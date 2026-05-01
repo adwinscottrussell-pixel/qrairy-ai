@@ -11,7 +11,7 @@ async function handleCreateQR(req, res) {
     }
 
     const qr = await createQR(url);
-    const redirectUrl = `http://localhost:3000/r/${qr.id}`;
+    const redirectUrl = `https://qrairy-ai-production.up.railway.app/r/${qr.id}`;
 
     return res.status(201).json({
       id: qr.id,
