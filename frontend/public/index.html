@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — Intelligent QR Codes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+
+  <header>
+    <div class="logo">QR<span class="accent">.</span>GEN</div>
+    <div class="tagline">AI-Powered Smart Redirects</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Turn any link<br/><em>into a smart code.</em></h1>
+      <p class="sub">Your QR intelligently routes users based on their device. Mobile gets mobile. Desktop gets desktop.</p>
+    </section>
+
+    <section class="generator">
+      <div class="input-row">
+        <input
+          type="url"
+          id="urlInput"
+          placeholder="https://your-url.com"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="generateBtn">Generate</button>
+      </div>
+      <div id="errorMsg" class="error-msg" aria-live="polite"></div>
+
+      <div id="result" class="result hidden">
+        <div class="qr-frame">
+          <div class="qr-corner tl"></div>
+          <div class="qr-corner tr"></div>
+          <div class="qr-corner bl"></div>
+          <div class="qr-corner br"></div>
+          <img id="qrImage" src="" alt="Generated QR Code" />
+        </div>
+        <div class="result-meta">
+          <div class="meta-label">Smart Redirect URL</div>
+          <a id="redirectLink" href="#" target="_blank" class="redirect-link"></a>
+          <button id="copyBtn" class="copy-btn">Copy Link</button>
+          <div id="copyConfirm" class="copy-confirm hidden">Copied!</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="feature-card">
+        <div class="feature-icon">&#10230;</div>
+        <div class="feature-title">Smart Routing</div>
+        <div class="feature-desc">Agent detects device type and routes accordingly.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9678;</div>
+        <div class="feature-title">Scan Logging</div>
+        <div class="feature-desc">Every scan is recorded with timestamp and user-agent.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9650;</div>
+        <div class="feature-title">Instant QR</div>
+        <div class="feature-desc">Generate a scannable code in under a second.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>QR.GEN MVP — Node · Express · Prisma · SQLite</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
