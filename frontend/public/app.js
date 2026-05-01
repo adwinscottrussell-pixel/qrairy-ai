@@ -1,4 +1,4 @@
-const API_BASE = 'https://qrairy-ai-production.up.railway.app';
+const API_BASE = 'https://api.qraivy.com';
 
 const urlInput = document.getElementById('urlInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -41,6 +41,7 @@ async function generateQR() {
   result.classList.add('hidden');
 
   try {
+    // ✅ CORRECT ENDPOINT
     const response = await fetch(`${API_BASE}/qr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,13 +57,14 @@ async function generateQR() {
 
     const { redirectUrl } = data;
 
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=160x160&format=png&margin=0`;
-    qrImage.src = qrSrc;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=160x160`;
 
+    qrImage.src = qrSrc;
     redirectLink.href = redirectUrl;
     redirectLink.textContent = redirectUrl;
 
     result.classList.remove('hidden');
+
   } catch (err) {
     showError('Could not reach the server. Is the backend running?');
     console.error(err);
@@ -80,6 +82,7 @@ urlInput.addEventListener('keydown', (e) => {
 copyBtn.addEventListener('click', async () => {
   const url = redirectLink.textContent;
   if (!url) return;
+
   try {
     await navigator.clipboard.writeText(url);
     copyConfirm.classList.remove('hidden');
