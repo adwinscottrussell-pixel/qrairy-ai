@@ -1,4 +1,4 @@
-const API_BASE = 'https://qrairy-ai-production.up.railway.app/qr';
+const API_BASE = 'https://qrairy-ai-production.up.railway.app';
 
 const urlInput = document.getElementById('urlInput');
 const generateBtn = document.getElementById('generateBtn');
