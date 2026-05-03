@@ -1,63 +1,38 @@
-// /src/controllers/qrController.js
+const { createQR, getQRById } = require('../services/qrService');
+const { logScan } = require('../services/scanService');
+const { decideRedirectUrl } = require('../agents/redirectAgent');
 
-const prisma = require('../prismaClient');
-
-// 🔥 YOUR DOMAIN
-const BASE_URL = 'https://api.qraivy.com';
-
-// ==========================
-// CREATE QR
-// ==========================
-exports.createQR = async (req, res) => {
+async function handleCreateQR(req, res) {
   try {
     const { url } = req.body;
-
-    if (!url) {
-      return res.status(400).json({ error: 'URL is required' });
+    if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+      return res.status(400).json({ error: 'A valid URL is required.' });
     }
-
-    const qr = await prisma.qR.create({
-      data: {
-        originalUrl: url,
-      },
-    });
-
-    const redirectUrl = `${BASE_URL}/r/${qr.id}`;
-
-    return res.status(200).json({ redirectUrl });
-
-  } catch (error) {
-    console.error('Create QR Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    const qr = await createQR(url);
+    const redirectUrl = `https://api.qraivy.com/r/${qr.id}`;
+    return res.status(201).json({ id: qr.id, redirectUrl });
+  } catch (err) {
+    console.error('handleCreateQR error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
-};
+}
 
-// ==========================
-// HANDLE REDIRECT
-// ==========================
-exports.handleRedirect = async (req, res) => {
+async function handleRedirect(req, res) {
   try {
     const { id } = req.params;
-
-    const qr = await prisma.qR.findUnique({
-      where: { id },
-    });
-
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const qr = await getQRById(id);
     if (!qr) {
-      return res.status(404).send('QR not found');
+      return res.status(404).json({ error: 'QR not found.' });
     }
-
-    await prisma.scan.create({
-      data: {
-        qrId: id,
-        userAgent: req.headers['user-agent'] || 'unknown',
-      },
-    });
-
-    return res.redirect(qr.originalUrl);
-
-  } catch (error) {
-    console.error('Redirect Error:', error);
-    return res.status(500).send('Internal server error');
+    await logScan(qr.id, userAgent);
+    const context = { userAgent };
+    const targetUrl = decideRedirectUrl(qr, context);
+    return res.redirect(302, targetUrl);
+  } catch (err) {
+    console.error('handleRedirect error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
-};
+}
+
+module.exports = { handleCreateQR, handleRedirect };
