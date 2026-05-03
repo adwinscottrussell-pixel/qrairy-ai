@@ -1,5 +1,19 @@
 {
+  "name": "qrairy-backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "postinstall": "prisma generate"
+  },
   "dependencies": {
-    "cors": "^2.8.6"
+    "@prisma/client": "^5.22.0",
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "nodemon": "^3.0.0"
   }
 }
