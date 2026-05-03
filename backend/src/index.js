@@ -1,16 +1,17 @@
 const express = require('express');
+const cors = require('cors');
+const qrRoutes = require('./routes/qrRoutes');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// 🔥 ONLY THIS ROUTE
-app.get('/', (req, res) => {
-  console.log('ROOT HIT');
-  res.send('OK');
-});
+app.use(cors());
+app.use(express.json());
 
-// 🚨 CRITICAL: DO NOT CHANGE THIS
-const PORT = process.env.PORT || 8080;
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+app.use('/', qrRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`QR SaaS backend running on http://localhost:${PORT}`);
 });
