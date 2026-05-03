@@ -1,19 +1,21 @@
 {
-  "name": "qrairy-backend",
+  "name": "qr-saas-backend",
   "version": "1.0.0",
+  "description": "AI-powered QR code SaaS backend",
   "main": "src/index.js",
   "scripts": {
-    "start": "npx prisma migrate deploy && node src/index.js",
-    "dev": "nodemon src/index.js",
-    "postinstall": "prisma generate"
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "postinstall": "prisma generate && prisma migrate deploy",
+    "migrate": "prisma migrate dev --name init",
+    "generate": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "express": "^4.19.2",
-    "cors": "^2.8.5"
+    "@prisma/client": "^5.14.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
   },
   "devDependencies": {
-    "prisma": "^5.22.0",
-    "nodemon": "^3.0.0"
+    "prisma": "^5.14.0"
   }
 }
