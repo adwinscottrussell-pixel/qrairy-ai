@@ -1,4 +1,4 @@
-const API_BASE = 'https://api.qrairy.ai';
+const API_BASE = 'https://api.qraivy.com';
 
 const urlInput = document.getElementById('urlInput');
 const generateBtn = document.getElementById('generateBtn');
