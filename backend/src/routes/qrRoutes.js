@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 
-const qrController = require('../controllers/qrController');
+const { createQR, handleRedirect } = require('../controllers/qrController');
 
-// Debug (temporary)
-console.log('QR Controller:', qrController);
+// ==========================
+// CREATE QR
+// POST /api/qr
+// ==========================
+router.post('/', createQR);
 
-router.post('/create-qr', qrController.createQR);
-router.get('/r/:id', qrController.handleRedirect);
+// ==========================
+// REDIRECT
+// GET /api/qr/r/:id
+// ==========================
+router.get('/r/:id', handleRedirect);
 
 module.exports = router;
