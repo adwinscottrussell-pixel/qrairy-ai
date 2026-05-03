@@ -5,22 +5,21 @@ const qrRoutes = require('./routes/qrRoutes');
 
 const app = express();
 
-// Middleware
+// middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/', qrRoutes);
+// routes
+app.use('/api/qr', qrRoutes);
 
-// Health check (optional but useful)
+// health check
 app.get('/', (req, res) => {
-  res.send('QR API is running');
+  res.send('API is running 🚀');
 });
 
-// 🔥 CRITICAL: Railway dynamic port
+// IMPORTANT: Railway port binding
 const PORT = process.env.PORT || 3000;
 
-// 🔥 MUST bind to 0.0.0.0
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
