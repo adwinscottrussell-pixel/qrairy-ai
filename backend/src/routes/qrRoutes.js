@@ -1,10 +1,12 @@
-
 const express = require('express');
 const router = express.Router();
-const { handleCreateQR, handleRedirect } = require('../controllers/qrController');
 
-// ✅ FIXED ROUTES
-router.post('/', handleCreateQR);     // was /qr ❌
-router.get('/r/:id', handleRedirect);
+const qrController = require('../controllers/qrController');
+
+// Debug (temporary)
+console.log('QR Controller:', qrController);
+
+router.post('/create-qr', qrController.createQR);
+router.get('/r/:id', qrController.handleRedirect);
 
 module.exports = router;

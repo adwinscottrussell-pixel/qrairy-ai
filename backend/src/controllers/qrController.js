@@ -1,12 +1,13 @@
-const { PrismaClient } = require('@prisma/client');
-const { v4: uuidv4 } = require('uuid');
+// /src/controllers/qrController.js
 
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 
-// 🔥 YOUR CLEAN DOMAIN
+// 🔥 YOUR DOMAIN
 const BASE_URL = 'https://api.qraivy.com';
 
+// ==========================
 // CREATE QR
+// ==========================
 exports.createQR = async (req, res) => {
   try {
     const { url } = req.body;
@@ -15,19 +16,13 @@ exports.createQR = async (req, res) => {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    // Generate unique ID
-    const id = uuidv4();
-
-    // Save to database
-    await prisma.qR.create({
+    const qr = await prisma.qR.create({
       data: {
-        id,
-        url,
+        originalUrl: url,
       },
     });
 
-    // Build redirect URL
-    const redirectUrl = `${BASE_URL}/r/${id}`;
+    const redirectUrl = `${BASE_URL}/r/${qr.id}`;
 
     return res.status(200).json({ redirectUrl });
 
@@ -37,7 +32,9 @@ exports.createQR = async (req, res) => {
   }
 };
 
+// ==========================
 // HANDLE REDIRECT
+// ==========================
 exports.handleRedirect = async (req, res) => {
   try {
     const { id } = req.params;
@@ -50,10 +47,14 @@ exports.handleRedirect = async (req, res) => {
       return res.status(404).send('QR not found');
     }
 
-    // Optional: log scan (future feature)
-    // await prisma.scan.create({ data: { qrId: id } });
+    await prisma.scan.create({
+      data: {
+        qrId: id,
+        userAgent: req.headers['user-agent'] || 'unknown',
+      },
+    });
 
-    return res.redirect(qr.url);
+    return res.redirect(qr.originalUrl);
 
   } catch (error) {
     console.error('Redirect Error:', error);
