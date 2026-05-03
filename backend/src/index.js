@@ -5,40 +5,26 @@ const qrRoutes = require('./routes/qrRoutes');
 
 const app = express();
 
-// 🔥 GLOBAL ERROR LOGGING
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err);
-});
-
 // middleware
 app.use(cors());
 app.use(express.json());
 
-// 🔥 SAFE ROOT ROUTE
+// 🔥 VERY IMPORTANT HEALTH ROUTE
 app.get('/', (req, res) => {
-  try {
-    res.send('API is working ✅');
-  } catch (err) {
-    console.error('Root route error:', err);
-    res.status(500).send('Root error');
-  }
+  console.log('✅ Root route hit');
+  res.status(200).send('API is working 🚀');
 });
 
 // routes
 app.use('/api/qr', qrRoutes);
 
-// 🔥 EXPRESS ERROR HANDLER
+// 🔥 ERROR HANDLER (YOU DIDN'T HAVE THIS)
 app.use((err, req, res, next) => {
-  console.error('Express error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  console.error('🔥 ERROR:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// start server
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
