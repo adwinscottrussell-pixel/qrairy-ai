@@ -1,4 +1,4 @@
-const API_BASE = 'https://api.qraivy.com';
+const API_BASE = 'https://api.qrairy.ai';
 
 const urlInput = document.getElementById('urlInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -24,47 +24,34 @@ function setLoading(loading) {
 
 async function generateQR() {
   const url = urlInput.value.trim();
-
   clearError();
-
   if (!url) {
     showError('Please enter a URL.');
     return;
   }
-
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     showError('URL must start with http:// or https://');
     return;
   }
-
   setLoading(true);
   result.classList.add('hidden');
-
   try {
-    // ✅ CORRECT ENDPOINT
     const response = await fetch(`${API_BASE}/qr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     });
-
     const data = await response.json();
-
     if (!response.ok) {
       showError(data.error || 'Something went wrong.');
       return;
     }
-
     const { redirectUrl } = data;
-
     const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=160x160`;
-
     qrImage.src = qrSrc;
     redirectLink.href = redirectUrl;
     redirectLink.textContent = redirectUrl;
-
     result.classList.remove('hidden');
-
   } catch (err) {
     showError('Could not reach the server. Is the backend running?');
     console.error(err);
@@ -82,7 +69,6 @@ urlInput.addEventListener('keydown', (e) => {
 copyBtn.addEventListener('click', async () => {
   const url = redirectLink.textContent;
   if (!url) return;
-
   try {
     await navigator.clipboard.writeText(url);
     copyConfirm.classList.remove('hidden');
