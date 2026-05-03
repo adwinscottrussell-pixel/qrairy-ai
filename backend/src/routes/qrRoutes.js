@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createQR, handleRedirect } = require('../controllers/qrController');
+const { handleCreateQR, handleRedirect } = require('../controllers/qrController');
 
-router.post('/qr', createQR);
+router.post('/qr', handleCreateQR);
 router.get('/r/:id', handleRedirect);
 
 module.exports = router;
