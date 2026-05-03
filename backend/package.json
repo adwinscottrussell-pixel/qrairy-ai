@@ -6,9 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "postinstall": "prisma generate && prisma migrate deploy",
-    "migrate": "prisma migrate dev --name init",
-    "generate": "prisma generate"
+    "postinstall": "prisma generate",
+    "migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
