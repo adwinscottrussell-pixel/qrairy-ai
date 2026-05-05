@@ -11,18 +11,15 @@
 </head>
 <body>
   <div class="noise"></div>
-
   <header>
     <div class="logo">QR<span class="accent">.</span>GEN</div>
     <div class="tagline">AI-Powered Smart Redirects</div>
   </header>
-
   <main>
     <section class="hero">
       <h1>Turn any link<br/><em>into a smart code.</em></h1>
       <p class="sub">Your QR intelligently routes users based on their device. Mobile gets mobile. Desktop gets desktop.</p>
     </section>
-
     <section class="generator">
       <div class="input-row">
         <input
@@ -35,7 +32,6 @@
         <button id="generateBtn">Generate</button>
       </div>
       <div id="errorMsg" class="error-msg" aria-live="polite"></div>
-
       <div id="result" class="result hidden">
         <div class="qr-frame">
           <div class="qr-corner tl"></div>
@@ -48,11 +44,11 @@
           <div class="meta-label">Smart Redirect URL</div>
           <a id="redirectLink" href="#" target="_blank" class="redirect-link"></a>
           <button id="copyBtn" class="copy-btn">Copy Link</button>
+          <button id="downloadBtn" class="copy-btn">Download QR</button>
           <div id="copyConfirm" class="copy-confirm hidden">Copied!</div>
         </div>
       </div>
     </section>
-
     <section class="features">
       <div class="feature-card">
         <div class="feature-icon">&#10230;</div>
@@ -71,11 +67,9 @@
       </div>
     </section>
   </main>
-
   <footer>
-    <span>QR.GEN MVP — Node · Express · Prisma · SQLite</span>
+    <span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span>
   </footer>
-
   <script src="app.js"></script>
 </body>
 </html>

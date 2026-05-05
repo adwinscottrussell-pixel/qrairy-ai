@@ -8,6 +8,7 @@ const qrImage = document.getElementById('qrImage');
 const redirectLink = document.getElementById('redirectLink');
 const copyBtn = document.getElementById('copyBtn');
 const copyConfirm = document.getElementById('copyConfirm');
+const downloadBtn = document.getElementById('downloadBtn');
 
 function showError(msg) {
   errorMsg.textContent = msg;
@@ -47,10 +48,17 @@ async function generateQR() {
       return;
     }
     const { redirectUrl } = data;
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=160x160`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=300x300`;
     qrImage.src = qrSrc;
+    qrImage.crossOrigin = 'anonymous';
     redirectLink.href = redirectUrl;
     redirectLink.textContent = redirectUrl;
+    downloadBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.href = qrSrc;
+      link.download = 'qraivy-qrcode.png';
+      link.click();
+    };
     result.classList.remove('hidden');
   } catch (err) {
     showError('Could not reach the server. Is the backend running?');
