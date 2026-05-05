@@ -8,6 +8,50 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .style-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .style-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .style-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .style-group input[type="color"] {
+      width: 48px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      padding: 2px;
+    }
+    .style-group select {
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .style-group select:focus {
+      border-color: var(--accent);
+    }
+  </style>
 </head>
 <body>
   <div class="noise"></div>
@@ -30,6 +74,24 @@
           spellcheck="false"
         />
         <button id="generateBtn">Generate</button>
+      </div>
+      <div class="style-row">
+        <div class="style-group">
+          <span class="style-label">QR Color</span>
+          <input type="color" id="qrColor" value="#000000" />
+        </div>
+        <div class="style-group">
+          <span class="style-label">Background</span>
+          <input type="color" id="qrBgColor" value="#ffffff" />
+        </div>
+        <div class="style-group">
+          <span class="style-label">Size</span>
+          <select id="qrSize">
+            <option value="150x150">Small</option>
+            <option value="300x300" selected>Medium</option>
+            <option value="500x500">Large</option>
+          </select>
+        </div>
       </div>
       <div id="errorMsg" class="error-msg" aria-live="polite"></div>
       <div id="result" class="result hidden">

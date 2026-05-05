@@ -9,6 +9,9 @@ const redirectLink = document.getElementById('redirectLink');
 const copyBtn = document.getElementById('copyBtn');
 const copyConfirm = document.getElementById('copyConfirm');
 const downloadBtn = document.getElementById('downloadBtn');
+const qrColor = document.getElementById('qrColor');
+const qrBgColor = document.getElementById('qrBgColor');
+const qrSize = document.getElementById('qrSize');
 
 function showError(msg) {
   errorMsg.textContent = msg;
@@ -48,7 +51,10 @@ async function generateQR() {
       return;
     }
     const { redirectUrl } = data;
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=300x300`;
+    const color = qrColor.value.replace('#', '');
+    const bgcolor = qrBgColor.value.replace('#', '');
+    const size = qrSize.value;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgcolor}`;
     qrImage.src = qrSrc;
     qrImage.crossOrigin = 'anonymous';
     redirectLink.href = redirectUrl;
