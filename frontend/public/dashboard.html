@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — Business Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .dash-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 60px 48px;
+    }
+    .dash-title {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .dash-title em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin: 32px 0;
+    }
+    .stat-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent);
+    }
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .qr-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .qr-card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .qr-card-url {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qr-card-stats {
+      display: flex;
+      gap: 16px;
+    }
+    .qr-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .qr-stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .qr-stat-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .qr-card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-ai {
+      padding: 12px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+    }
+    .btn-ai:hover { background: #ff7a45; }
+    .btn-send {
+      padding: 12px 16px;
+      background: transparent;
+      color: var(--text-mid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-send:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .special-preview {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-mid);
+      line-height: 1.6;
+      display: none;
+    }
+    .special-title-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      outline: none;
+      display: none;
+      margin-bottom: 4px;
+    }
+    .special-title-input:focus {
+      border-color: var(--accent);
+    }
+    .sent-confirm {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #22c55e;
+      display: none;
+      text-align: center;
+    }
+    .loading-text {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+      display: none;
+    }
+    .back-link {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--text-dim);
+      padding-bottom: 2px;
+    }
+    .back-link:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <header>
+    <div class="logo">QR<span class="accent">.</span>GEN</div>
+    <div class="nav-links">
+      <a href="/" class="back-link">← Generator</a>
+      <a href="/analytics.html" class="back-link">Analytics</a>
+    </div>
+  </header>
+  <main>
+    <div class="dash-wrap">
+      <h1 class="dash-title">Business <em>Dashboard</em></h1>
+      <p style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-dim);margin-bottom:8px">
+        Manage your QR codes, view subscribers and send AI-generated specials.
+      </p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total QR Codes</div>
+          <div class="stat-value" id="totalQR">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Subscribers</div>
+          <div class="stat-value" id="totalSubs">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value" id="totalScans">—</div>
+        </div>
+      </div>
+
+      <div id="loading" style="font-family:var(--font-mono);color:var(--text-dim);font-size:0.85rem;">
+        Loading dashboard...
+      </div>
+
+      <div class="qr-grid" id="qrGrid"></div>
+    </div>
+  </main>
+  <footer>
+    <span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span>
+  </footer>
+
+  <script>
+    const API_BASE = 'https://api.qraivy.com';
+
+    async function generateSpecial(qr, card) {
+      const loadingEl = card.querySelector('.loading-text');
+      const previewEl = card.querySelector('.special-preview');
+      const titleInput = card.querySelector('.special-title-input');
+      const sendBtn = card.querySelector('.btn-send');
+      const aiBtn = card.querySelector('.btn-ai');
+
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Generating...';
+      loadingEl.style.display = 'block';
+      previewEl.style.display = 'none';
+      titleInput.style.display = 'none';
+
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 200,
+            messages: [{
+              role: 'user',
+              content: `You are a marketing expert. Write a short, punchy push notification special offer for a business. 
+              Business URL: ${qr.originalUrl}
+              Business Name: ${qr.businessName}
+              
+              Write ONLY the notification message (max 100 characters). Make it exciting with an emoji. No quotes, no explanation.`
+            }]
+          })
+        });
+        const data = await response.json();
+        const message = data.content[0].text.trim();
+
+        titleInput.value = `Special Offer from ${qr.businessName}`;
+        titleInput.style.display = 'block';
+        previewEl.textContent = message;
+        previewEl.style.display = 'block';
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send to Subscribers';
+
+        sendBtn.onclick = () => sendSpecial(qr.id, titleInput.value, message, card);
+      } catch (err) {
+        previewEl.textContent = 'Failed to generate. Try again.';
+        previewEl.style.display = 'block';
+        console.error(err);
+      } finally {
+        loadingEl.style.display = 'none';
+        aiBtn.disabled = false;
+        aiBtn.textContent = '✨ Generate Special with AI';
+      }
+    }
+
+    async function sendSpecial(qrId, title, message, card) {
+      const sendBtn = card.querySelector('.btn-send');
+      const sentConfirm = card.querySelector('.sent-confirm');
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch(`${API_BASE}/send-special`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrId, title, message }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          sentConfirm.style.display = 'block';
+          sentConfirm.textContent = '✅ Notification sent to all subscribers!';
+          sendBtn.style.display = 'none';
+        } else {
+          sentConfirm.style.display = 'block';
+          sentConfirm.textContent = '❌ ' + (data.error || 'Failed to send.');
+          sentConfirm.style.color = '#ef4444';
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send to Subscribers';
+        }
+      } catch (err) {
+        console.error(err);
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send to Subscribers';
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/dashboard`);
+        const data = await res.json();
+        const { dashboard } = data;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('totalQR').textContent = dashboard.length;
+        document.getElementById('totalSubs').textContent = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
+        document.getElementById('totalScans').textContent = dashboard.reduce((s, q) => s + q.totalScans, 0);
+
+        const grid = document.getElementById('qrGrid');
+        dashboard.forEach(qr => {
+          const card = document.createElement('div');
+          card.className = 'qr-card';
+          card.innerHTML = `
+            <div class="qr-card-name">${qr.businessName}</div>
+            <div class="qr-card-url">${qr.originalUrl}</div>
+            <div class="qr-card-stats">
+              <div class="qr-stat">
+                <span class="qr-stat-label">Subscribers</span>
+                <span class="qr-stat-value">${qr.totalSubscribers}</span>
+              </div>
+              <div class="qr-stat">
+                <span class="qr-stat-label">Scans</span>
+                <span class="qr-stat-value">${qr.totalScans}</span>
+              </div>
+            </div>
+            <div class="qr-card-actions">
+              <button class="btn-ai">✨ Generate Special with AI</button>
+              <div class="loading-text">AI is writing your special...</div>
+              <input class="special-title-input" type="text" placeholder="Notification title" />
+              <div class="special-preview"></div>
+              <button class="btn-send" disabled>Send to Subscribers</button>
+              <div class="sent-confirm"></div>
+            </div>
+          `;
+          card.querySelector('.btn-ai').onclick = () => generateSpecial(qr, card);
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Failed to load dashboard.';
+        console.error(err);
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
