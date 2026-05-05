@@ -14,7 +14,7 @@
   --text: #ffffff;
   --text-dim: #6b7280;
   --text-mid: #9ca3af;
-  --font-display: 'Syne', sans-serif;
+  --font-display: 'Inter', sans-serif;
   --font-mono: 'DM Mono', monospace;
   --radius: 4px;
   --transition: 0.2s ease;
@@ -83,7 +83,7 @@ main {
 
 .hero h1 {
   font-size: clamp(2.8rem, 6vw, 4.2rem);
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1.05;
   letter-spacing: -0.04em;
   color: var(--text);
