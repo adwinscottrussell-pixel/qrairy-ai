@@ -1,0 +1,19 @@
+-- CreateTable
+CREATE TABLE "QR" (
+    "id" TEXT NOT NULL,
+    "originalUrl" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "QR_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Scan" (
+    "id" TEXT NOT NULL,
+    "qrId" TEXT NOT NULL,
+    "userAgent" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Scan_pkey" PRIMARY KEY ("id")
+);
+
+-- AddForeignKey
+ALTER TABLE "Scan" ADD CONSTRAINT "Scan_qrId_fkey" FOREIGN KEY ("qrId") REFERENCES "QR"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
