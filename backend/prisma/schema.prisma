@@ -8,10 +8,12 @@ datasource db {
 }
 
 model QR {
-  id          String   @id @default(uuid())
-  originalUrl String
-  createdAt   DateTime @default(now())
-  scans       Scan[]
+  id           String       @id @default(uuid())
+  originalUrl  String
+  businessName String?
+  createdAt    DateTime     @default(now())
+  scans        Scan[]
+  subscribers  Subscriber[]
 }
 
 model Scan {
@@ -20,4 +22,12 @@ model Scan {
   userAgent String
   createdAt DateTime @default(now())
   qr        QR       @relation(fields: [qrId], references: [id])
+}
+
+model Subscriber {
+  id            String   @id @default(uuid())
+  qrId          String
+  oneSignalId   String
+  createdAt     DateTime @default(now())
+  qr            QR       @relation(fields: [qrId], references: [id])
 }
