@@ -5,15 +5,15 @@
 }
 
 :root {
-  --bg: #0a0a0a;
-  --surface: #111111;
-  --surface2: #1a1a1a;
-  --border: #2a2a2a;
-  --accent: #e8ff47;
-  --accent2: #ff4f47;
-  --text: #f0f0f0;
-  --text-dim: #666666;
-  --text-mid: #999999;
+  --bg: #05082e;
+  --surface: #0d1240;
+  --surface2: #151a4a;
+  --border: #1e2560;
+  --accent: #ff5a1f;
+  --accent2: #ff8c00;
+  --text: #ffffff;
+  --text-dim: #6b7280;
+  --text-mid: #9ca3af;
   --font-display: 'Syne', sans-serif;
   --font-mono: 'DM Mono', monospace;
   --radius: 4px;
@@ -141,7 +141,7 @@ main {
 #generateBtn {
   padding: 18px 32px;
   background: var(--accent);
-  color: #0a0a0a;
+  color: #ffffff;
   border: none;
   font-family: var(--font-display);
   font-size: 0.85rem;
@@ -154,7 +154,7 @@ main {
 }
 
 #generateBtn:hover {
-  background: #f5ff6e;
+  background: #ff7a45;
 }
 
 #generateBtn:active {
