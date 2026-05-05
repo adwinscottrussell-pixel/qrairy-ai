@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .analytics-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 60px 48px;
+    }
+    .analytics-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .analytics-title em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin: 32px 0;
+    }
+    .stat-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .qr-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 32px;
+    }
+    .qr-table th {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .qr-table td {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .qr-table tr:hover td {
+      background: var(--surface);
+    }
+    .scan-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+    }
+    .loading {
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 40px;
+    }
+    .back-link {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--text-dim);
+      padding-bottom: 2px;
+    }
+    .back-link:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <header>
+    <div class="logo">QR<span class="accent">.</span>GEN</div>
+    <div class="tagline">Analytics Dashboard</div>
+  </header>
+  <main>
+    <div class="analytics-wrap">
+      <a href="/" class="back-link">← Back to Generator</a>
+      <h1 class="analytics-title" style="margin-top:32px">QR Code <em>Analytics</em></h1>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total QR Codes</div>
+          <div class="stat-value" id="totalQR">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value" id="totalScans">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Most Scanned</div>
+          <div class="stat-value" id="topScans">—</div>
+        </div>
+      </div>
+      <div id="loading" class="loading">Loading analytics...</div>
+      <table class="qr-table" id="qrTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Original URL</th>
+            <th>Redirect URL</th>
+            <th>Scans</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="qrTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+  <footer>
+    <span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span>
+  </footer>
+  <script>
+    const API_BASE = 'https://api.qraivy.com';
+
+    async function loadAnalytics() {
+      try {
+        const res = await fetch(`${API_BASE}/analytics`);
+        const data = await res.json();
+        const { analytics } = data;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('qrTable').style.display = 'table';
+
+        document.getElementById('totalQR').textContent = analytics.length;
+        const totalScans = analytics.reduce((sum, qr) => sum + qr.totalScans, 0);
+        document.getElementById('totalScans').textContent = totalScans;
+        const top = analytics.reduce((max, qr) => qr.totalScans > max ? qr.totalScans : max, 0);
+        document.getElementById('topScans').textContent = top;
+
+        const tbody = document.getElementById('qrTableBody');
+        analytics.forEach(qr => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td title="${qr.originalUrl}">${qr.originalUrl}</td>
+            <td><a href="${qr.redirectUrl}" target="_blank" style="color:var(--accent)">${qr.redirectUrl}</a></td>
+            <td><span class="scan-badge">${qr.totalScans}</span></td>
+            <td>${new Date(qr.createdAt).toLocaleDateString()}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Failed to load analytics.';
+        console.error(err);
+      }
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>

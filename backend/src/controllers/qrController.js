@@ -1,6 +1,7 @@
 const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
+const prisma = require('../utils/prismaClient');
 
 async function handleCreateQR(req, res) {
   try {
@@ -35,4 +36,28 @@ async function handleRedirect(req, res) {
   }
 }
 
-module.exports = { handleCreateQR, handleRedirect };
+async function handleAnalytics(req, res) {
+  try {
+    const data = await prisma.qR.findMany({
+      include: {
+        scans: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    const analytics = data.map(qr => ({
+      id: qr.id,
+      originalUrl: qr.originalUrl,
+      redirectUrl: `https://api.qraivy.com/r/${qr.id}`,
+      totalScans: qr.scans.length,
+      createdAt: qr.createdAt,
+    }));
+    return res.status(200).json({ analytics });
+  } catch (err) {
+    console.error('handleAnalytics error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+module.exports = { handleCreateQR, handleRedirect, handleAnalytics };
