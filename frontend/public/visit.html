@@ -82,9 +82,7 @@
       text-decoration: none;
     }
 
-    .business-url a:hover {
-      text-decoration: underline;
-    }
+    .business-url a:hover { text-decoration: underline; }
 
     .chat-section {
       flex: 1;
@@ -185,10 +183,7 @@
       30% { transform: translateY(-6px); }
     }
 
-    .chat-input-row {
-      display: flex;
-      gap: 8px;
-    }
+    .chat-input-row { display: flex; gap: 8px; }
 
     #chatInput {
       flex: 1;
@@ -357,8 +352,7 @@
         document.getElementById('businessUrl').href = data.originalUrl;
         document.getElementById('subBusinessName').textContent = data.businessName;
         document.getElementById('loadingScreen').style.display = 'none';
-        const pageContent = document.getElementById('pageContent');
-        pageContent.style.display = 'flex';
+        document.getElementById('pageContent').style.display = 'flex';
         addMessage('bot', `Hi! Welcome to ${data.businessName} 👋 How can I help you today?`);
       } catch (err) {
         document.getElementById('loadingScreen').textContent = 'Failed to load. Please try again.';
@@ -413,11 +407,7 @@
         const res = await fetch(`${API_BASE}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            qrId,
-            message,
-            history: chatHistory.slice(-6),
-          }),
+          body: JSON.stringify({ qrId, message, history: chatHistory.slice(-6) }),
         });
         const data = await res.json();
         removeTyping();
@@ -443,21 +433,13 @@
       const confirm = document.getElementById('subscribeConfirm');
       btn.disabled = true;
       btn.textContent = 'Subscribing...';
-      try {
-        const OneSignal = await new Promise(resolve => {
-          window.OneSignalDeferred = window.OneSignalDeferred || [];
-          window.OneSignalDeferred.push(resolve);
-        }).catch(() => window.OneSignal);
 
-        const os = window.OneSignal;
-        await os.Notifications.requestPermission();
-        
-        let oneSignalId = os.User?.PushSubscription?.id;
-        
-        if (!oneSignalId) {
-          await new Promise(r => setTimeout(r, 1500));
-          oneSignalId = os.User?.PushSubscription?.id;
-        }
+      try {
+        await window.OneSignal.Notifications.requestPermission();
+        await new Promise(r => setTimeout(r, 2000));
+
+        const oneSignalId = window.OneSignal.User.PushSubscription.id;
+        console.log('OneSignal ID:', oneSignalId);
 
         if (!oneSignalId) {
           btn.disabled = false;
@@ -466,18 +448,21 @@
           return;
         }
 
-        await fetch(`${API_BASE}/subscribe`, {
+        const res = await fetch(`${API_BASE}/subscribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ qrId, oneSignalId }),
         });
+
+        const data = await res.json();
+        console.log('Subscribe response:', data);
 
         btn.style.display = 'none';
         confirm.style.display = 'block';
       } catch (err) {
         btn.disabled = false;
         btn.textContent = 'Subscribe for Special Offers';
-        console.error(err);
+        console.error('Subscribe error:', err);
       }
     });
 
