@@ -15,6 +15,7 @@
         appId: "afd98e11-f616-40fe-a1c6-251f15861b54",
         notifyButton: { enable: false },
         allowLocalhostAsSecureOrigin: true,
+        serviceWorkerParam: { scope: "/" },
       });
     });
   </script>
@@ -126,13 +127,8 @@
       max-width: 85%;
     }
 
-    .message.bot {
-      align-self: flex-start;
-    }
-
-    .message.user {
-      align-self: flex-end;
-    }
+    .message.bot { align-self: flex-start; }
+    .message.user { align-self: flex-end; }
 
     .message-bubble {
       padding: 12px 16px;
@@ -161,9 +157,7 @@
       padding: 0 4px;
     }
 
-    .message.user .message-sender {
-      text-align: right;
-    }
+    .message.user .message-sender { text-align: right; }
 
     .typing-indicator {
       display: flex;
@@ -209,13 +203,8 @@
       transition: border-color 0.2s;
     }
 
-    #chatInput:focus {
-      border-color: var(--accent);
-    }
-
-    #chatInput::placeholder {
-      color: var(--text-dim);
-    }
+    #chatInput:focus { border-color: var(--accent); }
+    #chatInput::placeholder { color: var(--text-dim); }
 
     #sendBtn {
       padding: 14px 20px;
@@ -252,10 +241,7 @@
       gap: 12px;
     }
 
-    .subscribe-title {
-      font-size: 1rem;
-      font-weight: 700;
-    }
+    .subscribe-title { font-size: 1rem; font-weight: 700; }
 
     .subscribe-desc {
       font-family: var(--font-mono);
@@ -361,22 +347,18 @@
         document.getElementById('loadingScreen').textContent = 'Invalid QR code.';
         return;
       }
-
       try {
         const res = await fetch(`${API_BASE}/visit/${qrId}`);
         const data = await res.json();
         businessData = data;
-
         document.title = `Welcome to ${data.businessName}`;
         document.getElementById('businessName').textContent = data.businessName;
         document.getElementById('businessUrl').textContent = data.originalUrl;
         document.getElementById('businessUrl').href = data.originalUrl;
         document.getElementById('subBusinessName').textContent = data.businessName;
-
         document.getElementById('loadingScreen').style.display = 'none';
         const pageContent = document.getElementById('pageContent');
         pageContent.style.display = 'flex';
-
         addMessage('bot', `Hi! Welcome to ${data.businessName} 👋 How can I help you today?`);
       } catch (err) {
         document.getElementById('loadingScreen').textContent = 'Failed to load. Please try again.';
@@ -422,13 +404,11 @@
       const sendBtn = document.getElementById('sendBtn');
       const message = input.value.trim();
       if (!message) return;
-
       input.value = '';
       sendBtn.disabled = true;
       addMessage('user', message);
       chatHistory.push({ role: 'user', content: message });
       addTyping();
-
       try {
         const res = await fetch(`${API_BASE}/chat`, {
           method: 'POST',
@@ -463,17 +443,26 @@
       const confirm = document.getElementById('subscribeConfirm');
       btn.disabled = true;
       btn.textContent = 'Subscribing...';
-
       try {
-        await window.OneSignalDeferred;
-        const OneSignal = window.OneSignal;
-        await OneSignal.Notifications.requestPermission();
-        const oneSignalId = await OneSignal.User.PushSubscription.id;
+        const OneSignal = await new Promise(resolve => {
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          window.OneSignalDeferred.push(resolve);
+        }).catch(() => window.OneSignal);
+
+        const os = window.OneSignal;
+        await os.Notifications.requestPermission();
+        
+        let oneSignalId = os.User?.PushSubscription?.id;
+        
+        if (!oneSignalId) {
+          await new Promise(r => setTimeout(r, 1500));
+          oneSignalId = os.User?.PushSubscription?.id;
+        }
 
         if (!oneSignalId) {
           btn.disabled = false;
           btn.textContent = 'Subscribe for Special Offers';
-          alert('Please allow notifications to subscribe.');
+          alert('Please allow notifications in your browser to subscribe.');
           return;
         }
 
