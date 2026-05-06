@@ -137,4 +137,39 @@ async function handleSendSpecial(req, res) {
   }
 }
 
-module.exports = { handleCreateQR, handleRedirect, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial };
+async function handleGenerateSpecial(req, res) {
+  try {
+    const { businessName, originalUrl } = req.body;
+    if (!businessName || !originalUrl) {
+      return res.status(400).json({ error: 'businessName and originalUrl are required.' });
+    }
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: `You are a marketing expert. Write a short punchy push notification special offer for a business.
+Business URL: ${originalUrl}
+Business Name: ${businessName}
+
+Write ONLY the notification message (max 100 characters). Make it exciting with an emoji. No quotes, no explanation.`
+        }]
+      })
+    });
+    const data = await response.json();
+    const message = data.content[0].text.trim();
+    return res.status(200).json({ message });
+  } catch (err) {
+    console.error('handleGenerateSpecial error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+module.exports = { handleCreateQR, handleRedirect, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial, handleGenerateSpecial };
