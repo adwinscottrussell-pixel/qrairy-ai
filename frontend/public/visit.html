@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="QRAIRY" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
@@ -77,11 +81,7 @@
       color: var(--text-dim);
     }
 
-    .business-url a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
+    .business-url a { color: var(--accent); text-decoration: none; }
     .business-url a:hover { text-decoration: underline; }
 
     .chat-section {
@@ -268,6 +268,26 @@
       display: none;
     }
 
+    .ios-notice {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-mid);
+      line-height: 1.7;
+      text-align: left;
+      display: none;
+    }
+
+    .ios-notice strong {
+      color: var(--accent);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
     .powered-by {
       text-align: center;
       padding: 16px;
@@ -277,10 +297,7 @@
       letter-spacing: 0.05em;
     }
 
-    .powered-by a {
-      color: var(--accent);
-      text-decoration: none;
-    }
+    .powered-by a { color: var(--accent); text-decoration: none; }
 
     .loading-screen {
       position: fixed;
@@ -322,6 +339,14 @@
       <div class="subscribe-card">
         <div class="subscribe-title">🎁 Get Exclusive Offers</div>
         <div class="subscribe-desc">Subscribe to receive special deals and updates from <span id="subBusinessName">us</span> directly to your device.</div>
+        <div class="ios-notice" id="iosNotice">
+          <strong>📱 iPhone Users</strong>
+          To receive push notifications on iPhone:
+          1. Tap the Share button (□↑) in Safari
+          2. Tap "Add to Home Screen"
+          3. Open the app from your home screen
+          4. Then tap Subscribe below
+        </div>
         <button id="subscribeBtn">Subscribe for Special Offers</button>
         <div class="subscribe-confirm" id="subscribeConfirm">✅ You're subscribed! Watch out for special offers.</div>
       </div>
@@ -336,6 +361,10 @@
     const qrId = params.get('id');
     let chatHistory = [];
     let businessData = null;
+
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone === true;
 
     async function init() {
       if (!qrId) {
@@ -354,6 +383,11 @@
         document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('pageContent').style.display = 'flex';
         addMessage('bot', `Hi! Welcome to ${data.businessName} 👋 How can I help you today?`);
+
+        // Show iOS notice if on iPhone and not in standalone mode
+        if (isIOS && !isStandalone) {
+          document.getElementById('iosNotice').style.display = 'block';
+        }
       } catch (err) {
         document.getElementById('loadingScreen').textContent = 'Failed to load. Please try again.';
         console.error(err);
