@@ -142,17 +142,6 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
-    .special-preview {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-mid);
-      line-height: 1.6;
-      display: none;
-    }
     .special-title-input {
       width: 100%;
       padding: 10px 12px;
@@ -164,10 +153,35 @@
       font-size: 0.78rem;
       outline: none;
       display: none;
-      margin-bottom: 4px;
     }
     .special-title-input:focus {
       border-color: var(--accent);
+    }
+    .special-message-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      outline: none;
+      display: none;
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.6;
+    }
+    .special-message-input:focus {
+      border-color: var(--accent);
+    }
+    .field-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: none;
     }
     .sent-confirm {
       font-family: var(--font-mono);
@@ -249,16 +263,20 @@
 
     async function generateSpecial(qr, card) {
       const loadingEl = card.querySelector('.loading-text');
-      const previewEl = card.querySelector('.special-preview');
       const titleInput = card.querySelector('.special-title-input');
+      const messageInput = card.querySelector('.special-message-input');
+      const titleLabel = card.querySelectorAll('.field-label')[0];
+      const messageLabel = card.querySelectorAll('.field-label')[1];
       const sendBtn = card.querySelector('.btn-send');
       const aiBtn = card.querySelector('.btn-ai');
 
       aiBtn.disabled = true;
       aiBtn.textContent = 'Generating...';
       loadingEl.style.display = 'block';
-      previewEl.style.display = 'none';
       titleInput.style.display = 'none';
+      messageInput.style.display = 'none';
+      titleLabel.style.display = 'none';
+      messageLabel.style.display = 'none';
 
       try {
         const response = await fetch(`${API_BASE}/generate-special`, {
@@ -270,18 +288,21 @@
           }),
         });
         const data = await response.json();
-        const message = data.message;
 
         titleInput.value = `Special Offer from ${qr.businessName}`;
+        messageInput.value = data.message;
+
+        titleLabel.style.display = 'block';
+        messageLabel.style.display = 'block';
         titleInput.style.display = 'block';
-        previewEl.textContent = message;
-        previewEl.style.display = 'block';
+        messageInput.style.display = 'block';
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send to Subscribers';
-        sendBtn.onclick = () => sendSpecial(qr.id, titleInput.value, message, card);
+        sendBtn.onclick = () => sendSpecial(qr.id, titleInput, messageInput, card);
       } catch (err) {
-        previewEl.textContent = 'Failed to generate. Try again.';
-        previewEl.style.display = 'block';
+        messageInput.value = 'Failed to generate. Try again.';
+        messageInput.style.display = 'block';
+        messageLabel.style.display = 'block';
         console.error(err);
       } finally {
         loadingEl.style.display = 'none';
@@ -290,9 +311,16 @@
       }
     }
 
-    async function sendSpecial(qrId, title, message, card) {
+    async function sendSpecial(qrId, titleInput, messageInput, card) {
       const sendBtn = card.querySelector('.btn-send');
       const sentConfirm = card.querySelector('.sent-confirm');
+      const title = titleInput.value.trim();
+      const message = messageInput.value.trim();
+
+      if (!title || !message) {
+        alert('Please fill in both title and message before sending.');
+        return;
+      }
 
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending...';
@@ -353,8 +381,10 @@
             <div class="qr-card-actions">
               <button class="btn-ai">✨ Generate Special with AI</button>
               <div class="loading-text">AI is writing your special...</div>
+              <span class="field-label">Notification Title</span>
               <input class="special-title-input" type="text" placeholder="Notification title" />
-              <div class="special-preview"></div>
+              <span class="field-label">Message (editable)</span>
+              <textarea class="special-message-input" placeholder="Your message here..."></textarea>
               <button class="btn-send" disabled>Send to Subscribers</button>
               <div class="sent-confirm"></div>
             </div>
