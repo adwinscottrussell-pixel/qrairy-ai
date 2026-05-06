@@ -29,11 +29,74 @@ async function handleRedirect(req, res) {
       return res.status(404).json({ error: 'QR not found.' });
     }
     await logScan(qr.id, userAgent);
+    if (qr.businessName) {
+      return res.redirect(302, `https://www.qraivy.com/visit.html?id=${qr.id}`);
+    }
     const context = { userAgent };
     const targetUrl = decideRedirectUrl(qr, context);
     return res.redirect(302, targetUrl);
   } catch (err) {
     console.error('handleRedirect error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function handleVisit(req, res) {
+  try {
+    const { id } = req.params;
+    const qr = await prisma.qR.findUnique({ where: { id } });
+    if (!qr) {
+      return res.status(404).json({ error: 'QR not found.' });
+    }
+    return res.status(200).json({
+      id: qr.id,
+      businessName: qr.businessName,
+      originalUrl: qr.originalUrl,
+    });
+  } catch (err) {
+    console.error('handleVisit error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function handleChat(req, res) {
+  try {
+    const { qrId, message, history } = req.body;
+    if (!qrId || !message) {
+      return res.status(400).json({ error: 'qrId and message are required.' });
+    }
+    const qr = await prisma.qR.findUnique({ where: { id: qrId } });
+    if (!qr) {
+      return res.status(404).json({ error: 'QR not found.' });
+    }
+    const messages = [
+      ...(history || []),
+      { role: 'user', content: message },
+    ];
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: `You are a friendly helpful assistant for ${qr.businessName}. 
+The business website is ${qr.originalUrl}. 
+Answer questions about this business in a friendly, concise way.
+Keep responses under 3 sentences.
+If you don't know something specific about the business, be honest but stay helpful.
+Always encourage the customer to subscribe for special offers.`,
+        messages,
+      }),
+    });
+    const data = await response.json();
+    const reply = data.content[0].text.trim();
+    return res.status(200).json({ reply });
+  } catch (err) {
+    console.error('handleChat error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
@@ -172,4 +235,4 @@ Write ONLY the notification message (max 100 characters). Make it exciting with 
   }
 }
 
-module.exports = { handleCreateQR, handleRedirect, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial, handleGenerateSpecial };
+module.exports = { handleCreateQR, handleRedirect, handleVisit, handleChat, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial, handleGenerateSpecial };
