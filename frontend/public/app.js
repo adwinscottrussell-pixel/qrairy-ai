@@ -12,6 +12,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const qrColor = document.getElementById('qrColor');
 const qrBgColor = document.getElementById('qrBgColor');
 const qrSize = document.getElementById('qrSize');
+const businessNameInput = document.getElementById('businessName');
 
 function showError(msg) {
   errorMsg.textContent = msg;
@@ -28,6 +29,7 @@ function setLoading(loading) {
 
 async function generateQR() {
   const url = urlInput.value.trim();
+  const businessName = businessNameInput.value.trim();
   clearError();
   if (!url) {
     showError('Please enter a URL.');
@@ -43,7 +45,7 @@ async function generateQR() {
     const response = await fetch(`${API_BASE}/qr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, businessName: businessName || null }),
     });
     const data = await response.json();
     if (!response.ok) {
