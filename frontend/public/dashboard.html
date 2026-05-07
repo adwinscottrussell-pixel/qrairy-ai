@@ -9,11 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* ── LAYOUT ── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { display: flex; min-height: 100vh; background: var(--bg); }
-
-    /* ── SIDEBAR ── */
     #sidebar {
       position: fixed; top: 0; left: 0;
       width: 240px; height: 100vh;
@@ -24,7 +21,6 @@
       overflow: hidden;
     }
     #sidebar.collapsed { width: 60px; }
-
     .sb-logo {
       display: flex; align-items: center; gap: 10px;
       padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -37,12 +33,10 @@
     }
     .sb-logo-text {
       font-size: 1rem; font-weight: 800; color: #fff;
-      white-space: nowrap; letter-spacing: -0.02em;
-      transition: opacity 0.22s;
+      white-space: nowrap; letter-spacing: -0.02em; transition: opacity 0.22s;
     }
     .sb-logo-text span { color: #ff5a1f; font-style: italic; }
     #sidebar.collapsed .sb-logo-text { opacity: 0; pointer-events: none; }
-
     .sb-toggle {
       position: absolute; top: 16px; right: -11px;
       width: 22px; height: 22px; background: #0d1117;
@@ -53,13 +47,10 @@
     }
     .sb-toggle:hover { background: #ff5a1f; color: #fff; border-color: #ff5a1f; }
     #sidebar.collapsed .sb-toggle { transform: rotate(180deg); }
-
     .sb-nav {
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      padding: 10px 8px;
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 8px;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
     }
-
     .sb-section {
       font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em;
       text-transform: uppercase; color: #444d56;
@@ -67,7 +58,6 @@
       transition: opacity 0.22s; font-family: 'DM Mono', monospace;
     }
     #sidebar.collapsed .sb-section { opacity: 0; }
-
     .sb-item {
       display: flex; align-items: center; gap: 9px;
       padding: 8px 10px; border-radius: 6px; cursor: pointer;
@@ -81,7 +71,6 @@
     .sb-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 15px; }
     .sb-label { transition: opacity 0.22s; flex: 1; }
     #sidebar.collapsed .sb-label { opacity: 0; width: 0; overflow: hidden; }
-
     .sb-badge {
       font-size: 0.55rem; font-weight: 700; padding: 2px 5px;
       border-radius: 999px; background: #ff5a1f; color: #fff;
@@ -89,37 +78,27 @@
     }
     .sb-item.active .sb-badge { background: rgba(255,255,255,0.25); }
     #sidebar.collapsed .sb-badge { opacity: 0; width: 0; padding: 0; }
-
     .sb-soon {
       font-size: 0.55rem; opacity: 0.4;
-      font-family: 'DM Mono', monospace;
-      transition: opacity 0.22s;
+      font-family: 'DM Mono', monospace; transition: opacity 0.22s;
     }
     #sidebar.collapsed .sb-soon { opacity: 0; }
-
     .sb-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 8px; }
-
-    .sb-footer {
-      border-top: 1px solid rgba(255,255,255,0.06);
-      padding: 10px 8px; flex-shrink: 0;
-    }
+    .sb-footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 8px; flex-shrink: 0; }
     .sb-user {
       display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 6px; cursor: pointer;
-      transition: background 0.18s;
+      padding: 7px 10px; border-radius: 6px; cursor: pointer; transition: background 0.18s;
     }
     .sb-user:hover { background: rgba(255,255,255,0.05); }
     .sb-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: #ff5a1f; display: flex; align-items: center;
-      justify-content: center; font-size: 0.78rem; font-weight: 700;
-      color: #fff; flex-shrink: 0;
+      width: 30px; height: 30px; border-radius: 50%; background: #ff5a1f;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0;
     }
     .sb-user-info { transition: opacity 0.22s; overflow: hidden; }
     #sidebar.collapsed .sb-user-info { opacity: 0; width: 0; }
     .sb-user-name { font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
     .sb-user-role { font-size: 0.62rem; color: #8b949e; font-family: 'DM Mono', monospace; }
-
     .sb-signout {
       display: flex; align-items: center; gap: 9px;
       padding: 7px 10px; border-radius: 6px; cursor: pointer;
@@ -127,15 +106,10 @@
       transition: all 0.18s; text-decoration: none; margin-top: 2px;
     }
     .sb-signout:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
-
-    /* ── MAIN CONTENT ── */
     #main-content {
-      margin-left: 240px; flex: 1; min-height: 100vh;
-      transition: margin-left 0.22s ease;
+      margin-left: 240px; flex: 1; min-height: 100vh; transition: margin-left 0.22s ease;
     }
     body.sb-collapsed #main-content { margin-left: 60px; }
-
-    /* ── MOBILE ── */
     #mob-btn {
       display: none; position: fixed; top: 14px; left: 14px;
       width: 38px; height: 38px; background: #0d1117;
@@ -143,10 +117,7 @@
       cursor: pointer; align-items: center; justify-content: center;
       color: #fff; font-size: 16px; z-index: 200;
     }
-    .sb-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6); z-index: 99;
-    }
+    .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
     .sb-overlay.on { display: block; }
     @media(max-width:768px){
       #sidebar { transform: translateX(-100%); width: 240px !important; transition: transform 0.22s; }
@@ -155,18 +126,13 @@
       #mob-btn { display: flex; }
       .sb-toggle { display: none; }
     }
-
-    /* ── TOAST ── */
     #cs-toast {
       position: fixed; bottom: 24px; right: 24px;
       background: #1c2128; border: 1px solid rgba(255,90,31,0.3);
       color: #fff; padding: 11px 18px; border-radius: 7px;
       font-size: 0.83rem; z-index: 9999; display: none;
-      align-items: center; gap: 8px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
-
-    /* ── DASHBOARD STYLES ── */
     .dash-wrap { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
     .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
     .dash-title em { color: var(--accent); font-style: normal; }
@@ -257,11 +223,10 @@
       </a>
 
       <div class="sb-section">ACCOUNT</div>
-      <a href="#" class="sb-item sb-soon-item">
+      <a href="pricing.html" class="sb-item">
         <span class="sb-icon">💳</span>
-        <span class="sb-label">Billing</span>
+        <span class="sb-label">Billing & Plans</span>
         <span class="sb-badge">FREE</span>
-        <span class="sb-soon">SOON</span>
       </a>
       <a href="#" class="sb-item">
         <span class="sb-icon">?</span>
@@ -284,11 +249,8 @@
     </div>
   </div>
 
-  <!-- MOBILE BUTTON & OVERLAY -->
   <button id="mob-btn">☰</button>
   <div class="sb-overlay" id="sb-overlay"></div>
-
-  <!-- TOAST -->
   <div id="cs-toast"><span style="color:#ff5a1f">⚡</span> <span id="cs-toast-msg"></span></div>
 
   <!-- MAIN CONTENT -->
@@ -326,7 +288,6 @@
   <script>
     const API_BASE = 'https://api.qraivy.com';
 
-    // Sidebar toggle
     const sidebar = document.getElementById('sidebar');
     const sbToggle = document.getElementById('sb-toggle');
     const mobBtn = document.getElementById('mob-btn');
@@ -341,15 +302,8 @@
       localStorage.setItem('sb-collapsed', c);
     });
 
-    mobBtn.addEventListener('click', () => {
-      sidebar.classList.add('mob-open');
-      overlay.classList.add('on');
-    });
-
-    overlay.addEventListener('click', () => {
-      sidebar.classList.remove('mob-open');
-      overlay.classList.remove('on');
-    });
+    mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
+    overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
 
     document.querySelectorAll('.sb-soon-item').forEach(item => {
       item.addEventListener('click', e => {
@@ -362,7 +316,6 @@
       });
     });
 
-    // Dashboard
     async function generateSpecial(qr, card) {
       const loadingEl = card.querySelector('.loading-text');
       const titleInput = card.querySelector('.special-title-input');
