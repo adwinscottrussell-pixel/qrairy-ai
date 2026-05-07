@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — Pricing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #05082e; --surface: #0d1240; --surface2: #151a4a;
+      --border: #1e2560; --accent: #ff5a1f; --accent-hover: #ff7a45;
+      --text: #ffffff; --text-dim: #6b7280; --text-mid: #9ca3af;
+      --green: #22c55e; --radius: 12px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px; border-bottom: 1px solid var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 32px; height: 32px; background: var(--accent);
+      border-radius: 7px; display: flex; align-items: center;
+      justify-content: center; font-size: 16px;
+    }
+    .logo-text { font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+    .logo-text span { color: var(--accent); font-style: italic; }
+    .btn-back {
+      font-family: 'DM Mono', monospace; font-size: 0.78rem;
+      color: var(--text-dim); text-decoration: none;
+      border-bottom: 1px dashed var(--text-dim); padding-bottom: 2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-back:hover { color: var(--accent); border-color: var(--accent); }
+    .pricing-hero { text-align: center; padding: 72px 48px 48px; }
+    .pricing-badge {
+      display: inline-block; background: rgba(255,90,31,0.15);
+      color: var(--accent); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid rgba(255,90,31,0.3); margin-bottom: 20px;
+    }
+    .pricing-title {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
+      letter-spacing: -0.04em; line-height: 1.1; margin-bottom: 16px;
+    }
+    .pricing-title em { color: var(--accent); font-style: normal; }
+    .pricing-subtitle {
+      font-family: 'DM Mono', monospace; font-size: 0.88rem;
+      color: var(--text-mid); max-width: 480px; margin: 0 auto 40px; line-height: 1.7;
+    }
+    .currency-toggle {
+      display: inline-flex; align-items: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px; margin-bottom: 48px;
+    }
+    .currency-btn {
+      padding: 7px 20px; border-radius: 6px; cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; border: none;
+      background: transparent; color: var(--text-dim); transition: all 0.18s;
+    }
+    .currency-btn.active { background: var(--accent); color: #fff; }
+    .plans-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; max-width: 1040px; margin: 0 auto; padding: 0 48px 80px;
+    }
+    .plan-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px 28px;
+      display: flex; flex-direction: column; position: relative;
+      transition: border-color 0.2s;
+    }
+    .plan-card:hover { border-color: rgba(255,90,31,0.3); }
+    .plan-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #0d1240 0%, #1a0f3a 100%);
+    }
+    .plan-popular {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #fff;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+    }
+    .plan-name {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim);
+      font-family: 'DM Mono', monospace; margin-bottom: 12px;
+    }
+    .plan-card.featured .plan-name { color: var(--accent); }
+    .plan-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px; }
+    .plan-currency { font-size: 1.2rem; font-weight: 700; color: var(--text-mid); }
+    .plan-amount { font-size: 3rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text); line-height: 1; }
+    .plan-period { font-size: 0.82rem; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+    .plan-desc {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      color: var(--text-dim); line-height: 1.6; margin-bottom: 24px; min-height: 48px;
+    }
+    .plan-divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .plan-feature { display: flex; align-items: flex-start; gap: 10px; font-size: 0.84rem; color: var(--text-mid); line-height: 1.4; }
+    .plan-feature .check {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--green); flex-shrink: 0; margin-top: 1px;
+    }
+    .plan-feature .cross {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--text-dim); flex-shrink: 0; margin-top: 1px;
+    }
+    .plan-feature.dim { color: var(--text-dim); }
+    .plan-cta {
+      margin-top: 28px; padding: 14px 20px; border-radius: 8px;
+      font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+      text-decoration: none; display: block; letter-spacing: 0.02em;
+    }
+    .plan-cta.primary { background: var(--accent); color: #fff; border: none; }
+    .plan-cta.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .plan-cta.secondary { background: transparent; color: var(--text-mid); border: 1px solid var(--border); }
+    .plan-cta.secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .plan-cta.outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .plan-cta.outline:hover { background: var(--accent); color: #fff; }
+    .faq-section { max-width: 680px; margin: 0 auto; padding: 0 48px 80px; }
+    .faq-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 32px; text-align: center; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 20px 0; }
+    .faq-q { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .faq-a { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-dim); line-height: 1.7; }
+    footer {
+      border-top: 1px solid var(--border); padding: 24px 48px;
+      font-family: 'DM Mono', monospace; font-size: 0.7rem;
+      color: var(--text-dim); text-align: center; letter-spacing: 0.05em;
+    }
+    @media(max-width: 768px) {
+      header { padding: 16px 24px; }
+      .pricing-hero { padding: 48px 24px 32px; }
+      .plans-grid { grid-template-columns: 1fr; padding: 0 24px 60px; }
+      .faq-section { padding: 0 24px 60px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" class="logo">
+      <div class="logo-icon">⬡</div>
+      <div class="logo-text">QR<span>Aivy</span></div>
+    </a>
+    <a href="dashboard.html" class="btn-back">← Back to Dashboard</a>
+  </header>
+
+  <div class="pricing-hero">
+    <div class="pricing-badge">Simple, transparent pricing</div>
+    <h1 class="pricing-title">Choose your <em>plan</em></h1>
+    <p class="pricing-subtitle">Start free. Upgrade when your business is ready to grow.</p>
+    <div class="currency-toggle">
+      <button class="currency-btn active" id="btn-usd" onclick="setCurrency('usd')">$ USD</button>
+      <button class="currency-btn" id="btn-eur" onclick="setCurrency('eur')">€ EUR</button>
+    </div>
+  </div>
+
+  <div class="plans-grid">
+    <!-- FREE -->
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">
+        <span class="plan-currency" id="free-sym">$</span>
+        <span class="plan-amount">0</span>
+        <span class="plan-period">/month</span>
+      </div>
+      <div class="plan-desc">Perfect for trying out QR code generation.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li class="plan-feature"><span class="check">✓</span> 3 QR codes</li>
+        <li class="plan-feature"><span class="check">✓</span> Basic redirect</li>
+        <li class="plan-feature"><span class="check">✓</span> Scan counting</li>
+        <li class="plan-feature"><span class="check">✓</span> Custom QR colors</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> AI landing page</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> Push notifications</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> AI chat assistant</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> Analytics dashboard</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> Business branding</li>
+      </ul>
+      <a href="index.html" class="plan-cta secondary">Get Started Free</a>
+    </div>
+
+    <!-- PRO -->
+    <div class="plan-card featured">
+      <div class="plan-popular">Most Popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">
+        <span class="plan-currency" id="pro-sym">$</span>
+        <span class="plan-amount" id="pro-price">29</span>
+        <span class="plan-period">/month</span>
+      </div>
+      <div class="plan-desc">For businesses ready to engage customers with AI.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li class="plan-feature"><span class="check">✓</span> 10 QR codes</li>
+        <li class="plan-feature"><span class="check">✓</span> Smart AI landing page</li>
+        <li class="plan-feature"><span class="check">✓</span> AI chat assistant</li>
+        <li class="plan-feature"><span class="check">✓</span> Push notifications</li>
+        <li class="plan-feature"><span class="check">✓</span> Analytics dashboard</li>
+        <li class="plan-feature"><span class="check">✓</span> Business branding</li>
+        <li class="plan-feature"><span class="check">✓</span> Subscriber management</li>
+        <li class="plan-feature"><span class="check">✓</span> AI-generated specials</li>
+        <li class="plan-feature dim"><span class="cross">✕</span> White label</li>
+      </ul>
+      <a href="#" class="plan-cta primary" onclick="handleUpgrade('pro')">Upgrade to Pro</a>
+    </div>
+
+    <!-- BUSINESS -->
+    <div class="plan-card">
+      <div class="plan-name">Business</div>
+      <div class="plan-price">
+        <span class="plan-currency" id="biz-sym">$</span>
+        <span class="plan-amount" id="biz-price">79</span>
+        <span class="plan-period">/month</span>
+      </div>
+      <div class="plan-desc">For agencies managing multiple locations.</div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li class="plan-feature"><span class="check">✓</span> Unlimited QR codes</li>
+        <li class="plan-feature"><span class="check">✓</span> Everything in Pro</li>
+        <li class="plan-feature"><span class="check">✓</span> White label branding</li>
+        <li class="plan-feature"><span class="check">✓</span> Custom domain</li>
+        <li class="plan-feature"><span class="check">✓</span> WhatsApp notifications</li>
+        <li class="plan-feature"><span class="check">✓</span> Team access</li>
+        <li class="plan-feature"><span class="check">✓</span> Priority support</li>
+        <li class="plan-feature"><span class="check">✓</span> API access</li>
+        <li class="plan-feature"><span class="check">✓</span> Advanced analytics</li>
+      </ul>
+      <a href="#" class="plan-cta outline" onclick="handleUpgrade('business')">Upgrade to Business</a>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h2 class="faq-title">Frequently asked questions</h2>
+    <div class="faq-item">
+      <div class="faq-q">What is the AI landing page?</div>
+      <div class="faq-a">When a customer scans your QR code they land on a branded page with an AI assistant that knows about your business. It answers questions and encourages customers to subscribe for special offers.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How do push notifications work?</div>
+      <div class="faq-a">Customers subscribe when they visit your AI landing page. You can then send AI-generated special offers directly to their device from your dashboard — no app required.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I cancel anytime?</div>
+      <div class="faq-a">Yes. You can cancel your subscription at any time. You will keep access until the end of your billing period.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Do you offer EUR pricing?</div>
+      <div class="faq-a">Yes — toggle to EUR above. German language version coming soon.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What happens to my QR codes if I downgrade?</div>
+      <div class="faq-a">Your QR codes will continue to redirect but AI landing page and push notification features will be disabled until you upgrade again.</div>
+    </div>
+  </div>
+
+  <footer>
+    QRAIRY.AI — Intelligent QR Codes · <a href="index.html" style="color:var(--accent);text-decoration:none">qraivy.com</a>
+  </footer>
+
+  <script>
+    const prices = {
+      usd: { pro: 29, biz: 79, sym: '$' },
+      eur: { pro: 27, biz: 73, sym: '€' }
+    };
+
+    function setCurrency(currency) {
+      const p = prices[currency];
+      document.getElementById('pro-price').textContent = p.pro;
+      document.getElementById('biz-price').textContent = p.biz;
+      document.getElementById('pro-sym').textContent = p.sym;
+      document.getElementById('biz-sym').textContent = p.sym;
+      document.getElementById('free-sym').textContent = p.sym;
+      document.getElementById('btn-usd').classList.toggle('active', currency === 'usd');
+      document.getElementById('btn-eur').classList.toggle('active', currency === 'eur');
+    }
+
+    function handleUpgrade(plan) {
+      alert(`Stripe payment coming soon!\n\nYou selected the ${plan.toUpperCase()} plan.\n\nWe will contact you to complete your upgrade.`);
+    }
+  </script>
+</body>
+</html>
