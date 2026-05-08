@@ -29,23 +29,21 @@
     <div id="clerk-sign-in"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <script>
     const clerkPubKey = 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA';
 
-    async function initClerk() {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+    script.onload = async () => {
       const clerk = new window.Clerk(clerkPubKey);
-      await clerk.load({
-        appearance: {}
-      });
+      await clerk.load();
       if (clerk.user) {
         window.location.href = 'dashboard.html';
         return;
       }
       clerk.mountSignIn(document.getElementById('clerk-sign-in'));
-    }
-
-    initClerk().catch(console.error);
+    };
+    document.head.appendChild(script);
   </script>
 </body>
 </html>
