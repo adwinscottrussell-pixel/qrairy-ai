@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <script
-    async
     crossorigin="anonymous"
     data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
@@ -37,16 +36,14 @@
   </div>
 
   <script>
-    window.addEventListener('load', async () => {
-      const clerk = window.Clerk;
-      await clerk.load({
-        publishableKey: 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA'
-      });
-      if (clerk.user) {
+    window.__clerk_frontend_api = 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+    document.addEventListener('DOMContentLoaded', async () => {
+      await window.Clerk.load();
+      if (window.Clerk.user) {
         window.location.href = 'dashboard.html';
         return;
       }
-      clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+      window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
     });
   </script>
 </body>
