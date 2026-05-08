@@ -51,9 +51,7 @@
     #businessName:focus { border-color: var(--accent); }
     #businessName::placeholder { color: var(--text-dim); }
     header { justify-content: space-between; }
-    .header-right {
-      display: flex; align-items: center; gap: 20px;
-    }
+    .header-right { display: flex; align-items: center; gap: 20px; }
     .nav-link {
       font-family: var(--font-mono); font-size: 0.75rem;
       color: var(--text-dim); text-decoration: none;
@@ -66,12 +64,9 @@
     }
     .nav-link.btn:hover { background: #ff7a45; color: #fff; }
     .pricing-teaser {
-      margin-top: 80px;
-      padding: 48px 40px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      text-align: center;
+      margin-top: 80px; padding: 48px 40px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); text-align: center;
     }
     .pricing-teaser-badge {
       display: inline-block; background: rgba(255,90,31,0.15);
@@ -81,46 +76,32 @@
       border: 1px solid rgba(255,90,31,0.3); margin-bottom: 16px;
     }
     .pricing-teaser h2 {
-      font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em;
-      margin-bottom: 12px;
+      font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 12px;
     }
     .pricing-teaser h2 em { color: var(--accent); font-style: normal; }
     .pricing-teaser p {
       font-family: var(--font-mono); font-size: 0.82rem;
-      color: var(--text-dim); line-height: 1.7; max-width: 480px;
-      margin: 0 auto 28px;
+      color: var(--text-dim); line-height: 1.7; max-width: 480px; margin: 0 auto 28px;
     }
     .pricing-plans-preview {
-      display: flex; gap: 16px; justify-content: center;
-      margin-bottom: 28px; flex-wrap: wrap;
+      display: flex; gap: 16px; justify-content: center; margin-bottom: 28px; flex-wrap: wrap;
     }
     .preview-plan {
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 20px 24px; min-width: 160px;
-      text-align: center;
+      border-radius: 8px; padding: 20px 24px; min-width: 160px; text-align: center;
     }
     .preview-plan.highlight { border-color: var(--accent); }
     .preview-plan-name {
-      font-family: var(--font-mono); font-size: 0.65rem;
-      color: var(--text-dim); text-transform: uppercase;
-      letter-spacing: 0.1em; margin-bottom: 8px;
+      font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
     }
-    .preview-plan-price {
-      font-size: 1.6rem; font-weight: 900; color: var(--text);
-      letter-spacing: -0.03em;
-    }
+    .preview-plan-price { font-size: 1.6rem; font-weight: 900; color: var(--text); letter-spacing: -0.03em; }
     .preview-plan.highlight .preview-plan-price { color: var(--accent); }
-    .preview-plan-period {
-      font-family: var(--font-mono); font-size: 0.65rem;
-      color: var(--text-dim);
-    }
+    .preview-plan-period { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); }
     .btn-pricing {
-      display: inline-block; padding: 14px 32px;
-      background: var(--accent); color: #fff;
-      border-radius: var(--radius); font-weight: 700;
-      font-size: 0.88rem; text-decoration: none;
-      transition: background 0.2s, transform 0.2s;
-      letter-spacing: 0.02em;
+      display: inline-block; padding: 14px 32px; background: var(--accent); color: #fff;
+      border-radius: var(--radius); font-weight: 700; font-size: 0.88rem; text-decoration: none;
+      transition: background 0.2s, transform 0.2s; letter-spacing: 0.02em;
     }
     .btn-pricing:hover { background: #ff7a45; transform: translateY(-1px); }
   </style>
@@ -142,23 +123,11 @@
     </section>
     <section class="generator">
       <div class="input-row">
-        <input
-          type="url"
-          id="urlInput"
-          placeholder="https://your-url.com"
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <input type="url" id="urlInput" placeholder="https://your-url.com" autocomplete="off" spellcheck="false" />
         <button id="generateBtn">Generate</button>
       </div>
       <div class="business-row">
-        <input
-          type="text"
-          id="businessName"
-          placeholder="Business name (optional) — unlocks AI landing page"
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <input type="text" id="businessName" placeholder="Business name (optional) — unlocks AI landing page" autocomplete="off" spellcheck="false" />
       </div>
       <div class="style-row">
         <div class="style-group">
