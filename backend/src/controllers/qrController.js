@@ -3,16 +3,59 @@ const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
 
+// Scrape business website using Firecrawl
+async function scrapeBusinessSite(url) {
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v2/scrape', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown'],
+        onlyMainContent: true,
+      }),
+    });
+    const data = await response.json();
+    if (data.success && data.data?.markdown) {
+      // Limit to 3000 chars to keep Claude context manageable
+      return data.data.markdown.slice(0, 3000);
+    }
+    return null;
+  } catch (err) {
+    console.error('Firecrawl scrape error:', err);
+    return null;
+  }
+}
+
 async function handleCreateQR(req, res) {
   try {
     const { url, businessName } = req.body;
     if (!url || typeof url !== 'string' || !url.startsWith('http')) {
       return res.status(400).json({ error: 'A valid URL is required.' });
     }
+
+    // Create QR first so we can return fast
     const qr = await prisma.qR.create({
       data: { originalUrl: url, businessName: businessName || null },
     });
     const redirectUrl = `https://api.qraivy.com/r/${qr.id}`;
+
+    // Scrape site in background if business name provided
+    if (businessName) {
+      scrapeBusinessSite(url).then(async (siteContent) => {
+        if (siteContent) {
+          await prisma.qR.update({
+            where: { id: qr.id },
+            data: { siteContent },
+          });
+          console.log(`Scraped site content for QR ${qr.id}`);
+        }
+      }).catch(err => console.error('Background scrape error:', err));
+    }
+
     return res.status(201).json({ id: qr.id, redirectUrl });
   } catch (err) {
     console.error('handleCreateQR error:', err);
@@ -52,6 +95,7 @@ async function handleVisit(req, res) {
       id: qr.id,
       businessName: qr.businessName,
       originalUrl: qr.originalUrl,
+      hasSiteContent: !!qr.siteContent,
     });
   } catch (err) {
     console.error('handleVisit error:', err);
@@ -69,10 +113,32 @@ async function handleChat(req, res) {
     if (!qr) {
       return res.status(404).json({ error: 'QR not found.' });
     }
+
     const messages = [
       ...(history || []),
       { role: 'user', content: message },
     ];
+
+    // Build system prompt — use real scraped content if available
+    let systemPrompt;
+    if (qr.siteContent) {
+      systemPrompt = `You are a friendly helpful assistant for ${qr.businessName}.
+Here is the actual content from their website:
+
+${qr.siteContent}
+
+Use this real information to answer customer questions accurately and specifically.
+Keep responses under 3 sentences. Be friendly and helpful.
+Always encourage the customer to subscribe for special offers at the end.`;
+    } else {
+      systemPrompt = `You are a friendly helpful assistant for ${qr.businessName}.
+The business website is ${qr.originalUrl}.
+Answer questions about this business in a friendly, concise way.
+Keep responses under 3 sentences.
+If you don't know something specific, be honest but stay helpful.
+Always encourage the customer to subscribe for special offers.`;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -83,12 +149,7 @@ async function handleChat(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
-        system: `You are a friendly helpful assistant for ${qr.businessName}. 
-The business website is ${qr.originalUrl}. 
-Answer questions about this business in a friendly, concise way.
-Keep responses under 3 sentences.
-If you don't know something specific about the business, be honest but stay helpful.
-Always encourage the customer to subscribe for special offers.`,
+        system: systemPrompt,
         messages,
       }),
     });
@@ -135,6 +196,7 @@ async function handleDashboard(req, res) {
       redirectUrl: `https://api.qraivy.com/r/${qr.id}`,
       totalScans: qr.scans.length,
       totalSubscribers: qr.subscribers.length,
+      hasSiteContent: !!qr.siteContent,
       createdAt: qr.createdAt,
     }));
     return res.status(200).json({ dashboard });
@@ -172,9 +234,7 @@ async function handleSendSpecial(req, res) {
     if (!qrId || !message || !title) {
       return res.status(400).json({ error: 'qrId, title and message are required.' });
     }
-    const subscribers = await prisma.subscriber.findMany({
-      where: { qrId },
-    });
+    const subscribers = await prisma.subscriber.findMany({ where: { qrId } });
     if (subscribers.length === 0) {
       return res.status(400).json({ error: 'No subscribers for this QR code.' });
     }

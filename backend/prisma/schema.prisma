@@ -11,6 +11,7 @@ model QR {
   id           String       @id @default(uuid())
   originalUrl  String
   businessName String?
+  siteContent  String?
   createdAt    DateTime     @default(now())
   scans        Scan[]
   subscribers  Subscriber[]
@@ -25,9 +26,9 @@ model Scan {
 }
 
 model Subscriber {
-  id            String   @id @default(uuid())
-  qrId          String
-  oneSignalId   String
-  createdAt     DateTime @default(now())
-  qr            QR       @relation(fields: [qrId], references: [id])
+  id          String   @id @default(uuid())
+  qrId        String
+  oneSignalId String
+  createdAt   DateTime @default(now())
+  qr          QR       @relation(fields: [qrId], references: [id])
 }
