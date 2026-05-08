@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; background: #0d1117;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter', sans-serif;
+    }
+    .login-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 32px;
+    }
+    .logo {
+      font-size: 1.6rem; font-weight: 900; color: #fff; letter-spacing: -0.03em;
+    }
+    .logo span { color: #ff5a1f; font-style: italic; }
+    #clerk-sign-in { width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="logo">QR<span>Aivy</span></div>
+    <div id="clerk-sign-in"></div>
+  </div>
+  <script>
+    const clerk = new Clerk('pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA');
+    clerk.load().then(() => {
+      if (clerk.user) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+      clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+    });
+  </script>
+</body>
+</html>

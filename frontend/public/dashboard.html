@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { display: flex; min-height: 100vh; background: var(--bg); }
@@ -187,7 +188,6 @@
         <span class="sb-icon">↗</span>
         <span class="sb-label">Analytics</span>
       </a>
-
       <div class="sb-section">ENGAGE</div>
       <a href="dashboard.html" class="sb-item">
         <span class="sb-icon">🔔</span>
@@ -204,7 +204,6 @@
         <span class="sb-label">Customers</span>
         <span class="sb-soon">SOON</span>
       </a>
-
       <div class="sb-section">CONFIGURE</div>
       <a href="#" class="sb-item sb-soon-item">
         <span class="sb-icon">🎨</span>
@@ -221,7 +220,6 @@
         <span class="sb-label">Settings</span>
         <span class="sb-soon">SOON</span>
       </a>
-
       <div class="sb-section">ACCOUNT</div>
       <a href="pricing.html" class="sb-item">
         <span class="sb-icon">💳</span>
@@ -235,9 +233,9 @@
     </nav>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">A</div>
+        <div class="sb-avatar">?</div>
         <div class="sb-user-info">
-          <div class="sb-user-name">Admin</div>
+          <div class="sb-user-name">Loading...</div>
           <div class="sb-user-role">Business Owner</div>
         </div>
       </div>
@@ -285,9 +283,31 @@
     </footer>
   </div>
 
-  <script>
+  <script type="module">
+    const CLERK_KEY = 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA';
     const API_BASE = 'https://api.qraivy.com';
 
+    // Init Clerk and protect route
+    const clerk = new Clerk(CLERK_KEY);
+    await clerk.load();
+
+    if (!clerk.user) {
+      window.location.href = 'login.html';
+    }
+
+    // Update sidebar with real user info
+    const userName = clerk.user.firstName || clerk.user.emailAddresses[0].emailAddress;
+    document.querySelector('.sb-user-name').textContent = userName;
+    document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
+
+    // Sign out
+    document.querySelector('.sb-signout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await clerk.signOut();
+      window.location.href = 'login.html';
+    });
+
+    // Sidebar toggle
     const sidebar = document.getElementById('sidebar');
     const sbToggle = document.getElementById('sb-toggle');
     const mobBtn = document.getElementById('mob-btn');
@@ -334,9 +354,13 @@
       messageLabel.style.display = 'none';
 
       try {
+        const token = await clerk.session.getToken();
         const response = await fetch(`${API_BASE}/generate-special`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ businessName: qr.businessName, originalUrl: qr.originalUrl }),
         });
         const data = await response.json();
@@ -370,9 +394,13 @@
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending...';
       try {
+        const token = await clerk.session.getToken();
         const res = await fetch(`${API_BASE}/send-special`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ qrId, title, message }),
         });
         const data = await res.json();
@@ -396,7 +424,10 @@
 
     async function loadDashboard() {
       try {
-        const res = await fetch(`${API_BASE}/dashboard`);
+        const token = await clerk.session.getToken();
+        const res = await fetch(`${API_BASE}/dashboard`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await res.json();
         const { dashboard } = data;
         document.getElementById('loading').style.display = 'none';
