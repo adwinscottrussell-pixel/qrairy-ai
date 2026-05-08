@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,12 +30,6 @@
     <div id="clerk-sign-in"></div>
   </div>
 
-  <script
-    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
-    type="text/javascript"
-    onload="initClerk()"
-  ></script>
   <script>
     async function initClerk() {
       await window.Clerk.load();
@@ -45,5 +40,11 @@
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
     }
   </script>
+  <script
+    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"
+    onload="initClerk()"
+  ></script>
 </body>
 </html>
