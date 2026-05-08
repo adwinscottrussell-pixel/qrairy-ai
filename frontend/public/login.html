@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +36,11 @@
         window.location.href = 'dashboard.html';
         return;
       }
-      window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'));
+      window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+        afterSignInUrl: 'https://www.qraivy.com/dashboard.html',
+        afterSignUpUrl: 'https://www.qraivy.com/dashboard.html',
+        redirectUrl: 'https://www.qraivy.com/dashboard.html'
+      });
     }
   </script>
   <script
