@@ -6,7 +6,13 @@
   <title>QRAIRY.AI — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -29,9 +35,13 @@
     <div class="logo">QR<span>Aivy</span></div>
     <div id="clerk-sign-in"></div>
   </div>
+
   <script>
-    const clerk = new Clerk('pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA');
-    clerk.load().then(() => {
+    window.addEventListener('load', async () => {
+      const clerk = window.Clerk;
+      await clerk.load({
+        publishableKey: 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA'
+      });
       if (clerk.user) {
         window.location.href = 'dashboard.html';
         return;
