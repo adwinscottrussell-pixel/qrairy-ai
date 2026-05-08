@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { display: flex; min-height: 100vh; background: var(--bg); }
@@ -283,58 +282,52 @@
     </footer>
   </div>
 
-  <script type="module">
-    const CLERK_KEY = 'pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  <script>
     const API_BASE = 'https://api.qraivy.com';
 
-    // Init Clerk and protect route
-    const clerk = new Clerk(CLERK_KEY);
-    await clerk.load();
+    async function initDashboard() {
+      await window.Clerk.load();
+      if (!window.Clerk.user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const userName = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+      document.querySelector('.sb-user-name').textContent = userName;
+      document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
 
-    if (!clerk.user) {
-      window.location.href = 'login.html';
-    }
-
-    // Update sidebar with real user info
-    const userName = clerk.user.firstName || clerk.user.emailAddresses[0].emailAddress;
-    document.querySelector('.sb-user-name').textContent = userName;
-    document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
-
-    // Sign out
-    document.querySelector('.sb-signout').addEventListener('click', async (e) => {
-      e.preventDefault();
-      await clerk.signOut();
-      window.location.href = 'login.html';
-    });
-
-    // Sidebar toggle
-    const sidebar = document.getElementById('sidebar');
-    const sbToggle = document.getElementById('sb-toggle');
-    const mobBtn = document.getElementById('mob-btn');
-    const overlay = document.getElementById('sb-overlay');
-
-    const isCollapsed = localStorage.getItem('sb-collapsed') === 'true';
-    if (isCollapsed) { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-
-    sbToggle.addEventListener('click', () => {
-      const c = sidebar.classList.toggle('collapsed');
-      document.body.classList.toggle('sb-collapsed', c);
-      localStorage.setItem('sb-collapsed', c);
-    });
-
-    mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
-    overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
-
-    document.querySelectorAll('.sb-soon-item').forEach(item => {
-      item.addEventListener('click', e => {
+      document.querySelector('.sb-signout').addEventListener('click', async (e) => {
         e.preventDefault();
-        const label = item.querySelector('.sb-label').textContent;
-        const toast = document.getElementById('cs-toast');
-        document.getElementById('cs-toast-msg').textContent = `${label} is coming soon!`;
-        toast.style.display = 'flex';
-        setTimeout(() => toast.style.display = 'none', 3000);
+        await window.Clerk.signOut();
+        window.location.href = 'login.html';
       });
-    });
+
+      const sidebar = document.getElementById('sidebar');
+      const sbToggle = document.getElementById('sb-toggle');
+      const mobBtn = document.getElementById('mob-btn');
+      const overlay = document.getElementById('sb-overlay');
+      const isCollapsed = localStorage.getItem('sb-collapsed') === 'true';
+      if (isCollapsed) { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+      sbToggle.addEventListener('click', () => {
+        const c = sidebar.classList.toggle('collapsed');
+        document.body.classList.toggle('sb-collapsed', c);
+        localStorage.setItem('sb-collapsed', c);
+      });
+      mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
+      overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
+
+      document.querySelectorAll('.sb-soon-item').forEach(item => {
+        item.addEventListener('click', e => {
+          e.preventDefault();
+          const label = item.querySelector('.sb-label').textContent;
+          const toast = document.getElementById('cs-toast');
+          document.getElementById('cs-toast-msg').textContent = `${label} is coming soon!`;
+          toast.style.display = 'flex';
+          setTimeout(() => toast.style.display = 'none', 3000);
+        });
+      });
+
+      loadDashboard();
+    }
 
     async function generateSpecial(qr, card) {
       const loadingEl = card.querySelector('.loading-text');
@@ -344,7 +337,6 @@
       const messageLabel = card.querySelectorAll('.field-label')[1];
       const sendBtn = card.querySelector('.btn-send');
       const aiBtn = card.querySelector('.btn-ai');
-
       aiBtn.disabled = true;
       aiBtn.textContent = 'Generating...';
       loadingEl.style.display = 'block';
@@ -352,15 +344,11 @@
       messageInput.style.display = 'none';
       titleLabel.style.display = 'none';
       messageLabel.style.display = 'none';
-
       try {
-        const token = await clerk.session.getToken();
+        const token = await window.Clerk.session.getToken();
         const response = await fetch(`${API_BASE}/generate-special`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ businessName: qr.businessName, originalUrl: qr.originalUrl }),
         });
         const data = await response.json();
@@ -394,13 +382,10 @@
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending...';
       try {
-        const token = await clerk.session.getToken();
+        const token = await window.Clerk.session.getToken();
         const res = await fetch(`${API_BASE}/send-special`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ qrId, title, message }),
         });
         const data = await res.json();
@@ -424,7 +409,7 @@
 
     async function loadDashboard() {
       try {
-        const token = await clerk.session.getToken();
+        const token = await window.Clerk.session.getToken();
         const res = await fetch(`${API_BASE}/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -464,8 +449,12 @@
         console.error(err);
       }
     }
-
-    loadDashboard();
   </script>
+  <script
+    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"
+    onload="initDashboard()"
+  ></script>
 </body>
 </html>
