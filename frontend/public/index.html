@@ -98,7 +98,7 @@
     .hero-badge::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     .hero h1 {
-      font-family: var(--font-display); font-size: clamp(2.8rem, 6vw, 5rem);
+      font-family: var(--font-display); font-size: clamp(1.8rem, 7vw, 5rem);
       font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
       margin-bottom: 24px; max-width: 800px;
     }
@@ -403,8 +403,10 @@
       .qr-type-card.row2-start { grid-column: auto; }
     }
     @media(max-width: 768px) {
-      nav { padding: 14px 20px; }
+      nav { padding: 12px 16px; }
       .nav-links .nav-link:not(.nav-cta) { display: none; }
+      .nav-cta { padding: 7px 12px; font-size: 0.72rem; white-space: nowrap; }
+      .nav-logo { font-size: 1rem; }
       .hero { padding: 100px 20px 60px; }
       .hero-stats { gap: 24px; }
       .section-wrap { padding: 0 20px; }
