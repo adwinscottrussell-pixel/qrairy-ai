@@ -542,7 +542,10 @@
       sidebarBadge.textContent = planInfo.plan.toUpperCase();
 
       // Show AI landing page usage for Starter
-      if (planInfo.aiLimit !== null) {
+      if (planInfo.plan === 'free') {
+        progress.style.display = 'none';
+        infoText.innerHTML = `<strong>Free plan</strong> — Basic QR codes free forever. <a href='pricing.html' style='color:#ff5a1f'>Upgrade for AI landing pages →</a>`;
+      } else if (planInfo.aiLimit !== null) {
         infoText.innerHTML = `<strong>${planInfo.aiQrCount}</strong> of <strong>${planInfo.aiLimit}</strong> AI landing pages used`;
         const pct = Math.min((planInfo.aiQrCount / planInfo.aiLimit) * 100, 100);
         progress.style.display = 'block';
