@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id
+  email     String?
+  phone     String?
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+  qrs       QR[]
+}
+
+model QR {
+  id             String       @id @default(uuid())
+  originalUrl    String
+  businessName   String?
+  siteContent    String?
+  userId         String?
+  isDynamic      Boolean      @default(false)
+  destinationUrl String?
+  createdAt      DateTime     @default(now())
+  user           User?        @relation(fields: [userId], references: [id])
+  scans          Scan[]
+  subscribers    Subscriber[]
+}
+
+model Scan {
+  id        String   @id @default(uuid())
+  qrId      String
+  userAgent String
+  createdAt DateTime @default(now())
+  qr        QR       @relation(fields: [qrId], references: [id])
+}
+
+model Subscriber {
+  id          String   @id @default(uuid())
+  qrId        String
+  oneSignalId String
+  createdAt   DateTime @default(now())
+  qr          QR       @relation(fields: [qrId], references: [id])
+}
