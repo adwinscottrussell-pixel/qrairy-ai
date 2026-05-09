@@ -2,7 +2,7 @@ const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
-const Clerk = require('@clerk/backend');
+const { verifyToken } = require('@clerk/backend');
 
 const PLAN_LIMITS = { free: 2, starter: 10, pro: Infinity };
 
@@ -10,8 +10,9 @@ async function getUserFromToken(authHeader) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.split(' ')[1];
-    const sdk = Clerk.createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
-    const payload = await sdk.verifyToken(token);
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
     return payload.sub;
   } catch (err) {
     console.error('Token verification error:', err.message);
@@ -109,13 +110,13 @@ async function handleGetUserPlan(req, res) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await upsertUser(userId);
-    const limit = PLAN_LIMITS[user.plan] || 2;
+    const limit = PLAN_LIMITS[user.plan] === Infinity ? null : PLAN_LIMITS[user.plan];
 
     return res.status(200).json({
       plan: user.plan,
       qrCount: user.qrs.length,
       limit,
-      canCreate: user.qrs.length < limit,
+      canCreate: limit === null || user.qrs.length < limit,
     });
   } catch (err) {
     console.error('handleGetUserPlan error:', err);
