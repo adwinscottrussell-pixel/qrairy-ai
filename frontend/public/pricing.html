@@ -9,25 +9,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg: #05082e; --surface: #0d1240; --surface2: #151a4a;
-      --border: #1e2560; --accent: #ff5a1f; --accent-hover: #ff7a45;
-      --text: #ffffff; --text-dim: #6b7280; --text-mid: #9ca3af;
-      --green: #22c55e; --radius: 12px;
+      --bg: #05082e;
+      --surface: #0d1240;
+      --surface2: #151a4a;
+      --border: #1e2560;
+      --accent: #ff5a1f;
+      --accent-hover: #ff7a45;
+      --text: #ffffff;
+      --text-dim: #6b7280;
+      --text-mid: #9ca3af;
+      --gold: #f59e0b;
+      --green: #22c55e;
+      --radius: 12px;
     }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
     header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 20px 48px; border-bottom: 1px solid var(--border);
     }
-    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
     .logo-icon {
       width: 32px; height: 32px; background: var(--accent);
       border-radius: 7px; display: flex; align-items: center;
       justify-content: center; font-size: 16px;
     }
-    .logo-text { font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+    .logo-text {
+      font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;
+    }
     .logo-text span { color: var(--accent); font-style: italic; }
+    .header-nav { display: flex; align-items: center; gap: 16px; }
     .btn-back {
       font-family: 'DM Mono', monospace; font-size: 0.78rem;
       color: var(--text-dim); text-decoration: none;
@@ -35,7 +58,11 @@
       transition: color 0.2s, border-color 0.2s;
     }
     .btn-back:hover { color: var(--accent); border-color: var(--accent); }
-    .pricing-hero { text-align: center; padding: 72px 48px 48px; }
+
+    /* ── HERO ── */
+    .pricing-hero {
+      text-align: center; padding: 72px 48px 48px;
+    }
     .pricing-badge {
       display: inline-block; background: rgba(255,90,31,0.15);
       color: var(--accent); font-size: 0.72rem; font-weight: 700;
@@ -50,57 +77,88 @@
     .pricing-title em { color: var(--accent); font-style: normal; }
     .pricing-subtitle {
       font-family: 'DM Mono', monospace; font-size: 0.88rem;
-      color: var(--text-mid); max-width: 480px; margin: 0 auto 40px; line-height: 1.7;
+      color: var(--text-mid); max-width: 480px; margin: 0 auto 40px;
+      line-height: 1.7;
     }
+
+    /* ── CURRENCY TOGGLE ── */
     .currency-toggle {
-      display: inline-flex; align-items: center;
+      display: inline-flex; align-items: center; gap: 0;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 8px; padding: 4px; margin-bottom: 48px;
     }
     .currency-btn {
       padding: 7px 20px; border-radius: 6px; cursor: pointer;
       font-size: 0.82rem; font-weight: 600; border: none;
-      background: transparent; color: var(--text-dim); transition: all 0.18s;
+      background: transparent; color: var(--text-dim);
+      transition: all 0.18s;
     }
-    .currency-btn.active { background: var(--accent); color: #fff; }
+    .currency-btn.active {
+      background: var(--accent); color: #fff;
+    }
+
+    /* ── PLANS ── */
     .plans-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 20px; max-width: 1040px; margin: 0 auto; padding: 0 48px 80px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
     }
+
     .plan-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 32px 28px;
-      display: flex; flex-direction: column; position: relative;
-      transition: border-color 0.2s;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      display: flex; flex-direction: column;
+      position: relative; transition: border-color 0.2s;
     }
     .plan-card:hover { border-color: rgba(255,90,31,0.3); }
     .plan-card.featured {
       border-color: var(--accent);
       background: linear-gradient(135deg, #0d1240 0%, #1a0f3a 100%);
     }
+
     .plan-popular {
       position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
       background: var(--accent); color: #fff;
       font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
-      text-transform: uppercase; padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+      text-transform: uppercase; padding: 4px 14px; border-radius: 999px;
+      white-space: nowrap;
     }
+
     .plan-name {
       font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em;
       text-transform: uppercase; color: var(--text-dim);
       font-family: 'DM Mono', monospace; margin-bottom: 12px;
     }
     .plan-card.featured .plan-name { color: var(--accent); }
-    .plan-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px; }
+
+    .plan-price {
+      display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px;
+    }
     .plan-currency { font-size: 1.2rem; font-weight: 700; color: var(--text-mid); }
-    .plan-amount { font-size: 3rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text); line-height: 1; }
+    .plan-amount {
+      font-size: 3rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text);
+      line-height: 1;
+    }
     .plan-period { font-size: 0.82rem; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+
     .plan-desc {
       font-family: 'DM Mono', monospace; font-size: 0.75rem;
-      color: var(--text-dim); line-height: 1.6; margin-bottom: 24px; min-height: 48px;
+      color: var(--text-dim); line-height: 1.6; margin-bottom: 24px;
+      min-height: 48px;
     }
+
     .plan-divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+
     .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-    .plan-feature { display: flex; align-items: flex-start; gap: 10px; font-size: 0.84rem; color: var(--text-mid); line-height: 1.4; }
+    .plan-feature {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 0.84rem; color: var(--text-mid); line-height: 1.4;
+    }
     .plan-feature .check {
       width: 16px; height: 16px; border-radius: 50%;
       background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);
@@ -114,28 +172,55 @@
       font-size: 9px; color: var(--text-dim); flex-shrink: 0; margin-top: 1px;
     }
     .plan-feature.dim { color: var(--text-dim); }
+
     .plan-cta {
       margin-top: 28px; padding: 14px 20px; border-radius: 8px;
       font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 700;
       cursor: pointer; transition: all 0.2s; text-align: center;
       text-decoration: none; display: block; letter-spacing: 0.02em;
     }
-    .plan-cta.primary { background: var(--accent); color: #fff; border: none; }
+    .plan-cta.primary {
+      background: var(--accent); color: #fff; border: none;
+    }
     .plan-cta.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    .plan-cta.secondary { background: transparent; color: var(--text-mid); border: 1px solid var(--border); }
+    .plan-cta.secondary {
+      background: transparent; color: var(--text-mid);
+      border: 1px solid var(--border);
+    }
     .plan-cta.secondary:hover { border-color: var(--accent); color: var(--accent); }
-    .plan-cta.outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .plan-cta.outline {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent);
+    }
     .plan-cta.outline:hover { background: var(--accent); color: #fff; }
-    .faq-section { max-width: 680px; margin: 0 auto; padding: 0 48px 80px; }
-    .faq-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 32px; text-align: center; }
-    .faq-item { border-bottom: 1px solid var(--border); padding: 20px 0; }
-    .faq-q { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
-    .faq-a { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-dim); line-height: 1.7; }
+
+    /* ── FAQ ── */
+    .faq-section {
+      max-width: 680px; margin: 0 auto; padding: 0 48px 80px;
+    }
+    .faq-title {
+      font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em;
+      margin-bottom: 32px; text-align: center;
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--border); padding: 20px 0;
+    }
+    .faq-q {
+      font-size: 0.9rem; font-weight: 600; color: var(--text);
+      margin-bottom: 8px; cursor: pointer;
+    }
+    .faq-a {
+      font-family: 'DM Mono', monospace; font-size: 0.78rem;
+      color: var(--text-dim); line-height: 1.7;
+    }
+
+    /* ── FOOTER ── */
     footer {
       border-top: 1px solid var(--border); padding: 24px 48px;
       font-family: 'DM Mono', monospace; font-size: 0.7rem;
       color: var(--text-dim); text-align: center; letter-spacing: 0.05em;
     }
+
     @media(max-width: 768px) {
       header { padding: 16px 24px; }
       .pricing-hero { padding: 48px 24px 32px; }
@@ -145,12 +230,15 @@
   </style>
 </head>
 <body>
+
   <header>
     <a href="index.html" class="logo">
       <div class="logo-icon">⬡</div>
       <div class="logo-text">QR<span>Aivy</span></div>
     </a>
-    <a href="index.html" class="btn-back">← Back to Home</a>
+    <div class="header-nav">
+      <a href="dashboard.html" class="btn-back">← Back to Dashboard</a>
+    </div>
   </header>
 
   <div class="pricing-hero">
@@ -164,6 +252,7 @@
   </div>
 
   <div class="plans-grid">
+
     <!-- FREE -->
     <div class="plan-card">
       <div class="plan-name">Free</div>
@@ -197,7 +286,7 @@
         <span class="plan-amount" id="pro-price">29</span>
         <span class="plan-period">/month</span>
       </div>
-      <div class="plan-desc">For businesses ready to engage customers with AI.</div>
+      <div class="plan-desc">For businesses ready to engage their customers with AI.</div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
         <li class="plan-feature"><span class="check">✓</span> 10 QR codes</li>
@@ -221,7 +310,7 @@
         <span class="plan-amount" id="biz-price">79</span>
         <span class="plan-period">/month</span>
       </div>
-      <div class="plan-desc">For agencies managing multiple locations.</div>
+      <div class="plan-desc">For agencies and businesses managing multiple locations.</div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
         <li class="plan-feature"><span class="check">✓</span> Unlimited QR codes</li>
@@ -236,13 +325,15 @@
       </ul>
       <a href="#" class="plan-cta outline" onclick="handleUpgrade('business')">Upgrade to Business</a>
     </div>
+
   </div>
 
+  <!-- FAQ -->
   <div class="faq-section">
     <h2 class="faq-title">Frequently asked questions</h2>
     <div class="faq-item">
       <div class="faq-q">What is the AI landing page?</div>
-      <div class="faq-a">When a customer scans your QR code they land on a branded page with an AI assistant that knows about your business. It answers questions and encourages customers to subscribe for special offers.</div>
+      <div class="faq-a">When a customer scans your QR code they land on a branded page with an AI assistant that knows about your business. It can answer questions, show your services and encourage customers to subscribe for special offers.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">How do push notifications work?</div>
@@ -254,11 +345,11 @@
     </div>
     <div class="faq-item">
       <div class="faq-q">Do you offer EUR pricing?</div>
-      <div class="faq-a">Yes — toggle to EUR above. German language version coming soon.</div>
+      <div class="faq-a">Yes — toggle to EUR above. We also offer a German language version of the platform. Coming soon.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">What happens to my QR codes if I downgrade?</div>
-      <div class="faq-a">Your QR codes will continue to redirect but AI landing page and push notification features will be disabled until you upgrade again.</div>
+      <div class="faq-a">Your QR codes will continue to redirect but the AI landing page and push notification features will be disabled until you upgrade again.</div>
     </div>
   </div>
 
@@ -284,8 +375,10 @@
     }
 
     function handleUpgrade(plan) {
-      alert(`Stripe payment coming soon!\n\nYou selected the ${plan.toUpperCase()} plan.\n\nWe will contact you to complete your upgrade.`);
+      // Placeholder — connect Stripe here later
+      alert(`Stripe payment coming soon!\n\nYou selected the ${plan.toUpperCase()} plan.\n\nWe will contact you at adwinscottrussell@gmail.com to complete your upgrade.`);
     }
   </script>
+
 </body>
 </html>
