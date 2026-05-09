@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   handleCreateQR,
   handleGetUserPlan,
+  handleUpdateUserPhone,
   handleRedirect,
   handleVisit,
   handleChat,
@@ -15,6 +16,7 @@ const {
 
 router.post('/qr', handleCreateQR);
 router.get('/user/plan', handleGetUserPlan);
+router.post('/user/phone', handleUpdateUserPhone);
 router.get('/r/:id', handleRedirect);
 router.get('/visit/:id', handleVisit);
 router.post('/chat', handleChat);

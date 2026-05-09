@@ -115,9 +115,31 @@ async function handleGetUserPlan(req, res) {
       qrCount: user.qrs.length,
       limit,
       canCreate: limit === null || user.qrs.length < limit,
+      hasPhone: !!user.phone,
     });
   } catch (err) {
     console.error('handleGetUserPlan error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function handleUpdateUserPhone(req, res) {
+  try {
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'Phone number is required.' });
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: { phone },
+      create: { id: userId, phone },
+    });
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('handleUpdateUserPhone error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
@@ -273,6 +295,7 @@ async function handleDashboard(req, res) {
         qrCount: user.qrs.length,
         limit,
         canCreate: limit === null || user.qrs.length < limit,
+        hasPhone: !!user.phone,
       };
     }
 
@@ -375,6 +398,7 @@ Write ONLY the notification message (max 100 characters). Make it exciting with 
 module.exports = {
   handleCreateQR,
   handleGetUserPlan,
+  handleUpdateUserPhone,
   handleRedirect,
   handleVisit,
   handleChat,

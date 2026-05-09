@@ -10,6 +10,7 @@ datasource db {
 model User {
   id        String   @id
   email     String?
+  phone     String?
   plan      String   @default("free")
   createdAt DateTime @default(now())
   qrs       QR[]
