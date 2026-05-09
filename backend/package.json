@@ -13,7 +13,11 @@
     "@clerk/backend": "^1.13.0",
     "@prisma/client": "^5.14.0",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "helmet": "^8.1.0",
+    "jszip": "^3.10.1",
+    "multer": "^2.1.1",
+    "node-forge": "^1.4.0"
   },
   "devDependencies": {
     "prisma": "^5.14.0"
