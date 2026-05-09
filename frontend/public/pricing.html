@@ -100,7 +100,7 @@
     /* ── PLANS ── */
     .plans-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 20px;
       max-width: 1040px;
       margin: 0 auto;
@@ -374,32 +374,11 @@
       document.getElementById('btn-eur').classList.toggle('active', currency === 'eur');
     }
 
-    async function handleUpgrade(plan) {
-      if (!window.Clerk?.user) { window.location.href = 'login.html'; return; }
-      const btns = document.querySelectorAll('.plan-cta');
-      btns.forEach(b => b.disabled = true);
-      try {
-        const token = await window.Clerk.session.getToken();
-        const res = await fetch('https://api.qraivy.com/stripe/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ plan }),
-        });
-        const data = await res.json();
-        if (data.url) { window.location.href = data.url; }
-        else { alert(data.error || 'Something went wrong.'); btns.forEach(b => b.disabled = false); }
-      } catch (err) {
-        alert('Could not reach the server.');
-        btns.forEach(b => b.disabled = false);
-      }
+    function handleUpgrade(plan) {
+      // Placeholder — connect Stripe here later
+      alert(`Stripe payment coming soon!\n\nYou selected the ${plan.toUpperCase()} plan.\n\nWe will contact you at adwinscottrussell@gmail.com to complete your upgrade.`);
     }
   </script>
 
-  <script
-    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
-    type="text/javascript"
-    onload="window.Clerk.load()"
-  ></script>
 </body>
 </html>
