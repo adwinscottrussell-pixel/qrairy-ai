@@ -134,8 +134,116 @@
       align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     .dash-wrap { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
-    .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .dash-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px; flex-wrap: wrap; gap: 12px;
+    }
+    .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; }
     .dash-title em { color: var(--accent); font-style: normal; }
+    .btn-new-qr {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; background: #ff5a1f; color: #fff;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-size: 0.85rem;
+      font-weight: 700; transition: all 0.18s; letter-spacing: 0.01em;
+    }
+    .btn-new-qr:hover { background: #ff7a45; transform: translateY(-1px); }
+
+    /* QR GENERATOR PANEL */
+    .qr-generator-panel {
+      background: #0d1117;
+      border: 1px solid rgba(255,90,31,0.25);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      max-height: 0;
+      transition: max-height 0.4s ease, opacity 0.3s ease;
+      opacity: 0;
+    }
+    .qr-generator-panel.open {
+      max-height: 800px;
+      opacity: 1;
+    }
+    .qr-gen-inner { padding: 28px; }
+    .qr-gen-title {
+      font-family: 'Syne', sans-serif; font-size: 1rem;
+      font-weight: 800; margin-bottom: 20px; color: #fff;
+    }
+    .qr-gen-title span { color: #ff5a1f; font-style: italic; }
+    .qr-gen-form { display: flex; flex-direction: column; gap: 14px; }
+    .gen-label {
+      font-family: 'DM Mono', monospace; font-size: 0.62rem;
+      color: #4a6078; letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 5px; display: block;
+    }
+    .gen-input {
+      width: 100%; padding: 11px 14px;
+      background: #080b10; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: #f0f4f8;
+      font-family: 'DM Mono', monospace; font-size: 0.82rem;
+      outline: none; transition: border-color 0.18s;
+    }
+    .gen-input:focus { border-color: #ff5a1f; }
+    .gen-input::placeholder { color: #4a6078; }
+    .gen-row { display: flex; gap: 12px; }
+    .gen-row .gen-group { flex: 1; }
+    .gen-group { display: flex; flex-direction: column; }
+    .gen-color-wrap { display: flex; gap: 8px; align-items: center; }
+    .gen-color-wrap input[type="color"] {
+      width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; background: #080b10; cursor: pointer; padding: 3px;
+    }
+    .gen-select {
+      width: 100%; padding: 11px 14px; background: #080b10;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      color: #f0f4f8; font-family: 'DM Mono', monospace;
+      font-size: 0.82rem; outline: none; cursor: pointer;
+    }
+    .gen-btn {
+      padding: 13px; background: #ff5a1f; color: #fff;
+      border: none; border-radius: 8px;
+      font-family: 'Syne', sans-serif; font-size: 0.9rem;
+      font-weight: 700; cursor: pointer; transition: all 0.18s;
+    }
+    .gen-btn:hover { background: #ff7a45; }
+    .gen-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .gen-error {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: #ef4444; display: none;
+    }
+    .gen-result {
+      display: none; margin-top: 20px; padding: 20px;
+      background: #080b10; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; text-align: center;
+    }
+    .gen-result.show { display: block; }
+    .gen-qr-img {
+      width: 160px; height: 160px; border-radius: 8px;
+      background: #fff; padding: 6px; margin: 0 auto 14px; display: block;
+    }
+    .gen-result-url {
+      font-family: 'DM Mono', monospace; font-size: 0.68rem;
+      color: #4a6078; margin-bottom: 12px; word-break: break-all;
+    }
+    .gen-result-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .gen-result-btn {
+      padding: 8px 16px; border-radius: 7px;
+      font-family: 'Syne', sans-serif; font-size: 0.78rem;
+      font-weight: 700; cursor: pointer; transition: all 0.18s;
+      border: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .gen-result-btn.primary { background: #ff5a1f; color: #fff; }
+    .gen-result-btn.primary:hover { background: #ff7a45; }
+    .gen-result-btn.outline {
+      background: transparent; color: #8b949e;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .gen-result-btn.outline:hover { border-color: #ff5a1f; color: #ff5a1f; }
+    .gen-success-msg {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: #22c55e; margin-top: 10px; display: none;
+    }
+
     .plan-banner {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 20px; border-radius: 10px; margin-bottom: 24px;
@@ -311,9 +419,9 @@
         <span class="sb-icon">⊞</span>
         <span class="sb-label">Dashboard</span>
       </a>
-      <a href="index.html" class="sb-item">
-        <span class="sb-icon">⬡</span>
-        <span class="sb-label">QR Generator</span>
+      <a href="#" class="sb-item" id="sb-create-qr">
+        <span class="sb-icon">＋</span>
+        <span class="sb-label">Create QR Code</span>
       </a>
       <a href="analytics.html" class="sb-item">
         <span class="sb-icon">↗</span>
@@ -386,11 +494,68 @@
     <div class="noise"></div>
     <main>
       <div class="dash-wrap">
-        <h1 class="dash-title">Business <em>Dashboard</em></h1>
-        <p style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-dim);margin-bottom:8px">
+        <div class="dash-header">
+          <h1 class="dash-title">Business <em>Dashboard</em></h1>
+          <button class="btn-new-qr" id="toggle-generator">⬡ Create New QR</button>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-dim);margin-bottom:20px">
           Manage your QR codes, view subscribers and send AI-generated specials.
         </p>
 
+        <!-- QR GENERATOR PANEL -->
+        <div class="qr-generator-panel" id="qr-generator-panel">
+          <div class="qr-gen-inner">
+            <div class="qr-gen-title">Create a new <span>AI QR code</span></div>
+            <div class="qr-gen-form">
+              <div class="gen-group">
+                <label class="gen-label">Your URL *</label>
+                <input type="url" class="gen-input" id="gen-url" placeholder="https://your-website.com" autocomplete="off" />
+              </div>
+              <div class="gen-group">
+                <label class="gen-label">Business Name — unlocks AI landing page</label>
+                <input type="text" class="gen-input" id="gen-business" placeholder="e.g. Joe's Coffee Shop" autocomplete="off" />
+              </div>
+              <div class="gen-row">
+                <div class="gen-group">
+                  <label class="gen-label">QR Color</label>
+                  <div class="gen-color-wrap">
+                    <input type="color" id="gen-color" value="#000000" />
+                    <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#4a6078">Foreground</span>
+                  </div>
+                </div>
+                <div class="gen-group">
+                  <label class="gen-label">Background</label>
+                  <div class="gen-color-wrap">
+                    <input type="color" id="gen-bgcolor" value="#ffffff" />
+                    <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#4a6078">Background</span>
+                  </div>
+                </div>
+                <div class="gen-group">
+                  <label class="gen-label">Size</label>
+                  <select class="gen-select" id="gen-size">
+                    <option value="150x150">Small (150px)</option>
+                    <option value="300x300" selected>Medium (300px)</option>
+                    <option value="500x500">Large (500px)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="gen-error" id="gen-error"></div>
+              <button class="gen-btn" id="gen-btn">⬡ Generate QR Code</button>
+            </div>
+            <div class="gen-result" id="gen-result">
+              <img class="gen-qr-img" id="gen-qr-img" src="" alt="QR Code" />
+              <div class="gen-result-url" id="gen-result-url"></div>
+              <div class="gen-result-actions">
+                <button class="gen-result-btn primary" id="gen-copy-btn">📋 Copy Link</button>
+                <button class="gen-result-btn outline" id="gen-download-btn">⬇ Download</button>
+                <button class="gen-result-btn outline" id="gen-another-btn">＋ Create Another</button>
+              </div>
+              <div class="gen-success-msg" id="gen-success-msg">✅ QR code created and added to your dashboard!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLAN BANNER -->
         <div class="plan-banner" id="plan-banner" style="display:none">
           <div class="plan-banner-left">
             <span class="plan-badge" id="plan-badge-text">FREE</span>
@@ -471,6 +636,103 @@
         });
       });
 
+      // Toggle QR generator panel
+      const toggleGen = () => {
+        const panel = document.getElementById('qr-generator-panel');
+        panel.classList.toggle('open');
+        const btn = document.getElementById('toggle-generator');
+        btn.textContent = panel.classList.contains('open') ? '✕ Close' : '⬡ Create New QR';
+      };
+      document.getElementById('toggle-generator').addEventListener('click', toggleGen);
+      document.getElementById('sb-create-qr').addEventListener('click', (e) => {
+        e.preventDefault();
+        const panel = document.getElementById('qr-generator-panel');
+        if (!panel.classList.contains('open')) toggleGen();
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      // QR Generator
+      document.getElementById('gen-btn').addEventListener('click', async () => {
+        const url = document.getElementById('gen-url').value.trim();
+        const businessName = document.getElementById('gen-business').value.trim();
+        const color = document.getElementById('gen-color').value.replace('#', '');
+        const bgcolor = document.getElementById('gen-bgcolor').value.replace('#', '');
+        const size = document.getElementById('gen-size').value;
+        const errorEl = document.getElementById('gen-error');
+        const btn = document.getElementById('gen-btn');
+
+        errorEl.style.display = 'none';
+        if (!url) { errorEl.textContent = 'Please enter a URL.'; errorEl.style.display = 'block'; return; }
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          errorEl.textContent = 'URL must start with http:// or https://';
+          errorEl.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        try {
+          const token = await window.Clerk.session.getToken();
+          const res = await fetch(`${API_BASE}/qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ url, businessName: businessName || null }),
+          });
+          const data = await res.json();
+
+          if (res.status === 403 && data.upgrade) {
+            errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`;
+            errorEl.style.display = 'block';
+            return;
+          }
+          if (!res.ok) {
+            errorEl.textContent = data.error || 'Something went wrong.';
+            errorEl.style.display = 'block';
+            return;
+          }
+
+          const { redirectUrl } = data;
+          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgcolor}`;
+
+          document.getElementById('gen-qr-img').src = qrSrc;
+          document.getElementById('gen-result-url').textContent = redirectUrl;
+          document.getElementById('gen-result').classList.add('show');
+          document.getElementById('gen-success-msg').style.display = 'block';
+
+          document.getElementById('gen-copy-btn').onclick = async () => {
+            await navigator.clipboard.writeText(redirectUrl);
+            document.getElementById('gen-copy-btn').textContent = '✓ Copied!';
+            setTimeout(() => document.getElementById('gen-copy-btn').textContent = '📋 Copy Link', 2000);
+          };
+
+          document.getElementById('gen-download-btn').onclick = () => {
+            const link = document.createElement('a');
+            link.download = 'qraivy-code.png';
+            link.href = qrSrc;
+            link.click();
+          };
+
+          document.getElementById('gen-another-btn').onclick = () => {
+            document.getElementById('gen-result').classList.remove('show');
+            document.getElementById('gen-url').value = '';
+            document.getElementById('gen-business').value = '';
+            document.getElementById('gen-success-msg').style.display = 'none';
+          };
+
+          // Reload dashboard to show new QR
+          setTimeout(() => loadDashboard(), 1000);
+
+        } catch (err) {
+          errorEl.textContent = 'Could not reach the server. Please try again.';
+          errorEl.style.display = 'block';
+          console.error(err);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '⬡ Generate QR Code';
+        }
+      });
+
+      // Phone modal
       document.getElementById('phone-skip-btn').addEventListener('click', () => {
         document.getElementById('phone-modal').style.display = 'none';
         localStorage.setItem('phone-modal-skipped', 'true');
@@ -480,11 +742,7 @@
         const phone = document.getElementById('phone-input').value.trim();
         const errorEl = document.getElementById('phone-error');
         const btn = document.getElementById('phone-save-btn');
-        if (!phone) {
-          errorEl.textContent = 'Please enter a phone number.';
-          errorEl.style.display = 'block';
-          return;
-        }
+        if (!phone) { errorEl.textContent = 'Please enter a phone number.'; errorEl.style.display = 'block'; return; }
         btn.disabled = true;
         btn.textContent = 'Saving...';
         errorEl.style.display = 'none';
@@ -505,7 +763,6 @@
         } catch (err) {
           errorEl.textContent = 'Something went wrong. Try again.';
           errorEl.style.display = 'block';
-          console.error(err);
         } finally {
           btn.disabled = false;
           btn.textContent = 'Activate SMS Marketing →';
@@ -656,6 +913,7 @@
         document.getElementById('totalScans').textContent = dashboard.reduce((s, q) => s + q.totalScans, 0);
 
         const grid = document.getElementById('qrGrid');
+        grid.innerHTML = '';
 
         if (dashboard.length === 0) {
           grid.innerHTML = `
@@ -663,7 +921,7 @@
               <div class="empty-state-icon">⬡</div>
               <div class="empty-state-title">No QR codes yet</div>
               <div class="empty-state-desc">Create your first AI-powered QR code to get started.</div>
-              <a href="index.html" class="btn-create">⬡ Create your first QR</a>
+              <button class="btn-create" onclick="document.getElementById('toggle-generator').click();document.getElementById('qr-generator-panel').scrollIntoView({behavior:'smooth'})">⬡ Create your first QR</button>
             </div>
           `;
           return;
