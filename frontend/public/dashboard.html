@@ -6,7 +6,7 @@
   <title>QRAIRY.AI — Business Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -136,6 +136,45 @@
     .dash-wrap { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
     .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
     .dash-title em { color: var(--accent); font-style: normal; }
+    .plan-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-radius: 10px; margin-bottom: 24px;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
+      flex-wrap: wrap; gap: 12px;
+    }
+    .plan-banner.full {
+      background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3);
+    }
+    .plan-banner-left { display: flex; align-items: center; gap: 12px; }
+    .plan-badge {
+      font-family: 'DM Mono', monospace; font-size: 0.6rem;
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+      background: #ff5a1f; color: #fff;
+    }
+    .plan-badge.starter { background: #3b82f6; }
+    .plan-badge.pro { background: #8b5cf6; }
+    .plan-info-text {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
+    }
+    .plan-info-text strong { color: #fff; }
+    .plan-progress {
+      width: 120px; height: 4px; background: rgba(255,255,255,0.1);
+      border-radius: 999px; overflow: hidden;
+    }
+    .plan-progress-bar {
+      height: 100%; background: #ff5a1f; border-radius: 999px;
+      transition: width 0.3s;
+    }
+    .plan-progress-bar.full { background: #ef4444; }
+    .upgrade-btn {
+      padding: 8px 16px; background: #ff5a1f; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-size: 0.7rem;
+      font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      text-decoration: none; transition: background 0.18s; white-space: nowrap;
+    }
+    .upgrade-btn:hover { background: #ff7a45; }
     .stats-row { display: flex; gap: 16px; margin: 32px 0; }
     .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
     .stat-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
@@ -162,11 +201,27 @@
     .field-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; display: none; }
     .sent-confirm { font-family: var(--font-mono); font-size: 0.75rem; color: #22c55e; display: none; text-align: center; }
     .loading-text { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); text-align: center; display: none; }
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: var(--radius); margin-top: 32px;
+    }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .empty-state-desc { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); margin-bottom: 24px; }
+    .btn-create {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius);
+      font-family: var(--font-display); font-size: 0.85rem;
+      font-weight: 700; cursor: pointer; text-decoration: none;
+      transition: background 0.18s;
+    }
+    .btn-create:hover { background: #ff7a45; }
   </style>
 </head>
 <body>
 
-  <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-icon">⬡</div>
@@ -223,7 +278,7 @@
       <a href="pricing.html" class="sb-item">
         <span class="sb-icon">💳</span>
         <span class="sb-label">Billing & Plans</span>
-        <span class="sb-badge">FREE</span>
+        <span class="sb-badge" id="plan-badge">FREE</span>
       </a>
       <a href="#" class="sb-item">
         <span class="sb-icon">?</span>
@@ -250,7 +305,6 @@
   <div class="sb-overlay" id="sb-overlay"></div>
   <div id="cs-toast"><span style="color:#ff5a1f">⚡</span> <span id="cs-toast-msg"></span></div>
 
-  <!-- MAIN CONTENT -->
   <div id="main-content">
     <div class="noise"></div>
     <main>
@@ -259,6 +313,19 @@
         <p style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-dim);margin-bottom:8px">
           Manage your QR codes, view subscribers and send AI-generated specials.
         </p>
+
+        <!-- PLAN BANNER -->
+        <div class="plan-banner" id="plan-banner" style="display:none">
+          <div class="plan-banner-left">
+            <span class="plan-badge" id="plan-badge-text">FREE</span>
+            <span class="plan-info-text" id="plan-info-text">Loading...</span>
+            <div class="plan-progress" id="plan-progress" style="display:none">
+              <div class="plan-progress-bar" id="plan-progress-bar"></div>
+            </div>
+          </div>
+          <a href="pricing.html" class="upgrade-btn" id="upgrade-btn" style="display:none">Upgrade Plan →</a>
+        </div>
+
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Total QR Codes</div>
@@ -287,12 +354,12 @@
 
     async function initDashboard() {
       await window.Clerk.load();
-      // Give Clerk time to restore session after OAuth redirect
       await new Promise(resolve => setTimeout(resolve, 500));
       if (!window.Clerk.user) {
         window.location.href = 'login.html';
         return;
       }
+
       const userName = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
       document.querySelector('.sb-user-name').textContent = userName;
       document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
@@ -329,6 +396,39 @@
       });
 
       loadDashboard();
+    }
+
+    function showPlanBanner(planInfo) {
+      if (!planInfo) return;
+      const banner = document.getElementById('plan-banner');
+      const badgeText = document.getElementById('plan-badge-text');
+      const infoText = document.getElementById('plan-info-text');
+      const progress = document.getElementById('plan-progress');
+      const progressBar = document.getElementById('plan-progress-bar');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+      const sidebarBadge = document.getElementById('plan-badge');
+
+      banner.style.display = 'flex';
+      badgeText.textContent = planInfo.plan.toUpperCase();
+      badgeText.className = `plan-badge ${planInfo.plan}`;
+      sidebarBadge.textContent = planInfo.plan.toUpperCase();
+
+      const limitText = planInfo.limit === null ? '∞' : planInfo.limit;
+      infoText.innerHTML = `<strong>${planInfo.qrCount}</strong> of <strong>${limitText}</strong> QR codes used`;
+
+      if (planInfo.limit !== null) {
+        const pct = Math.min((planInfo.qrCount / planInfo.limit) * 100, 100);
+        progress.style.display = 'block';
+        progressBar.style.width = `${pct}%`;
+        if (pct >= 100) {
+          progressBar.classList.add('full');
+          banner.classList.add('full');
+        }
+      }
+
+      if (planInfo.plan === 'free' || !planInfo.canCreate) {
+        upgradeBtn.style.display = 'block';
+      }
     }
 
     async function generateSpecial(qr, card) {
@@ -416,12 +516,29 @@
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        const { dashboard } = data;
+        const { dashboard, planInfo } = data;
+
+        showPlanBanner(planInfo);
+
         document.getElementById('loading').style.display = 'none';
         document.getElementById('totalQR').textContent = dashboard.length;
         document.getElementById('totalSubs').textContent = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
         document.getElementById('totalScans').textContent = dashboard.reduce((s, q) => s + q.totalScans, 0);
+
         const grid = document.getElementById('qrGrid');
+
+        if (dashboard.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1">
+              <div class="empty-state-icon">⬡</div>
+              <div class="empty-state-title">No QR codes yet</div>
+              <div class="empty-state-desc">Create your first AI-powered QR code to get started.</div>
+              <a href="index.html" class="btn-create">⬡ Create your first QR</a>
+            </div>
+          `;
+          return;
+        }
+
         dashboard.forEach(qr => {
           const card = document.createElement('div');
           card.className = 'qr-card';
