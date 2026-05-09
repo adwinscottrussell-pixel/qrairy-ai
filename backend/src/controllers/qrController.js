@@ -2,9 +2,7 @@ const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
-const { createClerkClient } = require('@clerk/backend');
-
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+const Clerk = require('@clerk/backend');
 
 const PLAN_LIMITS = { free: 2, starter: 10, pro: Infinity };
 
@@ -12,10 +10,11 @@ async function getUserFromToken(authHeader) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.split(' ')[1];
-    const payload = await clerkClient.verifyToken(token);
+    const sdk = Clerk.createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+    const payload = await sdk.verifyToken(token);
     return payload.sub;
   } catch (err) {
-    console.error('Token verification error:', err);
+    console.error('Token verification error:', err.message);
     return null;
   }
 }
@@ -29,7 +28,6 @@ async function upsertUser(userId) {
   });
 }
 
-// Scrape business website using Firecrawl
 async function scrapeBusinessSite(url) {
   try {
     const response = await fetch('https://api.firecrawl.dev/v2/scrape', {
@@ -62,7 +60,6 @@ async function handleCreateQR(req, res) {
       return res.status(400).json({ error: 'A valid URL is required.' });
     }
 
-    // Check auth and plan limits if user is logged in
     const userId = await getUserFromToken(req.headers.authorization);
     if (userId) {
       const user = await upsertUser(userId);
@@ -268,16 +265,15 @@ async function handleDashboard(req, res) {
       createdAt: qr.createdAt,
     }));
 
-    // Include plan info if logged in
     let planInfo = null;
     if (userId) {
       const user = await upsertUser(userId);
-      const limit = PLAN_LIMITS[user.plan] || 2;
+      const limit = PLAN_LIMITS[user.plan] === Infinity ? null : PLAN_LIMITS[user.plan];
       planInfo = {
         plan: user.plan,
         qrCount: user.qrs.length,
         limit,
-        canCreate: user.qrs.length < limit,
+        canCreate: limit === null || user.qrs.length < limit,
       };
     }
 
