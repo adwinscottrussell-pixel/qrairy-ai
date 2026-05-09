@@ -13,6 +13,9 @@ model User {
   phone     String?
   plan      String   @default("free")
   createdAt DateTime @default(now())
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  subscriptionStatus   String?
   qrs       QR[]
 }
 
