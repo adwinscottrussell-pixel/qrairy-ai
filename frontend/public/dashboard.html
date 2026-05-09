@@ -210,25 +210,44 @@
 
     /* PHONE MODAL */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
       z-index: 1000; display: flex; align-items: center; justify-content: center;
       padding: 20px;
     }
     .modal-box {
       background: #0d1117; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px; padding: 40px; max-width: 440px; width: 100%;
+      border-radius: 16px; padding: 40px; max-width: 460px; width: 100%;
       text-align: center;
     }
     .modal-icon { font-size: 2.5rem; margin-bottom: 16px; }
     .modal-title {
-      font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800;
+      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
       letter-spacing: -0.02em; margin-bottom: 10px; color: #f0f4f8;
     }
     .modal-title span { color: #ff5a1f; font-style: italic; }
-    .modal-desc {
-      font-family: 'DM Mono', monospace; font-size: 0.75rem;
-      color: #8b949e; line-height: 1.6; margin-bottom: 24px;
+    .modal-stat {
+      display: inline-block;
+      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.25);
+      color: #ff8c55; font-family: 'DM Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.08em;
+      padding: 5px 14px; border-radius: 999px; margin-bottom: 20px;
     }
+    .modal-desc {
+      font-family: 'Manrope', sans-serif; font-size: 0.88rem;
+      color: #8b949e; line-height: 1.6; margin-bottom: 20px;
+    }
+    .modal-benefits {
+      display: flex; flex-direction: column; gap: 10px;
+      margin-bottom: 24px; text-align: left;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 16px;
+    }
+    .modal-benefit {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
+    }
+    .modal-benefit-icon { color: #ff5a1f; font-size: 14px; flex-shrink: 0; }
     .modal-input {
       width: 100%; padding: 13px 16px; background: #080b10;
       border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
@@ -239,32 +258,23 @@
     .modal-input:focus { border-color: #ff5a1f; }
     .modal-input::placeholder { color: #4a6078; }
     .modal-btn-primary {
-      width: 100%; padding: 13px; background: #ff5a1f; color: #fff;
+      width: 100%; padding: 14px; background: #ff5a1f; color: #fff;
       border: none; border-radius: 10px; font-family: 'Syne', sans-serif;
-      font-size: 0.9rem; font-weight: 700; cursor: pointer;
-      transition: background 0.18s; margin-bottom: 10px;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      transition: background 0.18s; margin-bottom: 10px; letter-spacing: 0.01em;
     }
     .modal-btn-primary:hover { background: #ff7a45; }
     .modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
     .modal-btn-skip {
       width: 100%; padding: 10px; background: transparent; color: #4a6078;
-      border: none; font-family: 'DM Mono', monospace; font-size: 0.72rem;
-      cursor: pointer; transition: color 0.18s; letter-spacing: 0.05em;
+      border: none; font-family: 'DM Mono', monospace; font-size: 0.7rem;
+      cursor: pointer; transition: color 0.18s; letter-spacing: 0.03em;
     }
     .modal-btn-skip:hover { color: #8b949e; }
     .modal-error {
       font-family: 'DM Mono', monospace; font-size: 0.72rem;
       color: #ef4444; margin-bottom: 10px; display: none;
     }
-    .modal-benefits {
-      display: flex; flex-direction: column; gap: 8px;
-      margin-bottom: 24px; text-align: left;
-    }
-    .modal-benefit {
-      display: flex; align-items: center; gap: 10px;
-      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
-    }
-    .modal-benefit-icon { color: #ff5a1f; font-size: 14px; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -273,17 +283,19 @@
   <div class="modal-overlay" id="phone-modal" style="display:none">
     <div class="modal-box">
       <div class="modal-icon">📱</div>
-      <div class="modal-title">Add your <span>phone number</span></div>
-      <div class="modal-desc">Get SMS alerts when customers scan your QR codes and receive important account updates.</div>
+      <div class="modal-title">Unlock <span>SMS Marketing</span></div>
+      <div class="modal-stat">⚡ SMS has a 98% open rate vs 20% for email</div>
+      <div class="modal-desc">Add your phone number to send SMS campaigns directly to your subscribers. The most powerful way to reach your customers instantly.</div>
       <div class="modal-benefits">
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant scan alerts via SMS</div>
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>New subscriber notifications</div>
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Account security alerts</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Send SMS specials directly to all your subscribers</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant alert when a customer scans your QR code</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>New subscriber notifications straight to your phone</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>3x higher conversion than push notifications</div>
       </div>
       <input type="tel" class="modal-input" id="phone-input" placeholder="+1 234 567 8900" />
       <div class="modal-error" id="phone-error"></div>
-      <button class="modal-btn-primary" id="phone-save-btn">Save Phone Number</button>
-      <button class="modal-btn-skip" id="phone-skip-btn">Skip for now — I'll add it later</button>
+      <button class="modal-btn-primary" id="phone-save-btn">Activate SMS Marketing →</button>
+      <button class="modal-btn-skip" id="phone-skip-btn">Skip for now — I'll miss out on SMS alerts</button>
     </div>
   </div>
 
@@ -459,7 +471,6 @@
         });
       });
 
-      // Phone modal handlers
       document.getElementById('phone-skip-btn').addEventListener('click', () => {
         document.getElementById('phone-modal').style.display = 'none';
         localStorage.setItem('phone-modal-skipped', 'true');
@@ -469,17 +480,14 @@
         const phone = document.getElementById('phone-input').value.trim();
         const errorEl = document.getElementById('phone-error');
         const btn = document.getElementById('phone-save-btn');
-
         if (!phone) {
           errorEl.textContent = 'Please enter a phone number.';
           errorEl.style.display = 'block';
           return;
         }
-
         btn.disabled = true;
         btn.textContent = 'Saving...';
         errorEl.style.display = 'none';
-
         try {
           const token = await window.Clerk.session.getToken();
           const res = await fetch(`${API_BASE}/user/phone`, {
@@ -500,7 +508,7 @@
           console.error(err);
         } finally {
           btn.disabled = false;
-          btn.textContent = 'Save Phone Number';
+          btn.textContent = 'Activate SMS Marketing →';
         }
       });
 
