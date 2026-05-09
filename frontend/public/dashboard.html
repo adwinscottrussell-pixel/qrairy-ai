@@ -142,30 +142,19 @@
       background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
       flex-wrap: wrap; gap: 12px;
     }
-    .plan-banner.full {
-      background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3);
-    }
+    .plan-banner.full { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
     .plan-banner-left { display: flex; align-items: center; gap: 12px; }
     .plan-badge {
       font-family: 'DM Mono', monospace; font-size: 0.6rem;
       font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 999px;
-      background: #ff5a1f; color: #fff;
+      padding: 3px 10px; border-radius: 999px; background: #ff5a1f; color: #fff;
     }
     .plan-badge.starter { background: #3b82f6; }
     .plan-badge.pro { background: #8b5cf6; }
-    .plan-info-text {
-      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
-    }
+    .plan-info-text { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e; }
     .plan-info-text strong { color: #fff; }
-    .plan-progress {
-      width: 120px; height: 4px; background: rgba(255,255,255,0.1);
-      border-radius: 999px; overflow: hidden;
-    }
-    .plan-progress-bar {
-      height: 100%; background: #ff5a1f; border-radius: 999px;
-      transition: width 0.3s;
-    }
+    .plan-progress { width: 120px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
+    .plan-progress-bar { height: 100%; background: #ff5a1f; border-radius: 999px; transition: width 0.3s; }
     .plan-progress-bar.full { background: #ef4444; }
     .upgrade-btn {
       padding: 8px 16px; background: #ff5a1f; color: #fff;
@@ -218,9 +207,85 @@
       transition: background 0.18s;
     }
     .btn-create:hover { background: #ff7a45; }
+
+    /* PHONE MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 1000; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #0d1117; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 40px; max-width: 440px; width: 100%;
+      text-align: center;
+    }
+    .modal-icon { font-size: 2.5rem; margin-bottom: 16px; }
+    .modal-title {
+      font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800;
+      letter-spacing: -0.02em; margin-bottom: 10px; color: #f0f4f8;
+    }
+    .modal-title span { color: #ff5a1f; font-style: italic; }
+    .modal-desc {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      color: #8b949e; line-height: 1.6; margin-bottom: 24px;
+    }
+    .modal-input {
+      width: 100%; padding: 13px 16px; background: #080b10;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+      color: #f0f4f8; font-family: 'DM Mono', monospace;
+      font-size: 0.9rem; outline: none; margin-bottom: 12px;
+      transition: border-color 0.18s; text-align: center; letter-spacing: 0.05em;
+    }
+    .modal-input:focus { border-color: #ff5a1f; }
+    .modal-input::placeholder { color: #4a6078; }
+    .modal-btn-primary {
+      width: 100%; padding: 13px; background: #ff5a1f; color: #fff;
+      border: none; border-radius: 10px; font-family: 'Syne', sans-serif;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      transition: background 0.18s; margin-bottom: 10px;
+    }
+    .modal-btn-primary:hover { background: #ff7a45; }
+    .modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .modal-btn-skip {
+      width: 100%; padding: 10px; background: transparent; color: #4a6078;
+      border: none; font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      cursor: pointer; transition: color 0.18s; letter-spacing: 0.05em;
+    }
+    .modal-btn-skip:hover { color: #8b949e; }
+    .modal-error {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: #ef4444; margin-bottom: 10px; display: none;
+    }
+    .modal-benefits {
+      display: flex; flex-direction: column; gap: 8px;
+      margin-bottom: 24px; text-align: left;
+    }
+    .modal-benefit {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
+    }
+    .modal-benefit-icon { color: #ff5a1f; font-size: 14px; flex-shrink: 0; }
   </style>
 </head>
 <body>
+
+  <!-- PHONE MODAL -->
+  <div class="modal-overlay" id="phone-modal" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon">📱</div>
+      <div class="modal-title">Add your <span>phone number</span></div>
+      <div class="modal-desc">Get SMS alerts when customers scan your QR codes and receive important account updates.</div>
+      <div class="modal-benefits">
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant scan alerts via SMS</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>New subscriber notifications</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Account security alerts</div>
+      </div>
+      <input type="tel" class="modal-input" id="phone-input" placeholder="+1 234 567 8900" />
+      <div class="modal-error" id="phone-error"></div>
+      <button class="modal-btn-primary" id="phone-save-btn">Save Phone Number</button>
+      <button class="modal-btn-skip" id="phone-skip-btn">Skip for now — I'll add it later</button>
+    </div>
+  </div>
 
   <div id="sidebar">
     <div class="sb-logo">
@@ -314,7 +379,6 @@
           Manage your QR codes, view subscribers and send AI-generated specials.
         </p>
 
-        <!-- PLAN BANNER -->
         <div class="plan-banner" id="plan-banner" style="display:none">
           <div class="plan-banner-left">
             <span class="plan-badge" id="plan-badge-text">FREE</span>
@@ -395,7 +459,61 @@
         });
       });
 
+      // Phone modal handlers
+      document.getElementById('phone-skip-btn').addEventListener('click', () => {
+        document.getElementById('phone-modal').style.display = 'none';
+        localStorage.setItem('phone-modal-skipped', 'true');
+      });
+
+      document.getElementById('phone-save-btn').addEventListener('click', async () => {
+        const phone = document.getElementById('phone-input').value.trim();
+        const errorEl = document.getElementById('phone-error');
+        const btn = document.getElementById('phone-save-btn');
+
+        if (!phone) {
+          errorEl.textContent = 'Please enter a phone number.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        errorEl.style.display = 'none';
+
+        try {
+          const token = await window.Clerk.session.getToken();
+          const res = await fetch(`${API_BASE}/user/phone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ phone }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            document.getElementById('phone-modal').style.display = 'none';
+          } else {
+            errorEl.textContent = data.error || 'Failed to save. Try again.';
+            errorEl.style.display = 'block';
+          }
+        } catch (err) {
+          errorEl.textContent = 'Something went wrong. Try again.';
+          errorEl.style.display = 'block';
+          console.error(err);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Save Phone Number';
+        }
+      });
+
       loadDashboard();
+    }
+
+    function showPhoneModal() {
+      const skipped = localStorage.getItem('phone-modal-skipped');
+      if (!skipped) {
+        setTimeout(() => {
+          document.getElementById('phone-modal').style.display = 'flex';
+        }, 1500);
+      }
     }
 
     function showPlanBanner(planInfo) {
@@ -428,6 +546,10 @@
 
       if (planInfo.plan === 'free' || !planInfo.canCreate) {
         upgradeBtn.style.display = 'block';
+      }
+
+      if (!planInfo.hasPhone) {
+        showPhoneModal();
       }
     }
 
