@@ -1,8 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const { handleCreateQR, handleRedirect, handleVisit, handleChat, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial, handleGenerateSpecial } = require('../controllers/qrController');
+const {
+  handleCreateQR,
+  handleGetUserPlan,
+  handleRedirect,
+  handleVisit,
+  handleChat,
+  handleAnalytics,
+  handleDashboard,
+  handleSubscribe,
+  handleSendSpecial,
+  handleGenerateSpecial,
+} = require('../controllers/qrController');
 
 router.post('/qr', handleCreateQR);
+router.get('/user/plan', handleGetUserPlan);
 router.get('/r/:id', handleRedirect);
 router.get('/visit/:id', handleVisit);
 router.post('/chat', handleChat);

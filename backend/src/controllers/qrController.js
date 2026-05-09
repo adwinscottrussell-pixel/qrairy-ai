@@ -2,6 +2,32 @@ const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
+const { createClerkClient } = require('@clerk/backend');
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+const PLAN_LIMITS = { free: 2, starter: 10, pro: Infinity };
+
+async function getUserFromToken(authHeader) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    const token = authHeader.split(' ')[1];
+    const payload = await clerkClient.verifyToken(token);
+    return payload.sub;
+  } catch (err) {
+    console.error('Token verification error:', err);
+    return null;
+  }
+}
+
+async function upsertUser(userId) {
+  return prisma.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: { id: userId },
+    include: { qrs: true },
+  });
+}
 
 // Scrape business website using Firecrawl
 async function scrapeBusinessSite(url) {
@@ -20,7 +46,6 @@ async function scrapeBusinessSite(url) {
     });
     const data = await response.json();
     if (data.success && data.data?.markdown) {
-      // Limit to 3000 chars to keep Claude context manageable
       return data.data.markdown.slice(0, 3000);
     }
     return null;
@@ -37,13 +62,31 @@ async function handleCreateQR(req, res) {
       return res.status(400).json({ error: 'A valid URL is required.' });
     }
 
-    // Create QR first so we can return fast
+    // Check auth and plan limits if user is logged in
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (userId) {
+      const user = await upsertUser(userId);
+      const limit = PLAN_LIMITS[user.plan] || 2;
+      if (user.qrs.length >= limit) {
+        return res.status(403).json({
+          error: `You have reached your ${user.plan} plan limit of ${limit} QR codes. Please upgrade to create more.`,
+          upgrade: true,
+          plan: user.plan,
+          limit,
+        });
+      }
+    }
+
     const qr = await prisma.qR.create({
-      data: { originalUrl: url, businessName: businessName || null },
+      data: {
+        originalUrl: url,
+        businessName: businessName || null,
+        userId: userId || null,
+      },
     });
+
     const redirectUrl = `https://api.qraivy.com/r/${qr.id}`;
 
-    // Scrape site in background if business name provided
     if (businessName) {
       scrapeBusinessSite(url).then(async (siteContent) => {
         if (siteContent) {
@@ -59,6 +102,26 @@ async function handleCreateQR(req, res) {
     return res.status(201).json({ id: qr.id, redirectUrl });
   } catch (err) {
     console.error('handleCreateQR error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function handleGetUserPlan(req, res) {
+  try {
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const user = await upsertUser(userId);
+    const limit = PLAN_LIMITS[user.plan] || 2;
+
+    return res.status(200).json({
+      plan: user.plan,
+      qrCount: user.qrs.length,
+      limit,
+      canCreate: user.qrs.length < limit,
+    });
+  } catch (err) {
+    console.error('handleGetUserPlan error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
@@ -119,7 +182,6 @@ async function handleChat(req, res) {
       { role: 'user', content: message },
     ];
 
-    // Build system prompt — use real scraped content if available
     let systemPrompt;
     if (qr.siteContent) {
       systemPrompt = `You are a friendly helpful assistant for ${qr.businessName}.
@@ -164,7 +226,10 @@ Always encourage the customer to subscribe for special offers.`;
 
 async function handleAnalytics(req, res) {
   try {
+    const userId = await getUserFromToken(req.headers.authorization);
+    const where = userId ? { userId } : {};
     const data = await prisma.qR.findMany({
+      where,
       include: { scans: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -185,7 +250,10 @@ async function handleAnalytics(req, res) {
 
 async function handleDashboard(req, res) {
   try {
+    const userId = await getUserFromToken(req.headers.authorization);
+    const where = userId ? { userId } : {};
     const data = await prisma.qR.findMany({
+      where,
       include: { scans: true, subscribers: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -199,7 +267,21 @@ async function handleDashboard(req, res) {
       hasSiteContent: !!qr.siteContent,
       createdAt: qr.createdAt,
     }));
-    return res.status(200).json({ dashboard });
+
+    // Include plan info if logged in
+    let planInfo = null;
+    if (userId) {
+      const user = await upsertUser(userId);
+      const limit = PLAN_LIMITS[user.plan] || 2;
+      planInfo = {
+        plan: user.plan,
+        qrCount: user.qrs.length,
+        limit,
+        canCreate: user.qrs.length < limit,
+      };
+    }
+
+    return res.status(200).json({ dashboard, planInfo });
   } catch (err) {
     console.error('handleDashboard error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -295,4 +377,15 @@ Write ONLY the notification message (max 100 characters). Make it exciting with 
   }
 }
 
-module.exports = { handleCreateQR, handleRedirect, handleVisit, handleChat, handleAnalytics, handleDashboard, handleSubscribe, handleSendSpecial, handleGenerateSpecial };
+module.exports = {
+  handleCreateQR,
+  handleGetUserPlan,
+  handleRedirect,
+  handleVisit,
+  handleChat,
+  handleAnalytics,
+  handleDashboard,
+  handleSubscribe,
+  handleSendSpecial,
+  handleGenerateSpecial,
+};
