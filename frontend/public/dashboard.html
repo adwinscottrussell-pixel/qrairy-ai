@@ -26,97 +26,41 @@
       padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
       min-height: 60px; flex-shrink: 0;
     }
-    .sb-logo-icon {
-      width: 32px; height: 32px; background: #ff5a1f;
-      border-radius: 7px; display: flex; align-items: center;
-      justify-content: center; font-size: 16px; flex-shrink: 0;
-    }
-    .sb-logo-text {
-      font-size: 1rem; font-weight: 800; color: #fff;
-      white-space: nowrap; letter-spacing: -0.02em; transition: opacity 0.22s;
-    }
+    .sb-logo-icon { width: 32px; height: 32px; background: #ff5a1f; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .sb-logo-text { font-size: 1rem; font-weight: 800; color: #fff; white-space: nowrap; letter-spacing: -0.02em; transition: opacity 0.22s; }
     .sb-logo-text span { color: #ff5a1f; font-style: italic; }
     #sidebar.collapsed .sb-logo-text { opacity: 0; pointer-events: none; }
-    .sb-toggle {
-      position: absolute; top: 16px; right: -11px;
-      width: 22px; height: 22px; background: #0d1117;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center;
-      justify-content: center; color: #8b949e; font-size: 11px;
-      transition: all 0.22s; z-index: 10;
-    }
+    .sb-toggle { position: absolute; top: 16px; right: -11px; width: 22px; height: 22px; background: #0d1117; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #8b949e; font-size: 11px; transition: all 0.22s; z-index: 10; }
     .sb-toggle:hover { background: #ff5a1f; color: #fff; border-color: #ff5a1f; }
     #sidebar.collapsed .sb-toggle { transform: rotate(180deg); }
-    .sb-nav {
-      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 8px;
-      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
-    }
-    .sb-section {
-      font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #444d56;
-      padding: 10px 10px 3px; white-space: nowrap;
-      transition: opacity 0.22s; font-family: 'DM Mono', monospace;
-    }
+    .sb-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent; }
+    .sb-section { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #444d56; padding: 10px 10px 3px; white-space: nowrap; transition: opacity 0.22s; font-family: 'DM Mono', monospace; }
     #sidebar.collapsed .sb-section { opacity: 0; }
-    .sb-item {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 10px; border-radius: 6px; cursor: pointer;
-      color: #8b949e; text-decoration: none;
-      font-size: 0.84rem; font-weight: 500;
-      white-space: nowrap; transition: all 0.18s;
-      margin-bottom: 1px; position: relative;
-    }
+    .sb-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: #8b949e; text-decoration: none; font-size: 0.84rem; font-weight: 500; white-space: nowrap; transition: all 0.18s; margin-bottom: 1px; position: relative; }
     .sb-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
     .sb-item.active { background: #ff5a1f; color: #fff; font-weight: 600; }
     .sb-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 15px; }
     .sb-label { transition: opacity 0.22s; flex: 1; }
     #sidebar.collapsed .sb-label { opacity: 0; width: 0; overflow: hidden; }
-    .sb-badge {
-      font-size: 0.55rem; font-weight: 700; padding: 2px 5px;
-      border-radius: 999px; background: #ff5a1f; color: #fff;
-      letter-spacing: 0.05em; transition: opacity 0.22s;
-    }
+    .sb-badge { font-size: 0.55rem; font-weight: 700; padding: 2px 5px; border-radius: 999px; background: #ff5a1f; color: #fff; letter-spacing: 0.05em; transition: opacity 0.22s; }
     .sb-item.active .sb-badge { background: rgba(255,255,255,0.25); }
     #sidebar.collapsed .sb-badge { opacity: 0; width: 0; padding: 0; }
-    .sb-soon {
-      font-size: 0.55rem; opacity: 0.4;
-      font-family: 'DM Mono', monospace; transition: opacity 0.22s;
-    }
+    .sb-soon { font-size: 0.55rem; opacity: 0.4; font-family: 'DM Mono', monospace; transition: opacity 0.22s; }
     #sidebar.collapsed .sb-soon { opacity: 0; }
     .sb-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 8px; }
     .sb-footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 8px; flex-shrink: 0; }
-    .sb-user {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 6px; cursor: pointer; transition: background 0.18s;
-    }
+    .sb-user { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px; cursor: pointer; transition: background 0.18s; }
     .sb-user:hover { background: rgba(255,255,255,0.05); }
-    .sb-avatar {
-      width: 30px; height: 30px; border-radius: 50%; background: #ff5a1f;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0;
-    }
+    .sb-avatar { width: 30px; height: 30px; border-radius: 50%; background: #ff5a1f; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0; }
     .sb-user-info { transition: opacity 0.22s; overflow: hidden; }
     #sidebar.collapsed .sb-user-info { opacity: 0; width: 0; }
     .sb-user-name { font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
     .sb-user-role { font-size: 0.62rem; color: #8b949e; font-family: 'DM Mono', monospace; }
-    .sb-signout {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 6px; cursor: pointer;
-      color: #8b949e; font-size: 0.84rem; font-weight: 500;
-      transition: all 0.18s; text-decoration: none; margin-top: 2px;
-    }
+    .sb-signout { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px; cursor: pointer; color: #8b949e; font-size: 0.84rem; font-weight: 500; transition: all 0.18s; text-decoration: none; margin-top: 2px; }
     .sb-signout:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
-    #main-content {
-      margin-left: 240px; flex: 1; min-height: 100vh; transition: margin-left 0.22s ease;
-    }
+    #main-content { margin-left: 240px; flex: 1; min-height: 100vh; transition: margin-left 0.22s ease; }
     body.sb-collapsed #main-content { margin-left: 60px; }
-    #mob-btn {
-      display: none; position: fixed; top: 14px; left: 14px;
-      width: 38px; height: 38px; background: #0d1117;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 7px;
-      cursor: pointer; align-items: center; justify-content: center;
-      color: #fff; font-size: 16px; z-index: 200;
-    }
+    #mob-btn { display: none; position: fixed; top: 14px; left: 14px; width: 38px; height: 38px; background: #0d1117; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; cursor: pointer; align-items: center; justify-content: center; color: #fff; font-size: 16px; z-index: 200; }
     .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
     .sb-overlay.on { display: block; }
     @media(max-width:768px){
@@ -126,137 +70,111 @@
       #mob-btn { display: flex; }
       .sb-toggle { display: none; }
     }
-    #cs-toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: #1c2128; border: 1px solid rgba(255,90,31,0.3);
-      color: #fff; padding: 11px 18px; border-radius: 7px;
-      font-size: 0.83rem; z-index: 9999; display: none;
-      align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
+    #cs-toast { position: fixed; bottom: 24px; right: 24px; background: #1c2128; border: 1px solid rgba(255,90,31,0.3); color: #fff; padding: 11px 18px; border-radius: 7px; font-size: 0.83rem; z-index: 9999; display: none; align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
     .dash-wrap { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
-    .dash-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 8px; flex-wrap: wrap; gap: 12px;
-    }
+    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
     .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; }
     .dash-title em { color: var(--accent); font-style: normal; }
-    .btn-new-qr {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 20px; background: #ff5a1f; color: #fff;
-      border: none; border-radius: 8px; cursor: pointer;
-      font-family: 'Syne', sans-serif; font-size: 0.85rem;
-      font-weight: 700; transition: all 0.18s; letter-spacing: 0.01em;
-    }
+    .btn-new-qr { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #ff5a1f; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; transition: all 0.18s; letter-spacing: 0.01em; }
     .btn-new-qr:hover { background: #ff7a45; transform: translateY(-1px); }
 
-    /* QR GENERATOR PANEL */
-    .qr-generator-panel {
-      background: #0d1117;
-      border: 1px solid rgba(255,90,31,0.25);
-      border-radius: 14px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      max-height: 0;
-      transition: max-height 0.4s ease, opacity 0.3s ease;
-      opacity: 0;
-    }
-    .qr-generator-panel.open {
-      max-height: 800px;
-      opacity: 1;
-    }
+    /* ── QR Generator Panel ── */
+    .qr-generator-panel { background: #0d1117; border: 1px solid rgba(255,90,31,0.25); border-radius: 14px; overflow: hidden; margin-bottom: 24px; max-height: 0; transition: max-height 0.4s ease, opacity 0.3s ease; opacity: 0; }
+    .qr-generator-panel.open { max-height: 900px; opacity: 1; }
     .qr-gen-inner { padding: 28px; }
-    .qr-gen-title {
-      font-family: 'Syne', sans-serif; font-size: 1rem;
-      font-weight: 800; margin-bottom: 20px; color: #fff;
-    }
+    .qr-gen-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; margin-bottom: 20px; color: #fff; }
     .qr-gen-title span { color: #ff5a1f; font-style: italic; }
     .qr-gen-form { display: flex; flex-direction: column; gap: 14px; }
-    .gen-label {
-      font-family: 'DM Mono', monospace; font-size: 0.62rem;
-      color: #4a6078; letter-spacing: 0.1em; text-transform: uppercase;
-      margin-bottom: 5px; display: block;
-    }
-    .gen-input {
-      width: 100%; padding: 11px 14px;
-      background: #080b10; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: #f0f4f8;
-      font-family: 'DM Mono', monospace; font-size: 0.82rem;
-      outline: none; transition: border-color 0.18s;
-    }
+    .gen-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #4a6078; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; display: block; }
+    .gen-input { width: 100%; padding: 11px 14px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.18s; }
     .gen-input:focus { border-color: #ff5a1f; }
     .gen-input::placeholder { color: #4a6078; }
+    .gen-input:disabled { opacity: 0.4; cursor: not-allowed; }
     .gen-row { display: flex; gap: 12px; }
     .gen-row .gen-group { flex: 1; }
     .gen-group { display: flex; flex-direction: column; }
     .gen-color-wrap { display: flex; gap: 8px; align-items: center; }
-    .gen-color-wrap input[type="color"] {
-      width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; background: #080b10; cursor: pointer; padding: 3px;
-    }
-    .gen-select {
-      width: 100%; padding: 11px 14px; background: #080b10;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
-      color: #f0f4f8; font-family: 'DM Mono', monospace;
-      font-size: 0.82rem; outline: none; cursor: pointer;
-    }
-    .gen-btn {
-      padding: 13px; background: #ff5a1f; color: #fff;
-      border: none; border-radius: 8px;
-      font-family: 'Syne', sans-serif; font-size: 0.9rem;
-      font-weight: 700; cursor: pointer; transition: all 0.18s;
-    }
+    .gen-color-wrap input[type="color"] { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: #080b10; cursor: pointer; padding: 3px; }
+    .gen-select { width: 100%; padding: 11px 14px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; cursor: pointer; }
+    .gen-btn { padding: 13px; background: #ff5a1f; color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.18s; }
     .gen-btn:hover { background: #ff7a45; }
     .gen-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .gen-error {
-      font-family: 'DM Mono', monospace; font-size: 0.72rem;
-      color: #ef4444; display: none;
-    }
-    .gen-result {
-      display: none; margin-top: 20px; padding: 20px;
-      background: #080b10; border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 10px; text-align: center;
-    }
+    .gen-error { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #ef4444; display: none; }
+    .gen-result { display: none; margin-top: 20px; padding: 20px; background: #080b10; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-align: center; }
     .gen-result.show { display: block; }
-    .gen-qr-img {
-      width: 160px; height: 160px; border-radius: 8px;
-      background: #fff; padding: 6px; margin: 0 auto 14px; display: block;
-    }
-    .gen-result-url {
-      font-family: 'DM Mono', monospace; font-size: 0.68rem;
-      color: #4a6078; margin-bottom: 12px; word-break: break-all;
-    }
+    .gen-qr-img { width: 160px; height: 160px; border-radius: 8px; background: #fff; padding: 6px; margin: 0 auto 14px; display: block; }
+    .gen-result-url { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #4a6078; margin-bottom: 12px; word-break: break-all; }
     .gen-result-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    .gen-result-btn {
-      padding: 8px 16px; border-radius: 7px;
-      font-family: 'Syne', sans-serif; font-size: 0.78rem;
-      font-weight: 700; cursor: pointer; transition: all 0.18s;
-      border: none; display: inline-flex; align-items: center; gap: 5px;
-    }
+    .gen-result-btn { padding: 8px 16px; border-radius: 7px; font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.18s; border: none; display: inline-flex; align-items: center; gap: 5px; }
     .gen-result-btn.primary { background: #ff5a1f; color: #fff; }
     .gen-result-btn.primary:hover { background: #ff7a45; }
-    .gen-result-btn.outline {
-      background: transparent; color: #8b949e;
-      border: 1px solid rgba(255,255,255,0.12);
-    }
+    .gen-result-btn.outline { background: transparent; color: #8b949e; border: 1px solid rgba(255,255,255,0.12); }
     .gen-result-btn.outline:hover { border-color: #ff5a1f; color: #ff5a1f; }
-    .gen-success-msg {
-      font-family: 'DM Mono', monospace; font-size: 0.72rem;
-      color: #22c55e; margin-top: 10px; display: none;
+    .gen-success-msg { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #22c55e; margin-top: 10px; display: none; }
+
+    /* ── Upgrade lock overlay on business name field ── */
+    .gen-locked-group { position: relative; }
+    .gen-lock-overlay {
+      position: absolute; inset: 0;
+      background: rgba(13,17,23,0.88);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; cursor: pointer;
+      border: 1px dashed rgba(255,90,31,0.4);
+      transition: border-color 0.18s;
+      z-index: 2;
+    }
+    .gen-lock-overlay:hover { border-color: #ff5a1f; }
+    .gen-lock-overlay-text {
+      font-family: 'DM Mono', monospace; font-size: 0.7rem;
+      color: #ff8c55; letter-spacing: 0.04em;
+    }
+    .gen-lock-overlay a {
+      color: #ff5a1f; text-decoration: underline;
+      font-family: 'DM Mono', monospace; font-size: 0.7rem;
     }
 
-    .plan-banner {
+    /* ── Dynamic QR toggle ── */
+    .gen-toggle-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-radius: 10px; margin-bottom: 24px;
-      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
-      flex-wrap: wrap; gap: 12px;
+      padding: 12px 14px;
+      background: #080b10; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
     }
+    .gen-toggle-info { display: flex; flex-direction: column; gap: 2px; }
+    .gen-toggle-label { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #f0f4f8; }
+    .gen-toggle-desc { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #4a6078; }
+    .gen-toggle-badge {
+      font-size: 0.55rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 999px; background: #8b5cf6; color: #fff;
+      letter-spacing: 0.06em; margin-left: 8px; vertical-align: middle;
+    }
+    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: #1c2128;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 999px;
+      cursor: pointer; transition: 0.2s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute;
+      height: 16px; width: 16px; left: 2px; bottom: 2px;
+      background: #4a6078; border-radius: 50%; transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: rgba(139,92,246,0.3); border-color: #8b5cf6; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); background: #8b5cf6; }
+    .toggle-switch input:disabled + .toggle-slider { opacity: 0.4; cursor: not-allowed; }
+    .gen-toggle-locked {
+      font-family: 'DM Mono', monospace; font-size: 0.65rem;
+      color: #8b5cf6; cursor: pointer; white-space: nowrap;
+    }
+    .gen-toggle-locked:hover { text-decoration: underline; }
+
+    /* ── Plan Banner ── */
+    .plan-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-radius: 10px; margin-bottom: 24px; background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2); flex-wrap: wrap; gap: 12px; }
     .plan-banner.full { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
-    .plan-banner-left { display: flex; align-items: center; gap: 12px; }
-    .plan-badge {
-      font-family: 'DM Mono', monospace; font-size: 0.6rem;
-      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 999px; background: #ff5a1f; color: #fff;
-    }
+    .plan-banner-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .plan-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: #ff5a1f; color: #fff; }
     .plan-badge.starter { background: #3b82f6; }
     .plan-badge.pro { background: #8b5cf6; }
     .plan-info-text { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e; }
@@ -264,14 +182,9 @@
     .plan-progress { width: 120px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
     .plan-progress-bar { height: 100%; background: #ff5a1f; border-radius: 999px; transition: width 0.3s; }
     .plan-progress-bar.full { background: #ef4444; }
-    .upgrade-btn {
-      padding: 8px 16px; background: #ff5a1f; color: #fff;
-      border: none; border-radius: 6px; cursor: pointer;
-      font-family: 'DM Mono', monospace; font-size: 0.7rem;
-      font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-      text-decoration: none; transition: background 0.18s; white-space: nowrap;
-    }
+    .upgrade-btn { padding: 8px 16px; background: #ff5a1f; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; transition: background 0.18s; white-space: nowrap; }
     .upgrade-btn:hover { background: #ff7a45; }
+
     .stats-row { display: flex; gap: 16px; margin: 32px 0; }
     .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
     .stat-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
@@ -284,6 +197,38 @@
     .qr-stat { display: flex; flex-direction: column; gap: 2px; }
     .qr-stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
     .qr-stat-value { font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+
+    /* ── QR type badges on cards ── */
+    .qr-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .qr-badge {
+      font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .qr-badge.ai { background: rgba(255,90,31,0.15); color: #ff8c55; border: 1px solid rgba(255,90,31,0.25); }
+    .qr-badge.dynamic { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    .qr-badge.basic { background: rgba(255,255,255,0.06); color: #4a6078; border: 1px solid rgba(255,255,255,0.08); }
+
+    /* ── Dynamic destination editor on card ── */
+    .dynamic-dest-section {
+      background: rgba(139,92,246,0.06);
+      border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 8px; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .dynamic-dest-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #a78bfa; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dynamic-dest-url { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #8b949e; word-break: break-all; }
+    .dynamic-dest-input { width: 100%; padding: 8px 10px; background: #080b10; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.78rem; outline: none; display: none; }
+    .dynamic-dest-input:focus { border-color: #8b5cf6; }
+    .dynamic-dest-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-dest-edit { padding: 6px 12px; background: transparent; color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.18s; }
+    .btn-dest-edit:hover { background: rgba(139,92,246,0.1); border-color: #8b5cf6; }
+    .btn-dest-save { padding: 6px 12px; background: #8b5cf6; color: #fff; border: none; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: background 0.18s; display: none; }
+    .btn-dest-save:hover { background: #7c3aed; }
+    .btn-dest-cancel { padding: 6px 12px; background: transparent; color: #4a6078; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.18s; display: none; }
+    .btn-dest-cancel:hover { color: #8b949e; }
+    .dest-saved-msg { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #22c55e; display: none; }
+
     .qr-card-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
     .btn-ai { padding: 12px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: background 0.2s; }
     .btn-ai:hover { background: #ff7a45; }
@@ -298,91 +243,33 @@
     .field-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; display: none; }
     .sent-confirm { font-family: var(--font-mono); font-size: 0.75rem; color: #22c55e; display: none; text-align: center; }
     .loading-text { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); text-align: center; display: none; }
-    .empty-state {
-      text-align: center; padding: 60px 20px;
-      border: 1px dashed rgba(255,255,255,0.1);
-      border-radius: var(--radius); margin-top: 32px;
-    }
+    .empty-state { text-align: center; padding: 60px 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: var(--radius); margin-top: 32px; }
     .empty-state-icon { font-size: 3rem; margin-bottom: 16px; }
     .empty-state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
     .empty-state-desc { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); margin-bottom: 24px; }
-    .btn-create {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 24px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius);
-      font-family: var(--font-display); font-size: 0.85rem;
-      font-weight: 700; cursor: pointer; text-decoration: none;
-      transition: background 0.18s;
-    }
+    .btn-create { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background 0.18s; }
     .btn-create:hover { background: #ff7a45; }
 
-    /* PHONE MODAL */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-      z-index: 1000; display: flex; align-items: center; justify-content: center;
-      padding: 20px;
-    }
-    .modal-box {
-      background: #0d1117; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px; padding: 40px; max-width: 460px; width: 100%;
-      text-align: center;
-    }
+    /* ── Phone Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal-box { background: #0d1117; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 40px; max-width: 460px; width: 100%; text-align: center; }
     .modal-icon { font-size: 2.5rem; margin-bottom: 16px; }
-    .modal-title {
-      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
-      letter-spacing: -0.02em; margin-bottom: 10px; color: #f0f4f8;
-    }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; color: #f0f4f8; }
     .modal-title span { color: #ff5a1f; font-style: italic; }
-    .modal-stat {
-      display: inline-block;
-      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.25);
-      color: #ff8c55; font-family: 'DM Mono', monospace;
-      font-size: 0.72rem; letter-spacing: 0.08em;
-      padding: 5px 14px; border-radius: 999px; margin-bottom: 20px;
-    }
-    .modal-desc {
-      font-family: 'Manrope', sans-serif; font-size: 0.88rem;
-      color: #8b949e; line-height: 1.6; margin-bottom: 20px;
-    }
-    .modal-benefits {
-      display: flex; flex-direction: column; gap: 10px;
-      margin-bottom: 24px; text-align: left;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 10px; padding: 16px;
-    }
-    .modal-benefit {
-      display: flex; align-items: center; gap: 10px;
-      font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e;
-    }
+    .modal-stat { display: inline-block; background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.25); color: #ff8c55; font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em; padding: 5px 14px; border-radius: 999px; margin-bottom: 20px; }
+    .modal-desc { font-family: 'Manrope', sans-serif; font-size: 0.88rem; color: #8b949e; line-height: 1.6; margin-bottom: 20px; }
+    .modal-benefits { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; }
+    .modal-benefit { display: flex; align-items: center; gap: 10px; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e; }
     .modal-benefit-icon { color: #ff5a1f; font-size: 14px; flex-shrink: 0; }
-    .modal-input {
-      width: 100%; padding: 13px 16px; background: #080b10;
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-      color: #f0f4f8; font-family: 'DM Mono', monospace;
-      font-size: 0.9rem; outline: none; margin-bottom: 12px;
-      transition: border-color 0.18s; text-align: center; letter-spacing: 0.05em;
-    }
+    .modal-input { width: 100%; padding: 13px 16px; background: #080b10; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.9rem; outline: none; margin-bottom: 12px; transition: border-color 0.18s; text-align: center; letter-spacing: 0.05em; }
     .modal-input:focus { border-color: #ff5a1f; }
     .modal-input::placeholder { color: #4a6078; }
-    .modal-btn-primary {
-      width: 100%; padding: 14px; background: #ff5a1f; color: #fff;
-      border: none; border-radius: 10px; font-family: 'Syne', sans-serif;
-      font-size: 0.95rem; font-weight: 700; cursor: pointer;
-      transition: background 0.18s; margin-bottom: 10px; letter-spacing: 0.01em;
-    }
+    .modal-btn-primary { width: 100%; padding: 14px; background: #ff5a1f; color: #fff; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.18s; margin-bottom: 10px; letter-spacing: 0.01em; }
     .modal-btn-primary:hover { background: #ff7a45; }
     .modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .modal-btn-skip {
-      width: 100%; padding: 10px; background: transparent; color: #4a6078;
-      border: none; font-family: 'DM Mono', monospace; font-size: 0.7rem;
-      cursor: pointer; transition: color 0.18s; letter-spacing: 0.03em;
-    }
+    .modal-btn-skip { width: 100%; padding: 10px; background: transparent; color: #4a6078; border: none; font-family: 'DM Mono', monospace; font-size: 0.7rem; cursor: pointer; transition: color 0.18s; letter-spacing: 0.03em; }
     .modal-btn-skip:hover { color: #8b949e; }
-    .modal-error {
-      font-family: 'DM Mono', monospace; font-size: 0.72rem;
-      color: #ef4444; margin-bottom: 10px; display: none;
-    }
+    .modal-error { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #ef4444; margin-bottom: 10px; display: none; }
   </style>
 </head>
 <body>
@@ -393,7 +280,7 @@
       <div class="modal-icon">📱</div>
       <div class="modal-title">Unlock <span>SMS Marketing</span></div>
       <div class="modal-stat">⚡ SMS has a 98% open rate vs 20% for email</div>
-      <div class="modal-desc">Add your phone number to send SMS campaigns directly to your subscribers. The most powerful way to reach your customers instantly.</div>
+      <div class="modal-desc">Add your phone number to send SMS campaigns directly to your subscribers.</div>
       <div class="modal-benefits">
         <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Send SMS specials directly to all your subscribers</div>
         <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant alert when a customer scans your QR code</div>
@@ -416,58 +303,42 @@
     <nav class="sb-nav">
       <div class="sb-section">MAIN</div>
       <a href="dashboard.html" class="sb-item active">
-        <span class="sb-icon">⊞</span>
-        <span class="sb-label">Dashboard</span>
+        <span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span>
       </a>
       <a href="#" class="sb-item" id="sb-create-qr">
-        <span class="sb-icon">＋</span>
-        <span class="sb-label">Create QR Code</span>
+        <span class="sb-icon">＋</span><span class="sb-label">Create QR Code</span>
       </a>
       <a href="analytics.html" class="sb-item">
-        <span class="sb-icon">↗</span>
-        <span class="sb-label">Analytics</span>
+        <span class="sb-icon">↗</span><span class="sb-label">Analytics</span>
       </a>
       <div class="sb-section">ENGAGE</div>
       <a href="dashboard.html" class="sb-item">
-        <span class="sb-icon">🔔</span>
-        <span class="sb-label">Push Notifications</span>
+        <span class="sb-icon">🔔</span><span class="sb-label">Push Notifications</span>
         <span class="sb-badge">LIVE</span>
       </a>
       <a href="#" class="sb-item sb-soon-item">
-        <span class="sb-icon">📣</span>
-        <span class="sb-label">Campaigns</span>
-        <span class="sb-soon">SOON</span>
+        <span class="sb-icon">📣</span><span class="sb-label">Campaigns</span><span class="sb-soon">SOON</span>
       </a>
       <a href="#" class="sb-item sb-soon-item">
-        <span class="sb-icon">👥</span>
-        <span class="sb-label">Customers</span>
-        <span class="sb-soon">SOON</span>
+        <span class="sb-icon">👥</span><span class="sb-label">Customers</span><span class="sb-soon">SOON</span>
       </a>
       <div class="sb-section">CONFIGURE</div>
       <a href="#" class="sb-item sb-soon-item">
-        <span class="sb-icon">🎨</span>
-        <span class="sb-label">Branding</span>
-        <span class="sb-soon">SOON</span>
+        <span class="sb-icon">🎨</span><span class="sb-label">Branding</span><span class="sb-soon">SOON</span>
       </a>
       <a href="#" class="sb-item sb-soon-item">
-        <span class="sb-icon">⚡</span>
-        <span class="sb-label">Integrations</span>
-        <span class="sb-soon">SOON</span>
+        <span class="sb-icon">⚡</span><span class="sb-label">Integrations</span><span class="sb-soon">SOON</span>
       </a>
       <a href="#" class="sb-item sb-soon-item">
-        <span class="sb-icon">⚙</span>
-        <span class="sb-label">Settings</span>
-        <span class="sb-soon">SOON</span>
+        <span class="sb-icon">⚙</span><span class="sb-label">Settings</span><span class="sb-soon">SOON</span>
       </a>
       <div class="sb-section">ACCOUNT</div>
       <a href="pricing.html" class="sb-item">
-        <span class="sb-icon">💳</span>
-        <span class="sb-label">Billing & Plans</span>
+        <span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span>
         <span class="sb-badge" id="plan-badge">FREE</span>
       </a>
       <a href="#" class="sb-item">
-        <span class="sb-icon">?</span>
-        <span class="sb-label">Help & Docs</span>
+        <span class="sb-icon">?</span><span class="sb-label">Help & Docs</span>
       </a>
     </nav>
     <div class="sb-footer">
@@ -480,8 +351,7 @@
       </div>
       <div class="sb-divider"></div>
       <a href="#" class="sb-signout">
-        <span class="sb-icon">→</span>
-        <span class="sb-label">Sign Out</span>
+        <span class="sb-icon">→</span><span class="sb-label">Sign Out</span>
       </a>
     </div>
   </div>
@@ -507,14 +377,20 @@
           <div class="qr-gen-inner">
             <div class="qr-gen-title">Create a new <span>AI QR code</span></div>
             <div class="qr-gen-form">
+
+              <!-- URL field — always available -->
               <div class="gen-group">
                 <label class="gen-label">Your URL *</label>
                 <input type="url" class="gen-input" id="gen-url" placeholder="https://your-website.com" autocomplete="off" />
               </div>
-              <div class="gen-group">
+
+              <!-- Business Name — locked for free users -->
+              <div class="gen-group gen-locked-group" id="gen-business-group">
                 <label class="gen-label">Business Name — unlocks AI landing page</label>
                 <input type="text" class="gen-input" id="gen-business" placeholder="e.g. Joe's Coffee Shop" autocomplete="off" />
+                <!-- Lock overlay injected by JS for free users -->
               </div>
+
               <div class="gen-row">
                 <div class="gen-group">
                   <label class="gen-label">QR Color</label>
@@ -539,9 +415,24 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Dynamic QR toggle — locked for non-Pro -->
+              <div class="gen-toggle-row" id="gen-dynamic-row">
+                <div class="gen-toggle-info">
+                  <span class="gen-toggle-label">
+                    Dynamic QR <span class="gen-toggle-badge">PRO</span>
+                  </span>
+                  <span class="gen-toggle-desc">Print once — update the destination URL any time from your dashboard</span>
+                </div>
+                <div id="gen-dynamic-control">
+                  <!-- JS injects toggle or locked link based on plan -->
+                </div>
+              </div>
+
               <div class="gen-error" id="gen-error"></div>
               <button class="gen-btn" id="gen-btn">⬡ Generate QR Code</button>
             </div>
+
             <div class="gen-result" id="gen-result">
               <img class="gen-qr-img" id="gen-qr-img" src="" alt="QR Code" />
               <div class="gen-result-url" id="gen-result-url"></div>
@@ -592,247 +483,104 @@
 
   <script>
     const API_BASE = 'https://api.qraivy.com';
+    let currentPlanInfo = null;
 
-    async function initDashboard() {
-      await window.Clerk.load();
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (!window.Clerk.user) {
-        window.location.href = 'login.html';
-        return;
+    // ── Plan-aware UI setup ──────────────────────────────────────────────────
+    function applyPlanToGenerator(planInfo) {
+      const canAI   = planInfo && planInfo.canCreateAI;
+      const canDyn  = planInfo && planInfo.canUseDynamic;
+      const plan    = planInfo ? planInfo.plan : 'free';
+
+      // Business name lock
+      const group   = document.getElementById('gen-business-group');
+      const input   = document.getElementById('gen-business');
+      if (!canAI) {
+        input.disabled = true;
+        input.placeholder = 'Upgrade to Starter to unlock';
+        // Inject lock overlay if not already there
+        if (!group.querySelector('.gen-lock-overlay')) {
+          const overlay = document.createElement('div');
+          overlay.className = 'gen-lock-overlay';
+          overlay.innerHTML = `<span class="gen-lock-overlay-text">🔒 AI landing pages require</span> <a href="pricing.html">Starter — $9/mo →</a>`;
+          overlay.addEventListener('click', () => window.location.href = 'pricing.html');
+          group.appendChild(overlay);
+        }
+      } else if (planInfo && planInfo.aiLimit !== null) {
+        // Starter: show remaining count
+        const remaining = planInfo.aiLimit - planInfo.aiQrCount;
+        input.placeholder = `e.g. Joe's Coffee Shop (${remaining} AI QR${remaining !== 1 ? 's' : ''} left)`;
       }
 
-      const userName = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
-      document.querySelector('.sb-user-name').textContent = userName;
-      document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
-
-      document.querySelector('.sb-signout').addEventListener('click', async (e) => {
-        e.preventDefault();
-        await window.Clerk.signOut();
-        window.location.href = 'login.html';
-      });
-
-      const sidebar = document.getElementById('sidebar');
-      const sbToggle = document.getElementById('sb-toggle');
-      const mobBtn = document.getElementById('mob-btn');
-      const overlay = document.getElementById('sb-overlay');
-      const isCollapsed = localStorage.getItem('sb-collapsed') === 'true';
-      if (isCollapsed) { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-      sbToggle.addEventListener('click', () => {
-        const c = sidebar.classList.toggle('collapsed');
-        document.body.classList.toggle('sb-collapsed', c);
-        localStorage.setItem('sb-collapsed', c);
-      });
-      mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
-      overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
-
-      document.querySelectorAll('.sb-soon-item').forEach(item => {
-        item.addEventListener('click', e => {
-          e.preventDefault();
-          const label = item.querySelector('.sb-label').textContent;
-          const toast = document.getElementById('cs-toast');
-          document.getElementById('cs-toast-msg').textContent = `${label} is coming soon!`;
-          toast.style.display = 'flex';
-          setTimeout(() => toast.style.display = 'none', 3000);
-        });
-      });
-
-      // Toggle QR generator panel
-      const toggleGen = () => {
-        const panel = document.getElementById('qr-generator-panel');
-        panel.classList.toggle('open');
-        const btn = document.getElementById('toggle-generator');
-        btn.textContent = panel.classList.contains('open') ? '✕ Close' : '⬡ Create New QR';
-      };
-      document.getElementById('toggle-generator').addEventListener('click', toggleGen);
-      document.getElementById('sb-create-qr').addEventListener('click', (e) => {
-        e.preventDefault();
-        const panel = document.getElementById('qr-generator-panel');
-        if (!panel.classList.contains('open')) toggleGen();
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-
-      // QR Generator
-      document.getElementById('gen-btn').addEventListener('click', async () => {
-        const url = document.getElementById('gen-url').value.trim();
-        const businessName = document.getElementById('gen-business').value.trim();
-        const color = document.getElementById('gen-color').value.replace('#', '');
-        const bgcolor = document.getElementById('gen-bgcolor').value.replace('#', '');
-        const size = document.getElementById('gen-size').value;
-        const errorEl = document.getElementById('gen-error');
-        const btn = document.getElementById('gen-btn');
-
-        errorEl.style.display = 'none';
-        if (!url) { errorEl.textContent = 'Please enter a URL.'; errorEl.style.display = 'block'; return; }
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          errorEl.textContent = 'URL must start with http:// or https://';
-          errorEl.style.display = 'block'; return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
-
-        try {
-          const token = await window.Clerk.session.getToken();
-          const res = await fetch(`${API_BASE}/qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ url, businessName: businessName || null }),
-          });
-          const data = await res.json();
-
-          if (res.status === 403 && data.upgrade) {
-            errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`;
-            errorEl.style.display = 'block';
-            return;
-          }
-          if (!res.ok) {
-            errorEl.textContent = data.error || 'Something went wrong.';
-            errorEl.style.display = 'block';
-            return;
-          }
-
-          const { redirectUrl } = data;
-          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgcolor}`;
-
-          document.getElementById('gen-qr-img').src = qrSrc;
-          document.getElementById('gen-result-url').textContent = redirectUrl;
-          document.getElementById('gen-result').classList.add('show');
-          document.getElementById('gen-success-msg').style.display = 'block';
-
-          document.getElementById('gen-copy-btn').onclick = async () => {
-            await navigator.clipboard.writeText(redirectUrl);
-            document.getElementById('gen-copy-btn').textContent = '✓ Copied!';
-            setTimeout(() => document.getElementById('gen-copy-btn').textContent = '📋 Copy Link', 2000);
-          };
-
-          document.getElementById('gen-download-btn').onclick = () => {
-            const link = document.createElement('a');
-            link.download = 'qraivy-code.png';
-            link.href = qrSrc;
-            link.click();
-          };
-
-          document.getElementById('gen-another-btn').onclick = () => {
-            document.getElementById('gen-result').classList.remove('show');
-            document.getElementById('gen-url').value = '';
-            document.getElementById('gen-business').value = '';
-            document.getElementById('gen-success-msg').style.display = 'none';
-          };
-
-          // Reload dashboard to show new QR
-          setTimeout(() => loadDashboard(), 1000);
-
-        } catch (err) {
-          errorEl.textContent = 'Could not reach the server. Please try again.';
-          errorEl.style.display = 'block';
-          console.error(err);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = '⬡ Generate QR Code';
-        }
-      });
-
-      // Phone modal
-      document.getElementById('phone-skip-btn').addEventListener('click', () => {
-        document.getElementById('phone-modal').style.display = 'none';
-        localStorage.setItem('phone-modal-skipped', 'true');
-      });
-
-      document.getElementById('phone-save-btn').addEventListener('click', async () => {
-        const phone = document.getElementById('phone-input').value.trim();
-        const errorEl = document.getElementById('phone-error');
-        const btn = document.getElementById('phone-save-btn');
-        if (!phone) { errorEl.textContent = 'Please enter a phone number.'; errorEl.style.display = 'block'; return; }
-        btn.disabled = true;
-        btn.textContent = 'Saving...';
-        errorEl.style.display = 'none';
-        try {
-          const token = await window.Clerk.session.getToken();
-          const res = await fetch(`${API_BASE}/user/phone`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ phone }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            document.getElementById('phone-modal').style.display = 'none';
-          } else {
-            errorEl.textContent = data.error || 'Failed to save. Try again.';
-            errorEl.style.display = 'block';
-          }
-        } catch (err) {
-          errorEl.textContent = 'Something went wrong. Try again.';
-          errorEl.style.display = 'block';
-        } finally {
-          btn.disabled = false;
-          btn.textContent = 'Activate SMS Marketing →';
-        }
-      });
-
-      loadDashboard();
-    }
-
-    function showPhoneModal() {
-      const skipped = localStorage.getItem('phone-modal-skipped');
-      if (!skipped) {
-        setTimeout(() => {
-          document.getElementById('phone-modal').style.display = 'flex';
-        }, 1500);
+      // Dynamic QR toggle
+      const dynControl = document.getElementById('gen-dynamic-control');
+      if (canDyn) {
+        dynControl.innerHTML = `
+          <label class="toggle-switch">
+            <input type="checkbox" id="gen-dynamic-toggle" />
+            <span class="toggle-slider"></span>
+          </label>`;
+      } else {
+        dynControl.innerHTML = `<span class="gen-toggle-locked" onclick="window.location.href='pricing.html'">Unlock with Pro →</span>`;
       }
     }
 
+    // ── Plan banner ──────────────────────────────────────────────────────────
     function showPlanBanner(planInfo) {
       if (!planInfo) return;
-      const banner = document.getElementById('plan-banner');
-      const badgeText = document.getElementById('plan-badge-text');
-      const infoText = document.getElementById('plan-info-text');
-      const progress = document.getElementById('plan-progress');
+      currentPlanInfo = planInfo;
+      const banner      = document.getElementById('plan-banner');
+      const badgeText   = document.getElementById('plan-badge-text');
+      const infoText    = document.getElementById('plan-info-text');
+      const progress    = document.getElementById('plan-progress');
       const progressBar = document.getElementById('plan-progress-bar');
-      const upgradeBtn = document.getElementById('upgrade-btn');
-      const sidebarBadge = document.getElementById('plan-badge');
+      const upgradeBtn  = document.getElementById('upgrade-btn');
+      const sidebarBadge= document.getElementById('plan-badge');
 
       banner.style.display = 'flex';
       badgeText.textContent = planInfo.plan.toUpperCase();
       badgeText.className = `plan-badge ${planInfo.plan}`;
       sidebarBadge.textContent = planInfo.plan.toUpperCase();
 
-      const limitText = planInfo.limit === null ? '∞' : planInfo.limit;
-      infoText.innerHTML = `<strong>${planInfo.qrCount}</strong> of <strong>${limitText}</strong> QR codes used`;
-
-      if (planInfo.limit !== null) {
-        const pct = Math.min((planInfo.qrCount / planInfo.limit) * 100, 100);
+      // Show AI landing page usage for Starter
+      if (planInfo.aiLimit !== null) {
+        infoText.innerHTML = `<strong>${planInfo.aiQrCount}</strong> of <strong>${planInfo.aiLimit}</strong> AI landing pages used`;
+        const pct = Math.min((planInfo.aiQrCount / planInfo.aiLimit) * 100, 100);
         progress.style.display = 'block';
         progressBar.style.width = `${pct}%`;
-        if (pct >= 100) {
-          progressBar.classList.add('full');
-          banner.classList.add('full');
-        }
+        if (pct >= 100) { progressBar.classList.add('full'); banner.classList.add('full'); }
+      } else if (planInfo.plan === 'free') {
+        infoText.innerHTML = `<strong>Free plan</strong> — Basic QR codes free forever. <a href="pricing.html" style="color:#ff5a1f">Upgrade for AI landing pages →</a>`;
+      } else {
+        infoText.innerHTML = `<strong>${planInfo.plan === 'pro' ? 'Pro' : 'Starter'} plan</strong> — Unlimited QR codes`;
       }
 
-      if (planInfo.plan === 'free' || !planInfo.canCreate) {
-        upgradeBtn.style.display = 'block';
-      }
+      if (planInfo.plan === 'free') { upgradeBtn.style.display = 'block'; }
 
-      if (!planInfo.hasPhone) {
-        showPhoneModal();
+      applyPlanToGenerator(planInfo);
+
+      if (!planInfo.hasPhone) { showPhoneModal(); }
+    }
+
+    // ── Phone modal ──────────────────────────────────────────────────────────
+    function showPhoneModal() {
+      if (!localStorage.getItem('phone-modal-skipped')) {
+        setTimeout(() => { document.getElementById('phone-modal').style.display = 'flex'; }, 1500);
       }
     }
 
+    // ── Generate special ─────────────────────────────────────────────────────
     async function generateSpecial(qr, card) {
-      const loadingEl = card.querySelector('.loading-text');
-      const titleInput = card.querySelector('.special-title-input');
+      const loadingEl    = card.querySelector('.loading-text');
+      const titleInput   = card.querySelector('.special-title-input');
       const messageInput = card.querySelector('.special-message-input');
-      const titleLabel = card.querySelectorAll('.field-label')[0];
+      const titleLabel   = card.querySelectorAll('.field-label')[0];
       const messageLabel = card.querySelectorAll('.field-label')[1];
-      const sendBtn = card.querySelector('.btn-send');
-      const aiBtn = card.querySelector('.btn-ai');
-      aiBtn.disabled = true;
-      aiBtn.textContent = 'Generating...';
+      const sendBtn      = card.querySelector('.btn-send');
+      const aiBtn        = card.querySelector('.btn-ai');
+      aiBtn.disabled = true; aiBtn.textContent = 'Generating...';
       loadingEl.style.display = 'block';
-      titleInput.style.display = 'none';
-      messageInput.style.display = 'none';
-      titleLabel.style.display = 'none';
-      messageLabel.style.display = 'none';
+      titleInput.style.display = messageInput.style.display = 'none';
+      titleLabel.style.display = messageLabel.style.display = 'none';
       try {
         const token = await window.Clerk.session.getToken();
         const response = await fetch(`${API_BASE}/generate-special`, {
@@ -843,22 +591,17 @@
         const data = await response.json();
         titleInput.value = `Special Offer from ${qr.businessName}`;
         messageInput.value = data.message;
-        titleLabel.style.display = 'block';
-        messageLabel.style.display = 'block';
-        titleInput.style.display = 'block';
-        messageInput.style.display = 'block';
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Send to Subscribers';
+        titleLabel.style.display = messageLabel.style.display = 'block';
+        titleInput.style.display = messageInput.style.display = 'block';
+        sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
         sendBtn.onclick = () => sendSpecial(qr.id, titleInput, messageInput, card);
       } catch (err) {
         messageInput.value = 'Failed to generate. Try again.';
-        messageInput.style.display = 'block';
-        messageLabel.style.display = 'block';
+        messageInput.style.display = messageLabel.style.display = 'block';
         console.error(err);
       } finally {
         loadingEl.style.display = 'none';
-        aiBtn.disabled = false;
-        aiBtn.textContent = '✨ Generate Special with AI';
+        aiBtn.disabled = false; aiBtn.textContent = '✨ Generate Special with AI';
       }
     }
 
@@ -868,8 +611,7 @@
       const title = titleInput.value.trim();
       const message = messageInput.value.trim();
       if (!title || !message) { alert('Please fill in both title and message.'); return; }
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
+      sendBtn.disabled = true; sendBtn.textContent = 'Sending...';
       try {
         const token = await window.Clerk.session.getToken();
         const res = await fetch(`${API_BASE}/send-special`, {
@@ -879,29 +621,84 @@
         });
         const data = await res.json();
         if (data.success) {
-          sentConfirm.style.display = 'block';
-          sentConfirm.textContent = '✅ Notification sent to all subscribers!';
+          sentConfirm.style.display = 'block'; sentConfirm.textContent = '✅ Notification sent to all subscribers!';
           sendBtn.style.display = 'none';
         } else {
-          sentConfirm.style.display = 'block';
-          sentConfirm.textContent = '❌ ' + (data.error || 'Failed to send.');
-          sentConfirm.style.color = '#ef4444';
-          sendBtn.disabled = false;
-          sendBtn.textContent = 'Send to Subscribers';
+          sentConfirm.style.display = 'block'; sentConfirm.textContent = '❌ ' + (data.error || 'Failed to send.');
+          sentConfirm.style.color = '#ef4444'; sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
         }
       } catch (err) {
-        console.error(err);
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Send to Subscribers';
+        console.error(err); sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
       }
     }
 
+    // ── Dynamic destination editor ────────────────────────────────────────────
+    function buildDynamicSection(qr, card) {
+      const section = card.querySelector('.dynamic-dest-section');
+      if (!section) return;
+      const urlDisplay  = section.querySelector('.dynamic-dest-url');
+      const input       = section.querySelector('.dynamic-dest-input');
+      const editBtn     = section.querySelector('.btn-dest-edit');
+      const saveBtn     = section.querySelector('.btn-dest-save');
+      const cancelBtn   = section.querySelector('.btn-dest-cancel');
+      const savedMsg    = section.querySelector('.dest-saved-msg');
+
+      urlDisplay.textContent = qr.destinationUrl || qr.originalUrl;
+
+      editBtn.addEventListener('click', () => {
+        input.value = qr.destinationUrl || qr.originalUrl;
+        input.style.display = 'block';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        editBtn.style.display = 'none';
+        savedMsg.style.display = 'none';
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        input.style.display = 'none';
+        saveBtn.style.display = cancelBtn.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const newUrl = input.value.trim();
+        if (!newUrl || !newUrl.startsWith('http')) {
+          input.style.borderColor = '#ef4444'; return;
+        }
+        saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+        try {
+          const token = await window.Clerk.session.getToken();
+          const res = await fetch(`${API_BASE}/qr/${qr.id}/destination`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ destinationUrl: newUrl }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            qr.destinationUrl = newUrl;
+            urlDisplay.textContent = newUrl;
+            input.style.display = 'none';
+            saveBtn.style.display = cancelBtn.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+            savedMsg.style.display = 'block';
+            setTimeout(() => savedMsg.style.display = 'none', 3000);
+          } else {
+            input.style.borderColor = '#ef4444';
+            alert(data.error || 'Failed to update destination.');
+          }
+        } catch (err) {
+          console.error(err); alert('Could not reach the server.');
+        } finally {
+          saveBtn.disabled = false; saveBtn.textContent = 'Save';
+        }
+      });
+    }
+
+    // ── Load dashboard ────────────────────────────────────────────────────────
     async function loadDashboard() {
       try {
         const token = await window.Clerk.session.getToken();
-        const res = await fetch(`${API_BASE}/dashboard`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch(`${API_BASE}/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await res.json();
         const { dashboard, planInfo } = data;
 
@@ -922,39 +719,228 @@
               <div class="empty-state-title">No QR codes yet</div>
               <div class="empty-state-desc">Create your first AI-powered QR code to get started.</div>
               <button class="btn-create" onclick="document.getElementById('toggle-generator').click();document.getElementById('qr-generator-panel').scrollIntoView({behavior:'smooth'})">⬡ Create your first QR</button>
-            </div>
-          `;
+            </div>`;
           return;
         }
 
         dashboard.forEach(qr => {
+          const isAI      = !!qr.businessName;
+          const isDynamic = !!qr.isDynamic;
+          const displayName = qr.businessName || 'Basic QR Code';
+
+          // Build badge HTML
+          let badges = '';
+          if (isAI)      badges += '<span class="qr-badge ai">✨ AI Page</span>';
+          if (isDynamic) badges += '<span class="qr-badge dynamic">⟳ Dynamic</span>';
+          if (!isAI && !isDynamic) badges += '<span class="qr-badge basic">Basic</span>';
+
+          // Build dynamic destination section (only for dynamic QRs)
+          const dynamicSection = isDynamic ? `
+            <div class="dynamic-dest-section">
+              <div class="dynamic-dest-label">⟳ Current destination</div>
+              <div class="dynamic-dest-url"></div>
+              <input class="dynamic-dest-input" type="url" placeholder="https://new-destination.com" />
+              <div class="dynamic-dest-actions">
+                <button class="btn-dest-edit">Edit destination</button>
+                <button class="btn-dest-save">Save</button>
+                <button class="btn-dest-cancel">Cancel</button>
+                <span class="dest-saved-msg">✅ Saved!</span>
+              </div>
+            </div>` : '';
+
+          // AI card actions (only if has businessName)
+          const aiActions = isAI ? `
+            <button class="btn-ai">✨ Generate Special with AI</button>
+            <div class="loading-text">AI is writing your special...</div>
+            <span class="field-label">Notification Title</span>
+            <input class="special-title-input" type="text" placeholder="Notification title" />
+            <span class="field-label">Message (editable)</span>
+            <textarea class="special-message-input" placeholder="Your message here..."></textarea>
+            <button class="btn-send" disabled>Send to Subscribers</button>
+            <div class="sent-confirm"></div>` : '';
+
           const card = document.createElement('div');
           card.className = 'qr-card';
           card.innerHTML = `
-            <div class="qr-card-name">${qr.businessName}</div>
+            <div class="qr-card-badges">${badges}</div>
+            <div class="qr-card-name">${displayName}</div>
             <div class="qr-card-url">${qr.originalUrl}</div>
             <div class="qr-card-stats">
               <div class="qr-stat"><span class="qr-stat-label">Subscribers</span><span class="qr-stat-value">${qr.totalSubscribers}</span></div>
               <div class="qr-stat"><span class="qr-stat-label">Scans</span><span class="qr-stat-value">${qr.totalScans}</span></div>
             </div>
-            <div class="qr-card-actions">
-              <button class="btn-ai">✨ Generate Special with AI</button>
-              <div class="loading-text">AI is writing your special...</div>
-              <span class="field-label">Notification Title</span>
-              <input class="special-title-input" type="text" placeholder="Notification title" />
-              <span class="field-label">Message (editable)</span>
-              <textarea class="special-message-input" placeholder="Your message here..."></textarea>
-              <button class="btn-send" disabled>Send to Subscribers</button>
-              <div class="sent-confirm"></div>
-            </div>
-          `;
-          card.querySelector('.btn-ai').onclick = () => generateSpecial(qr, card);
+            ${dynamicSection}
+            <div class="qr-card-actions">${aiActions}</div>`;
+
+          if (isAI) {
+            card.querySelector('.btn-ai').onclick = () => generateSpecial(qr, card);
+          }
+          if (isDynamic) {
+            buildDynamicSection(qr, card);
+          }
+
           grid.appendChild(card);
         });
       } catch (err) {
         document.getElementById('loading').textContent = 'Failed to load dashboard.';
         console.error(err);
       }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function initDashboard() {
+      await window.Clerk.load();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+
+      const userName = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+      document.querySelector('.sb-user-name').textContent = userName;
+      document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
+
+      document.querySelector('.sb-signout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await window.Clerk.signOut();
+        window.location.href = 'login.html';
+      });
+
+      // Sidebar collapse
+      const sidebar = document.getElementById('sidebar');
+      const sbToggle = document.getElementById('sb-toggle');
+      const mobBtn = document.getElementById('mob-btn');
+      const overlay = document.getElementById('sb-overlay');
+      if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+      sbToggle.addEventListener('click', () => {
+        const c = sidebar.classList.toggle('collapsed');
+        document.body.classList.toggle('sb-collapsed', c);
+        localStorage.setItem('sb-collapsed', c);
+      });
+      mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
+      overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
+
+      // Soon items toast
+      document.querySelectorAll('.sb-soon-item').forEach(item => {
+        item.addEventListener('click', e => {
+          e.preventDefault();
+          const label = item.querySelector('.sb-label').textContent;
+          const toast = document.getElementById('cs-toast');
+          document.getElementById('cs-toast-msg').textContent = `${label} is coming soon!`;
+          toast.style.display = 'flex';
+          setTimeout(() => toast.style.display = 'none', 3000);
+        });
+      });
+
+      // Generator panel toggle
+      const toggleGen = () => {
+        const panel = document.getElementById('qr-generator-panel');
+        panel.classList.toggle('open');
+        document.getElementById('toggle-generator').textContent = panel.classList.contains('open') ? '✕ Close' : '⬡ Create New QR';
+      };
+      document.getElementById('toggle-generator').addEventListener('click', toggleGen);
+      document.getElementById('sb-create-qr').addEventListener('click', (e) => {
+        e.preventDefault();
+        const panel = document.getElementById('qr-generator-panel');
+        if (!panel.classList.contains('open')) toggleGen();
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      // QR Generator submit
+      document.getElementById('gen-btn').addEventListener('click', async () => {
+        const url          = document.getElementById('gen-url').value.trim();
+        const businessName = document.getElementById('gen-business').value.trim();
+        const color        = document.getElementById('gen-color').value.replace('#', '');
+        const bgcolor      = document.getElementById('gen-bgcolor').value.replace('#', '');
+        const size         = document.getElementById('gen-size').value;
+        const dynToggle    = document.getElementById('gen-dynamic-toggle');
+        const isDynamic    = dynToggle ? dynToggle.checked : false;
+        const errorEl      = document.getElementById('gen-error');
+        const btn          = document.getElementById('gen-btn');
+
+        errorEl.style.display = 'none';
+        if (!url) { errorEl.textContent = 'Please enter a URL.'; errorEl.style.display = 'block'; return; }
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          errorEl.textContent = 'URL must start with http:// or https://'; errorEl.style.display = 'block'; return;
+        }
+
+        btn.disabled = true; btn.textContent = 'Generating...';
+
+        try {
+          const token = await window.Clerk.session.getToken();
+          const res = await fetch(`${API_BASE}/qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ url, businessName: businessName || null, isDynamic }),
+          });
+          const data = await res.json();
+
+          if (res.status === 403 && data.upgrade) {
+            errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`;
+            errorEl.style.display = 'block'; return;
+          }
+          if (!res.ok) {
+            errorEl.textContent = data.error || 'Something went wrong.'; errorEl.style.display = 'block'; return;
+          }
+
+          const { redirectUrl } = data;
+          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgcolor}`;
+
+          document.getElementById('gen-qr-img').src = qrSrc;
+          document.getElementById('gen-result-url').textContent = redirectUrl;
+          document.getElementById('gen-result').classList.add('show');
+          document.getElementById('gen-success-msg').style.display = 'block';
+
+          document.getElementById('gen-copy-btn').onclick = async () => {
+            await navigator.clipboard.writeText(redirectUrl);
+            document.getElementById('gen-copy-btn').textContent = '✓ Copied!';
+            setTimeout(() => document.getElementById('gen-copy-btn').textContent = '📋 Copy Link', 2000);
+          };
+          document.getElementById('gen-download-btn').onclick = () => {
+            const a = document.createElement('a'); a.download = 'qraivy-code.png'; a.href = qrSrc; a.click();
+          };
+          document.getElementById('gen-another-btn').onclick = () => {
+            document.getElementById('gen-result').classList.remove('show');
+            document.getElementById('gen-url').value = '';
+            document.getElementById('gen-business').value = '';
+            document.getElementById('gen-success-msg').style.display = 'none';
+            if (dynToggle) dynToggle.checked = false;
+          };
+
+          setTimeout(() => loadDashboard(), 1000);
+        } catch (err) {
+          errorEl.textContent = 'Could not reach the server. Please try again.'; errorEl.style.display = 'block'; console.error(err);
+        } finally {
+          btn.disabled = false; btn.textContent = '⬡ Generate QR Code';
+        }
+      });
+
+      // Phone modal handlers
+      document.getElementById('phone-skip-btn').addEventListener('click', () => {
+        document.getElementById('phone-modal').style.display = 'none';
+        localStorage.setItem('phone-modal-skipped', 'true');
+      });
+      document.getElementById('phone-save-btn').addEventListener('click', async () => {
+        const phone = document.getElementById('phone-input').value.trim();
+        const errorEl = document.getElementById('phone-error');
+        const btn = document.getElementById('phone-save-btn');
+        if (!phone) { errorEl.textContent = 'Please enter a phone number.'; errorEl.style.display = 'block'; return; }
+        btn.disabled = true; btn.textContent = 'Saving...'; errorEl.style.display = 'none';
+        try {
+          const token = await window.Clerk.session.getToken();
+          const res = await fetch(`${API_BASE}/user/phone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ phone }),
+          });
+          const data = await res.json();
+          if (data.success) { document.getElementById('phone-modal').style.display = 'none'; }
+          else { errorEl.textContent = data.error || 'Failed to save. Try again.'; errorEl.style.display = 'block'; }
+        } catch (err) {
+          errorEl.textContent = 'Something went wrong. Try again.'; errorEl.style.display = 'block';
+        } finally {
+          btn.disabled = false; btn.textContent = 'Activate SMS Marketing →';
+        }
+      });
+
+      loadDashboard();
     }
   </script>
   <script

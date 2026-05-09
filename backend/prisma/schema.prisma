@@ -17,15 +17,17 @@ model User {
 }
 
 model QR {
-  id           String       @id @default(uuid())
-  originalUrl  String
-  businessName String?
-  siteContent  String?
-  userId       String?
-  createdAt    DateTime     @default(now())
-  user         User?        @relation(fields: [userId], references: [id])
-  scans        Scan[]
-  subscribers  Subscriber[]
+  id             String       @id @default(uuid())
+  originalUrl    String
+  businessName   String?
+  siteContent    String?
+  userId         String?
+  isDynamic      Boolean      @default(false)
+  destinationUrl String?
+  createdAt      DateTime     @default(now())
+  user           User?        @relation(fields: [userId], references: [id])
+  scans          Scan[]
+  subscribers    Subscriber[]
 }
 
 model Scan {
