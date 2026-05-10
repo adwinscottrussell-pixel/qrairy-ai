@@ -21,7 +21,7 @@ async function handleCreateCheckout(req, res) {
     const { plan } = req.body;
     const userId = req.userId;
 
-    if (!['starter', 'pro', 'business'].includes(plan)) {
+    if (!['starter', 'pro', 'business', 'starter_annual', 'pro_annual', 'business_annual'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan.' });
     }
 
