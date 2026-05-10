@@ -608,7 +608,7 @@
       document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
       try {
         const res = await fetch(`${API_BASE}/admin/overview`, {
-          headers: { 'x-admin-key': sessionStorage.getItem('admin_key') || 'admin' }
+          headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         const data = await res.json();
 
@@ -670,7 +670,7 @@
     async function loadUsers() {
       try {
         const res = await fetch(`${API_BASE}/admin/users`, {
-          headers: { 'x-admin-key': 'admin' }
+          headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         const data = await res.json();
         allUsers = data.users || [];
@@ -747,7 +747,7 @@
       try {
         await fetch(`${API_BASE}/admin/users/${userId}/suspend`, {
           method: 'PUT',
-          headers: { 'x-admin-key': 'admin' },
+          headers: { 'x-admin-key': 'qraivy-admin-2026' },
         });
         loadUsers();
       } catch (err) {
@@ -759,7 +759,7 @@
     async function loadApiKeys() {
       try {
         const res = await fetch(`${API_BASE}/admin/api-keys`, {
-          headers: { 'x-admin-key': 'admin' }
+          headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         const data = await res.json();
         const keys = data.keys || [];
@@ -784,7 +784,7 @@
       if (!confirm('Revoke this API key?')) return;
       try {
         await fetch(`${API_BASE}/admin/api-keys/${id}/revoke`, {
-          method: 'PUT', headers: { 'x-admin-key': 'admin' }
+          method: 'PUT', headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         loadApiKeys();
       } catch (err) { alert('Failed.'); }
@@ -794,7 +794,7 @@
     async function loadRevenue() {
       try {
         const res = await fetch(`${API_BASE}/admin/revenue`, {
-          headers: { 'x-admin-key': 'admin' }
+          headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         const data = await res.json();
         const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
@@ -887,7 +887,7 @@
     async function loadQRAnalytics() {
       try {
         const res = await fetch(`${API_BASE}/admin/qr-analytics`, {
-          headers: { 'x-admin-key': 'admin' }
+          headers: { 'x-admin-key': 'qraivy-admin-2026' }
         });
         const data = await res.json();
 
