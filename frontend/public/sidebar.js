@@ -22,7 +22,7 @@
       items: [
         { href: 'dashboard.html', icon: '🔔', label: 'Push Notifications', tooltip: 'Push Notifications', badge: 'LIVE' },
         { href: '#campaigns', icon: '📣', label: 'Campaigns', tooltip: 'Campaigns', soon: true },
-        { href: '#customers', icon: '👥', label: 'Customers', tooltip: 'Customers', soon: true },
+
       ]
     },
     {
