@@ -87,7 +87,7 @@
             </div>
           </div>
           <div class="sidebar-divider"></div>
-          <a href="#" class="sidebar-signout">
+          <a href="#" class="sidebar-signout" onclick="(async()=>{if(window.Clerk)await window.Clerk.signOut();window.location.href='login.html';})();return false;">
             <span class="sidebar-item-icon">→</span>
             <span class="sidebar-item-label">Sign Out</span>
           </a>
