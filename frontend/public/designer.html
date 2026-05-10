@@ -60,7 +60,60 @@
   </style>
 </head>
 <body>
-  <div id="sidebar"></div>
+  <div id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">⬡</div>
+      <div class="sb-logo-text">QR<span>Aivy</span></div>
+    </div>
+    <button class="sb-toggle" id="sb-toggle">‹</button>
+    <nav class="sb-nav">
+      <div class="sb-section">MAIN</div>
+      <a href="dashboard.html" class="sb-item active">
+        <span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span>
+      </a>
+      <a href="#" class="sb-item" id="sb-create-qr">
+        <span class="sb-icon">＋</span><span class="sb-label">Create QR Code</span>
+      </a>
+      <a href="analytics.html" class="sb-item">
+        <span class="sb-icon">↗</span><span class="sb-label">Analytics</span>
+      </a>
+      <div class="sb-section">ENGAGE</div>
+      <a href="dashboard.html" class="sb-item">
+        <span class="sb-icon">🔔</span><span class="sb-label">Push Notifications</span>
+        <span class="sb-badge">LIVE</span>
+      </a>
+      <a href="#" class="sb-item sb-soon-item">
+        <span class="sb-icon">📣</span><span class="sb-label">Campaigns</span><span class="sb-soon">SOON</span>
+      </a>
+      <div class="sb-section">CONFIGURE</div>
+      <a href="designer.html" class="sb-item">
+        <span class="sb-icon">🎨</span><span class="sb-label">AI Designer</span>
+      </a>
+      
+      
+      <div class="sb-section">ACCOUNT</div>
+      <a href="pricing.html" class="sb-item">
+        <span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span>
+        <span class="sb-badge" id="plan-badge">FREE</span>
+      </a>
+      <a href="#" class="sb-item">
+        <span class="sb-icon">?</span><span class="sb-label">Help & Docs</span>
+      </a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar">?</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name">Loading...</div>
+          <div class="sb-user-role">Business Owner</div>
+        </div>
+      </div>
+      <div class="sb-divider"></div>
+      <a href="#" class="sb-signout">
+        <span class="sb-icon">→</span><span class="sb-label">Sign Out</span>
+      </a>
+    </div>
+  </div>
   <button id="mob-btn" style="display:none;position:fixed;top:14px;left:14px;width:38px;height:38px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200;">☰</button>
 
   <div id="main-content">
@@ -139,7 +192,7 @@
     <footer><span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span></footer>
   </div>
 
-  <script src="sidebar.js"></script>
+  
   <script
     data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
