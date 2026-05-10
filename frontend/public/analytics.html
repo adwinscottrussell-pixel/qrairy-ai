@@ -218,7 +218,7 @@
         </div>
       </div>
       <div class="sb-divider"></div>
-      <a href="#" class="sb-signout">
+      <a href="login.html" class="sb-signout" onclick="(async()=>{if(window.Clerk)await window.Clerk.signOut();window.location.href='login.html';})();return false;">
         <span class="sb-icon">→</span><span class="sb-label">Sign Out</span>
       </a>
     </div>
