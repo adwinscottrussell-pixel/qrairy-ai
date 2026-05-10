@@ -537,10 +537,11 @@
       const sidebarBadge= document.getElementById('plan-badge');
 
       banner.style.display = 'flex';
-      badgeText.textContent = planInfo.plan.toUpperCase();
-      badgeText.className = `plan-badge ${planInfo.plan}`;
-      sidebarBadge.textContent = planInfo.plan.toUpperCase();
-
+      const _base = planInfo.basePlan || planInfo.plan.replace('_annual','');
+      const _annual = planInfo.plan.includes('_annual');
+      badgeText.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
+      badgeText.className = plan-badge ;
+      sidebarBadge.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
       // Show AI landing page usage for Starter
       if (planInfo.plan === 'free') {
         progress.style.display = 'none';
