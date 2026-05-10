@@ -26,7 +26,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.groupBy({ by: ['plan'], _count: { _all: true } }),
-      prisma.qR.count({ where: { deletedAt: null } }),
+      prisma.qR.count(),
       prisma.scan.count(),
       prisma.subscriber.count(),
       prisma.user.findMany({
@@ -183,9 +183,9 @@ router.get('/revenue', requireAdmin, async (req, res) => {
 router.get('/qr-analytics', requireAdmin, async (req, res) => {
   try {
     const [totalQRs, aiQRs, dynamicQRs, totalScans, totalSubscribers, topQRs] = await Promise.all([
-      prisma.qR.count({ where: { deletedAt: null } }),
-      prisma.qR.count({ where: { businessName: { not: null }, deletedAt: null } }),
-      prisma.qR.count({ where: { isDynamic: true, deletedAt: null } }),
+      prisma.qR.count(),
+      prisma.qR.count({ where: { businessName: { not: null } } }),
+      prisma.qR.count({ where: { isDynamic: true } }),
       prisma.scan.count(),
       prisma.subscriber.count(),
       prisma.qR.findMany({
