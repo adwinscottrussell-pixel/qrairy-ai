@@ -388,6 +388,7 @@
         <div class="page-title">All <span>Users</span></div>
         <div style="display:flex;align-items:center;gap:10px">
           <input type="text" class="search-input" id="user-search" placeholder="Search by email..." oninput="filterUsers()" />
+          <button class="refresh-btn" onclick="downloadUsersCSV()">⬇ Export CSV</button>
           <button class="refresh-btn" onclick="loadUsers()">↻ Refresh</button>
         </div>
       </div>
@@ -965,6 +966,24 @@
     async function loadLogs() {
       document.getElementById('logs-body').innerHTML = '<tr><td colspan="4" class="loading">No error logging endpoint yet — add to Phase 3.</td></tr>';
       document.getElementById('logs-count').textContent = '0 errors';
+    }
+
+    // ── CSV Export ───────────────────────────────────────────
+    function downloadUsersCSV() {
+      if (!allUsers.length) { alert('Load users first — click All Users then Refresh.'); return; }
+      const headers = ['User ID','Email','Plan','QR Codes','Scans','Subscribers','Joined','Stripe Customer ID','Subscription Status'];
+      const rows = allUsers.map(u => [
+        u.id, u.email || '', u.plan,
+        u.qrCount || 0, u.totalScans || 0, u.totalSubscribers || 0,
+        new Date(u.createdAt).toLocaleDateString('en-GB'),
+        u.stripeCustomerId || '', u.subscriptionStatus || '',
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'qraivy-users-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
     }
 
     // ── Init ──────────────────────────────────────────────────
