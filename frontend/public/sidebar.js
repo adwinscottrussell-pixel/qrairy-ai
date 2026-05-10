@@ -26,6 +26,7 @@
       section: 'CONFIGURE',
       items: [
         { href: 'designer.html', icon: '🎨', label: 'AI Designer' },
+        { href: 'loyalty-setup.html', icon: '🃏', label: 'Loyalty Cards', soon: true },
       ]
     },
     {
