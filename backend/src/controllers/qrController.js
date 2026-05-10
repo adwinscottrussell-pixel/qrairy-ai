@@ -324,8 +324,8 @@ async function handleChat(req, res) {
 async function handleAnalytics(req, res) {
   try {
     const userId = await getUserFromToken(req.headers.authorization);
-    const where = userId ? { userId } : {};
-    const data = await prisma.qR.findMany({ where, include: { scans: true }, orderBy: { createdAt: 'desc' } });
+    if (!userId) return res.status(401).json({ error: 'Unauthorized.' });
+    const data = await prisma.qR.findMany({ where: { userId }, include: { scans: true }, orderBy: { createdAt: 'desc' } });
     const analytics = data.map(qr => ({
       id: qr.id,
       originalUrl: qr.originalUrl,
