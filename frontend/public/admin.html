@@ -799,15 +799,16 @@
         const data = await res.json();
         const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
 
+        const calcMRR = (data.planBreakdown || []).reduce((t,p) => t + (p.count * ({free:0,starter:9,pro:29,business:49}[p.plan]||0)), 0);
         document.getElementById('revenue-stats').innerHTML = `
           <div class="stat-card green">
             <div class="stat-label">Est. MRR</div>
-            <div class="stat-value">€${data.estimatedMRR ?? 0}</div>
+            <div class="stat-value">€${calcMRR}</div>
             <div class="stat-sub">monthly recurring</div>
           </div>
           <div class="stat-card orange">
             <div class="stat-label">Est. ARR</div>
-            <div class="stat-value">€${(data.estimatedMRR ?? 0) * 12}</div>
+            <div class="stat-value">€${calcMRR * 12}</div>
             <div class="stat-sub">annualised</div>
           </div>
           <div class="stat-card blue">
