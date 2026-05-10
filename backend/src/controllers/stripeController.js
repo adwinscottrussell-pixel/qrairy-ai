@@ -1,4 +1,6 @@
 const prisma = require('../utils/prismaClient');
+const { PLANS } = require('../config/constants');
+const normalizePlan = (p) => p ? p.replace('_annual','') : 'free';
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // ─── Plan map: Stripe Price ID → internal plan name ──────────
@@ -99,8 +101,13 @@ async function handleSubscriptionStatus(req, res) {
     const userId = req.userId;
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
+    const rawPlan = user?.plan || 'free';
+    const base = normalizePlan(rawPlan);
+    const planConfig = PLANS[base] || PLANS['free'];
     return res.status(200).json({
-      plan: user?.plan || 'free',
+      plan: rawPlan,
+      basePlan: base,
+      aiLimit: planConfig.aiQRLimit,
       stripeCustomerId: user?.stripeCustomerId || null,
       stripeSubscriptionId: user?.stripeSubscriptionId || null,
       subscriptionStatus: user?.subscriptionStatus || null,
