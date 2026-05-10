@@ -11,7 +11,7 @@
       section: 'MAIN',
       items: [
         { href: 'dashboard.html', icon: '⊞', label: 'Dashboard', tooltip: 'Dashboard' },
-        { href: 'index.html', icon: '⬡', label: 'QR Generator', tooltip: 'QR Generator' },
+        { href: 'dashboard.html', icon: '⬡', label: 'QR Generator', tooltip: 'QR Generator' },
         { href: 'analytics.html', icon: '↗', label: 'Analytics', tooltip: 'Analytics' },
       ]
     },
