@@ -1,5 +1,6 @@
 const prisma = require('../utils/prismaClient');
 const { PLANS } = require('../config/constants');
+const normalizePlan = (plan) => plan ? plan.replace('_annual', '') : 'free';
 
 // ─── requirePlan(feature) ─────────────────────────────────────
 // Usage: router.post('/pass/create', requireAuth, requirePlan('walletPasses'), handler)
