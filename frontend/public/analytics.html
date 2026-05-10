@@ -270,6 +270,10 @@
 
   <script>
     const API_BASE = 'https://api.qraivy.com';
+    document.addEventListener('DOMContentLoaded', () => {
+      const signOutLink = document.querySelector('.sb-item[href="login.html"]') || Array.from(document.querySelectorAll('.sb-item')).find(el => el.textContent.includes('Sign Out'));
+      if (signOutLink) signOutLink.addEventListener('click', async (e) => { e.preventDefault(); await window.Clerk?.signOut(); window.location.href = 'login.html'; });
+    });
     async function deleteQR(id, row) {
       if (!confirm('Delete this QR code and all its data?')) return;
       try {
