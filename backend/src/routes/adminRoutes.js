@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../utils/prismaClient');
 
 // ─── Admin key middleware ─────────────────────────────────────
+// cache-bust-v2
 const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || 'qraivy-admin-2026';
 
 function requireAdmin(req, res, next) {
