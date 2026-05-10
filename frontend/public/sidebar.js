@@ -1,3 +1,4 @@
+// sidebar v2 132317
 (function() {
   const path = window.location.pathname;
   const page = path.split('/').pop() || 'index.html';
