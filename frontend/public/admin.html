@@ -933,23 +933,22 @@
 
     // ── HEALTH ────────────────────────────────────────────────
     async function loadHealth() {
+      const adminKey = sessionStorage.getItem('adminKey') || '';
+      let checks = {};
+      try {
+        const res = await fetch(API_BASE + '/admin/health', { headers: { 'x-admin-key': adminKey } });
+        checks = await res.json();
+      } catch(e) {}
       const services = [
-        { name: 'Qraivy API (Railway)', url: `${API_BASE}/health`, key: 'api' },
-        { name: 'Anthropic AI', url: `${API_BASE}/health`, key: 'anthropic' },
-        { name: 'Database (PostgreSQL)', url: `${API_BASE}/health`, key: 'db' },
-        { name: 'Stripe Webhooks', url: `${API_BASE}/health`, key: 'stripe' },
-        { name: 'OneSignal Push', url: `${API_BASE}/health`, key: 'onesignal' },
-        { name: 'Vercel Frontend', url: 'https://www.qraivy.com', key: 'frontend' },
+        { name: 'Qraivy API (Railway)', key: 'api' },
+        { name: 'Anthropic AI', key: 'anthropic' },
+        { name: 'Database (PostgreSQL)', key: 'db' },
+        { name: 'Stripe Webhooks', key: 'stripe' },
+        { name: 'OneSignal Push', key: 'onesignal' },
+        { name: 'Vercel Frontend', key: 'frontend' },
       ];
-
-      document.getElementById('health-rows').innerHTML = '<div class="loading">Checking services...</div>';
-
-      const results = await Promise.allSettled(
-        services.map(s => fetch(s.url, { signal: AbortSignal.timeout(5000) }))
-      );
-
       document.getElementById('health-rows').innerHTML = services.map((s, i) => {
-        const ok = results[i].status === 'fulfilled' && results[i].value.ok;
+        const ok = checks[s.key] === true;
         return `
           <div class="health-row">
             <div class="health-name">${s.name}</div>

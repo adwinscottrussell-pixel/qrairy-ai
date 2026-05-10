@@ -218,4 +218,21 @@ router.get('/qr-analytics', requireAdmin, async (req, res) => {
   }
 });
 
+router.get('/health', async (req, res) => {
+  try {
+    await prisma.user.count();
+    const checks = {
+      api: true,
+      db: true,
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      stripe: !!process.env.STRIPE_SECRET_KEY,
+      onesignal: !!process.env.ONESIGNAL_APP_ID,
+      frontend: true,
+    };
+    res.json(checks);
+  } catch (err) {
+    res.json({ api: true, db: false, anthropic: false, stripe: false, onesignal: false, frontend: true });
+  }
+});
+
 module.exports = router;
