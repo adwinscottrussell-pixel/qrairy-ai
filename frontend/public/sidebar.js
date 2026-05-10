@@ -187,6 +187,19 @@
       });
     }, 800);
   }
+    function attachSignOut() {
+    setTimeout(() => {
+      document.querySelectorAll('a, button').forEach(el => {
+        if (el.textContent.trim().includes('Sign Out')) {
+          el.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (window.Clerk) await window.Clerk.signOut();
+            window.location.href = 'login.html';
+          });
+        }
+      });
+    }, 800);
+  }
     if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { buildSidebar(); attachSignOut(); });
   } else {
