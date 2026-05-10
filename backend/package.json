@@ -10,10 +10,10 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@clerk/backend": "^1.13.0",
     "@prisma/client": "^5.14.0",
     "@sparticuz/chromium": "^148.0.0",
-    "anthropic": "^0.0.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "helmet": "^8.1.0",
