@@ -5,8 +5,8 @@ const prisma = require('../utils/prismaClient');
 
 // ─── Tier definitions ────────────────────────────────────────────────────────
 const PLAN_LIMITS = { free: Infinity, starter: 10, pro: Infinity };
-const PLAN_AI_LIMITS = { free: 0, starter: 10, pro: Infinity }; // AI landing page limits
-const PLAN_DYNAMIC = { free: false, starter: false, pro: true };  // Dynamic QR access
+const PLAN_AI_LIMITS = { free: 0, starter: 10, pro: null, pro_annual: null, business: null, business_annual: null }; // null = unlimited
+const PLAN_DYNAMIC = { free: false, starter: false, starter_annual: false, pro: true, pro_annual: true, business: true, business_annual: true };
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 async function getUserFromToken(authHeader) {
