@@ -174,8 +174,21 @@
     setTimeout(() => toast.remove(), 3000);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildSidebar);
+  function attachSignOut() {
+    setTimeout(() => {
+      document.querySelectorAll('.sb-item, a').forEach(link => {
+        if (link.textContent.trim().includes('Sign Out')) {
+          link.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (window.Clerk) await window.Clerk.signOut();
+            window.location.href = 'login.html';
+          });
+        }
+      });
+    }, 800);
+  }
+    if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { buildSidebar(); attachSignOut(); });
   } else {
     buildSidebar();
   }
