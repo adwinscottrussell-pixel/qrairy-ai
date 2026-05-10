@@ -9,9 +9,12 @@ const PRICE_TO_PLAN = {
 };
 
 const PLAN_TO_PRICE = {
-  starter:  process.env.STRIPE_PRICE_STARTER,
-  pro:      process.env.STRIPE_PRICE_PRO,
-  business: process.env.STRIPE_PRICE_BUSINESS,
+  starter:          process.env.STRIPE_PRICE_STARTER,
+  pro:              process.env.STRIPE_PRICE_PRO,
+  business:         process.env.STRIPE_PRICE_BUSINESS,
+  starter_annual:   process.env.STRIPE_PRICE_STARTER_ANNUAL || process.env.STRIPE_PRICE_STARTER,
+  pro_annual:       process.env.STRIPE_PRICE_PRO_ANNUAL || process.env.STRIPE_PRICE_PRO,
+  business_annual:  process.env.STRIPE_PRICE_BUSINESS_ANNUAL || process.env.STRIPE_PRICE_BUSINESS,
 };
 
 // ─── POST /stripe/checkout ────────────────────────────────────
