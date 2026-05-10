@@ -13,7 +13,7 @@ function requirePlan(feature) {
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       const plan = user?.plan || 'free';
-      const limits = PLANS[plan];
+      const limits = PLANS[normalizePlan(plan)] || PLANS['free'];
 
       if (!limits[feature]) {
         const upgradeMap = {
