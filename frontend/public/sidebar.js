@@ -189,8 +189,8 @@
   }
     function attachSignOut() {
     setTimeout(() => {
-      document.querySelectorAll('a, button').forEach(el => {
-        if (el.textContent.trim().includes('Sign Out')) {
+      document.querySelectorAll('.sidebar-signout').forEach(el => {
+        if (true) {
           el.addEventListener('click', async (e) => {
             e.preventDefault();
             if (window.Clerk) await window.Clerk.signOut();
