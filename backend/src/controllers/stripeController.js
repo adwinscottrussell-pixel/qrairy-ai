@@ -107,8 +107,8 @@ async function handleSubscriptionStatus(req, res) {
     return res.status(200).json({
       plan: rawPlan,
       basePlan: base,
-      aiLimit: planConfig.aiQRLimit,
-      canCreateAI: planConfig.aiQRLimit > 0,
+      aiLimit: planConfig.aiQRLimit === -1 ? null : planConfig.aiQRLimit,
+      canCreateAI: planConfig.aiQRLimit !== 0,
       canUseDynamic: planConfig.dynamicQR,
       stripeCustomerId: user?.stripeCustomerId || null,
       stripeSubscriptionId: user?.stripeSubscriptionId || null,

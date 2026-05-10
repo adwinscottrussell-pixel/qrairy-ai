@@ -7,7 +7,7 @@ const PLANS = {
   free: {
     name: 'Free',
     price: 0,
-    basicQRLimit: Infinity,   // free forever
+    basicQRLimit: -1,   // free forever
     aiQRLimit: 0,             // blocked
     dynamicQR: false,
     pushNotifications: false,
@@ -18,7 +18,7 @@ const PLANS = {
   starter: {
     name: 'Starter',
     price: 9,
-    basicQRLimit: Infinity,
+    basicQRLimit: -1,
     aiQRLimit: 10,
     dynamicQR: false,
     pushNotifications: true,
@@ -29,8 +29,8 @@ const PLANS = {
   pro: {
     name: 'Pro',
     price: 29,
-    basicQRLimit: Infinity,
-    aiQRLimit: Infinity,
+    basicQRLimit: -1,
+    aiQRLimit: -1,
     dynamicQR: true,
     pushNotifications: true,
     walletPasses: false,
@@ -40,8 +40,8 @@ const PLANS = {
   business: {
     name: 'Business',
     price: 49,
-    basicQRLimit: Infinity,
-    aiQRLimit: Infinity,
+    basicQRLimit: -1,
+    aiQRLimit: -1,
     dynamicQR: true,
     pushNotifications: true,
     walletPasses: true,
