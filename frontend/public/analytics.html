@@ -316,6 +316,7 @@
     // Analytics
     async function loadAnalytics() {
       try {
+        if (!window.Clerk?.session) return;
         const token = window.Clerk?.session ? await window.Clerk.session.getToken() : null;
         const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
         const res = await fetch(API_BASE + '/analytics', { headers });
