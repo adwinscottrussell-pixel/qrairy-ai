@@ -270,6 +270,15 @@
 
   <script>
     const API_BASE = 'https://api.qraivy.com';
+    async function deleteQR(id, row) {
+      if (!confirm('Delete this QR code and all its data?')) return;
+      try {
+        const token = await window.Clerk.session.getToken();
+        const res = await fetch(API_BASE + '/qr/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.success) { row.remove(); } else { alert(data.error || 'Could not delete.'); }
+      } catch (e) { alert('Could not reach server.'); }
+    }
 
     // Sidebar
     const sidebar = document.getElementById('sidebar');
