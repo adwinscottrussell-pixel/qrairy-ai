@@ -310,7 +310,7 @@
 
       <div class="sb-section">Users</div>
       <button class="sb-item" onclick="showPage('users')">
-        <span class="sb-icon">👥</span> All Users
+        <span class="sb-icon">👥</span> All Customers
       </button>
       <button class="sb-item" onclick="showPage('api-keys')">
         <span class="sb-icon">🔑</span> API Keys
@@ -969,7 +969,7 @@
 
     // ── CSV Export ───────────────────────────────────────────
     function downloadUsersCSV() {
-      if (!allUsers.length) { alert('Load users first — click All Users then Refresh.'); return; }
+      if (!allUsers.length) { alert('Load users first — click All Customers then Refresh.'); return; }
       const headers = ['User ID','Email','Plan','QR Codes','Scans','Subscribers','Joined','Stripe Customer ID','Subscription Status'];
       const rows = allUsers.map(u => [
         u.id, u.email || '', u.plan,
