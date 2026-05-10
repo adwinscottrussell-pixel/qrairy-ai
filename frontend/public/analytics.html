@@ -352,7 +352,7 @@
     data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
     type="text/javascript"
-    onload="window.Clerk.load()"
+    onload="window.Clerk.load().then(() => loadAnalytics())"
   ></script>
 </body>
 </html>
