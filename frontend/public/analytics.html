@@ -211,9 +211,9 @@
     </nav>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">A</div>
+        <div class="sb-avatar" id="sb-avatar">?</div>
         <div class="sb-user-info">
-          <div class="sb-user-name">Admin</div>
+          <div class="sb-user-name" id="sb-user-name">...</div>
           <div class="sb-user-role">Business Owner</div>
         </div>
       </div>
@@ -355,7 +355,7 @@
     data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
     type="text/javascript"
-    onload="window.Clerk.load().then(() => loadAnalytics())"
+    onload="window.Clerk.load().then(() => { loadAnalytics(); const u=window.Clerk.user; if(u){const n=u.firstName||u.emailAddresses[0].emailAddress; document.getElementById('sb-user-name').textContent=n; document.getElementById('sb-avatar').textContent=n[0].toUpperCase();} })"
   ></script>
 </body>
 </html>
