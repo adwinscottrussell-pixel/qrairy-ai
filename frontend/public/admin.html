@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qraivy — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #05082e;
+      --surface: #0d1240;
+      --surface2: #151a4a;
+      --border: #1e2560;
+      --accent: #ff5a1f;
+      --accent2: #ff8c00;
+      --text: #ffffff;
+      --text-dim: #6b7280;
+      --text-mid: #9ca3af;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh; display: flex;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 220px; min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; z-index: 100;
+      flex-shrink: 0;
+    }
+    .sb-logo {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-display); font-size: 1rem;
+      font-weight: 900; letter-spacing: -0.02em;
+    }
+    .sb-logo span { color: var(--accent); font-style: italic; }
+    .sb-tag {
+      font-size: 0.55rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-dim);
+      display: block; margin-top: 2px;
+    }
+    .sb-nav { flex: 1; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+    .sb-section {
+      font-size: 0.55rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-dim);
+      padding: 10px 10px 4px;
+    }
+    .sb-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 6px;
+      cursor: pointer; color: var(--text-mid);
+      font-size: 0.78rem; font-weight: 500;
+      transition: all 0.18s; border: none;
+      background: none; width: 100%; text-align: left;
+    }
+    .sb-item:hover { background: var(--surface2); color: var(--text); }
+    .sb-item.active { background: var(--accent); color: #fff; }
+    .sb-icon { width: 16px; text-align: center; font-size: 13px; }
+    .sb-footer {
+      padding: 12px 8px;
+      border-top: 1px solid var(--border);
+    }
+    .sb-signout {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 6px;
+      cursor: pointer; color: var(--text-dim);
+      font-size: 0.78rem; transition: all 0.18s;
+      border: none; background: none; width: 100%;
+    }
+    .sb-signout:hover { background: rgba(239,68,68,0.1); color: var(--red); }
+
+    /* ── Main content ── */
+    #main { margin-left: 220px; flex: 1; padding: 32px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 28px;
+    }
+    .page-title {
+      font-family: var(--font-display); font-size: 1.4rem;
+      font-weight: 800; letter-spacing: -0.02em;
+    }
+    .page-title span { color: var(--accent); font-style: normal; }
+    .refresh-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text-mid); font-family: var(--font-mono);
+      font-size: 0.72rem; cursor: pointer; transition: all 0.18s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .last-updated {
+      font-size: 0.62rem; color: var(--text-dim); margin-left: 8px;
+    }
+
+    /* ── Stat cards ── */
+    .stats-grid {
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .stat-label {
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: var(--font-display); font-size: 2rem;
+      font-weight: 900; line-height: 1;
+    }
+    .stat-sub {
+      font-size: 0.65rem; color: var(--text-dim); margin-top: 4px;
+    }
+    .stat-card.green { border-color: rgba(34,197,94,0.3); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.orange { border-color: rgba(255,90,31,0.3); }
+    .stat-card.orange .stat-value { color: var(--accent); }
+    .stat-card.blue { border-color: rgba(59,130,246,0.3); }
+    .stat-card.blue .stat-value { color: var(--blue); }
+    .stat-card.purple { border-color: rgba(139,92,246,0.3); }
+    .stat-card.purple .stat-value { color: var(--purple); }
+    .stat-card.yellow { border-color: rgba(245,158,11,0.3); }
+    .stat-card.yellow .stat-value { color: var(--yellow); }
+
+    /* ── Tables ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; margin-bottom: 24px;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .table-title {
+      font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
+    }
+    .table-count {
+      font-size: 0.65rem; color: var(--text-dim);
+      background: var(--surface2); padding: 3px 10px;
+      border-radius: 999px; border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-dim); padding: 10px 20px; text-align: left;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    td {
+      padding: 12px 20px; font-size: 0.75rem; color: var(--text-mid);
+      border-bottom: 1px solid rgba(30,37,96,0.5); vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .td-name { color: var(--text); font-weight: 500; }
+    .td-email { color: var(--text-dim); }
+
+    /* ── Plan badges ── */
+    .plan-badge {
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+    }
+    .plan-free { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .plan-starter { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .plan-pro { background: rgba(255,90,31,0.2); color: #ff8c55; }
+    .plan-business { background: rgba(139,92,246,0.2); color: #a78bfa; }
+
+    /* ── Status indicators ── */
+    .status-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; margin-right: 6px;
+    }
+    .status-ok { background: var(--green); }
+    .status-warn { background: var(--yellow); }
+    .status-err { background: var(--red); }
+
+    /* ── Action buttons ── */
+    .action-btn {
+      padding: 4px 10px; border-radius: 5px; font-size: 0.65rem;
+      font-family: var(--font-mono); cursor: pointer;
+      border: 1px solid var(--border); background: none;
+      color: var(--text-mid); transition: all 0.18s; margin-right: 4px;
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Cost section ── */
+    .cost-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid rgba(30,37,96,0.5);
+      font-size: 0.78rem;
+    }
+    .cost-row:last-child { border-bottom: none; }
+    .cost-service { color: var(--text); display: flex; align-items: center; gap: 10px; }
+    .cost-service-icon { font-size: 16px; }
+    .cost-amount { font-family: var(--font-display); font-weight: 700; color: var(--accent); }
+    .cost-detail { font-size: 0.65rem; color: var(--text-dim); }
+
+    /* ── System health ── */
+    .health-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid rgba(30,37,96,0.5);
+      font-size: 0.78rem;
+    }
+    .health-row:last-child { border-bottom: none; }
+    .health-name { color: var(--text); }
+    .health-status { font-size: 0.7rem; }
+
+    /* ── Loading ── */
+    .loading { color: var(--text-dim); font-size: 0.78rem; padding: 20px; text-align: center; }
+
+    /* ── Search ── */
+    .search-input {
+      padding: 7px 12px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: var(--font-mono);
+      font-size: 0.72rem; outline: none; width: 220px;
+      transition: border-color 0.18s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 999; display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 32px; max-width: 420px; width: 100%;
+    }
+    .modal-title {
+      font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .modal-label {
+      font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-dim); display: block; margin-bottom: 6px; margin-top: 14px;
+    }
+    .modal-select {
+      width: 100%; padding: 10px 12px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text); font-family: var(--font-mono); font-size: 0.82rem;
+      outline: none; cursor: pointer;
+    }
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .modal-btn {
+      padding: 8px 18px; border-radius: 7px; font-family: var(--font-mono);
+      font-size: 0.75rem; cursor: pointer; border: 1px solid var(--border);
+      background: none; color: var(--text-mid); transition: all 0.18s;
+    }
+    .modal-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .modal-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .modal-btn.primary:hover { background: #ff7a45; }
+  </style>
+</head>
+<body>
+
+  <!-- Change Plan Modal -->
+  <div class="modal-overlay" id="plan-modal">
+    <div class="modal-box">
+      <div class="modal-title">Change User Plan</div>
+      <div id="modal-user-info" style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px"></div>
+      <label class="modal-label">New Plan</label>
+      <select class="modal-select" id="modal-plan-select">
+        <option value="free">Free</option>
+        <option value="starter">Starter — €9/mo</option>
+        <option value="pro">Pro — €29/mo</option>
+        <option value="business">Business — €49/mo</option>
+      </select>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closePlanModal()">Cancel</button>
+        <button class="modal-btn primary" onclick="savePlanChange()">Save Change</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sb-logo">
+      QR<span>Aivy</span>
+      <span class="sb-tag">Admin Panel</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Overview</div>
+      <button class="sb-item active" onclick="showPage('overview')">
+        <span class="sb-icon">⊞</span> Overview
+      </button>
+
+      <div class="sb-section">Users</div>
+      <button class="sb-item" onclick="showPage('users')">
+        <span class="sb-icon">👥</span> All Users
+      </button>
+      <button class="sb-item" onclick="showPage('api-keys')">
+        <span class="sb-icon">🔑</span> API Keys
+      </button>
+
+      <div class="sb-section">Revenue</div>
+      <button class="sb-item" onclick="showPage('revenue')">
+        <span class="sb-icon">💰</span> Revenue
+      </button>
+      <button class="sb-item" onclick="showPage('costs')">
+        <span class="sb-icon">📊</span> Cost Analytics
+      </button>
+
+      <div class="sb-section">Platform</div>
+      <button class="sb-item" onclick="showPage('qr-analytics')">
+        <span class="sb-icon">⬡</span> QR Analytics
+      </button>
+      <button class="sb-item" onclick="showPage('health')">
+        <span class="sb-icon">❤</span> System Health
+      </button>
+      <button class="sb-item" onclick="showPage('logs')">
+        <span class="sb-icon">📋</span> Error Logs
+      </button>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-signout" onclick="signOut()">
+        <span>→</span> Sign Out
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">System <span>Overview</span></div>
+        </div>
+        <div style="display:flex;align-items:center">
+          <span class="last-updated" id="overview-updated"></span>
+          <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="stats-grid" id="overview-stats">
+        <div class="loading">Loading...</div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Recent Signups</div>
+          <span class="table-count" id="recent-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>QR Codes</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="recent-users-body">
+            <tr><td colspan="5" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <div class="page-title">All <span>Users</span></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" class="search-input" id="user-search" placeholder="Search by email..." oninput="filterUsers()" />
+          <button class="refresh-btn" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Users</div>
+          <span class="table-count" id="users-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>QR Codes</th>
+              <th>Scans</th>
+              <th>Subscribers</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- API KEYS -->
+    <div class="page" id="page-api-keys">
+      <div class="page-header">
+        <div class="page-title">API <span>Keys</span></div>
+        <button class="refresh-btn" onclick="loadApiKeys()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Active API Keys</div>
+          <span class="table-count" id="apikeys-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Plan</th>
+              <th>QR Used</th>
+              <th>QR Limit</th>
+              <th>Last Used</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="apikeys-body">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REVENUE -->
+    <div class="page" id="page-revenue">
+      <div class="page-header">
+        <div class="page-title">Revenue <span>Dashboard</span></div>
+        <button class="refresh-btn" onclick="loadRevenue()">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="revenue-stats">
+        <div class="loading">Loading...</div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Subscribers by Plan</div>
+        </div>
+        <div id="revenue-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- COSTS -->
+    <div class="page" id="page-costs">
+      <div class="page-header">
+        <div class="page-title">Cost <span>Analytics</span></div>
+        <button class="refresh-btn" onclick="loadCosts()">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="cost-summary">
+        <div class="loading">Loading...</div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Monthly API Costs</div>
+        </div>
+        <div id="cost-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- QR ANALYTICS -->
+    <div class="page" id="page-qr-analytics">
+      <div class="page-header">
+        <div class="page-title">QR <span>Analytics</span></div>
+        <button class="refresh-btn" onclick="loadQRAnalytics()">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="qr-stats">
+        <div class="loading">Loading...</div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Most Scanned QR Codes</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Business</th>
+              <th>URL</th>
+              <th>Type</th>
+              <th>Scans</th>
+              <th>Subscribers</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="qr-body">
+            <tr><td colspan="6" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HEALTH -->
+    <div class="page" id="page-health">
+      <div class="page-header">
+        <div class="page-title">System <span>Health</span></div>
+        <button class="refresh-btn" onclick="loadHealth()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Service Status</div>
+        </div>
+        <div id="health-rows"></div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="page" id="page-logs">
+      <div class="page-header">
+        <div class="page-title">Error <span>Logs</span></div>
+        <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Recent Errors</div>
+          <span class="table-count" id="logs-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Message</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body">
+            <tr><td colspan="4" class="loading">No error logs available yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <script>
+    const API_BASE = 'https://api.qraivy.com';
+    let allUsers = [];
+    let currentEditUserId = null;
+
+    // ── Auth check ────────────────────────────────────────────
+    if (sessionStorage.getItem('admin_auth') !== 'true') {
+      window.location.href = 'admin-login.html';
+    }
+
+    function signOut() {
+      sessionStorage.removeItem('admin_auth');
+      window.location.href = 'admin-login.html';
+    }
+
+    // ── Navigation ────────────────────────────────────────────
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+      document.getElementById(`page-${name}`).classList.add('active');
+      event.currentTarget.classList.add('active');
+
+      const loaders = {
+        overview: loadOverview,
+        users: loadUsers,
+        'api-keys': loadApiKeys,
+        revenue: loadRevenue,
+        costs: loadCosts,
+        'qr-analytics': loadQRAnalytics,
+        health: loadHealth,
+        logs: loadLogs,
+      };
+      if (loaders[name]) loaders[name]();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────
+    function planBadge(plan) {
+      return `<span class="plan-badge plan-${plan}">${plan}</span>`;
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+    }
+
+    function fmtTime(d) {
+      if (!d) return 'Never';
+      return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ── OVERVIEW ──────────────────────────────────────────────
+    async function loadOverview() {
+      document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
+      try {
+        const res = await fetch(`${API_BASE}/admin/overview`, {
+          headers: { 'x-admin-key': sessionStorage.getItem('admin_key') || 'admin' }
+        });
+        const data = await res.json();
+
+        document.getElementById('overview-stats').innerHTML = `
+          <div class="stat-card green">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value">${data.totalUsers ?? '—'}</div>
+            <div class="stat-sub">all time</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">Paid Users</div>
+            <div class="stat-value">${data.paidUsers ?? '—'}</div>
+            <div class="stat-sub">starter + pro + business</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Total QR Codes</div>
+            <div class="stat-value">${data.totalQRs ?? '—'}</div>
+            <div class="stat-sub">all users</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Total Scans</div>
+            <div class="stat-value">${data.totalScans ?? '—'}</div>
+            <div class="stat-sub">all time</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Est. MRR</div>
+            <div class="stat-value">€${data.estimatedMRR ?? '0'}</div>
+            <div class="stat-sub">based on active plans</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Total Subscribers</div>
+            <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
+            <div class="stat-sub">push notification subs</div>
+          </div>
+        `;
+
+        const tbody = document.getElementById('recent-users-body');
+        if (data.recentUsers && data.recentUsers.length > 0) {
+          tbody.innerHTML = data.recentUsers.map(u => `
+            <tr>
+              <td class="td-email">${u.id.substring(0, 16)}...</td>
+              <td>${u.email || '—'}</td>
+              <td>${planBadge(u.plan)}</td>
+              <td>${u._count?.qrs ?? 0}</td>
+              <td>${fmtDate(u.createdAt)}</td>
+            </tr>
+          `).join('');
+          document.getElementById('recent-count').textContent = `${data.recentUsers.length} recent`;
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" class="loading">No users yet.</td></tr>';
+        }
+      } catch (err) {
+        document.getElementById('overview-stats').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load. Is the admin route deployed?</div>`;
+        console.error(err);
+      }
+    }
+
+    // ── USERS ─────────────────────────────────────────────────
+    async function loadUsers() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/users`, {
+          headers: { 'x-admin-key': 'admin' }
+        });
+        const data = await res.json();
+        allUsers = data.users || [];
+        document.getElementById('users-count').textContent = `${allUsers.length} users`;
+        renderUsers(allUsers);
+      } catch (err) {
+        document.getElementById('users-body').innerHTML = '<tr><td colspan="7" class="loading" style="color:var(--red)">Failed to load users.</td></tr>';
+      }
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('users-body');
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td class="td-name">${u.email || u.id.substring(0,20)+'...'}</td>
+          <td>${planBadge(u.plan)}</td>
+          <td>${u.qrCount ?? 0}</td>
+          <td>${u.totalScans ?? 0}</td>
+          <td>${u.totalSubscribers ?? 0}</td>
+          <td>${fmtDate(u.createdAt)}</td>
+          <td>
+            <button class="action-btn" onclick="openPlanModal('${u.id}', '${u.email || ''}', '${u.plan}')">Change Plan</button>
+            <button class="action-btn danger" onclick="suspendUser('${u.id}')">Suspend</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterUsers() {
+      const q = document.getElementById('user-search').value.toLowerCase();
+      renderUsers(allUsers.filter(u => (u.email || '').toLowerCase().includes(q)));
+    }
+
+    // ── PLAN MODAL ────────────────────────────────────────────
+    function openPlanModal(userId, email, currentPlan) {
+      currentEditUserId = userId;
+      document.getElementById('modal-user-info').textContent = email || userId;
+      document.getElementById('modal-plan-select').value = currentPlan;
+      document.getElementById('plan-modal').classList.add('open');
+    }
+
+    function closePlanModal() {
+      document.getElementById('plan-modal').classList.remove('open');
+      currentEditUserId = null;
+    }
+
+    async function savePlanChange() {
+      const newPlan = document.getElementById('modal-plan-select').value;
+      if (!currentEditUserId) return;
+      try {
+        const res = await fetch(`${API_BASE}/admin/users/${currentEditUserId}/plan`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'admin' },
+          body: JSON.stringify({ plan: newPlan }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          closePlanModal();
+          loadUsers();
+        } else {
+          alert(data.error || 'Failed to update plan.');
+        }
+      } catch (err) {
+        alert('Could not reach server.');
+      }
+    }
+
+    async function suspendUser(userId) {
+      if (!confirm('Suspend this user? They will lose access to paid features.')) return;
+      try {
+        await fetch(`${API_BASE}/admin/users/${userId}/suspend`, {
+          method: 'PUT',
+          headers: { 'x-admin-key': 'admin' },
+        });
+        loadUsers();
+      } catch (err) {
+        alert('Could not reach server.');
+      }
+    }
+
+    // ── API KEYS ──────────────────────────────────────────────
+    async function loadApiKeys() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/api-keys`, {
+          headers: { 'x-admin-key': 'admin' }
+        });
+        const data = await res.json();
+        const keys = data.keys || [];
+        document.getElementById('apikeys-count').textContent = `${keys.length} keys`;
+        document.getElementById('apikeys-body').innerHTML = keys.length ? keys.map(k => `
+          <tr>
+            <td class="td-name">${k.name}</td>
+            <td>${planBadge(k.plan.replace('api_', ''))}</td>
+            <td>${k.qrUsed}</td>
+            <td>${k.qrLimit === -1 ? '∞' : k.qrLimit}</td>
+            <td>${fmtTime(k.lastUsedAt)}</td>
+            <td><span class="status-dot ${k.isActive ? 'status-ok' : 'status-err'}"></span>${k.isActive ? 'Active' : 'Revoked'}</td>
+            <td><button class="action-btn danger" onclick="revokeKey('${k.id}')">Revoke</button></td>
+          </tr>
+        `).join('') : '<tr><td colspan="7" class="loading">No API keys yet.</td></tr>';
+      } catch (err) {
+        document.getElementById('apikeys-body').innerHTML = '<tr><td colspan="7" class="loading" style="color:var(--red)">Failed to load.</td></tr>';
+      }
+    }
+
+    async function revokeKey(id) {
+      if (!confirm('Revoke this API key?')) return;
+      try {
+        await fetch(`${API_BASE}/admin/api-keys/${id}/revoke`, {
+          method: 'PUT', headers: { 'x-admin-key': 'admin' }
+        });
+        loadApiKeys();
+      } catch (err) { alert('Failed.'); }
+    }
+
+    // ── REVENUE ───────────────────────────────────────────────
+    async function loadRevenue() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/revenue`, {
+          headers: { 'x-admin-key': 'admin' }
+        });
+        const data = await res.json();
+        const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
+
+        document.getElementById('revenue-stats').innerHTML = `
+          <div class="stat-card green">
+            <div class="stat-label">Est. MRR</div>
+            <div class="stat-value">€${data.estimatedMRR ?? 0}</div>
+            <div class="stat-sub">monthly recurring</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">Est. ARR</div>
+            <div class="stat-value">€${(data.estimatedMRR ?? 0) * 12}</div>
+            <div class="stat-sub">annualised</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Paying Users</div>
+            <div class="stat-value">${data.paidUsers ?? 0}</div>
+            <div class="stat-sub">starter + pro + business</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Free Users</div>
+            <div class="stat-value">${data.freeUsers ?? 0}</div>
+            <div class="stat-sub">conversion potential</div>
+          </div>
+        `;
+
+        document.getElementById('revenue-breakdown').innerHTML = (data.planBreakdown || []).map(p => `
+          <div class="cost-row">
+            <div class="cost-service">
+              <span>${planBadge(p.plan)}</span>
+              <span style="margin-left:8px">${p.count} user${p.count !== 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              <div class="cost-amount">€${(p.count * (planPrices[p.plan] || 0)).toLocaleString()}/mo</div>
+              <div class="cost-detail">€${planPrices[p.plan] || 0} × ${p.count}</div>
+            </div>
+          </div>
+        `).join('') || '<div class="loading">No data yet.</div>';
+      } catch (err) {
+        document.getElementById('revenue-stats').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load revenue data.</div>`;
+      }
+    }
+
+    // ── COSTS ─────────────────────────────────────────────────
+    async function loadCosts() {
+      // Static cost structure — update monthly
+      const costs = [
+        { service: '🤖 Anthropic (Claude API)', monthly: '~€15–50', detail: 'Per API call pricing — check Anthropic console', url: 'https://console.anthropic.com' },
+        { service: '🕷️ Firecrawl (Scraping)', monthly: '~€0–20', detail: 'Per scrape pricing — check Firecrawl dashboard', url: 'https://firecrawl.dev' },
+        { service: '🚂 Railway (Backend)', monthly: '~€5–20', detail: 'Compute + database — check Railway dashboard', url: 'https://railway.app' },
+        { service: '▲ Vercel (Frontend)', monthly: '€0', detail: 'Free tier — check Vercel dashboard', url: 'https://vercel.com' },
+        { service: '🔔 OneSignal (Push)', monthly: '€0', detail: 'Free tier up to 10k subscribers', url: 'https://onesignal.com' },
+        { service: '🍎 Apple Developer', monthly: '~€8.25', detail: '€99/year ÷ 12 months', url: 'https://developer.apple.com' },
+        { service: '💳 Stripe (Payments)', monthly: '1.4% + €0.25', detail: 'Per transaction — check Stripe dashboard', url: 'https://stripe.com' },
+      ];
+
+      document.getElementById('cost-summary').innerHTML = `
+        <div class="stat-card yellow">
+          <div class="stat-label">Est. Monthly Infra Cost</div>
+          <div class="stat-value">~€30</div>
+          <div class="stat-sub">at current usage</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Break-even Users</div>
+          <div class="stat-value">4</div>
+          <div class="stat-sub">Starter plan users needed</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Cost Per User</div>
+          <div class="stat-value">~€0.5</div>
+          <div class="stat-sub">estimated at 100 users</div>
+        </div>
+      `;
+
+      document.getElementById('cost-breakdown').innerHTML = costs.map(c => `
+        <div class="cost-row">
+          <div class="cost-service">
+            <span>${c.service}</span>
+          </div>
+          <div style="text-align:right">
+            <div class="cost-amount">${c.monthly}</div>
+            <div class="cost-detail">${c.detail} <a href="${c.url}" target="_blank" style="color:var(--accent);text-decoration:none">→ Dashboard</a></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── QR ANALYTICS ──────────────────────────────────────────
+    async function loadQRAnalytics() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/qr-analytics`, {
+          headers: { 'x-admin-key': 'admin' }
+        });
+        const data = await res.json();
+
+        document.getElementById('qr-stats').innerHTML = `
+          <div class="stat-card blue">
+            <div class="stat-label">Total QR Codes</div>
+            <div class="stat-value">${data.totalQRs ?? '—'}</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">AI Landing Pages</div>
+            <div class="stat-value">${data.aiQRs ?? '—'}</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Dynamic QRs</div>
+            <div class="stat-value">${data.dynamicQRs ?? '—'}</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Total Scans</div>
+            <div class="stat-value">${data.totalScans ?? '—'}</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Total Subscribers</div>
+            <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
+          </div>
+        `;
+
+        document.getElementById('qr-body').innerHTML = (data.topQRs || []).map(q => `
+          <tr>
+            <td class="td-name">${q.businessName || '—'}</td>
+            <td class="td-email">${q.originalUrl}</td>
+            <td>${q.isDynamic ? '<span class="plan-badge plan-pro">Dynamic</span>' : q.businessName ? '<span class="plan-badge plan-starter">AI</span>' : '<span class="plan-badge plan-free">Basic</span>'}</td>
+            <td>${q.totalScans}</td>
+            <td>${q.totalSubscribers}</td>
+            <td>${fmtDate(q.createdAt)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" class="loading">No QR data yet.</td></tr>';
+      } catch (err) {
+        document.getElementById('qr-stats').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load.</div>`;
+      }
+    }
+
+    // ── HEALTH ────────────────────────────────────────────────
+    async function loadHealth() {
+      const services = [
+        { name: 'Qraivy API (Railway)', url: `${API_BASE}/health`, key: 'api' },
+        { name: 'Anthropic AI', url: `${API_BASE}/health`, key: 'anthropic' },
+        { name: 'Database (PostgreSQL)', url: `${API_BASE}/health`, key: 'db' },
+        { name: 'Stripe Webhooks', url: `${API_BASE}/health`, key: 'stripe' },
+        { name: 'OneSignal Push', url: `${API_BASE}/health`, key: 'onesignal' },
+        { name: 'Vercel Frontend', url: 'https://www.qraivy.com', key: 'frontend' },
+      ];
+
+      document.getElementById('health-rows').innerHTML = '<div class="loading">Checking services...</div>';
+
+      const results = await Promise.allSettled(
+        services.map(s => fetch(s.url, { signal: AbortSignal.timeout(5000) }))
+      );
+
+      document.getElementById('health-rows').innerHTML = services.map((s, i) => {
+        const ok = results[i].status === 'fulfilled' && results[i].value.ok;
+        return `
+          <div class="health-row">
+            <div class="health-name">${s.name}</div>
+            <div class="health-status">
+              <span class="status-dot ${ok ? 'status-ok' : 'status-err'}"></span>
+              ${ok ? 'Operational' : 'Unreachable'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── LOGS ──────────────────────────────────────────────────
+    async function loadLogs() {
+      document.getElementById('logs-body').innerHTML = '<tr><td colspan="4" class="loading">No error logging endpoint yet — add to Phase 3.</td></tr>';
+      document.getElementById('logs-count').textContent = '0 errors';
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    loadOverview();
+  </script>
+</body>
+</html>

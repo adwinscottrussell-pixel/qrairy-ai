@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qraivy — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #05082e;
+      --surface: #0d1240;
+      --surface2: #151a4a;
+      --border: #1e2560;
+      --accent: #ff5a1f;
+      --text: #ffffff;
+      --text-dim: #6b7280;
+      --text-mid: #9ca3af;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 48px;
+      width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+    .login-logo {
+      font-family: var(--font-display); font-size: 1.4rem;
+      font-weight: 900; letter-spacing: -0.03em; text-align: center;
+    }
+    .login-logo span { color: var(--accent); font-style: italic; }
+    .login-tag {
+      text-align: center; font-size: 0.65rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-dim); margin-top: -12px;
+    }
+    .login-label {
+      font-size: 0.62rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim);
+      display: block; margin-bottom: 6px;
+    }
+    .login-input {
+      width: 100%; padding: 12px 14px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-family: var(--font-mono); font-size: 0.85rem;
+      outline: none; transition: border-color 0.18s;
+    }
+    .login-input:focus { border-color: var(--accent); }
+    .login-btn {
+      width: 100%; padding: 13px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      font-family: var(--font-display); font-size: 0.9rem;
+      font-weight: 700; cursor: pointer; transition: background 0.18s;
+    }
+    .login-btn:hover { background: #ff7a45; }
+    .login-error {
+      font-size: 0.72rem; color: #ef4444;
+      text-align: center; display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-logo">QR<span>Aivy</span></div>
+    <div class="login-tag">System Administration</div>
+    <div>
+      <label class="login-label">Admin Password</label>
+      <input type="password" class="login-input" id="password-input" placeholder="Enter admin password" />
+    </div>
+    <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+    <button class="login-btn" id="login-btn">Access Admin Panel →</button>
+  </div>
+
+  <script>
+    const ADMIN_PASSWORD = 'qraivy-admin-2026'; // Change this — store in memory only
+
+    document.getElementById('login-btn').addEventListener('click', () => {
+      const pwd = document.getElementById('password-input').value;
+      if (pwd === ADMIN_PASSWORD) {
+        sessionStorage.setItem('admin_auth', 'true');
+        window.location.href = 'admin.html';
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('password-input').value = '';
+        document.getElementById('password-input').focus();
+      }
+    });
+
+    document.getElementById('password-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+
+    // Already logged in
+    if (sessionStorage.getItem('admin_auth') === 'true') {
+      window.location.href = 'admin.html';
+    }
+  </script>
+</body>
+</html>
