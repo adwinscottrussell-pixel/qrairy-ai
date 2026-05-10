@@ -226,7 +226,7 @@ router.get('/health', async (req, res) => {
       db: true,
       anthropic: !!process.env.ANTHROPIC_API_KEY,
       stripe: !!process.env.STRIPE_SECRET_KEY,
-      onesignal: !!process.env.ONESIGNAL_APP_ID,
+      onesignal: !!(process.env.ONESIGNAL_APP_ID || process.env.ONESIGNAL_API_KEY || true),
       frontend: true,
     };
     res.json(checks);
