@@ -316,9 +316,11 @@
     // Analytics
     async function loadAnalytics() {
       try {
-        const res = await fetch(`${API_BASE}/analytics`);
+        const token = window.Clerk?.session ? await window.Clerk.session.getToken() : null;
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+        const res = await fetch(API_BASE + '/analytics', { headers });
         const data = await res.json();
-        const { analytics } = data;
+        const analytics = data.analytics || data || [];
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('qrTable').style.display = 'table';
