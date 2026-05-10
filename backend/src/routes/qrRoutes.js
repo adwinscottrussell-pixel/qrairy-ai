@@ -13,11 +13,13 @@ const {
   handleSubscribe,
   handleSendSpecial,
   handleGenerateSpecial,
+  handleDeleteQR,
 } = require('../controllers/qrController');
 
 // QR codes
 router.post('/qr', handleCreateQR);
-router.put('/qr/:id/destination', handleUpdateDestination);  // NEW: dynamic QR destination update
+router.put('/qr/:id/destination', handleUpdateDestination);
+router.delete('/qr/:id', handleDeleteQR);  // NEW: dynamic QR destination update
 
 // Redirect
 router.get('/r/:id', handleRedirect);

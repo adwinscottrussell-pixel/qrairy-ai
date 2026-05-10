@@ -472,8 +472,28 @@ async function handleGenerateSpecial(req, res) {
   }
 }
 
+async function handleDeleteQR(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized.' });
+    const qr = await prisma.qR.findUnique({ where: { id } });
+    if (!qr) return res.status(404).json({ error: 'QR not found.' });
+    if (qr.userId !== userId) return res.status(403).json({ error: 'Forbidden.' });
+    // Delete related records first
+    await prisma.scan.deleteMany({ where: { qrId: id } });
+    await prisma.subscriber.deleteMany({ where: { qrId: id } });
+    await prisma.qR.delete({ where: { id } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('handleDeleteQR error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 module.exports = {
   handleCreateQR,
+  handleDeleteQR,
   handleUpdateDestination,
   handleGetUserPlan,
   handleUpdateUserPhone,
