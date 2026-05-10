@@ -536,7 +536,7 @@
       const _annual = planInfo.plan.includes('_annual');
       badgeText.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
       badgeText.className = 'plan-badge ' + _base;
-      sidebarBadge.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
+      sidebarBadge.textContent = _base.toUpperCase();
       // Show AI landing page usage for Starter
       if (planInfo.plan === 'free') {
         progress.style.display = 'none';
