@@ -46,7 +46,7 @@ const PLANS = {
     pushNotifications: true,
     walletPasses: true,
     apiAccess: false,
-    passLimit: Infinity,      // unlimited wallet passes
+    passLimit: -1,      // unlimited wallet passes (-1 = unlimited)
   },
 };
 
