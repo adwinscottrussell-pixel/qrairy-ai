@@ -1,10 +1,5 @@
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
-const Anthropic = require('@anthropic-ai/sdk');
 const prisma = require('../utils/prismaClient');
 const { getUserFromToken } = require('../middleware/auth');
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SIZES = {
   a4:       { width: 794,  height: 1123, name: 'A4' },
@@ -17,6 +12,11 @@ const SIZES = {
 
 async function handleGenerateDesign(req, res) {
   try {
+    const puppeteer = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
     const userId = await getUserFromToken(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: 'Unauthorized.' });
 
