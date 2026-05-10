@@ -25,7 +25,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
       recentUsers,
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.user.groupBy({ by: ['plan'], _count: { id: true } }),
+      prisma.user.groupBy({ by: ['plan'], _count: { _all: true } }),
       prisma.qR.count({ where: { deletedAt: null } }),
       prisma.scan.count(),
       prisma.subscriber.count(),
@@ -39,11 +39,11 @@ router.get('/overview', requireAdmin, async (req, res) => {
     const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
     const paidUsers = planBreakdown
       .filter(p => p.plan !== 'free')
-      .reduce((s, p) => s + p._count.id, 0);
-    const freeUsers = planBreakdown.find(p => p.plan === 'free')?._count.id || 0;
+      .reduce((s, p) => s + p._count._all, 0);
+    const freeUsers = planBreakdown.find(p => p.plan === 'free')?._count._all || 0;
 
     const estimatedMRR = planBreakdown.reduce((total, p) => {
-      return total + (p._count.id * (planPrices[p.plan] || 0));
+      return total + (p._count._all * (planPrices[p.plan] || 0));
     }, 0);
 
     return res.json({
@@ -54,7 +54,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
       totalScans,
       totalSubscribers,
       estimatedMRR,
-      planBreakdown: planBreakdown.map(p => ({ plan: p.plan, count: p._count.id })),
+      planBreakdown: planBreakdown.map(p => ({ plan: p.plan, count: p._count._all })),
       recentUsers,
     });
   } catch (err) {
@@ -160,7 +160,7 @@ router.get('/revenue', requireAdmin, async (req, res) => {
   try {
     const planBreakdown = await prisma.user.groupBy({
       by: ['plan'],
-      _count: { id: true },
+      _count: { _all: true },
     });
 
     const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
@@ -172,7 +172,7 @@ router.get('/revenue', requireAdmin, async (req, res) => {
       paidUsers,
       freeUsers,
       estimatedMRR,
-      planBreakdown: planBreakdown.map(p => ({ plan: p.plan, count: p._count.id })),
+      planBreakdown: planBreakdown.map(p => ({ plan: p.plan, count: p._count._all })),
     });
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error.' });
