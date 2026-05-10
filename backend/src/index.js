@@ -10,6 +10,7 @@ const userRoutes      = require('./routes/userRoutes');
 const apiKeyRoutes    = require('./routes/apiKeyRoutes');
 const stripeRoutes    = require('./routes/stripeRoutes');
 const adminRoutes     = require('./routes/adminRoutes');
+const designRoutes    = require('./routes/designRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/user',     userRoutes);
 app.use('/api',      apiKeyRoutes);
 app.use('/stripe',   stripeRoutes);
 app.use('/admin',    adminRoutes);
+app.use('/design',   designRoutes);
 
 app.use(errorHandler);
 
