@@ -425,7 +425,7 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ plan }),
+          body: JSON.stringify({ plan: isAnnual && plan !== 'free' ? plan + '_annual' : plan }),
         });
         const data = await res.json();
 
