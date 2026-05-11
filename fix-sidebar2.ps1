@@ -1,3 +1,9 @@
+$root = "C:\Users\adwin\OneDrive\Desktop\qrairy.ai\frontend\public"
+$sidebarPath = "$root\sidebar.js"
+
+Write-Host "Fixing sidebar.js class names..." -ForegroundColor Cyan
+
+$newSidebar = @'
 (function() {
   const path = window.location.pathname;
   const page = path.split('/').pop() || 'dashboard.html';
@@ -140,3 +146,13 @@
     buildSidebar();
   }
 })();
+'@
+
+Set-Content -Path $sidebarPath -Value $newSidebar -Encoding UTF8
+Write-Host "sidebar.js fixed - now uses correct CSS class names" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host " Done! Now run:" -ForegroundColor Cyan
+Write-Host " git add . && git commit -m 'fix: sidebar CSS class names match stylesheet' && git push" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
