@@ -1,3 +1,9 @@
+$root = "C:\Users\adwin\OneDrive\Desktop\qrairy.ai\frontend\public"
+$sidebarPath = "$root\sidebar.js"
+
+Write-Host "Restoring sidebar.js with original class names + fixed active state..." -ForegroundColor Cyan
+
+$newSidebar = @'
 (function() {
   const path = window.location.pathname;
   const page = path.split('/').pop() || 'dashboard.html';
@@ -139,3 +145,37 @@
     buildSidebar();
   }
 })();
+'@
+
+Set-Content -Path $sidebarPath -Value $newSidebar -Encoding UTF8
+Write-Host "sidebar.js restored with original sb- class names" -ForegroundColor Green
+
+# Also patch sidebar.css to add sb-item-active style
+$cssPath = "$root\sidebar.css"
+$css = Get-Content $cssPath -Raw -Encoding UTF8
+
+if ($css -notmatch 'sb-item-active') {
+    $inject = @'
+
+/* Active state for sb- class naming system */
+.sb-item-active {
+  background: var(--sidebar-accent, #ff5a1f) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.sb-item-active .sb-icon {
+  color: #fff !important;
+}
+'@
+    $css = $css + $inject
+    Set-Content -Path $cssPath -Value $css -Encoding UTF8
+    Write-Host "sidebar.css patched with sb-item-active styles" -ForegroundColor Green
+} else {
+    Write-Host "sb-item-active already in CSS - skipped" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host " Done! Now run:" -ForegroundColor Cyan
+Write-Host " git add . && git commit -m 'fix: restore sidebar sb- classes + active state' && git push" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan

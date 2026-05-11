@@ -389,3 +389,12 @@ body.sidebar-collapsed #sidebar-content {
     display: none;
   }
 }
+/* Active state for sb- class naming system */
+.sb-item-active {
+  background: var(--sidebar-accent, #ff5a1f) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.sb-item-active .sb-icon {
+  color: #fff !important;
+}
