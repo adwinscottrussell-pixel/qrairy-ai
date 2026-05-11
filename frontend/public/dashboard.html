@@ -273,6 +273,7 @@
     .modal-btn-skip:hover { color: #8b949e; }
     .modal-error { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #ef4444; margin-bottom: 10px; display: none; }
   </style>
+  <link rel="stylesheet" href="onboarding.css">
 </head>
 <body>
 
@@ -950,6 +951,7 @@
         }
       });
 
+      if(window.Clerk&&window.Clerk.user){window.qrairyOnboarding.init(window.Clerk.user.id);}
       loadDashboard();
     }
   </script>
@@ -959,5 +961,7 @@
     type="text/javascript"
     onload="initDashboard()"
   ></script>
+  <script src="onboarding.js"></script>
 </body>
 </html>
+
