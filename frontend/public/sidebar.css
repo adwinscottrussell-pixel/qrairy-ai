@@ -5,7 +5,7 @@
 :root {
   --sidebar-width: 260px;
   --sidebar-collapsed: 68px;
-  --sidebar-bg: #0d1117;
+  --sidebar-bg: #05082e;
   --sidebar-border: rgba(255,255,255,0.06);
   --sidebar-text: #8b949e;
   --sidebar-text-active: #ffffff;
@@ -398,3 +398,4 @@ body.sidebar-collapsed #sidebar-content {
 .sb-item-active .sb-icon {
   color: #fff !important;
 }
+
