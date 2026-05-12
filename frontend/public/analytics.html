@@ -157,6 +157,7 @@
     .del-btn:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
     .loading { font-family: var(--font-mono); color: var(--text-dim); font-size: 0.85rem; margin-top: 40px; }
   </style>
+  <link rel="stylesheet" href="sidebar.css?v=3">
 </head>
 <body>
 
@@ -297,6 +298,7 @@
     type="text/javascript"
     onload="window.Clerk.load().then(() => { loadAnalytics(); const u=window.Clerk.user; if(u){const n=u.firstName||u.emailAddresses[0].emailAddress; document.getElementById('sb-user-name').textContent=n; document.getElementById('sb-avatar').textContent=n[0].toUpperCase();} })"
   ></script>
-<script src="sidebar.js"></script></body>
+<script src="sidebar.js?v=3"></script></body>
 </html>
+
 
