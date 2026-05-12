@@ -54,11 +54,12 @@
       section.items.forEach(item => {
         // Active only when label matches current page, never for Create QR Code
         const active = (!item.isCreateQR && item.label === activeLabel) ? 'sb-item-active' : '';
+        const activeStyle = (!item.isCreateQR && item.label === activeLabel) ? ' style="background:#ff5a1f!important;color:#fff!important;font-weight:600;border-radius:8px;"' : '';
         const soon = item.soon ? '<span class="sb-soon">SOON</span>' : '';
         const badge = item.badge ? `<span class="sb-badge">${item.badge}</span>` : '';
         const planBadge = item.planBadge ? `<span class="sb-plan-badge" id="sb-plan-badge"></span>` : '';
 
-        navHTML += `<a href="${item.href}" class="sb-item ${active}">
+        navHTML += `<a href="${item.href}" class="sb-item ${active}"${activeStyle}>
           <span class="sb-icon">${item.icon}</span>
           <span class="sb-label">${item.label}</span>
           ${badge}${soon}${planBadge}
@@ -139,3 +140,4 @@
     buildSidebar();
   }
 })();
+
