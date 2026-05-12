@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIVY — Design Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --surface2: #1a1a1a; --surface3: #222222;
+      --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.12);
+      --accent: #ff5a1f; --accent2: #ff8c00;
+      --text: #f0ece0; --text-dim: #6b6b65; --text-mid: #a0a09a;
+      --mono: 'DM Mono', monospace; --sans: 'Inter', sans-serif;
+      --topbar-h: 52px; --left-w: 64px; --panel-w: 260px; --right-w: 260px;
+    }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* TOPBAR */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0; z-index: 200; padding: 0 12px;
+    }
+    .tb-logo { display:flex; align-items:center; gap:8px; padding:0 12px 0 4px; border-right:1px solid var(--border); margin-right:12px; text-decoration:none; }
+    .tb-logo-icon { width:28px; height:28px; background:var(--accent); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+    .tb-logo-text { font-size:0.85rem; font-weight:700; color:var(--text); white-space:nowrap; }
+    .tb-logo-text span { color:var(--accent); font-style:italic; }
+    .tb-file-name { font-family:var(--mono); font-size:0.75rem; color:var(--text-mid); background:transparent; border:1px solid transparent; border-radius:6px; padding:4px 8px; outline:none; transition:border 0.15s; min-width:160px; }
+    .tb-file-name:hover { border-color:var(--border2); }
+    .tb-file-name:focus { border-color:var(--accent); color:var(--text); }
+    .tb-sep { width:1px; height:24px; background:var(--border); margin:0 10px; }
+    .tb-btn { height:32px; padding:0 12px; background:transparent; border:1px solid var(--border); border-radius:7px; color:var(--text-mid); font-family:var(--mono); font-size:0.7rem; letter-spacing:0.04em; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.15s; white-space:nowrap; }
+    .tb-btn:hover { border-color:var(--border2); color:var(--text); }
+    .tb-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+    .tb-btn.primary:hover { background:#e04e18; }
+    .tb-spacer { flex:1; }
+    .tb-canvas-size { font-family:var(--mono); font-size:0.68rem; color:var(--text-dim); padding:4px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; cursor:pointer; transition:all 0.15s; }
+    .tb-canvas-size:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* LAYOUT */
+    #layout { position:fixed; top:var(--topbar-h); left:0; right:0; bottom:0; display:flex; }
+
+    /* LEFT ICON TOOLBAR */
+    #left-toolbar { width:var(--left-w); background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:8px 0; gap:2px; z-index:100; flex-shrink:0; }
+    .tool-btn { width:46px; height:46px; border-radius:10px; background:transparent; border:1px solid transparent; color:var(--text-dim); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; transition:all 0.15s; position:relative; }
+    .tool-btn:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
+    .tool-btn.active { background:rgba(255,90,31,0.12); border-color:rgba(255,90,31,0.3); color:var(--accent); }
+    .tool-icon { font-size:18px; line-height:1; }
+    .tool-label { font-family:var(--mono); font-size:0.45rem; letter-spacing:0.04em; opacity:0.7; }
+    .tool-sep { width:32px; height:1px; background:var(--border); margin:4px 0; }
+    .tool-btn::after { content:attr(data-tip); position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%); background:var(--surface3); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:0.65rem; padding:4px 8px; border-radius:6px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity 0.15s; z-index:999; }
+    .tool-btn:hover::after { opacity:1; }
+
+    /* LEFT PANEL */
+    #left-panel { width:0; overflow:hidden; background:var(--surface); border-right:1px solid var(--border); transition:width 0.2s cubic-bezier(0.4,0,0.2,1); flex-shrink:0; display:flex; flex-direction:column; }
+    #left-panel.open { width:var(--panel-w); }
+    .panel-header { padding:16px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .panel-title { font-family:var(--mono); font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+    .panel-body { flex:1; overflow-y:auto; padding:12px; scrollbar-width:thin; }
+
+    /* CANVAS AREA */
+    #canvas-area { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; background:#060606; overflow:auto; position:relative; padding:32px; }
+    #zoom-controls { position:absolute; bottom:32px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:6px 10px; z-index:50; }
+    .zoom-btn { width:26px; height:26px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text-mid); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .zoom-btn:hover { border-color:var(--accent); color:var(--accent); }
+    #zoom-label { font-family:var(--mono); font-size:0.68rem; color:var(--text-mid); min-width:42px; text-align:center; }
+    #canvas-wrapper { position:relative; transform-origin:top center; transition:transform 0.15s; }
+    #canvas-shadow { box-shadow:0 8px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4); }
+    #polotno-container { background:#fff; position:relative; overflow:hidden; }
+
+    /* RIGHT PANEL */
+    #right-panel { width:var(--right-w); background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
+    .right-tabs { display:flex; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .rtab { flex:1; padding:10px 6px; font-family:var(--mono); font-size:0.6rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); background:transparent; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:all 0.15s; text-align:center; }
+    .rtab:hover { color:var(--text); }
+    .rtab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .rtab-content { display:none; flex:1; overflow-y:auto; padding:14px; scrollbar-width:thin; }
+    .rtab-content.active { display:block; }
+
+    /* PROPS */
+    .prop-group { margin-bottom:18px; }
+    .prop-label { font-family:var(--mono); font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; display:block; }
+    .prop-row { display:flex; gap:6px; align-items:center; }
+    .prop-input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; color:var(--text); font-family:var(--mono); font-size:0.72rem; outline:none; width:100%; transition:border 0.15s; }
+    .prop-input:focus { border-color:var(--accent); }
+    .prop-select { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; color:var(--text); font-family:var(--mono); font-size:0.72rem; outline:none; width:100%; cursor:pointer; }
+    .color-row { display:flex; gap:6px; flex-wrap:wrap; }
+    .color-swatch { width:24px; height:24px; border-radius:50%; border:2px solid transparent; cursor:pointer; transition:transform 0.1s, border-color 0.15s; }
+    .color-swatch:hover { transform:scale(1.15); }
+    .color-picker-wrap { display:flex; align-items:center; gap:8px; }
+    .color-picker-preview { width:32px; height:32px; border-radius:6px; border:1px solid var(--border2); cursor:pointer; flex-shrink:0; }
+    .align-row { display:flex; gap:4px; }
+    .align-btn { flex:1; height:30px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text-dim); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .align-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* LAYERS */
+    .layer-list { display:flex; flex-direction:column; gap:4px; }
+    .layer-item { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); cursor:pointer; transition:all 0.15s; }
+    .layer-item:hover { border-color:var(--border2); }
+    .layer-item.selected { border-color:var(--accent); background:rgba(255,90,31,0.08); }
+    .layer-icon { font-size:13px; flex-shrink:0; }
+    .layer-name { flex:1; font-family:var(--mono); font-size:0.65rem; color:var(--text-mid); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .layer-vis { width:18px; height:18px; background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; flex-shrink:0; }
+
+    /* EMPTY STATE */
+    .empty-state { text-align:center; padding:32px 16px; color:var(--text-dim); }
+    .empty-state .es-icon { font-size:2rem; margin-bottom:10px; opacity:0.4; }
+    .empty-state p { font-family:var(--mono); font-size:0.68rem; line-height:1.6; }
+
+    /* TEMPLATE GRID */
+    .template-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .template-card { aspect-ratio:3/4; border-radius:8px; border:1px solid var(--border); background:var(--surface2); cursor:pointer; overflow:hidden; transition:all 0.15s; position:relative; }
+    .template-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .tc-preview { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; }
+    .tc-label { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.7); padding:4px 6px; font-family:var(--mono); font-size:0.55rem; color:var(--text-mid); text-align:center; }
+
+    /* ELEMENT GRID */
+    .element-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .element-btn { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 8px; cursor:pointer; text-align:center; transition:all 0.15s; display:flex; flex-direction:column; align-items:center; gap:6px; }
+    .element-btn:hover { border-color:var(--accent); background:rgba(255,90,31,0.06); }
+    .ei { font-size:1.4rem; }
+    .el { font-family:var(--mono); font-size:0.6rem; color:var(--text-mid); letter-spacing:0.04em; }
+
+    /* QR LIST */
+    .qr-list { display:flex; flex-direction:column; gap:8px; }
+    .qr-item { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:10px; transition:all 0.15s; }
+    .qr-item:hover { border-color:var(--accent); }
+    .qr-item-thumb { width:36px; height:36px; background:#fff; border-radius:4px; flex-shrink:0; overflow:hidden; }
+    .qr-item-thumb img { width:100%; height:100%; object-fit:cover; }
+    .qr-item-info { flex:1; overflow:hidden; }
+    .qr-item-name { font-size:0.75rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .qr-item-url { font-family:var(--mono); font-size:0.6rem; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* UPLOAD */
+    .upload-zone { border:1.5px dashed var(--border2); border-radius:10px; padding:24px 16px; text-align:center; cursor:pointer; transition:all 0.15s; margin-bottom:12px; }
+    .upload-zone:hover { border-color:var(--accent); background:rgba(255,90,31,0.04); }
+    .uz-icon { font-size:1.8rem; margin-bottom:8px; }
+    .uz-text { font-family:var(--mono); font-size:0.65rem; color:var(--text-dim); line-height:1.6; }
+    .uploaded-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    .uploaded-img { aspect-ratio:1; border-radius:6px; overflow:hidden; border:1px solid var(--border); cursor:pointer; transition:border-color 0.15s; }
+    .uploaded-img:hover { border-color:var(--accent); }
+    .uploaded-img img { width:100%; height:100%; object-fit:cover; }
+
+    /* SIZE MODAL */
+    #size-modal { display:none; position:fixed; inset:0; z-index:500; align-items:center; justify-content:center; }
+    #size-modal.open { display:flex; }
+    .size-modal-bg { position:absolute; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); }
+    .size-modal-box { position:relative; background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:24px; width:360px; z-index:1; animation:modalIn 0.2s ease; }
+    @keyframes modalIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    .size-modal-title { font-family:var(--mono); font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin-bottom:16px; }
+    .size-grid-modal { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+    .size-opt { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; text-align:center; transition:all 0.15s; }
+    .size-opt:hover { border-color:var(--accent); }
+    .size-opt.active { border-color:var(--accent); background:rgba(255,90,31,0.1); }
+    .size-opt-name { font-size:0.82rem; font-weight:600; color:var(--text); margin-bottom:2px; }
+    .size-opt-dim { font-family:var(--mono); font-size:0.58rem; color:var(--text-dim); }
+
+    /* SECTION LABEL */
+    .section-label { font-family:var(--mono); font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 8px; display:flex; align-items:center; gap:8px; }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <a href="dashboard.html" class="tb-logo">
+    <div class="tb-logo-icon">Q</div>
+    <div class="tb-logo-text">QR<span>Aivy</span></div>
+  </a>
+  <input type="text" class="tb-file-name" id="file-name" value="Untitled Design" />
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="editorActions.undo()">↩ Undo</button>
+  <button class="tb-btn" onclick="editorActions.redo()">↪ Redo</button>
+  <div class="tb-sep"></div>
+  <button class="tb-canvas-size" id="canvas-size-btn" onclick="openSizeModal()">A4 · 794 × 1123</button>
+  <div class="tb-spacer"></div>
+  <button class="tb-btn" onclick="editorActions.exportPNG()">⬇ PNG</button>
+  <button class="tb-btn" onclick="editorActions.exportPDF()">⬇ PDF</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn primary" onclick="editorActions.save()">✦ Save</button>
+</div>
+
+<div id="layout">
+  <div id="left-toolbar">
+    <button class="tool-btn active" data-panel="templates" data-tip="Templates" onclick="togglePanel('templates',this)">
+      <span class="tool-icon">⊞</span><span class="tool-label">TMPL</span>
+    </button>
+    <button class="tool-btn" data-panel="elements" data-tip="Elements" onclick="togglePanel('elements',this)">
+      <span class="tool-icon">◈</span><span class="tool-label">ELEM</span>
+    </button>
+    <button class="tool-btn" data-panel="text" data-tip="Text" onclick="togglePanel('text',this)">
+      <span class="tool-icon" style="font-weight:700;font-size:16px">T</span><span class="tool-label">TEXT</span>
+    </button>
+    <button class="tool-btn" data-panel="images" data-tip="Images" onclick="togglePanel('images',this)">
+      <span class="tool-icon">🖼</span><span class="tool-label">IMG</span>
+    </button>
+    <button class="tool-btn" data-panel="qrcodes" data-tip="QR Codes" onclick="togglePanel('qrcodes',this)">
+      <span class="tool-icon">⬡</span><span class="tool-label">QR</span>
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" data-panel="background" data-tip="Background" onclick="togglePanel('background',this)">
+      <span class="tool-icon">🎨</span><span class="tool-label">BG</span>
+    </button>
+  </div>
+
+  <div id="left-panel" class="open">
+    <div class="panel-header"><div class="panel-title" id="panel-title">Templates</div></div>
+    <div class="panel-body" id="panel-body"></div>
+  </div>
+
+  <div id="canvas-area">
+    <div id="canvas-wrapper">
+      <div id="canvas-shadow">
+        <div id="polotno-container"></div>
+      </div>
+    </div>
+    <div id="zoom-controls">
+      <button class="zoom-btn" onclick="editorActions.zoomOut()">−</button>
+      <span id="zoom-label">100%</span>
+      <button class="zoom-btn" onclick="editorActions.zoomIn()">+</button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
+      <button class="zoom-btn" onclick="editorActions.zoomFit()" style="font-size:10px;width:auto;padding:0 6px">FIT</button>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="right-tabs">
+      <button class="rtab active" onclick="switchRTab('properties',this)">PROPS</button>
+      <button class="rtab" onclick="switchRTab('layers',this)">LAYERS</button>
+      <button class="rtab" onclick="switchRTab('page',this)">PAGE</button>
+    </div>
+
+    <div class="rtab-content active" id="rtab-properties">
+      <div class="empty-state" id="no-selection">
+        <div class="es-icon">⊹</div>
+        <p>Select an element<br>to edit properties</p>
+      </div>
+      <div id="text-props" style="display:none">
+        <div class="prop-group">
+          <span class="prop-label">Font</span>
+          <select class="prop-select" id="prop-font">
+            <option>Inter</option><option>DM Mono</option><option>Georgia</option><option>Playfair Display</option>
+          </select>
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Size & Weight</span>
+          <div class="prop-row">
+            <input class="prop-input" type="number" id="prop-size" value="24" style="width:50%">
+            <select class="prop-select" id="prop-weight" style="width:50%">
+              <option value="400">Regular</option><option value="600">SemiBold</option><option value="700">Bold</option>
+            </select>
+          </div>
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Color</span>
+          <div class="color-picker-wrap">
+            <div class="color-picker-preview" id="text-color-preview" style="background:#0a0a0a" onclick="document.getElementById('text-color-input').click()"></div>
+            <input type="color" id="text-color-input" value="#0a0a0a" style="display:none" oninput="setTextColor(this.value)">
+            <span id="text-color-hex" style="font-family:var(--mono);font-size:0.68rem;color:var(--text-mid)">#0a0a0a</span>
+          </div>
+          <div class="color-row" style="margin-top:8px">
+            <div class="color-swatch" style="background:#0a0a0a" onclick="setTextColor('#0a0a0a')"></div>
+            <div class="color-swatch" style="background:#ffffff" onclick="setTextColor('#ffffff')"></div>
+            <div class="color-swatch" style="background:#ff5a1f" onclick="setTextColor('#ff5a1f')"></div>
+            <div class="color-swatch" style="background:#ff8c00" onclick="setTextColor('#ff8c00')"></div>
+            <div class="color-swatch" style="background:#f0ece0" onclick="setTextColor('#f0ece0')"></div>
+            <div class="color-swatch" style="background:#666666" onclick="setTextColor('#666666')"></div>
+          </div>
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Align</span>
+          <div class="align-row">
+            <button class="align-btn" onclick="applyAlign('left')">⬅</button>
+            <button class="align-btn" onclick="applyAlign('center')">↔</button>
+            <button class="align-btn" onclick="applyAlign('right')">➡</button>
+          </div>
+        </div>
+      </div>
+      <div id="image-props" style="display:none">
+        <div class="prop-group">
+          <span class="prop-label">Position</span>
+          <div class="prop-row">
+            <input class="prop-input" type="number" id="prop-x" placeholder="X" style="width:50%">
+            <input class="prop-input" type="number" id="prop-y" placeholder="Y" style="width:50%">
+          </div>
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Size</span>
+          <div class="prop-row">
+            <input class="prop-input" type="number" id="prop-w" placeholder="W" style="width:50%">
+            <input class="prop-input" type="number" id="prop-h" placeholder="H" style="width:50%">
+          </div>
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Opacity</span>
+          <input type="range" min="0" max="100" value="100" id="prop-opacity" style="width:100%;accent-color:var(--accent)">
+        </div>
+        <div class="prop-group">
+          <span class="prop-label">Corner Radius</span>
+          <input class="prop-input" type="number" id="prop-radius" value="0" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="rtab-content" id="rtab-layers">
+      <div class="layer-list" id="layer-list">
+        <div class="empty-state"><div class="es-icon">⊹</div><p>No elements yet.</p></div>
+      </div>
+    </div>
+
+    <div class="rtab-content" id="rtab-page">
+      <div class="prop-group">
+        <span class="prop-label">Background</span>
+        <div class="color-picker-wrap">
+          <div class="color-picker-preview" id="bg-color-preview" style="background:#ffffff" onclick="document.getElementById('bg-color-input').click()"></div>
+          <input type="color" id="bg-color-input" value="#ffffff" style="display:none" oninput="setBgColor(this.value)">
+          <span id="bg-color-hex" style="font-family:var(--mono);font-size:0.68rem;color:var(--text-mid)">#ffffff</span>
+        </div>
+        <div class="color-row" style="margin-top:8px">
+          <div class="color-swatch" style="background:#ffffff" onclick="setBgColor('#ffffff')"></div>
+          <div class="color-swatch" style="background:#0a0a0a" onclick="setBgColor('#0a0a0a')"></div>
+          <div class="color-swatch" style="background:#ff5a1f" onclick="setBgColor('#ff5a1f')"></div>
+          <div class="color-swatch" style="background:#f0ece0" onclick="setBgColor('#f0ece0')"></div>
+          <div class="color-swatch" style="background:#05082e" onclick="setBgColor('#05082e')"></div>
+          <div class="color-swatch" style="background:#1a1a18" onclick="setBgColor('#1a1a18')"></div>
+        </div>
+      </div>
+      <div class="prop-group">
+        <span class="prop-label">Canvas Size</span>
+        <button class="tb-btn" style="width:100%;justify-content:center" onclick="openSizeModal()">Change Size</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="size-modal">
+  <div class="size-modal-bg" onclick="closeSizeModal()"></div>
+  <div class="size-modal-box">
+    <div class="size-modal-title">Canvas Size</div>
+    <div class="size-grid-modal">
+      <div class="size-opt active" data-w="794" data-h="1123" onclick="selectSize(this)"><div class="size-opt-name">A4 Poster</div><div class="size-opt-dim">794 × 1123 px</div></div>
+      <div class="size-opt" data-w="559" data-h="794" onclick="selectSize(this)"><div class="size-opt-name">A5 Flyer</div><div class="size-opt-dim">559 × 794 px</div></div>
+      <div class="size-opt" data-w="374" data-h="794" onclick="selectSize(this)"><div class="size-opt-name">DL Flyer</div><div class="size-opt-dim">374 × 794 px</div></div>
+      <div class="size-opt" data-w="323" data-h="209" onclick="selectSize(this)"><div class="size-opt-name">Business Card</div><div class="size-opt-dim">323 × 209 px</div></div>
+      <div class="size-opt" data-w="559" data-h="559" onclick="selectSize(this)"><div class="size-opt-name">Square Post</div><div class="size-opt-dim">559 × 559 px</div></div>
+      <div class="size-opt" data-w="378" data-h="567" onclick="selectSize(this)"><div class="size-opt-name">POS Tent</div><div class="size-opt-dim">378 × 567 px</div></div>
+    </div>
+    <button class="tb-btn primary" style="width:100%;justify-content:center" onclick="applySize()">Apply Size</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/polotno/polotno.js" crossorigin="anonymous"></script>
+<script>
+const S = {
+  store: null, zoom: 1, canvasW: 794, canvasH: 1123,
+  activePanelId: 'templates', pendingW: 794, pendingH: 1123,
+  uploadedImages: [], qrCodes: [], authToken: null,
+};
+
+window.addEventListener('load', async () => {
+  await initClerk();
+  initPolotno();
+  renderPanel('templates');
+  window.addEventListener('resize', () => editorActions.zoomFit());
+});
+
+async function initClerk() {
+  if (!window.Clerk) return;
+  await window.Clerk.load();
+  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+  S.authToken = await window.Clerk.session.getToken();
+  try {
+    const r = await fetch('https://api.qraivy.com/dashboard', { headers: { 'Authorization': 'Bearer ' + S.authToken } });
+    const d = await r.json();
+    S.qrCodes = d.qrCodes || [];
+  } catch(e) {}
+}
+
+function initPolotno() {
+  const c = document.getElementById('polotno-container');
+  c.style.width = S.canvasW + 'px';
+  c.style.height = S.canvasH + 'px';
+  try {
+    if (window.polotno && window.polotno.createStore) {
+      S.store = window.polotno.createStore({ key: 'qraivy' });
+      S.store.setSize(S.canvasW, S.canvasH);
+      if (!S.store.pages.length) S.store.addPage();
+      const w = document.createElement('div');
+      w.style.cssText = 'width:100%;height:100%';
+      c.appendChild(w);
+      if (window.polotno.Workspace) {
+        window.polotno.Workspace({ store: S.store, components: { Toolbar: null, ZoomButtons: null, PagesTimeline: null } }, w);
+      }
+      S.store.on('change', () => { updateLayers(); showElementProps(); });
+    } else { fallbackCanvas(); }
+  } catch(e) { fallbackCanvas(); }
+  setTimeout(() => editorActions.zoomFit(), 200);
+}
+
+function fallbackCanvas() {
+  const c = document.getElementById('polotno-container');
+  c.style.cssText += ';display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;';
+  c.innerHTML = '<div style="font-size:3rem;opacity:0.15">⬡</div><div style="font-family:\'DM Mono\',monospace;font-size:0.72rem;color:#999;text-align:center">Canvas ready<br><span style="font-size:0.6rem;opacity:0.5">' + S.canvasW + ' × ' + S.canvasH + 'px</span></div>';
+}
+
+const PANELS = {
+  templates: { title: 'Templates', render: () => `
+    <div class="section-label">Print Layouts</div>
+    <div class="template-grid">
+      ${[['📄','Minimal White'],['🟧','Bold Orange'],['⬛','Dark Luxury'],['📋','Business Card'],['🎯','Promo Flyer'],['🖼','Photo Card']].map(([i,l]) => `<div class="template-card" onclick="showToast('Template: ${l}')"><div class="tc-preview">${i}</div><div class="tc-label">${l}</div></div>`).join('')}
+    </div>
+    <div class="section-label">Blank</div>
+    <div class="template-grid">
+      <div class="template-card" onclick="setBgColor('#ffffff')"><div class="tc-preview" style="background:#fff"> </div><div class="tc-label">White</div></div>
+      <div class="template-card" onclick="setBgColor('#0a0a0a')"><div class="tc-preview" style="background:#0a0a0a"> </div><div class="tc-label">Dark</div></div>
+    </div>` },
+  elements: { title: 'Elements', render: () => `
+    <div class="section-label">Shapes</div>
+    <div class="element-grid">
+      ${[['⬜','Rectangle','rect'],['⬬','Ellipse','ellipse'],['△','Triangle','triangle'],['★','Star','star'],['╱','Line','line'],['◈','Arrow','arrow']].map(([i,l,t]) => `<div class="element-btn" onclick="addElement('${t}')"><span class="ei">${i}</span><span class="el">${l}</span></div>`).join('')}
+    </div>
+    <div class="section-label">Decorative</div>
+    <div class="element-grid">
+      ${[['▬','Divider'],['⬡','Badge'],['🏷','Label'],['📐','Grid']].map(([i,l]) => `<div class="element-btn" onclick="showToast('Add ${l}')"><span class="ei">${i}</span><span class="el">${l}</span></div>`).join('')}
+    </div>` },
+  text: { title: 'Text', render: () => `
+    <div class="section-label">Add Text</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${[['H','Heading','heading',800],['H2','Subheading','subheading',600],['¶','Body Text','body',400],['ab','Caption','caption',300]].map(([ic,l,s,w]) => `<div class="element-btn" style="flex-direction:row;justify-content:flex-start;gap:12px" onclick="addText('${s}')"><span style="font-size:1.1rem;font-weight:${w};color:var(--text);width:24px;text-align:center">${ic}</span><span class="el" style="font-size:0.72rem">${l}</span></div>`).join('')}
+    </div>
+    <div class="section-label">Font Presets</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${['Inter','DM Mono','Georgia','Playfair Display'].map(f => `<div class="element-btn" style="flex-direction:row;justify-content:space-between" onclick="addTextWithFont('${f}')"><span style="font-family:'${f}',serif;font-size:0.85rem;color:var(--text)">${f}</span><span class="el">+ Add</span></div>`).join('')}
+    </div>` },
+  images: { title: 'Images', render: () => `
+    <div class="upload-zone" onclick="document.getElementById('upload-input').click()">
+      <div class="uz-icon">⬆</div>
+      <div class="uz-text">Click to upload image<br><span style="opacity:0.5">PNG, JPG, SVG, WebP</span></div>
+    </div>
+    <input type="file" id="upload-input" accept="image/*" multiple onchange="handleUpload(event)" style="display:none">
+    ${S.uploadedImages.length ? `<div class="section-label">Uploaded</div><div class="uploaded-grid">${S.uploadedImages.map(img => `<div class="uploaded-img" onclick="addImageToCanvas('${img}')"><img src="${img}"></div>`).join('')}</div>` : ''}` },
+  qrcodes: { title: 'QR Codes', render: () => S.qrCodes.length ? `
+    <div class="section-label">Your QR Codes</div>
+    <div class="qr-list">
+      ${S.qrCodes.map(q => `<div class="qr-item" onclick="addQR('${q.redirectUrl}')"><div class="qr-item-thumb"><img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=${encodeURIComponent(q.redirectUrl)}"></div><div class="qr-item-info"><div class="qr-item-name">${q.businessName||'QR Code'}</div><div class="qr-item-url">${q.redirectUrl}</div></div></div>`).join('')}
+    </div>` : `<div class="empty-state"><div class="es-icon">⬡</div><p>No QR codes yet.<br>Create one in the Dashboard.</p></div><a href="dashboard.html" class="tb-btn primary" style="width:100%;justify-content:center;text-decoration:none;display:flex;margin-top:12px">Go to Dashboard</a>` },
+  background: { title: 'Background', render: () => `
+    <div class="section-label">Colors</div>
+    <div class="color-row" style="flex-wrap:wrap;gap:8px">
+      ${['#ffffff','#0a0a0a','#ff5a1f','#1a1a18','#f0ece0','#05082e','#ff8c00','#2d2d2d'].map(c => `<div class="color-swatch" style="background:${c};width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.1)" onclick="setBgColor('${c}')"></div>`).join('')}
+    </div>
+    <div class="section-label">Gradients</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${[['Sunset','linear-gradient(135deg,#ff5a1f,#ff8c00)'],['Dark','linear-gradient(135deg,#0a0a0a,#2d2d2d)'],['Ocean','linear-gradient(135deg,#0f0c29,#302b63)'],['Warm','linear-gradient(135deg,#f0ece0,#e8d5b0)']].map(([n,g]) => `<div style="height:48px;border-radius:8px;background:${g};cursor:pointer;border:1px solid var(--border);display:flex;align-items:flex-end;padding:4px 6px" onclick="setBgGradient('${g}')"><span style="font-family:var(--mono);font-size:0.55rem;color:rgba(255,255,255,0.8)">${n}</span></div>`).join('')}
+    </div>` }
+};
+
+function renderPanel(id) {
+  const p = PANELS[id]; if (!p) return;
+  document.getElementById('panel-title').textContent = p.title;
+  document.getElementById('panel-body').innerHTML = p.render();
+}
+
+function togglePanel(id, btn) {
+  const panel = document.getElementById('left-panel');
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  if (S.activePanelId === id && panel.classList.contains('open')) {
+    panel.classList.remove('open'); S.activePanelId = null;
+  } else {
+    panel.classList.add('open'); S.activePanelId = id;
+    btn.classList.add('active'); renderPanel(id);
+  }
+}
+
+function switchRTab(id, btn) {
+  document.querySelectorAll('.rtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rtab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('rtab-' + id).classList.add('active');
+}
+
+function applyZoom(z) {
+  S.zoom = Math.min(3, Math.max(0.1, z));
+  document.getElementById('canvas-wrapper').style.transform = 'scale(' + S.zoom + ')';
+  document.getElementById('zoom-label').textContent = Math.round(S.zoom * 100) + '%';
+}
+
+function openSizeModal() { document.getElementById('size-modal').classList.add('open'); }
+function closeSizeModal() { document.getElementById('size-modal').classList.remove('open'); }
+function selectSize(el) { document.querySelectorAll('.size-opt').forEach(s => s.classList.remove('active')); el.classList.add('active'); S.pendingW = parseInt(el.dataset.w); S.pendingH = parseInt(el.dataset.h); }
+function applySize() {
+  S.canvasW = S.pendingW; S.canvasH = S.pendingH;
+  const c = document.getElementById('polotno-container');
+  c.style.width = S.canvasW + 'px'; c.style.height = S.canvasH + 'px';
+  if (S.store) S.store.setSize(S.canvasW, S.canvasH);
+  document.getElementById('canvas-size-btn').textContent = document.querySelector('.size-opt.active .size-opt-name').textContent + ' · ' + S.canvasW + ' × ' + S.canvasH;
+  closeSizeModal(); setTimeout(() => editorActions.zoomFit(), 100);
+}
+
+function addElement(type) {
+  if (!S.store) return showToast('Canvas loading...');
+  const page = S.store.pages[0]; if (!page) return;
+  const map = { rect:{type:'rect',width:200,height:120,fill:'#ff5a1f',x:100,y:100}, ellipse:{type:'circle',width:150,height:150,fill:'#ff5a1f',x:120,y:120}, line:{type:'rect',width:300,height:4,fill:'#ff5a1f',x:50,y:200} };
+  page.addElement(map[type] || map.rect); updateLayers();
+}
+function addText(style) {
+  if (!S.store) return showToast('Canvas loading...');
+  const page = S.store.pages[0]; if (!page) return;
+  const map = { heading:{text:'Your Heading',fontSize:48,fontWeight:'bold',fill:'#0a0a0a'}, subheading:{text:'Subheading',fontSize:28,fontWeight:'600',fill:'#0a0a0a'}, body:{text:'Body text here',fontSize:16,fill:'#333333'}, caption:{text:'Caption',fontSize:12,fill:'#666666'} };
+  page.addElement({ type:'text', ...(map[style]||map.body), x:80, y:100, width:S.canvasW-160 }); updateLayers();
+}
+function addTextWithFont(font) {
+  if (!S.store) return showToast('Canvas loading...');
+  const page = S.store.pages[0]; if (!page) return;
+  page.addElement({ type:'text', text:'Your text here', fontSize:32, fontFamily:font, fill:'#0a0a0a', x:80, y:100, width:S.canvasW-160 }); updateLayers();
+}
+function addQR(url) {
+  if (!S.store) return showToast('Canvas loading...');
+  const page = S.store.pages[0]; if (!page) return;
+  const src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url);
+  page.addElement({ type:'image', src, width:200, height:200, x:S.canvasW/2-100, y:S.canvasH/2-100 }); updateLayers(); showToast('QR added to canvas');
+}
+function addImageToCanvas(url) {
+  if (!S.store) return;
+  const page = S.store.pages[0]; if (!page) return;
+  page.addElement({ type:'image', src:url, width:300, height:200, x:50, y:50 }); updateLayers();
+}
+function handleUpload(e) {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => { S.uploadedImages.push(ev.target.result); renderPanel('images'); addImageToCanvas(ev.target.result); };
+    reader.readAsDataURL(file);
+  });
+}
+function setBgColor(color) {
+  document.getElementById('polotno-container').style.background = color;
+  document.getElementById('bg-color-preview').style.background = color;
+  document.getElementById('bg-color-hex').textContent = color;
+  if (S.store && S.store.pages[0]) S.store.pages[0].set({ background: color });
+}
+function setBgGradient(g) { document.getElementById('polotno-container').style.background = g; }
+function setTextColor(color) {
+  document.getElementById('text-color-preview').style.background = color;
+  document.getElementById('text-color-hex').textContent = color;
+  if (S.store) { const sel = S.store.selectedElements; if (sel && sel.length) sel[0].set({ fill: color }); }
+}
+function applyAlign(dir) {
+  if (!S.store) return;
+  const sel = S.store.selectedElements; if (!sel || !sel.length) return;
+  const el = sel[0];
+  const x = dir==='left'?0:dir==='center'?S.canvasW/2-(el.width||0)/2:S.canvasW-(el.width||0);
+  el.set({ x });
+}
+function updateLayers() {
+  if (!S.store) return;
+  const page = S.store.pages[0]; if (!page) return;
+  const els = page.elements || [];
+  const list = document.getElementById('layer-list');
+  if (!els.length) { list.innerHTML = '<div class="empty-state"><div class="es-icon">⊹</div><p>No elements yet.</p></div>'; return; }
+  const icons = { text:'T', image:'🖼', rect:'⬜', circle:'⬬', svg:'◈' };
+  list.innerHTML = [...els].reverse().map(el => `<div class="layer-item${el.selected?' selected':''}" onclick="selectLayer('${el.id}')"><span class="layer-icon">${icons[el.type]||'◈'}</span><span class="layer-name">${el.text||el.type||'Element'}</span><button class="layer-vis" onclick="event.stopPropagation();toggleVis('${el.id}')">${el.visible===false?'🙈':'👁'}</button></div>`).join('');
+}
+function selectLayer(id) { if (S.store) { S.store.selectElements([id]); showElementProps(); } }
+function toggleVis(id) { if (!S.store) return; const p=S.store.pages[0]; if(!p)return; const el=p.elements.find(e=>e.id===id); if(el)el.set({visible:el.visible===false}); updateLayers(); }
+function showElementProps() {
+  if (!S.store) return;
+  const sel = S.store.selectedElements;
+  const noSel = document.getElementById('no-selection');
+  const tp = document.getElementById('text-props');
+  const ip = document.getElementById('image-props');
+  if (sel && sel.length) {
+    noSel.style.display = 'none';
+    if (sel[0].type === 'text') { tp.style.display='block'; ip.style.display='none'; }
+    else { ip.style.display='block'; tp.style.display='none'; const el=sel[0]; document.getElementById('prop-x').value=Math.round(el.x||0); document.getElementById('prop-y').value=Math.round(el.y||0); document.getElementById('prop-w').value=Math.round(el.width||0); document.getElementById('prop-h').value=Math.round(el.height||0); }
+  } else { noSel.style.display='block'; tp.style.display='none'; ip.style.display='none'; }
+}
+
+const editorActions = {
+  undo() { if (S.store) S.store.history.undo(); },
+  redo() { if (S.store) S.store.history.redo(); },
+  zoomIn()  { applyZoom(S.zoom + 0.1); },
+  zoomOut() { applyZoom(S.zoom - 0.1); },
+  zoomFit() {
+    const area = document.getElementById('canvas-area');
+    const scale = Math.min((area.clientWidth - 80) / S.canvasW, (area.clientHeight - 80) / S.canvasH, 1);
+    applyZoom(scale);
+  },
+  save() {
+    const name = document.getElementById('file-name').value || 'design';
+    if (S.store) localStorage.setItem('qraivy_design_' + name, JSON.stringify(S.store.toJSON()));
+    showToast('Saved: ' + name);
+  },
+  exportPNG() {
+    if (S.store && S.store.toDataURL) { S.store.toDataURL({pixelRatio:2}).then(url => { const a=document.createElement('a'); a.href=url; a.download='qraivy-design.png'; a.click(); }); }
+    else showToast('Select elements first');
+  },
+  exportPDF() { showToast('PDF export via Puppeteer — coming in Step 2'); }
+};
+
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) { t = document.createElement('div'); t.id='_toast'; t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#222;border:1px solid rgba(255,255,255,0.15);color:#f0ece0;font-family:\'DM Mono\',monospace;font-size:0.72rem;padding:8px 16px;border-radius:20px;z-index:9999;transition:opacity 0.3s;pointer-events:none;white-space:nowrap'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = '0', 2500);
+}
+</script>
+
+<script data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+</body>
+</html>
