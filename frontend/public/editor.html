@@ -2469,7 +2469,6 @@ function selectAIStyle(id) {
   if (sel) sel.style.borderColor = 'rgba(255,90,31,0.7)';
 }
 
-document.addEventListener('click',function(e){if(e.target&&e.target.id==='_aiGenerateBtn')triggerAIGenerate();});`ndocument.addEventListener('click',function(e){if(e.target&&e.target.id==='_aiGenerateBtn')triggerAIGenerate();});`nfunction triggerAIGenerate() {
 
   const prompt = document.getElementById('_aiPrompt').value.trim();
   if (!prompt) { showToast('Enter a design description first'); return; }
