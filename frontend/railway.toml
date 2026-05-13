@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+[[headers]]
+path = "/*"
+[headers.values]
+Content-Security-Policy = "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://js.clerk.dev https://cdn.clerk.io https://www.googletagmanager.com; default-src *; style-src 'self' 'unsafe-inline' https:; img-src * data:; connect-src *;"
