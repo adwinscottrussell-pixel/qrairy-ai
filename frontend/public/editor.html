@@ -414,8 +414,385 @@
     .section-label { font-family:var(--mono); font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 8px; display:flex; align-items:center; gap:8px; }
     .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
+
+    /* ── DEPTH SYSTEM ─────────────────────────────────────── */
+    /* Topbar elevation */
+    #topbar {
+      background: rgba(13,13,13,0.95) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.04),
+        0 4px 24px rgba(0,0,0,0.5),
+        0 1px 3px rgba(0,0,0,0.8) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Left panel elevation */
+    #left-panel {
+      background: rgba(14,14,14,0.98) !important;
+      border-right: 1px solid rgba(255,255,255,0.05) !important;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.4) !important;
+    }
+
+    /* Right panel elevation */
+    #right-panel {
+      background: rgba(14,14,14,0.98) !important;
+      border-left: 1px solid rgba(255,255,255,0.05) !important;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.4) !important;
+    }
+
+    /* Canvas workspace ambient */
+    #canvas-area {
+      background: radial-gradient(ellipse at 50% 30%, rgba(255,90,31,0.04) 0%, #040404 60%) !important;
+    }
+
+    /* Floating canvas effect */
+    #canvas-shadow {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 20px 80px rgba(0,0,0,0.8),
+        0 8px 32px rgba(0,0,0,0.6),
+        0 0 60px rgba(255,90,31,0.04) !important;
+      border-radius: 2px;
+    }
+
+    /* ── AI GENERATE BUTTON ───────────────────────────────── */
+    .tb-btn-ai {
+      height: 36px;
+      padding: 0 16px;
+      background: linear-gradient(135deg, #ff5a1f, #ff8c00);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+      white-space: nowrap;
+      box-shadow:
+        0 0 20px rgba(255,90,31,0.3),
+        0 4px 12px rgba(255,90,31,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+
+    .tb-btn-ai::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      transform: translateX(-100%);
+      animation: aiShine 3s ease-in-out infinite;
+    }
+
+    @keyframes aiShine {
+      0% { transform: translateX(-100%); }
+      30%, 100% { transform: translateX(200%); }
+    }
+
+    .tb-btn-ai:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 0 32px rgba(255,90,31,0.45),
+        0 6px 20px rgba(255,90,31,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .tb-btn-ai:active { transform: translateY(0); }
+
+    /* AI pulse dot */
+    .ai-pulse {
+      width: 6px; height: 6px;
+      background: #fff;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    /* ── TEMPLATE CARDS PREMIUM ───────────────────────────── */
+    .template-card {
+      border-radius: 10px !important;
+      border: 1px solid rgba(255,255,255,0.07) !important;
+      background: var(--surface2) !important;
+      cursor: pointer;
+      overflow: hidden;
+      transition:
+        transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+        box-shadow 0.2s ease,
+        border-color 0.2s ease !important;
+      position: relative;
+    }
+
+    .template-card:hover {
+      border-color: rgba(255,90,31,0.5) !important;
+      transform: translateY(-3px) scale(1.02) !important;
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,90,31,0.15),
+        0 0 20px rgba(255,90,31,0.08) !important;
+    }
+
+    .template-card:hover .tc-label {
+      background: rgba(255,90,31,0.85) !important;
+      color: #fff !important;
+    }
+
+    .template-card.tc-active {
+      border-color: rgba(255,90,31,0.6) !important;
+      box-shadow:
+        0 0 0 2px rgba(255,90,31,0.25),
+        0 8px 32px rgba(0,0,0,0.5) !important;
+    }
+
+    .tc-preview svg { width:100%; height:100%; display:block; }
+
+    .tc-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 5px 7px;
+      font-family: var(--mono); font-size: 0.56rem;
+      color: rgba(240,236,224,0.7);
+      text-align: center;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── SMART EMPTY STATE ────────────────────────────────── */
+    .smart-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 12px 12px;
+      gap: 8px;
+    }
+
+    .smart-empty-icon {
+      width: 48px; height: 48px;
+      background: rgba(255,90,31,0.08);
+      border: 1px solid rgba(255,90,31,0.2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+      animation: floatIcon 3s ease-in-out infinite;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .smart-empty-title {
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .smart-empty-sub {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .smart-action-btn {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text-mid);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s;
+      text-align: left;
+    }
+
+    .smart-action-btn:hover {
+      background: rgba(255,90,31,0.08);
+      border-color: rgba(255,90,31,0.3);
+      color: var(--text);
+    }
+
+    .smart-action-btn .sab-icon {
+      width: 22px; height: 22px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .smart-action-btn.ai-action {
+      background: rgba(255,90,31,0.08);
+      border-color: rgba(255,90,31,0.25);
+      color: #ff8845;
+    }
+
+    .smart-action-btn.ai-action:hover {
+      background: rgba(255,90,31,0.15);
+      border-color: rgba(255,90,31,0.45);
+      box-shadow: 0 0 16px rgba(255,90,31,0.1);
+    }
+
+    .smart-action-btn.ai-action .sab-icon {
+      background: rgba(255,90,31,0.15);
+    }
+
+    .smart-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* ── CANVAS ONBOARDING OVERLAY ────────────────────────── */
+    #canvas-onboarding {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+
+    #canvas-onboarding.hidden { opacity: 0; }
+
+    .onboarding-hint {
+      background: rgba(12,12,12,0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 20px;
+      margin: 6px;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: rgba(240,236,224,0.5);
+      letter-spacing: 0.04em;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .onboarding-hint:hover {
+      border-color: rgba(255,90,31,0.3);
+      color: rgba(240,236,224,0.8);
+    }
+
+    .onboarding-hint .oh-key {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.6rem;
+    }
+
+    .onboarding-dismiss {
+      margin-top: 8px;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.2);
+      cursor: pointer;
+      pointer-events: auto;
+      letter-spacing: 0.06em;
+      padding: 4px 8px;
+      transition: color 0.15s;
+    }
+
+    .onboarding-dismiss:hover { color: rgba(255,255,255,0.4); }
+
+    /* ── SHIMMER SKELETON ─────────────────────────────────── */
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 400px 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 6px;
+    }
+
+    /* ── SECTION LABEL UPGRADE ────────────────────────────── */
+    .section-label {
+      font-size: 0.6rem !important;
+      letter-spacing: 0.12em !important;
+      color: rgba(255,255,255,0.3) !important;
+      font-weight: 500 !important;
+    }
+
+    /* ── ZOOM CONTROLS PREMIUM ────────────────────────────── */
+    #zoom-controls {
+      background: rgba(14,14,14,0.9) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      backdrop-filter: blur(12px) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    }
+
+    /* ── PANEL HEADER ─────────────────────────────────────── */
+    .panel-header {
+      background: rgba(255,255,255,0.01);
+      border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+    }
+    .panel-title {
+      color: rgba(255,255,255,0.35) !important;
+      font-size: 0.64rem !important;
+      letter-spacing: 0.14em !important;
+    }
+
+    /* ── RIGHT TABS ───────────────────────────────────────── */
+    .right-tabs {
+      background: rgba(255,255,255,0.01);
+    }
+
+    /* ── AI IDENTITY BADGE ────────────────────────────────── */
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      background: rgba(255,90,31,0.1);
+      border: 1px solid rgba(255,90,31,0.25);
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 0.55rem;
+      color: rgba(255,130,60,0.9);
+      letter-spacing: 0.08em;
+    }
+
     ::-webkit-scrollbar { width:4px; height:4px; }
-    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
 <body>
@@ -432,10 +809,15 @@
   <div class="tb-sep"></div>
   <button class="tb-canvas-size" id="canvas-size-btn" onclick="openSizeModal()">A4 · 794 × 1123</button>
   <div class="tb-spacer"></div>
+  <button class="tb-btn-ai" onclick="showAIModal()">
+    <div class="ai-pulse"></div>
+    ✦ Generate with AI
+  </button>
+  <div class="tb-sep"></div>
   <button class="tb-btn" onclick="editorActions.exportPNG()">⬇ PNG</button>
   <button class="tb-btn" onclick="editorActions.exportPDF()">⬇ PDF</button>
   <div class="tb-sep"></div>
-  <button class="tb-btn primary" onclick="editorActions.save()">✦ Save</button>
+  <button class="tb-btn primary" onclick="editorActions.save()">Save</button>
 </div>
 
 <div id="layout">
@@ -548,6 +930,28 @@
         <div id="polotno-container"></div>
       </div>
     </div>
+    <!-- Canvas onboarding hints -->
+    <div id="canvas-onboarding">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="font-family:var(--mono);font-size:0.62rem;color:rgba(255,255,255,0.15);letter-spacing:0.1em;margin-bottom:8px">GET STARTED</div>
+        <div class="onboarding-hint" onclick="showAIModal()">
+          <span style="color:#ff7a35">✦</span>
+          Generate a design with AI
+        </div>
+        <div class="onboarding-hint" onclick="togglePanel('templates', document.querySelector('[data-panel=templates]'))">
+          <span>⊞</span>
+          Choose from templates
+          <span class="oh-key">T</span>
+        </div>
+        <div class="onboarding-hint" onclick="togglePanel('text', document.querySelector('[data-panel=text]'))">
+          <span>T</span>
+          Add a text block
+          <span class="oh-key">X</span>
+        </div>
+        <div class="onboarding-dismiss" onclick="dismissOnboarding()">dismiss hints</div>
+      </div>
+    </div>
+
     <div id="zoom-controls">
       <button class="zoom-btn" onclick="editorActions.zoomOut()">−</button>
       <span id="zoom-label">100%</span>
@@ -565,9 +969,56 @@
     </div>
 
     <div class="rtab-content active" id="rtab-properties">
-      <div class="empty-state" id="no-selection">
-        <div class="es-icon">⊹</div>
-        <p>Select an element<br>to edit properties</p>
+      <div id="no-selection">
+        <div class="smart-empty">
+          <div class="smart-empty-icon">✦</div>
+          <div class="smart-empty-title">AI Design Studio</div>
+          <div class="smart-empty-sub">Generate or select an element<br>to start editing</div>
+
+          <button class="smart-action-btn ai-action" onclick="showAIModal()">
+            <span class="sab-icon">✦</span>
+            Generate with AI
+          </button>
+
+          <div class="smart-divider"></div>
+
+          <button class="smart-action-btn" onclick="togglePanel('templates', document.querySelector('[data-panel=templates]'))">
+            <span class="sab-icon">⊞</span>
+            Browse Templates
+          </button>
+          <button class="smart-action-btn" onclick="togglePanel('text', document.querySelector('[data-panel=text]'))">
+            <span class="sab-icon">T</span>
+            Add Text Block
+          </button>
+          <button class="smart-action-btn" onclick="togglePanel('qrcodes', document.querySelector('[data-panel=qrcodes]'))">
+            <span class="sab-icon">⬡</span>
+            Insert QR Code
+          </button>
+          <button class="smart-action-btn" onclick="togglePanel('images', document.querySelector('[data-panel=images]'))">
+            <span class="sab-icon">🖼</span>
+            Upload Image
+          </button>
+
+          <div class="smart-divider"></div>
+
+          <div style="width:100%;padding:8px 4px 0">
+            <div style="font-family:var(--mono);font-size:0.56rem;color:rgba(255,255,255,0.2);letter-spacing:0.08em;margin-bottom:6px">KEYBOARD SHORTCUTS</div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.25)">
+                <span>Templates</span><span style="background:rgba(255,255,255,0.06);border-radius:3px;padding:1px 5px">T</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.25)">
+                <span>Add Text</span><span style="background:rgba(255,255,255,0.06);border-radius:3px;padding:1px 5px">X</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.25)">
+                <span>QR Codes</span><span style="background:rgba(255,255,255,0.06);border-radius:3px;padding:1px 5px">Q</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.25)">
+                <span>Save</span><span style="background:rgba(255,255,255,0.06);border-radius:3px;padding:1px 5px">⌘S</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="text-props" style="display:none">
         <div class="prop-group">
@@ -702,6 +1153,7 @@ window.addEventListener('load', async () => {
     if (firstActive) moveIndicator(firstActive);
   }, 100);
 
+  initOnboarding();
   // Ensure topbar always shows A4 on load
   document.getElementById('canvas-size-btn').textContent = 'A4 · 794 × 1123';
   S.canvasW = 794; S.canvasH = 1123; S.pendingW = 794; S.pendingH = 1123;
@@ -1329,6 +1781,77 @@ const editorActions = {
   },
   exportPDF() { showToast('PDF export via Puppeteer — coming in Step 2'); }
 };
+
+// ── CANVAS ONBOARDING ─────────────────────────────────────────
+function dismissOnboarding() {
+  const el = document.getElementById('canvas-onboarding');
+  if (el) { el.classList.add('hidden'); setTimeout(() => el.style.display='none', 400); }
+  localStorage.setItem('qraivy_onboarding_dismissed', '1');
+}
+
+function initOnboarding() {
+  if (localStorage.getItem('qraivy_onboarding_dismissed')) {
+    const el = document.getElementById('canvas-onboarding');
+    if (el) el.style.display = 'none';
+  }
+}
+
+// ── AI MODAL (placeholder for Step 2) ─────────────────────────
+function showAIModal() {
+  let modal = document.getElementById('_aiModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = '_aiModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:8000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px)';
+    modal.innerHTML = `
+      <div style="background:#111;border:1px solid rgba(255,90,31,0.25);border-radius:20px;padding:32px;width:480px;max-width:90vw;position:relative;box-shadow:0 0 80px rgba(255,90,31,0.1),0 24px 80px rgba(0,0,0,0.8)">
+        <div style="position:absolute;inset:0;border-radius:20px;background:radial-gradient(ellipse at 50% 0%,rgba(255,90,31,0.08),transparent 60%);pointer-events:none"></div>
+        <button onclick="document.getElementById('_aiModal').style.display='none'" style="position:absolute;top:16px;right:16px;width:28px;height:28px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(255,255,255,0.4);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">×</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#ff5a1f,#ff8c00);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 16px rgba(255,90,31,0.4)">✦</div>
+          <div>
+            <div style="font-size:1rem;font-weight:700;color:#f0ece0">AI Design Generator</div>
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:rgba(255,90,31,0.7)">POWERED BY CLAUDE</div>
+          </div>
+        </div>
+        <p style="font-family:'DM Mono',monospace;font-size:0.72rem;color:rgba(240,236,224,0.45);margin-bottom:20px;line-height:1.7">Describe your design and Claude will generate a fully editable layout with your QR code, branding, and copy.</p>
+        <textarea id="_aiPrompt" placeholder="e.g. Dark luxury restaurant promo flyer for La Maison, orange and gold theme, 20% discount offer, elegant and premium feel..." style="width:100%;height:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.75rem;outline:none;resize:none;line-height:1.6" onfocus="this.style.borderColor='rgba(255,90,31,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <select id="_aiSize" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:rgba(240,236,224,0.7);font-family:'DM Mono',monospace;font-size:0.7rem;outline:none">
+            <option value="a4">A4 Poster</option>
+            <option value="a5">A5 Flyer</option>
+            <option value="business">Business Card</option>
+            <option value="square">Instagram Post</option>
+            <option value="dl">DL Flyer</option>
+          </select>
+          <select id="_aiStyle" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:rgba(240,236,224,0.7);font-family:'DM Mono',monospace;font-size:0.7rem;outline:none">
+            <option>Dark Luxury</option>
+            <option>Bold Orange</option>
+            <option>Minimal White</option>
+            <option>Restaurant Gold</option>
+            <option>Event Neon</option>
+          </select>
+        </div>
+        <button onclick="triggerAIGenerate()" style="width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#ff5a1f,#ff8c00);border:none;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:0.8rem;font-weight:600;letter-spacing:0.05em;cursor:pointer;box-shadow:0 0 24px rgba(255,90,31,0.3);transition:all 0.2s" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 0 36px rgba(255,90,31,0.45)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 0 24px rgba(255,90,31,0.3)'">
+          ✦ Generate Design
+        </button>
+        <div style="text-align:center;margin-top:10px;font-family:'DM Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">AI generation wires to Claude in Step 2</div>
+      </div>
+    `;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display='none'; });
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'flex';
+  }
+  setTimeout(() => document.getElementById('_aiPrompt') && document.getElementById('_aiPrompt').focus(), 100);
+}
+
+function triggerAIGenerate() {
+  const prompt = document.getElementById('_aiPrompt').value.trim();
+  if (!prompt) { showToast('Enter a design description first'); return; }
+  document.getElementById('_aiModal').style.display = 'none';
+  showToast('✦ AI generation coming in Step 2 — template engine ready');
+}
 
 function showToast(msg) {
   let t = document.getElementById('_toast');
