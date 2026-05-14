@@ -123,3 +123,20 @@
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
+
+/* ── TYPOGRAPHY INSPECTOR ───────────────────────── */
+#text-props { padding: 4px 0; }
+#text-props .prop-label { margin-bottom: 4px; }
+#text-props .prop-input { height: 30px; font-size: 0.72rem; }
+#text-props .prop-select { height: 30px; font-size: 0.72rem; }
+#text-props input[type="range"] { height: 4px; border-radius: 2px; cursor: pointer; }
+
+.align-btn.active {
+  background: rgba(255,90,31,0.12) !important;
+  border-color: rgba(255,90,31,0.5) !important;
+  color: var(--accent) !important;
+}
+
+/* ── IMAGE PROPS ─────────────────────────────────── */
+#image-props { padding: 4px 0; }
+#image-props .prop-label { margin-bottom: 4px; }

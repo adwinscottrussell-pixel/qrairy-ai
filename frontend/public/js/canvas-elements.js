@@ -75,21 +75,13 @@ function ceAddElement(props) {
   ceSelect(id);
   updateLayers();
 
-  // Auto-enter edit mode for text, scroll element into view
+  // Auto-enter edit mode for text
   if (el.type === 'text') {
     setTimeout(function() {
+      var foundEl = CE.elements.find(function(e) { return e.id === id; });
       var node = document.getElementById(id);
-      if (node) {
-        node.focus();
-        // Place cursor at end
-        var range = document.createRange();
-        var sel = window.getSelection();
-        range.selectNodeContents(node);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    }, 60);
+      if (foundEl && node) ceEnterTextEdit(foundEl, node);
+    }, 80);
   }
 
   // Subtle reveal animation
@@ -155,44 +147,32 @@ function ceRenderElement(el) {
 
   // ── TEXT ──────────────────────────────────────
   } else if (el.type === 'text') {
+    // ── Text element: select on single click, edit on double click ──
     node.style.height = 'auto';
-    node.style.minHeight = (el.height || 24) + 'px';
+    node.style.minHeight = Math.max(el.fontSize || 20, el.height || 20) + 'px';
     node.style.color = el.fill || '#000000';
     node.style.fontSize = (el.fontSize || 16) + 'px';
     node.style.fontWeight = el.fontWeight || 'normal';
+    node.style.fontStyle = el.fontStyle || 'normal';
     node.style.fontFamily = (el.fontFamily || 'Inter') + ',sans-serif';
     node.style.textAlign = el.align || 'left';
     node.style.lineHeight = el.lineHeight || 1.35;
     node.style.letterSpacing = el.letterSpacing || 'normal';
+    node.style.textTransform = el.textTransform || 'none';
+    node.style.textDecoration = el.textDecoration || 'none';
     node.style.whiteSpace = 'pre-wrap';
     node.style.wordBreak = 'break-word';
     node.style.overflowWrap = 'break-word';
     node.style.background = 'transparent';
-    node.style.padding = '2px';
-    node.style.cursor = 'text';
-    node.contentEditable = 'true';
+    node.style.padding = '4px';
+    node.style.cursor = 'default';
+    node.style.outline = 'none';
+    node.contentEditable = 'false';  // editing off by default
     node.spellcheck = false;
+    node.dataset.editing = 'false';
     node.textContent = el.text || '';
-
-    node.addEventListener('input', function() {
-      el.text = node.innerText;
-      el.height = node.offsetHeight;
-    });
-    node.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') { node.blur(); ceSelect(el.id); }
-      e.stopPropagation();
-    });
-    node.addEventListener('focus', function() {
-      node.style.outline = '2px solid rgba(255,90,31,0.7)';
-      node.style.outlineOffset = '1px';
-      CE.selected = el.id;
-    });
-    node.addEventListener('blur', function() {
-      node.style.outline = 'none';
-      el.text = node.innerText;
-      el.height = node.offsetHeight;
-      cePushHistory();
-    });
+    if (el.opacity != null) node.style.opacity = el.opacity;
+    if (el.textShadow) node.style.textShadow = el.textShadow;
 
   // ── IMAGE / QR ────────────────────────────────
   } else if (el.type === 'image') {
@@ -211,14 +191,49 @@ function ceRenderElement(el) {
   }
 
   // ── MOUSE EVENTS ──────────────────────────────
-  node.addEventListener('mousedown', function(e) {
-    // Allow text cursor clicks on text elements
-    if (el.type === 'text' && e.target.isContentEditable) return;
-    e.preventDefault();
-    e.stopPropagation();
-    ceSelect(el.id);
-    ceDrag(e, el);
-  });
+  if (el.type === 'text') {
+    // Single click: select + move
+    node.addEventListener('mousedown', function(e) {
+      if (node.dataset.editing === 'true') return; // let browser handle cursor
+      e.preventDefault();
+      e.stopPropagation();
+      ceSelect(el.id);
+      ceDrag(e, el);
+    });
+
+    // Double click: enter edit mode
+    node.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      ceEnterTextEdit(el, node);
+    });
+
+    // Blur: exit edit mode
+    node.addEventListener('blur', function() {
+      ceExitTextEdit(el, node);
+    });
+
+    node.addEventListener('input', function() {
+      el.text = node.innerText;
+      el.height = node.offsetHeight;
+      // Live update layer name
+      updateLayers();
+    });
+
+    node.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { node.blur(); }
+      e.stopPropagation(); // don't trigger global shortcuts while editing
+    });
+
+  } else {
+    // Non-text: normal mousedown drag
+    node.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      ceSelect(el.id);
+      ceDrag(e, el);
+    });
+  }
 
   c.appendChild(node);
 }
@@ -274,6 +289,217 @@ function ceAutoSwitchPanel(el) {
 function ceDeselect() {
   ceSelect(null);
 }
+
+// ── TEXT EDIT MODE ────────────────────────────────
+function ceEnterTextEdit(el, node) {
+  if (!node) node = document.getElementById(el.id);
+  if (!node) return;
+
+  // Enable editing
+  node.contentEditable = 'true';
+  node.dataset.editing = 'true';
+  node.style.cursor = 'text';
+  node.style.outline = '2px solid rgba(255,90,31,0.7)';
+  node.style.outlineOffset = '2px';
+
+  // Remove drag/resize handles while editing
+  document.querySelectorAll('.ce-handles-wrap').forEach(h => h.remove());
+
+  node.focus();
+
+  // Place cursor at end
+  var range = document.createRange();
+  range.selectNodeContents(node);
+  range.collapse(false);
+  var sel = window.getSelection();
+  if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+
+  CE._editingId = el.id;
+}
+
+function ceExitTextEdit(el, node) {
+  if (!node) node = document.getElementById(el.id);
+  if (!node) return;
+
+  node.contentEditable = 'false';
+  node.dataset.editing = 'false';
+  node.style.cursor = 'default';
+  node.style.outline = 'none';
+
+  el.text = node.innerText || node.textContent;
+  el.height = node.offsetHeight;
+  cePushHistory();
+  CE._editingId = null;
+
+  // Re-show selection
+  ceSelect(el.id);
+}
+
+// Click outside canvas during text edit exits edit mode
+document.addEventListener('mousedown', function(e) {
+  if (!CE._editingId) return;
+  var node = document.getElementById(CE._editingId);
+  if (node && !node.contains(e.target)) {
+    node.blur();
+  }
+});
+
+// ── FULL TYPOGRAPHY INSPECTOR ─────────────────────
+// Called from showElementProps when text is selected
+function ceRenderTypographyPanel(el) {
+  var noSel = document.getElementById('no-selection');
+  var textP = document.getElementById('text-props');
+  var imgP  = document.getElementById('image-props');
+  if (noSel) noSel.style.display = 'none';
+  if (imgP)  imgP.style.display = 'none';
+
+  if (!textP) {
+    // Create typography panel dynamically
+    var rtabContent = document.querySelector('.rtab-content#rtab-properties') ||
+                      document.querySelector('.rtab-content') ||
+                      document.querySelector('#right-panel');
+    if (!rtabContent) return;
+
+    var panel = document.createElement('div');
+    panel.id = 'text-props';
+    panel.style.cssText = 'display:block;padding:4px 0;';
+    rtabContent.appendChild(panel);
+    textP = panel;
+  }
+
+  textP.style.display = 'block';
+
+  var fonts = ['Inter','DM Mono','Georgia','Playfair Display','Arial','Helvetica','Times New Roman','Courier New'];
+  var weights = [['100','Thin'],['300','Light'],['400','Regular'],['500','Medium'],['600','SemiBold'],['700','Bold'],['800','ExtraBold'],['900','Black']];
+
+  textP.innerHTML = [
+    // Edit button
+    '<div style="margin-bottom:12px">',
+    '<button onclick="var n=document.getElementById(\''+el.id+'\');if(n)ceEnterTextEdit(CE.elements.find(e=>e.id===\''+el.id+'\'),n);" style="width:100%;padding:9px;background:rgba(255,90,31,0.1);border:1px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff7848;font-family:var(--mono);font-size:0.7rem;cursor:pointer;letter-spacing:0.04em">✎ Double-click canvas to edit text</button>',
+    '</div>',
+
+    // Font family
+    '<div class="prop-group">',
+    '<span class="prop-label">Font Family</span>',
+    '<select class="prop-select" id="tp-font" onchange="ceTpUpdate(\''+el.id+'\',\'fontFamily\',this.value)">',
+    fonts.map(function(f) { return '<option value="'+f+'"'+(el.fontFamily===f?' selected':'')+'>'+f+'</option>'; }).join(''),
+    '</select>',
+    '</div>',
+
+    // Size + Weight row
+    '<div class="prop-row" style="gap:6px;margin-bottom:12px">',
+    '<div style="flex:1"><span class="prop-label">Size</span><div style="display:flex;align-items:center;gap:4px"><button onclick="ceTpUpdate(\''+el.id+'\',\'fontSize\',Math.max(6,(parseInt(document.getElementById(\'tp-size\').value)||16)-1);document.getElementById(\'tp-size\').value=Math.max(6,(parseInt(document.getElementById(\'tp-size\').value)||16))-1" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">−</button><input class="prop-input" id="tp-size" type="number" min="6" max="400" value="'+(el.fontSize||16)+'" oninput="ceTpUpdate(\''+el.id+'\',\'fontSize\',parseInt(this.value)||16)" style="width:52px;text-align:center"><button onclick="ceTpUpdate(\''+el.id+'\',\'fontSize\',Math.min(400,(parseInt(document.getElementById(\'tp-size\').value)||16)+1);document.getElementById(\'tp-size\').value=Math.min(400,(parseInt(document.getElementById(\'tp-size\').value)||16))+1" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">+</button></div></div>',
+    '<div style="flex:1"><span class="prop-label">Weight</span><select class="prop-select" id="tp-weight" onchange="ceTpUpdate(\''+el.id+'\',\'fontWeight\',this.value)">'+weights.map(function(w){return '<option value="'+w[0]+'"'+(String(el.fontWeight)===w[0]?' selected':'')+'>'+w[1]+'</option>';}).join('')+'</select></div>',
+    '</div>',
+
+    // Line height + Letter spacing
+    '<div class="prop-row" style="gap:6px;margin-bottom:12px">',
+    '<div style="flex:1"><span class="prop-label">Line Height</span><input class="prop-input" id="tp-lh" type="number" min="0.8" max="4" step="0.05" value="'+(el.lineHeight||1.35)+'" oninput="ceTpUpdate(\''+el.id+'\',\'lineHeight\',parseFloat(this.value)||1.35)" style="text-align:center"></div>',
+    '<div style="flex:1"><span class="prop-label">Letter Spacing</span><input class="prop-input" id="tp-ls" type="number" min="-10" max="40" step="0.5" value="'+(parseFloat(el.letterSpacing)||0)+'" oninput="ceTpUpdateLS(\''+el.id+'\',this.value)" style="text-align:center"></div>',
+    '</div>',
+
+    // Alignment
+    '<div class="prop-group">',
+    '<span class="prop-label">Alignment</span>',
+    '<div class="align-row">',
+    ['left','center','right','justify'].map(function(a) {
+      var icons = {left:'⬅',center:'≡',right:'➡',justify:'☰'};
+      return '<button class="align-btn'+(el.align===a?' active':'')+'" onclick="ceTpUpdate(\''+el.id+'\',\'align\',\''+a+'\');document.querySelectorAll(\'#text-props .align-btn\').forEach(b=>b.classList.remove(\'active\'));this.classList.add(\'active\')" style="'+(el.align===a?'border-color:var(--accent);color:var(--accent)':'')+'" title="'+a+'">'+icons[a]+'</button>';
+    }).join(''),
+    '</div></div>',
+
+    // Text transforms
+    '<div class="prop-group">',
+    '<span class="prop-label">Style</span>',
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">',
+    [
+      ['B','fontWeight',el.fontWeight==='bold'?'normal':'bold','font-weight:bold'],
+      ['I','fontStyle',el.fontStyle==='italic'?'normal':'italic','font-style:italic'],
+      ['U','textDecoration',el.textDecoration==='underline'?'none':'underline','text-decoration:underline'],
+      ['AA','textTransform',el.textTransform==='uppercase'?'none':'uppercase',''],
+    ].map(function(s) {
+      return '<button onclick="ceTpUpdate(\''+el.id+'\',\''+s[1]+'\',\''+s[2]+'\')" style="width:32px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text-mid);cursor:pointer;'+s[3]+';transition:all 0.15s" onmouseover="this.style.borderColor=\'rgba(255,90,31,0.4)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'+s[0]+'</button>';
+    }).join(''),
+    '</div></div>',
+
+    // Color
+    '<div class="prop-group">',
+    '<span class="prop-label">Text Color</span>',
+    '<div class="color-picker-wrap">',
+    '<div id="text-color-preview" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border2);cursor:pointer;background:'+(el.fill||'#000000')+'" onclick="document.getElementById(\'tp-color-input\').click()"></div>',
+    '<input type="color" id="tp-color-input" value="'+(el.fill||'#000000')+'" style="display:none" oninput="ceTpUpdate(\''+el.id+'\',\'fill\',this.value);document.getElementById(\'text-color-preview\').style.background=this.value">',
+    '<span id="text-color-hex" style="font-family:var(--mono);font-size:0.68rem;color:var(--text-mid)">'+(el.fill||'#000000')+'</span>',
+    '</div>',
+    '<div class="color-row" style="flex-wrap:wrap;gap:5px;margin-top:8px">',
+    ['#ffffff','#0a0a0a','#ff5a1f','#f0ece0','#ff8c00','#c8860a','#7c3aed','#333333','#666666','#999999'].map(function(c) {
+      return '<div style="width:22px;height:22px;border-radius:4px;background:'+c+';cursor:pointer;border:1px solid rgba(255,255,255,0.1)" onclick="ceTpUpdate(\''+el.id+'\',\'fill\',\''+c+'\');document.getElementById(\'text-color-preview\').style.background=\''+c+'\';document.getElementById(\'text-color-hex\').textContent=\''+c+'\'"></div>';
+    }).join(''),
+    '</div></div>',
+
+    // Opacity
+    '<div class="prop-group">',
+    '<span class="prop-label">Opacity: <span id="tp-opacity-val">'+(el.opacity!=null?Math.round(el.opacity*100):100)+'%</span></span>',
+    '<input type="range" min="0" max="100" value="'+(el.opacity!=null?Math.round(el.opacity*100):100)+'" style="width:100%;accent-color:var(--accent)" oninput="var v=parseInt(this.value)/100;ceTpUpdate(\''+el.id+'\',\'opacity\',v);document.getElementById(\'tp-opacity-val\').textContent=this.value+\'%\'">',
+    '</div>',
+
+    // Position + Size
+    '<div class="section-label">Transform</div>',
+    '<div class="prop-row">',
+    '<div style="flex:1"><span class="prop-label">X</span><input class="prop-input" id="tp-x" type="number" value="'+Math.round(el.x)+'" oninput="ceTpUpdate(\''+el.id+'\',\'x\',parseInt(this.value))"></div>',
+    '<div style="flex:1"><span class="prop-label">Y</span><input class="prop-input" id="tp-y" type="number" value="'+Math.round(el.y)+'" oninput="ceTpUpdate(\''+el.id+'\',\'y\',parseInt(this.value))"></div>',
+    '</div>',
+    '<div class="prop-row" style="margin-top:6px">',
+    '<div style="flex:1"><span class="prop-label">Width</span><input class="prop-input" id="tp-w" type="number" value="'+Math.round(el.width)+'" oninput="ceTpUpdate(\''+el.id+'\',\'width\',parseInt(this.value))"></div>',
+    '<div style="flex:1"><span class="prop-label">Rotation</span><input class="prop-input" id="tp-rot" type="number" value="'+(el.rotation||0)+'" oninput="ceTpUpdate(\''+el.id+'\',\'rotation\',parseInt(this.value))"></div>',
+    '</div>',
+
+    // Delete button
+    '<div style="margin-top:16px;display:flex;gap:6px">',
+    '<button onclick="ceDuplicateSelected()" style="flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-mid);font-family:var(--mono);font-size:0.65rem;cursor:pointer">⊕ Duplicate</button>',
+    '<button onclick="ceDeleteSelected()" style="flex:1;padding:8px;background:rgba(220,50,50,0.08);border:1px solid rgba(220,50,50,0.2);border-radius:8px;color:rgba(220,100,100,0.8);font-family:var(--mono);font-size:0.65rem;cursor:pointer">✕ Delete</button>',
+    '</div>',
+
+  ].join('');
+}
+
+// ── TYPOGRAPHY LIVE UPDATE ────────────────────────
+function ceTpUpdate(id, key, value) {
+  var el = CE.elements.find(function(e) { return e.id === id; });
+  if (!el) return;
+  el[key] = value;
+  var node = document.getElementById(id);
+  if (!node) return;
+
+  var styleMap = {
+    fontFamily:     function(v) { node.style.fontFamily = v + ',sans-serif'; },
+    fontSize:       function(v) { node.style.fontSize = v + 'px'; },
+    fontWeight:     function(v) { node.style.fontWeight = v; },
+    fontStyle:      function(v) { node.style.fontStyle = v; },
+    lineHeight:     function(v) { node.style.lineHeight = v; },
+    letterSpacing:  function(v) { node.style.letterSpacing = v; },
+    align:          function(v) { node.style.textAlign = v; },
+    textTransform:  function(v) { node.style.textTransform = v; },
+    textDecoration: function(v) { node.style.textDecoration = v; },
+    fill:           function(v) { node.style.color = v; },
+    opacity:        function(v) { node.style.opacity = v; },
+    x:              function(v) { el.x = v; node.style.left = v + 'px'; ceShowHandles(el); },
+    y:              function(v) { el.y = v; node.style.top = v + 'px'; ceShowHandles(el); },
+    width:          function(v) { node.style.width = v + 'px'; },
+    rotation:       function(v) { node.style.transform = 'rotate(' + v + 'deg)'; },
+  };
+
+  if (styleMap[key]) styleMap[key](value);
+  // Don't push history on every keystroke - debounce
+  clearTimeout(ceTpUpdate._t);
+  ceTpUpdate._t = setTimeout(function() { cePushHistory(); }, 400);
+}
+
+function ceTpUpdateLS(id, val) {
+  var v = parseFloat(val) || 0;
+  ceTpUpdate(id, 'letterSpacing', v === 0 ? 'normal' : v + 'px');
+}
+
+
 
 function ceShowHandles(el) {
   // Remove existing
@@ -708,9 +934,9 @@ function updateLayers() {
 
 // ── SHOW ELEMENT PROPS ────────────────────────────
 function showElementProps(el) {
-  const noSel = document.getElementById('no-selection');
-  const textP = document.getElementById('text-props');
-  const imgP  = document.getElementById('image-props');
+  var noSel = document.getElementById('no-selection');
+  var textP = document.getElementById('text-props');
+  var imgP  = document.getElementById('image-props');
 
   if (!el) {
     if (noSel) noSel.style.display = '';
@@ -721,25 +947,30 @@ function showElementProps(el) {
   if (noSel) noSel.style.display = 'none';
 
   if (el.type === 'text') {
-    if (textP) textP.style.display = '';
-    if (imgP)  imgP.style.display  = 'none';
-    const fEl = document.getElementById('prop-font');
-    const sEl = document.getElementById('prop-size');
-    const wEl = document.getElementById('prop-weight');
-    if (fEl) { fEl.value = el.fontFamily || 'Inter'; fEl.onchange = function() { ceUpdateProp(el.id, 'fontFamily', fEl.value); }; }
-    if (sEl) { sEl.value = el.fontSize || 16;       sEl.onchange = function() { ceUpdateProp(el.id, 'fontSize', parseInt(sEl.value)); }; }
-    if (wEl) { wEl.value = el.fontWeight || '400';  wEl.onchange = function() { ceUpdateProp(el.id, 'fontWeight', wEl.value); }; }
+    if (imgP) imgP.style.display = 'none';
+    // Render full typography inspector
+    ceRenderTypographyPanel(el);
   } else {
     if (textP) textP.style.display = 'none';
-    if (imgP)  imgP.style.display  = '';
-    const xEl = document.getElementById('prop-x');
-    const yEl = document.getElementById('prop-y');
-    const wEl = document.getElementById('prop-w');
-    const hEl = document.getElementById('prop-h');
-    if (xEl) { xEl.value = Math.round(el.x);          xEl.onchange = function() { ceUpdateProp(el.id, 'x',      parseInt(xEl.value)); }; }
-    if (yEl) { yEl.value = Math.round(el.y);          yEl.onchange = function() { ceUpdateProp(el.id, 'y',      parseInt(yEl.value)); }; }
-    if (wEl) { wEl.value = Math.round(el.width);      wEl.onchange = function() { ceUpdateProp(el.id, 'width',  parseInt(wEl.value)); }; }
-    if (hEl) { hEl.value = Math.round(el.height || 0); hEl.onchange = function() { ceUpdateProp(el.id, 'height', parseInt(hEl.value)); }; }
+    if (imgP) imgP.style.display = '';
+    var xEl = document.getElementById('prop-x');
+    var yEl = document.getElementById('prop-y');
+    var wEl = document.getElementById('prop-w');
+    var hEl = document.getElementById('prop-h');
+    if (xEl) { xEl.value = Math.round(el.x);           xEl.onchange = function() { ceUpdateProp(el.id,'x',parseInt(xEl.value)); }; }
+    if (yEl) { yEl.value = Math.round(el.y);           yEl.onchange = function() { ceUpdateProp(el.id,'y',parseInt(yEl.value)); }; }
+    if (wEl) { wEl.value = Math.round(el.width);       wEl.onchange = function() { ceUpdateProp(el.id,'width',parseInt(wEl.value)); }; }
+    if (hEl) { hEl.value = Math.round(el.height || 0); hEl.onchange = function() { ceUpdateProp(el.id,'height',parseInt(hEl.value)); }; }
+    // Duplicate + Delete for non-text
+    var acts = document.getElementById('el-actions');
+    if (!acts) {
+      acts = document.createElement('div');
+      acts.id = 'el-actions';
+      acts.style.cssText = 'display:flex;gap:6px;margin-top:16px';
+      if (imgP) imgP.appendChild(acts);
+    }
+    acts.innerHTML = '<button onclick="ceDuplicateSelected()" style="flex:1;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-mid);font-family:var(--mono);font-size:0.65rem;cursor:pointer">⊕ Duplicate</button>' +
+      '<button onclick="ceDeleteSelected()" style="flex:1;padding:8px;background:rgba(220,50,50,0.08);border:1px solid rgba(220,50,50,0.2);border-radius:8px;color:rgba(220,100,100,0.8);font-family:var(--mono);font-size:0.65rem;cursor:pointer">✕ Delete</button>';
   }
 }
 
