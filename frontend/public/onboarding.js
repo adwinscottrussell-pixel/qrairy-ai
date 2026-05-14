@@ -1,15 +1,17 @@
 (function(){
-  var FREE_PATH='dashboard.html?create=static';
-  var UPGRADE_PATH='pricing.html';
-  var EDITOR_PATH='editor.html';
+  var PUBLISH_PATH  = 'dashboard.html?publish=1';
+  var FREE_PATH     = 'dashboard.html?create=static';
+  var EDITOR_PATH   = 'editor.html';
+  var UPGRADE_PATH  = 'pricing.html';
+  var ASSETS_PATH   = 'editor.html?mode=assets';
 
   function key(u){return 'qraivy_onboarded_'+u;}
   function done(u){return !!localStorage.getItem(key(u));}
   function mark(u){localStorage.setItem(key(u),'true');}
 
-  var onboardingState = { qrType:null, selectedUseCase:null, generatedTheme:null, onboardingProgress:0 };
+  var S = { qrType:null, selectedUseCase:null, generatedTheme:null, progress:0 };
 
-  // ── SVG icons ────────────────────────────────────
+  // ── SVG assets ────────────────────────────────────
   var qrSVG='<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="21" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="2" y="18" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="21" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/></svg>';
   var aiSVG='<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3 L17.5 13 L28 16 L17.5 19 L16 29 L14.5 19 L4 16 L14.5 13 Z" stroke="#FF7A35" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M26 5 L26.8 8 L30 9 L26.8 10 L26 13 L25.2 10 L22 9 L25.2 8 Z" fill="#FF7A35" opacity="0.6"/></svg>';
 
@@ -22,41 +24,206 @@
 
   // ── Use cases ─────────────────────────────────────
   var USE_CASES = [
-    { id:'restaurant',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6h4M21 22H3"/></svg>', title:'Restaurant', sub:'Menus, promos, and customer engagement' },
-    { id:'bizcard',     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 10h.01M2 10h2M16 10h4M8 14h8"/></svg>', title:'Business Card', sub:'Modern networking with smart contact sharing' },
-    { id:'packaging',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', title:'Product Packaging', sub:'Connect physical products to digital experiences' },
-    { id:'event',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', title:'Event', sub:'Tickets, schedules, and attendee engagement' },
-    { id:'social',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 2H7a5 5 0 00-5 5v10a5 5 0 005 5h10a5 5 0 005-5V7a5 5 0 00-5-5z"/><circle cx="12" cy="12" r="3"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>', title:'Social Media', sub:'Grow followers and drive engagement' },
-    { id:'ai-support',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg>', title:'AI Customer Support', sub:'Launch AI-powered customer interactions' },
-    { id:'realestate',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>', title:'Real Estate', sub:'Property showcases and lead capture' },
-    { id:'ecommerce',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>', title:'Ecommerce', sub:'Drive traffic to products and offers' },
-    { id:'leadgen',     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>', title:'Lead Generation', sub:'Capture and qualify new leads' },
-    { id:'gym',         icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4v16M18 4v16M3 8h3M18 8h3M3 16h3M18 16h3M6 12h12"/></svg>', title:'Gym / Fitness', sub:'Memberships, classes, and promotions' },
-    { id:'portfolio',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>', title:'Portfolio', sub:'Showcase creative or professional work' },
+    { id:'restaurant', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6h4M21 22H3"/></svg>', title:'Restaurant', sub:'Menus, promos & reservations' },
+    { id:'ecommerce',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>', title:'Ecommerce', sub:'Products, offers & sales' },
+    { id:'realestate', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>', title:'Real Estate', sub:'Listings, viewings & leads' },
+    { id:'social',     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 2H7a5 5 0 00-5 5v10a5 5 0 005 5h10a5 5 0 005-5V7a5 5 0 00-5-5z"/><circle cx="12" cy="12" r="3"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>', title:'Social Media', sub:'Bio link & follower growth' },
+    { id:'leadgen',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>', title:'Lead Generation', sub:'Capture & qualify leads' },
+    { id:'gym',        icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4v16M18 4v16M3 8h3M18 8h3M3 16h3M18 16h3M6 12h12"/></svg>', title:'Gym / Fitness', sub:'Memberships & classes' },
+    { id:'bizcard',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 10h.01M2 10h2M16 10h4M8 14h8"/></svg>', title:'Business Card', sub:'Smart contact sharing' },
+    { id:'event',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', title:'Event', sub:'Tickets & RSVP' },
+    { id:'ai-support', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg>', title:'AI Support', sub:'24/7 AI customer chat' },
+    { id:'portfolio',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>', title:'Portfolio', sub:'Showcase your work' },
+    { id:'packaging',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', title:'Product / Packaging', sub:'Connect products digitally' },
   ];
 
-  // ── Starter kits ──────────────────────────────────
-  var STARTER_KITS = {
-    restaurant: { templateId:'restaurant-menu',   label:'Restaurant Menu',   emoji:'🍽', headline:'20% Off Your Next Order',        sub:'Scan to view our full menu & reserve your table',          cta:'View Menu & Book',       sections:['Digital Menu','Reservation CTA','Loyalty Rewards','Chef Specials'],   style:'Dark Gold',    accent:'#c8860a', bg:'#1a1208' },
-    bizcard:    { templateId:'business-card',     label:'Business Card',     emoji:'💼', headline:'Connect Instantly',              sub:'Tap or scan to save contact details & connect on LinkedIn', cta:'Save My Contact',        sections:['Digital vCard','Social Links','Portfolio Preview','Book a Call'],       style:'Minimal Dark', accent:'#ff5a1f', bg:'#0a0a0a' },
-    packaging:  { templateId:'promo-flyer-dark',  label:'Product Packaging', emoji:'📦', headline:'Scan for Product Info',          sub:'Get care instructions, origin story, and exclusive offers', cta:'Explore Product',        sections:['Product Story','Usage Guide','Reorder CTA','Brand Experience'],         style:'Dark Orange',  accent:'#ff5a1f', bg:'#111111' },
-    event:      { templateId:'event-poster',      label:'Event Poster',      emoji:'🎵', headline:'Limited Tickets Available',      sub:'Scan to buy tickets, view lineup and get venue directions', cta:'Get Tickets Now',        sections:['Event Lineup','Ticket CTA','Venue Map','Artist Profiles'],             style:'Dark Purple',  accent:'#7c3aed', bg:'#05082e' },
-    social:     { templateId:'instagram-promo',   label:'Social Post',       emoji:'📱', headline:'Follow for Daily Updates',       sub:'Exclusive content, giveaways and behind-the-scenes',       cta:'Follow Now',             sections:['Link in Bio','Latest Posts','Giveaway CTA','Collab Enquiry'],           style:'Dark Orange',  accent:'#ff5a1f', bg:'#0a0a0a' },
-    'ai-support':{ templateId:'promo-flyer-dark', label:'AI Support Page',   emoji:'🤖', headline:'AI Support, 24/7',              sub:'Scan to chat with our AI assistant — instant answers',      cta:'Chat Now',               sections:['AI Chat Widget','FAQ Section','Escalation CTA','Knowledge Base'],       style:'Dark Tech',    accent:'#ff5a1f', bg:'#080b10' },
-    realestate: { templateId:'promo-flyer-light', label:'Property Showcase', emoji:'🏠', headline:'Schedule a Viewing Today',       sub:'Scan to explore photos, floorplan and book your visit',    cta:'Book a Viewing',         sections:['Property Gallery','Book Viewing','Agent Contact','Mortgage Guide'],     style:'Light Minimal',accent:'#ff5a1f', bg:'#f0ece0' },
-    ecommerce:  { templateId:'promo-flyer-dark',  label:'Product Promo',     emoji:'🛒', headline:'30% Off — Today Only',           sub:'Scan to shop the collection and claim your discount',       cta:'Shop the Collection',    sections:['Product Showcase','Discount Banner','Buy Now CTA','Reviews Section'],  style:'Dark Orange',  accent:'#ff5a1f', bg:'#0a0a0a' },
-    leadgen:    { templateId:'qr-landing-promo',  label:'Lead Capture',      emoji:'🎯', headline:'Claim Your Free Consultation',   sub:'Scan to book your free strategy session',                  cta:'Book Free Session',      sections:['Lead Form','Social Proof','Offer Details','Urgency CTA'],             style:'Dark Minimal', accent:'#ff5a1f', bg:'#111111' },
-    gym:        { templateId:'promo-flyer-dark',  label:'Fitness Promo',     emoji:'💪', headline:'Start Your Transformation',      sub:'Scan to claim your free trial and meet your trainer',       cta:'Claim Free Trial',       sections:['Transformation Gallery','Free Trial CTA','Class Timetable','Trainers'],style:'Dark Orange',  accent:'#ff5a1f', bg:'#0d0d0d' },
-    portfolio:  { templateId:'business-card',     label:'Portfolio Card',    emoji:'🎨', headline:'See My Work',                   sub:'Scan to explore my portfolio and get in touch',             cta:'View Portfolio',         sections:['Featured Work','About Me','Services','Contact CTA'],                   style:'Minimal Dark', accent:'#ff5a1f', bg:'#0a0a0a' },
+  // ── Landing page kits ──────────────────────────────
+  var LP_KITS = {
+    restaurant: {
+      label:'Restaurant', emoji:'🍽', accent:'#e8a020', bg:'#0f0a04',
+      headline:'Welcome to Our Restaurant', tagline:'Authentic flavours, unforgettable experiences',
+      cta:'Reserve Your Table', cta2:'View Full Menu',
+      convGoal:'Table reservations & menu views',
+      sections:[
+        { icon:'🖼', name:'Hero Banner',        desc:'Full-width photo with headline & CTA' },
+        { icon:'📋', name:'Digital Menu',       desc:'AI-generated menu sections' },
+        { icon:'📅', name:'Reserve a Table',    desc:'One-tap booking CTA' },
+        { icon:'💬', name:'WhatsApp CTA',       desc:'Instant message button' },
+        { icon:'🤖', name:'AI Food Assistant',  desc:'Chat about dishes & allergens' },
+        { icon:'⭐', name:'Reviews',            desc:'Google reviews widget' },
+        { icon:'📍', name:'Map & Hours',        desc:'Location & opening times' },
+        { icon:'🎁', name:'Promo Section',      desc:'Current offers & loyalty' },
+      ]
+    },
+    ecommerce: {
+      label:'Ecommerce', emoji:'🛒', accent:'#ff5a1f', bg:'#0a0a0a',
+      headline:'Shop the Collection', tagline:'Premium products, exclusive deals, fast delivery',
+      cta:'Shop Now', cta2:'View Offers',
+      convGoal:'Product sales & basket adds',
+      sections:[
+        { icon:'🖼', name:'Product Hero',        desc:'Hero image with buy CTA' },
+        { icon:'💰', name:'Discount Banner',     desc:'Active offer with countdown' },
+        { icon:'🛍', name:'Product Carousel',    desc:'Top products with prices' },
+        { icon:'⭐', name:'Reviews',             desc:'Social proof section' },
+        { icon:'🤖', name:'AI Shopping Asst.',  desc:'Chat to find products' },
+        { icon:'📦', name:'Delivery Info',       desc:'Shipping & returns' },
+        { icon:'🔥', name:'Flash Sale',          desc:'Limited time urgency block' },
+        { icon:'📲', name:'App Download',        desc:'Mobile app CTA' },
+      ]
+    },
+    realestate: {
+      label:'Real Estate', emoji:'🏠', accent:'#ff5a1f', bg:'#060810',
+      headline:'Your Dream Property Awaits', tagline:'Discover exceptional homes in prime locations',
+      cta:'Schedule a Viewing', cta2:'View Gallery',
+      convGoal:'Viewing bookings & lead capture',
+      sections:[
+        { icon:'🖼', name:'Property Hero',       desc:'Gallery slideshow with key facts' },
+        { icon:'📅', name:'Book a Viewing',      desc:'Calendar booking CTA' },
+        { icon:'📋', name:'Property Details',    desc:'Beds, baths, size, price' },
+        { icon:'🗺', name:'Neighbourhood Map',   desc:'Local amenities & transport' },
+        { icon:'🤖', name:'AI Property Asst.',  desc:'Answer questions 24/7' },
+        { icon:'📸', name:'Photo Gallery',       desc:'Full property gallery' },
+        { icon:'💰', name:'Mortgage Guide',      desc:'Affordability calculator' },
+        { icon:'📞', name:'Agent Contact',       desc:'Direct call & message' },
+      ]
+    },
+    social: {
+      label:'Social Media', emoji:'📱', accent:'#ff5a1f', bg:'#0a0a0a',
+      headline:'Follow for Exclusive Content', tagline:'Behind-the-scenes, giveaways & early access',
+      cta:'Follow Now', cta2:'Latest Content',
+      convGoal:'Follower growth & engagement',
+      sections:[
+        { icon:'🖼', name:'Profile Hero',        desc:'Brand photo & bio' },
+        { icon:'🔗', name:'Link in Bio',         desc:'All links in one place' },
+        { icon:'📸', name:'Latest Posts',        desc:'Instagram feed embed' },
+        { icon:'🎁', name:'Giveaway CTA',        desc:'Active contest section' },
+        { icon:'🤖', name:'AI Chat',             desc:'Answer DMs automatically' },
+        { icon:'🎵', name:'TikTok Feed',         desc:'Latest videos' },
+        { icon:'📧', name:'Newsletter CTA',      desc:'Email list growth' },
+        { icon:'💼', name:'Collab Enquiry',      desc:'Brand partnership form' },
+      ]
+    },
+    leadgen: {
+      label:'Lead Generation', emoji:'🎯', accent:'#ff5a1f', bg:'#0a0808',
+      headline:'Get Your Free Consultation', tagline:'Limited slots available — book yours today',
+      cta:'Book Free Session', cta2:'See How It Works',
+      convGoal:'Lead form submissions',
+      sections:[
+        { icon:'🎯', name:'Offer Hero',          desc:'Bold headline + CTA above fold' },
+        { icon:'📋', name:'Lead Capture Form',   desc:'Name, email, phone' },
+        { icon:'✅', name:'Social Proof',        desc:'Testimonials & logos' },
+        { icon:'📦', name:'What You Get',        desc:'Value proposition bullets' },
+        { icon:'⏰', name:'Urgency Block',       desc:'Limited spots countdown' },
+        { icon:'🤖', name:'AI Qualifier',        desc:'Chat to pre-qualify leads' },
+        { icon:'📞', name:'Call CTA',            desc:'Direct phone button' },
+        { icon:'🎁', name:'Bonus Offer',         desc:'Extra incentive section' },
+      ]
+    },
+    gym: {
+      label:'Gym / Fitness', emoji:'💪', accent:'#ff5a1f', bg:'#080808',
+      headline:'Start Your Transformation', tagline:'Expert coaching, proven results, no excuses',
+      cta:'Claim Free Trial', cta2:'View Classes',
+      convGoal:'Free trial sign-ups & memberships',
+      sections:[
+        { icon:'🏋', name:'Hero Banner',         desc:'Bold transformation headline' },
+        { icon:'🆓', name:'Free Trial CTA',      desc:'No-commitment offer' },
+        { icon:'📅', name:'Class Timetable',     desc:'Weekly schedule' },
+        { icon:'👤', name:'Trainer Profiles',    desc:'Meet your coaches' },
+        { icon:'📸', name:'Results Gallery',     desc:'Before & after transformations' },
+        { icon:'🤖', name:'AI Fitness Asst.',   desc:'Workout & nutrition advice' },
+        { icon:'💳', name:'Membership Plans',    desc:'Pricing comparison' },
+        { icon:'⭐', name:'Member Reviews',      desc:'Success story testimonials' },
+      ]
+    },
+    bizcard: {
+      label:'Business Card', emoji:'💼', accent:'#ff5a1f', bg:'#0a0a0a',
+      headline:'Let\'s Connect', tagline:'Professional. Trusted. Ready to help.',
+      cta:'Save My Contact', cta2:'Book a Call',
+      convGoal:'Contact saves & meeting bookings',
+      sections:[
+        { icon:'👤', name:'Profile Hero',        desc:'Photo, name & title' },
+        { icon:'📇', name:'Digital vCard',       desc:'One-tap contact save' },
+        { icon:'🔗', name:'Social Links',        desc:'LinkedIn, Twitter, etc.' },
+        { icon:'🗓', name:'Book a Meeting',       desc:'Calendly-style booking' },
+        { icon:'🤖', name:'AI Assistant',        desc:'Answer intro questions' },
+        { icon:'💼', name:'Services',            desc:'What you offer' },
+        { icon:'⭐', name:'Testimonials',        desc:'Client reviews' },
+        { icon:'📧', name:'Contact Form',        desc:'Direct message form' },
+      ]
+    },
+    event: {
+      label:'Event', emoji:'🎵', accent:'#7c3aed', bg:'#05082e',
+      headline:'Don\'t Miss Out', tagline:'An experience you\'ll never forget',
+      cta:'Get Tickets', cta2:'View Lineup',
+      convGoal:'Ticket sales & RSVPs',
+      sections:[
+        { icon:'🎵', name:'Event Hero',          desc:'Date, venue, headline act' },
+        { icon:'🎟', name:'Buy Tickets',         desc:'Ticket tiers & checkout' },
+        { icon:'📋', name:'Full Lineup',         desc:'Artist / speaker schedule' },
+        { icon:'📍', name:'Venue & Directions',  desc:'Map & travel info' },
+        { icon:'🤖', name:'AI Event Asst.',     desc:'Answer attendee questions' },
+        { icon:'📸', name:'Gallery',             desc:'Previous event highlights' },
+        { icon:'📧', name:'RSVP / Waitlist',     desc:'Email capture for updates' },
+        { icon:'🎁', name:'VIP Packages',        desc:'Upsell premium experience' },
+      ]
+    },
+    'ai-support': {
+      label:'AI Support', emoji:'🤖', accent:'#ff5a1f', bg:'#080b10',
+      headline:'Instant Support, 24/7', tagline:'Scan to chat with our AI — answers in seconds',
+      cta:'Chat Now', cta2:'Browse FAQs',
+      convGoal:'Support deflection & satisfaction',
+      sections:[
+        { icon:'🤖', name:'AI Chat Widget',      desc:'Full-screen AI assistant' },
+        { icon:'❓', name:'FAQ Section',          desc:'Top questions auto-answered' },
+        { icon:'📋', name:'Knowledge Base',      desc:'Searchable help articles' },
+        { icon:'🔗', name:'Quick Links',          desc:'Most-visited pages' },
+        { icon:'📞', name:'Escalation CTA',       desc:'Talk to a human option' },
+        { icon:'⭐', name:'CSAT Widget',          desc:'Satisfaction rating' },
+        { icon:'📧', name:'Ticket Form',          desc:'Submit a support request' },
+        { icon:'📊', name:'Status Page',          desc:'Live system status' },
+      ]
+    },
+    portfolio: {
+      label:'Portfolio', emoji:'🎨', accent:'#ff5a1f', bg:'#0a0a0a',
+      headline:'Creative Work That Converts', tagline:'Strategy + design + results',
+      cta:'View My Work', cta2:'Get in Touch',
+      convGoal:'Enquiries & project bookings',
+      sections:[
+        { icon:'🖼', name:'Portfolio Hero',       desc:'Name, title & best work' },
+        { icon:'💼', name:'Featured Projects',    desc:'Top 3 case studies' },
+        { icon:'🛠', name:'Skills & Services',   desc:'What you offer' },
+        { icon:'⭐', name:'Client Reviews',       desc:'Testimonial carousel' },
+        { icon:'🤖', name:'AI Intro Asst.',      desc:'Answer project questions' },
+        { icon:'📧', name:'Contact Form',         desc:'Project enquiry form' },
+        { icon:'💰', name:'Pricing Guide',        desc:'Starting rates' },
+        { icon:'📅', name:'Book a Discovery Call',desc:'Calendar booking' },
+      ]
+    },
+    packaging: {
+      label:'Product / Packaging', emoji:'📦', accent:'#ff5a1f', bg:'#111111',
+      headline:'Scan to Discover More', tagline:'Your product, now with a digital soul',
+      cta:'Explore Product', cta2:'Reorder Now',
+      convGoal:'Repeat purchases & brand engagement',
+      sections:[
+        { icon:'✨', name:'Brand Hero',           desc:'Product story & origin' },
+        { icon:'📖', name:'Usage Guide',          desc:'How-to instructions' },
+        { icon:'🌿', name:'Ingredients / Materials',desc:'Transparency section' },
+        { icon:'⭐', name:'Reviews',              desc:'Customer ratings' },
+        { icon:'🤖', name:'AI Product Asst.',    desc:'Answer product questions' },
+        { icon:'🔄', name:'Reorder CTA',          desc:'One-tap repurchase' },
+        { icon:'🎁', name:'Loyalty Reward',       desc:'Scan-to-earn points' },
+        { icon:'📲', name:'Social Share',          desc:'UGC encouragement' },
+      ]
+    },
   };
 
   var LOADING_STEPS = [
-    { icon:'✓', text:'Analysing your business type' },
-    { icon:'✓', text:'Generating QR experience' },
-    { icon:'✓', text:'Creating landing page structure' },
-    { icon:'✓', text:'Optimising layout' },
-    { icon:'✓', text:'Applying branding' },
-    { icon:'✓', text:'Preparing smart content' },
+    'Analysing your business type',
+    'Generating QR experience',
+    'Creating landing page structure',
+    'Optimising for mobile',
+    'Applying branding & colours',
+    'Preparing smart content',
   ];
 
   // ── Progress bar ──────────────────────────────────
@@ -71,7 +238,7 @@
   }
 
   // ── Step 1 ────────────────────────────────────────
-  function welcomeHTML(){
+  function step1HTML(){
     return '<div class="qr-modal">'+
       '<button class="qr-close-btn" id="qr-close">&#215;</button>'+
       progressBar(1,5)+
@@ -83,28 +250,28 @@
           '<span class="qr-badge-free">Free Plan</span>'+
           '<div class="qr-card-icon qr-card-icon-free">'+qrSVG+'</div>'+
           '<div class="qr-card-title">Static QR Code</div>'+
-          '<p class="qr-card-desc">Create a fast, free QR code that links directly to websites, PDFs, menus, social pages, or contact info.</p>'+
-          '<ul class="qr-feature-list">'+fi('Unlimited scans',false)+fi('Instant generation',false)+fi('Basic customization',false)+fi('No AI required',false)+'</ul>'+
+          '<p class="qr-card-desc">A fast, free QR that links directly to any URL — website, PDF, menu, social page or contact info.</p>'+
+          '<ul class="qr-feature-list">'+fi('Unlimited scans',false)+fi('Instant generation',false)+fi('Custom colours',false)+fi('No account needed',false)+'</ul>'+
           '<button class="qr-btn-free" id="qr-free">Create Free QR</button>'+
         '</div>'+
         '<div class="qr-card qr-card-premium">'+
           '<div class="qr-card-glow"></div>'+
-          '<span class="qr-badge-pro">&#10022; Most Popular</span>'+
+          '<span class="qr-badge-pro">&#10022; Recommended</span>'+
           '<div class="qr-card-icon qr-card-icon-ai">'+aiSVG+'</div>'+
-          '<div class="qr-card-title">AI Smart QR Experience</div>'+
-          '<p class="qr-card-desc">Build AI-powered QR landing pages with voice welcome, AI chat, wallet subscriptions, and customer engagement tools.</p>'+
-          '<ul class="qr-feature-list">'+fi('AI chat assistant',true)+fi('Voice welcome',true)+fi('Smart landing pages',true)+fi('Wallet pass support',true)+fi('Push notifications',true)+fi('Analytics',true)+'</ul>'+
-          '<button class="qr-btn-premium" id="qr-upgrade">&#10022; Upgrade &amp; Build AI QR</button>'+
+          '<div class="qr-card-title">AI Smart Landing Page</div>'+
+          '<p class="qr-card-desc">AI builds a complete mobile landing page behind your QR — with your content, CTAs, AI chat, and analytics built in.</p>'+
+          '<ul class="qr-feature-list">'+fi('AI-generated landing page',true)+fi('Mobile-first layout',true)+fi('AI chat assistant',true)+fi('QR + analytics',true)+fi('Push notifications',true)+fi('Editable anytime',true)+'</ul>'+
+          '<button class="qr-btn-premium" id="qr-ai">&#10022; Build AI Landing Page</button>'+
         '</div>'+
       '</div>'+
-      '<p class="qr-modal-footer">You can always change your plan later from <strong>Settings &rarr; Billing</strong></p>'+
+      '<p class="qr-modal-footer">You can always upgrade later from <strong>Settings &rarr; Billing</strong></p>'+
     '</div>';
   }
 
   // ── Step 2 ────────────────────────────────────────
   function step2HTML(){
     var cards=USE_CASES.map(function(uc,i){
-      return '<button class="qr-uc-card" data-uc="'+uc.id+'" style="animation-delay:'+(i*35)+'ms">'+
+      return '<button class="qr-uc-card" data-uc="'+uc.id+'" style="animation-delay:'+(i*30)+'ms">'+
         '<div class="qr-uc-check"><svg viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#FF7A35" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
         '<div class="qr-uc-icon">'+uc.icon+'</div>'+
         '<div class="qr-uc-title">'+uc.title+'</div>'+
@@ -115,24 +282,24 @@
       '<button class="qr-close-btn" id="qr-close">&#215;</button>'+
       progressBar(2,5)+
       '<div class="qr-modal-header qr-modal-header-compact">'+
-        '<h1 class="qr-modal-title">What are you using your QR for?</h1>'+
-        '<p class="qr-modal-subtitle">Choose your primary use case to personalise your experience</p>'+
+        '<h1 class="qr-modal-title">What\'s your primary goal?</h1>'+
+        '<p class="qr-modal-subtitle">AI will personalise your landing page for your industry</p>'+
       '</div>'+
       '<div class="qr-uc-grid">'+cards+'</div>'+
       '<div class="qr-step2-footer">'+
         '<button class="qr-back-btn" id="qr-back">&larr; Back</button>'+
-        '<button class="qr-btn-continue" id="qr-continue" disabled>Continue &rarr;</button>'+
+        '<button class="qr-btn-continue" id="qr-continue" disabled>Generate My Page &rarr;</button>'+
       '</div>'+
     '</div>';
   }
 
-  // ── Step 3: Loading ───────────────────────────────
+  // ── Step 3: AI Loading ─────────────────────────────
   function step3HTML(){
-    var kit=STARTER_KITS[onboardingState.selectedUseCase]||{label:'Your Workspace',emoji:'✦'};
-    var steps=LOADING_STEPS.map(function(s,i){
+    var kit=LP_KITS[S.selectedUseCase]||{label:'Your Page',emoji:'✦'};
+    var steps=LOADING_STEPS.map(function(t,i){
       return '<div class="qr-ls-step" id="qr-ls-'+i+'">'+
-        '<span class="qr-ls-icon">'+s.icon+'</span>'+
-        '<span class="qr-ls-text">'+s.text+'</span>'+
+        '<span class="qr-ls-icon">&#10003;</span>'+
+        '<span class="qr-ls-text">'+t+'</span>'+
       '</div>';
     }).join('');
     return '<div class="qr-modal qr-step3-modal">'+
@@ -143,9 +310,9 @@
           '<div class="qr-s3-ring qr-s3-ring-inner"></div>'+
           '<div class="qr-s3-orb"><div class="qr-logo-mark" style="margin:0;width:44px;height:44px;font-size:1.3rem;">Q</div></div>'+
         '</div>'+
-        '<div class="qr-s3-kit-label">'+kit.emoji+' '+kit.label+'</div>'+
+        '<div class="qr-s3-kit-label">'+kit.emoji+' '+kit.label+' Landing Page</div>'+
         '<h2 class="qr-s3-title">Generating your AI experience\u2026</h2>'+
-        '<div class="qr-ls-steps" id="qr-ls-steps">'+steps+'</div>'+
+        '<div class="qr-ls-steps">'+steps+'</div>'+
         '<div class="qr-s3-prog-wrap">'+
           '<div class="qr-s3-prog-track"><div class="qr-s3-prog-fill" id="qr-s3-fill"></div></div>'+
           '<span class="qr-s3-pct" id="qr-s3-pct">0%</span>'+
@@ -154,86 +321,99 @@
     '</div>';
   }
 
-  // ── Step 4: AI Preview Workspace ──────────────────
+  // ── Step 4: AI Landing Page Preview ───────────────
   function step4HTML(){
-    var kit=STARTER_KITS[onboardingState.selectedUseCase]||{label:'Your Design',emoji:'✦',headline:'Your Headline',sub:'Your subtitle here',cta:'Get Started',sections:['Section 1','Section 2','Section 3','Section 4'],style:'Dark',accent:'#ff5a1f',bg:'#111'};
-    onboardingState.generatedTheme=kit.style;
+    var kit=LP_KITS[S.selectedUseCase]||LP_KITS['restaurant'];
+    S.generatedTheme=kit.label;
 
-    var qrUrl='https://qraivy.com';
-    var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(qrUrl)+'&color=ffffff&bgcolor='+encodeURIComponent(kit.bg.replace('#',''));
-    var isLight=kit.bg==='#f0ece0';
-    var textColor=isLight?'#0a0a0a':'#f0ece0';
-    var textDim=isLight?'rgba(0,0,0,0.45)':'rgba(240,236,224,0.45)';
-    var surfaceBg=isLight?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)';
-
-    // Left: Flyer preview
-    var flyerHTML='<div class="qr-pw-flyer" style="background:'+kit.bg+';border-color:'+kit.accent+'40">'+
-      // Accent bar
-      '<div style="height:6px;background:'+kit.accent+';border-radius:3px 3px 0 0;margin:-1px -1px 0;"></div>'+
-      // Badge
-      '<div style="display:inline-flex;align-items:center;gap:5px;background:'+kit.accent+'20;border:0.5px solid '+kit.accent+'50;border-radius:99px;padding:3px 10px;font-family:JetBrains Mono,monospace;font-size:0.55rem;color:'+kit.accent+';letter-spacing:0.1em;margin-bottom:10px;">'+kit.emoji+' AI GENERATED</div>'+
-      // Headline
-      '<div style="font-family:Playfair Display,Georgia,serif;font-size:1.3rem;font-weight:700;color:'+textColor+';line-height:1.2;margin-bottom:6px;">'+kit.headline+'</div>'+
-      // Sub
-      '<div style="font-family:JetBrains Mono,monospace;font-size:0.62rem;color:'+textDim+';line-height:1.6;margin-bottom:14px;">'+kit.sub+'</div>'+
-      // Image placeholder
-      '<div style="width:100%;height:90px;background:'+surfaceBg+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:14px;">🖼</div>'+
-      // QR + CTA row
-      '<div style="display:flex;align-items:center;gap:10px;">'+
-        '<img src="'+qrSrc+'" style="width:56px;height:56px;border-radius:6px;background:#fff;" onerror="this.style.background=\'#333\'" />'+
-        '<div>'+
-          '<div style="font-family:JetBrains Mono,monospace;font-size:0.55rem;color:'+textDim+';margin-bottom:4px;">SCAN TO ACCESS</div>'+
-          '<div style="background:'+kit.accent+';color:#fff;font-family:JetBrains Mono,monospace;font-size:0.62rem;font-weight:700;padding:6px 12px;border-radius:6px;letter-spacing:0.05em;">'+kit.cta+' &rarr;</div>'+
+    // Mobile phone mockup with landing page sections inside
+    var sectionsPreview=kit.sections.slice(0,5).map(function(sec,i){
+      return '<div class="qr-phone-section" style="animation-delay:'+(i*80)+'ms">'+
+        '<div class="qr-phone-sec-icon">'+sec.icon+'</div>'+
+        '<div class="qr-phone-sec-info">'+
+          '<div class="qr-phone-sec-name">'+sec.name+'</div>'+
+          '<div class="qr-phone-sec-desc">'+sec.desc+'</div>'+
         '</div>'+
-      '</div>'+
-      // AI badge
-      '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid '+surfaceBg+';font-family:JetBrains Mono,monospace;font-size:0.5rem;color:'+textDim+';display:flex;justify-content:space-between;">'+
-        '<span>&#10022; AI Generated</span><span>qraivy.com</span>'+
-      '</div>'+
-    '</div>';
-
-    // Right: AI summary panel
-    var sectionsHTML=kit.sections.map(function(s,i){
-      return '<div class="qr-pw-section-item" style="animation-delay:'+(i*60)+'ms">'+
-        '<span class="qr-pw-section-dot" style="background:'+kit.accent+'"></span>'+
-        '<span>'+s+'</span>'+
+        '<div class="qr-phone-sec-live"></div>'+
       '</div>';
     }).join('');
 
-    var summaryHTML='<div class="qr-pw-summary">'+
-      '<div class="qr-pw-summary-header">'+
-        '<div class="qr-pw-ai-badge">&#10022; AI Generated</div>'+
-        '<h3 class="qr-pw-summary-title">Your design is ready</h3>'+
-        '<p class="qr-pw-summary-sub">Tailored for <strong>'+kit.label+'</strong></p>'+
-      '</div>'+
-      '<div class="qr-pw-meta-grid">'+
-        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">USE CASE</span><span class="qr-pw-meta-val">'+kit.label+'</span></div>'+
-        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">DESIGN STYLE</span><span class="qr-pw-meta-val">'+kit.style+'</span></div>'+
-        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">SUGGESTED CTA</span><span class="qr-pw-meta-val" style="color:'+kit.accent+'">'+kit.cta+'</span></div>'+
-        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">QR TYPE</span><span class="qr-pw-meta-val">AI Smart QR</span></div>'+
-      '</div>'+
-      '<div class="qr-pw-sections-label">Generated Sections</div>'+
-      '<div class="qr-pw-sections">'+sectionsHTML+'</div>'+
-    '</div>';
+    // Right panel sections list (all 8)
+    var allSections=kit.sections.map(function(sec,i){
+      return '<div class="qr-pw-section-item" style="animation-delay:'+(i*50)+'ms">'+
+        '<span class="qr-pw-section-dot" style="background:'+kit.accent+'"></span>'+
+        '<span class="qr-pw-section-name">'+sec.icon+' '+sec.name+'</span>'+
+        '<span class="qr-pw-section-desc">'+sec.desc+'</span>'+
+      '</div>';
+    }).join('');
+
+    var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent('https://qraivy.com/preview')+'&color=ffffff&bgcolor=111111';
 
     return '<div class="qr-modal qr-preview-modal">'+
       '<button class="qr-close-btn" id="qr-close">&#215;</button>'+
       progressBar(3,5)+
+
+      // Header
       '<div class="qr-pw-header">'+
         '<div>'+
-          '<h2 class="qr-pw-title">Your AI workspace is ready</h2>'+
-          '<p class="qr-pw-subtitle">Review your generated design, then open the editor to customise</p>'+
+          '<div class="qr-pw-ai-badge">&#10022; AI Generated</div>'+
+          '<h2 class="qr-pw-title">Your landing page is ready</h2>'+
+          '<p class="qr-pw-subtitle">Preview your AI-built page, then publish or customise</p>'+
         '</div>'+
-        '<button class="qr-back-btn" id="qr-back" style="flex-shrink:0">&larr; Back</button>'+
+        '<button class="qr-back-btn" id="qr-back" style="flex-shrink:0;margin-top:4px">&larr; Back</button>'+
       '</div>'+
+
+      // Body: phone mockup + right panel
       '<div class="qr-pw-body">'+
-        flyerHTML+
-        summaryHTML+
+
+        // LEFT: Mobile phone mockup
+        '<div class="qr-phone-wrap">'+
+          '<div class="qr-phone-frame">'+
+            '<div class="qr-phone-notch"></div>'+
+            '<div class="qr-phone-screen" style="background:'+kit.bg+'">'+
+              // Hero
+              '<div class="qr-phone-hero" style="background:linear-gradient(160deg,'+kit.accent+'22,'+kit.bg+' 70%)">'+
+                '<div class="qr-phone-hero-badge">'+kit.emoji+' '+kit.label+'</div>'+
+                '<div class="qr-phone-hero-title">'+kit.headline+'</div>'+
+                '<div class="qr-phone-hero-sub">'+kit.tagline+'</div>'+
+                '<button class="qr-phone-cta-btn" style="background:'+kit.accent+'">'+kit.cta+' &rarr;</button>'+
+              '</div>'+
+              // Sections preview
+              '<div class="qr-phone-sections">'+sectionsPreview+'</div>'+
+              // QR footer
+              '<div class="qr-phone-footer">'+
+                '<img src="'+qrSrc+'" class="qr-phone-qr" onerror="this.style.background=\'#333\'" />'+
+                '<div>'+
+                  '<div class="qr-phone-footer-label">Your QR Code</div>'+
+                  '<div class="qr-phone-footer-sub">qraivy.com/your-page</div>'+
+                '</div>'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          // "Live" badge
+          '<div class="qr-phone-live-badge">&#9679; Ready to publish</div>'+
+        '</div>'+
+
+        // RIGHT: AI summary
+        '<div class="qr-pw-summary">'+
+          '<div class="qr-pw-meta-grid">'+
+            '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">USE CASE</span><span class="qr-pw-meta-val">'+kit.label+'</span></div>'+
+            '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">CONVERSION GOAL</span><span class="qr-pw-meta-val">'+kit.convGoal+'</span></div>'+
+            '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">PRIMARY CTA</span><span class="qr-pw-meta-val" style="color:'+kit.accent+'">'+kit.cta+'</span></div>'+
+            '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">SECONDARY CTA</span><span class="qr-pw-meta-val">'+kit.cta2+'</span></div>'+
+          '</div>'+
+          '<div class="qr-pw-sections-label">Generated Sections ('+kit.sections.length+')</div>'+
+          '<div class="qr-pw-sections">'+allSections+'</div>'+
+        '</div>'+
       '</div>'+
+
+      // Action bar
       '<div class="qr-pw-actions">'+
-        '<button class="qr-pw-btn-secondary" id="qr-regenerate">&#8635; Regenerate</button>'+
-        '<button class="qr-pw-btn-secondary" id="qr-publish">&#10003; Publish</button>'+
-        '<button class="qr-pw-btn-primary" id="qr-edit-design">&#9998; Edit Design</button>'+
+        '<button class="qr-pw-btn-ghost" id="qr-regenerate">&#8635; Regenerate</button>'+
+        '<button class="qr-pw-btn-secondary" id="qr-customize">&#9998; Customise Page</button>'+
+        '<div style="flex:1"></div>'+
+        '<button class="qr-pw-btn-assets" id="qr-assets">&#9881; Marketing Assets</button>'+
+        '<button class="qr-pw-btn-primary" id="qr-publish">&#9654; Publish Landing Page</button>'+
       '</div>'+
     '</div>';
   }
@@ -244,10 +424,10 @@
       progressBar(3,5)+
       '<p class="qr-upgrade-eyebrow">ONE STEP AWAY</p>'+
       '<h2 class="qr-upgrade-title">Unlock AI Smart Pages</h2>'+
-      '<p class="qr-upgrade-subtitle">Upgrade to create conversational QR experiences that engage, convert, and retain.</p>'+
+      '<p class="qr-upgrade-subtitle">Upgrade to create complete AI landing page experiences connected to your QR code.</p>'+
       '<div class="qr-compare-grid">'+
-        '<div class="qr-compare-col"><span class="qr-badge-free">Free</span><ul class="qr-compare-list">'+ci('Static QR codes',false,false)+ci('Direct links',false,false)+ci('Basic customization',false,false)+ci('Unlimited scans',false,false)+ci('AI smart pages',true,false)+ci('Voice welcome',true,false)+ci('AI chat assistant',true,false)+ci('Wallet subscriptions',true,false)+ci('Push notifications',true,false)+ci('Advanced analytics',true,false)+'</ul></div>'+
-        '<div class="qr-compare-col qr-compare-col-pro"><div class="qr-compare-col-glow"></div><span class="qr-badge-pro">Pro &middot; Most Popular</span><ul class="qr-compare-list">'+ci('Static QR codes',false,true)+ci('Direct links',false,true)+ci('Basic customization',false,true)+ci('Unlimited scans',false,true)+ci('AI smart pages',false,true)+ci('Voice welcome',false,true)+ci('AI chat assistant',false,true)+ci('Wallet subscriptions',false,true)+ci('Push notifications',false,true)+ci('Advanced analytics',false,true)+'</ul></div>'+
+        '<div class="qr-compare-col"><span class="qr-badge-free">Free</span><ul class="qr-compare-list">'+ci('Static QR codes',false,false)+ci('Direct URL links',false,false)+ci('Custom colours',false,false)+ci('Unlimited scans',false,false)+ci('AI landing pages',true,false)+ci('AI chat assistant',true,false)+ci('Mobile-first layouts',true,false)+ci('Push notifications',true,false)+ci('Analytics',true,false)+ci('Editable dashboard',true,false)+'</ul></div>'+
+        '<div class="qr-compare-col qr-compare-col-pro"><div class="qr-compare-col-glow"></div><span class="qr-badge-pro">Pro &middot; Recommended</span><ul class="qr-compare-list">'+ci('Static QR codes',false,true)+ci('Direct URL links',false,true)+ci('Custom colours',false,true)+ci('Unlimited scans',false,true)+ci('AI landing pages',false,true)+ci('AI chat assistant',false,true)+ci('Mobile-first layouts',false,true)+ci('Push notifications',false,true)+ci('Analytics',false,true)+ci('Editable dashboard',false,true)+'</ul></div>'+
       '</div>'+
       '<div class="qr-upgrade-actions">'+
         '<button class="qr-btn-upgrade" id="qr-go-upgrade">&#10022; Upgrade Now</button>'+
@@ -271,162 +451,159 @@
     el.style.transition='opacity 0.25s';el.style.opacity='0';
     setTimeout(function(){el.classList.add('qr-hidden');},260);
   }
-  function slideOut(el,cb){
+  function slideOut(el,dir,cb){
     var modal=el.querySelector('.qr-modal');
     if(!modal){cb();return;}
+    var tx=dir==='back'?'28px':'-28px';
     modal.style.transition='opacity 0.18s ease,transform 0.18s ease';
-    modal.style.opacity='0';modal.style.transform='translateX(-28px) scale(0.98)';
+    modal.style.opacity='0';modal.style.transform='translateX('+tx+') scale(0.98)';
     setTimeout(cb,190);
   }
-  function render(step,u){
+  function render(step,u,dir){
     var el=getOrCreateOverlay();
     var hasPrev=!!el.querySelector('.qr-modal');
     function setHTML(html){el.innerHTML=html;bindStep(step,u);}
-    if(hasPrev){slideOut(el,function(){setHTML(getHTML(step));});}
+    if(hasPrev){slideOut(el,dir||'fwd',function(){setHTML(getHTML(step));});}
     else{setHTML(getHTML(step));}
   }
   function getHTML(step){
-    if(step==='welcome') return welcomeHTML();
+    if(step==='step1')   return step1HTML();
     if(step==='step2')   return step2HTML();
     if(step==='step3')   return step3HTML();
     if(step==='step4')   return step4HTML();
     if(step==='upgrade') return upgradeHTML();
-    return welcomeHTML();
+    return step1HTML();
   }
 
   // ── Step 3 animation ──────────────────────────────
   function runStep3Animation(u){
     var DURATION=2800;
     var start=Date.now();
-    var stepIdx=0;
-    var stepCount=LOADING_STEPS.length;
-
+    var idx=0;
+    var total=LOADING_STEPS.length;
     spawnParticles();
 
-    var stepTimer=setInterval(function(){
-      var el=document.getElementById('qr-ls-'+stepIdx);
+    var timer=setInterval(function(){
+      var el=document.getElementById('qr-ls-'+idx);
       if(el) el.classList.add('qr-ls-step-active');
-      stepIdx++;
-      if(stepIdx>=stepCount) clearInterval(stepTimer);
-    }, DURATION/(stepCount+1));
+      idx++;
+      if(idx>=total) clearInterval(timer);
+    }, DURATION/(total+1));
 
     function tick(){
       var elapsed=Date.now()-start;
-      var eased=Math.round(100*(1-Math.pow(1-Math.min(elapsed/DURATION,1),2.4)));
-      eased=Math.min(99,eased);
+      var e=Math.round(100*(1-Math.pow(1-Math.min(elapsed/DURATION,1),2.4)));
+      e=Math.min(99,e);
       var fill=document.getElementById('qr-s3-fill');
       var pct=document.getElementById('qr-s3-pct');
-      if(fill) fill.style.width=eased+'%';
-      if(pct)  pct.textContent=eased+'%';
+      if(fill) fill.style.width=e+'%';
+      if(pct)  pct.textContent=e+'%';
       if(elapsed<DURATION) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
 
     setTimeout(function(){
-      clearInterval(stepTimer);
-      for(var i=0;i<stepCount;i++){
-        var el=document.getElementById('qr-ls-'+i);
-        if(el) el.classList.add('qr-ls-step-active');
-      }
+      clearInterval(timer);
+      for(var i=0;i<total;i++){var el=document.getElementById('qr-ls-'+i);if(el)el.classList.add('qr-ls-step-active');}
       var fill=document.getElementById('qr-s3-fill');
       var pct=document.getElementById('qr-s3-pct');
-      if(fill) fill.style.width='100%';
-      if(pct)  pct.textContent='100%';
-      onboardingState.onboardingProgress=3;
-      setTimeout(function(){ render('step4',u); },500);
-    }, DURATION);
+      if(fill)fill.style.width='100%';
+      if(pct)pct.textContent='100%';
+      S.progress=3;
+      setTimeout(function(){render('step4',u);},480);
+    },DURATION);
   }
 
   function spawnParticles(){
     var c=document.getElementById('qr-s3-particles');
     if(!c)return;
     for(var i=0;i<16;i++){
-      (function(idx){
+      (function(n){
         setTimeout(function(){
           var p=document.createElement('div');
-          p.style.cssText='position:absolute;bottom:0;left:'+(8+Math.random()*84)+'%;width:'+(2+Math.random()*3)+'px;height:'+(2+Math.random()*3)+'px;border-radius:50%;background:rgba(255,78,0,'+(0.3+Math.random()*0.5)+');animation:qrParticleRise '+(2.5+Math.random()*2)+'s ease-out '+(Math.random()*1.2)+'s both;pointer-events:none;';
+          p.style.cssText='position:absolute;bottom:0;left:'+(8+Math.random()*84)+'%;width:'+(2+Math.random()*3)+'px;height:'+(2+Math.random()*3)+'px;border-radius:50%;background:rgba(255,78,0,'+(0.3+Math.random()*0.5)+');animation:qrParticleRise '+(2.5+Math.random()*2)+'s ease-out '+(Math.random()*1)+'s both;pointer-events:none;';
           c.appendChild(p);
-        },idx*130);
+        },n*110);
       })(i);
-    }
-  }
-
-  // ── Launch editor ─────────────────────────────────
-  function launchEditor(u){
-    closeModal(u);
-    var kit=STARTER_KITS[onboardingState.selectedUseCase];
-    var isEditor=window.location.pathname.indexOf('editor')!==-1||document.getElementById('polotno-container')!==null;
-    if(isEditor){
-      setTimeout(function(){
-        if(typeof loadTemplate==='function') loadTemplate(kit?kit.templateId:'promo-flyer-dark');
-        if(typeof showToast==='function') showToast('\u2726 AI workspace ready \u2014 '+(kit?kit.label:'Design')+' loaded');
-      },350);
-    } else {
-      window.location.href=EDITOR_PATH+'?kit='+encodeURIComponent(kit?kit.templateId:'')+'&usecase='+encodeURIComponent(onboardingState.selectedUseCase||'');
     }
   }
 
   // ── Bind events ───────────────────────────────────
   function bindStep(step,u){
-    var closeBtn=document.getElementById('qr-close');
-    if(closeBtn) closeBtn.onclick=function(){closeModal(u);};
+    var cb=document.getElementById('qr-close');
+    if(cb) cb.onclick=function(){closeModal(u);};
 
-    if(step==='welcome'){
+    if(step==='step1'){
       document.getElementById('qr-free').onclick=function(){
-        onboardingState.qrType='static';
+        S.qrType='static';
         closeModal(u);
         window.location.href=FREE_PATH;
       };
-      document.getElementById('qr-upgrade').onclick=function(){
-        onboardingState.qrType='ai';
+      document.getElementById('qr-ai').onclick=function(){
+        S.qrType='ai';
         render('step2',u);
       };
     }
     else if(step==='step2'){
       var cards=document.querySelectorAll('.qr-uc-card');
-      var contBtn=document.getElementById('qr-continue');
+      var cont=document.getElementById('qr-continue');
       cards.forEach(function(card){
         card.addEventListener('click',function(){
           cards.forEach(function(c){c.classList.remove('qr-uc-card-selected');});
           card.classList.add('qr-uc-card-selected');
-          onboardingState.selectedUseCase=card.getAttribute('data-uc');
-          contBtn.disabled=false;
+          S.selectedUseCase=card.getAttribute('data-uc');
+          cont.disabled=false;
         });
       });
-      contBtn.onclick=function(){if(!onboardingState.selectedUseCase)return;render('step3',u);};
-      document.getElementById('qr-back').onclick=function(){render('welcome',u);};
+      cont.onclick=function(){if(!S.selectedUseCase)return;render('step3',u);};
+      document.getElementById('qr-back').onclick=function(){render('step1',u,'back');};
     }
     else if(step==='step3'){
       setTimeout(function(){runStep3Animation(u);},80);
     }
     else if(step==='step4'){
-      document.getElementById('qr-edit-design').onclick=function(){launchEditor(u);};
-      document.getElementById('qr-back').onclick=function(){render('step2',u);};
-      document.getElementById('qr-regenerate').onclick=function(){
-        // Re-run loading then re-show preview
-        render('step3',u);
-      };
+      // PRIMARY: Publish
       document.getElementById('qr-publish').onclick=function(){
         closeModal(u);
-        window.location.href=FREE_PATH;
+        window.location.href=PUBLISH_PATH+'&usecase='+(S.selectedUseCase||'')+'&theme='+(S.generatedTheme||'');
       };
+      // SECONDARY: Customise landing page → editor
+      document.getElementById('qr-customize').onclick=function(){
+        closeModal(u);
+        var kit=LP_KITS[S.selectedUseCase];
+        var isEditor=window.location.pathname.indexOf('editor')!==-1||document.getElementById('polotno-container')!==null;
+        if(isEditor){
+          if(typeof loadTemplate==='function') loadTemplate(kit?kit.templateId:'promo-flyer-dark');
+          if(typeof showToast==='function') showToast('\u2726 '+(kit?kit.label:'Design')+' loaded — customise your page');
+        } else {
+          window.location.href=EDITOR_PATH+'?kit='+(kit?encodeURIComponent(kit.templateId):'')+'&usecase='+encodeURIComponent(S.selectedUseCase||'');
+        }
+      };
+      // TERTIARY: Marketing assets → editor in asset mode
+      document.getElementById('qr-assets').onclick=function(){
+        closeModal(u);
+        window.location.href=ASSETS_PATH+'&usecase='+encodeURIComponent(S.selectedUseCase||'');
+      };
+      // Regenerate → re-run loading
+      document.getElementById('qr-regenerate').onclick=function(){render('step3',u);};
+      document.getElementById('qr-back').onclick=function(){render('step2',u,'back');};
     }
     else if(step==='upgrade'){
       document.getElementById('qr-go-upgrade').onclick=function(){closeModal(u);window.location.href=UPGRADE_PATH;};
       document.getElementById('qr-cont-free').onclick=function(){closeModal(u);window.location.href=FREE_PATH;};
-      document.getElementById('qr-back').onclick=function(){render('step2',u);};
+      document.getElementById('qr-back').onclick=function(){render('step2',u,'back');};
     }
   }
 
-  // Handle ?kit= param on editor.html load
+  // Handle ?kit= on editor load
   window.addEventListener('load',function(){
-    var params=new URLSearchParams(window.location.search);
-    var kit=params.get('kit');
+    var p=new URLSearchParams(window.location.search);
+    var kit=p.get('kit');
     if(kit&&typeof loadTemplate==='function') setTimeout(function(){loadTemplate(kit);},500);
   });
 
   window.qrairyOnboarding={
-    init:   function(u){if(!u||done(u))return;setTimeout(function(){render('welcome',u);},450);},
-    reopen: function(u){render('welcome',u);}
+    init:   function(u){if(!u||done(u))return;setTimeout(function(){render('step1',u);},450);},
+    reopen: function(u){render('step1',u);}
   };
 })();
