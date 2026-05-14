@@ -1,0 +1,28 @@
+/* ─────────────────────────────────────────────────
+   QRAIVY Editor — Animations & Keyframes
+   ───────────────────────────────────────────────── */
+
+@keyframes modalIn     { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes cpFadeIn    { from { opacity:0; } to { opacity:1; } }
+@keyframes cpSlideIn   { from { opacity:0; transform:translateY(-12px) scale(0.98); } to { opacity:1; transform:none; } }
+@keyframes spin        { to { transform:rotate(360deg); } }
+@keyframes textFade    { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+@keyframes shimmer     { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+@keyframes floatIcon   { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+@keyframes pulse       { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.7); } }
+@keyframes aiShine     { 0% { transform:translateX(-100%); } 30%,100% { transform:translateX(200%); } }
+@keyframes heroGradientShift { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+@keyframes heroBreath {
+  0%,100% { box-shadow:0 0 0 1px rgba(255,120,40,0.4),0 0 24px rgba(255,90,31,0.35),0 4px 16px rgba(255,90,31,0.25),inset 0 1px 0 rgba(255,255,255,0.2); }
+  50%     { box-shadow:0 0 0 1px rgba(255,120,40,0.5),0 0 36px rgba(255,90,31,0.5),0 4px 20px rgba(255,90,31,0.35),inset 0 1px 0 rgba(255,255,255,0.25); }
+}
+@keyframes heroRingPulse { 0%,100% { opacity:0.4; transform:scale(1); } 50% { opacity:0; transform:scale(1.08); } }
+@keyframes orbPulse    { 0%,100% { transform:scale(1); box-shadow:0 0 40px rgba(255,90,31,0.4),0 0 80px rgba(255,90,31,0.2); } 50% { transform:scale(1.08); box-shadow:0 0 60px rgba(255,90,31,0.6),0 0 120px rgba(255,90,31,0.3); } }
+@keyframes toolBreath  { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+@keyframes aiStarPulse { 0%,100% { box-shadow:0 0 8px rgba(255,90,31,0.1); } 50% { box-shadow:0 0 16px rgba(255,90,31,0.25); } }
+@keyframes editorFadeIn { from { opacity:0; transform:scale(0.995); } to { opacity:1; transform:none; } }
+
+/* ── SKELETON SHIMMER ───────────────────────────── */
+.skeleton { background:linear-gradient(90deg,rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,rgba(255,255,255,0.03) 75%); background-size:400px 100%; animation:shimmer 1.4s ease-in-out infinite; border-radius:6px; }
+
+body { animation:editorFadeIn 0.4s ease both; }
