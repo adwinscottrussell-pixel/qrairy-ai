@@ -1594,3 +1594,93 @@ function ceResizeText(e, el, dir) {
 }
 
 
+
+// ── WORKSPACE NAVIGATION ──────────────────────────
+(function() {
+  var isPanning = false;
+  var spaceDown = false;
+  var panStart = null;
+  var panScrollStart = null;
+
+  // ── MOUSE WHEEL: Ctrl+wheel = zoom, plain wheel = scroll ──
+  document.addEventListener('wheel', function(e) {
+    var vp = document.getElementById('workspace-viewport');
+    if (!vp || !vp.contains(e.target)) return;
+
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      var delta = e.deltaY > 0 ? -0.08 : 0.08;
+      // Zoom toward mouse position
+      applyZoom(S.zoom + delta * S.zoom);
+    }
+    // Plain wheel - let browser scroll naturally (workspace-viewport handles it)
+  }, { passive: false });
+
+  // ── SPACEBAR PAN ──────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' && !e.target.isContentEditable &&
+        e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      if (!spaceDown) {
+        spaceDown = true;
+        var vp = document.getElementById('workspace-viewport');
+        if (vp) vp.style.cursor = 'grab';
+        e.preventDefault();
+      }
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    if (e.code === 'Space') {
+      spaceDown = false;
+      var vp = document.getElementById('workspace-viewport');
+      if (vp) vp.style.cursor = '';
+      isPanning = false;
+    }
+  });
+
+  // ── MIDDLE MOUSE + SPACEBAR DRAG TO PAN ──────────
+  document.addEventListener('mousedown', function(e) {
+    var vp = document.getElementById('workspace-viewport');
+    if (!vp) return;
+
+    // Middle mouse button OR space+left click
+    if (e.button === 1 || (e.button === 0 && spaceDown)) {
+      if (!vp.contains(e.target)) return;
+      e.preventDefault();
+      isPanning = true;
+      panStart = { x: e.clientX, y: e.clientY };
+      panScrollStart = { x: vp.scrollLeft, y: vp.scrollTop };
+      vp.style.cursor = 'grabbing';
+    }
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isPanning || !panStart) return;
+    var vp = document.getElementById('workspace-viewport');
+    if (!vp) return;
+    var dx = e.clientX - panStart.x;
+    var dy = e.clientY - panStart.y;
+    vp.scrollLeft = panScrollStart.x - dx;
+    vp.scrollTop  = panScrollStart.y - dy;
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (isPanning) {
+      isPanning = false;
+      panStart = null;
+      var vp = document.getElementById('workspace-viewport');
+      if (vp) vp.style.cursor = spaceDown ? 'grab' : '';
+    }
+  });
+
+  // ── INIT: set workspace surface size on load ──────
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      var surface = document.getElementById('workspace-surface');
+      if (surface && S) {
+        surface.style.minWidth = (S.canvasW + 240) + 'px';
+        surface.style.minHeight = (S.canvasH + 320) + 'px';
+      }
+    }, 300);
+  });
+})();

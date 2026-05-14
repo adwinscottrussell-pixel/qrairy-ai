@@ -48,11 +48,13 @@
   isolation: auto;
   user-select: none;
 }
-/* Canvas wrapper never selectable */
-#canvas-wrapper, #canvas-shadow, #canvas-area {
+/* Only workspace-surface and polotno-container are interactive */
+#canvas-area, #workspace-viewport, #workspace-surface {
+  pointer-events: all;
+}
+#canvas-wrapper, #canvas-shadow {
   pointer-events: none;
 }
-/* But polotno-container content IS interactive */
 #polotno-container {
   pointer-events: all;
 }
@@ -96,11 +98,13 @@
   isolation: auto;
   user-select: none;
 }
-/* Canvas wrapper never selectable */
-#canvas-wrapper, #canvas-shadow, #canvas-area {
+/* Only workspace-surface and polotno-container are interactive */
+#canvas-area, #workspace-viewport, #workspace-surface {
+  pointer-events: all;
+}
+#canvas-wrapper, #canvas-shadow {
   pointer-events: none;
 }
-/* But polotno-container content IS interactive */
 #polotno-container {
   pointer-events: all;
 }
@@ -245,9 +249,13 @@
   </div>
 
   <div id="canvas-area">
-    <div id="canvas-wrapper">
-      <div id="canvas-shadow">
-        <div id="polotno-container"></div>
+    <div id="workspace-viewport">
+      <div id="workspace-surface">
+        <div id="canvas-wrapper">
+          <div id="canvas-shadow">
+            <div id="polotno-container"></div>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Canvas onboarding hints -->

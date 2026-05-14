@@ -24,10 +24,30 @@ function switchRTab(id, btn) {
   document.getElementById('rtab-' + id).classList.add('active');
 }
 
-function applyZoom(z) {
-  S.zoom = Math.min(3, Math.max(0.1, z));
-  document.getElementById('canvas-wrapper').style.transform = 'scale(' + S.zoom + ')';
-  document.getElementById('zoom-label').textContent = Math.round(S.zoom * 100) + '%';
+function applyZoom(z, pivotX, pivotY) {
+  var prevZoom = S.zoom;
+  S.zoom = Math.min(3, Math.max(0.08, z));
+
+  var wrapper = document.getElementById('canvas-wrapper');
+  var viewport = document.getElementById('workspace-viewport');
+  var surface = document.getElementById('workspace-surface');
+
+  if (wrapper) {
+    wrapper.style.transform = 'scale(' + S.zoom + ')';
+    // Adjust transform-origin to top-center so page stays centered
+    wrapper.style.transformOrigin = 'top center';
+  }
+
+  // Update workspace surface minimum size to accommodate zoomed canvas
+  if (surface) {
+    var paddedW = Math.round(S.canvasW * S.zoom) + 240;
+    var paddedH = Math.round(S.canvasH * S.zoom) + 320;
+    surface.style.minWidth = paddedW + 'px';
+    surface.style.minHeight = paddedH + 'px';
+  }
+
+  var label = document.getElementById('zoom-label');
+  if (label) label.textContent = Math.round(S.zoom * 100) + '%';
 }
 
 function openSizeModal() { document.getElementById('size-modal').classList.add('open'); }

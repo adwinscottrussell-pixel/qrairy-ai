@@ -42,9 +42,25 @@ const editorActions = {
   zoomIn()  { applyZoom(S.zoom + 0.1); },
   zoomOut() { applyZoom(S.zoom - 0.1); },
   zoomFit() {
-    const area = document.getElementById('canvas-area');
-    const scale = Math.min((area.clientWidth - 80) / S.canvasW, (area.clientHeight - 80) / S.canvasH, 1);
-    applyZoom(scale);
+    var viewport = document.getElementById('workspace-viewport') || document.getElementById('canvas-area');
+    var padW = 80, padH = 100;
+    var scale = Math.min(
+      (viewport.clientWidth - padW) / S.canvasW,
+      (viewport.clientHeight - padH) / S.canvasH,
+      1.5
+    );
+    applyZoom(Math.max(0.1, scale));
+    // After zoom, scroll to top-center
+    setTimeout(function() {
+      var surface = document.getElementById('workspace-surface');
+      var vp = document.getElementById('workspace-viewport');
+      if (vp && surface) {
+        // Center horizontally, scroll to top
+        var surfaceW = surface.scrollWidth;
+        vp.scrollLeft = Math.max(0, (surfaceW - vp.clientWidth) / 2);
+        vp.scrollTop = 0;
+      }
+    }, 50);
   },
   save() {
     const name = document.getElementById('file-name').value || 'design';
