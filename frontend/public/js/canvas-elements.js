@@ -332,6 +332,12 @@ function ceSelect(id) {
     var base = { rect: 1, image: 5, text: 20 }[el.type] || 5;
     node2.style.zIndex = base + CE.elements.length + 10;
   }
+
+  // Show floating toolbar for text
+  ceHideFloatingToolbar();
+  if (el.type === 'text') {
+    setTimeout(function() { ceShowFloatingToolbar(el); }, 50);
+  }
 }
 
 // ── AUTO-SWITCH RIGHT PANEL ON SELECTION ──────────
@@ -347,6 +353,7 @@ function ceAutoSwitchPanel(el) {
 }
 
 function ceDeselect() {
+  ceHideFloatingToolbar();
   ceSelect(null);
 }
 
@@ -410,6 +417,138 @@ document.addEventListener('mousedown', function(e) {
     node.blur();
   }
 });
+
+// ── FLOATING TEXT TOOLBAR ─────────────────────────
+// Appears near selected text element - Canva-style
+function ceShowFloatingToolbar(el) {
+  ceHideFloatingToolbar();
+  if (!el || el.type !== 'text') return;
+
+  var node = document.getElementById(el.id);
+  if (!node) return;
+
+  var container = document.getElementById('polotno-container');
+  if (!container) return;
+
+  var toolbar = document.createElement('div');
+  toolbar.id = '_floatingToolbar';
+  toolbar.style.cssText = 'position:fixed;z-index:10000;background:rgba(14,14,14,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:6px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 8px 32px rgba(0,0,0,0.6),0 2px 8px rgba(0,0,0,0.4);backdrop-filter:blur(12px);pointer-events:all;';
+
+  // Position above the element
+  var rect = node.getBoundingClientRect();
+  var scale = ceGetScale();
+  var toolbarY = Math.max(60, rect.top - 52);
+
+  toolbar.style.top = toolbarY + 'px';
+  toolbar.style.left = Math.max(100, Math.min(window.innerWidth - 400, rect.left)) + 'px';
+
+  var fonts = ['Inter','DM Mono','Georgia','Playfair Display','Arial'];
+  var sizes = [10,12,14,16,18,20,24,28,32,36,40,48,56,64,72,96];
+
+  // Build toolbar using DOM methods to avoid quote issues
+  var ftFont = document.createElement('select');
+  ftFont.id = 'ft-font';
+  ftFont.style.cssText = 'height:28px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#f0ece0;font-family:monospace;font-size:0.65rem;padding:0 6px;cursor:pointer;outline:none;min-width:90px';
+  ['Inter','DM Mono','Georgia','Playfair Display','Arial'].forEach(function(f) {
+    var opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    if (el.fontFamily === f) opt.selected = true;
+    ftFont.appendChild(opt);
+  });
+  toolbar.appendChild(ftFont);
+
+  var ftSize = document.createElement('select');
+  ftSize.id = 'ft-size';
+  ftSize.style.cssText = 'height:28px;width:52px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#f0ece0;font-family:monospace;font-size:0.65rem;padding:0 4px;cursor:pointer;outline:none';
+  [8,10,12,14,16,18,20,24,28,32,36,40,48,56,64,72,96].forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if (el.fontSize === s) opt.selected = true;
+    ftSize.appendChild(opt);
+  });
+  toolbar.appendChild(ftSize);
+
+  function makeSep() { var s=document.createElement('div'); s.style.cssText='width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 2px;flex-shrink:0'; toolbar.appendChild(s); }
+  function makeBtn(id, label, active, title) {
+    var b=document.createElement('button'); b.id=id; b.title=title||label;
+    b.style.cssText='width:28px;height:28px;background:'+(active?'rgba(255,90,31,0.2)':'rgba(255,255,255,0.06)')+';border:1px solid '+(active?'rgba(255,90,31,0.4)':'rgba(255,255,255,0.1)')+';border-radius:5px;color:#f0ece0;cursor:pointer;font-size:13px;flex-shrink:0';
+    b.innerHTML = label; return b;
+  }
+
+  makeSep();
+  var ftBold = makeBtn('ft-bold','<b>B</b>', el.fontWeight==='bold'||el.fontWeight==='700', 'Bold');
+  toolbar.appendChild(ftBold);
+  var ftItalic = makeBtn('ft-italic','<i>I</i>', el.fontStyle==='italic', 'Italic');
+  toolbar.appendChild(ftItalic);
+  makeSep();
+
+  ['left','center','right'].forEach(function(a) {
+    var icons = {left:'⬅',center:'≡',right:'➡'};
+    var btn = makeBtn('ft-align-'+a, icons[a], el.align===a, 'Align '+a);
+    btn.onclick = function() { ceTpUpdate(el.id, 'align', a); ceHideFloatingToolbar(); setTimeout(function(){ceShowFloatingToolbar(CE.elements.find(function(x){return x.id===el.id;}));},10); };
+    toolbar.appendChild(btn);
+  });
+  makeSep();
+
+  // Color swatch
+  var colorSwatch = document.createElement('div');
+  colorSwatch.style.cssText = 'width:24px;height:24px;border-radius:4px;border:2px solid rgba(255,255,255,0.2);background:'+(el.fill||'#333')+';cursor:pointer;flex-shrink:0';
+  colorSwatch.title = 'Text color';
+  var colorInput = document.createElement('input');
+  colorInput.type = 'color'; colorInput.id = 'ft-color-input';
+  colorInput.value = el.fill || '#ffffff';
+  colorInput.style.display = 'none';
+  colorInput.oninput = function() { ceTpUpdate(el.id,'fill',this.value); colorSwatch.style.background=this.value; };
+  colorSwatch.onclick = function() { colorInput.click(); };
+  toolbar.appendChild(colorSwatch);
+  toolbar.appendChild(colorInput);
+  makeSep();
+
+  var editBtn = makeBtn('ft-edit','✎', false, 'Edit text');
+  editBtn.style.background = 'rgba(255,90,31,0.1)';
+  editBtn.style.borderColor = 'rgba(255,90,31,0.3)';
+  editBtn.style.color = '#ff7848';
+  toolbar.appendChild(editBtn);
+
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'width:20px;height:20px;background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;margin-left:2px;flex-shrink:0';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = ceHideFloatingToolbar;
+  toolbar.appendChild(closeBtn);
+  document.body.appendChild(toolbar);
+
+  // Wire controls
+  ftFont.onchange = function() { ceTpUpdate(el.id, 'fontFamily', this.value); };
+  ftSize.onchange = function() { ceTpUpdate(el.id, 'fontSize', parseInt(this.value)); };
+  ftBold.onclick = function() {
+    var isBold = el.fontWeight === 'bold' || el.fontWeight === '700';
+    ceTpUpdate(el.id, 'fontWeight', isBold ? '400' : 'bold');
+    ceHideFloatingToolbar();
+    var elNow = CE.elements.find(function(x) { return x.id === el.id; });
+    if (elNow) setTimeout(function() { ceShowFloatingToolbar(elNow); }, 10);
+  };
+  ftItalic.onclick = function() {
+    ceTpUpdate(el.id, 'fontStyle', el.fontStyle === 'italic' ? 'normal' : 'italic');
+    ceHideFloatingToolbar();
+    var elNow = CE.elements.find(function(x) { return x.id === el.id; });
+    if (elNow) setTimeout(function() { ceShowFloatingToolbar(elNow); }, 10);
+  };
+  editBtn.onclick = function() {
+    var node = document.getElementById(el.id);
+    var elNow = CE.elements.find(function(x) { return x.id === el.id; });
+    if (node && elNow) ceEnterTextEdit(elNow, node);
+  };
+
+  // Prevent toolbar from interfering with canvas clicks
+  toolbar.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+}
+
+function ceClickColorPicker() { var i = document.getElementById("ft-color-input"); if(i) i.click(); }
+function ceHideFloatingToolbar() {
+  var t = document.getElementById('_floatingToolbar');
+  if (t) t.remove();
+}
+
 
 // ── FULL TYPOGRAPHY INSPECTOR ─────────────────────
 // Called from showElementProps when text is selected
@@ -857,17 +996,51 @@ function ceDuplicateSelected() {
 
 // ── LAYER OPERATIONS ──────────────────────────────
 function ceMoveUp(id) {
-  const i = CE.elements.findIndex(e => e.id === id);
+  var i = CE.elements.findIndex(function(e) { return e.id === id; });
   if (i < CE.elements.length - 1) {
-    [CE.elements[i], CE.elements[i+1]] = [CE.elements[i+1], CE.elements[i]];
-    ceRenderAll(); cePushHistory();
+    var tmp = CE.elements[i];
+    CE.elements[i] = CE.elements[i+1];
+    CE.elements[i+1] = tmp;
+    ceEnforceLayerOrder();
+    cePushHistory();
+    updateLayers();
+    showToast('Layer moved up');
   }
 }
 function ceMoveDown(id) {
-  const i = CE.elements.findIndex(e => e.id === id);
+  var i = CE.elements.findIndex(function(e) { return e.id === id; });
   if (i > 0) {
-    [CE.elements[i], CE.elements[i-1]] = [CE.elements[i-1], CE.elements[i]];
-    ceRenderAll(); cePushHistory();
+    var tmp = CE.elements[i];
+    CE.elements[i] = CE.elements[i-1];
+    CE.elements[i-1] = tmp;
+    ceEnforceLayerOrder();
+    cePushHistory();
+    updateLayers();
+    showToast('Layer moved down');
+  }
+}
+function ceBringToFront(id) {
+  var i = CE.elements.findIndex(function(e) { return e.id === id; });
+  if (i < CE.elements.length - 1) {
+    var el = CE.elements.splice(i, 1)[0];
+    CE.elements.push(el);
+    ceEnforceLayerOrder();
+    cePushHistory();
+    updateLayers();
+    showToast('Brought to front');
+  }
+}
+function ceSendToBack(id) {
+  var i = CE.elements.findIndex(function(e) { return e.id === id; });
+  if (i > 0) {
+    var el = CE.elements.splice(i, 1)[0];
+    // Put after locked elements
+    var firstUnlocked = CE.elements.findIndex(function(e) { return !e.locked; });
+    CE.elements.splice(firstUnlocked >= 0 ? firstUnlocked : 0, 0, el);
+    ceEnforceLayerOrder();
+    cePushHistory();
+    updateLayers();
+    showToast('Sent to back');
   }
 }
 function ceToggleVis(id) {
@@ -1003,24 +1176,44 @@ function ceExportJSON() {
 
 // ── UPDATE LAYERS PANEL ───────────────────────────
 function updateLayers() {
-  const list = document.getElementById('layer-list');
+  var list = document.getElementById('layer-list');
   if (!list) return;
+
   if (!CE.elements.length) {
-    list.innerHTML = '<div class="empty-state"><div class="es-icon">⊹</div><p>No elements yet.</p></div>';
+    list.innerHTML = '<div style="text-align:center;padding:24px 12px;font-family:var(--mono);font-size:0.65rem;color:rgba(255,255,255,0.2)">No elements yet</div>';
     return;
   }
-  const icons = { text:'T', image:'🖼', rect:'▭' };
-  list.innerHTML = [...CE.elements].reverse().map(function(el) {
-    const icon = icons[el.type] || '·';
-    const name = el.name || el.type;
-    const sel = CE.selected === el.id;
-    return '<div class="layer-item' + (sel ? ' selected' : '') + '" data-el-id="' + el.id + '" onclick="ceSelect(\'' + el.id + '\')" style="' + (sel ? 'border-color:rgba(255,90,31,0.5)' : '') + '">' +
-      '<span class="layer-icon">' + icon + '</span>' +
-      '<span class="layer-name">' + name + '</span>' +
-      '<button class="layer-vis" onclick="event.stopPropagation();ceToggleVis(\'' + el.id + '\')">' + (el.visible !== false ? '👁' : '○') + '</button>' +
+
+  var icons = { text:'T', image:'🖼', rect:'▭' };
+  var typeColors = { text:'rgba(255,90,31,0.7)', image:'rgba(100,180,255,0.6)', rect:'rgba(180,180,180,0.5)' };
+  var n = CE.elements.length;
+
+  list.innerHTML = CE.elements.slice().reverse().map(function(el, revIdx) {
+    var realIdx = n - 1 - revIdx;
+    var icon = icons[el.type] || '·';
+    var name = el.name || el.type;
+    var sel = CE.selected === el.id;
+    var color = typeColors[el.type] || 'rgba(255,255,255,0.4)';
+    var isTop = realIdx === n - 1;
+    var isBot = realIdx === 0;
+    var locked = el.locked;
+
+    var upBtn = '<button title="Up" onclick="event.stopPropagation();ceMoveUp(\'' + el.id + '\')" style="width:18px;height:18px;background:rgba(255,255,255,0.06);border:none;border-radius:3px;cursor:pointer;color:rgba(255,255,255,' + (isTop?'0.2':'0.6') + ');font-size:10px;' + (isTop?'pointer-events:none':'') + '">↑</button>';
+    var dnBtn = '<button title="Down" onclick="event.stopPropagation();ceMoveDown(\'' + el.id + '\')" style="width:18px;height:18px;background:rgba(255,255,255,0.06);border:none;border-radius:3px;cursor:pointer;color:rgba(255,255,255,' + (isBot?'0.2':'0.6') + ');font-size:10px;' + (isBot?'pointer-events:none':'') + '">↓</button>';
+    var visBtn = '<button title="' + (el.visible!==false?'Hide':'Show') + '" onclick="event.stopPropagation();ceToggleVis(\'' + el.id + '\')" style="width:18px;height:18px;background:rgba(255,255,255,0.06);border:none;border-radius:3px;cursor:pointer;color:rgba(255,255,255,0.5);font-size:10px">' + (el.visible!==false?'👁':'○') + '</button>';
+
+    return '<div class="layer-item' + (sel?' selected':'') + '" data-el-id="' + el.id + '" onclick="ceSelect(\'' + el.id + '\')" style="' + (sel?'background:rgba(255,90,31,0.08);border-color:rgba(255,90,31,0.4);':'') + '">' +
+      '<span style="width:16px;height:16px;border-radius:3px;background:' + color + ';display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;color:#fff;flex-shrink:0;margin-right:6px">' + icon + '</span>' +
+      '<span class="layer-name" style="flex:1;' + (locked?'opacity:0.35;':'') + '">' + name + (locked?' 🔒':'') + '</span>' +
+      (!locked ? '<div style="display:flex;gap:2px">' + upBtn + dnBtn + visBtn + '</div>' : '') +
       '</div>';
   }).join('');
+
+  // Also update layers count badge if present
+  var badge = document.getElementById('layers-count');
+  if (badge) badge.textContent = n + ' layers';
 }
+
 
 // ── SHOW ELEMENT PROPS ────────────────────────────
 function showElementProps(el) {
