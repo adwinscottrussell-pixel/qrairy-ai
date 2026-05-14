@@ -2,24 +2,90 @@
    QRAIVY Editor — Canvas & Workspace
    ───────────────────────────────────────────────── */
 
+/* ══ WORKSPACE ARCHITECTURE ════════════════════════
+   #canvas-area              → fixed container, clips the workspace region
+   #workspace-viewport       → scrollable container (overflow: auto)
+   #workspace-surface        → dynamically sized inner surface (zoom * canvas + padding)
+   #canvas-wrapper           → absolutely centered inside surface
+   #canvas-shadow            → visual shadow wrapper
+   #polotno-container        → the actual canvas at native pixel size
+   ═══════════════════════════════════════════════════ */
+
+/* ── LEVEL 1: canvas-area ─────────────────────────
+   Fills available layout space. Clips the scroll region.
+   Must NOT overflow:hidden on children via stacking context tricks. */
 #canvas-area {
-  flex: 1; position: relative; overflow: hidden;
+  flex: 1;
+  position: relative;
+  overflow: hidden;           /* clips scroll region edges */
   user-select: none;
-  display: flex; align-items: center; justify-content: center;
   background:
     radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255,90,31,0.055) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 20% 80%, rgba(255,90,31,0.02) 0%, transparent 50%),
     #040404;
 }
 
-#canvas-wrapper {
+/* ── LEVEL 2: workspace-viewport ─────────────────
+   The actual scroll container. Full size of canvas-area.
+   overflow: auto gives native scrollbars and scroll physics.
+   Must NOT have transform applied — transforms break scroll math. */
+#workspace-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  cursor: default;
+  /* Scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+#workspace-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+#workspace-viewport::-webkit-scrollbar-track { background: transparent; }
+#workspace-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+#workspace-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
+}
+#workspace-viewport::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── LEVEL 3: workspace-surface ──────────────────
+   Dynamically sized by JS: width/height = canvasW * zoom + PADDING * 2
+   This is what makes the scroll area expand at high zoom.
+   position: relative so canvas-wrapper can be absolutely centered inside. */
+#workspace-surface {
   position: relative;
-  transform-origin: center center;
-  transition: transform 0.3s ease;
+  /* Size is set entirely by JS — do not set width/height here */
+  min-width: 100%;
+  min-height: 100%;
+  /* Dot grid background — scales with surface, not canvas */
+  background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-attachment: local;
 }
 
+/* ── LEVEL 4: canvas-wrapper ─────────────────────
+   Centered inside surface by JS (absolute + top/left).
+   The transform:scale lives here. transform-origin: top left
+   so JS can do precise math. NO transition on transform — 
+   JS handles smoothing via requestAnimationFrame. */
+#canvas-wrapper {
+  position: absolute;
+  transform-origin: top left;
+  /* transform: scale(z) set by JS */
+  /* width/height set to native canvas size by JS */
+  pointer-events: none; /* children handle events */
+}
+
+/* ── LEVEL 5: canvas-shadow ──────────────────────
+   Visual shadow. Must match native canvas size exactly.
+   pointer-events: none — polotno-container handles interaction. */
 #canvas-shadow {
   border-radius: 3px;
+  pointer-events: none;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.07),
     0 2px 4px rgba(0,0,0,0.4),
@@ -29,7 +95,6 @@
     0 0 200px rgba(255,90,31,0.03);
   transition: box-shadow 0.4s ease;
 }
-
 #canvas-shadow:hover {
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.09),
@@ -40,32 +105,66 @@
     0 0 240px rgba(255,90,31,0.04);
 }
 
+/* ── LEVEL 6: polotno-container ──────────────────
+   Native canvas size. Never scaled — scaling happens on #canvas-wrapper.
+   overflow: hidden clips canvas content to page bounds. */
 #polotno-container {
-  width: 794px; height: 1123px;
+  width: 794px;
+  height: 1123px;
   background: #ffffff;
-  position: relative; overflow: hidden;
+  position: relative;
+  overflow: hidden;
   display: block;
+  pointer-events: all;
 }
 
-/* ── ZOOM CONTROLS (now in topbar) ───────────────── */
-.zoom-btn { width:26px; height:26px; background:transparent; border:none; color:var(--text-mid); cursor:pointer; border-radius:5px; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
-.zoom-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); }
+/* ── Pan cursor states ───────────────────────────── */
+#workspace-viewport.is-panning { cursor: grabbing !important; }
+#workspace-viewport.pan-ready  { cursor: grab !important; }
+
+/* ── ZOOM CONTROLS ───────────────────────────────── */
+.zoom-btn {
+  width: 26px; height: 26px;
+  background: transparent; border: none;
+  color: var(--text-mid); cursor: pointer;
+  border-radius: 5px; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.zoom-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 
 /* ── CANVAS ONBOARDING ───────────────────────────── */
 #canvas-onboarding {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  pointer-events: none; z-index: 5; opacity: 1; transition: opacity 0.4s ease;
+  pointer-events: none; z-index: 10; opacity: 1; transition: opacity 0.4s ease;
 }
 #canvas-onboarding.hidden { opacity: 0; }
-.onboarding-hint { background:rgba(12,12,12,0.85); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 20px; margin:6px; font-family:var(--mono); font-size:0.68rem; color:rgba(240,236,224,0.5); letter-spacing:0.04em; pointer-events:auto; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:8px; }
-.onboarding-hint:hover { border-color:rgba(255,90,31,0.3); color:rgba(240,236,224,0.8); }
-.oh-key { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:1px 6px; font-size:0.6rem; }
-.onboarding-dismiss { margin-top:8px; font-family:var(--mono); font-size:0.6rem; color:rgba(255,255,255,0.2); cursor:pointer; pointer-events:auto; letter-spacing:0.06em; padding:4px 8px; transition:color 0.15s; }
-.onboarding-dismiss:hover { color:rgba(255,255,255,0.4); }
+.onboarding-hint {
+  background: rgba(12,12,12,0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 12px 20px; margin: 6px;
+  font-family: var(--mono); font-size: 0.68rem;
+  color: rgba(240,236,224,0.5); letter-spacing: 0.04em;
+  pointer-events: auto; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px;
+}
+.onboarding-hint:hover { border-color: rgba(255,90,31,0.3); color: rgba(240,236,224,0.8); }
+.oh-key {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px; padding: 1px 6px; font-size: 0.6rem;
+}
+.onboarding-dismiss {
+  margin-top: 8px; font-family: var(--mono); font-size: 0.6rem;
+  color: rgba(255,255,255,0.2); cursor: pointer; pointer-events: auto;
+  letter-spacing: 0.06em; padding: 4px 8px; transition: color 0.15s;
+}
+.onboarding-dismiss:hover { color: rgba(255,255,255,0.4); }
 
 /* ── CE ELEMENT REVEAL ───────────────────────────── */
 @keyframes ceElReveal {
-  from { opacity:0.4; transform:scale(0.95); }
-  to   { opacity:1;   transform:scale(1); }
+  from { opacity: 0.4; transform: scale(0.95); }
+  to   { opacity: 1;   transform: scale(1); }
 }
