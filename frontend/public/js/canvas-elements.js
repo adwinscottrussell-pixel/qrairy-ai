@@ -102,11 +102,23 @@ function ceRenderAll() {
   if (!c) return;
   c.querySelectorAll('.ce-el, .ce-guide').forEach(n => n.remove());
   CE.elements.forEach(el => { if (el.visible !== false) ceRenderElement(el); });
+  // Enforce z-index layering after all elements rendered
+  ceEnforceLayerOrder();
   updateLayers();
   if (CE.selected) {
     const sel = CE.elements.find(e => e.id === CE.selected);
     if (sel) ceShowHandles(sel);
   }
+}
+
+function ceEnforceLayerOrder() {
+  // Apply correct z-index: rects at bottom, images middle, text on top
+  CE.elements.forEach(function(el, idx) {
+    var node = document.getElementById(el.id);
+    if (!node) return;
+    var base = { rect: 1, image: 5, text: 20 }[el.type] || 5;
+    node.style.zIndex = base + idx;
+  });
 }
 
 // ── RENDER ONE ELEMENT ────────────────────────────
@@ -132,6 +144,10 @@ function ceRenderElement(el) {
   node.style.boxSizing = 'border-box';
   node.style.userSelect = 'none';
   if (el.rotation) node.style.transform = 'rotate(' + el.rotation + 'deg)';
+  // Z-index by type: text always above rects/images
+  var typeZ = { rect: 1, image: 2, text: 10 };
+  node.style.zIndex = (typeZ[el.type] || 5) + (CE.elements.indexOf(el) || 0);
+  node.style.pointerEvents = 'all';
 
   // ── RECT ──────────────────────────────────────
   if (el.type === 'rect') {
@@ -144,6 +160,8 @@ function ceRenderElement(el) {
     }
     if (el.opacity != null) node.style.opacity = el.opacity;
     node.style.cursor = 'move';
+    // Rects don't steal pointer events from text above them
+    node.style.pointerEvents = 'all';
 
   // ── TEXT ──────────────────────────────────────
   } else if (el.type === 'text') {
@@ -167,6 +185,8 @@ function ceRenderElement(el) {
     node.style.padding = '4px';
     node.style.cursor = 'default';
     node.style.outline = 'none';
+    node.style.pointerEvents = 'all';
+    node.style.isolation = 'isolate';  // prevent parent stacking context issues
     node.contentEditable = 'false';  // editing off by default
     node.spellcheck = false;
     node.dataset.editing = 'false';
@@ -267,6 +287,13 @@ function ceSelect(id) {
   showElementProps(el);
   updateLayers();
   ceAutoSwitchPanel(el);
+
+  // Bring selected element to top of its type group
+  var node2 = document.getElementById(id);
+  if (node2) {
+    var base = { rect: 1, image: 5, text: 20 }[el.type] || 5;
+    node2.style.zIndex = base + CE.elements.length + 10;
+  }
 }
 
 // ── AUTO-SWITCH RIGHT PANEL ON SELECTION ──────────
@@ -294,6 +321,10 @@ function ceDeselect() {
 function ceEnterTextEdit(el, node) {
   if (!node) node = document.getElementById(el.id);
   if (!node) return;
+
+  // Bring to absolute front while editing
+  node.style.zIndex = '9999';
+  node.style.pointerEvents = 'all';
 
   // Enable editing
   node.contentEditable = 'true';
@@ -330,6 +361,9 @@ function ceExitTextEdit(el, node) {
   el.height = node.offsetHeight;
   cePushHistory();
   CE._editingId = null;
+
+  // Restore proper z-index
+  ceEnforceLayerOrder();
 
   // Re-show selection
   ceSelect(el.id);
@@ -898,6 +932,7 @@ function renderElementsToCanvas(layout, qrSrc) {
 
   // One history snapshot for the whole layout
   cePushHistory();
+  ceEnforceLayerOrder();
   updateLayers();
   setTimeout(function() { editorActions.zoomFit(); }, 80);
 }
