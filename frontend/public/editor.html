@@ -14,20 +14,34 @@
   <link rel="stylesheet" href="css/animations.css" />
 
 <style>
-/* CE Element system styles */
-.ce-el:hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.4) !important; }
-.ce-el[contenteditable="true"]:focus { box-shadow: 0 0 0 2px rgba(255,90,31,0.7) !important; cursor: text !important; }
-.ce-handles { position: absolute; inset: -2px; pointer-events: none; z-index: 999; }
+/* ── CE Element system ── */
+.ce-el { transition: none !important; }
+.ce-el:not([contenteditable="true"]):hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.35) !important; }
+.ce-el[contenteditable="true"] { cursor: text !important; }
+.ce-el[contenteditable="true"]:focus { outline: 2px solid rgba(255,90,31,0.7) !important; outline-offset: 2px; }
+.ce-handles-wrap { pointer-events: none; }
+.ce-handle { transition: transform 0.1s ease, background 0.1s; }
+.ce-handle:hover { background: #ff8c00 !important; transform: scale(1.3) !important; }
+.ce-guide { pointer-events: none; }
+/* Ensure polotno-container clips CE elements */
+#polotno-container { isolation: isolate; }
 </style>
 </head>
 <body>
 
 
 <style>
-/* CE Element system styles */
-.ce-el:hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.4) !important; }
-.ce-el[contenteditable="true"]:focus { box-shadow: 0 0 0 2px rgba(255,90,31,0.7) !important; cursor: text !important; }
-.ce-handles { position: absolute; inset: -2px; pointer-events: none; z-index: 999; }
+/* ── CE Element system ── */
+.ce-el { transition: none !important; }
+.ce-el:not([contenteditable="true"]):hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.35) !important; }
+.ce-el[contenteditable="true"] { cursor: text !important; }
+.ce-el[contenteditable="true"]:focus { outline: 2px solid rgba(255,90,31,0.7) !important; outline-offset: 2px; }
+.ce-handles-wrap { pointer-events: none; }
+.ce-handle { transition: transform 0.1s ease, background 0.1s; }
+.ce-handle:hover { background: #ff8c00 !important; transform: scale(1.3) !important; }
+.ce-guide { pointer-events: none; }
+/* Ensure polotno-container clips CE elements */
+#polotno-container { isolation: isolate; }
 </style>
 </head>
 <body>
