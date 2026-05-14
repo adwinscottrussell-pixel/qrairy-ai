@@ -736,6 +736,43 @@ function applyAlign(direction) {
   showToast('Aligned ' + direction);
 }
 
+
+// ── TEXT STYLE PRESETS ────────────────────────────
+var CE_TEXT_STYLES = {
+  heading:    { text:'Heading',         fontSize:52, fontWeight:'bold',   fontFamily:'Inter',           fill:'#0a0a0a', align:'left' },
+  subheading: { text:'Subheading',      fontSize:28, fontWeight:'600',    fontFamily:'Inter',           fill:'#333333', align:'left' },
+  body:       { text:'Body text here',  fontSize:16, fontWeight:'normal', fontFamily:'Inter',           fill:'#555555', align:'left' },
+  caption:    { text:'Caption text',    fontSize:12, fontWeight:'normal', fontFamily:'DM Mono',         fill:'#888888', align:'left' },
+  cta:        { text:'CLICK HERE →',   fontSize:18, fontWeight:'bold',   fontFamily:'Inter',           fill:'#ffffff', align:'center' },
+};
+
+function ceAddTextStyle(styleKey) {
+  var s = CE_TEXT_STYLES[styleKey] || CE_TEXT_STYLES.body;
+  ceAddElement({
+    type: 'text',
+    text: s.text,
+    x: 60,
+    y: Math.max(60, (CE.elements.length * 40) % (S.canvasH - 100)),
+    width: Math.round(S.canvasW * 0.75),
+    fontSize: s.fontSize,
+    fontWeight: s.fontWeight,
+    fontFamily: s.fontFamily,
+    fill: s.fill,
+    align: s.align,
+    name: styleKey.charAt(0).toUpperCase() + styleKey.slice(1),
+  });
+  showToast(styleKey.charAt(0).toUpperCase() + styleKey.slice(1) + ' added');
+}
+
+// ── FIX setBgGradient ─────────────────────────────
+function setBgGradient(grad) {
+  // Decode %27 back to quotes if needed
+  var decoded = grad.replace(/%27/g, "'");
+  var c = document.getElementById('polotno-container');
+  if (c) c.style.background = decoded;
+  showToast('Background updated');
+}
+
 // ── ADD ELEMENT HELPERS ───────────────────────────
 function addText() {
   ceAddElement({ type:'text', text:'Click to edit text', x:80, y:200, width:400, fontSize:24, fontFamily:'Inter', fill:'#0a0a0a', align:'left' });
