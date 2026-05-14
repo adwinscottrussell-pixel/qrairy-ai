@@ -46,17 +46,9 @@
   display: block;
 }
 
-/* ── ZOOM CONTROLS ───────────────────────────────── */
-#zoom-controls {
-  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px;
-  background: rgba(14,14,14,0.9); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; padding: 4px 6px;
-  backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-.zoom-btn { width:28px; height:28px; background:transparent; border:none; color:var(--text-mid); cursor:pointer; border-radius:6px; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+/* ── ZOOM CONTROLS (now in topbar) ───────────────── */
+.zoom-btn { width:26px; height:26px; background:transparent; border:none; color:var(--text-mid); cursor:pointer; border-radius:5px; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
 .zoom-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); }
-#zoom-label { font-family:var(--mono); font-size:0.68rem; color:var(--text-mid); min-width:38px; text-align:center; }
 
 /* ── CANVAS ONBOARDING ───────────────────────────── */
 #canvas-onboarding {
@@ -70,3 +62,9 @@
 .oh-key { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:1px 6px; font-size:0.6rem; }
 .onboarding-dismiss { margin-top:8px; font-family:var(--mono); font-size:0.6rem; color:rgba(255,255,255,0.2); cursor:pointer; pointer-events:auto; letter-spacing:0.06em; padding:4px 8px; transition:color 0.15s; }
 .onboarding-dismiss:hover { color:rgba(255,255,255,0.4); }
+
+/* ── CE ELEMENT REVEAL ───────────────────────────── */
+@keyframes ceElReveal {
+  from { opacity:0.4; transform:scale(0.95); }
+  to   { opacity:1;   transform:scale(1); }
+}

@@ -57,3 +57,11 @@ const editorActions = {
   },
   exportPDF() { showToast('PDF export via Puppeteer — coming in Step 2'); }
 };
+
+function switchRTab(id, btn) {
+  document.querySelectorAll('.rtab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.rtab-content').forEach(function(c) { c.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var content = document.getElementById('rtab-' + id);
+  if (content) content.classList.add('active');
+}

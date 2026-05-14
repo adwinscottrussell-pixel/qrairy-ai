@@ -60,8 +60,11 @@ function ceClientToCanvas(cx, cy) {
 // ── ADD ELEMENT ───────────────────────────────────
 function ceAddElement(props) {
   const id = 'el_' + (CE.nextId++);
+  // Smart default position: center of visible canvas area
+  var defaultX = Math.round(S.canvasW * 0.1);
+  var defaultY = Math.round(S.canvasH * 0.1 + (CE.elements.length * 30) % (S.canvasH * 0.6));
   const el = Object.assign({
-    id, visible: true, x: 80, y: 80,
+    id, visible: true, x: defaultX, y: defaultY,
     width: 200, height: 60, rotation: 0,
   }, props);
   // Ensure height is set for rects/images
@@ -71,6 +74,33 @@ function ceAddElement(props) {
   ceRenderElement(el);
   ceSelect(id);
   updateLayers();
+
+  // Auto-enter edit mode for text, scroll element into view
+  if (el.type === 'text') {
+    setTimeout(function() {
+      var node = document.getElementById(id);
+      if (node) {
+        node.focus();
+        // Place cursor at end
+        var range = document.createRange();
+        var sel = window.getSelection();
+        range.selectNodeContents(node);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }, 60);
+  }
+
+  // Subtle reveal animation
+  setTimeout(function() {
+    var node = document.getElementById(id);
+    if (node) {
+      node.style.animation = 'ceElReveal 0.2s ease';
+      setTimeout(function() { node.style.animation = ''; }, 200);
+    }
+  }, 10);
+
   return id;
 }
 
@@ -200,6 +230,7 @@ function ceSelect(id) {
   document.querySelectorAll('.ce-el').forEach(n => {
     n.style.outline = 'none';
     n.style.outlineOffset = '0';
+    n.style.boxShadow = '';
   });
 
   CE.selected = id || null;
@@ -212,13 +243,32 @@ function ceSelect(id) {
   if (!node) return;
 
   if (el.type !== 'text') {
-    node.style.outline = '2px solid rgba(255,90,31,0.85)';
-    node.style.outlineOffset = '1px';
+    node.style.outline = '2px solid #ff5a1f';
+    node.style.outlineOffset = '2px';
+    node.style.boxShadow = '0 0 0 4px rgba(255,90,31,0.15)';
   }
 
   ceShowHandles(el);
   showElementProps(el);
   updateLayers();
+  ceAutoSwitchPanel(el);
+}
+
+// ── AUTO-SWITCH RIGHT PANEL ON SELECTION ──────────
+function ceAutoSwitchPanel(el) {
+  if (!el) return;
+  // Switch to PROPS tab
+  var propsTab = document.querySelector('.rtab');
+  if (propsTab && !propsTab.classList.contains('active')) {
+    switchRTab('properties', propsTab);
+  }
+  // Switch left panel to relevant tool
+  var panelMap = { text:'text', image:'images', rect:'elements' };
+  var targetPanel = panelMap[el.type];
+  if (targetPanel && S.activePanelId !== targetPanel) {
+    var btn = document.querySelector('[data-panel="' + targetPanel + '"]');
+    if (btn) togglePanel(targetPanel, btn);
+  }
 }
 
 function ceDeselect() {

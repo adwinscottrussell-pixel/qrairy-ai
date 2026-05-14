@@ -57,6 +57,14 @@
   <button class="tb-btn" onclick="editorActions.redo()">↪ Redo</button>
   <div class="tb-sep"></div>
   <button class="tb-canvas-size" id="canvas-size-btn" onclick="openSizeModal()">A4 · 794 × 1123</button>
+  <div class="tb-sep"></div>
+  <div id="zoom-controls" style="display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:2px 4px">
+    <button class="zoom-btn" onclick="editorActions.zoomOut()" title="Zoom out (-)">−</button>
+    <span id="zoom-label" style="font-family:var(--mono);font-size:0.68rem;color:var(--text-mid);min-width:38px;text-align:center;cursor:default">100%</span>
+    <button class="zoom-btn" onclick="editorActions.zoomIn()" title="Zoom in (+)">+</button>
+    <button class="zoom-btn" onclick="editorActions.zoomFit()" title="Fit canvas" style="font-size:0.6rem;width:auto;padding:0 6px;letter-spacing:0.04em">FIT</button>
+  </div>
+  <div class="tb-sep"></div>
   <button class="tb-btn" onclick="openCp()" style="gap:4px;opacity:0.6"><span style="background:rgba(255,255,255,0.08);border-radius:3px;padding:1px 6px;font-size:0.65rem">/</span> Quick Actions</button>
   <div class="tb-spacer"></div>
   <button class="tb-btn-ai" onclick="showAIModal()">
@@ -202,13 +210,7 @@
       </div>
     </div>
 
-    <div id="zoom-controls">
-      <button class="zoom-btn" onclick="editorActions.zoomOut()">−</button>
-      <span id="zoom-label">100%</span>
-      <button class="zoom-btn" onclick="editorActions.zoomIn()">+</button>
-      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
-      <button class="zoom-btn" onclick="editorActions.zoomFit()" style="font-size:10px;width:auto;padding:0 6px">FIT</button>
-    </div>
+
   </div>
 
   <div id="right-panel">
