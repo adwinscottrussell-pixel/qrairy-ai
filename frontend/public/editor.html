@@ -43,9 +43,18 @@
 }
 .ce-handle:hover { background: #ff8c00 !important; transform: scale(1.3) !important; }
 .ce-guide { pointer-events: none; }
-/* Canvas container */
+/* Canvas container - no stacking context, no selection */
 #polotno-container {
-  isolation: auto; /* don't create stacking context - let z-index flow naturally */
+  isolation: auto;
+  user-select: none;
+}
+/* Canvas wrapper never selectable */
+#canvas-wrapper, #canvas-shadow, #canvas-area {
+  pointer-events: none;
+}
+/* But polotno-container content IS interactive */
+#polotno-container {
+  pointer-events: all;
 }
 </style>
 </head>
@@ -82,9 +91,18 @@
 }
 .ce-handle:hover { background: #ff8c00 !important; transform: scale(1.3) !important; }
 .ce-guide { pointer-events: none; }
-/* Canvas container */
+/* Canvas container - no stacking context, no selection */
 #polotno-container {
-  isolation: auto; /* don't create stacking context - let z-index flow naturally */
+  isolation: auto;
+  user-select: none;
+}
+/* Canvas wrapper never selectable */
+#canvas-wrapper, #canvas-shadow, #canvas-area {
+  pointer-events: none;
+}
+/* But polotno-container content IS interactive */
+#polotno-container {
+  pointer-events: all;
 }
 </style>
 </head>

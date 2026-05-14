@@ -4,6 +4,7 @@
 
 #canvas-area {
   flex: 1; position: relative; overflow: hidden;
+  user-select: none;
   display: flex; align-items: center; justify-content: center;
   background:
     radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255,90,31,0.055) 0%, transparent 60%),

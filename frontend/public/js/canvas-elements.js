@@ -147,7 +147,7 @@ function ceRenderElement(el) {
   // Z-index by type: text always above rects/images
   var typeZ = { rect: 1, image: 2, text: 10 };
   node.style.zIndex = (typeZ[el.type] || 5) + (CE.elements.indexOf(el) || 0);
-  node.style.pointerEvents = 'all';
+node.style.pointerEvents = el.locked ? 'none' : 'all';
 
   // ── RECT ──────────────────────────────────────
   if (el.type === 'rect') {
@@ -273,6 +273,12 @@ function ceSelect(id) {
 
   const el = CE.elements.find(e => e.id === id);
   if (!el) return;
+
+  // Never select locked elements (background fills covering full canvas)
+  if (el.locked) {
+    CE.selected = null;
+    return;
+  }
 
   const node = document.getElementById(id);
   if (!node) return;
@@ -926,6 +932,16 @@ function renderElementsToCanvas(layout, qrSrc) {
     // Use ceAddElement but skip auto-select + history during bulk load
     const id = 'el_' + (CE.nextId++);
     const newEl = Object.assign({ id, visible: true, rotation: 0 }, props);
+
+    // Lock full-canvas background rects so they can't be accidentally selected
+    if (newEl.type === 'rect' &&
+        newEl.x === 0 && newEl.y === 0 &&
+        newEl.width >= S.canvasW - 10 &&
+        newEl.height >= S.canvasH - 10) {
+      newEl.locked = true;
+      // Background rects should not catch pointer events
+    }
+
     CE.elements.push(newEl);
     ceRenderElement(newEl);
   });
@@ -1148,7 +1164,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const c = document.getElementById('polotno-container');
   if (c) {
     c.addEventListener('mousedown', function(e) {
-      if (e.target === c) ceDeselect();
+      // Only deselect if clicking directly on the container background
+      if (e.target === c || e.target.id === 'polotno-container') {
+        ceDeselect();
+      }
     });
   }
 });
