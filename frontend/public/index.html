@@ -36,22 +36,19 @@
       --font-body: 'Manrope', sans-serif;
       --font-mono: 'DM Mono', monospace;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
       background: var(--bg); color: var(--text);
       font-family: var(--font-body); font-size: 16px;
       line-height: 1.6; overflow-x: hidden;
     }
-    body::before {
-      content: ''; position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none; z-index: 0; opacity: 0.4;
-    }
+
+    /* ── NAV ── */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 40px;
+      padding: 16px 48px;
       background: rgba(8,11,16,0.85);
       backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
@@ -61,7 +58,7 @@
       color: var(--text); text-decoration: none; letter-spacing: -0.02em;
     }
     .nav-logo span { color: var(--accent); font-style: italic; }
-    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
     .nav-link {
       font-family: var(--font-mono); font-size: 0.72rem;
       color: var(--text-mid); text-decoration: none;
@@ -69,84 +66,206 @@
       transition: all 0.18s; letter-spacing: 0.03em;
     }
     .nav-link:hover { color: var(--text); background: var(--surface); }
+    .nav-link.has-arrow::after { content: ' ↓'; font-size: 0.6rem; }
     .nav-cta {
       background: var(--accent); color: #fff;
-      padding: 8px 18px; border-radius: 6px;
+      padding: 9px 20px; border-radius: 8px;
       font-family: var(--font-display); font-size: 0.8rem;
       font-weight: 700; text-decoration: none;
-      transition: background 0.18s; letter-spacing: 0.02em;
+      transition: all 0.18s; letter-spacing: 0.02em;
+      box-shadow: 0 0 20px rgba(255,90,31,0.3);
     }
-    .nav-cta:hover { background: var(--accent2); color: #fff; }
+    .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 0 30px rgba(255,90,31,0.4); }
+
+    /* ── HERO ── */
     .hero {
       position: relative; min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center; padding: 120px 40px 80px; overflow: hidden;
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+      padding: 140px 48px 80px;
+      max-width: 1200px; margin: 0 auto;
     }
-    .hero-glow {
-      position: absolute; width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(255,90,31,0.12) 0%, transparent 70%);
-      top: 50%; left: 50%; transform: translate(-50%, -60%); pointer-events: none;
+    .hero-bg-glow {
+      position: fixed; width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(255,90,31,0.08) 0%, transparent 65%);
+      top: 0; right: -200px; pointer-events: none; z-index: 0;
     }
+    .hero-left { position: relative; z-index: 1; }
     .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.25);
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.3);
       color: var(--accent2); font-family: var(--font-mono);
-      font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 5px 14px; border-radius: 999px; margin-bottom: 28px;
+      font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 14px; border-radius: 999px; margin-bottom: 28px;
     }
-    .hero-badge::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero-badge-dot {
+      width: 6px; height: 6px; background: var(--accent);
+      border-radius: 50%; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
     .hero h1 {
-      font-family: var(--font-display); font-size: clamp(1.8rem, 7vw, 5rem);
+      font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.8rem);
       font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
-      margin-bottom: 24px; max-width: 800px;
+      margin-bottom: 24px;
     }
-    .hero h1 em { color: var(--accent); font-style: normal; }
+    .hero h1 em { color: var(--accent); font-style: normal; display: block; }
     .hero p {
-      font-size: 1.1rem; color: var(--text-mid);
-      max-width: 520px; margin: 0 auto 40px; line-height: 1.7;
+      font-size: 1rem; color: var(--text-mid);
+      max-width: 460px; margin-bottom: 36px; line-height: 1.75;
     }
-    .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--accent); color: #fff;
-      padding: 14px 28px; border-radius: var(--radius);
-      font-family: var(--font-display); font-size: 0.9rem;
+      padding: 13px 26px; border-radius: var(--radius);
+      font-family: var(--font-display); font-size: 0.88rem;
       font-weight: 700; text-decoration: none;
-      transition: all 0.18s; letter-spacing: 0.02em;
+      transition: all 0.2s; letter-spacing: 0.02em;
+      box-shadow: 0 0 24px rgba(255,90,31,0.35);
     }
-    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 0 36px rgba(255,90,31,0.5); }
     .btn-secondary {
       display: inline-flex; align-items: center; gap: 8px;
       background: transparent; color: var(--text-mid);
       border: 1px solid var(--border2);
-      padding: 14px 28px; border-radius: var(--radius);
-      font-family: var(--font-display); font-size: 0.9rem;
+      padding: 13px 26px; border-radius: var(--radius);
+      font-family: var(--font-display); font-size: 0.88rem;
       font-weight: 600; text-decoration: none; transition: all 0.18s;
     }
     .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-    .hero-stats {
-      display: flex; gap: 40px; justify-content: center;
-      margin-top: 64px; flex-wrap: wrap;
-    }
-    .hero-stat { text-align: center; }
+    .hero-stats { display: flex; gap: 36px; }
     .hero-stat-num {
-      font-family: var(--font-display); font-size: 2rem;
+      font-family: var(--font-display); font-size: 1.7rem;
       font-weight: 800; color: var(--text); letter-spacing: -0.03em;
+      line-height: 1;
     }
     .hero-stat-num span { color: var(--accent); }
     .hero-stat-label {
-      font-family: var(--font-mono); font-size: 0.65rem;
+      font-family: var(--font-mono); font-size: 0.6rem;
       color: var(--text-dim); text-transform: uppercase;
       letter-spacing: 0.1em; margin-top: 4px;
     }
+    .hero-stat-icon { font-size: 0.75rem; margin-right: 2px; }
+
+    /* ── HERO RIGHT: PRODUCT MOCKUP ── */
+    .hero-right {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .hero-mockup-top {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 16px; padding: 20px; position: relative;
+      overflow: hidden;
+    }
+    .hero-mockup-top::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,90,31,0.05) 0%, transparent 60%);
+    }
+    .mockup-prompt-label {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--accent); letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .mockup-prompt-label svg { width: 14px; height: 14px; }
+    .mockup-prompt-box {
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
+      border-radius: 10px; padding: 14px 16px;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      color: var(--text-mid); line-height: 1.5; margin-bottom: 14px;
+    }
+    .mockup-generate-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      padding: 10px 20px; border-radius: 8px;
+      font-family: var(--font-display); font-size: 0.78rem;
+      font-weight: 700; cursor: pointer; border: none;
+      animation: btnBreath 3s ease-in-out infinite;
+    }
+    @keyframes btnBreath { 0%,100%{box-shadow:0 0 16px rgba(255,90,31,0.4)} 50%{box-shadow:0 0 32px rgba(255,90,31,0.6)} }
+    /* Restaurant card mockup */
+    .mockup-result-card {
+      background: linear-gradient(135deg, #1a0e08 0%, #0d0805 100%);
+      border: 1px solid rgba(255,90,31,0.2); border-radius: 12px;
+      padding: 16px; display: flex; gap: 14px; align-items: flex-start;
+    }
+    .mockup-card-left { flex: 1; }
+    .mockup-restaurant-name {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: rgba(255,255,255,0.4); letter-spacing: 0.1em; margin-bottom: 8px;
+    }
+    .mockup-discount {
+      font-family: var(--font-display); font-size: 1.6rem;
+      font-weight: 800; color: var(--accent); line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .mockup-discount-sub {
+      font-family: var(--font-display); font-size: 0.7rem;
+      font-weight: 700; color: var(--text); margin-bottom: 6px;
+    }
+    .mockup-scan-label {
+      font-family: var(--font-mono); font-size: 0.58rem;
+      color: var(--text-dim);
+    }
+    .mockup-qr-placeholder {
+      width: 60px; height: 60px; background: #fff;
+      border-radius: 6px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mockup-qr-placeholder svg { width: 44px; height: 44px; }
+
+    /* Bottom row of hero mockup */
+    .hero-mockup-bottom {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 20px;
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .mockup-action {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--text-dim); letter-spacing: 0.06em;
+    }
+    .mockup-action-icon {
+      width: 36px; height: 36px; background: rgba(255,90,31,0.1);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 16px;
+    }
+    .mockup-action.active .mockup-action-icon { background: rgba(255,90,31,0.2); }
+    .mockup-action.active { color: var(--accent2); }
+
+    /* ── TRUSTED BY ── */
+    .trusted-section {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 24px 48px; background: rgba(13,17,23,0.6);
+    }
+    .trusted-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; gap: 40px; flex-wrap: wrap;
+    }
+    .trusted-label {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .trusted-logos {
+      display: flex; align-items: center; gap: 36px; flex-wrap: wrap;
+    }
+    .trusted-logo {
+      font-family: var(--font-display); font-size: 0.85rem;
+      font-weight: 700; color: var(--text-dim);
+      letter-spacing: -0.01em; opacity: 0.5; transition: opacity 0.2s;
+    }
+    .trusted-logo:hover { opacity: 0.8; }
+
+    /* ── SHARED SECTION STYLES ── */
     section { position: relative; z-index: 1; }
-    .section-wrap { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+    .section-wrap { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
     .section-header { text-align: center; margin-bottom: 56px; }
     .section-badge {
-      display: inline-block; font-family: var(--font-mono); font-size: 0.65rem;
-      color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px;
+      display: inline-block; font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase;
+      margin-bottom: 14px;
     }
     .section-title {
       font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.6rem);
@@ -154,6 +273,8 @@
     }
     .section-title em { color: var(--accent); font-style: normal; }
     .section-sub { font-size: 1rem; color: var(--text-mid); max-width: 500px; margin: 0 auto; }
+
+    /* ── QR TYPES ── */
     .qr-types-section {
       padding: 100px 0; background: var(--bg2);
       border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
@@ -163,12 +284,12 @@
     }
     .qr-type-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 20px 16px;
+      border-radius: 12px; padding: 20px 14px;
       text-align: center; cursor: pointer; transition: all 0.2s;
       text-decoration: none; display: flex; flex-direction: column;
-      align-items: center; gap: 10px;
+      align-items: center; gap: 8px;
     }
-    .qr-type-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-2px); }
+    .qr-type-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
     .qr-type-card.featured { border-color: var(--accent); background: rgba(255,90,31,0.06); }
     .qr-type-card.row2-start { grid-column: 2; }
     .qr-type-icon {
@@ -178,125 +299,287 @@
     }
     .qr-type-card.featured .qr-type-icon { background: rgba(255,90,31,0.15); }
     .qr-type-card:hover .qr-type-icon { background: rgba(255,90,31,0.12); }
-    .qr-type-name { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; color: var(--text); }
-    .qr-type-desc { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); line-height: 1.4; }
+    .qr-type-name { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .qr-type-desc { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-dim); line-height: 1.4; }
     .qr-type-badge {
-      font-family: var(--font-mono); font-size: 0.55rem; font-weight: 700;
+      font-family: var(--font-mono); font-size: 0.52rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
-      background: var(--accent); color: #fff; padding: 2px 7px; border-radius: 999px;
+      background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 999px;
     }
-    .wizard-section { padding: 100px 0; }
-    .wizard-steps {
-      display: flex; gap: 0; margin-bottom: 48px;
-      justify-content: center; align-items: center;
+
+    /* ── EDITOR PREVIEW SECTION ── */
+    .editor-section {
+      padding: 100px 0;
     }
-    .wizard-step {
+    .editor-preview-wrap {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 64px; align-items: center;
+    }
+    .editor-preview-left {}
+    .editor-preview-left .section-header { text-align: left; margin-bottom: 28px; }
+    .editor-preview-left .section-title { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+    .editor-checklist { list-style: none; margin-bottom: 32px; }
+    .editor-checklist li {
       display: flex; align-items: center; gap: 10px;
-      font-family: var(--font-mono); font-size: 0.72rem;
-      color: var(--text-dim); letter-spacing: 0.05em;
+      font-size: 0.9rem; color: var(--text-mid); padding: 7px 0;
     }
-    .wizard-step.active { color: var(--text); }
-    .wizard-step-num {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--surface); border: 1px solid var(--border2);
+    .editor-checklist li::before {
+      content: ''; width: 16px; height: 16px; flex-shrink: 0;
+      background: rgba(255,90,31,0.15); border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.72rem; flex-shrink: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%23ff5a1f' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: center; background-size: 12px;
     }
-    .wizard-step.active .wizard-step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .wizard-step-connector { width: 60px; height: 1px; background: var(--border2); margin: 0 8px; }
-    .wizard-form {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 40px; max-width: 680px; margin: 0 auto;
+    .editor-preview-right {
+      position: relative;
     }
-    .form-group { margin-bottom: 20px; }
-    .form-label {
-      font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
-      letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; display: block;
+    /* Fake editor UI mockup */
+    .editor-mock {
+      background: #0d1117; border: 1px solid var(--border2);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(255,90,31,0.06);
     }
-    .form-input {
-      width: 100%; padding: 13px 16px; background: var(--bg);
-      border: 1px solid var(--border2); border-radius: var(--radius);
-      color: var(--text); font-family: var(--font-mono);
-      font-size: 0.85rem; outline: none; transition: border-color 0.18s;
+    .editor-mock-topbar {
+      background: #111820; padding: 10px 16px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
     }
-    .form-input:focus { border-color: var(--accent); }
-    .form-input::placeholder { color: var(--text-dim); }
-    .form-row { display: flex; gap: 12px; }
-    .form-row .form-group { flex: 1; }
-    .color-input-wrap { display: flex; gap: 8px; align-items: center; }
-    .color-input-wrap input[type="color"] {
-      width: 44px; height: 44px; border: 1px solid var(--border2);
-      border-radius: var(--radius); background: var(--bg); cursor: pointer; padding: 3px;
+    .em-dots { display: flex; gap: 6px; }
+    .em-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .em-dot:nth-child(1) { background: #ff5f57; }
+    .em-dot:nth-child(2) { background: #ffbd2e; }
+    .em-dot:nth-child(3) { background: #28ca41; }
+    .em-topbar-tabs {
+      display: flex; gap: 2px; flex: 1; justify-content: center;
     }
-    .form-select {
-      width: 100%; padding: 13px 16px; background: var(--bg);
-      border: 1px solid var(--border2); border-radius: var(--radius);
-      color: var(--text); font-family: var(--font-mono);
-      font-size: 0.85rem; outline: none; cursor: pointer;
+    .em-tab {
+      font-family: var(--font-mono); font-size: 0.58rem;
+      color: var(--text-dim); padding: 4px 10px;
+      border-radius: 4px; letter-spacing: 0.06em;
     }
-    .generate-btn {
-      width: 100%; padding: 15px; background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius); font-family: var(--font-display);
-      font-size: 1rem; font-weight: 700; cursor: pointer; letter-spacing: 0.02em;
-      transition: all 0.18s; margin-top: 8px;
+    .em-tab.active { background: rgba(255,90,31,0.1); color: var(--accent); }
+    .editor-mock-body {
+      display: grid; grid-template-columns: 48px 200px 1fr 200px;
+      height: 280px;
     }
-    .generate-btn:hover { background: var(--accent2); transform: translateY(-1px); }
-    .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .free-badge {
-      text-align: center; margin-top: 12px;
-      font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
+    .em-sidebar {
+      background: #0a0f16; border-right: 1px solid var(--border);
+      padding: 12px 0; display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
     }
-    .free-badge a { color: var(--accent); text-decoration: none; }
-    #qr-result {
-      display: none; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 32px; max-width: 680px; margin: 24px auto 0; text-align: center;
+    .em-tool {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: transparent; display: flex; align-items: center;
+      justify-content: center; font-size: 12px; color: var(--text-dim);
+      cursor: pointer; transition: background 0.15s;
     }
-    #qr-result.show { display: block; }
-    #qrImage {
-      width: 200px; height: 200px; border-radius: 12px;
-      background: #fff; padding: 8px; margin: 0 auto 20px; display: block;
+    .em-tool.active { background: rgba(255,90,31,0.15); color: var(--accent); }
+    .em-panel {
+      background: #0d1420; border-right: 1px solid var(--border);
+      padding: 12px;
     }
-    .result-url {
-      font-family: var(--font-mono); font-size: 0.72rem;
-      color: var(--text-dim); margin-bottom: 16px; word-break: break-all;
+    .em-panel-label {
+      font-family: var(--font-mono); font-size: 0.55rem;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 8px; padding: 0 2px;
     }
-    .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    .result-btn {
-      padding: 10px 20px; border-radius: var(--radius);
-      font-family: var(--font-display); font-size: 0.8rem;
-      font-weight: 700; cursor: pointer; transition: all 0.18s;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none;
+    .em-tmpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .em-tmpl {
+      aspect-ratio: 3/4; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 4px;
+      overflow: hidden; position: relative;
     }
-    .result-btn.primary { background: var(--accent); color: #fff; }
-    .result-btn.primary:hover { background: var(--accent2); }
-    .result-btn.outline { background: transparent; color: var(--text-mid); border: 1px solid var(--border2); }
-    .result-btn.outline:hover { border-color: var(--accent); color: var(--accent); }
-    .expiry-notice {
-      margin-top: 16px; padding: 12px 16px;
-      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
-      border-radius: var(--radius); font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent2);
+    .em-tmpl:nth-child(1) { background: linear-gradient(160deg, #1a2535 0%, #0d1420 100%); }
+    .em-tmpl:nth-child(2) { background: linear-gradient(160deg, #1a1410 0%, #0d0b08 100%); border-color: rgba(255,90,31,0.3); }
+    .em-tmpl:nth-child(3) { background: linear-gradient(160deg, #111c14 0%, #0a100c 100%); }
+    .em-tmpl:nth-child(4) { background: linear-gradient(160deg, #1c1420 0%, #100c14 100%); }
+    .em-tmpl-bar { height: 6px; width: 60%; background: rgba(255,255,255,0.1); border-radius: 2px; margin: 8px auto 3px; }
+    .em-tmpl-bar2 { height: 3px; width: 40%; background: rgba(255,255,255,0.06); border-radius: 2px; margin: 0 auto; }
+    .em-canvas-area {
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 30%, rgba(255,90,31,0.06) 0%, transparent 60%),
+        #040607;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
     }
-    .expiry-notice a { color: var(--accent); }
+    .em-canvas-bg-dots {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+    .em-canvas-page {
+      position: relative; z-index: 1;
+      width: 90px; height: 124px; background: #fff;
+      border-radius: 2px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+    }
+    .em-canvas-page-inner {
+      width: 100%; height: 100%;
+      background: linear-gradient(160deg, #fff 0%, #f8f8f8 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; padding: 10px;
+    }
+    .em-page-block { height: 4px; width: 80%; background: #111; border-radius: 1px; }
+    .em-page-block.accent { background: var(--accent); width: 60%; }
+    .em-page-block.sm { width: 50%; background: #ccc; }
+    .em-page-qr {
+      width: 28px; height: 28px;
+      border: 2px solid #111; border-radius: 2px;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px; padding: 2px; margin-top: 4px;
+    }
+    .em-qr-cell { background: #111; border-radius: 1px; }
+    .em-qr-cell.empty { background: transparent; }
+    .em-right-panel {
+      background: #0d1420; padding: 12px; border-left: 1px solid var(--border);
+    }
+
+    /* ── PHONE MOCKUP (from screenshot, right side of editor section) ── */
+    .phone-mockup {
+      position: absolute; right: -40px; top: -20px;
+      width: 120px; background: #111; border-radius: 20px;
+      border: 2px solid rgba(255,255,255,0.1); overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+    }
+    .phone-mockup-screen {
+      background: linear-gradient(160deg, #1a0e08, #0d0805);
+      padding: 12px 10px; min-height: 160px;
+    }
+    .phone-discount-text {
+      font-family: var(--font-display); font-weight: 800;
+      font-size: 0.75rem; color: var(--accent);
+      line-height: 1.1; margin-bottom: 2px;
+    }
+    .phone-discount-sub {
+      font-family: var(--font-display); font-size: 0.5rem;
+      font-weight: 700; color: var(--text); margin-bottom: 6px;
+    }
+    .phone-qr-box {
+      width: 40px; height: 40px; background: #fff;
+      border-radius: 4px; margin-bottom: 4px;
+    }
+    .phone-foot {
+      font-family: var(--font-mono); font-size: 0.42rem;
+      color: var(--text-dim);
+    }
+
+    /* ── FEATURES SECTION ── */
     .features-section { padding: 100px 0; }
-    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
     .feature-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 14px; padding: 28px; transition: border-color 0.2s;
+      border-radius: 14px; padding: 28px 26px; transition: all 0.2s;
+      position: relative; overflow: hidden;
     }
-    .feature-card:hover { border-color: var(--border2); }
+    .feature-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at top left, rgba(255,90,31,0.04) 0%, transparent 60%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .feature-card:hover { border-color: rgba(255,90,31,0.2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .feature-card:hover::before { opacity: 1; }
     .feature-icon-wrap {
       width: 48px; height: 48px; background: rgba(255,90,31,0.1);
       border-radius: 10px; display: flex; align-items: center;
-      justify-content: center; font-size: 24px; margin-bottom: 16px;
+      justify-content: center; font-size: 22px; margin-bottom: 16px;
     }
     .feature-title { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-    .feature-desc { font-size: 0.88rem; color: var(--text-mid); line-height: 1.6; }
-    .how-section {
+    .feature-desc { font-size: 0.85rem; color: var(--text-mid); line-height: 1.65; }
+
+    /* ── ANALYTICS SECTION ── */
+    .analytics-section {
       padding: 100px 0; background: var(--bg2);
       border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
     }
-    .how-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 32px; }
-    .how-step { text-align: center; padding: 24px; }
+    .analytics-wrap {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 72px; align-items: center;
+    }
+    /* Fake analytics dashboard */
+    .analytics-mock {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 16px; padding: 24px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .analytics-mock-title {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-dim); letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 20px;
+    }
+    .analytics-stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .analytics-stat-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 12px;
+    }
+    .analytics-stat-val {
+      font-family: var(--font-display); font-size: 1.3rem;
+      font-weight: 800; color: var(--text); letter-spacing: -0.02em;
+    }
+    .analytics-stat-label {
+      font-family: var(--font-mono); font-size: 0.55rem;
+      color: var(--text-dim); margin-top: 2px;
+    }
+    .analytics-chart {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; margin-bottom: 14px;
+    }
+    .analytics-chart-label {
+      font-family: var(--font-mono); font-size: 0.58rem;
+      color: var(--text-dim); margin-bottom: 12px;
+    }
+    .chart-bars {
+      display: flex; align-items: flex-end;
+      gap: 4px; height: 48px;
+    }
+    .chart-bar {
+      flex: 1; border-radius: 3px 3px 0 0;
+      background: rgba(255,90,31,0.3); transition: background 0.2s;
+      position: relative;
+    }
+    .chart-bar.highlight { background: var(--accent); }
+    /* Donut chart mockup */
+    .analytics-bottom-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .donut-mock {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .donut-svg { width: 48px; height: 48px; flex-shrink: 0; }
+    .donut-legend { display: flex; flex-direction: column; gap: 4px; }
+    .donut-leg-item {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-dim);
+    }
+    .donut-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    .analytics-right {}
+    .analytics-right .section-header { text-align: left; margin-bottom: 28px; }
+    .analytics-checklist { list-style: none; margin-bottom: 32px; }
+    .analytics-checklist li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.88rem; color: var(--text-mid); padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .analytics-checklist li:last-child { border-bottom: none; }
+    .analytics-check {
+      width: 18px; height: 18px; background: rgba(255,90,31,0.15);
+      border-radius: 50%; flex-shrink: 0; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 10px; color: var(--accent);
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { padding: 100px 0; }
+    .how-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+    .how-step { text-align: center; padding: 24px 16px; }
     .how-step-num {
       width: 52px; height: 52px; background: var(--surface);
       border: 1px solid var(--border2); border-radius: 50%;
@@ -304,225 +587,621 @@
       font-family: var(--font-display); font-size: 1.2rem;
       font-weight: 800; color: var(--accent); margin: 0 auto 16px;
     }
-    .how-step-title { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-    .how-step-desc { font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; }
+    .how-step-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .how-step-desc { font-size: 0.82rem; color: var(--text-mid); line-height: 1.6; }
+
+    /* ── GENERATOR SECTION ── */
+    .wizard-section { padding: 100px 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .wizard-steps { display: flex; gap: 0; margin-bottom: 48px; justify-content: center; align-items: center; }
+    .wizard-step { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.05em; }
+    .wizard-step.active { color: var(--text); }
+    .wizard-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.72rem; flex-shrink: 0; }
+    .wizard-step.active .wizard-step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .wizard-step-connector { width: 60px; height: 1px; background: var(--border2); margin: 0 8px; }
+    .wizard-form { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; max-width: 680px; margin: 0 auto; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .form-input { width: 100%; padding: 13px 16px; background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; outline: none; transition: border-color 0.18s; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-dim); }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .color-input-wrap { display: flex; gap: 8px; align-items: center; }
+    .color-input-wrap input[type="color"] { width: 44px; height: 44px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); cursor: pointer; padding: 3px; }
+    .form-select { width: 100%; padding: 13px 16px; background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; outline: none; cursor: pointer; }
+    .generate-btn { width: 100%; padding: 15px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-display); font-size: 1rem; font-weight: 700; cursor: pointer; letter-spacing: 0.02em; transition: all 0.18s; margin-top: 8px; box-shadow: 0 0 24px rgba(255,90,31,0.3); }
+    .generate-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .free-badge { text-align: center; margin-top: 12px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); }
+    .free-badge a { color: var(--accent); text-decoration: none; }
+    #qr-result { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 680px; margin: 24px auto 0; text-align: center; }
+    #qr-result.show { display: block; }
+    #qrImage { width: 200px; height: 200px; border-radius: 12px; background: #fff; padding: 8px; margin: 0 auto 20px; display: block; }
+    .result-url { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); margin-bottom: 16px; word-break: break-all; }
+    .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .result-btn { padding: 10px 20px; border-radius: var(--radius); font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.18s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; }
+    .result-btn.primary { background: var(--accent); color: #fff; }
+    .result-btn.primary:hover { background: var(--accent2); }
+    .result-btn.outline { background: transparent; color: var(--text-mid); border: 1px solid var(--border2); }
+    .result-btn.outline:hover { border-color: var(--accent); color: var(--accent); }
+    .expiry-notice { margin-top: 16px; padding: 12px 16px; background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2); border-radius: var(--radius); font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent2); }
+    .expiry-notice a { color: var(--accent); }
+
+    /* ── PRICING ── */
     .pricing-section { padding: 100px 0; }
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 960px; margin: 0 auto; }
-    .pricing-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 32px; position: relative; transition: border-color 0.2s;
-    }
+    .pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 960px; margin: 0 auto; }
+    .pricing-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; position: relative; transition: all 0.2s; }
+    .pricing-card:hover { border-color: var(--border2); transform: translateY(-2px); }
     .pricing-card.featured { border-color: var(--accent); background: rgba(255,90,31,0.04); }
-    .pricing-popular {
-      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: var(--accent); color: #fff; font-family: var(--font-mono);
-      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 4px 14px; border-radius: 999px;
-    }
-    .pricing-plan { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; }
-    .pricing-price { font-family: var(--font-display); font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px; }
-    .pricing-price span { font-size: 1rem; color: var(--text-dim); font-weight: 400; }
-    .pricing-desc { font-size: 0.85rem; color: var(--text-mid); margin-bottom: 24px; line-height: 1.5; }
-    .pricing-features { list-style: none; margin-bottom: 28px; }
-    .pricing-features li { font-size: 0.85rem; color: var(--text-mid); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-    .pricing-features li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+    .pricing-popular { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 14px; border-radius: 999px; white-space: nowrap; }
+    .pricing-plan { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+    .pricing-price { font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px; }
+    .pricing-price span { font-size: 0.9rem; color: var(--text-dim); font-weight: 400; }
+    .pricing-desc { font-size: 0.82rem; color: var(--text-mid); margin-bottom: 20px; line-height: 1.5; }
+    .pricing-features { list-style: none; margin-bottom: 24px; }
+    .pricing-features li { font-size: 0.82rem; color: var(--text-mid); padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .pricing-features li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 0.82rem; flex-shrink: 0; }
     .pricing-features li.dim { color: var(--text-dim); }
     .pricing-features li.dim::before { content: '—'; color: var(--text-dim); }
-    .pricing-btn {
-      display: block; width: 100%; padding: 13px; border-radius: var(--radius);
-      text-align: center; text-decoration: none; font-family: var(--font-display);
-      font-size: 0.88rem; font-weight: 700; transition: all 0.18s; letter-spacing: 0.02em; cursor: pointer;
-    }
-    .pricing-btn.filled { background: var(--accent); color: #fff; border: none; }
+    .pricing-btn { display: block; width: 100%; padding: 12px; border-radius: var(--radius); text-align: center; text-decoration: none; font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; transition: all 0.18s; letter-spacing: 0.02em; cursor: pointer; }
+    .pricing-btn.filled { background: var(--accent); color: #fff; border: none; box-shadow: 0 0 20px rgba(255,90,31,0.25); }
     .pricing-btn.filled:hover { background: var(--accent2); }
     .pricing-btn.outline { background: transparent; color: var(--text-mid); border: 1px solid var(--border2); }
     .pricing-btn.outline:hover { border-color: var(--accent); color: var(--accent); }
-    .testimonials-section {
-      padding: 100px 0; background: var(--bg2);
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-    }
-    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-    .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials-section { padding: 100px 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .testimonial-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; transition: border-color 0.2s; }
+    .testimonial-card:hover { border-color: var(--border2); }
     .testimonial-stars { color: var(--accent); font-size: 0.85rem; margin-bottom: 12px; letter-spacing: 2px; }
-    .testimonial-text { font-size: 0.9rem; color: var(--text-mid); line-height: 1.6; margin-bottom: 16px; font-style: italic; }
+    .testimonial-text { font-size: 0.88rem; color: var(--text-mid); line-height: 1.65; margin-bottom: 16px; font-style: italic; }
     .testimonial-author { display: flex; align-items: center; gap: 10px; }
-    .testimonial-avatar {
-      width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 0.75rem; font-weight: 800; color: #fff; flex-shrink: 0;
-    }
+    .testimonial-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 0.72rem; font-weight: 800; color: #fff; flex-shrink: 0; }
     .testimonial-name { font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; }
-    .testimonial-role { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); }
+    .testimonial-role { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim); }
+
+    /* ── FAQ ── */
     .faq-section { padding: 100px 0; }
     .faq-list { max-width: 720px; margin: 0 auto; }
     .faq-item { border-bottom: 1px solid var(--border); }
-    .faq-question {
-      width: 100%; background: none; border: none;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 0; cursor: pointer; font-family: var(--font-display);
-      font-size: 0.95rem; font-weight: 700; color: var(--text); text-align: left; gap: 16px;
-    }
+    .faq-question { width: 100%; background: none; border: none; display: flex; align-items: center; justify-content: space-between; padding: 20px 0; cursor: pointer; font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--text); text-align: left; gap: 16px; }
     .faq-question:hover { color: var(--accent); }
-    .faq-icon {
-      width: 24px; height: 24px; border-radius: 50%; background: var(--surface);
-      border: 1px solid var(--border2); display: flex; align-items: center;
-      justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.2s; color: var(--text-mid);
-    }
+    .faq-icon { width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.2s; color: var(--text-mid); }
     .faq-item.open .faq-icon { background: var(--accent); border-color: var(--accent); color: #fff; transform: rotate(45deg); }
-    .faq-answer { display: none; padding: 0 0 20px; font-size: 0.9rem; color: var(--text-mid); line-height: 1.7; }
+    .faq-answer { display: none; padding: 0 0 20px; font-size: 0.88rem; color: var(--text-mid); line-height: 1.7; }
     .faq-item.open .faq-answer { display: block; }
+
+    /* ── CTA SECTION ── */
     .cta-section { padding: 100px 0; }
     .cta-inner {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 64px 40px; text-align: center; position: relative; overflow: hidden;
+      border-radius: 24px; padding: 72px 48px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center; position: relative; overflow: hidden;
     }
     .cta-inner::before {
-      content: ''; position: absolute; width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(255,90,31,0.1) 0%, transparent 70%);
-      top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
+      content: ''; position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,90,31,0.08) 0%, transparent 70%);
+      top: 50%; left: 30%; transform: translate(-50%,-50%); pointer-events: none;
     }
-    .cta-inner h2 {
-      font-family: var(--font-display); font-size: clamp(1.8rem, 3vw, 2.6rem);
-      font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px; position: relative;
+    .cta-left { position: relative; }
+    .cta-ready-label {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--accent); letter-spacing: 0.14em;
+      text-transform: uppercase; margin-bottom: 16px;
     }
+    .cta-inner h2 { font-family: var(--font-display); font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px; line-height: 1.1; }
     .cta-inner h2 em { color: var(--accent); font-style: normal; }
-    .cta-inner p { color: var(--text-mid); font-size: 1rem; max-width: 480px; margin: 0 auto 32px; position: relative; }
-    footer {
-      border-top: 1px solid var(--border); padding: 40px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    .cta-inner p { color: var(--text-mid); font-size: 0.95rem; margin-bottom: 28px; line-height: 1.6; }
+    .cta-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    /* Glowing QR orb */
+    .cta-right { display: flex; align-items: center; justify-content: center; position: relative; }
+    .cta-qr-orb {
+      width: 200px; height: 200px;
+      position: relative; z-index: 1;
     }
+    .cta-qr-orb-glow {
+      position: absolute; inset: -40px;
+      background: radial-gradient(circle, rgba(255,90,31,0.25) 0%, rgba(255,140,0,0.15) 40%, transparent 70%);
+      animation: orbPulse 3s ease-in-out infinite;
+    }
+    @keyframes orbPulse { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.1);opacity:1} }
+    .cta-qr-box {
+      position: relative; z-index: 1;
+      width: 160px; height: 160px; background: linear-gradient(135deg, #ff6b35 0%, #ff8c00 50%, #ff5a1f 100%);
+      border-radius: 24px; padding: 20px;
+      box-shadow: 0 0 60px rgba(255,90,31,0.4), 0 20px 60px rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      animation: qrFloat 4s ease-in-out infinite;
+    }
+    @keyframes qrFloat { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-12px) rotate(2deg)} }
+    .cta-qr-svg { width: 110px; height: 110px; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
     .footer-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 800; color: var(--text); text-decoration: none; }
     .footer-logo span { color: var(--accent); font-style: italic; }
     .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
-    .footer-link { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); text-decoration: none; transition: color 0.18s; letter-spacing: 0.05em; }
+    .footer-link { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-dim); text-decoration: none; transition: color 0.18s; letter-spacing: 0.05em; }
     .footer-link:hover { color: var(--accent); }
-    .footer-copy { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); }
+    .footer-copy { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); }
+
     #errorMsg { font-family: var(--font-mono); font-size: 0.75rem; color: #ef4444; margin-top: 8px; display: none; }
-    @media(max-width: 900px) {
+
+    /* ── RESPONSIVE ── */
+    @media(max-width: 1024px) {
+      .hero { grid-template-columns: 1fr; padding: 120px 32px 60px; }
+      .hero-right { display: none; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .analytics-wrap { grid-template-columns: 1fr; }
+      .analytics-mock { display: none; }
+      .cta-inner { grid-template-columns: 1fr; text-align: center; padding: 48px 32px; }
+      .cta-btns { justify-content: center; }
+      .cta-right { display: none; }
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
       .qr-types-grid { grid-template-columns: repeat(3, 1fr); }
       .qr-type-card.row2-start { grid-column: auto; }
     }
     @media(max-width: 768px) {
-      nav { padding: 12px 16px; }
+      nav { padding: 12px 20px; }
       .nav-links .nav-link:not(.nav-cta) { display: none; }
-      .nav-cta { padding: 6px 10px; font-size: 0.68rem; white-space: nowrap; max-width: 140px; text-align: center; }
-      .nav-logo { font-size: 1rem; }
-      .hero { padding: 100px 20px 60px; }
-      .wizard-steps { overflow-x: hidden; flex-direction: column; align-items: flex-start; gap: 8px; }
-      .wizard-step { flex-direction: row; align-items: center; }
-      .wizard-step-label { font-size: 0.75rem; }
-      .hero-stats { gap: 24px; }
       .section-wrap { padding: 0 20px; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-stats { gap: 20px; }
+      .hero-stat-num { font-size: 1.4rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .how-steps { grid-template-columns: repeat(2, 1fr); }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 380px; }
+      .qr-types-grid { grid-template-columns: repeat(2, 1fr); }
       .wizard-form { padding: 24px 20px; }
       .form-row { flex-direction: column; }
-      footer { flex-direction: column; align-items: flex-start; }
-      .cta-inner { padding: 40px 24px; }
-      .qr-types-grid { grid-template-columns: repeat(2, 1fr); }
-      .qr-type-card.row2-start { grid-column: auto; }
+      footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
+      trusted-section { padding: 20px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- NAV -->
   <nav>
     <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
     <div class="nav-links">
-      <a href="#features" class="nav-link">Features</a>
+      <a href="#" class="nav-link has-arrow">Product</a>
+      <a href="#" class="nav-link has-arrow">Solutions</a>
+      <a href="#" class="nav-link has-arrow">Templates</a>
       <a href="#pricing" class="nav-link">Pricing</a>
-      <a href="#faq" class="nav-link">FAQ</a>
-      <a href="login.html" class="nav-link" id="nav-auth-link">Login</a>
-      <a href="login.html" class="nav-cta" id="nav-cta-btn">Get Started Free →</a>
+      <a href="#" class="nav-link has-arrow">Resources</a>
+      <a href="login.html" class="nav-link" id="nav-auth-link">Log in</a>
+      <a href="login.html" class="nav-cta" id="nav-cta-btn">Get started free</a>
     </div>
   </nav>
 
-  <section class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-badge">Now with AI-powered landing pages</div>
-    <h1>QR codes that<br/><em>engage & convert</em></h1>
-    <p>Generate smart QR codes in seconds. Add an AI landing page, capture subscribers, and send push notifications — all from one dashboard.</p>
-    <div class="hero-btns">
-      <a href="login.html" class="btn-primary">Start for free →</a>
-      <a href="#how-it-works" class="btn-secondary">See how it works</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <div class="hero-stat-num">10K<span>+</span></div>
-        <div class="hero-stat-label">QR Codes Generated</div>
+  <!-- HERO -->
+  <div class="hero-bg-glow"></div>
+  <div style="max-width:1200px;margin:0 auto;position:relative">
+    <section class="hero">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <div class="hero-badge-dot"></div>
+          AI POWERED QR PLATFORM
+        </div>
+        <h1>Turn every<br/>QR code into an<br/><em>engaging experience.</em></h1>
+        <p>Create beautiful QR codes, optimised landing pages and marketing campaigns in seconds with AI.</p>
+        <div class="hero-btns">
+          <a href="login.html" class="btn-primary">Start creating for free →</a>
+          <a href="#how-it-works" class="btn-secondary">▶ Watch demo</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-num"><span style="font-size:0.9em">👥</span> 10K<span>+</span></div>
+            <div class="hero-stat-label">Businesses</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num"><span style="font-size:0.9em">★</span> 98<span>%</span></div>
+            <div class="hero-stat-label">Satisfaction rate</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num"><span style="font-size:0.9em">⚡</span> 3<span>x</span></div>
+            <div class="hero-stat-label">More engagement</div>
+          </div>
+        </div>
       </div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">98<span>%</span></div>
-        <div class="hero-stat-label">Uptime Guaranteed</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-num">3<span>x</span></div>
-        <div class="hero-stat-label">More Engagement</div>
-      </div>
-    </div>
-  </section>
 
+      <!-- HERO RIGHT: product mockup -->
+      <div class="hero-right">
+        <div class="hero-mockup-top">
+          <div class="mockup-prompt-label">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 1l1.8 5.5H15l-4.6 3.4 1.8 5.5L8 13l-4.2 2.4 1.8-5.5L1 6.5h5.2L8 1z" fill="#ff5a1f"/></svg>
+            AI Prompt
+          </div>
+          <div class="mockup-prompt-box">Create a modern restaurant promo flyer with 20% off and a QR code to view our menu.</div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <button class="mockup-generate-btn">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.4 4.2H12l-3.7 2.7 1.4 4.2L6 9.8l-3.7 2.1 1.4-4.2L0 5.2h4.6L6 1z" fill="#fff"/></svg>
+              Generate →
+            </button>
+          </div>
+
+          <!-- Restaurant result card -->
+          <div style="margin-top:14px">
+            <div class="mockup-result-card">
+              <div class="mockup-card-left">
+                <div class="mockup-restaurant-name">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1l1 3h3L6.5 6l1 3L5 7.5 2.5 9l1-3L1 4h3L5 1z" fill="rgba(255,255,255,0.3)"/></svg>
+                  ITALIANO
+                </div>
+                <div class="mockup-discount">20% OFF</div>
+                <div class="mockup-discount-sub">YOUR NEXT ORDER</div>
+                <div class="mockup-scan-label">Scan to view our menu</div>
+              </div>
+              <div>
+                <div class="mockup-qr-placeholder">
+                  <svg class="mockup-qr-placeholder svg" viewBox="0 0 44 44" fill="none">
+                    <rect x="2" y="2" width="16" height="16" rx="2" stroke="#111" stroke-width="2"/>
+                    <rect x="6" y="6" width="8" height="8" fill="#111"/>
+                    <rect x="26" y="2" width="16" height="16" rx="2" stroke="#111" stroke-width="2"/>
+                    <rect x="30" y="6" width="8" height="8" fill="#111"/>
+                    <rect x="2" y="26" width="16" height="16" rx="2" stroke="#111" stroke-width="2"/>
+                    <rect x="6" y="30" width="8" height="8" fill="#111"/>
+                    <rect x="26" y="26" width="4" height="4" fill="#111"/>
+                    <rect x="32" y="26" width="4" height="4" fill="#111"/>
+                    <rect x="26" y="32" width="4" height="4" fill="#111"/>
+                    <rect x="38" y="32" width="4" height="4" fill="#111"/>
+                    <rect x="32" y="38" width="4" height="4" fill="#111"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom action bar -->
+        <div class="hero-mockup-bottom">
+          <div class="mockup-action active">
+            <div class="mockup-action-icon">✦</div>
+            AI Generate
+          </div>
+          <div class="mockup-action">
+            <div class="mockup-action-icon">✏️</div>
+            Customise
+          </div>
+          <div class="mockup-action">
+            <div class="mockup-action-icon">⬡</div>
+            QR Code
+          </div>
+          <div class="mockup-action">
+            <div class="mockup-action-icon">📊</div>
+            Analytics
+          </div>
+          <div class="mockup-action">
+            <div class="mockup-action-icon">↗</div>
+            Share
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- TRUSTED BY -->
+  <div class="trusted-section">
+    <div class="trusted-inner">
+      <div class="trusted-label">Trusted by 10,000+ businesses worldwide</div>
+      <div class="trusted-logos">
+        <div class="trusted-logo">amazon</div>
+        <div class="trusted-logo">shopify</div>
+        <div class="trusted-logo">Spotify</div>
+        <div class="trusted-logo">Google</div>
+        <div class="trusted-logo">airbnb</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR TYPES -->
   <section class="qr-types-section" id="create">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">What do you want to create?</div>
-        <h2 class="section-title">Choose your <em>QR type</em></h2>
-        <p class="section-sub">From simple links to full AI-powered business pages — we've got every format covered.</p>
+        <div class="section-badge">Built for every use case</div>
+        <h2 class="section-title">Choose your <em>QR solution</em></h2>
+        <p class="section-sub">Powerful QR codes for every industry and goal</p>
       </div>
       <div class="qr-types-grid">
-        <a href="#generator" class="qr-type-card featured" onclick="setType('ai-business')">
-          <div class="qr-type-icon">🤖</div>
-          <div class="qr-type-name">AI Business</div>
-          <div class="qr-type-desc">AI landing page + subscribers</div>
-          <div class="qr-type-badge">Popular</div>
+        <a href="#generator" class="qr-type-card featured" onclick="setType('restaurant')">
+          <div class="qr-type-icon">🍽</div>
+          <div class="qr-type-name">Restaurant</div>
+          <div class="qr-type-desc">Digital menus, reviews & more</div>
         </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('website')">
-          <div class="qr-type-icon">🌐</div>
-          <div class="qr-type-name">Website</div>
-          <div class="qr-type-desc">Link to any webpage</div>
+        <a href="#generator" class="qr-type-card" onclick="setType('events')">
+          <div class="qr-type-icon">🎵</div>
+          <div class="qr-type-name">Events</div>
+          <div class="qr-type-desc">Tickets, RSVPs & check-ins</div>
         </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('vcard')">
-          <div class="qr-type-icon">💳</div>
-          <div class="qr-type-name">vCard</div>
-          <div class="qr-type-desc">Digital business card</div>
+        <a href="#generator" class="qr-type-card" onclick="setType('business')">
+          <div class="qr-type-icon">💼</div>
+          <div class="qr-type-name">Business</div>
+          <div class="qr-type-desc">Contact, vCards & presentations</div>
         </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('pdf')">
-          <div class="qr-type-icon">📄</div>
-          <div class="qr-type-name">PDF / Menu</div>
-          <div class="qr-type-desc">Share documents instantly</div>
+        <a href="#generator" class="qr-type-card" onclick="setType('marketing')">
+          <div class="qr-type-icon">📣</div>
+          <div class="qr-type-name">Marketing</div>
+          <div class="qr-type-desc">Campaigns, promotions</div>
         </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('app')">
-          <div class="qr-type-icon">📱</div>
-          <div class="qr-type-name">App Store</div>
-          <div class="qr-type-desc">iOS & Android smart link</div>
-        </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('maps')">
-          <div class="qr-type-icon">📍</div>
-          <div class="qr-type-name">Location</div>
-          <div class="qr-type-desc">Google Maps directions</div>
-        </a>
-        <a href="#generator" class="qr-type-card row2-start" onclick="setType('whatsapp')">
-          <div class="qr-type-icon">💬</div>
-          <div class="qr-type-name">WhatsApp</div>
-          <div class="qr-type-desc">Start a conversation</div>
+        <a href="#generator" class="qr-type-card" onclick="setType('social')">
+          <div class="qr-type-icon">👥</div>
+          <div class="qr-type-name">Social</div>
+          <div class="qr-type-desc">Link in bio, followers</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('wifi')">
           <div class="qr-type-icon">📶</div>
           <div class="qr-type-name">WiFi</div>
-          <div class="qr-type-desc">Share network access</div>
-        </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('social')">
-          <div class="qr-type-icon">📸</div>
-          <div class="qr-type-name">Social Media</div>
-          <div class="qr-type-desc">Instagram, TikTok & more</div>
-        </a>
-        <a href="#generator" class="qr-type-card" onclick="setType('email')">
-          <div class="qr-type-icon">📧</div>
-          <div class="qr-type-name">Email</div>
-          <div class="qr-type-desc">Pre-filled email composer</div>
+          <div class="qr-type-desc">Instant WiFi access</div>
         </a>
       </div>
     </div>
   </section>
 
+  <!-- EDITOR PREVIEW SECTION -->
+  <section class="editor-section">
+    <div class="section-wrap">
+      <div class="editor-preview-wrap">
+        <div class="editor-preview-left">
+          <div class="section-header">
+            <div class="section-badge">AI QR CODE GENERATOR</div>
+            <h2 class="section-title">Create. Customise.<br/><em>Convert.</em></h2>
+          </div>
+          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:24px;line-height:1.7">
+            Generate beautiful QR codes and landing pages in seconds with the power of AI.
+          </p>
+          <ul class="editor-checklist">
+            <li>AI generates content &amp; design</li>
+            <li>Fully customisable to your brand</li>
+            <li>Dynamic QR codes with analytics</li>
+            <li>Share anywhere, track everything</li>
+          </ul>
+          <a href="login.html" class="btn-primary" style="display:inline-flex">Generate your QR code →</a>
+        </div>
+
+        <div class="editor-preview-right">
+          <!-- Editor mock -->
+          <div class="editor-mock">
+            <div class="editor-mock-topbar">
+              <div class="em-dots">
+                <div class="em-dot"></div>
+                <div class="em-dot"></div>
+                <div class="em-dot"></div>
+              </div>
+              <div class="em-topbar-tabs">
+                <div class="em-tab">Templates</div>
+                <div class="em-tab active">Elements</div>
+                <div class="em-tab">Text</div>
+                <div class="em-tab">Images</div>
+                <div class="em-tab">Background</div>
+              </div>
+            </div>
+            <div class="editor-mock-body">
+              <div class="em-sidebar">
+                <div class="em-tool active">⊞</div>
+                <div class="em-tool">T</div>
+                <div class="em-tool">🖼</div>
+                <div class="em-tool">⬡</div>
+                <div class="em-tool">🎨</div>
+              </div>
+              <div class="em-panel">
+                <div class="em-panel-label">Templates</div>
+                <div class="em-tmpl-grid">
+                  <div class="em-tmpl"><div class="em-tmpl-bar"></div><div class="em-tmpl-bar2"></div></div>
+                  <div class="em-tmpl"><div class="em-tmpl-bar" style="background:rgba(255,90,31,0.5)"></div><div class="em-tmpl-bar2"></div></div>
+                  <div class="em-tmpl"><div class="em-tmpl-bar"></div><div class="em-tmpl-bar2"></div></div>
+                  <div class="em-tmpl"><div class="em-tmpl-bar"></div><div class="em-tmpl-bar2"></div></div>
+                </div>
+              </div>
+              <div class="em-canvas-area">
+                <div class="em-canvas-bg-dots"></div>
+                <div class="em-canvas-page">
+                  <div class="em-canvas-page-inner">
+                    <div class="em-page-block" style="background:var(--accent);width:70%;height:6px"></div>
+                    <div class="em-page-block accent"></div>
+                    <div class="em-page-block sm"></div>
+                    <div class="em-page-block sm" style="width:40%"></div>
+                    <div class="em-page-qr">
+                      <div class="em-qr-cell"></div><div class="em-qr-cell"></div><div class="em-qr-cell"></div>
+                      <div class="em-qr-cell"></div><div class="em-qr-cell empty"></div><div class="em-qr-cell"></div>
+                      <div class="em-qr-cell"></div><div class="em-qr-cell"></div><div class="em-qr-cell"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="em-right-panel">
+                <div class="em-panel-label">Properties</div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+                  <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;width:80%"></div>
+                  <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;width:60%"></div>
+                  <div style="height:20px;background:rgba(255,90,31,0.1);border-radius:4px;border:1px solid rgba(255,90,31,0.2);margin-top:6px"></div>
+                  <div style="height:20px;background:rgba(255,255,255,0.04);border-radius:4px;border:1px solid var(--border)"></div>
+                  <div style="height:20px;background:rgba(255,255,255,0.04);border-radius:4px;border:1px solid var(--border)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating phone -->
+          <div class="phone-mockup">
+            <div class="phone-mockup-screen">
+              <div class="phone-discount-text">SUMMER<br/>SALE</div>
+              <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:var(--accent);line-height:1">UP TO<br/>30%</div>
+              <div class="phone-discount-sub">OFF</div>
+              <div class="phone-qr-box"></div>
+              <div class="phone-foot">shopnow.com</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section" id="features">
+    <div class="section-wrap">
+      <div class="section-header">
+        <div class="section-badge">Smart Features</div>
+        <h2 class="section-title">Everything you need <em>to grow</em></h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🍽</div>
+          <div class="feature-title">Editable Designs</div>
+          <div class="feature-desc">Use our drag & drop editor to create stunning designs that convert.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">✦</div>
+          <div class="feature-title">AI Content Generation</div>
+          <div class="feature-desc">Let AI write your headlines, descriptions and call-to-actions that get results.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">⬡</div>
+          <div class="feature-title">Dynamic QR Codes</div>
+          <div class="feature-desc">Update content anytime without changing your QR code.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">📊</div>
+          <div class="feature-title">Advanced Analytics</div>
+          <div class="feature-desc">Track scans, locations, devices and user behaviour in real-time.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">📱</div>
+          <div class="feature-title">Custom Landing Pages</div>
+          <div class="feature-desc">Beautiful mobile-optimised pages that turn scans into customers.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">👥</div>
+          <div class="feature-title">Team Collaboration</div>
+          <div class="feature-desc">Work together with your team and manage campaigns easily.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANALYTICS SECTION -->
+  <section class="analytics-section">
+    <div class="section-wrap">
+      <div class="analytics-wrap">
+        <!-- Fake analytics dashboard -->
+        <div class="analytics-mock">
+          <div class="analytics-mock-title">Analytics Overview</div>
+          <div class="analytics-stats-row">
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-val">24,532</div>
+              <div class="analytics-stat-label">Total Scans</div>
+            </div>
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-val">18,921</div>
+              <div class="analytics-stat-label">Unique Visitors</div>
+            </div>
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-val">68.2%</div>
+              <div class="analytics-stat-label">Conversion Rate</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;font-family:var(--font-mono);font-size:0.55rem;color:var(--text-dim)">
+            <span>New York, USA</span>
+          </div>
+          <div class="analytics-chart">
+            <div class="analytics-chart-label">Scans over time</div>
+            <div class="chart-bars">
+              <div class="chart-bar" style="height:30%"></div>
+              <div class="chart-bar" style="height:45%"></div>
+              <div class="chart-bar" style="height:35%"></div>
+              <div class="chart-bar" style="height:60%"></div>
+              <div class="chart-bar" style="height:50%"></div>
+              <div class="chart-bar highlight" style="height:80%"></div>
+              <div class="chart-bar" style="height:70%"></div>
+              <div class="chart-bar" style="height:85%"></div>
+              <div class="chart-bar highlight" style="height:100%"></div>
+              <div class="chart-bar" style="height:75%"></div>
+              <div class="chart-bar" style="height:65%"></div>
+              <div class="chart-bar" style="height:90%"></div>
+            </div>
+          </div>
+          <div class="analytics-bottom-row">
+            <div class="donut-mock">
+              <svg class="donut-svg" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="18" fill="none" stroke="#1a2535" stroke-width="8"/>
+                <circle cx="24" cy="24" r="18" fill="none" stroke="#ff5a1f" stroke-width="8" stroke-dasharray="68 45" stroke-dashoffset="-10" stroke-linecap="round"/>
+                <circle cx="24" cy="24" r="18" fill="none" stroke="#3b6fbd" stroke-width="8" stroke-dasharray="30 83" stroke-dashoffset="58" stroke-linecap="round"/>
+                <circle cx="24" cy="24" r="18" fill="none" stroke="#2d8c5a" stroke-width="8" stroke-dasharray="15 98" stroke-dashoffset="88" stroke-linecap="round"/>
+              </svg>
+              <div class="donut-legend">
+                <div class="donut-leg-item"><div class="donut-dot" style="background:#ff5a1f"></div>Mobile</div>
+                <div class="donut-leg-item"><div class="donut-dot" style="background:#3b6fbd"></div>Desktop</div>
+                <div class="donut-leg-item"><div class="donut-dot" style="background:#2d8c5a"></div>Tablet</div>
+              </div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+              <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--text-dim);margin-bottom:8px">TOP LOCATIONS</div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.6rem;color:var(--text-mid)"><span>New York</span><span style="color:var(--accent)">42%</span></div>
+                <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.6rem;color:var(--text-mid)"><span>London</span><span>28%</span></div>
+                <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.6rem;color:var(--text-mid)"><span>Sydney</span><span>18%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-right">
+          <div class="section-header" style="text-align:left;margin-bottom:28px">
+            <div class="section-badge">Real-time analytics</div>
+            <h2 class="section-title">Know your audience.<br/><em>Grow your business.</em></h2>
+          </div>
+          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:28px;line-height:1.7">
+            Make data-driven decisions with powerful insights from every scan.
+          </p>
+          <ul class="analytics-checklist">
+            <li><span class="analytics-check">●</span> Real-time scan tracking</li>
+            <li><span class="analytics-check">●</span> Location &amp; device analytics</li>
+            <li><span class="analytics-check">●</span> UTM &amp; campaign tracking</li>
+            <li><span class="analytics-check">●</span> Export reports anytime</li>
+          </ul>
+          <a href="login.html" class="btn-primary" style="display:inline-flex">See analytics in action →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section" id="how-it-works">
+    <div class="section-wrap">
+      <div class="section-header">
+        <div class="section-badge">How it works</div>
+        <h2 class="section-title">Up and running in <em>3 steps</em></h2>
+      </div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-num">1</div>
+          <div class="how-step-title">Create your QR</div>
+          <div class="how-step-desc">Enter your URL and business name. We generate a smart QR code and AI landing page in seconds.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">2</div>
+          <div class="how-step-title">Print &amp; share</div>
+          <div class="how-step-desc">Download your QR and put it anywhere — menus, windows, flyers, packaging, receipts.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">3</div>
+          <div class="how-step-title">Engage customers</div>
+          <div class="how-step-desc">Customers scan, subscribe, and you send them AI-generated offers. Watch your engagement grow.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">4</div>
+          <div class="how-step-title">Track everything</div>
+          <div class="how-step-desc">Monitor scans, subscribers and campaign performance from your dashboard in real time.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GENERATOR -->
   <section class="wizard-section" id="generator">
     <div class="section-wrap">
       <div class="section-header">
@@ -531,20 +1210,11 @@
         <p class="section-sub">Try it free — no account needed for a basic QR. Sign up free to unlock AI features.</p>
       </div>
       <div class="wizard-steps">
-        <div class="wizard-step active">
-          <div class="wizard-step-num">1</div>
-          <span>Enter details</span>
-        </div>
+        <div class="wizard-step active"><div class="wizard-step-num">1</div><span>Enter details</span></div>
         <div class="wizard-step-connector"></div>
-        <div class="wizard-step active">
-          <div class="wizard-step-num">2</div>
-          <span>Customise</span>
-        </div>
+        <div class="wizard-step active"><div class="wizard-step-num">2</div><span>Customise</span></div>
         <div class="wizard-step-connector"></div>
-        <div class="wizard-step">
-          <div class="wizard-step-num">3</div>
-          <span>Download & share</span>
-        </div>
+        <div class="wizard-step"><div class="wizard-step-num">3</div><span>Download &amp; share</span></div>
       </div>
       <div class="wizard-form">
         <div class="form-group">
@@ -597,79 +1267,7 @@
     </div>
   </section>
 
-  <section class="features-section" id="features">
-    <div class="section-wrap">
-      <div class="section-header">
-        <div class="section-badge">Why QRAivy</div>
-        <h2 class="section-title">More than a <em>QR generator</em></h2>
-        <p class="section-sub">Every QR code becomes a complete customer engagement tool.</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon-wrap">🤖</div>
-          <div class="feature-title">AI Landing Page</div>
-          <div class="feature-desc">When customers scan your QR they land on a branded AI page that chats with them, answers questions and collects leads automatically.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">🔔</div>
-          <div class="feature-title">Push Notifications</div>
-          <div class="feature-desc">Send special offers and updates directly to your subscribers' devices. Real-time engagement without email or social media.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">👥</div>
-          <div class="feature-title">Subscriber Capture</div>
-          <div class="feature-desc">Every scan is an opportunity to grow your audience. Customers subscribe with one tap and you own the relationship.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">📊</div>
-          <div class="feature-title">Real-time Analytics</div>
-          <div class="feature-desc">See exactly when, where and how your QR codes are being scanned. Device type, location, time of day — all tracked.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">✨</div>
-          <div class="feature-title">AI-Generated Specials</div>
-          <div class="feature-desc">One click to generate a compelling special offer with AI and send it to all your subscribers instantly.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">⚡</div>
-          <div class="feature-title">Smart Routing</div>
-          <div class="feature-desc">QR codes detect device type and route customers to the optimal experience — mobile users get mobile, desktop gets desktop.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="how-section" id="how-it-works">
-    <div class="section-wrap">
-      <div class="section-header">
-        <div class="section-badge">How it works</div>
-        <h2 class="section-title">Up and running in <em>3 steps</em></h2>
-      </div>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="how-step-num">1</div>
-          <div class="how-step-title">Create your QR</div>
-          <div class="how-step-desc">Enter your URL and business name. We generate a smart QR code and AI landing page in seconds.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">2</div>
-          <div class="how-step-title">Print & share</div>
-          <div class="how-step-desc">Download your QR and put it anywhere — menus, windows, flyers, packaging, receipts.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">3</div>
-          <div class="how-step-title">Engage customers</div>
-          <div class="how-step-desc">Customers scan, subscribe, and you send them AI-generated offers. Watch your engagement grow.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">4</div>
-          <div class="how-step-title">Track everything</div>
-          <div class="how-step-desc">Monitor scans, subscribers and campaign performance from your dashboard in real time.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
+  <!-- PRICING -->
   <section class="pricing-section" id="pricing">
     <div class="section-wrap">
       <div class="section-header">
@@ -677,8 +1275,6 @@
         <h2 class="section-title">Start free, <em>scale when ready</em></h2>
         <p class="section-sub">No credit card required to get started. Upgrade when you need more.</p>
       </div>
-
-      <!-- Billing toggle -->
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:36px;">
         <span id="label-monthly" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-mid);">Monthly</span>
         <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
@@ -688,14 +1284,11 @@
         </label>
         <span id="label-annual" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-dim);">Annual <span style="background:var(--accent);color:#fff;font-size:0.6rem;padding:2px 7px;border-radius:20px;margin-left:4px;letter-spacing:0.05em;">SAVE 20%</span></span>
       </div>
-
-      <div class="pricing-grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));">
-
-        <!-- FREE -->
+      <div class="pricing-grid">
         <div class="pricing-card">
           <div class="pricing-plan">Free</div>
           <div class="pricing-price" id="price-free">&euro;0<span>/mo</span></div>
-          <div class="pricing-desc">The perfect starting point. No credit card required.</div>
+          <div class="pricing-desc">The perfect starting point.</div>
           <ul class="pricing-features">
             <li>Unlimited basic QR codes</li>
             <li>Download &amp; share</li>
@@ -706,12 +1299,10 @@
           </ul>
           <a href="login.html" class="pricing-btn outline">Get started free</a>
         </div>
-
-        <!-- STARTER -->
         <div class="pricing-card">
           <div class="pricing-plan">Starter</div>
           <div class="pricing-price" id="price-starter">&euro;9<span id="starter-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-starter">For businesses ready to engage customers with AI-powered QR pages.</div>
+          <div class="pricing-desc" id="desc-starter">For businesses ready to engage with AI-powered QR pages.</div>
           <ul class="pricing-features">
             <li>Unlimited basic QR codes</li>
             <li>10 AI landing pages</li>
@@ -722,13 +1313,11 @@
           </ul>
           <a href="pricing.html" class="pricing-btn outline" id="btn-starter">Upgrade to Starter &rarr;</a>
         </div>
-
-        <!-- PRO -->
         <div class="pricing-card featured">
           <div class="pricing-popular">Most Popular</div>
           <div class="pricing-plan">Pro</div>
           <div class="pricing-price" id="price-pro">&euro;29<span id="pro-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-pro">Unlimited AI pages and dynamic QR codes that update without reprinting.</div>
+          <div class="pricing-desc" id="desc-pro">Unlimited AI pages and dynamic QR codes.</div>
           <ul class="pricing-features">
             <li>Unlimited basic QR codes</li>
             <li>Unlimited AI landing pages</li>
@@ -739,13 +1328,11 @@
           </ul>
           <a href="pricing.html" class="pricing-btn filled" id="btn-pro">Upgrade to Pro &rarr;</a>
         </div>
-
-        <!-- BUSINESS -->
         <div class="pricing-card">
           <div class="pricing-popular" style="background:var(--text-mid);color:#fff;">Full Platform</div>
           <div class="pricing-plan">Business</div>
           <div class="pricing-price" id="price-business">&euro;49<span id="business-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-business">Apple &amp; Google Wallet passes. The complete digital identity platform.</div>
+          <div class="pricing-desc" id="desc-business">Apple &amp; Google Wallet. The complete platform.</div>
           <ul class="pricing-features">
             <li>Everything in Pro</li>
             <li>Apple Wallet passes</li>
@@ -756,7 +1343,6 @@
           </ul>
           <a href="pricing.html" class="pricing-btn outline" id="btn-business">Upgrade to Business &rarr;</a>
         </div>
-
       </div>
     </div>
   </section>
@@ -764,24 +1350,18 @@
   <script>
   (function(){
     var isAnnual = false;
-    var prices = {
-      starter: { monthly: 9, annual: 7 },
-      pro:     { monthly: 29, annual: 23 },
-      business:{ monthly: 49, annual: 39 }
-    };
+    var prices = { starter:{monthly:9,annual:7}, pro:{monthly:29,annual:23}, business:{monthly:49,annual:39} };
     var toggle = document.getElementById('billing-toggle');
     var track  = document.getElementById('toggle-track');
     var thumb  = document.getElementById('toggle-thumb');
     var lm = document.getElementById('label-monthly');
     var la = document.getElementById('label-annual');
-
     function update() {
       isAnnual = toggle.checked;
       track.style.background = isAnnual ? 'var(--accent)' : 'var(--border2)';
-      thumb.style.transform   = isAnnual ? 'translateX(20px)' : 'translateX(0)';
+      thumb.style.transform  = isAnnual ? 'translateX(20px)' : 'translateX(0)';
       lm.style.color = isAnnual ? 'var(--text-dim)' : 'var(--text-mid)';
       la.style.color = isAnnual ? 'var(--text-mid)' : 'var(--text-dim)';
-
       ['starter','pro','business'].forEach(function(plan){
         var price = isAnnual ? prices[plan].annual : prices[plan].monthly;
         var el = document.getElementById('price-' + plan);
@@ -790,12 +1370,12 @@
         if (period) period.textContent = isAnnual ? '/mo, billed annually' : '/mo';
       });
     }
-
     toggle.addEventListener('change', update);
     update();
   })();
   </script>
 
+  <!-- TESTIMONIALS -->
   <section class="testimonials-section">
     <div class="section-wrap">
       <div class="section-header">
@@ -808,10 +1388,7 @@
           <div class="testimonial-text">"We put QRAivy codes on every table. Our subscribers grew by 200 in the first month and the AI specials get incredible open rates."</div>
           <div class="testimonial-author">
             <div class="testimonial-avatar">JM</div>
-            <div>
-              <div class="testimonial-name">James Mitchell</div>
-              <div class="testimonial-role">Owner, The Anchor Pub</div>
-            </div>
+            <div><div class="testimonial-name">James Mitchell</div><div class="testimonial-role">Owner, The Anchor Pub</div></div>
           </div>
         </div>
         <div class="testimonial-card">
@@ -819,10 +1396,7 @@
           <div class="testimonial-text">"The AI landing page blew our customers away. They scan the QR on our packaging and get a full branded experience. Incredible for a small business."</div>
           <div class="testimonial-author">
             <div class="testimonial-avatar">SR</div>
-            <div>
-              <div class="testimonial-name">Sarah Reynolds</div>
-              <div class="testimonial-role">Founder, Bloom Bakery</div>
-            </div>
+            <div><div class="testimonial-name">Sarah Reynolds</div><div class="testimonial-role">Founder, Bloom Bakery</div></div>
           </div>
         </div>
         <div class="testimonial-card">
@@ -830,16 +1404,14 @@
           <div class="testimonial-text">"I use it for all my clients now. The analytics alone are worth it — I can show them exactly how their QR campaigns are performing."</div>
           <div class="testimonial-author">
             <div class="testimonial-avatar">DK</div>
-            <div>
-              <div class="testimonial-name">David Kim</div>
-              <div class="testimonial-role">Digital Marketing Agency</div>
-            </div>
+            <div><div class="testimonial-name">David Kim</div><div class="testimonial-role">Digital Marketing Agency</div></div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- FAQ -->
   <section class="faq-section" id="faq">
     <div class="section-wrap">
       <div class="section-header">
@@ -847,44 +1419,63 @@
         <h2 class="section-title">Frequently asked <em>questions</em></h2>
       </div>
       <div class="faq-list">
-        <div class="faq-item">
-          <button class="faq-question">What is QRAivy? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">QRAivy is an AI-powered QR code platform. Unlike basic QR generators, every QRAivy code comes with an AI landing page, subscriber capture, push notifications and real-time analytics.</div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-question">Do I need to install anything? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">No. QRAivy is fully web-based. Sign up, create your QR code and you're live in under a minute — nothing to install.</div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-question">What happens to free QR codes? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">Free plan QR codes are basic static codes with no AI features. They never expire but don't include the AI landing page, analytics or push notifications. Upgrade to Starter or Pro to unlock AI features.</div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-question">Can I change the URL after generating? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">Yes, on paid plans you can update the destination URL of any QR code from your dashboard without reprinting the code.</div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-question">How do push notifications work? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">When customers scan your QR and visit your AI landing page, they can subscribe to receive push notifications. You can then send them offers and updates directly from your dashboard.</div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-question">Can I cancel anytime? <div class="faq-icon">+</div></button>
-          <div class="faq-answer">Yes, you can cancel your subscription at any time. Your QR codes will continue to work until the end of your billing period.</div>
-        </div>
+        <div class="faq-item"><button class="faq-question">What is QRAivy? <div class="faq-icon">+</div></button><div class="faq-answer">QRAivy is an AI-powered QR code platform. Unlike basic QR generators, every QRAivy code comes with an AI landing page, subscriber capture, push notifications and real-time analytics.</div></div>
+        <div class="faq-item"><button class="faq-question">Do I need to install anything? <div class="faq-icon">+</div></button><div class="faq-answer">No. QRAivy is fully web-based. Sign up, create your QR code and you're live in under a minute — nothing to install.</div></div>
+        <div class="faq-item"><button class="faq-question">What happens to free QR codes? <div class="faq-icon">+</div></button><div class="faq-answer">Free plan QR codes are basic static codes with no AI features. They never expire but don't include the AI landing page, analytics or push notifications.</div></div>
+        <div class="faq-item"><button class="faq-question">Can I change the URL after generating? <div class="faq-icon">+</div></button><div class="faq-answer">Yes, on paid plans you can update the destination URL of any QR code from your dashboard without reprinting the code.</div></div>
+        <div class="faq-item"><button class="faq-question">How do push notifications work? <div class="faq-icon">+</div></button><div class="faq-answer">When customers scan your QR and visit your AI landing page, they can subscribe to receive push notifications. You can send them offers and updates directly from your dashboard.</div></div>
+        <div class="faq-item"><button class="faq-question">Can I cancel anytime? <div class="faq-icon">+</div></button><div class="faq-answer">Yes, you can cancel your subscription at any time. Your QR codes will continue to work until the end of your billing period.</div></div>
       </div>
     </div>
   </section>
 
+  <!-- CTA -->
   <section class="cta-section">
     <div class="section-wrap">
       <div class="cta-inner">
-        <h2>Ready to make your QR codes<br/><em>work harder?</em></h2>
-        <p>Join thousands of businesses using QRAivy to engage customers and grow their audience.</p>
-        <a href="login.html" class="btn-primary" style="display:inline-flex">Start for free — no credit card needed →</a>
+        <div class="cta-left">
+          <div class="cta-ready-label">READY TO GET STARTED?</div>
+          <h2>Join thousands of businesses<br/>growing with <em>QRAivy</em></h2>
+          <p>Start for free. No credit card required.</p>
+          <div class="cta-btns">
+            <a href="login.html" class="btn-primary">Get started free →</a>
+            <a href="#pricing" class="btn-secondary">⊙ View pricing</a>
+          </div>
+        </div>
+        <div class="cta-right">
+          <div class="cta-qr-orb">
+            <div class="cta-qr-orb-glow"></div>
+            <div class="cta-qr-box">
+              <svg class="cta-qr-svg" viewBox="0 0 110 110" fill="none">
+                <!-- QR pattern SVG -->
+                <rect x="5" y="5" width="40" height="40" rx="4" fill="rgba(255,255,255,0.9)"/>
+                <rect x="13" y="13" width="24" height="24" fill="rgba(255,255,255,0.3)"/>
+                <rect x="65" y="5" width="40" height="40" rx="4" fill="rgba(255,255,255,0.9)"/>
+                <rect x="73" y="13" width="24" height="24" fill="rgba(255,255,255,0.3)"/>
+                <rect x="5" y="65" width="40" height="40" rx="4" fill="rgba(255,255,255,0.9)"/>
+                <rect x="13" y="73" width="24" height="24" fill="rgba(255,255,255,0.3)"/>
+                <rect x="65" y="65" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="80" y="65" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="95" y="65" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="65" y="80" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="80" y="80" width="10" height="10" rx="1" fill="rgba(255,255,255,0.3)"/>
+                <rect x="95" y="80" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="65" y="95" width="10" height="10" rx="1" fill="rgba(255,255,255,0.3)"/>
+                <rect x="80" y="95" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <rect x="95" y="95" width="10" height="10" rx="1" fill="rgba(255,255,255,0.9)"/>
+                <!-- finder pattern centers -->
+                <rect x="17" y="17" width="16" height="16" rx="2" fill="rgba(255,255,255,0.95)"/>
+                <rect x="77" y="17" width="16" height="16" rx="2" fill="rgba(255,255,255,0.95)"/>
+                <rect x="17" y="77" width="16" height="16" rx="2" fill="rgba(255,255,255,0.95)"/>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
+  <!-- FOOTER -->
   <footer>
     <a href="index.html" class="footer-logo">QR<span>Aivy</span></a>
     <div class="footer-links">
@@ -900,12 +1491,9 @@
   <script>
     const API_BASE = 'https://api.qraivy.com';
     let selectedType = 'website';
-
     function setType(type) {
       selectedType = type;
-      if (type === 'ai-business') {
-        document.getElementById('businessName').placeholder = "e.g. Joe's Coffee Shop — required for AI page";
-      }
+      if (type === 'restaurant') document.getElementById('businessName').placeholder = "e.g. Joe's Coffee Shop — required for AI page";
     }
 
     document.getElementById('generateBtn').addEventListener('click', async () => {
@@ -915,109 +1503,36 @@
       const bgColor = document.getElementById('qrBgColor').value.replace('#', '');
       const size = document.getElementById('qrSize').value;
       const errorEl = document.getElementById('errorMsg');
-
       errorEl.style.display = 'none';
-      if (!url) {
-        errorEl.textContent = 'Please enter a URL.';
-        errorEl.style.display = 'block';
-        return;
-      }
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        errorEl.textContent = 'URL must start with http:// or https://';
-        errorEl.style.display = 'block';
-        return;
-      }
-
+      if (!url) { errorEl.textContent = 'Please enter a URL.'; errorEl.style.display = 'block'; return; }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) { errorEl.textContent = 'URL must start with http:// or https://'; errorEl.style.display = 'block'; return; }
       const btn = document.getElementById('generateBtn');
-      btn.textContent = 'Generating...';
-      btn.disabled = true;
-
+      btn.textContent = 'Generating...'; btn.disabled = true;
       try {
         let headers = { 'Content-Type': 'application/json' };
         if (window.Clerk && window.Clerk.session) {
           const token = await window.Clerk.session.getToken();
           if (token) headers['Authorization'] = `Bearer ${token}`;
         }
-
-        const res = await fetch(`${API_BASE}/qr`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ url, businessName: businessName || null }),
-        });
+        const res = await fetch(`${API_BASE}/qr`, { method:'POST', headers, body: JSON.stringify({ url, businessName: businessName || null }) });
         const data = await res.json();
-
-        if (res.status === 403 && data.upgrade) {
-          errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`;
-          errorEl.style.display = 'block';
-          return;
-        }
-
-        if (!res.ok) {
-          errorEl.textContent = data.error || 'Something went wrong.';
-          errorEl.style.display = 'block';
-          return;
-        }
-
+        if (res.status === 403 && data.upgrade) { errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`; errorEl.style.display = 'block'; return; }
+        if (!res.ok) { errorEl.textContent = data.error || 'Something went wrong.'; errorEl.style.display = 'block'; return; }
         const { redirectUrl } = data;
         const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgColor}`;
-
         document.getElementById('qrImage').src = qrSrc;
         document.getElementById('redirectLink').textContent = redirectUrl;
-
         const result = document.getElementById('qr-result');
         result.classList.add('show');
         document.getElementById('expiryNotice').style.display = businessName ? 'block' : 'none';
-
-        document.getElementById('copyBtn').onclick = async () => {
-          await navigator.clipboard.writeText(redirectUrl);
-          document.getElementById('copyBtn').textContent = '✓ Copied!';
-          setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Link', 2000);
-        };
-
-        document.getElementById('downloadBtn').onclick = () => {
-          const link = document.createElement('a');
-          link.download = 'qraivy-code.png';
-          link.href = qrSrc;
-          link.click();
-        };
-
-        // Demo QR expiry — 1 hour countdown
-        const _expiresAt = Date.now() + 60 * 60 * 1000;
-        let _timerBadge = document.getElementById('qr-demo-timer');
-        if (!_timerBadge) {
-          _timerBadge = document.createElement('div');
-          _timerBadge.id = 'qr-demo-timer';
-          _timerBadge.style.cssText = 'margin:10px auto 0;display:inline-block;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:20px;padding:4px 14px;font-family:monospace;font-size:0.72rem;color:#ff5a1f;letter-spacing:0.04em;text-align:center;';
-          const _result = document.getElementById('result');
-          if (_result) _result.appendChild(_timerBadge);
-        }
-        const _countdown = setInterval(() => {
-          const _rem = _expiresAt - Date.now();
-          if (_rem <= 0) {
-            clearInterval(_countdown);
-            const _img = document.querySelector('#result img');
-            if (_img) { _img.style.filter='blur(8px)'; _img.style.opacity='0.35'; }
-            _timerBadge.textContent = 'DEMO EXPIRED — Sign up free for a permanent QR';
-            _timerBadge.style.cursor = 'pointer';
-            _timerBadge.onclick = () => window.location.href = 'login.html';
-            document.getElementById('downloadBtn').disabled = true;
-            document.getElementById('copyBtn').disabled = true;
-            return;
-          }
-          const _h = Math.floor(_rem/3600000);
-          const _m = Math.floor((_rem%3600000)/60000);
-          const _s = Math.floor((_rem%60000)/1000);
-          _timerBadge.textContent = `DEMO \u2014 expires in ${_h}:${String(_m).padStart(2,'0')}:${String(_s).padStart(2,'0')}`;
-        }, 1000);
-
+        document.getElementById('copyBtn').onclick = async () => { await navigator.clipboard.writeText(redirectUrl); document.getElementById('copyBtn').textContent = '✓ Copied!'; setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Link', 2000); };
+        document.getElementById('downloadBtn').onclick = () => { const link = document.createElement('a'); link.download = 'qraivy-code.png'; link.href = qrSrc; link.click(); };
         result.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } catch (err) {
         errorEl.textContent = 'Could not reach the server. Please try again.';
         errorEl.style.display = 'block';
-        console.error(err);
       } finally {
-        btn.textContent = '⬡ Generate QR Code';
-        btn.disabled = false;
+        btn.textContent = '⬡ Generate QR Code'; btn.disabled = false;
       }
     });
 
@@ -1035,10 +1550,8 @@
       const authLink = document.getElementById('nav-auth-link');
       const ctaBtn = document.getElementById('nav-cta-btn');
       if (window.Clerk.user) {
-        authLink.href = 'dashboard.html';
-        authLink.textContent = 'Dashboard';
-        ctaBtn.href = 'dashboard.html';
-        ctaBtn.textContent = 'Go to Dashboard →';
+        authLink.href = 'dashboard.html'; authLink.textContent = 'Dashboard';
+        ctaBtn.href = 'dashboard.html'; ctaBtn.textContent = 'Go to Dashboard →';
       }
     }
   </script>
@@ -1050,5 +1563,3 @@
   ></script>
 </body>
 </html>
-
-
