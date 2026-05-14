@@ -120,28 +120,6 @@ function showElementProps() {
   } else { noSel.style.display='block'; tp.style.display='none'; ip.style.display='none'; }
 }
 
-const editorActions = {
-  undo() { if (S.store) S.store.history.undo(); },
-  redo() { if (S.store) S.store.history.redo(); },
-  zoomIn()  { applyZoom(S.zoom + 0.1); },
-  zoomOut() { applyZoom(S.zoom - 0.1); },
-  zoomFit() {
-    const area = document.getElementById('canvas-area');
-    const scale = Math.min((area.clientWidth - 80) / S.canvasW, (area.clientHeight - 80) / S.canvasH, 1);
-    applyZoom(scale);
-  },
-  save() {
-    const name = document.getElementById('file-name').value || 'design';
-    if (S.store) localStorage.setItem('qraivy_design_' + name, JSON.stringify(S.store.toJSON()));
-    showToast('Saved: ' + name);
-  },
-  exportPNG() {
-    if (S.store && S.store.toDataURL) { S.store.toDataURL({pixelRatio:2}).then(url => { const a=document.createElement('a'); a.href=url; a.download='qraivy-design.png'; a.click(); }); }
-    else showToast('Select elements first');
-  },
-  exportPDF() { showToast('PDF export via Puppeteer — coming in Step 2'); }
-};
-
 // ── CANVAS ONBOARDING ─────────────────────────────────────────
 function dismissOnboarding() {
   const el = document.getElementById('canvas-onboarding');
