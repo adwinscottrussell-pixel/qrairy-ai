@@ -355,35 +355,39 @@ function buildCustomLayout(prompt, size, style, includeQR) {
 }
 
 function renderAILayout(layout) {
-  // Resize canvas
-  S.canvasW = layout.canvas.width; S.canvasH = layout.canvas.height;
+  // Resize canvas to match layout
+  S.canvasW = layout.canvas.width;
+  S.canvasH = layout.canvas.height;
   const c = document.getElementById('polotno-container');
-  c.style.width = S.canvasW + 'px'; c.style.height = S.canvasH + 'px';
+  if (c) { c.style.width = S.canvasW + 'px'; c.style.height = S.canvasH + 'px'; }
+  document.getElementById('canvas-size-btn').textContent =
+    (layout.name || 'AI Design') + ' · ' + S.canvasW + ' × ' + S.canvasH;
 
   const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com';
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrUrl);
 
-  // Use Polotno if available, else fallback
+  // Use Polotno store if available, otherwise use interactive CE system
   if (S.store) {
     renderTemplateToStore(layout, qrSrc);
   } else {
-    renderTemplateToFallback(layout, qrSrc);
+    // CE system: fully interactive draggable/editable elements
+    renderElementsToCanvas(layout, qrSrc);
   }
 
-  // Animate canvas reveal
+  // Cinematic canvas reveal animation
   const wrapper = document.getElementById('canvas-wrapper');
   if (wrapper) {
     wrapper.style.opacity = '0';
     wrapper.style.transform = 'scale(0.96)';
-    wrapper.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
-    setTimeout(() => {
+    wrapper.style.transition = 'opacity 0.5s ease, transform 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+    setTimeout(function() {
       wrapper.style.opacity = '1';
       wrapper.style.transform = 'scale(1)';
-      setTimeout(() => editorActions.zoomFit(), 300);
-    }, 100);
+      setTimeout(function() { editorActions.zoomFit(); }, 300);
+    }, 80);
   }
 
-  showToast('✦ AI design generated — all elements editable');
+  showToast('✦ AI design ready — click any element to edit');
 }
 
 

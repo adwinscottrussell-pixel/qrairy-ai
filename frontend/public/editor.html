@@ -12,9 +12,23 @@
   <link rel="stylesheet" href="css/canvas.css" />
   <link rel="stylesheet" href="css/modal.css" />
   <link rel="stylesheet" href="css/animations.css" />
+
+<style>
+/* CE Element system styles */
+.ce-el:hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.4) !important; }
+.ce-el[contenteditable="true"]:focus { box-shadow: 0 0 0 2px rgba(255,90,31,0.7) !important; cursor: text !important; }
+.ce-handles { position: absolute; inset: -2px; pointer-events: none; z-index: 999; }
+</style>
 </head>
 <body>
 
+
+<style>
+/* CE Element system styles */
+.ce-el:hover { box-shadow: 0 0 0 1px rgba(255,90,31,0.4) !important; }
+.ce-el[contenteditable="true"]:focus { box-shadow: 0 0 0 2px rgba(255,90,31,0.7) !important; cursor: text !important; }
+.ce-handles { position: absolute; inset: -2px; pointer-events: none; z-index: 999; }
+</style>
 </head>
 <body>
 
@@ -390,6 +404,7 @@
 <!-- JavaScript Modules (order matters) -->
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/canvas-elements.js"></script>
 <script src="js/templates.js"></script>
 <script src="js/panels.js"></script>
 <script src="js/toolbar.js"></script>

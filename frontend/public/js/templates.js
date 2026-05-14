@@ -280,25 +280,8 @@ function renderTemplateToStore(tmpl, qrSrc) {
 }
 
 function renderTemplateToFallback(tmpl, qrSrc) {
-  const c = document.getElementById('polotno-container');
-  c.style.background = tmpl.canvas.background || '#ffffff';
-  c.style.position = 'relative';
-  c.style.overflow = 'hidden';
-
-  // Build HTML representation of the template
-  let innerHTML = '';
-  tmpl.elements.forEach(function(el) {
-    const src = (el.isQR || el.src === '{{QR_URL}}') ? qrSrc : (el.src || '');
-    if (el.type === 'rect') {
-      innerHTML += '<div style="position:absolute;left:' + el.x + 'px;top:' + el.y + 'px;width:' + el.width + 'px;height:' + (el.height||40) + 'px;background:' + (el.fill||'transparent') + ';border-radius:' + (el.cornerRadius||0) + 'px;' + (el.stroke ? 'border:' + (el.strokeWidth||1) + 'px solid ' + el.stroke + ';' : '') + '"></div>';
-    } else if (el.type === 'text') {
-      innerHTML += '<div style="position:absolute;left:' + el.x + 'px;top:' + el.y + 'px;width:' + el.width + 'px;font-size:' + (el.fontSize||16) + 'px;font-weight:' + (el.fontWeight||'normal') + ';color:' + (el.fill||'#000') + ';font-family:' + (el.fontFamily||'Inter') + ',sans-serif;text-align:' + (el.align||'left') + ';line-height:' + (el.lineHeight||1.4) + ';white-space:pre-wrap;">' + (el.text||'') + '</div>';
-    } else if (el.type === 'image') {
-      innerHTML += '<div style="position:absolute;left:' + el.x + 'px;top:' + el.y + 'px;width:' + el.width + 'px;height:' + el.height + 'px;background:#fff;border-radius:4px;overflow:hidden;"><img src="' + src + '" style="width:100%;height:100%;object-fit:cover"></div>';
-    }
-  });
-  c.innerHTML = innerHTML;
-  setTimeout(() => editorActions.zoomFit(), 100);
+  // Use the interactive CE element system for full editability
+  renderElementsToCanvas(tmpl, qrSrc);
 }
 
 // ── LOADING OVERLAY ────────────────────────────────────────────────────────
