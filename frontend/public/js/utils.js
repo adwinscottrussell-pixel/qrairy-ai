@@ -9,3 +9,20 @@ function showToast(msg) {
   t.textContent = msg; t.style.opacity = '1';
   clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = '0', 2500);
 }
+
+
+// ── CANVAS ONBOARDING ─────────────────────────────────────────
+function dismissOnboarding() {
+  const el = document.getElementById('canvas-onboarding');
+  if (el) { el.classList.add('hidden'); setTimeout(() => el.style.display='none', 400); }
+  localStorage.setItem('qraivy_onboarding_dismissed', '1');
+}
+
+function initOnboarding() {
+  if (localStorage.getItem('qraivy_onboarding_dismissed')) {
+    const el = document.getElementById('canvas-onboarding');
+    if (el) el.style.display = 'none';
+  }
+}
+
+

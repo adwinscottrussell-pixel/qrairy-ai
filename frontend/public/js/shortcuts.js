@@ -188,32 +188,6 @@ function triggerAIGenerate() {
 }
 
 // ── CINEMATIC AI GENERATION ENGINE ────────────────────────────
-const GENERATION_STAGES = [
-  { label: 'Analysing your prompt...', duration: 900 },
-  { label: 'Generating layout structure...', duration: 1100 },
-  { label: 'Creating visual hierarchy...', duration: 900 },
-  { label: 'Building QR experience...', duration: 800 },
-  { label: 'Applying brand system...', duration: 700 },
-  { label: 'Rendering editable design...', duration: 600 },
-];
-
-const STYLE_TEMPLATES = {
-  'dark-luxury':    'promo-flyer-dark',
-  'bold-orange':    'promo-flyer-dark',
-  'minimal-white':  'promo-flyer-light',
-  'restaurant-gold':'restaurant-menu',
-  'event-purple':   'event-poster',
-  'editorial':      'promo-flyer-light',
-};
-
-const SIZE_MAP = {
-  'a4': { width:794, height:1123, name:'A4 Poster' },
-  'a5': { width:559, height:794,  name:'A5 Flyer' },
-  'business': { width:680, height:380, name:'Business Card' },
-  'square': { width:1080, height:1080, name:'Instagram' },
-  'dl': { width:374, height:794, name:'DL Flyer' },
-};
-
 function runCinematicGeneration(prompt, size, style, includeQR) {
   // Build the overlay
   let overlay = document.getElementById('_genOverlay');
