@@ -1,12 +1,15 @@
 (function(){
   var FREE_PATH='dashboard.html?create=static';
   var UPGRADE_PATH='pricing.html';
+  var EDITOR_PATH='editor.html';
+
   function key(u){return 'qraivy_onboarded_'+u;}
   function done(u){return !!localStorage.getItem(key(u));}
   function mark(u){localStorage.setItem(key(u),'true');}
 
-  var onboardingState = { qrType: null, selectedUseCase: null };
+  var onboardingState = { qrType:null, selectedUseCase:null, generatedTheme:null, onboardingProgress:0 };
 
+  // ── SVG icons ────────────────────────────────────
   var qrSVG='<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="21" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="2" y="18" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="21" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/></svg>';
   var aiSVG='<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3 L17.5 13 L28 16 L17.5 19 L16 29 L14.5 19 L4 16 L14.5 13 Z" stroke="#FF7A35" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M26 5 L26.8 8 L30 9 L26.8 10 L26 13 L25.2 10 L22 9 L25.2 8 Z" fill="#FF7A35" opacity="0.6"/></svg>';
 
@@ -17,6 +20,7 @@
     return '<li class="qr-compare-item'+(pro?' qr-compare-item-pro':'')+'"><span class="qr-check'+(pro?' qr-check-accent':'')+'">&#10003;</span>'+t+'</li>';
   }
 
+  // ── Use cases ─────────────────────────────────────
   var USE_CASES = [
     { id:'restaurant',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6h4M21 22H3"/></svg>', title:'Restaurant', sub:'Menus, promos, and customer engagement' },
     { id:'bizcard',     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M8 10h.01M2 10h2M16 10h4M8 14h8"/></svg>', title:'Business Card', sub:'Modern networking with smart contact sharing' },
@@ -31,39 +35,42 @@
     { id:'portfolio',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>', title:'Portfolio', sub:'Showcase creative or professional work' },
   ];
 
+  // ── Starter kits ──────────────────────────────────
   var STARTER_KITS = {
-    restaurant: { templateId:'restaurant-menu',   label:'Restaurant Menu',   emoji:'🍽' },
-    bizcard:    { templateId:'business-card',     label:'Business Card',     emoji:'💼' },
-    packaging:  { templateId:'promo-flyer-dark',  label:'Product Promo',     emoji:'📦' },
-    event:      { templateId:'event-poster',      label:'Event Poster',      emoji:'🎵' },
-    social:     { templateId:'instagram-promo',   label:'Social Post',       emoji:'📱' },
-    'ai-support':{ templateId:'promo-flyer-dark', label:'AI Support Page',   emoji:'🤖' },
-    realestate: { templateId:'promo-flyer-light', label:'Property Showcase', emoji:'🏠' },
-    ecommerce:  { templateId:'promo-flyer-dark',  label:'Product Promo',     emoji:'🛒' },
-    leadgen:    { templateId:'qr-landing-promo',  label:'Lead Capture',      emoji:'🎯' },
-    gym:        { templateId:'promo-flyer-dark',  label:'Fitness Promo',     emoji:'💪' },
-    portfolio:  { templateId:'business-card',     label:'Portfolio Card',    emoji:'🎨' },
+    restaurant: { templateId:'restaurant-menu',   label:'Restaurant Menu',   emoji:'🍽', headline:'20% Off Your Next Order',        sub:'Scan to view our full menu & reserve your table',          cta:'View Menu & Book',       sections:['Digital Menu','Reservation CTA','Loyalty Rewards','Chef Specials'],   style:'Dark Gold',    accent:'#c8860a', bg:'#1a1208' },
+    bizcard:    { templateId:'business-card',     label:'Business Card',     emoji:'💼', headline:'Connect Instantly',              sub:'Tap or scan to save contact details & connect on LinkedIn', cta:'Save My Contact',        sections:['Digital vCard','Social Links','Portfolio Preview','Book a Call'],       style:'Minimal Dark', accent:'#ff5a1f', bg:'#0a0a0a' },
+    packaging:  { templateId:'promo-flyer-dark',  label:'Product Packaging', emoji:'📦', headline:'Scan for Product Info',          sub:'Get care instructions, origin story, and exclusive offers', cta:'Explore Product',        sections:['Product Story','Usage Guide','Reorder CTA','Brand Experience'],         style:'Dark Orange',  accent:'#ff5a1f', bg:'#111111' },
+    event:      { templateId:'event-poster',      label:'Event Poster',      emoji:'🎵', headline:'Limited Tickets Available',      sub:'Scan to buy tickets, view lineup and get venue directions', cta:'Get Tickets Now',        sections:['Event Lineup','Ticket CTA','Venue Map','Artist Profiles'],             style:'Dark Purple',  accent:'#7c3aed', bg:'#05082e' },
+    social:     { templateId:'instagram-promo',   label:'Social Post',       emoji:'📱', headline:'Follow for Daily Updates',       sub:'Exclusive content, giveaways and behind-the-scenes',       cta:'Follow Now',             sections:['Link in Bio','Latest Posts','Giveaway CTA','Collab Enquiry'],           style:'Dark Orange',  accent:'#ff5a1f', bg:'#0a0a0a' },
+    'ai-support':{ templateId:'promo-flyer-dark', label:'AI Support Page',   emoji:'🤖', headline:'AI Support, 24/7',              sub:'Scan to chat with our AI assistant — instant answers',      cta:'Chat Now',               sections:['AI Chat Widget','FAQ Section','Escalation CTA','Knowledge Base'],       style:'Dark Tech',    accent:'#ff5a1f', bg:'#080b10' },
+    realestate: { templateId:'promo-flyer-light', label:'Property Showcase', emoji:'🏠', headline:'Schedule a Viewing Today',       sub:'Scan to explore photos, floorplan and book your visit',    cta:'Book a Viewing',         sections:['Property Gallery','Book Viewing','Agent Contact','Mortgage Guide'],     style:'Light Minimal',accent:'#ff5a1f', bg:'#f0ece0' },
+    ecommerce:  { templateId:'promo-flyer-dark',  label:'Product Promo',     emoji:'🛒', headline:'30% Off — Today Only',           sub:'Scan to shop the collection and claim your discount',       cta:'Shop the Collection',    sections:['Product Showcase','Discount Banner','Buy Now CTA','Reviews Section'],  style:'Dark Orange',  accent:'#ff5a1f', bg:'#0a0a0a' },
+    leadgen:    { templateId:'qr-landing-promo',  label:'Lead Capture',      emoji:'🎯', headline:'Claim Your Free Consultation',   sub:'Scan to book your free strategy session',                  cta:'Book Free Session',      sections:['Lead Form','Social Proof','Offer Details','Urgency CTA'],             style:'Dark Minimal', accent:'#ff5a1f', bg:'#111111' },
+    gym:        { templateId:'promo-flyer-dark',  label:'Fitness Promo',     emoji:'💪', headline:'Start Your Transformation',      sub:'Scan to claim your free trial and meet your trainer',       cta:'Claim Free Trial',       sections:['Transformation Gallery','Free Trial CTA','Class Timetable','Trainers'],style:'Dark Orange',  accent:'#ff5a1f', bg:'#0d0d0d' },
+    portfolio:  { templateId:'business-card',     label:'Portfolio Card',    emoji:'🎨', headline:'See My Work',                   sub:'Scan to explore my portfolio and get in touch',             cta:'View Portfolio',         sections:['Featured Work','About Me','Services','Contact CTA'],                   style:'Minimal Dark', accent:'#ff5a1f', bg:'#0a0a0a' },
   };
 
-  var LOADING_MSGS = [
-    'Analyzing your business type\u2026',
-    'Building your smart QR experience\u2026',
-    'Preparing AI layouts\u2026',
-    'Generating conversion-focused sections\u2026',
-    'Personalizing your workspace\u2026',
-    'Almost ready\u2026',
+  var LOADING_STEPS = [
+    { icon:'✓', text:'Analysing your business type' },
+    { icon:'✓', text:'Generating QR experience' },
+    { icon:'✓', text:'Creating landing page structure' },
+    { icon:'✓', text:'Optimising layout' },
+    { icon:'✓', text:'Applying branding' },
+    { icon:'✓', text:'Preparing smart content' },
   ];
 
+  // ── Progress bar ──────────────────────────────────
   function progressBar(step, total) {
-    var pct = Math.round((step/total)*100);
+    var pct=Math.round((step/total)*100);
     var dots='';
     for(var i=1;i<=total;i++) dots+='<span class="qr-prog-dot'+(i<=step?' qr-prog-dot-active':'')+'"></span>';
     return '<div class="qr-progress-wrap">'+
       '<div class="qr-progress-bar-track"><div class="qr-progress-bar-fill" style="width:'+pct+'%"></div></div>'+
       '<div class="qr-progress-meta"><span class="qr-progress-label">Step '+step+' of '+total+'</span><div class="qr-prog-dots">'+dots+'</div></div>'+
-      '</div>';
+    '</div>';
   }
 
+  // ── Step 1 ────────────────────────────────────────
   function welcomeHTML(){
     return '<div class="qr-modal">'+
       '<button class="qr-close-btn" id="qr-close">&#215;</button>'+
@@ -94,6 +101,7 @@
     '</div>';
   }
 
+  // ── Step 2 ────────────────────────────────────────
   function step2HTML(){
     var cards=USE_CASES.map(function(uc,i){
       return '<button class="qr-uc-card" data-uc="'+uc.id+'" style="animation-delay:'+(i*35)+'ms">'+
@@ -118,35 +126,119 @@
     '</div>';
   }
 
+  // ── Step 3: Loading ───────────────────────────────
   function step3HTML(){
-    var kit = STARTER_KITS[onboardingState.selectedUseCase] || { label:'Your Workspace', emoji:'✦' };
+    var kit=STARTER_KITS[onboardingState.selectedUseCase]||{label:'Your Workspace',emoji:'✦'};
+    var steps=LOADING_STEPS.map(function(s,i){
+      return '<div class="qr-ls-step" id="qr-ls-'+i+'">'+
+        '<span class="qr-ls-icon">'+s.icon+'</span>'+
+        '<span class="qr-ls-text">'+s.text+'</span>'+
+      '</div>';
+    }).join('');
     return '<div class="qr-modal qr-step3-modal">'+
       '<div class="qr-s3-particles" id="qr-s3-particles"></div>'+
       '<div class="qr-s3-content">'+
         '<div class="qr-s3-orb-wrap">'+
           '<div class="qr-s3-ring qr-s3-ring-outer"></div>'+
           '<div class="qr-s3-ring qr-s3-ring-inner"></div>'+
-          '<div class="qr-s3-orb">'+
-            '<div class="qr-logo-mark" style="margin:0;width:44px;height:44px;font-size:1.3rem;">Q</div>'+
-          '</div>'+
+          '<div class="qr-s3-orb"><div class="qr-logo-mark" style="margin:0;width:44px;height:44px;font-size:1.3rem;">Q</div></div>'+
         '</div>'+
         '<div class="qr-s3-kit-label">'+kit.emoji+' '+kit.label+'</div>'+
-        '<h2 class="qr-s3-title">Preparing your AI workspace</h2>'+
-        '<p class="qr-s3-msg" id="qr-s3-msg">'+LOADING_MSGS[0]+'</p>'+
+        '<h2 class="qr-s3-title">Generating your AI experience\u2026</h2>'+
+        '<div class="qr-ls-steps" id="qr-ls-steps">'+steps+'</div>'+
         '<div class="qr-s3-prog-wrap">'+
           '<div class="qr-s3-prog-track"><div class="qr-s3-prog-fill" id="qr-s3-fill"></div></div>'+
           '<span class="qr-s3-pct" id="qr-s3-pct">0%</span>'+
-        '</div>'+
-        '<div class="qr-s3-feats">'+
-          '<div class="qr-s3-feat" id="qr-s3-f0"><span class="qr-s3-feat-dot"></span>AI Layout Engine</div>'+
-          '<div class="qr-s3-feat" id="qr-s3-f1"><span class="qr-s3-feat-dot"></span>Smart QR Blocks</div>'+
-          '<div class="qr-s3-feat" id="qr-s3-f2"><span class="qr-s3-feat-dot"></span>CTA Generator</div>'+
-          '<div class="qr-s3-feat" id="qr-s3-f3"><span class="qr-s3-feat-dot"></span>Brand Personalizer</div>'+
         '</div>'+
       '</div>'+
     '</div>';
   }
 
+  // ── Step 4: AI Preview Workspace ──────────────────
+  function step4HTML(){
+    var kit=STARTER_KITS[onboardingState.selectedUseCase]||{label:'Your Design',emoji:'✦',headline:'Your Headline',sub:'Your subtitle here',cta:'Get Started',sections:['Section 1','Section 2','Section 3','Section 4'],style:'Dark',accent:'#ff5a1f',bg:'#111'};
+    onboardingState.generatedTheme=kit.style;
+
+    var qrUrl='https://qraivy.com';
+    var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(qrUrl)+'&color=ffffff&bgcolor='+encodeURIComponent(kit.bg.replace('#',''));
+    var isLight=kit.bg==='#f0ece0';
+    var textColor=isLight?'#0a0a0a':'#f0ece0';
+    var textDim=isLight?'rgba(0,0,0,0.45)':'rgba(240,236,224,0.45)';
+    var surfaceBg=isLight?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)';
+
+    // Left: Flyer preview
+    var flyerHTML='<div class="qr-pw-flyer" style="background:'+kit.bg+';border-color:'+kit.accent+'40">'+
+      // Accent bar
+      '<div style="height:6px;background:'+kit.accent+';border-radius:3px 3px 0 0;margin:-1px -1px 0;"></div>'+
+      // Badge
+      '<div style="display:inline-flex;align-items:center;gap:5px;background:'+kit.accent+'20;border:0.5px solid '+kit.accent+'50;border-radius:99px;padding:3px 10px;font-family:JetBrains Mono,monospace;font-size:0.55rem;color:'+kit.accent+';letter-spacing:0.1em;margin-bottom:10px;">'+kit.emoji+' AI GENERATED</div>'+
+      // Headline
+      '<div style="font-family:Playfair Display,Georgia,serif;font-size:1.3rem;font-weight:700;color:'+textColor+';line-height:1.2;margin-bottom:6px;">'+kit.headline+'</div>'+
+      // Sub
+      '<div style="font-family:JetBrains Mono,monospace;font-size:0.62rem;color:'+textDim+';line-height:1.6;margin-bottom:14px;">'+kit.sub+'</div>'+
+      // Image placeholder
+      '<div style="width:100%;height:90px;background:'+surfaceBg+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:14px;">🖼</div>'+
+      // QR + CTA row
+      '<div style="display:flex;align-items:center;gap:10px;">'+
+        '<img src="'+qrSrc+'" style="width:56px;height:56px;border-radius:6px;background:#fff;" onerror="this.style.background=\'#333\'" />'+
+        '<div>'+
+          '<div style="font-family:JetBrains Mono,monospace;font-size:0.55rem;color:'+textDim+';margin-bottom:4px;">SCAN TO ACCESS</div>'+
+          '<div style="background:'+kit.accent+';color:#fff;font-family:JetBrains Mono,monospace;font-size:0.62rem;font-weight:700;padding:6px 12px;border-radius:6px;letter-spacing:0.05em;">'+kit.cta+' &rarr;</div>'+
+        '</div>'+
+      '</div>'+
+      // AI badge
+      '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid '+surfaceBg+';font-family:JetBrains Mono,monospace;font-size:0.5rem;color:'+textDim+';display:flex;justify-content:space-between;">'+
+        '<span>&#10022; AI Generated</span><span>qraivy.com</span>'+
+      '</div>'+
+    '</div>';
+
+    // Right: AI summary panel
+    var sectionsHTML=kit.sections.map(function(s,i){
+      return '<div class="qr-pw-section-item" style="animation-delay:'+(i*60)+'ms">'+
+        '<span class="qr-pw-section-dot" style="background:'+kit.accent+'"></span>'+
+        '<span>'+s+'</span>'+
+      '</div>';
+    }).join('');
+
+    var summaryHTML='<div class="qr-pw-summary">'+
+      '<div class="qr-pw-summary-header">'+
+        '<div class="qr-pw-ai-badge">&#10022; AI Generated</div>'+
+        '<h3 class="qr-pw-summary-title">Your design is ready</h3>'+
+        '<p class="qr-pw-summary-sub">Tailored for <strong>'+kit.label+'</strong></p>'+
+      '</div>'+
+      '<div class="qr-pw-meta-grid">'+
+        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">USE CASE</span><span class="qr-pw-meta-val">'+kit.label+'</span></div>'+
+        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">DESIGN STYLE</span><span class="qr-pw-meta-val">'+kit.style+'</span></div>'+
+        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">SUGGESTED CTA</span><span class="qr-pw-meta-val" style="color:'+kit.accent+'">'+kit.cta+'</span></div>'+
+        '<div class="qr-pw-meta-item"><span class="qr-pw-meta-label">QR TYPE</span><span class="qr-pw-meta-val">AI Smart QR</span></div>'+
+      '</div>'+
+      '<div class="qr-pw-sections-label">Generated Sections</div>'+
+      '<div class="qr-pw-sections">'+sectionsHTML+'</div>'+
+    '</div>';
+
+    return '<div class="qr-modal qr-preview-modal">'+
+      '<button class="qr-close-btn" id="qr-close">&#215;</button>'+
+      progressBar(3,5)+
+      '<div class="qr-pw-header">'+
+        '<div>'+
+          '<h2 class="qr-pw-title">Your AI workspace is ready</h2>'+
+          '<p class="qr-pw-subtitle">Review your generated design, then open the editor to customise</p>'+
+        '</div>'+
+        '<button class="qr-back-btn" id="qr-back" style="flex-shrink:0">&larr; Back</button>'+
+      '</div>'+
+      '<div class="qr-pw-body">'+
+        flyerHTML+
+        summaryHTML+
+      '</div>'+
+      '<div class="qr-pw-actions">'+
+        '<button class="qr-pw-btn-secondary" id="qr-regenerate">&#8635; Regenerate</button>'+
+        '<button class="qr-pw-btn-secondary" id="qr-publish">&#10003; Publish</button>'+
+        '<button class="qr-pw-btn-primary" id="qr-edit-design">&#9998; Edit Design</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  // ── Upgrade screen ────────────────────────────────
   function upgradeHTML(){
     return '<div class="qr-modal qr-modal-wide"><button class="qr-close-btn" id="qr-close">&#215;</button>'+
       progressBar(3,5)+
@@ -165,13 +257,13 @@
     '</div>';
   }
 
+  // ── Overlay helpers ───────────────────────────────
   function getOrCreateOverlay(){
     var el=document.getElementById('qr-onboarding-overlay');
     if(!el){el=document.createElement('div');el.id='qr-onboarding-overlay';document.body.appendChild(el);}
     el.classList.remove('qr-hidden');el.style.opacity='1';el.style.transition='';
     return el;
   }
-
   function closeModal(u){
     mark(u);
     var el=document.getElementById('qr-onboarding-overlay');
@@ -179,15 +271,13 @@
     el.style.transition='opacity 0.25s';el.style.opacity='0';
     setTimeout(function(){el.classList.add('qr-hidden');},260);
   }
-
-  function slideOut(el, cb){
+  function slideOut(el,cb){
     var modal=el.querySelector('.qr-modal');
     if(!modal){cb();return;}
     modal.style.transition='opacity 0.18s ease,transform 0.18s ease';
     modal.style.opacity='0';modal.style.transform='translateX(-28px) scale(0.98)';
     setTimeout(cb,190);
   }
-
   function render(step,u){
     var el=getOrCreateOverlay();
     var hasPrev=!!el.querySelector('.qr-modal');
@@ -195,130 +285,102 @@
     if(hasPrev){slideOut(el,function(){setHTML(getHTML(step));});}
     else{setHTML(getHTML(step));}
   }
-
   function getHTML(step){
     if(step==='welcome') return welcomeHTML();
     if(step==='step2')   return step2HTML();
     if(step==='step3')   return step3HTML();
+    if(step==='step4')   return step4HTML();
     if(step==='upgrade') return upgradeHTML();
     return welcomeHTML();
   }
 
-  // ── Step 3 animation engine ───────────────────────
+  // ── Step 3 animation ──────────────────────────────
   function runStep3Animation(u){
-    var msgEl  = document.getElementById('qr-s3-msg');
-    var fillEl = document.getElementById('qr-s3-fill');
-    var pctEl  = document.getElementById('qr-s3-pct');
-    var feats  = [0,1,2,3].map(function(i){return document.getElementById('qr-s3-f'+i);});
+    var DURATION=2800;
+    var start=Date.now();
+    var stepIdx=0;
+    var stepCount=LOADING_STEPS.length;
 
     spawnParticles();
 
-    var DURATION = 3800;
-    var start = Date.now();
-    var msgIdx = 0;
-    var featIdx = 0;
-
-    var msgTimer = setInterval(function(){
-      msgIdx = (msgIdx+1) % LOADING_MSGS.length;
-      if(msgEl){
-        msgEl.style.opacity='0';
-        setTimeout(function(){
-          if(msgEl){msgEl.textContent=LOADING_MSGS[msgIdx];msgEl.style.opacity='1';}
-        },150);
-      }
-    }, 620);
-
-    var featTimer = setInterval(function(){
-      if(featIdx<feats.length && feats[featIdx]){
-        feats[featIdx].classList.add('qr-s3-feat-active');
-        featIdx++;
-      }
-    }, DURATION/(feats.length+1));
+    var stepTimer=setInterval(function(){
+      var el=document.getElementById('qr-ls-'+stepIdx);
+      if(el) el.classList.add('qr-ls-step-active');
+      stepIdx++;
+      if(stepIdx>=stepCount) clearInterval(stepTimer);
+    }, DURATION/(stepCount+1));
 
     function tick(){
       var elapsed=Date.now()-start;
-      var raw=elapsed/DURATION;
-      var eased=Math.round(100*(1-Math.pow(1-Math.min(raw,1),2.4)));
+      var eased=Math.round(100*(1-Math.pow(1-Math.min(elapsed/DURATION,1),2.4)));
       eased=Math.min(99,eased);
-      if(fillEl) fillEl.style.width=eased+'%';
-      if(pctEl)  pctEl.textContent=eased+'%';
+      var fill=document.getElementById('qr-s3-fill');
+      var pct=document.getElementById('qr-s3-pct');
+      if(fill) fill.style.width=eased+'%';
+      if(pct)  pct.textContent=eased+'%';
       if(elapsed<DURATION) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
 
     setTimeout(function(){
-      clearInterval(msgTimer);
-      clearInterval(featTimer);
-      feats.forEach(function(f){if(f)f.classList.add('qr-s3-feat-active');});
-      if(fillEl) fillEl.style.width='100%';
-      if(pctEl)  pctEl.textContent='100%';
-      if(msgEl){
-        msgEl.style.opacity='0';
-        setTimeout(function(){
-          if(msgEl){msgEl.textContent='Your workspace is ready \u2726';msgEl.style.opacity='1';msgEl.style.color='#FF7A35';}
-        },150);
+      clearInterval(stepTimer);
+      for(var i=0;i<stepCount;i++){
+        var el=document.getElementById('qr-ls-'+i);
+        if(el) el.classList.add('qr-ls-step-active');
       }
-      setTimeout(function(){launchEditor(u);},650);
+      var fill=document.getElementById('qr-s3-fill');
+      var pct=document.getElementById('qr-s3-pct');
+      if(fill) fill.style.width='100%';
+      if(pct)  pct.textContent='100%';
+      onboardingState.onboardingProgress=3;
+      setTimeout(function(){ render('step4',u); },500);
     }, DURATION);
   }
 
   function spawnParticles(){
     var c=document.getElementById('qr-s3-particles');
-    if(!c) return;
-    for(var i=0;i<20;i++){
+    if(!c)return;
+    for(var i=0;i<16;i++){
       (function(idx){
         setTimeout(function(){
           var p=document.createElement('div');
-          p.className='qr-s3-particle';
-          p.style.cssText=[
-            'position:absolute',
-            'bottom:0',
-            'left:'+(8+Math.random()*84)+'%',
-            'width:'+(2+Math.random()*3)+'px',
-            'height:'+(2+Math.random()*3)+'px',
-            'border-radius:50%',
-            'background:rgba(255,78,0,'+(0.3+Math.random()*0.5)+')',
-            'animation:qrParticleRise '+(2.5+Math.random()*2.5)+'s ease-out '+(Math.random()*1.5)+'s both',
-            'pointer-events:none',
-          ].join(';');
+          p.style.cssText='position:absolute;bottom:0;left:'+(8+Math.random()*84)+'%;width:'+(2+Math.random()*3)+'px;height:'+(2+Math.random()*3)+'px;border-radius:50%;background:rgba(255,78,0,'+(0.3+Math.random()*0.5)+');animation:qrParticleRise '+(2.5+Math.random()*2)+'s ease-out '+(Math.random()*1.2)+'s both;pointer-events:none;';
           c.appendChild(p);
-        }, idx*120);
+        },idx*130);
       })(i);
     }
   }
 
+  // ── Launch editor ─────────────────────────────────
   function launchEditor(u){
-    var el=getOrCreateOverlay();
-    el.style.transition='opacity 0.35s';
-    el.style.opacity='0';
-    setTimeout(function(){el.classList.add('qr-hidden');mark(u);},360);
-
+    closeModal(u);
     var kit=STARTER_KITS[onboardingState.selectedUseCase];
-    if(!kit) return;
-
-    var isEditor = window.location.pathname.indexOf('editor')!==-1 ||
-                   document.getElementById('polotno-container')!==null;
-
+    var isEditor=window.location.pathname.indexOf('editor')!==-1||document.getElementById('polotno-container')!==null;
     if(isEditor){
       setTimeout(function(){
-        if(typeof loadTemplate==='function'){
-          loadTemplate(kit.templateId);
-          if(typeof showToast==='function') showToast('\u2726 AI workspace ready \u2014 '+kit.label+' loaded');
-        }
-      },400);
+        if(typeof loadTemplate==='function') loadTemplate(kit?kit.templateId:'promo-flyer-dark');
+        if(typeof showToast==='function') showToast('\u2726 AI workspace ready \u2014 '+(kit?kit.label:'Design')+' loaded');
+      },350);
     } else {
-      window.location.href='editor.html?kit='+encodeURIComponent(kit.templateId)+'&usecase='+encodeURIComponent(onboardingState.selectedUseCase||'');
+      window.location.href=EDITOR_PATH+'?kit='+encodeURIComponent(kit?kit.templateId:'')+'&usecase='+encodeURIComponent(onboardingState.selectedUseCase||'');
     }
   }
 
-  // ── Bind step events ──────────────────────────────
+  // ── Bind events ───────────────────────────────────
   function bindStep(step,u){
     var closeBtn=document.getElementById('qr-close');
     if(closeBtn) closeBtn.onclick=function(){closeModal(u);};
 
     if(step==='welcome'){
-      document.getElementById('qr-free').onclick=function(){onboardingState.qrType='static';render('step2',u);};
-      document.getElementById('qr-upgrade').onclick=function(){onboardingState.qrType='ai';render('step2',u);};
+      document.getElementById('qr-free').onclick=function(){
+        onboardingState.qrType='static';
+        closeModal(u);
+        window.location.href=FREE_PATH;
+      };
+      document.getElementById('qr-upgrade').onclick=function(){
+        onboardingState.qrType='ai';
+        render('step2',u);
+      };
     }
     else if(step==='step2'){
       var cards=document.querySelectorAll('.qr-uc-card');
@@ -337,6 +399,18 @@
     else if(step==='step3'){
       setTimeout(function(){runStep3Animation(u);},80);
     }
+    else if(step==='step4'){
+      document.getElementById('qr-edit-design').onclick=function(){launchEditor(u);};
+      document.getElementById('qr-back').onclick=function(){render('step2',u);};
+      document.getElementById('qr-regenerate').onclick=function(){
+        // Re-run loading then re-show preview
+        render('step3',u);
+      };
+      document.getElementById('qr-publish').onclick=function(){
+        closeModal(u);
+        window.location.href=FREE_PATH;
+      };
+    }
     else if(step==='upgrade'){
       document.getElementById('qr-go-upgrade').onclick=function(){closeModal(u);window.location.href=UPGRADE_PATH;};
       document.getElementById('qr-cont-free').onclick=function(){closeModal(u);window.location.href=FREE_PATH;};
@@ -344,13 +418,11 @@
     }
   }
 
-  // ── Handle editor.html ?kit= param ───────────────
+  // Handle ?kit= param on editor.html load
   window.addEventListener('load',function(){
     var params=new URLSearchParams(window.location.search);
     var kit=params.get('kit');
-    if(kit && typeof loadTemplate==='function'){
-      setTimeout(function(){loadTemplate(kit);},500);
-    }
+    if(kit&&typeof loadTemplate==='function') setTimeout(function(){loadTemplate(kit);},500);
   });
 
   window.qrairyOnboarding={
