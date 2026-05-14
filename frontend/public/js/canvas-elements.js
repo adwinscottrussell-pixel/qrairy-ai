@@ -212,19 +212,51 @@ node.style.pointerEvents = el.locked ? 'none' : 'all';
 
   // ── MOUSE EVENTS ──────────────────────────────
   if (el.type === 'text') {
-    // Single click: select + move
+    // Text: click selects, drag moves, double-click edits
     node.addEventListener('mousedown', function(e) {
-      if (node.dataset.editing === 'true') return; // let browser handle cursor
+      if (node.dataset.editing === 'true') return;
       e.preventDefault();
       e.stopPropagation();
+
       ceSelect(el.id);
-      ceDrag(e, el);
+
+      // Use threshold drag: only drag if mouse moves >4px
+      var startX = e.clientX, startY = e.clientY;
+      var dragging = false;
+      var clickTime = Date.now();
+
+      function onMoveThreshold(mv) {
+        if (CE._cancelDrag) {
+          document.removeEventListener('mousemove', onMoveThreshold);
+          document.removeEventListener('mouseup', onUpThreshold);
+          return;
+        }
+        if (Math.abs(mv.clientX - startX) > 4 || Math.abs(mv.clientY - startY) > 4) {
+          dragging = true;
+          document.removeEventListener('mousemove', onMoveThreshold);
+          document.removeEventListener('mouseup', onUpThreshold);
+          ceDrag(e, el); // start real drag
+        }
+      }
+
+      function onUpThreshold() {
+        document.removeEventListener('mousemove', onMoveThreshold);
+        document.removeEventListener('mouseup', onUpThreshold);
+        // Pure click (no drag) - just keep selection
+      }
+
+      document.addEventListener('mousemove', onMoveThreshold);
+      document.addEventListener('mouseup', onUpThreshold);
     });
 
     // Double click: enter edit mode
+    // dblclick fires after 2 mousedowns - just enable editing directly
     node.addEventListener('dblclick', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      // Cancel any pending drag
+      CE._cancelDrag = true;
+      setTimeout(function() { CE._cancelDrag = false; }, 100);
       ceEnterTextEdit(el, node);
     });
 
@@ -305,18 +337,13 @@ function ceSelect(id) {
 // ── AUTO-SWITCH RIGHT PANEL ON SELECTION ──────────
 function ceAutoSwitchPanel(el) {
   if (!el) return;
-  // Switch to PROPS tab
+  // Always switch right panel to PROPS tab when element selected
   var propsTab = document.querySelector('.rtab');
-  if (propsTab && !propsTab.classList.contains('active')) {
+  if (propsTab) {
     switchRTab('properties', propsTab);
   }
-  // Switch left panel to relevant tool
-  var panelMap = { text:'text', image:'images', rect:'elements' };
-  var targetPanel = panelMap[el.type];
-  if (targetPanel && S.activePanelId !== targetPanel) {
-    var btn = document.querySelector('[data-panel="' + targetPanel + '"]');
-    if (btn) togglePanel(targetPanel, btn);
-  }
+  // DON'T auto-switch left panel - let user control left panel independently
+  // This prevents the jarring panel switch that breaks text editing flow
 }
 
 function ceDeselect() {
@@ -428,7 +455,10 @@ function ceRenderTypographyPanel(el) {
 
     // Size + Weight row
     '<div class="prop-row" style="gap:6px;margin-bottom:12px">',
-    '<div style="flex:1"><span class="prop-label">Size</span><div style="display:flex;align-items:center;gap:4px"><button onclick="ceTpUpdate(\''+el.id+'\',\'fontSize\',Math.max(6,(parseInt(document.getElementById(\'tp-size\').value)||16)-1);document.getElementById(\'tp-size\').value=Math.max(6,(parseInt(document.getElementById(\'tp-size\').value)||16))-1" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">−</button><input class="prop-input" id="tp-size" type="number" min="6" max="400" value="'+(el.fontSize||16)+'" oninput="ceTpUpdate(\''+el.id+'\',\'fontSize\',parseInt(this.value)||16)" style="width:52px;text-align:center"><button onclick="ceTpUpdate(\''+el.id+'\',\'fontSize\',Math.min(400,(parseInt(document.getElementById(\'tp-size\').value)||16)+1);document.getElementById(\'tp-size\').value=Math.min(400,(parseInt(document.getElementById(\'tp-size\').value)||16))+1" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">+</button></div></div>',
+    '<div style="flex:1"><span class="prop-label">Size</span><div style="display:flex;align-items:center;gap:4px">' +
+    '<button onclick="ceTpStepSize(\''+el.id+'\', -1)" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">−</button>' +
+    '<input class="prop-input" id="tp-size" type="number" min="6" max="400" value="'+(el.fontSize||16)+'" oninput="ceTpUpdate(\''+el.id+'\',\'fontSize\',parseInt(this.value)||16)" style="width:52px;text-align:center">' +
+    '<button onclick="ceTpStepSize(\''+el.id+'\', 1)" style="width:24px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-mid);cursor:pointer;font-size:14px">+</button></div></div>',
     '<div style="flex:1"><span class="prop-label">Weight</span><select class="prop-select" id="tp-weight" onchange="ceTpUpdate(\''+el.id+'\',\'fontWeight\',this.value)">'+weights.map(function(w){return '<option value="'+w[0]+'"'+(String(el.fontWeight)===w[0]?' selected':'')+'>'+w[1]+'</option>';}).join('')+'</select></div>',
     '</div>',
 
@@ -500,6 +530,15 @@ function ceRenderTypographyPanel(el) {
     '</div>',
 
   ].join('');
+}
+
+// ── TYPOGRAPHY HELPERS ───────────────────────────
+function ceTpStepSize(id, delta) {
+  var inp = document.getElementById('tp-size');
+  var current = parseInt(inp ? inp.value : 16) || 16;
+  var next = Math.max(6, Math.min(400, current + delta));
+  if (inp) inp.value = next;
+  ceTpUpdate(id, 'fontSize', next);
 }
 
 // ── TYPOGRAPHY LIVE UPDATE ────────────────────────
