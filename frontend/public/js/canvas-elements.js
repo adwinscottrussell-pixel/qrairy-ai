@@ -167,7 +167,7 @@ node.style.pointerEvents = el.locked ? 'none' : 'all';
   } else if (el.type === 'text') {
     // ── Text element: select on single click, edit on double click ──
     node.style.height = 'auto';
-    node.style.minHeight = Math.max(el.fontSize || 20, el.height || 20) + 'px';
+    node.style.minHeight = Math.max(el.fontSize || 20, 20) + 'px';
     node.style.color = el.fill || '#000000';
     node.style.fontSize = (el.fontSize || 16) + 'px';
     node.style.fontWeight = el.fontWeight || 'normal';
@@ -178,16 +178,19 @@ node.style.pointerEvents = el.locked ? 'none' : 'all';
     node.style.letterSpacing = el.letterSpacing || 'normal';
     node.style.textTransform = el.textTransform || 'none';
     node.style.textDecoration = el.textDecoration || 'none';
-    node.style.whiteSpace = 'pre-wrap';
+    // Smart wrapping: use nowrap for short text, pre-wrap for longer
+    var textLen = (el.text || '').length;
+    var isShortLabel = textLen < 20 && (el.fontSize || 16) <= 20;
+    node.style.whiteSpace = isShortLabel ? 'nowrap' : 'pre-wrap';
     node.style.wordBreak = 'break-word';
     node.style.overflowWrap = 'break-word';
+    node.style.overflow = 'visible'; // let text be visible even if wider than box
     node.style.background = 'transparent';
     node.style.padding = '4px';
     node.style.cursor = 'default';
     node.style.outline = 'none';
     node.style.pointerEvents = 'all';
-    node.style.isolation = 'isolate';  // prevent parent stacking context issues
-    node.contentEditable = 'false';  // editing off by default
+    node.contentEditable = 'false';
     node.spellcheck = false;
     node.dataset.editing = 'false';
     node.textContent = el.text || '';
@@ -366,7 +369,8 @@ function ceEnterTextEdit(el, node) {
   node.style.zIndex = '9999';
   node.style.pointerEvents = 'all';
 
-  // Enable editing
+  // Enable editing - always use pre-wrap so Enter key works
+  node.style.whiteSpace = 'pre-wrap';
   node.contentEditable = 'true';
   node.dataset.editing = 'true';
   node.style.cursor = 'text';
@@ -399,11 +403,21 @@ function ceExitTextEdit(el, node) {
 
   el.text = node.innerText || node.textContent;
   el.height = node.offsetHeight;
+
+  // Restore smart wrapping
+  var textLen = (el.text || '').length;
+  var isShortLabel = textLen < 20 && (el.fontSize || 16) <= 20;
+  node.style.whiteSpace = isShortLabel ? 'nowrap' : 'pre-wrap';
+
   cePushHistory();
   CE._editingId = null;
 
   // Restore proper z-index
   ceEnforceLayerOrder();
+
+  // Update text handles size to match new height
+  var hw = document.querySelector('.ce-handles-wrap');
+  if (hw) hw.style.height = (node.offsetHeight + 4) + 'px';
 
   // Re-show selection
   ceSelect(el.id);
@@ -726,8 +740,11 @@ function ceShowHandles(el) {
   const node = document.getElementById(el.id);
   if (!node) return;
 
-  // Text elements don't have resize handles (they auto-size vertically)
-  if (el.type === 'text') return;
+  // Text elements get width-only handles (left, right, corners)
+  if (el.type === 'text') {
+    ceShowTextHandles(el, node);
+    return;
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'ce-handles-wrap';
@@ -1122,15 +1139,19 @@ function renderElementsToCanvas(layout, qrSrc) {
         opacity:      el.opacity != null ? el.opacity : 1,
       });
     } else if (el.type === 'text') {
+      var tLen = (el.text || '').length;
+      var tSize = el.fontSize || 16;
       Object.assign(props, {
         text:          el.text || '',
-        fontSize:      el.fontSize || 16,
+        fontSize:      tSize,
         fontWeight:    el.fontWeight || 'normal',
         fontFamily:    el.fontFamily || 'Inter',
         fill:          el.fill || '#000000',
         align:         el.align || 'left',
         lineHeight:    el.lineHeight || 1.35,
         letterSpacing: el.letterSpacing || 'normal',
+        // Short labels get wider default width to prevent wrapping
+        width:         el.width || (tLen < 10 && tSize <= 18 ? Math.max(el.width||200, tLen * tSize * 0.65) : el.width || 400),
       });
       delete props.height; // text height is auto
     } else if (el.type === 'image') {
@@ -1403,3 +1424,173 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+// ── TEXT RESIZE HANDLES ───────────────────────────
+// Text elements get left/right/corner handles for width control
+function ceShowTextHandles(el, node) {
+  if (!node) node = document.getElementById(el.id);
+  if (!node) return;
+
+  var container = document.getElementById('polotno-container');
+  if (!container) return;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'ce-handles-wrap';
+  wrap.style.cssText = [
+    'position:absolute',
+    'left:' + (el.x - 2) + 'px',
+    'top:' + (el.y - 2) + 'px',
+    'width:' + (el.width + 4) + 'px',
+    'height:' + (node.offsetHeight + 4) + 'px',
+    'pointer-events:none',
+    'z-index:1001',
+    'border:1.5px solid rgba(255,90,31,0.6)',
+    'border-radius:2px',
+  ].join(';');
+
+  // Text handles: only sides and corners (no top/bottom = height is auto)
+  var textDirs = [
+    { d:'w',  s:'top:50%;left:-5px;transform:translateY(-50%);cursor:w-resize' },
+    { d:'e',  s:'top:50%;right:-5px;transform:translateY(-50%);cursor:e-resize' },
+    { d:'nw', s:'top:-5px;left:-5px;cursor:nw-resize' },
+    { d:'ne', s:'top:-5px;right:-5px;cursor:ne-resize' },
+    { d:'sw', s:'bottom:-5px;left:-5px;cursor:sw-resize' },
+    { d:'se', s:'bottom:-5px;right:-5px;cursor:se-resize' },
+  ];
+
+  textDirs.forEach(function(dir) {
+    var h = document.createElement('div');
+    h.className = 'ce-handle';
+    h.dataset.dir = dir.d;
+    h.style.cssText = 'position:absolute;width:10px;height:10px;background:#ff5a1f;border:2px solid #fff;border-radius:2px;pointer-events:all;box-shadow:0 1px 4px rgba(0,0,0,0.4);' + dir.s;
+    h.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      ceResizeText(e, el, dir.d);
+    });
+    wrap.appendChild(h);
+  });
+
+  // Auto-width toggle button
+  var autoBtn = document.createElement('div');
+  autoBtn.title = el.autoWidth ? 'Switch to fixed width' : 'Switch to auto width';
+  autoBtn.style.cssText = 'position:absolute;top:-20px;right:0;height:16px;padding:0 5px;background:rgba(255,90,31,0.15);border:1px solid rgba(255,90,31,0.3);border-radius:3px;font-family:monospace;font-size:9px;color:rgba(255,130,60,0.8);pointer-events:all;cursor:pointer;display:flex;align-items:center;white-space:nowrap;';
+  autoBtn.textContent = el.autoWidth ? 'AUTO' : 'FIXED';
+  autoBtn.addEventListener('mousedown', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+  });
+  autoBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    ceToggleTextAutoWidth(el);
+  });
+  wrap.appendChild(autoBtn);
+
+  // Rotation handle
+  var rot = document.createElement('div');
+  rot.style.cssText = 'position:absolute;width:12px;height:12px;background:#7c3aed;border:2px solid #fff;border-radius:50%;pointer-events:all;top:-22px;left:50%;transform:translateX(-50%);cursor:grab;box-shadow:0 1px 4px rgba(0,0,0,0.4)';
+  rot.title = 'Rotate';
+  rot.addEventListener('mousedown', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    ceRotate(e, el);
+  });
+  wrap.appendChild(rot);
+
+  container.appendChild(wrap);
+}
+
+// ── TEXT AUTO-WIDTH TOGGLE ────────────────────────
+function ceToggleTextAutoWidth(el) {
+  var node = document.getElementById(el.id);
+  if (!node) return;
+  el.autoWidth = !el.autoWidth;
+  if (el.autoWidth) {
+    // Expand to fit content
+    node.style.whiteSpace = 'nowrap';
+    node.style.width = 'auto';
+    node.style.minWidth = '20px';
+    node.style.maxWidth = S.canvasW + 'px';
+    // Measure and set width
+    setTimeout(function() {
+      el.width = Math.min(node.scrollWidth + 8, S.canvasW - el.x);
+      node.style.width = el.width + 'px';
+      node.style.whiteSpace = 'pre-wrap';
+      el.autoWidth = false;
+      ceShowTextHandles(el, node);
+      cePushHistory();
+    }, 20);
+  } else {
+    node.style.whiteSpace = 'pre-wrap';
+    ceShowTextHandles(el, node);
+  }
+  showToast(el.autoWidth ? 'Auto width' : 'Width fitted to text');
+}
+
+// ── TEXT RESIZE ───────────────────────────────────
+function ceResizeText(e, el, dir) {
+  var start = ceClientToCanvas(e.clientX, e.clientY);
+  var startX = el.x, startW = el.width;
+  var node = document.getElementById(el.id);
+
+  function onMove(ev) {
+    var pos = ceClientToCanvas(ev.clientX, ev.clientY);
+    var dx = pos.x - start.x;
+    var nw = startW, nx = startX;
+
+    if (dir.includes('e')) {
+      nw = Math.max(40, startW + dx);
+    }
+    if (dir.includes('w')) {
+      nx = startX + dx;
+      nw = Math.max(40, startW - dx);
+    }
+
+    el.x = Math.round(nx);
+    el.width = Math.round(nw);
+
+    if (node) {
+      node.style.left = el.x + 'px';
+      node.style.width = el.width + 'px';
+      // Force text reflow
+      el.height = node.offsetHeight;
+    }
+
+    // Update handle wrap live
+    var hw = document.querySelector('.ce-handles-wrap');
+    if (hw) {
+      hw.style.left = (el.x - 2) + 'px';
+      hw.style.width = (el.width + 4) + 'px';
+      hw.style.height = (node ? node.offsetHeight + 4 : 60) + 'px';
+    }
+
+    // Corner handles also resize font proportionally
+    if ((dir === 'nw' || dir === 'ne' || dir === 'sw' || dir === 'se') && el.fontSize) {
+      var scale = nw / startW;
+      var newSize = Math.max(8, Math.round(el.fontSize * scale));
+      // Only scale font if significant change
+      if (Math.abs(newSize - el.fontSize) > 1) {
+        el.fontSize = newSize;
+        if (node) node.style.fontSize = newSize + 'px';
+        // Update floating toolbar size selector
+        var ftSize = document.getElementById('ft-size');
+        if (ftSize) ftSize.value = newSize;
+        var tpSize = document.getElementById('tp-size');
+        if (tpSize) tpSize.value = newSize;
+      }
+    }
+
+    syncPropsPanel(el);
+  }
+
+  function onUp() {
+    el.height = node ? node.offsetHeight : el.height;
+    cePushHistory();
+    ceShowTextHandles(el, node);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+
