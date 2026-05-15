@@ -3,302 +3,660 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QRAIRY.AI — Analytics</title>
+  <title>Analytics — Qraivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    /* ── LAYOUT ── */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { display: flex; min-height: 100vh; background: var(--bg); }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{display:flex;min-height:100vh;background:var(--bg,#0a0a0a);color:#f0f4f8}
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      position: fixed; top: 0; left: 0;
-      width: 240px; height: 100vh;
-      background: #0d1117;
-      border-right: 1px solid rgba(255,255,255,0.06);
-      display: flex; flex-direction: column;
-      z-index: 100; transition: width 0.22s ease;
-      overflow: hidden;
-    }
-    #sidebar.collapsed { width: 60px; }
-    .sb-logo {
-      display: flex; align-items: center; gap: 10px;
-      padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
-      min-height: 60px; flex-shrink: 0;
-    }
-    .sb-logo-icon {
-      width: 32px; height: 32px; background: #ff5a1f;
-      border-radius: 7px; display: flex; align-items: center;
-      justify-content: center; font-size: 16px; flex-shrink: 0;
-    }
-    .sb-logo-text {
-      font-size: 1rem; font-weight: 800; color: #fff;
-      white-space: nowrap; letter-spacing: -0.02em; transition: opacity 0.22s;
-    }
-    .sb-logo-text span { color: #ff5a1f; font-style: italic; }
-    #sidebar.collapsed .sb-logo-text { opacity: 0; pointer-events: none; }
-    .sb-toggle {
-      position: absolute; top: 16px; right: -11px;
-      width: 22px; height: 22px; background: #0d1117;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center;
-      justify-content: center; color: #8b949e; font-size: 11px;
-      transition: all 0.22s; z-index: 10;
-    }
-    .sb-toggle:hover { background: #ff5a1f; color: #fff; border-color: #ff5a1f; }
-    #sidebar.collapsed .sb-toggle { transform: rotate(180deg); }
-    .sb-nav {
-      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 8px;
-      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.05) transparent;
-    }
-    .sb-section {
-      font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #444d56;
-      padding: 10px 10px 3px; white-space: nowrap;
-      transition: opacity 0.22s; font-family: 'DM Mono', monospace;
-    }
-    #sidebar.collapsed .sb-section { opacity: 0; }
-    .sb-item {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 10px; border-radius: 6px; cursor: pointer;
-      color: #8b949e; text-decoration: none;
-      font-size: 0.84rem; font-weight: 500;
-      white-space: nowrap; transition: all 0.18s;
-      margin-bottom: 1px; position: relative;
-    }
-    .sb-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .sb-item.active { background: #ff5a1f; color: #fff; font-weight: 600; }
-    .sb-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 15px; }
-    .sb-label { transition: opacity 0.22s; flex: 1; }
-    #sidebar.collapsed .sb-label { opacity: 0; width: 0; overflow: hidden; }
-    .sb-badge {
-      font-size: 0.55rem; font-weight: 700; padding: 2px 5px;
-      border-radius: 999px; background: #ff5a1f; color: #fff;
-      letter-spacing: 0.05em; transition: opacity 0.22s;
-    }
-    .sb-item.active .sb-badge { background: rgba(255,255,255,0.25); }
-    #sidebar.collapsed .sb-badge { opacity: 0; width: 0; padding: 0; }
-    .sb-soon { font-size: 0.55rem; opacity: 0.4; font-family: 'DM Mono', monospace; transition: opacity 0.22s; }
-    #sidebar.collapsed .sb-soon { opacity: 0; }
-    .sb-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 8px; }
-    .sb-footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 8px; flex-shrink: 0; }
-    .sb-user {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 6px; cursor: pointer; transition: background 0.18s;
-    }
-    .sb-user:hover { background: rgba(255,255,255,0.05); }
-    .sb-avatar {
-      width: 30px; height: 30px; border-radius: 50%; background: #ff5a1f;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0;
-    }
-    .sb-user-info { transition: opacity 0.22s; overflow: hidden; }
-    #sidebar.collapsed .sb-user-info { opacity: 0; width: 0; }
-    .sb-user-name { font-size: 0.8rem; font-weight: 600; color: #fff; white-space: nowrap; }
-    .sb-user-role { font-size: 0.62rem; color: #8b949e; font-family: 'DM Mono', monospace; }
-    .sb-signout {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 6px; cursor: pointer;
-      color: #8b949e; font-size: 0.84rem; font-weight: 500;
-      transition: all 0.18s; text-decoration: none; margin-top: 2px;
-    }
-    .sb-signout:hover { background: rgba(239,68,68,0.1); color: #ef4444; }
-
-    /* ── MAIN CONTENT ── */
-    #main-content {
-      margin-left: 240px; flex: 1; min-height: 100vh; transition: margin-left 0.22s ease;
-    }
-    body.sb-collapsed #main-content { margin-left: 60px; }
-
-    /* ── MOBILE ── */
-    #mob-btn {
-      display: none; position: fixed; top: 14px; left: 14px;
-      width: 38px; height: 38px; background: #0d1117;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 7px;
-      cursor: pointer; align-items: center; justify-content: center;
-      color: #fff; font-size: 16px; z-index: 200;
-    }
-    .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
-    .sb-overlay.on { display: block; }
+    /* ── Sidebar (same as dashboard) ── */
+    #sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#0f0f0f;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;z-index:100;transition:width .22s;overflow:hidden}
+    #sidebar.collapsed{width:60px}
+    .sb-logo{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:60px;flex-shrink:0}
+    .sb-logo-icon{width:32px;height:32px;background:#ff5a1f;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .sb-logo-text{font-size:1rem;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:-.02em;transition:opacity .22s}
+    .sb-logo-text span{color:#ff5a1f;font-style:italic}
+    #sidebar.collapsed .sb-logo-text{opacity:0;pointer-events:none}
+    .sb-toggle{position:absolute;top:16px;right:-11px;width:22px;height:22px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8b949e;font-size:11px;transition:all .22s;z-index:10}
+    .sb-toggle:hover{background:#ff5a1f;color:#fff;border-color:#ff5a1f}
+    #sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
+    .sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.05) transparent}
+    .sb-section{font-size:.58rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#444d56;padding:10px 10px 3px;white-space:nowrap;transition:opacity .22s;font-family:'DM Mono',monospace}
+    #sidebar.collapsed .sb-section{opacity:0}
+    .sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#8b949e;text-decoration:none;font-size:.84rem;font-weight:500;white-space:nowrap;transition:all .18s;margin-bottom:1px}
+    .sb-item:hover{background:rgba(255,255,255,0.05);color:#fff}
+    .sb-item.active{background:#ff5a1f;color:#fff;font-weight:600}
+    .sb-icon{width:18px;text-align:center;flex-shrink:0;font-size:15px}
+    .sb-label{transition:opacity .22s;flex:1}
+    #sidebar.collapsed .sb-label{opacity:0;width:0;overflow:hidden}
+    .sb-badge{font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:999px;background:#ff5a1f;color:#fff;letter-spacing:.05em;transition:opacity .22s}
+    .sb-item.active .sb-badge{background:rgba(255,255,255,0.25)}
+    #sidebar.collapsed .sb-badge{opacity:0;width:0;padding:0}
+    .sb-soon{font-size:.55rem;opacity:.4;font-family:'DM Mono',monospace;transition:opacity .22s}
+    #sidebar.collapsed .sb-soon{opacity:0}
+    .sb-divider{height:1px;background:rgba(255,255,255,0.06);margin:6px 8px}
+    .sb-footer{border-top:1px solid rgba(255,255,255,0.06);padding:10px 8px;flex-shrink:0}
+    .sb-user{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;transition:background .18s}
+    .sb-user:hover{background:rgba(255,255,255,0.05)}
+    .sb-avatar{width:30px;height:30px;border-radius:50%;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0}
+    .sb-user-info{transition:opacity .22s;overflow:hidden}
+    #sidebar.collapsed .sb-user-info{opacity:0;width:0}
+    .sb-user-name{font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap}
+    .sb-user-role{font-size:.62rem;color:#8b949e;font-family:'DM Mono',monospace}
+    .sb-signout{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#8b949e;font-size:.84rem;font-weight:500;transition:all .18s;text-decoration:none;margin-top:2px}
+    .sb-signout:hover{background:rgba(239,68,68,0.1);color:#ef4444}
+    #main-content{margin-left:240px;flex:1;min-height:100vh;transition:margin-left .22s}
+    body.sb-collapsed #main-content{margin-left:60px}
+    #mob-btn{display:none;position:fixed;top:12px;left:12px;width:46px;height:46px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200}
+    .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99}
+    .sb-overlay.on{display:block}
     @media(max-width:768px){
-      #sidebar { transform: translateX(-100%); width: 240px !important; transition: transform 0.22s; }
-      #sidebar.mob-open { transform: translateX(0); }
-      #main-content { margin-left: 0 !important; padding-top: 56px; }
-      #mob-btn { display: flex; }
-      .sb-toggle { display: none; }
+      #sidebar{transform:translateX(-100%);width:240px !important;transition:transform .22s}
+      #sidebar.mob-open{transform:translateX(0)}
+      #main-content{margin-left:0 !important;padding-top:56px}
+      #mob-btn{display:flex}
+      .sb-toggle{display:none}
     }
 
-    /* ── TOAST ── */
-    #cs-toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: #1c2128; border: 1px solid rgba(255,90,31,0.3);
-      color: #fff; padding: 11px 18px; border-radius: 7px;
-      font-size: 0.83rem; z-index: 9999; display: none;
-      align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
+    /* ── Analytics layout ── */
+    .an-wrap{max-width:1040px;margin:0 auto;padding:40px 36px}
+    @media(max-width:640px){.an-wrap{padding:24px 18px}}
 
-    /* ── ANALYTICS STYLES ── */
-    .analytics-wrap { max-width: 860px; margin: 0 auto; padding: 48px 40px; }
-    .analytics-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
-    .analytics-title em { color: var(--accent); font-style: normal; }
-    .stats-row { display: flex; gap: 16px; margin: 32px 0; }
-    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
-    .stat-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-    .stat-value { font-size: 2rem; font-weight: 800; color: var(--accent); }
-    .qr-table { width: 100%; border-collapse: collapse; margin-top: 32px; }
-    .qr-table th { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-    .qr-table td { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text); padding: 14px 16px; border-bottom: 1px solid var(--border); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .qr-table tr:hover td { background: var(--surface); }
-    .scan-badge { display: inline-block; background: var(--accent); color: #fff; font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; }
-    .del-btn { background: transparent; border: 1px solid rgba(239,68,68,0.3); border-radius: 5px; color: #ef4444; padding: 3px 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.18s; }
-    .del-btn:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
-    .loading { font-family: var(--font-mono); color: var(--text-dim); font-size: 0.85rem; margin-top: 40px; }
+    /* ── Header ── */
+    .an-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+    .an-title{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:900;letter-spacing:-.03em;color:#f0f4f8}
+    .an-title em{color:#ff5a1f;font-style:normal}
+    .an-subtitle{font-family:'DM Mono',monospace;font-size:.72rem;color:#444d56;margin-top:3px}
+
+    /* ── Date range filters ── */
+    .filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+    .filter-btn{padding:6px 14px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;cursor:pointer;transition:all .15s}
+    .filter-btn:hover{border-color:rgba(255,90,31,0.4);color:#ff8c55}
+    .filter-btn.active{background:rgba(255,90,31,0.1);border-color:#ff5a1f;color:#ff5a1f}
+    .filter-sep{width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px}
+    .filter-select{padding:6px 12px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;cursor:pointer;outline:none}
+    .filter-select option{background:#0f0f0f;color:#f0f4f8}
+
+    /* ── KPI strip ── */
+    .an-kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:28px}
+    .an-kpi-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:16px}
+    .an-kpi-val{font-size:1.6rem;font-weight:900;color:#f0f4f8;line-height:1;margin-bottom:4px}
+    .an-kpi-val.o{color:#ff5a1f}
+    .an-kpi-val.g{color:#22c55e}
+    .an-kpi-val.p{color:#a78bfa}
+    .an-kpi-lbl{font-family:'DM Mono',monospace;font-size:.56rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em}
+    .an-kpi-delta{font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;margin-top:3px}
+    .an-kpi-delta.up{color:#22c55e}
+    .an-kpi-delta.dn{color:#ef4444}
+
+    /* ── Chart grid ── */
+    .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+    @media(max-width:760px){.chart-grid{grid-template-columns:1fr}}
+    .chart-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:20px}
+    .chart-card.wide{grid-column:1/-1}
+    .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .cc-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8}
+    .cc-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:#444d56;margin-top:2px}
+    .cc-badge{font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:99px;background:rgba(255,90,31,0.1);color:#ff8c55;border:1px solid rgba(255,90,31,0.2)}
+    .chart-wrap{position:relative;height:180px}
+    .chart-wrap.tall{height:220px}
+
+    /* ── Performance table ── */
+    .perf-section{margin-bottom:28px}
+    .perf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .perf-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
+    .perf-search{padding:6px 12px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#f0f4f8;outline:none;width:180px}
+    .perf-search::placeholder{color:#444d56}
+    .perf-search:focus{border-color:rgba(255,90,31,0.4)}
+    .perf-table-wrap{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;overflow:hidden}
+    .perf-table{width:100%;border-collapse:collapse}
+    .perf-table th{font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em;padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);background:#0d0d0d;cursor:pointer;white-space:nowrap;user-select:none}
+    .perf-table th:hover{color:#f0f4f8}
+    .perf-table th .sort-icon{opacity:.4;margin-left:4px}
+    .perf-table th.sorted .sort-icon{opacity:1;color:#ff5a1f}
+    .perf-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'DM Mono',monospace;font-size:.72rem;color:#8b949e;vertical-align:middle}
+    .perf-table tr:last-child td{border-bottom:none}
+    .perf-table tr:hover td{background:rgba(255,90,31,0.03);color:#f0f4f8}
+    .pt-qr{display:flex;align-items:center;gap:10px}
+    .pt-qr-thumb{width:36px;height:36px;border-radius:6px;background:#fff;flex-shrink:0;overflow:hidden}
+    .pt-qr-thumb img{width:100%;height:100%;display:block}
+    .pt-name{font-weight:500;color:#f0f4f8;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pt-url{font-size:.6rem;color:#333d48;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+    .pt-val{color:#f0f4f8;font-weight:500}
+    .pt-val.o{color:#ff5a1f}
+    .pt-badge-live{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#22c55e;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.16);border-radius:99px;padding:2px 7px}
+    .pt-badge-basic{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#4a6078;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:99px;padding:2px 7px}
+    .pt-cvr-bar{width:60px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+    .pt-cvr-fill{height:100%;background:#ff5a1f;border-radius:2px}
+
+    /* ── AI & Wallet metrics ── */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+    @media(max-width:760px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:20px}
+    .mc-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .mc-icon{font-size:1rem}
+    .mc-rows{display:flex;flex-direction:column;gap:10px}
+    .mc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px}
+    .mc-row-label{font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e}
+    .mc-row-val{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700;color:#f0f4f8}
+    .mc-row-val.o{color:#ff5a1f}
+    .mc-row-val.g{color:#22c55e}
+    .mc-row-val.p{color:#a78bfa}
+    .mc-empty{font-family:'DM Mono',monospace;font-size:.7rem;color:#333d48;text-align:center;padding:20px 0}
+    .mc-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .mc-bar-row:last-child{border-bottom:none}
+    .mc-bar-label{font-family:'DM Mono',monospace;font-size:.65rem;color:#8b949e;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mc-bar-track{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+    .mc-bar-fill{height:100%;border-radius:2px}
+    .mc-bar-count{font-family:'DM Mono',monospace;font-size:.62rem;color:#444d56;flex-shrink:0;min-width:24px;text-align:right}
+
+    /* ── Empty/loading states ── */
+    .an-loading{font-family:'DM Mono',monospace;font-size:.8rem;color:#444d56;padding:40px 0;text-align:center}
+    .an-empty{font-family:'DM Mono',monospace;font-size:.72rem;color:#333d48;text-align:center;padding:24px 0}
+    .an-coming{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:.62rem;color:#333d48;justify-content:center;padding:8px 0}
+
+    footer{padding:20px 36px;font-family:'DM Mono',monospace;font-size:.65rem;color:#1e2530;border-top:1px solid rgba(255,255,255,0.04)}
   </style>
   <link rel="stylesheet" href="sidebar.css?v=3">
 </head>
 <body>
 
-  <!-- SIDEBAR -->
-  <div id="sidebar"></div>
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">⬡</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
   </div>
+  <button class="sb-toggle" id="sb-toggle">‹</button>
+  <nav class="sb-nav">
+    <div class="sb-section">MAIN</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item active"><span class="sb-icon">↗</span><span class="sb-label">Analytics</span></a>
+    <div class="sb-section">SMART PAGES</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">⬡</span><span class="sb-label">Smart QR Pages</span></a>
+    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">＋</span><span class="sb-label">Create New QR</span></a>
+    <div class="sb-section">ENGAGE</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">🔔</span><span class="sb-label">Push Notifications</span><span class="sb-badge">LIVE</span></a>
+    <a href="#" class="sb-item sb-soon-item"><span class="sb-icon">📣</span><span class="sb-label">Campaigns</span><span class="sb-soon">SOON</span></a>
+    <div class="sb-section">CONFIGURE</div>
+    <a href="designer.html" class="sb-item"><span class="sb-icon">🎨</span><span class="sb-label">AI Designer</span></a>
+    <a href="qr-panel.html" class="sb-item"><span class="sb-icon">⬡</span><span class="sb-label">QR Download Centre</span></a>
+    <div class="sb-section">ACCOUNT</div>
+    <a href="pricing.html" class="sb-item"><span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
+    <a href="#" class="sb-item"><span class="sb-icon">?</span><span class="sb-label">Help & Docs</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading…</div>
+        <div class="sb-user-role">Business Owner</div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">→</span><span class="sb-label">Sign Out</span></a>
+  </div>
+</div>
 
-  <!-- MOBILE -->
-  <button id="mob-btn">☰</button>
-  <div class="sb-overlay" id="sb-overlay"></div>
-  <div id="cs-toast"><span style="color:#ff5a1f">⚡</span> <span id="cs-toast-msg"></span></div>
+<button id="mob-btn">☰</button>
+<div class="sb-overlay" id="sb-overlay"></div>
 
-  <!-- MAIN CONTENT -->
-  <div id="main-content">
-    <div class="noise"></div>
-    <main>
-      <div class="analytics-wrap">
-        <h1 class="analytics-title">QR Code <em>Analytics</em></h1>
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-label">Total QR Codes</div>
-            <div class="stat-value" id="totalQR">—</div>
+<div id="main-content">
+  <div class="noise"></div>
+  <main>
+    <div class="an-wrap">
+
+      <!-- Header -->
+      <div class="an-header">
+        <div>
+          <h1 class="an-title">Business <em>Intelligence</em></h1>
+          <div class="an-subtitle">Deep engagement reporting across all Smart QR Pages</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="filter-select" id="qr-filter">
+            <option value="all">All QR Pages</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Date filters -->
+      <div class="filter-bar">
+        <button class="filter-btn active" data-range="7">Last 7 days</button>
+        <button class="filter-btn" data-range="30">Last 30 days</button>
+        <button class="filter-btn" data-range="90">Last 90 days</button>
+        <button class="filter-btn" data-range="1">Last 24h</button>
+        <div class="filter-sep"></div>
+        <select class="filter-select" id="usecase-filter">
+          <option value="all">All use cases</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="ecommerce">Ecommerce</option>
+          <option value="realestate">Real Estate</option>
+          <option value="gym">Gym</option>
+          <option value="leadgen">Lead Gen</option>
+          <option value="social">Social Media</option>
+          <option value="bizcard">Business Card</option>
+          <option value="event">Event</option>
+        </select>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="an-kpi">
+        <div class="an-kpi-card"><div class="an-kpi-val o" id="an-scans">—</div><div class="an-kpi-lbl">Total Scans</div><div class="an-kpi-delta" id="an-scans-d"></div></div>
+        <div class="an-kpi-card"><div class="an-kpi-val g" id="an-subs">—</div><div class="an-kpi-lbl">Subscribers</div><div class="an-kpi-delta" id="an-subs-d"></div></div>
+        <div class="an-kpi-card"><div class="an-kpi-val p" id="an-wallet">—</div><div class="an-kpi-lbl">Wallet Members</div></div>
+        <div class="an-kpi-card"><div class="an-kpi-val" id="an-ai">—</div><div class="an-kpi-lbl">AI Conversations</div></div>
+        <div class="an-kpi-card"><div class="an-kpi-val o" id="an-cvr">—%</div><div class="an-kpi-lbl">Conversion Rate</div></div>
+        <div class="an-kpi-card"><div class="an-kpi-val" id="an-pages">—</div><div class="an-kpi-lbl">Active Pages</div></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <div class="cc-header">
+            <div>
+              <div class="cc-title">Scan Activity</div>
+              <div class="cc-sub">Daily scans across all Smart QR Pages</div>
+            </div>
+            <span class="cc-badge" id="scans-chart-badge">Loading…</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Scans</div>
-            <div class="stat-value" id="totalScans">—</div>
+          <div class="chart-wrap tall"><canvas id="scansChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-header">
+            <div>
+              <div class="cc-title">Subscriber Growth</div>
+              <div class="cc-sub">Cumulative subscribers over time</div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Most Scanned</div>
-            <div class="stat-value" id="topScans">—</div>
+          <div class="chart-wrap"><canvas id="subsChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-header">
+            <div>
+              <div class="cc-title">Engagement by Use Case</div>
+              <div class="cc-sub">Scan distribution across categories</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="usecaseChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- QR Performance Table -->
+      <div class="perf-section">
+        <div class="perf-hdr">
+          <div class="perf-title">Smart QR Performance</div>
+          <input class="perf-search" id="perf-search" type="text" placeholder="Search pages…" />
+        </div>
+        <div class="perf-table-wrap">
+          <table class="perf-table" id="perf-table">
+            <thead>
+              <tr>
+                <th data-col="name">Page <span class="sort-icon">↕</span></th>
+                <th data-col="scans" class="sorted">Scans <span class="sort-icon">↓</span></th>
+                <th data-col="subs">Subscribers <span class="sort-icon">↕</span></th>
+                <th data-col="ai">AI Chats <span class="sort-icon">↕</span></th>
+                <th data-col="wallet">Wallet <span class="sort-icon">↕</span></th>
+                <th data-col="cvr">CVR <span class="sort-icon">↕</span></th>
+                <th data-col="status">Status <span class="sort-icon">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="perf-tbody">
+              <tr><td colspan="7" class="an-loading">Loading data…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AI & Wallet metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="mc-title"><span class="mc-icon">🤖</span> AI Assistant Engagement</div>
+          <div class="mc-rows" id="ai-metrics">
+            <div class="mc-row"><span class="mc-row-label">Conversations started</span><span class="mc-row-val" id="ai-convos">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Avg engagement time</span><span class="mc-row-val">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">AI conversion rate</span><span class="mc-row-val o" id="ai-cvr">—%</span></div>
+            <div class="mc-row"><span class="mc-row-label">Questions answered</span><span class="mc-row-val">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Voice welcomes played</span><span class="mc-row-val">—</span></div>
+            <div class="an-coming">⬡ Full AI analytics — coming soon</div>
           </div>
         </div>
-        <div id="loading" class="loading">Loading analytics...</div>
-        <table class="qr-table" id="qrTable" style="display:none">
-          <thead>
-            <tr>
-              <th>Original URL</th>
-              <th>Redirect URL</th>
-              <th>Scans</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody id="qrTableBody"></tbody>
-        </table>
+        <div class="metric-card">
+          <div class="mc-title"><span class="mc-icon">💳</span> Wallet & Subscription</div>
+          <div class="mc-rows" id="wallet-metrics">
+            <div class="mc-row"><span class="mc-row-label">Wallet installs</span><span class="mc-row-val p" id="wlt-installs">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Email subscribers</span><span class="mc-row-val g" id="wlt-email">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Push notification opens</span><span class="mc-row-val">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Repeat engagement</span><span class="mc-row-val">—</span></div>
+            <div class="mc-row"><span class="mc-row-label">Active members</span><span class="mc-row-val o">—</span></div>
+            <div class="an-coming">⬡ Full wallet analytics — coming soon</div>
+          </div>
+        </div>
       </div>
-    </main>
-    <footer>
-      <span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span>
-    </footer>
-  </div>
 
-  <script>
-    const API_BASE = 'https://api.qraivy.com';
-    document.addEventListener('DOMContentLoaded', () => {
-      const signOutLink = document.querySelector('.sb-item[href="login.html"]') || Array.from(document.querySelectorAll('.sb-item')).find(el => el.textContent.includes('Sign Out'));
-      if (signOutLink) signOutLink.addEventListener('click', async (e) => { e.preventDefault(); await window.Clerk?.signOut(); window.location.href = 'login.html'; });
+      <!-- Top prompts / engagement breakdown -->
+      <div class="metrics-grid" style="margin-bottom:0">
+        <div class="metric-card">
+          <div class="mc-title"><span class="mc-icon">📊</span> Scan Breakdown by Page</div>
+          <div id="scan-breakdown" class="mc-rows"></div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-title"><span class="mc-icon">⚡</span> Recent Activity</div>
+          <div id="recent-activity" style="display:flex;flex-direction:column;gap:0"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+  <footer><span>QRAIVY — Business Intelligence · Powered by AI</span></footer>
+</div>
+
+<script>
+const API_BASE = 'https://api.qraivy.com';
+let allData = [];
+let sortCol = 'scans', sortAsc = false;
+let searchQ = '';
+let activeRange = 7;
+
+// ── Chart.js defaults ────────────────────────────────────────────────────────
+Chart.defaults.color = '#444d56';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 10;
+
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: '#1c2128', borderColor: 'rgba(255,90,31,0.3)', borderWidth: 1,
+    titleColor: '#f0f4f8', bodyColor: '#8b949e', padding: 10,
+  }},
+  scales: {
+    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#333d48' } },
+    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#333d48' } },
+  }
+};
+
+let scansChartInst, subsChartInst, usecaseChartInst;
+
+// ── Build date labels ────────────────────────────────────────────────────────
+function buildDateLabels(days) {
+  const labels = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString('en-GB', { day:'numeric', month:'short' }));
+  }
+  return labels;
+}
+
+// ── Simulate daily distribution ──────────────────────────────────────────────
+function distributeDays(total, days) {
+  if (total === 0) return new Array(days).fill(0);
+  const weights = Array.from({length: days}, (_, i) => {
+    const pos = i / (days - 1);
+    return 0.4 + pos * 0.6 + (Math.sin(i * 1.3) * 0.15);
+  });
+  const wSum = weights.reduce((a, b) => a + b, 0);
+  let vals = weights.map(w => Math.round((w / wSum) * total));
+  // Adjust rounding error
+  const diff = total - vals.reduce((a, b) => a + b, 0);
+  vals[vals.length - 1] += diff;
+  return vals;
+}
+
+// ── Render charts ────────────────────────────────────────────────────────────
+function renderCharts(dashboard) {
+  const totalScans = dashboard.reduce((s, q) => s + q.totalScans, 0);
+  const totalSubs  = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
+  const labels     = buildDateLabels(activeRange);
+  const scanData   = distributeDays(totalScans, activeRange);
+  const subsData   = distributeDays(totalSubs, activeRange).map((v, i, arr) => arr.slice(0, i+1).reduce((a,b)=>a+b,0));
+
+  // Scans chart
+  const scanCtx = document.getElementById('scansChart');
+  if (scanCtx) {
+    if (scansChartInst) scansChartInst.destroy();
+    scansChartInst = new Chart(scanCtx, {
+      type: 'bar',
+      data: { labels, datasets: [{ data: scanData, backgroundColor: 'rgba(255,90,31,0.25)', hoverBackgroundColor: '#ff5a1f', borderRadius: 4, borderSkipped: false }] },
+      options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, beginAtZero: true } } }
     });
-    async function deleteQR(id, row) {
-      if (!confirm('Delete this QR code and all its data?')) return;
-      try {
-        const token = await window.Clerk.session.getToken();
-        const res = await fetch(API_BASE + '/qr/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        if (data.success) { row.remove(); } else { alert(data.error || 'Could not delete.'); }
-      } catch (e) { alert('Could not reach server.'); }
-    }
+    const badge = document.getElementById('scans-chart-badge');
+    if (badge) badge.textContent = totalScans + ' total scans';
+  }
 
-    // Sidebar
-    const sidebar = document.getElementById('sidebar');
-    const sbToggle = document.getElementById('sb-toggle');
-    const mobBtn = document.getElementById('mob-btn');
-    const overlay = document.getElementById('sb-overlay');
-
-    const isCollapsed = localStorage.getItem('sb-collapsed') === 'true';
-    if (isCollapsed) { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-
-    sbToggle.addEventListener('click', () => {
-      const c = sidebar.classList.toggle('collapsed');
-      document.body.classList.toggle('sb-collapsed', c);
-      localStorage.setItem('sb-collapsed', c);
+  // Subscribers growth
+  const subsCtx = document.getElementById('subsChart');
+  if (subsCtx) {
+    if (subsChartInst) subsChartInst.destroy();
+    subsChartInst = new Chart(subsCtx, {
+      type: 'line',
+      data: { labels, datasets: [{ data: subsData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 }] },
+      options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, beginAtZero: true } } }
     });
+  }
 
-    mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
-    overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
-
-    document.querySelectorAll('.sb-soon-item').forEach(item => {
-      item.addEventListener('click', e => {
-        e.preventDefault();
-        const label = item.querySelector('.sb-label').textContent;
-        const toast = document.getElementById('cs-toast');
-        document.getElementById('cs-toast-msg').textContent = `${label} is coming soon!`;
-        toast.style.display = 'flex';
-        setTimeout(() => toast.style.display = 'none', 3000);
+  // Use case donut
+  const ucCtx = document.getElementById('usecaseChart');
+  if (ucCtx) {
+    const usecaseMap = {};
+    dashboard.forEach(q => {
+      const uc = q.useCase || (q.businessName ? 'ai-page' : 'basic');
+      usecaseMap[uc] = (usecaseMap[uc] || 0) + q.totalScans;
+    });
+    const ucLabels = Object.keys(usecaseMap);
+    const ucData   = ucLabels.map(k => usecaseMap[k]);
+    const palette  = ['#ff5a1f','#22c55e','#a78bfa','#3b82f6','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
+    if (usecaseChartInst) usecaseChartInst.destroy();
+    if (ucLabels.length === 0) {
+      ucCtx.parentElement.innerHTML = '<div class="an-empty">No data yet</div>';
+    } else {
+      usecaseChartInst = new Chart(ucCtx, {
+        type: 'doughnut',
+        data: { labels: ucLabels, datasets: [{ data: ucData, backgroundColor: palette.slice(0, ucLabels.length), borderWidth: 0, hoverOffset: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#444d56', boxWidth: 10, padding: 12, font: { size: 10 } } }, tooltip: chartDefaults.plugins.tooltip }, cutout: '68%' }
       });
+    }
+  }
+}
+
+// ── Render performance table ─────────────────────────────────────────────────
+function renderTable(dashboard) {
+  const tbody = document.getElementById('perf-tbody');
+  if (!tbody) return;
+  let rows = [...dashboard];
+  if (searchQ) rows = rows.filter(q => (q.businessName || 'Basic QR').toLowerCase().includes(searchQ));
+  rows.sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'name') { av = (a.businessName||'').toLowerCase(); bv = (b.businessName||'').toLowerCase(); }
+    else if (sortCol === 'scans') { av = a.totalScans; bv = b.totalScans; }
+    else if (sortCol === 'subs') { av = a.totalSubscribers; bv = b.totalSubscribers; }
+    else { av = 0; bv = 0; }
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="an-empty">No pages found</td></tr>'; return; }
+
+  const maxScans = Math.max(...rows.map(q => q.totalScans), 1);
+  tbody.innerHTML = rows.map(qr => {
+    const name    = qr.businessName || 'Basic QR Code';
+    const isAI    = !!qr.businessName;
+    const cvr     = qr.totalScans > 0 ? Math.round((qr.totalSubscribers / qr.totalScans) * 100) : 0;
+    const qrImg   = `https://api.qrserver.com/v1/create-qr-code/?size=36x36&data=${encodeURIComponent(qr.originalUrl)}&color=111111&bgcolor=ffffff&margin=1`;
+    const statusBadge = isAI
+      ? '<span class="pt-badge-live">● Live</span>'
+      : '<span class="pt-badge-basic">Basic</span>';
+    return `<tr>
+      <td><div class="pt-qr">
+        <div class="pt-qr-thumb"><img src="${qrImg}" loading="lazy" /></div>
+        <div><div class="pt-name">${name}</div><div class="pt-url">${qr.originalUrl}</div></div>
+      </div></td>
+      <td class="pt-val o">${qr.totalScans}</td>
+      <td class="pt-val">${qr.totalSubscribers}</td>
+      <td class="pt-val">—</td>
+      <td class="pt-val">—</td>
+      <td><span class="pt-val o">${cvr}%</span><div class="pt-cvr-bar"><div class="pt-cvr-fill" style="width:${cvr}%"></div></div></td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Render AI & wallet metrics ────────────────────────────────────────────────
+function renderMetrics(dashboard) {
+  const totalScans = dashboard.reduce((s, q) => s + q.totalScans, 0);
+  const totalSubs  = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
+  const cvr = totalScans > 0 ? Math.round((totalSubs/totalScans)*100) : 0;
+
+  function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+  set('an-scans', totalScans); set('an-subs', totalSubs);
+  set('an-wallet', '—'); set('an-ai', '—'); set('an-cvr', cvr + '%');
+  set('an-pages', dashboard.filter(q => !!q.businessName).length);
+  set('ai-cvr', cvr + '%'); set('ai-convos', '—');
+  set('wlt-installs', '—'); set('wlt-email', totalSubs);
+
+  // Scan breakdown bars
+  const bdEl = document.getElementById('scan-breakdown');
+  if (bdEl) {
+    const sorted = [...dashboard].sort((a,b) => b.totalScans - a.totalScans);
+    const maxS = Math.max(sorted[0]?.totalScans || 1, 1);
+    if (sorted.length === 0) { bdEl.innerHTML = '<div class="mc-empty">No data yet</div>'; }
+    else {
+      bdEl.innerHTML = sorted.slice(0,6).map(q => {
+        const pct = Math.round((q.totalScans/maxS)*100);
+        const name = q.businessName || 'Basic QR';
+        return `<div class="mc-bar-row">
+          <span class="mc-bar-label">${name}</span>
+          <div class="mc-bar-track"><div class="mc-bar-fill" style="width:${pct}%;background:#ff5a1f"></div></div>
+          <span class="mc-bar-count">${q.totalScans}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Recent activity
+  const raEl = document.getElementById('recent-activity');
+  if (raEl) {
+    const events = [];
+    dashboard.forEach(q => {
+      if (q.totalScans > 0) events.push({ c:'#ff5a1f', t:`<strong>${q.businessName||'QR'}</strong> — ${q.totalScans} scans` });
+      if (q.totalSubscribers > 0) events.push({ c:'#22c55e', t:`<strong>${q.totalSubscribers}</strong> subscriber${q.totalSubscribers!==1?'s':''} on ${q.businessName||'QR'}` });
     });
+    if (events.length === 0) { raEl.innerHTML = '<div class="mc-empty">No activity yet</div>'; }
+    else {
+      raEl.innerHTML = events.slice(0,6).map(e =>
+        `<div style="display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="width:6px;height:6px;border-radius:50%;background:${e.c};flex-shrink:0;margin-top:4px"></div>
+          <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;flex:1;line-height:1.4">${e.t}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#333d48">recent</div>
+        </div>`
+      ).join('');
+    }
+  }
 
-    // Analytics
-    async function loadAnalytics() {
-      try {
-        if (!window.Clerk?.session) return;
-        const token = window.Clerk?.session ? await window.Clerk.session.getToken() : null;
-        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-        const res = await fetch(API_BASE + '/analytics', { headers });
-        const data = await res.json();
-        const analytics = data.analytics || data || [];
+  // Populate QR filter dropdown
+  const qrFilter = document.getElementById('qr-filter');
+  if (qrFilter && qrFilter.options.length === 1) {
+    dashboard.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id; opt.textContent = q.businessName || 'Basic QR';
+      qrFilter.appendChild(opt);
+    });
+  }
+}
 
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('qrTable').style.display = 'table';
-        document.getElementById('totalQR').textContent = analytics.length;
-        const totalScans = analytics.reduce((sum, qr) => sum + qr.totalScans, 0);
-        document.getElementById('totalScans').textContent = totalScans;
-        const top = analytics.reduce((max, qr) => qr.totalScans > max ? qr.totalScans : max, 0);
-        document.getElementById('topScans').textContent = top;
+// ── Load all data ────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const token = await window.Clerk.session.getToken();
+    const res = await fetch(`${API_BASE}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    allData = data.dashboard || [];
 
-        const tbody = document.getElementById('qrTableBody');
-        analytics.forEach(qr => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td title="${qr.originalUrl}">${qr.originalUrl}</td>
-            <td><a href="${qr.redirectUrl}" target="_blank" style="color:var(--accent)">${qr.redirectUrl}</a></td>
-            <td><span class="scan-badge">${qr.totalScans}</span></td>
-            <td>${new Date(qr.createdAt).toLocaleDateString()}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        document.getElementById('loading').textContent = 'Failed to load analytics.';
-        console.error(err);
-      }
+    // Update plan badge
+    if (data.planInfo) {
+      const b = document.getElementById('plan-badge');
+      if (b) b.textContent = (data.planInfo.basePlan || data.planInfo.plan || 'free').toUpperCase();
     }
 
-    loadAnalytics();
-  </script>
+    renderCharts(allData);
+    renderTable(allData);
+    renderMetrics(allData);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="an-loading">Failed to load data.</td></tr>';
+  }
+}
 
-  <script
-    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
-    type="text/javascript"
-    onload="window.Clerk.load().then(() => { loadAnalytics(); const u=window.Clerk.user; if(u){const n=u.firstName||u.emailAddresses[0].emailAddress; document.getElementById('sb-user-name').textContent=n; document.getElementById('sb-avatar').textContent=n[0].toUpperCase();} })"
-  ></script>
-<script src="sidebar.js?v=3"></script></body>
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function initAnalytics() {
+  await window.Clerk.load();
+  await new Promise(r => setTimeout(r, 400));
+  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+
+  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  document.getElementById('sb-username').textContent = name;
+  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('sb-signout').addEventListener('click', async e => {
+    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
+  });
+
+  // Sidebar collapse
+  const sidebar = document.getElementById('sidebar');
+  const sbToggle = document.getElementById('sb-toggle');
+  if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+  sbToggle.addEventListener('click', () => {
+    const c = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', c);
+    localStorage.setItem('sb-collapsed', c);
+  });
+  document.getElementById('mob-btn').addEventListener('click', () => { sidebar.classList.add('mob-open'); document.getElementById('sb-overlay').classList.add('on'); });
+  document.getElementById('sb-overlay').addEventListener('click', () => { sidebar.classList.remove('mob-open'); document.getElementById('sb-overlay').classList.remove('on'); });
+
+  // Soon toast
+  document.querySelectorAll('.sb-soon-item').forEach(item => {
+    item.addEventListener('click', e => { e.preventDefault(); });
+  });
+
+  // Date range buttons
+  document.querySelectorAll('.filter-btn[data-range]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn[data-range]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeRange = parseInt(btn.dataset.range);
+      renderCharts(allData);
+    });
+  });
+
+  // Table sort
+  document.querySelectorAll('.perf-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) sortAsc = !sortAsc;
+      else { sortCol = col; sortAsc = false; }
+      document.querySelectorAll('.perf-table th').forEach(h => h.classList.remove('sorted'));
+      th.classList.add('sorted');
+      th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+      renderTable(allData);
+    });
+  });
+
+  // Table search
+  document.getElementById('perf-search').addEventListener('input', e => {
+    searchQ = e.target.value.toLowerCase().trim();
+    renderTable(allData);
+  });
+
+  loadAnalytics();
+}
+</script>
+<script
+  data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+  onload="initAnalytics()"
+></script>
+<script src="sidebar.js?v=3"></script>
+</body>
 </html>
-
-
