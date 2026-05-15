@@ -139,7 +139,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
     <span class="fqr-nav-name">QR<span>Aivy</span></span>
   </a>
   <div class="fqr-nav-right">
-    <a class="fqr-nav-back" href="dashboard.html">← Dashboard</a>
+    <a class="fqr-nav-back" href="qr-free-dashboard.html">← My QR Codes</a>
     <a class="fqr-nav-upgrade" href="dashboard.html">✨ Smart QR</a>
   </div>
 </nav>
@@ -386,6 +386,14 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       qrStatus.className = 'fqr-qr-status ready';
       btnDl.disabled = false;
       state.hasQR = true;
+      // Save to localStorage for dashboard
+      try {
+        var stored = JSON.parse(localStorage.getItem('qraivy_free_qrs')||'[]');
+        stored = stored.filter(function(q){ return q.url !== val; });
+        stored.unshift({ url: val, scans: 0, createdAt: new Date().toISOString() });
+        if (stored.length > 20) stored = stored.slice(0, 20);
+        localStorage.setItem('qraivy_free_qrs', JSON.stringify(stored));
+      } catch(e) {}
     };
     img.onerror = function() {
       showLoading(false);

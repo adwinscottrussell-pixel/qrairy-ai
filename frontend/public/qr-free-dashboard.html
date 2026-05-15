@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>My QR Codes — Qraivy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;min-height:100vh}
+
+/* ── Nav ── */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(10,10,10,0.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-icon{width:30px;height:30px;background:#ff5a1f;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-family:'Syne',sans-serif;font-weight:800}
+.nav-name{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;color:#f0f4f8;letter-spacing:-.01em}
+.nav-name span{color:#ff5a1f;font-style:italic}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:background .15s}
+.nav-user:hover{background:rgba(255,255,255,0.07)}
+.nav-avatar{width:24px;height:24px;border-radius:50%;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0}
+.nav-username{font-size:.68rem;color:#a8b4c0;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-upgrade-nav{font-size:.68rem;font-family:'Syne',sans-serif;font-weight:700;color:#fff;background:#ff5a1f;padding:7px 14px;border-radius:7px;text-decoration:none;transition:background .15s;border:none;cursor:pointer}
+.btn-upgrade-nav:hover{background:#ff7a45}
+.btn-signout{font-size:.65rem;color:#7a8fa8;background:none;border:none;cursor:pointer;padding:6px 10px;transition:color .15s}
+.btn-signout:hover{color:#ef4444}
+
+/* ── Main wrap ── */
+.wrap{max-width:860px;margin:0 auto;padding:36px 24px 60px}
+
+/* ── Header ── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-.03em;color:#f0f4f8}
+.page-title em{color:#ff5a1f;font-style:normal}
+.page-sub{font-size:.72rem;color:#7a8fa8;margin-top:4px}
+.btn-new-qr{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;background:#ff5a1f;color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;text-decoration:none;box-shadow:0 0 16px rgba(255,90,31,0.18)}
+.btn-new-qr:hover{background:#ff7a45;box-shadow:0 0 24px rgba(255,90,31,0.3)}
+
+/* ── Stats strip ── */
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:28px}
+.stat-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:16px 18px}
+.stat-val{font-size:1.7rem;font-weight:900;color:#f0f4f8;line-height:1;margin-bottom:4px}
+.stat-val.o{color:#ff5a1f}
+.stat-lbl{font-size:.58rem;color:#7a8fa8;text-transform:uppercase;letter-spacing:.1em}
+
+/* ── Section header ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
+.sec-count{font-size:.65rem;color:#7a8fa8;margin-left:6px}
+
+/* ── QR Cards grid ── */
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:32px}
+.qr-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;overflow:hidden;transition:border-color .18s}
+.qr-card:hover{border-color:rgba(255,90,31,0.22)}
+.qr-card-body{padding:16px;display:flex;gap:12px;align-items:flex-start}
+.qr-thumb{width:60px;height:60px;border-radius:9px;background:#fff;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.qr-thumb img{width:56px;height:56px;display:block}
+.qr-info{flex:1;min-width:0}
+.qr-url{font-size:.72rem;color:#f0f4f8;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.qr-date{font-size:.6rem;color:#7a8fa8;margin-bottom:8px}
+.qr-scan-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.08);border:1px solid rgba(255,90,31,0.15);border-radius:99px;padding:3px 8px;font-size:.58rem;color:#ff8c55}
+.qr-actions{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,0.06)}
+.qr-act{padding:9px;background:#0f0f0f;font-size:.62rem;color:#a8b4c0;cursor:pointer;border:none;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.qr-act:first-child{border-right:1px solid rgba(255,255,255,0.05)}
+.qr-act:hover{background:rgba(255,90,31,0.06);color:#ff8c55}
+
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:52px 24px;border:1px dashed rgba(255,255,255,0.07);border-radius:13px;margin-bottom:28px}
+.empty-icon{font-size:2.4rem;margin-bottom:12px;opacity:.4}
+.empty-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:6px;color:#f0f4f8}
+.empty-desc{font-size:.72rem;color:#7a8fa8;margin-bottom:20px;line-height:1.65}
+
+/* ── Basic analytics ── */
+.analytics-section{margin-bottom:32px}
+.analytics-panel{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;overflow:hidden}
+.an-hdr{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8}
+.an-rows{padding:4px 0}
+.an-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,0.04);transition:background .15s}
+.an-row:last-child{border-bottom:none}
+.an-row:hover{background:rgba(255,255,255,0.02)}
+.an-qr-mini{width:32px;height:32px;border-radius:6px;background:#fff;flex-shrink:0;overflow:hidden}
+.an-qr-mini img{width:100%;height:100%;display:block}
+.an-name{font-size:.72rem;color:#f0f4f8;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.an-bar-wrap{width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.an-bar{height:100%;background:#ff5a1f;border-radius:2px}
+.an-scans{font-size:.7rem;color:#ff5a1f;font-weight:700;min-width:28px;text-align:right}
+.an-empty{font-size:.72rem;color:#5a6473;text-align:center;padding:24px 0}
+
+/* ── Upgrade section ── */
+.upgrade-section{background:linear-gradient(135deg,rgba(255,90,31,0.09) 0%,rgba(255,90,31,0.04) 100%);border:1px solid rgba(255,90,31,0.22);border-radius:16px;padding:28px;position:relative;overflow:hidden}
+.upgrade-glow{position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(255,90,31,0.14),transparent 70%);pointer-events:none;border-radius:50%}
+.upgrade-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.15);border:1px solid rgba(255,90,31,0.3);border-radius:99px;padding:3px 10px;font-size:.56rem;color:#ff8c55;letter-spacing:.08em;margin-bottom:12px}
+.upgrade-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:#f0f4f8;margin-bottom:8px;position:relative;line-height:1.25}
+.upgrade-sub{font-size:.72rem;color:#a8b4c0;margin-bottom:18px;line-height:1.7;position:relative;max-width:500px}
+.upgrade-features{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:20px;position:relative}
+@media(max-width:500px){.upgrade-features{grid-template-columns:1fr}}
+.upgrade-feat{display:flex;align-items:center;gap:8px;font-size:.7rem;color:#a8b4c0}
+.upgrade-feat-dot{width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0}
+.upgrade-feat strong{color:#f0f4f8;font-weight:500}
+.btn-upgrade-big{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#ff5a1f;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer;text-decoration:none;transition:all .15s;box-shadow:0 0 22px rgba(255,90,31,0.25);position:relative}
+.btn-upgrade-big:hover{background:#ff7a45;box-shadow:0 0 32px rgba(255,90,31,0.38)}
+.upgrade-note{font-size:.6rem;color:#5a6473;margin-top:8px;position:relative}
+
+/* ── Loading ── */
+.loading{font-size:.78rem;color:#5a6473;padding:32px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <a class="nav-brand" href="qr-free-dashboard.html">
+    <div class="nav-icon">Q</div>
+    <span class="nav-name">QR<span>Aivy</span></span>
+  </a>
+  <div class="nav-right">
+    <div class="nav-user" id="nav-user">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <span class="nav-username" id="nav-username">Loading…</span>
+    </div>
+    <button class="btn-upgrade-nav" onclick="window.location.href='dashboard.html'">✨ Smart QR</button>
+    <button class="btn-signout" id="btn-signout">Sign out</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">My <em>QR Codes</em></h1>
+      <div class="page-sub">Your free QR codes — simple, fast, always free</div>
+    </div>
+    <a class="btn-new-qr" href="qr-free.html">＋ Generate New QR</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-card">
+      <div class="stat-val o" id="stat-total">—</div>
+      <div class="stat-lbl">QR Codes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-scans">—</div>
+      <div class="stat-lbl">Total Scans</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-recent">—</div>
+      <div class="stat-lbl">Scans This Week</div>
+    </div>
+  </div>
+
+  <!-- Recent QR Codes -->
+  <div class="sec-hdr">
+    <div>
+      <span class="sec-title">Recent QR Codes</span>
+      <span class="sec-count" id="qr-count"></span>
+    </div>
+  </div>
+  <div id="qr-grid-wrap">
+    <div class="loading">Loading your QR codes…</div>
+  </div>
+
+  <!-- Basic Analytics -->
+  <div class="analytics-section">
+    <div class="sec-hdr">
+      <span class="sec-title">Scan Performance</span>
+    </div>
+    <div class="analytics-panel">
+      <div class="an-hdr">Scans per QR Code</div>
+      <div class="an-rows" id="an-rows">
+        <div class="an-empty">No scan data yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade section -->
+  <div class="upgrade-section">
+    <div class="upgrade-glow"></div>
+    <div class="upgrade-badge">✨ Smart QR — Upgrade</div>
+    <div class="upgrade-title">Turn your QR into an<br/>AI business assistant</div>
+    <div class="upgrade-sub">Your free QR just links to a URL. Smart QR creates a full AI-powered landing page behind your code — with an AI chat assistant, wallet subscribers, push notifications and real analytics.</div>
+    <div class="upgrade-features">
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>AI-generated <strong>landing page</strong></span></div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>AI <strong>chat assistant</strong> on page</span></div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span><strong>Wallet pass</strong> &amp; subscribers</span></div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span><strong>Push notifications</strong></span></div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>Smart <strong>scan analytics</strong></span></div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>AI <strong>voice welcome</strong> message</span></div>
+    </div>
+    <a class="btn-upgrade-big" href="dashboard.html">✨ Create your first Smart QR — Free</a>
+    <div class="upgrade-note">No credit card required to start · Free plan available forever</div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = 'https://api.qraivy.com';
+
+// ── localStorage QR store ─────────────────────────────────────────────────
+// Free QRs are stored locally since they bypass the backend
+function getLocalQRs() {
+  try {
+    return JSON.parse(localStorage.getItem('qraivy_free_qrs') || '[]');
+  } catch { return []; }
+}
+
+function saveLocalQR(entry) {
+  var qrs = getLocalQRs();
+  // Avoid dupes by URL
+  qrs = qrs.filter(function(q){ return q.url !== entry.url; });
+  qrs.unshift(entry);
+  if (qrs.length > 20) qrs = qrs.slice(0, 20); // cap at 20
+  localStorage.setItem('qraivy_free_qrs', JSON.stringify(qrs));
+}
+
+function qrImgSrc(url, size) {
+  return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||60)+'x'+(size||60)
+    +'&data='+encodeURIComponent(url)+'&color=111111&bgcolor=ffffff&margin=1';
+}
+
+function timeAgo(dateStr) {
+  var d = new Date(dateStr);
+  var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function truncUrl(url) {
+  try {
+    var u = new URL(url);
+    var s = u.hostname + (u.pathname !== '/' ? u.pathname : '');
+    return s.length > 32 ? s.slice(0,32)+'…' : s;
+  } catch { return url.slice(0,32); }
+}
+
+// ── Render QR grid ────────────────────────────────────────────────────────
+function renderGrid(qrs) {
+  var wrap = document.getElementById('qr-grid-wrap');
+  var countEl = document.getElementById('qr-count');
+  var statTotal = document.getElementById('stat-total');
+  var statScans = document.getElementById('stat-scans');
+  var statRecent = document.getElementById('stat-recent');
+  var anRows = document.getElementById('an-rows');
+
+  var totalScans = qrs.reduce(function(s,q){ return s+(q.scans||0); }, 0);
+  var weekAgo = Date.now() - 7*24*3600*1000;
+  var recentScans = qrs.filter(function(q){ return new Date(q.createdAt).getTime() > weekAgo; })
+                       .reduce(function(s,q){ return s+(q.scans||0); }, 0);
+
+  if (statTotal) statTotal.textContent = qrs.length;
+  if (statScans) statScans.textContent = totalScans;
+  if (statRecent) statRecent.textContent = recentScans;
+  if (countEl) countEl.textContent = qrs.length > 0 ? '('+qrs.length+')' : '';
+
+  if (qrs.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">'
+      +'<div class="empty-icon">⬡</div>'
+      +'<div class="empty-title">No QR codes yet</div>'
+      +'<div class="empty-desc">Generate your first free QR code in seconds.<br/>No account needed.</div>'
+      +'<a class="btn-new-qr" href="qr-free.html">＋ Generate your first QR</a>'
+      +'</div>';
+  } else {
+    wrap.innerHTML = '<div class="qr-grid">'
+      + qrs.map(function(qr) {
+          var url = qr.url || '';
+          var scans = qr.scans || 0;
+          return '<div class="qr-card">'
+            +'<div class="qr-card-body">'
+              +'<div class="qr-thumb"><img src="'+qrImgSrc(url,60)+'" loading="lazy"/></div>'
+              +'<div class="qr-info">'
+                +'<div class="qr-url" title="'+url+'">'+truncUrl(url)+'</div>'
+                +'<div class="qr-date">'+timeAgo(qr.createdAt)+'</div>'
+                +'<div class="qr-scan-pill">⬡ '+scans+' scan'+(scans!==1?'s':'')+'</div>'
+              +'</div>'
+            +'</div>'
+            +'<div class="qr-actions">'
+              +'<button class="qr-act" onclick="downloadQR(\''+encodeURIComponent(url)+'\')">⬇ Download</button>'
+              +'<button class="qr-act" onclick="editQR(\''+encodeURIComponent(url)+'\')">✏ Edit</button>'
+            +'</div>'
+          +'</div>';
+        }).join('')
+      +'</div>';
+  }
+
+  // Analytics rows
+  if (anRows) {
+    if (qrs.length === 0) {
+      anRows.innerHTML = '<div class="an-empty">Generate a QR code to see scan data</div>';
+    } else {
+      var maxS = Math.max.apply(null, qrs.map(function(q){ return q.scans||0; }).concat([1]));
+      anRows.innerHTML = qrs.slice(0,8).map(function(qr) {
+        var pct = Math.round(((qr.scans||0)/maxS)*100);
+        return '<div class="an-row">'
+          +'<div class="an-qr-mini"><img src="'+qrImgSrc(qr.url,32)+'" loading="lazy"/></div>'
+          +'<div class="an-name">'+truncUrl(qr.url)+'</div>'
+          +'<div class="an-bar-wrap"><div class="an-bar" style="width:'+pct+'%"></div></div>'
+          +'<div class="an-scans">'+(qr.scans||0)+'</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+}
+
+function downloadQR(encodedUrl) {
+  var url = decodeURIComponent(encodedUrl);
+  var src = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url)+'&color=000000&bgcolor=ffffff&margin=2';
+  var a = document.createElement('a');
+  a.href = src; a.download = 'qraivy-qr.png'; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function editQR(encodedUrl) {
+  var url = decodeURIComponent(encodedUrl);
+  window.location.href = 'qr-free.html?url=' + encodeURIComponent(url);
+}
+
+// ── Load from API + localStorage merge ────────────────────────────────────
+async function loadDashboard() {
+  var localQRs = getLocalQRs();
+
+  // Try to also pull basic QRs from the API (non-AI QRs)
+  try {
+    var token = await window.Clerk.session.getToken();
+    var res = await fetch(API_BASE+'/dashboard', { headers:{Authorization:'Bearer '+token} });
+    var data = await res.json();
+    var apiQRs = (data.dashboard||[]).filter(function(q){ return !q.businessName; });
+
+    // Merge API QRs into local format
+    var merged = apiQRs.map(function(q) {
+      return { url: q.originalUrl, scans: q.totalScans||0, createdAt: q.createdAt||new Date().toISOString(), source:'api', id:q.id };
+    });
+
+    // Add local-only QRs that aren't in API results
+    var apiUrls = merged.map(function(q){ return q.url; });
+    localQRs.forEach(function(lq) {
+      if (!apiUrls.includes(lq.url)) merged.push(lq);
+    });
+
+    // Sort by date
+    merged.sort(function(a,b){ return new Date(b.createdAt)-new Date(a.createdAt); });
+    renderGrid(merged);
+  } catch(err) {
+    // Fall back to localStorage only
+    renderGrid(localQRs);
+  }
+}
+
+// ── Record newly generated QR (called from qr-free.html via postMessage) ──
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'qraivy_new_qr') {
+    saveLocalQR({ url: e.data.url, scans: 0, createdAt: new Date().toISOString() });
+  }
+});
+
+// ── Also capture URL param on return from qr-free ─────────────────────────
+(function(){
+  var p = new URLSearchParams(window.location.search);
+  var savedUrl = p.get('saved');
+  if (savedUrl) {
+    saveLocalQR({ url: savedUrl, scans: 0, createdAt: new Date().toISOString() });
+    // Clean URL
+    history.replaceState({}, '', 'qr-free-dashboard.html');
+  }
+})();
+
+// ── Init ─────────────────────────────────────────────────────────────────
+async function init() {
+  // Try Clerk auth - gracefully degrade if not signed in
+  try {
+    await window.Clerk.load();
+    await new Promise(function(r){ setTimeout(r, 400); });
+
+    if (window.Clerk.user) {
+      var name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+      document.getElementById('nav-avatar').textContent = name[0].toUpperCase();
+      document.getElementById('nav-username').textContent = name;
+      document.getElementById('btn-signout').addEventListener('click', async function() {
+        await window.Clerk.signOut();
+        window.location.href = 'login.html';
+      });
+    } else {
+      document.getElementById('nav-username').textContent = 'Guest';
+      document.getElementById('btn-signout').style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('nav-username').textContent = 'Guest';
+  }
+
+  loadDashboard();
+}
+</script>
+<script
+  data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+  onload="init()"
+></script>
+</body>
+</html>
