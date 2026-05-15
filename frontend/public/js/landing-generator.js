@@ -193,7 +193,7 @@ window.QRAivyLPGen = (function(){
     var logo      = opts.logo      || null;
     var slug      = opts.slug      || makeSlug(bizName);
     var websiteURL= opts.websiteURL|| '';
-    var qrSrc     = opts.qrSrc    || ('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://qraivy.com/lp/'+slug+'&color=ffffff&bgcolor=111111&margin=2');
+    var qrSrc     = opts.qrSrc    || ('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://api.qraivy.com/lp/'+slug+'&color=ffffff&bgcolor=111111&margin=2');
 
     var c = CONTENT[useCase] || CONTENT['restaurant'];
     var domain = websiteURL.replace(/^https?:\/\//,'').replace(/\/.*$/,'') || 'qraivy.com';
@@ -268,7 +268,7 @@ window.QRAivyLPGen = (function(){
         '<img src="'+qrSrc+'" class="lp-qr-img" alt="QR Code" />'+
         '<div class="lp-qr-info">'+
           '<div class="lp-qr-title">Your Smart QR</div>'+
-          '<div class="lp-qr-url">qraivy.com/lp/'+slug+'</div>'+
+          '<div class="lp-qr-url">api.qraivy.com/lp/'+slug+'</div>'+
           '<div class="lp-qr-badge" style="background:'+accentDim+';border-color:'+accentBorder+';color:'+accent+'">&#10022; AI Smart Landing Page</div>'+
         '</div>'+
       '</div>'+
@@ -353,7 +353,7 @@ window.QRAivyLPGen = (function(){
         '<div class="lp-footer-logo" style="color:'+accent+'">Q</div>'+
         '<div class="lp-footer-info">'+
           '<div class="lp-footer-name">'+bizName+'</div>'+
-          '<div class="lp-footer-url">qraivy.com/lp/'+slug+'</div>'+
+          '<div class="lp-footer-url">api.qraivy.com/lp/'+slug+'</div>'+
         '</div>'+
       '</div>'+
       '<div class="lp-footer-powered">Powered by <a href="https://qraivy.com" style="color:'+accent+'">Qraivy</a> &mdash; AI Smart Landing Pages</div>'+
@@ -536,6 +536,7 @@ window.QRAivyLPGen = (function(){
 
   return { generate:generate, makeSlug:makeSlug };
 })();
+
 
 
 
