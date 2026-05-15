@@ -38,3 +38,4 @@
   window.qrairyOnboarding={init:function(u){if(!u||done(u))return;setTimeout(function(){render('step1',u);},450);},reopen:function(u){render('step1',u);}};
 })();
 
+
