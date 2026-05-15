@@ -179,7 +179,7 @@ a{color:inherit;text-decoration:none}
 .lp-hero{padding:36px 20px 28px;text-align:center;background:linear-gradient(160deg,${accentDim} 0%,transparent 55%)}
 .lp-hero-eyebrow{display:inline-flex;align-items:center;gap:6px;border:0.5px solid ${accentBorder};border-radius:99px;padding:5px 14px;font-size:0.6rem;color:${accent};letter-spacing:0.1em;margin-bottom:18px}
 .lp-hero-title{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,6vw,2.2rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:14px}
-.lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.5);max-width:340px;margin:0 auto 28px;line-height:1.75}
+.lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:340px;margin:0 auto 28px;line-height:1.75}
 .lp-hero-ctas{display:flex;flex-direction:column;gap:10px;align-items:center}
 /* Buttons */
 .lp-btn{display:block;width:100%;max-width:320px;padding:15px 24px;border-radius:12px;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
@@ -191,7 +191,7 @@ a{color:inherit;text-decoration:none}
 .lp-qr-card{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px}
 .lp-qr-img{width:72px;height:72px;border-radius:8px;flex-shrink:0;background:#fff}
 .lp-qr-label{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:3px}
-.lp-qr-url{font-size:0.62rem;color:rgba(240,236,224,0.35);margin-bottom:8px;word-break:break-all}
+.lp-qr-url{font-size:0.62rem;color:rgba(240,236,224,0.55);margin-bottom:8px;word-break:break-all}
 .lp-qr-badge{display:inline-flex;align-items:center;gap:5px;border:0.5px solid ${accentBorder};border-radius:99px;padding:3px 9px;font-size:0.55rem;color:${accent};background:${accentDim}}
 /* Sections */
 .lp-section{padding:22px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
@@ -206,7 +206,7 @@ a{color:inherit;text-decoration:none}
 .lp-chat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.07)}
 .lp-chat-avatar{width:32px;height:32px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#fff;flex-shrink:0}
 .lp-chat-hname{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700}
-.lp-chat-status{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:rgba(240,236,224,0.4)}
+.lp-chat-status{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:rgba(240,236,224,0.6)}
 .lp-status-dot{width:5px;height:5px;border-radius:50%;background:#22c55e}
 .lp-chat-msgs{min-height:80px;max-height:180px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
 .lp-chat-msgs::-webkit-scrollbar{display:none}
@@ -218,7 +218,7 @@ a{color:inherit;text-decoration:none}
 .lp-msg-user .lp-bubble{background:${accentDim};border:0.5px solid ${accentBorder};color:rgba(240,236,224,0.85)}
 .lp-chat-input-row{display:flex;gap:8px;padding:10px 12px;border-top:0.5px solid rgba(255,255,255,0.07)}
 .lp-chat-input{flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.75rem;outline:none}
-.lp-chat-input::placeholder{color:rgba(240,236,224,0.22)}
+.lp-chat-input::placeholder{color:rgba(240,236,224,0.65)}
 .lp-chat-send{width:36px;height:36px;border:none;border-radius:8px;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0}
 /* Voice */
 .lp-voice-section{padding:28px 20px;border-top:0.5px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.01)}
@@ -228,12 +228,12 @@ a{color:inherit;text-decoration:none}
 .lp-voice-btn:active{transform:scale(0.92)}
 .lp-voice-info{flex:1}
 .lp-voice-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;margin-bottom:2px}
-.lp-voice-sub{font-size:0.6rem;color:rgba(240,236,224,0.3)}
+.lp-voice-sub{font-size:0.6rem;color:rgba(240,236,224,0.7)}
 .lp-waveform{display:flex;align-items:center;gap:2px;height:30px}
 .lp-bar{width:3px;background:rgba(255,255,255,0.15);border-radius:2px}
 .lp-waveform-active .lp-bar{background:${accent};animation:lpWave 0.8s ease-in-out infinite alternate}
 @keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
-.lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.18);text-align:center}
+.lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.6);text-align:center}
 /* Subscribe */
 .lp-subscribe-section{padding:28px 20px 32px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-subscribe-card{position:relative;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid ${accentBorder};border-radius:18px;padding:24px 20px}
@@ -247,23 +247,23 @@ a{color:inherit;text-decoration:none}
 .lp-wallet-id{font-size:0.52rem;color:rgba(255,255,255,0.5);letter-spacing:0.2em}
 .lp-wallet-circles{font-size:1.2rem;opacity:0.6;letter-spacing:-4px}
 .lp-sub-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin-bottom:6px;position:relative}
-.lp-sub-text{font-size:0.72rem;color:rgba(240,236,224,0.45);margin-bottom:16px;line-height:1.65;position:relative}
+.lp-sub-text{font-size:0.72rem;color:rgba(240,236,224,0.65);margin-bottom:16px;line-height:1.65;position:relative}
 .lp-sub-form{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative}
 .lp-sub-input{padding:12px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none}
-.lp-sub-input::placeholder{color:rgba(240,236,224,0.22)}
+.lp-sub-input::placeholder{color:rgba(240,236,224,0.65)}
 .lp-sub-btn{padding:12px;border:none;border-radius:10px;background:${accent};color:#fff;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer}
 .lp-wallet-btns{display:flex;flex-direction:column;gap:7px;position:relative}
-.lp-wallet-btn{padding:11px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(240,236,224,0.5);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;width:100%}
+.lp-wallet-btn{padding:11px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(240,236,224,0.7);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;width:100%}
 
 /* Chat collapsed state */
 .lp-chat-collapsed{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
 .lp-chat-collapsed:hover{border-color:rgba(255,78,0,0.3);background:rgba(255,78,0,0.04)}
 .lp-chat-collapsed-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;box-shadow:0 0 8px rgba(34,197,94,0.6);animation:lpDot 2s ease-in-out infinite}
 .lp-chat-collapsed-label{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;flex:1}
-.lp-chat-collapsed-hint{font-size:0.6rem;color:rgba(240,236,224,0.3);white-space:nowrap}
+.lp-chat-collapsed-hint{font-size:0.6rem;color:rgba(240,236,224,0.7);white-space:nowrap}
 /* Typing dots */
 .lp-typing-dots{display:inline-flex;gap:4px;align-items:center;padding:2px 0}
-.lp-typing-dots span{width:6px;height:6px;border-radius:50%;background:rgba(240,236,224,0.4);animation:lpTypeDot 1.2s ease-in-out infinite}
+.lp-typing-dots span{width:6px;height:6px;border-radius:50%;background:rgba(240,236,224,0.6);animation:lpTypeDot 1.2s ease-in-out infinite}
 .lp-typing-dots span:nth-child(2){animation-delay:0.2s}
 .lp-typing-dots span:nth-child(3){animation-delay:0.4s}
 @keyframes lpTypeDot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
@@ -275,8 +275,8 @@ a{color:inherit;text-decoration:none}
 .lp-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
 .lp-footer-Q{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem}
 .lp-footer-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700}
-.lp-footer-url{font-size:0.58rem;color:rgba(240,236,224,0.25);margin-bottom:8px;word-break:break-all}
-.lp-footer-powered{font-size:0.58rem;color:rgba(240,236,224,0.18)}
+.lp-footer-url{font-size:0.58rem;color:rgba(240,236,224,0.65);margin-bottom:8px;word-break:break-all}
+.lp-footer-powered{font-size:0.58rem;color:rgba(240,236,224,0.6)}
 .lp-footer-powered a{color:${accent};text-decoration:none}
 </style>
 </head>
@@ -506,8 +506,8 @@ function render404(slug) {
 .wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
 .logo{width:52px;height:52px;background:#FF4E00;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:#fff}
 h1{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800}
-p{font-size:0.78rem;color:rgba(240,236,224,0.4);line-height:1.7;max-width:300px}
-.slug{font-size:0.65rem;color:rgba(240,236,224,0.2);margin-top:-4px}
+p{font-size:0.78rem;color:rgba(240,236,224,0.6);line-height:1.7;max-width:300px}
+.slug{font-size:0.65rem;color:rgba(240,236,224,0.7);margin-top:-4px}
 a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:#fff;text-decoration:none}
 </style></head>
 <body><div class="wrap">
