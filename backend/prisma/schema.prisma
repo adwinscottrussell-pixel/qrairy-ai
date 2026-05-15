@@ -48,3 +48,20 @@ model Subscriber {
   createdAt   DateTime @default(now())
   qr          QR       @relation(fields: [qrId], references: [id])
 }
+
+model LandingPage {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  businessName String
+  websiteUrl   String?
+  useCase      String?
+  brandColor   String?  @default("#ff5a1f")
+  logoUrl      String?
+  userId       String?
+  qrType       String?  @default("ai")
+  sections     String?
+  status       String   @default("live")
+  scanCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+}
