@@ -128,7 +128,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://api.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://qrairy.ai/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   // Accent RGB for rgba usage
   function hexToRGB(hex) {
@@ -379,7 +379,7 @@ ${sectionsHTML}
     <div class="lp-footer-Q">Q</div>
     <span class="lp-footer-name">${bizName}</span>
   </div>
-  <div class="lp-footer-url">api.qraivy.com/lp/${slug}</div>
+  <div class="lp-footer-url">qrairy.ai/lp/${slug}</div>
   <div class="lp-footer-powered">Powered by <a href="https://qrairy.ai" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>
 <script>
@@ -497,4 +497,84 @@ ${sectionsHTML}
   }
 })();
 </script>
+`;
+};
 
+// ── 404 page ──────────────────────────────────────────────────────────────
+function render404(slug) {
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Page Not Found — Qraivy</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;max-width:480px;margin:0 auto}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.logo{width:52px;height:52px;background:#FF4E00;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:#fff}
+h1{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800}
+p{font-size:0.78rem;color:rgba(240,236,224,0.4);line-height:1.7;max-width:300px}
+.slug{font-size:0.65rem;color:rgba(240,236,224,0.2);margin-top:-4px}
+a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:#fff;text-decoration:none}
+</style></head>
+<body><div class="wrap">
+<div class="logo">Q</div>
+<h1>Page not found</h1>
+<p>This smart landing page doesn't exist yet or may have been removed.</p>
+<div class="slug">api.qraivy.com/lp/${slug}</div>
+<a href="https://qraivy.com">Create your own AI page &rarr;</a>
+</div></body></html>`;
+}
+
+// ── Controllers ───────────────────────────────────────────────────────────
+
+async function handlePublishLP(req, res) {
+  try {
+    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections, qrType } = req.body;
+    if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
+    const page = await prisma.landingPage.upsert({
+      where: { slug },
+      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
+      create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
+    });
+    return res.json({ ok: true, url: `https://api.qraivy.com/lp/${slug}`, slug, id: page.id });
+  } catch (err) {
+    console.error('[LP] publish error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function handleServeLP(req, res) {
+  try {
+    const { slug } = req.params;
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page || page.status === 'draft') return res.status(404).send(render404(slug));
+    prisma.landingPage.update({ where: { slug }, data: { scanCount: { increment: 1 } } }).catch(() => {});
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return res.send(renderLP(page));
+  } catch (err) {
+    console.error('[LP] serve error:', err);
+    return res.status(500).send(render404(req.params.slug));
+  }
+}
+
+async function handleGetLP(req, res) {
+  try {
+    const page = await prisma.landingPage.findUnique({ where: { slug: req.params.slug } });
+    if (!page) return res.status(404).json({ error: 'not found' });
+    return res.json(page);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function handleListLPs(req, res) {
+  try {
+    const userId = req.query.userId;
+    const where = userId ? { userId } : {};
+    const pages = await prisma.landingPage.findMany({ where, orderBy: { createdAt: 'desc' }, select: { id:true, slug:true, businessName:true, useCase:true, brandColor:true, status:true, scanCount:true, createdAt:true } });
+    return res.json(pages);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };
