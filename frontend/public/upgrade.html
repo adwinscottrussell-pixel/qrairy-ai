@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Smart QR — AI-Powered Business Pages · Qraivy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--accent:#ff5a1f;--accent-dim:rgba(255,90,31,0.12);--accent-border:rgba(255,90,31,0.28);--surface:#0f0f0f;--border:rgba(255,255,255,0.08);--text:#f0f4f8;--text-dim:#a8b4c0;--text-muted:#5a6473}
+html{scroll-behavior:smooth}
+body{background:#0a0a0a;color:var(--text);font-family:'DM Mono',monospace;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* ── Nav ── */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid var(--border);background:rgba(10,10,10,0.92);backdrop-filter:blur(16px);position:sticky;top:0;z-index:100}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:#fff}
+.nav-name{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:-.01em}
+.nav-name span{color:var(--accent);font-style:italic}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-link{padding:7px 14px;border-radius:7px;font-size:.7rem;color:var(--text-dim);transition:color .15s;cursor:pointer}
+.nav-link:hover{color:var(--text)}
+.btn-nav-cta{padding:8px 18px;background:var(--accent);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer;transition:background .15s}
+.btn-nav-cta:hover{background:#ff7a45}
+@media(max-width:640px){.nav{padding:14px 20px}.nav-links{display:none}}
+
+/* ── Hero ── */
+.hero{min-height:92vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 60px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(255,90,31,0.09) 0%,transparent 65%);pointer-events:none}
+.hero-glow{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(255,90,31,0.06),transparent 65%);pointer-events:none;border-radius:50%}
+.hero-badge{display:inline-flex;align-items:center;gap:7px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:99px;padding:6px 16px;font-size:.62rem;color:var(--accent);letter-spacing:.1em;margin-bottom:24px;position:relative}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(2.4rem,7vw,4.2rem);font-weight:800;letter-spacing:-.04em;line-height:1.08;margin-bottom:20px;position:relative;max-width:800px}
+.hero-title em{color:var(--accent);font-style:normal;display:block}
+.hero-sub{font-size:clamp(.85rem,2vw,1rem);color:var(--text-dim);max-width:520px;line-height:1.8;margin-bottom:36px;position:relative}
+.hero-ctas{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:56px;position:relative}
+.btn-hero-primary{display:inline-flex;align-items:center;gap:8px;padding:15px 32px;background:var(--accent);border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:#fff;cursor:pointer;transition:all .18s;box-shadow:0 0 32px rgba(255,90,31,0.3);text-decoration:none}
+.btn-hero-primary:hover{background:#ff7a45;box-shadow:0 0 44px rgba(255,90,31,0.45);transform:translateY(-1px)}
+.btn-hero-secondary{display:inline-flex;align-items:center;gap:8px;padding:15px 28px;background:transparent;border:1px solid var(--border);border-radius:11px;font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text-dim);cursor:pointer;transition:all .18s}
+.btn-hero-secondary:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+.hero-proof{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;position:relative}
+.hero-proof-item{display:flex;align-items:center;gap:6px;font-size:.65rem;color:var(--text-muted)}
+.hero-proof-dot{width:4px;height:4px;border-radius:50%;background:var(--text-muted)}
+
+/* ── Floating feature pills ── */
+.hero-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:600px;margin:0 auto 48px;position:relative}
+.hero-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:99px;font-size:.65rem;color:var(--text-dim);transition:all .2s}
+.hero-pill:hover{border-color:var(--accent-border);color:var(--text);background:var(--accent-dim)}
+.hero-pill-icon{font-size:.75rem}
+
+/* ── Section base ── */
+section{padding:80px 24px}
+.section-inner{max-width:1000px;margin:0 auto}
+.section-label{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label::before{content:'';width:24px;height:1px;background:var(--accent);display:block}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
+.section-sub{font-size:.82rem;color:var(--text-dim);line-height:1.75;max-width:520px}
+.section-hdr{margin-bottom:48px}
+
+/* ── Comparison table ── */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.compare-grid{grid-template-columns:1fr}}
+.compare-card{border-radius:16px;padding:28px;overflow:hidden;position:relative}
+.compare-card.free{background:var(--surface);border:1px solid var(--border)}
+.compare-card.smart{background:linear-gradient(140deg,rgba(255,90,31,0.1),rgba(255,90,31,0.04));border:1px solid var(--accent-border)}
+.compare-card.smart::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,90,31,0.15),transparent 70%);border-radius:50%;pointer-events:none}
+.compare-plan-badge{display:inline-flex;align-items:center;gap:6px;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:99px;margin-bottom:16px}
+.compare-plan-badge.free{background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--border)}
+.compare-plan-badge.smart{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+.compare-plan-name{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:6px}
+.compare-plan-desc{font-size:.7rem;color:var(--text-dim);margin-bottom:20px;line-height:1.6}
+.compare-features{display:flex;flex-direction:column;gap:9px}
+.compare-feat{display:flex;align-items:center;gap:10px;font-size:.72rem}
+.compare-feat-check{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.6rem}
+.compare-feat-check.yes{background:rgba(34,197,94,0.15);color:#22c55e}
+.compare-feat-check.no{background:rgba(255,255,255,0.04);color:var(--text-muted)}
+.compare-feat-text{color:var(--text-dim)}
+.compare-feat-text.yes{color:var(--text)}
+.compare-cta{margin-top:24px}
+.btn-compare-free{width:100%;padding:11px;background:transparent;border:1px solid var(--border);border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text-dim);cursor:pointer;transition:all .15s}
+.btn-compare-free:hover{border-color:rgba(255,255,255,0.18);color:var(--text)}
+.btn-compare-smart{width:100%;padding:11px;background:var(--accent);border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;box-shadow:0 0 22px rgba(255,90,31,0.22)}
+.btn-compare-smart:hover{background:#ff7a45;box-shadow:0 0 32px rgba(255,90,31,0.35)}
+
+/* ── Feature showcase ── */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;transition:border-color .18s,transform .15s}
+.feature-card:hover{border-color:var(--accent-border);transform:translateY(-2px)}
+.feature-card-icon{width:40px;height:40px;border-radius:10px;background:var(--accent-dim);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:14px}
+.feature-card-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;margin-bottom:6px}
+.feature-card-desc{font-size:.7rem;color:var(--text-dim);line-height:1.7}
+
+/* ── Demo mockup ── */
+.demo-section{background:linear-gradient(180deg,transparent 0%,rgba(255,90,31,0.04) 50%,transparent 100%)}
+.demo-inner{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;max-width:1000px;margin:0 auto}
+@media(max-width:760px){.demo-inner{grid-template-columns:1fr}}
+.demo-phone-wrap{display:flex;justify-content:center;position:relative}
+.demo-phone{width:220px;background:#0d0d0d;border-radius:32px;border:2px solid rgba(255,255,255,0.1);overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04)}
+.demo-phone-notch{width:60px;height:6px;background:#1a1a1a;border-radius:0 0 6px 6px;margin:8px auto 0}
+.demo-phone-screen{padding:14px 12px;display:flex;flex-direction:column;gap:8px}
+.dp-hero{background:linear-gradient(160deg,rgba(255,90,31,0.12),transparent 70%);border-radius:10px;padding:12px;margin-bottom:4px}
+.dp-badge{font-size:.42rem;color:var(--accent);letter-spacing:.08em;margin-bottom:6px}
+.dp-title{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:800;color:var(--text);margin-bottom:3px;line-height:1.2}
+.dp-sub{font-size:.44rem;color:var(--text-dim);line-height:1.5;margin-bottom:8px}
+.dp-btn{background:var(--accent);border-radius:6px;padding:5px 10px;font-family:'Syne',sans-serif;font-size:.48rem;font-weight:700;color:#fff;display:inline-block}
+.dp-section{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px}
+.dp-section-label{font-size:.46rem;color:var(--text-dim);margin-bottom:4px}
+.dp-chat-pill{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:99px;padding:4px 8px;display:flex;align-items:center;gap:5px;font-size:.44rem;color:#22c55e}
+.dp-green-dot{width:5px;height:5px;border-radius:50%;background:#22c55e}
+.dp-wallet{background:linear-gradient(135deg,var(--accent),#cc3a00);border-radius:8px;padding:8px}
+.dp-wallet-brand{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:800;color:#fff;margin-bottom:10px}
+.dp-wallet-id{font-size:.4rem;color:rgba(255,255,255,0.5);letter-spacing:.12em}
+.demo-text-col{}
+.demo-feature-list{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+.demo-feat{display:flex;align-items:flex-start;gap:12px}
+.demo-feat-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-dim);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;margin-top:2px}
+.demo-feat-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:2px}
+.demo-feat-desc{font-size:.68rem;color:var(--text-dim);line-height:1.6}
+
+/* ── Use cases ── */
+.usecases-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.usecase-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:all .18s;cursor:pointer}
+.usecase-card:hover{border-color:var(--accent-border);background:var(--accent-dim)}
+.usecase-icon{font-size:1.5rem;margin-bottom:8px}
+.usecase-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:3px}
+.usecase-desc{font-size:.62rem;color:var(--text-dim);line-height:1.5}
+
+/* ── Testimonials ── */
+.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.testimonial-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px}
+.testimonial-stars{font-size:.8rem;color:var(--accent);letter-spacing:2px;margin-bottom:10px}
+.testimonial-text{font-size:.75rem;color:var(--text-dim);line-height:1.7;margin-bottom:14px;font-style:italic}
+.testimonial-text::before{content:'\201C'}
+.testimonial-text::after{content:'\201D'}
+.testimonial-author{display:flex;align-items:center;gap:10px}
+.testimonial-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent-dim);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--accent);flex-shrink:0}
+.testimonial-name{font-size:.72rem;font-weight:500}
+.testimonial-role{font-size:.6rem;color:var(--text-muted)}
+
+/* ── Pricing ── */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:900px;margin:0 auto}
+.pricing-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden;transition:border-color .18s}
+.pricing-card.featured{border-color:var(--accent-border);background:linear-gradient(140deg,rgba(255,90,31,0.08),rgba(255,90,31,0.03))}
+.pricing-card.featured::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,90,31,0.14),transparent 70%);border-radius:50%}
+.pricing-popular{position:absolute;top:16px;right:16px;background:var(--accent);color:#fff;font-size:.52rem;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:99px;text-transform:uppercase}
+.pricing-plan{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.pricing-price{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-.04em;color:var(--text);line-height:1;margin-bottom:4px}
+.pricing-price span{font-size:.8rem;font-weight:400;color:var(--text-dim)}
+.pricing-desc{font-size:.68rem;color:var(--text-dim);margin-bottom:20px;line-height:1.6}
+.pricing-features{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.pf{display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--text-dim)}
+.pf-check{width:16px;height:16px;border-radius:50%;background:rgba(34,197,94,0.12);color:#22c55e;display:flex;align-items:center;justify-content:center;font-size:.55rem;flex-shrink:0}
+.pf-check.accent{background:var(--accent-dim);color:var(--accent)}
+.pf-text{color:var(--text)}
+.btn-pricing{width:100%;padding:12px;border-radius:10px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .15s;border:none}
+.btn-pricing.free{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-pricing.free:hover{border-color:rgba(255,255,255,0.18);color:var(--text)}
+.btn-pricing.starter{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(255,90,31,0.2)}
+.btn-pricing.starter:hover{background:#ff7a45;box-shadow:0 0 30px rgba(255,90,31,0.35)}
+.btn-pricing.pro{background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)}
+.btn-pricing.pro:hover{background:rgba(139,92,246,0.25)}
+.pricing-note{text-align:center;font-size:.62rem;color:var(--text-muted);margin-top:20px}
+
+/* ── Bottom CTA ── */
+.bottom-cta{text-align:center;padding:100px 24px;background:linear-gradient(180deg,transparent 0%,rgba(255,90,31,0.05) 50%,transparent 100%);position:relative}
+.bottom-cta-title{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:800;letter-spacing:-.04em;margin-bottom:12px}
+.bottom-cta-sub{font-size:.85rem;color:var(--text-dim);margin-bottom:32px;line-height:1.75;max-width:440px;margin-left:auto;margin-right:auto}
+
+/* ── Footer ── */
+footer{padding:28px 40px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-brand{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--text-dim)}
+.footer-brand span{color:var(--accent);font-style:italic}
+.footer-links{display:flex;gap:16px}
+.footer-link{font-size:.65rem;color:var(--text-muted);transition:color .15s}
+.footer-link:hover{color:var(--text-dim)}
+.footer-copy{font-size:.62rem;color:var(--text-muted)}
+
+/* ── Divider ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:0 auto;max-width:1000px}
+
+/* ── Scroll reveal ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s ease,transform .5s ease}
+.reveal.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-icon">Q</div>
+    <span class="nav-name">QR<span>Aivy</span></span>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="#features">Features</a>
+    <a class="nav-link" href="#compare">Compare</a>
+    <a class="nav-link" href="#pricing">Pricing</a>
+    <a class="nav-link" href="qr-free.html">Free QR</a>
+    <button class="btn-nav-cta" onclick="startSmartQR()">Start Smart QR →</button>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><span class="hero-badge-dot"></span>✨ Smart QR — AI Business Pages</div>
+  <h1 class="hero-title">
+    Your QR code is just<br/>
+    <em>the beginning.</em>
+  </h1>
+  <p class="hero-sub">Smart QR turns a simple scan into a full AI-powered business experience — landing page, AI assistant, wallet subscriptions and real analytics. All behind one code.</p>
+  <div class="hero-pills">
+    <div class="hero-pill"><span class="hero-pill-icon">🤖</span>AI Landing Page</div>
+    <div class="hero-pill"><span class="hero-pill-icon">💬</span>AI Chat Assistant</div>
+    <div class="hero-pill"><span class="hero-pill-icon">💳</span>Wallet Subscribers</div>
+    <div class="hero-pill"><span class="hero-pill-icon">🔔</span>Push Notifications</div>
+    <div class="hero-pill"><span class="hero-pill-icon">📊</span>Smart Analytics</div>
+    <div class="hero-pill"><span class="hero-pill-icon">🎙</span>Voice Welcome</div>
+    <div class="hero-pill"><span class="hero-pill-icon">⚡</span>Dynamic Content</div>
+  </div>
+  <div class="hero-ctas">
+    <button class="btn-hero-primary" onclick="startSmartQR()">✨ Create Smart QR — Free to start</button>
+    <a class="btn-hero-secondary" href="#compare">Compare plans ↓</a>
+  </div>
+  <div class="hero-proof">
+    <span class="hero-proof-item">✓ No credit card required</span>
+    <span class="hero-proof-dot"></span>
+    <span class="hero-proof-item">✓ Free plan forever</span>
+    <span class="hero-proof-dot"></span>
+    <span class="hero-proof-item">✓ Live in 60 seconds</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── FEATURE COMPARISON ─────────────────────────────────────────────── -->
+<section id="compare">
+  <div class="section-inner">
+    <div class="section-hdr reveal">
+      <div class="section-label">Compare</div>
+      <h2 class="section-title">Free QR vs Smart QR</h2>
+      <p class="section-sub">A standard QR code gets you a link. Smart QR gets you a customer engagement platform.</p>
+    </div>
+    <div class="compare-grid reveal">
+      <div class="compare-card free">
+        <div class="compare-plan-badge free">Free QR</div>
+        <div class="compare-plan-name">Basic QR Code</div>
+        <div class="compare-plan-desc">A simple QR that links to a URL. That's it.</div>
+        <div class="compare-features">
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Static QR code</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Direct link to URL</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">PNG/SVG download</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Custom colours</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">AI landing page</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">AI chat assistant</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">Wallet subscribers</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">Push notifications</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">Scan analytics</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">Dynamic content</span></div>
+          <div class="compare-feat"><div class="compare-feat-check no">–</div><span class="compare-feat-text">Voice welcome message</span></div>
+        </div>
+        <div class="compare-cta">
+          <button class="btn-compare-free" onclick="window.location.href='qr-free.html'">Continue with Free</button>
+        </div>
+      </div>
+      <div class="compare-card smart">
+        <div class="compare-plan-badge smart">✨ Smart QR</div>
+        <div class="compare-plan-name">AI Business Page</div>
+        <div class="compare-plan-desc">A full customer engagement platform behind one scan.</div>
+        <div class="compare-features">
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Everything in Free</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">AI-generated landing page</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">AI chat assistant 24/7</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Wallet pass + subscribers</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Push notifications</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Real-time scan analytics</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Dynamic content updates</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">AI voice welcome message</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Business dashboard</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Subscriber campaigns</span></div>
+          <div class="compare-feat"><div class="compare-feat-check yes">✓</div><span class="compare-feat-text yes">Marketing asset exports</span></div>
+        </div>
+        <div class="compare-cta">
+          <button class="btn-compare-smart" onclick="startSmartQR()">✨ Start Smart QR — Free</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── FEATURE SHOWCASE ───────────────────────────────────────────────── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="section-hdr reveal">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything your business needs</h2>
+      <p class="section-sub">Smart QR builds a complete customer engagement system — AI first, mobile first, results first.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <div class="feature-card-icon">🤖</div>
+        <div class="feature-card-title">AI Landing Page</div>
+        <div class="feature-card-desc">AI generates a complete mobile-first landing page for your business in 60 seconds. Hero, CTAs, content sections, all personalised to your industry.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">💬</div>
+        <div class="feature-card-title">AI Chat Assistant</div>
+        <div class="feature-card-desc">A 24/7 AI assistant answers customer questions about your business directly on the landing page — no staff needed.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">💳</div>
+        <div class="feature-card-title">Wallet Pass System</div>
+        <div class="feature-card-desc">Customers subscribe and add your business to Apple or Google Wallet. Send push notifications directly to their lock screen.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🎙</div>
+        <div class="feature-card-title">Voice Welcome</div>
+        <div class="feature-card-desc">An AI-generated voice message personally welcomes every visitor. Powered by ElevenLabs. Unlocks the AI assistant automatically.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">📊</div>
+        <div class="feature-card-title">Smart Analytics</div>
+        <div class="feature-card-desc">Real-time scan tracking, subscriber growth, AI engagement metrics, wallet installs and conversion rates — all in one dashboard.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">⚡</div>
+        <div class="feature-card-title">Dynamic Content</div>
+        <div class="feature-card-desc">Update your landing page, CTAs and promotions any time — without reprinting your QR code. The same code, always fresh.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── DEMO MOCKUP ────────────────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="demo-inner">
+    <div class="demo-phone-wrap reveal">
+      <div class="demo-phone">
+        <div class="demo-phone-notch"></div>
+        <div class="demo-phone-screen">
+          <div class="dp-hero">
+            <div class="dp-badge">✨ Qraivy Smart Page</div>
+            <div class="dp-title">Excellence Maklerhaus</div>
+            <div class="dp-sub">Discover exceptional homes in prime locations. Schedule your viewing today.</div>
+            <div class="dp-btn">Schedule Viewing →</div>
+          </div>
+          <div class="dp-section">
+            <div class="dp-section-label">AI Assistant</div>
+            <div class="dp-chat-pill"><div class="dp-green-dot"></div>Online — Ask me anything</div>
+          </div>
+          <div class="dp-wallet">
+            <div class="dp-wallet-brand">Excellence Maklerhaus</div>
+            <div class="dp-wallet-id">QRAIVY MEMBER · SMART PASS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="demo-text-col reveal">
+      <div class="section-label">Live Demo</div>
+      <h2 class="section-title">What your customers see</h2>
+      <p style="font-size:.78rem;color:var(--text-dim);line-height:1.75;margin-bottom:8px">Every Smart QR generates a complete mobile-first business page. Scan → land → engage → subscribe. All automatic.</p>
+      <div class="demo-feature-list">
+        <div class="demo-feat">
+          <div class="demo-feat-icon">🤖</div>
+          <div><div class="demo-feat-title">AI activates on arrival</div><div class="demo-feat-desc">Voice welcome plays → AI assistant expands → visitor is greeted personally</div></div>
+        </div>
+        <div class="demo-feat">
+          <div class="demo-feat-icon">💳</div>
+          <div><div class="demo-feat-title">One-tap subscription</div><div class="demo-feat-desc">Subscribe for updates, add to Wallet, get push notifications from your business</div></div>
+        </div>
+        <div class="demo-feat">
+          <div class="demo-feat-icon">📊</div>
+          <div><div class="demo-feat-title">Every scan tracked</div><div class="demo-feat-desc">See who scanned, when, conversion rates and AI engagement in your dashboard</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── USE CASES ──────────────────────────────────────────────────────── -->
+<section>
+  <div class="section-inner">
+    <div class="section-hdr reveal">
+      <div class="section-label">Use Cases</div>
+      <h2 class="section-title">Built for every business</h2>
+    </div>
+    <div class="usecases-grid reveal">
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">🍽</div><div class="usecase-name">Restaurant</div><div class="usecase-desc">Menu, reservations, specials</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">🏠</div><div class="usecase-name">Real Estate</div><div class="usecase-desc">Listings, viewings, agent AI</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">🛒</div><div class="usecase-name">Ecommerce</div><div class="usecase-desc">Products, offers, loyalty</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">💪</div><div class="usecase-name">Gym & Fitness</div><div class="usecase-desc">Classes, memberships, trials</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">📱</div><div class="usecase-name">Social Media</div><div class="usecase-desc">Bio link, followers, content</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">🎯</div><div class="usecase-name">Lead Generation</div><div class="usecase-desc">Qualify, capture, convert</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">🎵</div><div class="usecase-name">Events</div><div class="usecase-desc">Tickets, lineup, RSVP</div></div>
+      <div class="usecase-card" onclick="startSmartQR()"><div class="usecase-icon">📦</div><div class="usecase-name">Packaging</div><div class="usecase-desc">Product story, reorder, loyalty</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── TESTIMONIALS ───────────────────────────────────────────────────── -->
+<section>
+  <div class="section-inner">
+    <div class="section-hdr reveal">
+      <div class="section-label">Testimonials</div>
+      <h2 class="section-title">Businesses love Smart QR</h2>
+    </div>
+    <div class="testimonials-grid reveal">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">We replaced our static QR menus with Smart QR. Reservations up 40% in the first month. Customers love the AI assistant.</div>
+        <div class="testimonial-author"><div class="testimonial-avatar">M</div><div><div class="testimonial-name">Marco R.</div><div class="testimonial-role">Restaurant Owner, Milano</div></div></div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">The AI landing page built in 60 seconds was better than our old website. Wallet subscribers get push notifications for new listings.</div>
+        <div class="testimonial-author"><div class="testimonial-avatar">S</div><div><div class="testimonial-name">Sarah K.</div><div class="testimonial-role">Real Estate Agent, Berlin</div></div></div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <div class="testimonial-text">Put QR codes on our packaging. Now every customer has a direct AI chat line and we can send loyalty rewards straight to their wallet.</div>
+        <div class="testimonial-author"><div class="testimonial-avatar">J</div><div><div class="testimonial-name">James T.</div><div class="testimonial-role">Product Brand, London</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── PRICING ────────────────────────────────────────────────────────── -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="section-hdr reveal" style="text-align:center;max-width:100%">
+      <div class="section-label" style="justify-content:center">Pricing</div>
+      <h2 class="section-title">Simple, honest pricing</h2>
+      <p class="section-sub" style="margin:0 auto">Start free. Upgrade when you're ready to grow.</p>
+    </div>
+    <div class="pricing-grid reveal">
+      <div class="pricing-card">
+        <div class="pricing-plan">Free</div>
+        <div class="pricing-price">€0<span>/mo</span></div>
+        <div class="pricing-desc">Basic QR codes, always free. No strings attached.</div>
+        <div class="pricing-features">
+          <div class="pf"><div class="pf-check">✓</div><span class="pf-text">Unlimited basic QR codes</span></div>
+          <div class="pf"><div class="pf-check">✓</div><span class="pf-text">Custom colours</span></div>
+          <div class="pf"><div class="pf-check">✓</div><span class="pf-text">PNG/SVG download</span></div>
+          <div class="pf"><div class="pf-check">✓</div><span class="pf-text">Logo upload</span></div>
+        </div>
+        <button class="btn-pricing free" onclick="window.location.href='qr-free.html'">Continue Free</button>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-popular">Most Popular</div>
+        <div class="pricing-plan">Starter</div>
+        <div class="pricing-price">€9<span>/mo</span></div>
+        <div class="pricing-desc">Everything you need to turn QR scans into customers.</div>
+        <div class="pricing-features">
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">5 Smart QR Pages</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">AI landing page generator</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">AI chat assistant</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Wallet subscribers</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Scan analytics</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Push notifications</span></div>
+        </div>
+        <button class="btn-pricing starter" onclick="startSmartQR()">✨ Start Smart QR</button>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-plan">Pro</div>
+        <div class="pricing-price">€29<span>/mo</span></div>
+        <div class="pricing-desc">For businesses serious about customer engagement at scale.</div>
+        <div class="pricing-features">
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Unlimited Smart QR Pages</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Everything in Starter</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">AI voice welcome (ElevenLabs)</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Advanced analytics</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Campaign manager</span></div>
+          <div class="pf"><div class="pf-check accent">✓</div><span class="pf-text">Priority support</span></div>
+        </div>
+        <button class="btn-pricing pro" onclick="startSmartQR()">Start Pro</button>
+      </div>
+    </div>
+    <div class="pricing-note">All plans include a 14-day free trial · Cancel any time · No setup fees</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── BOTTOM CTA ─────────────────────────────────────────────────────── -->
+<div class="bottom-cta reveal">
+  <h2 class="bottom-cta-title">Ready to go beyond the QR?</h2>
+  <p class="bottom-cta-sub">Join thousands of businesses using Smart QR to turn every scan into a customer conversation.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button class="btn-hero-primary" onclick="startSmartQR()">✨ Create Smart QR — Free to start</button>
+    <a class="btn-hero-secondary" href="qr-free.html">Stay with Free QR</a>
+  </div>
+  <div style="margin-top:16px;font-size:.62rem;color:var(--text-muted)">No credit card required · Live in 60 seconds · Cancel any time</div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-brand">QR<span>Aivy</span></div>
+  <div class="footer-links">
+    <a class="footer-link" href="qr-free.html">Free QR</a>
+    <a class="footer-link" href="#pricing">Pricing</a>
+    <a class="footer-link" href="dashboard.html">Dashboard</a>
+    <a class="footer-link" href="#">Privacy</a>
+  </div>
+  <div class="footer-copy">© 2026 Qraivy · AI-powered QR engagement</div>
+</footer>
+
+<script>
+// ── Smart QR CTA ────────────────────────────────────────────────────────────
+function startSmartQR() {
+  // Check if user is signed in via Clerk
+  if (window.Clerk && window.Clerk.user) {
+    // Already signed in — launch onboarding on the dashboard
+    window.location.href = 'dashboard.html?launch=onboarding';
+  } else {
+    // Not signed in — go to login, then redirect to dashboard with onboarding
+    window.location.href = 'login.html?redirect=dashboard.html?launch=onboarding';
+  }
+}
+
+// ── Scroll reveal ────────────────────────────────────────────────────────────
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+// ── Clerk load (non-blocking) ────────────────────────────────────────────────
+if (typeof window.Clerk !== 'undefined') {
+  window.Clerk.load().catch(function(){});
+}
+</script>
+<script
+  data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+></script>
+</body>
+</html>

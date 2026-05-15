@@ -930,7 +930,13 @@
       });
 
       if (window.Clerk && window.Clerk.user) {
-        window.qrairyOnboarding.init(window.Clerk.user.id);
+        var launchP = new URLSearchParams(window.location.search).get('launch');
+        if (launchP === 'onboarding') {
+          // Force onboarding open for upgrade flow
+          setTimeout(function(){ window.qrairyOnboarding.reopen(window.Clerk.user.id); }, 600);
+        } else {
+          window.qrairyOnboarding.init(window.Clerk.user.id);
+        }
       }
       loadDashboard();
     }
