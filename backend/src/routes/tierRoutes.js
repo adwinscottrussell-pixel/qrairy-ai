@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router  = express.Router();
-const { ClerkExpressRequireAuth } = require('@clerk/clerk-sdk-node');
+const { requireAuth } = require('../middleware/auth');
 const prisma  = require('../prismaClient');
 const {
   buildPlanInfo,
@@ -14,12 +14,10 @@ const {
   TRIAL_DURATION_MS,
 } = require('../utils/tierSystem');
 
-const requireAuth = ClerkExpressRequireAuth();
-
 // ── GET /tier/plan — get current plan info ─────────────────────────────────
 router.get('/plan', requireAuth, async (req, res) => {
   try {
-    const userId = req.auth.userId;
+    const userId = req.userId;
     const user   = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -37,7 +35,7 @@ router.get('/plan', requireAuth, async (req, res) => {
 // ── POST /tier/trial — start a trial ──────────────────────────────────────
 router.post('/trial', requireAuth, async (req, res) => {
   try {
-    const userId = req.auth.userId;
+    const userId = req.userId;
     const user   = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -81,7 +79,7 @@ router.post('/trial', requireAuth, async (req, res) => {
 router.post('/check', requireAuth, async (req, res) => {
   try {
     const { capability } = req.body;
-    const userId = req.auth.userId;
+    const userId = req.userId;
     const user   = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
