@@ -726,15 +726,20 @@
           ${destSection}
           ${aiExpand}
           <div class="sqr-actions">
+            <button class="sqr-act sqr-act-manage" title="Manage this QR"><span class="sqr-act-icon">⚙</span>Manage</button>
             ${isAI ? `<button class="sqr-act sqr-act-open" title="Open landing page"><span class="sqr-act-icon">🌐</span>View Page</button>` : ''}
             ${isAI ? `<button class="sqr-act sqr-act-special" title="Send AI special"><span class="sqr-act-icon">✨</span>AI Special</button>` : ''}
             <button class="sqr-act sqr-act-qr" title="QR Download Centre"><span class="sqr-act-icon">⬡</span>QR Assets</button>
             <button class="sqr-act sqr-act-analytics" title="Analytics"><span class="sqr-act-icon">↗</span>Analytics</button>
-            ${!isAI && !isDynamic ? `<button class="sqr-act sqr-act-open" title="Open URL"><span class="sqr-act-icon">🔗</span>Open URL</button>` : ''}
           </div>
           <button class="btn-del" data-id="${qr.id}">Delete</button>`;
 
         // Bind actions
+        const manageBtn = card.querySelector('.sqr-act-manage');
+        if (manageBtn) manageBtn.addEventListener('click', () => {
+          const slug = lpSlug || '';
+          window.location.href = `qr-manage.html?id=${qr.id}&slug=${encodeURIComponent(slug)}`;
+        });
         const openBtn = card.querySelector('.sqr-act-open');
         if (openBtn) openBtn.addEventListener('click', () => window.open(lpUrl, '_blank'));
 

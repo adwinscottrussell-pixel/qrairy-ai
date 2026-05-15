@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Smart QR Manager — Qraivy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{display:flex;min-height:100vh;background:var(--bg,#0a0a0a);color:#f0f4f8}
+
+/* ── Sidebar ── */
+#sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#0f0f0f;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;z-index:100;transition:width .22s;overflow:hidden}
+#sidebar.collapsed{width:60px}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:60px;flex-shrink:0}
+.sb-logo-icon{width:32px;height:32px;background:#ff5a1f;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sb-logo-text{font-size:1rem;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:-.02em;transition:opacity .22s}
+.sb-logo-text span{color:#ff5a1f;font-style:italic}
+#sidebar.collapsed .sb-logo-text{opacity:0;pointer-events:none}
+.sb-toggle{position:absolute;top:16px;right:-11px;width:22px;height:22px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8b949e;font-size:11px;transition:all .22s;z-index:10}
+.sb-toggle:hover{background:#ff5a1f;color:#fff;border-color:#ff5a1f}
+#sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 8px;scrollbar-width:thin}
+.sb-section{font-size:.58rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#444d56;padding:10px 10px 3px;white-space:nowrap;transition:opacity .22s;font-family:'DM Mono',monospace}
+#sidebar.collapsed .sb-section{opacity:0}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#8b949e;text-decoration:none;font-size:.84rem;font-weight:500;white-space:nowrap;transition:all .18s;margin-bottom:1px}
+.sb-item:hover{background:rgba(255,255,255,0.05);color:#fff}
+.sb-item.active{background:#ff5a1f;color:#fff;font-weight:600}
+.sb-icon{width:18px;text-align:center;flex-shrink:0;font-size:15px}
+.sb-label{transition:opacity .22s;flex:1}
+#sidebar.collapsed .sb-label{opacity:0;width:0;overflow:hidden}
+.sb-badge{font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:999px;background:#ff5a1f;color:#fff;letter-spacing:.05em;transition:opacity .22s}
+#sidebar.collapsed .sb-badge{opacity:0;width:0;padding:0}
+.sb-soon{font-size:.55rem;opacity:.4;font-family:'DM Mono',monospace}
+.sb-divider{height:1px;background:rgba(255,255,255,0.06);margin:6px 8px}
+.sb-footer{border-top:1px solid rgba(255,255,255,0.06);padding:10px 8px;flex-shrink:0}
+.sb-user{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;transition:background .18s}
+.sb-user:hover{background:rgba(255,255,255,0.05)}
+.sb-avatar{width:30px;height:30px;border-radius:50%;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0}
+.sb-user-info{transition:opacity .22s;overflow:hidden}
+#sidebar.collapsed .sb-user-info{opacity:0;width:0}
+.sb-user-name{font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap}
+.sb-user-role{font-size:.62rem;color:#8b949e;font-family:'DM Mono',monospace}
+.sb-signout{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#8b949e;font-size:.84rem;font-weight:500;transition:all .18s;text-decoration:none;margin-top:2px}
+.sb-signout:hover{background:rgba(239,68,68,0.1);color:#ef4444}
+#main-content{margin-left:240px;flex:1;min-height:100vh;transition:margin-left .22s}
+body.sb-collapsed #main-content{margin-left:60px}
+#mob-btn{display:none;position:fixed;top:12px;left:12px;width:46px;height:46px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99}
+.sb-overlay.on{display:block}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%);width:240px !important;transition:transform .22s}
+  #sidebar.mob-open{transform:translateX(0)}
+  #main-content{margin-left:0 !important;padding-top:56px}
+  #mob-btn{display:flex}
+  .sb-toggle{display:none}
+}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1c2128;border:1px solid rgba(255,90,31,0.3);color:#fff;padding:11px 18px;border-radius:7px;font-size:.83rem;z-index:9999;display:none;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,0.4);font-family:'DM Mono',monospace}
+
+/* ── Page layout ── */
+.mgr-wrap{max-width:1100px;margin:0 auto;padding:36px 32px}
+@media(max-width:700px){.mgr-wrap{padding:20px 16px}}
+
+/* ── Breadcrumb ── */
+.breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:.68rem;color:#444d56}
+.breadcrumb a{color:#444d56;text-decoration:none;transition:color .15s}
+.breadcrumb a:hover{color:#ff5a1f}
+.breadcrumb-sep{opacity:.4}
+.breadcrumb-current{color:#8b949e}
+
+/* ── Page header ── */
+.mgr-header{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px 24px;margin-bottom:20px}
+.mgr-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.mgr-title-block{display:flex;align-items:flex-start;gap:14px}
+.mgr-qr-mini{width:52px;height:52px;border-radius:10px;background:#fff;flex-shrink:0;overflow:hidden}
+.mgr-qr-mini img{width:100%;height:100%;display:block}
+.mgr-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;letter-spacing:-.02em;color:#f0f4f8;margin-bottom:4px}
+.mgr-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mgr-badge{display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px}
+.b-live{background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
+.b-ai{background:rgba(255,90,31,0.1);color:#ff8c55;border:1px solid rgba(255,90,31,0.2)}
+.b-draft{background:rgba(255,255,255,0.05);color:#4a6078;border:1px solid rgba(255,255,255,0.08)}
+.mgr-url{font-family:'DM Mono',monospace;font-size:.68rem;color:#444d56;margin-top:6px}
+.mgr-url a{color:#ff5a1f;text-decoration:none}
+.mgr-url a:hover{text-decoration:underline}
+.mgr-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.btn-mgr{padding:8px 16px;border-radius:8px;font-family:'DM Mono',monospace;font-size:.7rem;cursor:pointer;transition:all .15s;border:none;white-space:nowrap}
+.btn-primary{background:#ff5a1f;color:#fff}
+.btn-primary:hover{background:#ff7a45}
+.btn-outline{background:transparent;color:#8b949e;border:1px solid rgba(255,255,255,0.12)}
+.btn-outline:hover{border-color:rgba(255,90,31,0.4);color:#ff8c55}
+.btn-ghost{background:transparent;color:#4a6078;border:1px solid rgba(255,255,255,0.07)}
+.btn-ghost:hover{color:#8b949e;border-color:rgba(255,255,255,0.15)}
+.mgr-header-stats{display:flex;gap:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-top:16px;flex-wrap:wrap}
+.mgr-stat{display:flex;flex-direction:column;gap:2px}
+.mgr-stat-val{font-size:1.3rem;font-weight:900;color:#f0f4f8;line-height:1}
+.mgr-stat-val.o{color:#ff5a1f}
+.mgr-stat-val.g{color:#22c55e}
+.mgr-stat-lbl{font-family:'DM Mono',monospace;font-size:.55rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em}
+
+/* ── 2-col grid ── */
+.mgr-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start}
+@media(max-width:900px){.mgr-grid{grid-template-columns:1fr}}
+.mgr-col{display:flex;flex-direction:column;gap:16px}
+
+/* ── Panels ── */
+.panel{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.panel-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8;display:flex;align-items:center;gap:8px}
+.panel-icon{font-size:.9rem}
+.panel-action{font-family:'DM Mono',monospace;font-size:.62rem;color:#ff5a1f;cursor:pointer;background:none;border:none;padding:0;transition:opacity .15s}
+.panel-action:hover{opacity:.7}
+.panel-body{padding:18px 20px}
+
+/* ── QR Preview ── */
+.qr-preview-main{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px}
+.qr-preview-frame{width:160px;height:160px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 0 0 0 rgba(255,90,31,0);transition:box-shadow .3s}
+.qr-preview-frame:hover{box-shadow:0 0 32px rgba(255,90,31,0.25)}
+.qr-preview-frame img{width:152px;height:152px;border-radius:10px;display:block}
+.qr-preview-url{font-family:'DM Mono',monospace;font-size:.65rem;color:#444d56;text-align:center}
+.qr-scan-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,90,31,0.08);border:1px solid rgba(255,90,31,0.2);border-radius:99px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:.65rem;color:#ff8c55}
+
+/* ── Download section ── */
+.dl-sizes{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.dl-size{padding:9px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;transition:all .15s}
+.dl-size:hover{border-color:rgba(255,90,31,0.3)}
+.dl-size.active{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
+.dl-size-name{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:#f0f4f8;display:block}
+.dl-size-px{font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56}
+.dl-formats{display:flex;gap:7px;margin-bottom:14px}
+.dl-fmt{flex:1;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:7px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;text-align:center;transition:all .15s}
+.dl-fmt:hover{border-color:rgba(255,90,31,0.3);color:#f0f4f8}
+.dl-fmt.active{border-color:#ff5a1f;color:#ff5a1f;background:rgba(255,90,31,0.06)}
+.btn-download{width:100%;padding:11px;background:#ff5a1f;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;box-shadow:0 0 18px rgba(255,90,31,0.2)}
+.btn-download:hover{background:#ff7a45;box-shadow:0 0 28px rgba(255,90,31,0.35)}
+
+/* ── QR Customise ── */
+.custom-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.cp{height:40px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.06em}
+.cp:hover{transform:scale(1.05)}
+.cp.active{border-color:#ff5a1f;transform:scale(1.05)}
+.custom-colors{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.color-field{display:flex;align-items:center;gap:8px;flex:1}
+.color-swatch{width:32px;height:32px;border-radius:7px;border:0.5px solid rgba(255,255,255,0.12);cursor:pointer;flex-shrink:0;transition:transform .12s}
+.color-swatch:hover{transform:scale(1.08)}
+.color-label{font-family:'DM Mono',monospace;font-size:.6rem;color:#444d56}
+.color-hex{font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;min-width:56px}
+.btn-update-qr{width:100%;padding:10px;background:transparent;border:1px solid rgba(255,90,31,0.3);border-radius:9px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#ff8c55;cursor:pointer;transition:all .15s}
+.btn-update-qr:hover{background:rgba(255,90,31,0.08)}
+
+/* ── Toggle rows ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{display:flex;flex-direction:column;gap:2px}
+.toggle-label{font-family:'DM Mono',monospace;font-size:.75rem;color:#f0f4f8}
+.toggle-desc{font-family:'DM Mono',monospace;font-size:.6rem;color:#444d56}
+.toggle-switch{position:relative;width:38px;height:21px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#1c2128;border:1px solid rgba(255,255,255,0.1);border-radius:999px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;height:15px;width:15px;left:2px;bottom:2px;background:#4a6078;border-radius:50%;transition:.2s}
+.toggle-switch input:checked+.toggle-slider{background:rgba(255,90,31,0.3);border-color:#ff5a1f}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(17px);background:#ff5a1f}
+
+/* ── KPI row ── */
+.kpi-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.kpi-m{background:rgba(255,255,255,0.03);border-radius:9px;padding:12px;text-align:center}
+.kpi-m-val{font-size:1.2rem;font-weight:900;color:#f0f4f8;line-height:1}
+.kpi-m-val.o{color:#ff5a1f}
+.kpi-m-val.g{color:#22c55e}
+.kpi-m-val.p{color:#a78bfa}
+.kpi-m-lbl{font-family:'DM Mono',monospace;font-size:.52rem;color:#444d56;text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+
+/* ── AI metrics ── */
+.ai-metric-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.ai-metric-row:last-child{border-bottom:none}
+.ai-m-lbl{font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e}
+.ai-m-val{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700;color:#f0f4f8}
+.ai-m-val.o{color:#ff5a1f}
+
+/* ── Field inputs ── */
+.field-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field-lbl{font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em}
+.field-input{padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f4f8;font-family:'DM Mono',monospace;font-size:.78rem;outline:none;width:100%;transition:border-color .15s}
+.field-input:focus{border-color:rgba(255,90,31,0.5)}
+.field-input::placeholder{color:#333d48}
+.field-textarea{padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f4f8;font-family:'DM Mono',monospace;font-size:.75rem;outline:none;width:100%;resize:vertical;min-height:72px;line-height:1.6;transition:border-color .15s}
+.field-textarea:focus{border-color:rgba(255,90,31,0.5)}
+.btn-save-field{padding:8px 18px;background:#ff5a1f;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;color:#fff;cursor:pointer;transition:background .15s}
+.btn-save-field:hover{background:#ff7a45}
+
+/* ── Voice section ── */
+.voice-player{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:12px}
+.voice-btn{width:38px;height:38px;border:none;border-radius:50%;background:#ff5a1f;color:#fff;cursor:pointer;font-size:.85rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .1s}
+.voice-btn:active{transform:scale(.92)}
+.voice-info{flex:1}
+.voice-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:1px}
+.voice-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:#444d56}
+.voice-wave{display:flex;align-items:center;gap:2px;height:24px}
+.vw-bar{width:3px;background:rgba(255,255,255,0.12);border-radius:2px}
+.voice-wave.active .vw-bar{background:#ff5a1f;animation:vwAnim .8s ease-in-out infinite alternate}
+@keyframes vwAnim{0%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
+.voice-coming{font-family:'DM Mono',monospace;font-size:.58rem;color:#333d48;text-align:center;padding:4px 0}
+
+/* ── Subscribers ── */
+.sub-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.sub-row:last-child{border-bottom:none}
+.sub-lbl{font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e}
+.sub-val{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700}
+.sub-val.g{color:#22c55e}
+.sub-val.p{color:#a78bfa}
+.sub-val.o{color:#ff5a1f}
+
+/* ── Activity feed ── */
+.activity-list{display:flex;flex-direction:column;max-height:240px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.05) transparent}
+.act-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.act-text{font-family:'DM Mono',monospace;font-size:.68rem;color:#8b949e;flex:1;line-height:1.4}
+.act-text strong{color:#f0f4f8;font-weight:500}
+.act-time{font-family:'DM Mono',monospace;font-size:.58rem;color:#333d48;flex-shrink:0}
+.act-empty{font-family:'DM Mono',monospace;font-size:.7rem;color:#333d48;text-align:center;padding:20px 0}
+
+/* ── Status toggle ── */
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:9px;margin-bottom:12px}
+.status-bar.offline{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}
+.status-indicator{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.72rem}
+.status-dot-live{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.5)}
+.status-dot-off{width:7px;height:7px;border-radius:50%;background:#444d56}
+.btn-toggle-status{padding:5px 14px;border-radius:7px;font-family:'DM Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .15s;border:none}
+.btn-go-live{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3)}
+.btn-unpublish{background:rgba(255,255,255,0.05);color:#8b949e;border:1px solid rgba(255,255,255,0.1)}
+
+/* ── Danger zone ── */
+.danger-zone{padding:14px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.15);border-radius:9px;margin-top:6px}
+.danger-title{font-family:'DM Mono',monospace;font-size:.6rem;color:#ef4444;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.btn-delete{width:100%;padding:9px;background:transparent;border:1px solid rgba(239,68,68,0.3);border-radius:7px;color:#ef444466;font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;transition:all .15s}
+.btn-delete:hover{background:rgba(239,68,68,0.08);border-color:#ef4444;color:#ef4444}
+
+.an-loading{font-family:'DM Mono',monospace;font-size:.8rem;color:#444d56;padding:40px;text-align:center}
+footer{padding:20px 32px;font-family:'DM Mono',monospace;font-size:.65rem;color:#1e2530;border-top:1px solid rgba(255,255,255,0.04)}
+</style>
+<link rel="stylesheet" href="sidebar.css?v=3"/>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">⬡</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
+  </div>
+  <button class="sb-toggle" id="sb-toggle">‹</button>
+  <nav class="sb-nav">
+    <div class="sb-section">MAIN</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">↗</span><span class="sb-label">Analytics</span></a>
+    <div class="sb-section">SMART PAGES</div>
+    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">⬡</span><span class="sb-label">Smart QR Pages</span></a>
+    <a href="#" class="sb-item" id="sb-create"><span class="sb-icon">＋</span><span class="sb-label">Create New QR</span></a>
+    <div class="sb-section">ENGAGE</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">🔔</span><span class="sb-label">Push Notifications</span><span class="sb-badge">LIVE</span></a>
+    <a href="#" class="sb-item sb-soon-item"><span class="sb-icon">📣</span><span class="sb-label">Campaigns</span><span class="sb-soon">SOON</span></a>
+    <div class="sb-section">CONFIGURE</div>
+    <a href="designer.html" class="sb-item"><span class="sb-icon">🎨</span><span class="sb-label">AI Designer</span></a>
+    <a href="qr-panel.html" class="sb-item"><span class="sb-icon">⬡</span><span class="sb-label">QR Download Centre</span></a>
+    <div class="sb-section">ACCOUNT</div>
+    <a href="pricing.html" class="sb-item"><span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
+    <a href="#" class="sb-item"><span class="sb-icon">?</span><span class="sb-label">Help & Docs</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading…</div>
+        <div class="sb-user-role">Business Owner</div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">→</span><span class="sb-label">Sign Out</span></a>
+  </div>
+</div>
+
+<button id="mob-btn">☰</button>
+<div class="sb-overlay" id="sb-overlay"></div>
+<div id="toast"><span style="color:#ff5a1f">⚡</span><span id="toast-msg"></span></div>
+
+<div id="main-content">
+  <div class="noise"></div>
+  <main>
+    <div class="mgr-wrap">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="dashboard.html">Smart QR Pages</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current" id="bc-name">Loading…</span>
+      </div>
+
+      <!-- Page header -->
+      <div class="mgr-header" id="mgr-header">
+        <div class="an-loading">Loading Smart QR…</div>
+      </div>
+
+      <!-- 2-col grid -->
+      <div class="mgr-grid">
+
+        <!-- LEFT column -->
+        <div class="mgr-col">
+
+          <!-- QR Preview -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">⬡</span> QR Code</span>
+              <button class="panel-action" id="btn-refresh-qr">↻ Refresh</button>
+            </div>
+            <div class="qr-preview-main">
+              <div class="qr-preview-frame">
+                <img id="qr-main-img" src="" alt="QR Code"/>
+              </div>
+              <div class="qr-preview-url" id="qr-main-url">—</div>
+              <div class="qr-scan-pill" id="qr-scan-pill">⬡ 0 scans</div>
+            </div>
+          </div>
+
+          <!-- QR Customise -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">🎨</span> Customise QR</span>
+            </div>
+            <div class="panel-body">
+              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Presets</div>
+              <div class="custom-presets" id="cp-row">
+                <div class="cp active" data-fg="111111" data-bg="ffffff" style="background:#fff;color:#111;font-size:.5rem">Classic</div>
+                <div class="cp" data-fg="ff5a1f" data-bg="0a0a0a" style="background:#0a0a0a;color:#ff5a1f;border-color:rgba(255,90,31,0.4)">Brand</div>
+                <div class="cp" data-fg="ffffff" data-bg="ff5a1f" style="background:#ff5a1f;color:#fff">Invert</div>
+                <div class="cp" data-fg="0a0a0a" data-bg="f0ece0" style="background:#f0ece0;color:#0a0a0a">Light</div>
+              </div>
+              <div class="custom-colors">
+                <div class="color-field">
+                  <div class="color-swatch" id="fg-swatch" style="background:#111" onclick="document.getElementById('fg-input').click()"></div>
+                  <input type="color" id="fg-input" value="#111111" style="display:none"/>
+                  <div><div class="color-label">QR Colour</div><div class="color-hex" id="fg-hex">#111111</div></div>
+                </div>
+                <div class="color-field">
+                  <div class="color-swatch" id="bg-swatch" style="background:#fff" onclick="document.getElementById('bg-input').click()"></div>
+                  <input type="color" id="bg-input" value="#ffffff" style="display:none"/>
+                  <div><div class="color-label">Background</div><div class="color-hex" id="bg-hex">#ffffff</div></div>
+                </div>
+              </div>
+              <button class="btn-update-qr" id="btn-update-qr">↻ Update QR Preview</button>
+            </div>
+          </div>
+
+          <!-- Download Centre -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">⬇</span> Download QR</span>
+            </div>
+            <div class="panel-body">
+              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Size</div>
+              <div class="dl-sizes" id="dl-sizes">
+                <div class="dl-size" data-size="200"><span class="dl-size-name">Small</span><span class="dl-size-px">200 × 200 px</span></div>
+                <div class="dl-size active" data-size="400"><span class="dl-size-name">Medium</span><span class="dl-size-px">400 × 400 px</span></div>
+                <div class="dl-size" data-size="800"><span class="dl-size-name">Large</span><span class="dl-size-px">800 × 800 px</span></div>
+                <div class="dl-size" data-size="1200"><span class="dl-size-name">Print</span><span class="dl-size-px">1200 × 1200 px</span></div>
+              </div>
+              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#444d56;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Format</div>
+              <div class="dl-formats" id="dl-formats">
+                <div class="dl-fmt active" data-fmt="png">PNG</div>
+                <div class="dl-fmt" data-fmt="svg">SVG</div>
+                <div class="dl-fmt" data-fmt="pdf">PDF</div>
+              </div>
+              <button class="btn-download" id="btn-download">⬇ Download QR Code</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT column -->
+        <div class="mgr-col">
+
+          <!-- Analytics summary -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">↗</span> Performance</span>
+              <a class="panel-action" href="analytics.html">Full report →</a>
+            </div>
+            <div class="panel-body">
+              <div class="kpi-mini">
+                <div class="kpi-m"><div class="kpi-m-val o" id="kpi-scans">0</div><div class="kpi-m-lbl">Scans</div></div>
+                <div class="kpi-m"><div class="kpi-m-val g" id="kpi-subs">0</div><div class="kpi-m-lbl">Subscribers</div></div>
+                <div class="kpi-m"><div class="kpi-m-val p" id="kpi-cvr">0%</div><div class="kpi-m-lbl">CVR</div></div>
+              </div>
+              <div style="margin-top:10px">
+                <div class="ai-metric-row"><span class="ai-m-lbl">Wallet installs</span><span class="ai-m-val">—</span></div>
+                <div class="ai-metric-row"><span class="ai-m-lbl">AI conversations</span><span class="ai-m-val">—</span></div>
+                <div class="ai-metric-row"><span class="ai-m-lbl">Voice plays</span><span class="ai-m-val">—</span></div>
+                <div class="ai-metric-row"><span class="ai-m-lbl">CTA clicks</span><span class="ai-m-val">—</span></div>
+                <div class="ai-metric-row"><span class="ai-m-lbl">Last scan</span><span class="ai-m-val" id="last-scan">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Page controls -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">⚙</span> Page Controls</span>
+            </div>
+            <div class="panel-body">
+              <div class="status-bar" id="status-bar">
+                <div class="status-indicator">
+                  <div class="status-dot-live"></div>
+                  <span id="status-text" style="color:#22c55e">Live — Page is active</span>
+                </div>
+                <button class="btn-toggle-status btn-unpublish" id="btn-status">Unpublish</button>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">AI Assistant</span><span class="toggle-desc">Chat widget on landing page</span></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">Voice Welcome</span><span class="toggle-desc">Auto-play introduction message</span></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">Wallet Subscription</span><span class="toggle-desc">Show subscribe + wallet section</span></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info"><span class="toggle-label">CTA Buttons</span><span class="toggle-desc">Primary action buttons visible</span></div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                <button class="btn-mgr btn-primary" id="btn-open-page" style="flex:1">🌐 View Live Page</button>
+                <button class="btn-mgr btn-outline" id="btn-copy-url" style="flex:1">📋 Copy URL</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Voice welcome -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">🎙</span> Voice Welcome</span>
+              <span class="panel-action">ElevenLabs</span>
+            </div>
+            <div class="panel-body">
+              <div class="voice-player">
+                <button class="voice-btn" id="voice-play-btn">▶</button>
+                <div class="voice-info">
+                  <div class="voice-name">Welcome Message</div>
+                  <div class="voice-sub" id="voice-sub">Tap to preview</div>
+                </div>
+                <div class="voice-wave" id="voice-wave">
+                  <div class="vw-bar" style="height:8px"></div>
+                  <div class="vw-bar" style="height:16px"></div>
+                  <div class="vw-bar" style="height:12px"></div>
+                  <div class="vw-bar" style="height:20px"></div>
+                  <div class="vw-bar" style="height:10px"></div>
+                  <div class="vw-bar" style="height:18px"></div>
+                  <div class="vw-bar" style="height:8px"></div>
+                  <div class="vw-bar" style="height:14px"></div>
+                </div>
+              </div>
+              <div class="field-group">
+                <label class="field-lbl">Voice Script</label>
+                <textarea class="field-textarea" id="voice-script" placeholder="Hi! Welcome to our business. I'm your AI assistant…"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-save-field" style="flex:1">Save Script</button>
+                <button class="btn-mgr btn-ghost" style="flex:1;padding:8px">⬡ Regenerate AI</button>
+              </div>
+              <div class="voice-coming" style="margin-top:8px">⬡ ElevenLabs voice generation — coming soon</div>
+            </div>
+          </div>
+
+          <!-- AI Assistant -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">🤖</span> AI Assistant</span>
+            </div>
+            <div class="panel-body">
+              <div class="ai-metric-row"><span class="ai-m-lbl">Status</span><span class="ai-m-val" style="color:#22c55e">● Active</span></div>
+              <div class="ai-metric-row"><span class="ai-m-lbl">Conversations started</span><span class="ai-m-val">—</span></div>
+              <div class="ai-metric-row"><span class="ai-m-lbl">Avg engagement time</span><span class="ai-m-val">—</span></div>
+              <div class="ai-metric-row"><span class="ai-m-lbl">AI conversion rate</span><span class="ai-m-val o" id="ai-cvr-val">—</span></div>
+              <div style="margin-top:14px">
+                <div class="field-group">
+                  <label class="field-lbl">Business Context</label>
+                  <textarea class="field-textarea" id="ai-context" placeholder="Describe your business, services, FAQs and key information for the AI assistant…"></textarea>
+                </div>
+                <div class="field-group">
+                  <label class="field-lbl">AI Greeting</label>
+                  <input type="text" class="field-input" id="ai-greeting" placeholder="Hi! I can help answer questions about [Business]…"/>
+                </div>
+                <button class="btn-save-field">Save AI Settings</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subscribers & Wallet -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">💳</span> Subscribers & Wallet</span>
+            </div>
+            <div class="panel-body">
+              <div class="sub-row"><span class="sub-lbl">Total subscribers</span><span class="sub-val g" id="sub-total">—</span></div>
+              <div class="sub-row"><span class="sub-lbl">Email captures</span><span class="sub-val" id="sub-email">—</span></div>
+              <div class="sub-row"><span class="sub-lbl">Wallet installs</span><span class="sub-val p" id="sub-wallet">—</span></div>
+              <div class="sub-row"><span class="sub-lbl">Push notification opens</span><span class="sub-val">—</span></div>
+              <div class="sub-row"><span class="sub-lbl">Active members</span><span class="sub-val o">—</span></div>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                <button class="btn-mgr btn-outline" style="flex:1">⬇ Export CSV</button>
+                <button class="btn-mgr btn-primary" style="flex:1">✨ Send Campaign</button>
+              </div>
+              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#333d48;text-align:center;margin-top:8px">Apple & Google Wallet integration — coming soon</div>
+            </div>
+          </div>
+
+          <!-- Activity feed -->
+          <div class="panel">
+            <div class="panel-hdr">
+              <span class="panel-title"><span class="panel-icon">⚡</span> Activity Feed</span>
+            </div>
+            <div class="panel-body" style="padding:12px 16px">
+              <div class="activity-list" id="activity-list">
+                <div class="act-empty">No activity yet — publish your page to start tracking</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="panel">
+            <div class="panel-body">
+              <div class="danger-zone">
+                <div class="danger-title">Danger Zone</div>
+                <button class="btn-delete" id="btn-delete">Delete this Smart QR Page</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer><span>QRAIVY — Smart QR Management</span></footer>
+</div>
+
+<script>
+const API_BASE = 'https://api.qraivy.com';
+const params   = new URLSearchParams(window.location.search);
+const QR_ID    = params.get('id');
+const LP_SLUG  = params.get('slug');
+
+let qrData = null;
+let dlSize = 400, dlFmt = 'png';
+let fgColor = '111111', bgColor = 'ffffff';
+
+// ── QR image URL ─────────────────────────────────────────────────────────────
+function qrImgURL(size, fg, bg) {
+  const url = LP_SLUG
+    ? `https://api.qraivy.com/lp/${LP_SLUG}`
+    : (qrData?.originalUrl || 'https://qraivy.com');
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=${fg||fgColor}&bgcolor=${bg||bgColor}&margin=2`;
+}
+
+function updateQRPreview() {
+  const img = document.getElementById('qr-main-img');
+  if (img) img.src = qrImgURL(240);
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = ' ' + msg;
+  t.style.display = 'flex';
+  setTimeout(() => t.style.display = 'none', 2800);
+}
+
+// ── Render header ────────────────────────────────────────────────────────────
+function renderHeader(qr) {
+  const isAI = !!qr.businessName;
+  const name = qr.businessName || 'Basic QR Code';
+  const slug = LP_SLUG || '';
+  const lpUrl = slug ? `https://api.qraivy.com/lp/${slug}` : qr.originalUrl;
+  const created = new Date(qr.createdAt || Date.now()).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+
+  document.getElementById('bc-name').textContent = name;
+  document.getElementById('mgr-header').innerHTML = `
+    <div class="mgr-header-top">
+      <div class="mgr-title-block">
+        <div class="mgr-qr-mini"><img src="${qrImgURL(52)}" alt="QR"/></div>
+        <div>
+          <div class="mgr-name">${name}</div>
+          <div class="mgr-meta">
+            ${isAI ? '<span class="mgr-badge b-live">● Live</span>' : ''}
+            ${isAI ? '<span class="mgr-badge b-ai">✨ AI Page</span>' : '<span class="mgr-badge b-draft">Basic QR</span>'}
+          </div>
+          ${slug ? `<div class="mgr-url">api.qraivy.com/lp/${slug} &mdash; <a href="${lpUrl}" target="_blank">Open →</a></div>` : `<div class="mgr-url">${qr.originalUrl}</div>`}
+        </div>
+      </div>
+      <div class="mgr-actions">
+        <button class="btn-mgr btn-primary" onclick="window.open('${lpUrl}','_blank')">🌐 View Live</button>
+        <button class="btn-mgr btn-outline" id="hdr-copy-btn">📋 Copy URL</button>
+        <button class="btn-mgr btn-ghost" onclick="window.location.href='analytics.html'">↗ Analytics</button>
+      </div>
+    </div>
+    <div class="mgr-header-stats">
+      <div class="mgr-stat"><div class="mgr-stat-val o">${qr.totalScans || 0}</div><div class="mgr-stat-lbl">Total Scans</div></div>
+      <div class="mgr-stat"><div class="mgr-stat-val g">${qr.totalSubscribers || 0}</div><div class="mgr-stat-lbl">Subscribers</div></div>
+      <div class="mgr-stat"><div class="mgr-stat-val p">—</div><div class="mgr-stat-lbl">Wallet</div></div>
+      <div class="mgr-stat"><div class="mgr-stat-val">—</div><div class="mgr-stat-lbl">AI Chats</div></div>
+      <div class="mgr-stat"><div class="mgr-stat-val" style="font-size:.9rem;color:#444d56">${created}</div><div class="mgr-stat-lbl">Created</div></div>
+    </div>`;
+
+  document.getElementById('hdr-copy-btn').onclick = () => {
+    navigator.clipboard.writeText(lpUrl).then(() => toast('URL copied!'));
+  };
+}
+
+// ── Render panels ────────────────────────────────────────────────────────────
+function renderPanels(qr) {
+  const scans = qr.totalScans || 0;
+  const subs  = qr.totalSubscribers || 0;
+  const cvr   = scans > 0 ? Math.round((subs/scans)*100) : 0;
+  const slug  = LP_SLUG || '';
+  const lpUrl = slug ? `https://api.qraivy.com/lp/${slug}` : qr.originalUrl;
+
+  function set(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
+  set('kpi-scans', scans); set('kpi-subs', subs); set('kpi-cvr', cvr+'%');
+  set('qr-main-url', slug ? `api.qraivy.com/lp/${slug}` : qr.originalUrl);
+  set('qr-scan-pill', `⬡ ${scans} scan${scans!==1?'s':''}`);
+  set('sub-total', subs); set('sub-email', subs); set('sub-wallet', '—');
+  set('ai-cvr-val', cvr+'%');
+
+  // Activity feed
+  const actEl = document.getElementById('activity-list');
+  if (actEl) {
+    const events = [];
+    if (scans > 0) events.push({ c:'#ff5a1f', t:`Page scanned <strong>${scans}</strong> time${scans!==1?'s':''}` });
+    if (subs > 0)  events.push({ c:'#22c55e', t:`<strong>${subs}</strong> subscriber${subs!==1?'s':''} captured` });
+    if (qr.businessName) events.push({ c:'#a78bfa', t:`AI landing page <strong>live</strong> at api.qraivy.com/lp/${slug}` });
+    events.push({ c:'#444d56', t:`Smart QR created for <strong>${qr.businessName||'Basic QR'}</strong>` });
+    if (events.length === 0) return;
+    actEl.innerHTML = events.map(e =>
+      `<div class="act-item"><div class="act-dot" style="background:${e.c}"></div><div class="act-text">${e.t}</div><div class="act-time">recent</div></div>`
+    ).join('');
+  }
+
+  // Open page / copy URL buttons in controls panel
+  const openBtn = document.getElementById('btn-open-page');
+  if (openBtn) openBtn.onclick = () => window.open(lpUrl, '_blank');
+  const copyBtn = document.getElementById('btn-copy-url');
+  if (copyBtn) copyBtn.onclick = () => navigator.clipboard.writeText(lpUrl).then(() => toast('URL copied!'));
+}
+
+// ── Load data ────────────────────────────────────────────────────────────────
+async function loadQR() {
+  if (!QR_ID && !LP_SLUG) {
+    document.getElementById('mgr-header').innerHTML = '<div class="an-loading">No QR ID specified. <a href="dashboard.html" style="color:#ff5a1f">Back to dashboard →</a></div>';
+    return;
+  }
+  try {
+    const token = await window.Clerk.session.getToken();
+    const res = await fetch(`${API_BASE}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const all  = data.dashboard || [];
+
+    // Find matching QR
+    const qr = all.find(q => q.id === QR_ID) || all.find(q => q.lpSlug === LP_SLUG) || all[0];
+    if (!qr) {
+      document.getElementById('mgr-header').innerHTML = '<div class="an-loading">QR page not found. <a href="dashboard.html" style="color:#ff5a1f">Back →</a></div>';
+      return;
+    }
+    qrData = qr;
+    updateQRPreview();
+    renderHeader(qr);
+    renderPanels(qr);
+
+    // Plan badge
+    if (data.planInfo) {
+      const b = document.getElementById('plan-badge');
+      if (b) b.textContent = (data.planInfo.basePlan || data.planInfo.plan || 'free').toUpperCase();
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('mgr-header').innerHTML = '<div class="an-loading">Failed to load. <a href="dashboard.html" style="color:#ff5a1f">Back →</a></div>';
+  }
+}
+
+// ── QR controls ──────────────────────────────────────────────────────────────
+document.querySelectorAll('#cp-row .cp').forEach(cp => {
+  cp.addEventListener('click', () => {
+    document.querySelectorAll('#cp-row .cp').forEach(x => x.classList.remove('active'));
+    cp.classList.add('active');
+    fgColor = cp.dataset.fg; bgColor = cp.dataset.bg;
+    document.getElementById('fg-swatch').style.background = '#'+fgColor;
+    document.getElementById('bg-swatch').style.background = '#'+bgColor;
+    document.getElementById('fg-hex').textContent = '#'+fgColor;
+    document.getElementById('bg-hex').textContent = '#'+bgColor;
+    document.getElementById('fg-input').value = '#'+fgColor;
+    document.getElementById('bg-input').value = '#'+bgColor;
+  });
+});
+
+document.getElementById('fg-input').addEventListener('input', e => {
+  fgColor = e.target.value.replace('#','');
+  document.getElementById('fg-swatch').style.background = e.target.value;
+  document.getElementById('fg-hex').textContent = e.target.value;
+});
+document.getElementById('bg-input').addEventListener('input', e => {
+  bgColor = e.target.value.replace('#','');
+  document.getElementById('bg-swatch').style.background = e.target.value;
+  document.getElementById('bg-hex').textContent = e.target.value;
+});
+
+document.getElementById('btn-update-qr').addEventListener('click', () => {
+  updateQRPreview();
+  toast('QR preview updated!');
+});
+
+document.getElementById('btn-refresh-qr').addEventListener('click', updateQRPreview);
+
+// Download size/format
+document.querySelectorAll('#dl-sizes .dl-size').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#dl-sizes .dl-size').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); dlSize = parseInt(b.dataset.size);
+  });
+});
+document.querySelectorAll('#dl-formats .dl-fmt').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#dl-formats .dl-fmt').forEach(x => x.classList.remove('active'));
+    b.classList.add('active'); dlFmt = b.dataset.fmt;
+  });
+});
+document.getElementById('btn-download').addEventListener('click', () => {
+  const url = qrImgURL(dlSize);
+  const a = document.createElement('a');
+  a.href = url; a.download = `qr-${LP_SLUG||QR_ID||'code'}-${dlSize}px.${dlFmt}`; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('Download started!');
+});
+
+// Status toggle
+document.getElementById('btn-status').addEventListener('click', () => {
+  const bar = document.getElementById('status-bar');
+  const txt = document.getElementById('status-text');
+  const btn = document.getElementById('btn-status');
+  const isLive = !bar.classList.contains('offline');
+  if (isLive) {
+    bar.classList.add('offline');
+    bar.querySelector('.status-dot-live') && (bar.querySelector('.status-dot-live').className = 'status-dot-off');
+    txt.textContent = 'Offline — Page unpublished'; txt.style.color = '#4a6078';
+    btn.textContent = 'Go Live'; btn.className = 'btn-toggle-status btn-go-live';
+  } else {
+    bar.classList.remove('offline');
+    bar.querySelector('.status-dot-off') && (bar.querySelector('.status-dot-off').className = 'status-dot-live');
+    txt.textContent = 'Live — Page is active'; txt.style.color = '#22c55e';
+    btn.textContent = 'Unpublish'; btn.className = 'btn-toggle-status btn-unpublish';
+  }
+  toast(isLive ? 'Page unpublished' : 'Page is now live!');
+});
+
+// Voice
+let voicePlaying = false;
+document.getElementById('voice-play-btn').addEventListener('click', () => {
+  voicePlaying = !voicePlaying;
+  document.getElementById('voice-play-btn').textContent = voicePlaying ? '⏸' : '▶';
+  document.getElementById('voice-wave').classList.toggle('active', voicePlaying);
+  document.getElementById('voice-sub').textContent = voicePlaying ? 'Playing preview…' : 'Tap to preview';
+  if (voicePlaying) setTimeout(() => {
+    voicePlaying = false;
+    document.getElementById('voice-play-btn').textContent = '▶';
+    document.getElementById('voice-wave').classList.remove('active');
+    document.getElementById('voice-sub').textContent = 'Tap to preview';
+  }, 3500);
+});
+
+// Delete
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  if (!confirm('Delete this Smart QR Page and all its data? This cannot be undone.')) return;
+  try {
+    const token = await window.Clerk.session.getToken();
+    const res = await fetch(`${API_BASE}/qr/${QR_ID}`, { method:'DELETE', headers:{Authorization:`Bearer ${token}`} });
+    const d = await res.json();
+    if (d.success) { window.location.href = 'dashboard.html'; }
+    else { toast('Delete failed: ' + (d.error||'unknown error')); }
+  } catch { toast('Could not reach server.'); }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await window.Clerk.load();
+  await new Promise(r => setTimeout(r, 400));
+  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+
+  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  document.getElementById('sb-username').textContent = name;
+  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('sb-signout').addEventListener('click', async e => {
+    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
+  });
+
+  // Sidebar
+  const sidebar = document.getElementById('sidebar');
+  const sbToggle = document.getElementById('sb-toggle');
+  if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+  sbToggle.addEventListener('click', () => {
+    const c = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', c);
+    localStorage.setItem('sb-collapsed', c);
+  });
+  document.getElementById('mob-btn').addEventListener('click', () => { sidebar.classList.add('mob-open'); document.getElementById('sb-overlay').classList.add('on'); });
+  document.getElementById('sb-overlay').addEventListener('click', () => { sidebar.classList.remove('mob-open'); document.getElementById('sb-overlay').classList.remove('on'); });
+
+  loadQR();
+}
+</script>
+<script
+  data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+  onload="init()"
+></script>
+<script src="sidebar.js?v=3"></script>
+</body>
+</html>
