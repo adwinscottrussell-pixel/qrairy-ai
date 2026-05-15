@@ -119,7 +119,7 @@ function renderLP(page) {
   const accent  = page.brandColor || '#ff5a1f';
   const bizName = page.businessName || 'My Business';
   const slug    = page.slug;
-  const website = page.websiteUrl || 'https://qraivy.com';
+  const website = page.websiteUrl || 'https://qrairy.ai';
   const domain  = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
   function tmpl(s) {
@@ -128,7 +128,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://qrairy.ai/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   // Accent RGB for rgba usage
   function hexToRGB(hex) {
@@ -200,7 +200,7 @@ a{color:inherit;text-decoration:none}
 .lp-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:9px;font-size:0.78rem;color:rgba(240,236,224,0.7)}
 .lp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 /* AI Chat */
-.lp-chat-section{padding:22px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-chat-section{padding:28px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-chat-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:14px}
 .lp-chat-widget{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden}
 .lp-chat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.07)}
@@ -221,7 +221,7 @@ a{color:inherit;text-decoration:none}
 .lp-chat-input::placeholder{color:rgba(240,236,224,0.22)}
 .lp-chat-send{width:36px;height:36px;border:none;border-radius:8px;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0}
 /* Voice */
-.lp-voice-section{padding:22px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-voice-section{padding:28px 20px;border-top:0.5px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.01)}
 .lp-voice-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:14px}
 .lp-voice-player{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:8px}
 .lp-voice-btn{width:40px;height:40px;border:none;border-radius:50%;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:transform 0.1s}
@@ -235,7 +235,7 @@ a{color:inherit;text-decoration:none}
 @keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
 .lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.18);text-align:center}
 /* Subscribe */
-.lp-subscribe-section{padding:22px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-subscribe-section{padding:28px 20px 32px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-subscribe-card{position:relative;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid ${accentBorder};border-radius:18px;padding:24px 20px}
 .lp-sub-glow{position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,${accentDim},transparent 70%);pointer-events:none;border-radius:50%}
 .lp-wallet-preview{display:flex;justify-content:center;margin-bottom:20px;position:relative}
@@ -273,7 +273,6 @@ a{color:inherit;text-decoration:none}
   </div>
   <div class="lp-nav-pill"><span class="lp-nav-dot"></span>AI Powered</div>
 </nav>
-
 <section class="lp-hero">
   <div class="lp-hero-eyebrow">&#10022; Qraivy Smart Page</div>
   <h1 class="lp-hero-title">${headline}</h1>
@@ -284,20 +283,22 @@ a{color:inherit;text-decoration:none}
   </div>
 </section>
 
-<section class="lp-qr-section">
-  <div class="lp-qr-card">
-    <img src="${qrSrc}" class="lp-qr-img" alt="QR Code" />
-    <div>
-      <div class="lp-qr-label">Your Smart QR</div>
-      <div class="lp-qr-url">qraivy.com/lp/${slug}</div>
-      <div class="lp-qr-badge">&#10022; AI Smart Page</div>
+<!-- AI Concierge Zone -->
+<section class="lp-voice-section lp-voice-prominent">
+  <div class="lp-voice-title">Welcome Message</div>
+  <div class="lp-voice-player">
+    <button class="lp-voice-btn" id="voiceBtn">&#9654;</button>
+    <div class="lp-voice-info">
+      <div class="lp-voice-name">From ${bizName}</div>
+      <div class="lp-voice-sub">Tap to listen &mdash; AI voice coming soon</div>
+    </div>
+    <div class="lp-waveform" id="waveform">
+      ${Array.from({length:18},(_,i)=>`<div class="lp-bar" style="height:${Math.floor(Math.random()*22+6)}px;animation-delay:${(i*0.06).toFixed(2)}s"></div>`).join('')}
     </div>
   </div>
 </section>
 
-${sectionsHTML}
-
-<section class="lp-chat-section">
+<section class="lp-chat-section lp-chat-prominent">
   <div class="lp-chat-title">AI Assistant</div>
   <div class="lp-chat-widget">
     <div class="lp-chat-header">
@@ -317,21 +318,7 @@ ${sectionsHTML}
   </div>
 </section>
 
-<section class="lp-voice-section">
-  <div class="lp-voice-title">Welcome Message</div>
-  <div class="lp-voice-player">
-    <button class="lp-voice-btn" id="voiceBtn">&#9654;</button>
-    <div class="lp-voice-info">
-      <div class="lp-voice-name">From ${bizName}</div>
-      <div class="lp-voice-sub">Tap to listen &mdash; AI voice coming soon</div>
-    </div>
-    <div class="lp-waveform" id="waveform">
-      ${Array.from({length:18},(_,i)=>`<div class="lp-bar" style="height:${Math.floor(Math.random()*22+6)}px;animation-delay:${(i*0.06).toFixed(2)}s"></div>`).join('')}
-    </div>
-  </div>
-</section>
-
-<section class="lp-subscribe-section">
+<section class="lp-subscribe-section lp-subscribe-prominent">
   <div class="lp-subscribe-card">
     <div class="lp-sub-glow"></div>
     <div class="lp-wallet-preview">
@@ -359,13 +346,27 @@ ${sectionsHTML}
   </div>
 </section>
 
+<!-- Business Info Zone -->
+<section class="lp-qr-section">
+  <div class="lp-qr-card">
+    <img src="${qrSrc}" class="lp-qr-img" alt="QR Code" />
+    <div>
+      <div class="lp-qr-label">Your Smart QR</div>
+      <div class="lp-qr-url">qrairy.ai/lp/${slug}</div>
+      <div class="lp-qr-badge">&#10022; AI Smart Page</div>
+    </div>
+  </div>
+</section>
+
+${sectionsHTML}
+
 <footer class="lp-footer">
   <div class="lp-footer-brand">
     <div class="lp-footer-Q">Q</div>
     <span class="lp-footer-name">${bizName}</span>
   </div>
-  <div class="lp-footer-url">qraivy.com/lp/${slug}</div>
-  <div class="lp-footer-powered">Powered by <a href="https://qraivy.com" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
+  <div class="lp-footer-url">qrairy.ai/lp/${slug}</div>
+  <div class="lp-footer-powered">Powered by <a href="https://qrairy.ai" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>
 
 <script>
@@ -413,8 +414,8 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 <div class="logo">Q</div>
 <h1>Page not found</h1>
 <p>This smart landing page doesn't exist yet or may have been removed.</p>
-<div class="slug">qraivy.com/lp/${slug}</div>
-<a href="https://qraivy.com">Create your own AI page &rarr;</a>
+<div class="slug">qrairy.ai/lp/${slug}</div>
+<a href="https://qrairy.ai">Create your own AI page &rarr;</a>
 </div></body></html>`;
 }
 
@@ -450,7 +451,7 @@ async function handlePublishLP(req, res) {
 
     return res.json({
       ok: true,
-      url: `https://qraivy.com/lp/${slug}`,
+      url: `https://qrairy.ai/lp/${slug}`,
       slug,
       id: page.id,
     });
@@ -513,6 +514,3 @@ async function handleListLPs(req, res) {
 }
 
 module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };
-
-
-
