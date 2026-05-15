@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QRAIRY.AI — Business Dashboard</title>
+  <title>QRAIVY — Smart QR Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -11,21 +11,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { display: flex; min-height: 100vh; background: var(--bg); }
-    #sidebar {
-      position: fixed; top: 0; left: 0;
-      width: 240px; height: 100vh;
-      background: #0f0f0f;
-      border-right: 1px solid rgba(255,255,255,0.08);
-      display: flex; flex-direction: column;
-      z-index: 100; transition: width 0.22s ease;
-      overflow: hidden;
-    }
+
+    /* ── Sidebar ── */
+    #sidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: #0f0f0f; border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; z-index: 100; transition: width 0.22s ease; overflow: hidden; }
     #sidebar.collapsed { width: 60px; }
-    .sb-logo {
-      display: flex; align-items: center; gap: 10px;
-      padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
-      min-height: 60px; flex-shrink: 0;
-    }
+    .sb-logo { display: flex; align-items: center; gap: 10px; padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); min-height: 60px; flex-shrink: 0; }
     .sb-logo-icon { width: 32px; height: 32px; background: #ff5a1f; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
     .sb-logo-text { font-size: 1rem; font-weight: 800; color: #fff; white-space: nowrap; letter-spacing: -0.02em; transition: opacity 0.22s; }
     .sb-logo-text span { color: #ff5a1f; font-style: italic; }
@@ -63,196 +53,133 @@
     #mob-btn { display: none; position: fixed; top: 12px; left: 12px; width: 46px; height: 46px; background: #0f0f0f; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; cursor: pointer; align-items: center; justify-content: center; color: #fff; font-size: 16px; z-index: 200; }
     .sb-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
     .sb-overlay.on { display: block; }
-    @media(max-width:768px){
+    @media(max-width:768px) {
       #sidebar { transform: translateX(-100%); width: 240px !important; transition: transform 0.22s; }
       #sidebar.mob-open { transform: translateX(0); }
       #main-content { margin-left: 0 !important; padding-top: 56px; }
       #mob-btn { display: flex; }
       .sb-toggle { display: none; }
     }
+
+    /* ── Toast ── */
     #cs-toast { position: fixed; bottom: 24px; right: 24px; background: #1c2128; border: 1px solid rgba(255,90,31,0.3); color: #fff; padding: 11px 18px; border-radius: 7px; font-size: 0.83rem; z-index: 9999; display: none; align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-    .dash-wrap { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
-    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
-    .dash-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; }
-    .dash-title em { color: var(--accent); font-style: normal; }
-    .btn-new-qr { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #ff5a1f; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; transition: all 0.18s; letter-spacing: 0.01em; }
-    .btn-new-qr:hover { background: #ff7a45; transform: translateY(-1px); }
 
-    /* ── QR Generator Panel ── */
-    .qr-generator-panel { background: #0f0f0f; border: 1px solid rgba(255,90,31,0.25); border-radius: 14px; overflow: hidden; margin-bottom: 24px; max-height: 0; transition: max-height 0.4s ease, opacity 0.3s ease; opacity: 0; }
-    .qr-generator-panel.open { max-height: 900px; opacity: 1; }
-    .qr-gen-inner { padding: 28px; }
-    .qr-gen-title { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; margin-bottom: 20px; color: #fff; }
-    .qr-gen-title span { color: #ff5a1f; font-style: italic; }
-    .qr-gen-form { display: flex; flex-direction: column; gap: 14px; }
-    .gen-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #4a6078; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; display: block; }
-    .gen-input { width: 100%; padding: 11px 14px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.18s; }
-    .gen-input:focus { border-color: #ff5a1f; }
-    .gen-input::placeholder { color: #4a6078; }
-    .gen-input:disabled { opacity: 0.4; cursor: not-allowed; }
-    .gen-row { display: flex; gap: 12px; }
-    .gen-row .gen-group { flex: 1; }
-    .gen-group { display: flex; flex-direction: column; }
-    .gen-color-wrap { display: flex; gap: 8px; align-items: center; }
-    .gen-color-wrap input[type="color"] { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: #080b10; cursor: pointer; padding: 3px; }
-    .gen-select { width: 100%; padding: 11px 14px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; cursor: pointer; }
-    .gen-btn { padding: 13px; background: #ff5a1f; color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.18s; }
-    .gen-btn:hover { background: #ff7a45; }
-    .gen-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .gen-error { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #ef4444; display: none; }
-    .gen-result { display: none; margin-top: 20px; padding: 20px; background: #080b10; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; text-align: center; }
-    .gen-result.show { display: block; }
-    .gen-qr-img { width: 160px; height: 160px; border-radius: 8px; background: #fff; padding: 6px; margin: 0 auto 14px; display: block; }
-    .gen-result-url { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #4a6078; margin-bottom: 12px; word-break: break-all; }
-    .gen-result-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    .gen-result-btn { padding: 8px 16px; border-radius: 7px; font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.18s; border: none; display: inline-flex; align-items: center; gap: 5px; }
-    .gen-result-btn.primary { background: #ff5a1f; color: #fff; }
-    .gen-result-btn.primary:hover { background: #ff7a45; }
-    .gen-result-btn.outline { background: transparent; color: #8b949e; border: 1px solid rgba(255,255,255,0.12); }
-    .gen-result-btn.outline:hover { border-color: #ff5a1f; color: #ff5a1f; }
-    .gen-success-msg { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #22c55e; margin-top: 10px; display: none; }
+    /* ── Main layout ── */
+    .dash-wrap { max-width: 1000px; margin: 0 auto; padding: 40px 36px; }
+    @media(max-width:640px) { .dash-wrap { padding: 24px 18px; } }
 
-    /* ── Upgrade lock overlay on business name field ── */
-    .gen-locked-group { position: relative; }
-    .gen-lock-overlay {
-      position: absolute; inset: 0;
-      background: rgba(13,17,23,0.88);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      gap: 10px; cursor: pointer;
-      border: 1px dashed rgba(255,90,31,0.4);
-      transition: border-color 0.18s;
-      z-index: 2;
-    }
-    .gen-lock-overlay:hover { border-color: #ff5a1f; }
-    .gen-lock-overlay-text {
-      font-family: 'DM Mono', monospace; font-size: 0.7rem;
-      color: #ff8c55; letter-spacing: 0.04em;
-    }
-    .gen-lock-overlay a {
-      color: #ff5a1f; text-decoration: underline;
-      font-family: 'DM Mono', monospace; font-size: 0.7rem;
-    }
+    /* ── Page header ── */
+    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
+    .dash-title { font-size: 1.7rem; font-weight: 900; letter-spacing: -0.03em; color: #f0f4f8; }
+    .dash-title em { color: #ff5a1f; font-style: normal; }
+    .dash-subtitle { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #444d56; margin-top: 3px; }
+    .btn-create-sqr { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; background: #ff5a1f; color: #fff; border: none; border-radius: 9px; font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.18s; box-shadow: 0 0 20px rgba(255,90,31,0.22); white-space: nowrap; }
+    .btn-create-sqr:hover { background: #ff7a45; box-shadow: 0 0 28px rgba(255,90,31,0.38); transform: translateY(-1px); }
 
-    /* ── Dynamic QR toggle ── */
-    .gen-toggle-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 14px;
-      background: #080b10; border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-    }
-    .gen-toggle-info { display: flex; flex-direction: column; gap: 2px; }
-    .gen-toggle-label { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #f0f4f8; }
-    .gen-toggle-desc { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #4a6078; }
-    .gen-toggle-badge {
-      font-size: 0.55rem; font-weight: 700; padding: 2px 7px;
-      border-radius: 999px; background: #8b5cf6; color: #fff;
-      letter-spacing: 0.06em; margin-left: 8px; vertical-align: middle;
-    }
-    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; inset: 0; background: #1c2128;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 999px;
-      cursor: pointer; transition: 0.2s;
-    }
-    .toggle-slider:before {
-      content: ''; position: absolute;
-      height: 16px; width: 16px; left: 2px; bottom: 2px;
-      background: #4a6078; border-radius: 50%; transition: 0.2s;
-    }
-    .toggle-switch input:checked + .toggle-slider { background: rgba(139,92,246,0.3); border-color: #8b5cf6; }
-    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); background: #8b5cf6; }
-    .toggle-switch input:disabled + .toggle-slider { opacity: 0.4; cursor: not-allowed; }
-    .gen-toggle-locked {
-      font-family: 'DM Mono', monospace; font-size: 0.65rem;
-      color: #8b5cf6; cursor: pointer; white-space: nowrap;
-    }
-    .gen-toggle-locked:hover { text-decoration: underline; }
+    /* ── Overview stats ── */
+    .dash-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 36px; }
+    .ov-card { background: #0f0f0f; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 18px 20px; }
+    .ov-card.ov-accent { border-color: rgba(255,90,31,0.22); }
+    .ov-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #444d56; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+    .ov-val { font-size: 1.8rem; font-weight: 900; color: #f0f4f8; line-height: 1; }
+    .ov-val.orange { color: #ff5a1f; }
+    .ov-sub { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #333d48; margin-top: 4px; }
 
-    /* ── Plan Banner ── */
-    .plan-banner { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-radius: 10px; margin-bottom: 24px; background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2); flex-wrap: wrap; gap: 12px; }
-    .plan-banner.full { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
-    .plan-banner-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .plan-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: #ff5a1f; color: #fff; }
+    /* ── Plan banner ── */
+    .plan-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-radius: 10px; margin-bottom: 28px; background: rgba(255,90,31,0.06); border: 1px solid rgba(255,90,31,0.18); flex-wrap: wrap; gap: 10px; display: none; }
+    .plan-banner.show { display: flex; }
+    .plan-banner.full { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.25); }
+    .plan-badge { font-family: 'DM Mono', monospace; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: #ff5a1f; color: #fff; }
     .plan-badge.starter { background: #3b82f6; }
     .plan-badge.pro { background: #8b5cf6; }
-    .plan-info-text { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #8b949e; }
+    .plan-info-text { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #8b949e; }
     .plan-info-text strong { color: #fff; }
-    .plan-progress { width: 120px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; }
+    .plan-progress { width: 100px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
     .plan-progress-bar { height: 100%; background: #ff5a1f; border-radius: 999px; transition: width 0.3s; }
-    .plan-progress-bar.full { background: #ef4444; }
-    .upgrade-btn { padding: 8px 16px; background: #ff5a1f; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; transition: background 0.18s; white-space: nowrap; }
+    .upgrade-btn { padding: 7px 14px; background: #ff5a1f; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 700; text-decoration: none; transition: background 0.18s; white-space: nowrap; }
     .upgrade-btn:hover { background: #ff7a45; }
 
-    .stats-row { display: flex; gap: 16px; margin: 32px 0; }
-    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
-    .stat-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-    .stat-value { font-size: 2rem; font-weight: 900; color: var(--accent); }
-    .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 32px; }
-    .qr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
-    .qr-card-name { font-size: 1rem; font-weight: 700; color: var(--text); }
-    .qr-card-url { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .qr-card-stats { display: flex; gap: 16px; }
-    .qr-stat { display: flex; flex-direction: column; gap: 2px; }
-    .qr-stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
-    .qr-stat-value { font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+    /* ── Section header ── */
+    .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 0.92rem; font-weight: 700; color: #f0f4f8; }
+    .section-count { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #444d56; margin-left: 8px; }
 
-    /* ── QR type badges on cards ── */
-    .qr-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-    .qr-badge {
-      font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      padding: 2px 8px; border-radius: 999px;
-    }
-    .qr-badge.ai { background: rgba(255,90,31,0.15); color: #ff8c55; border: 1px solid rgba(255,90,31,0.25); }
-    .qr-badge.dynamic { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
-    .qr-badge.basic { background: rgba(255,255,255,0.06); color: #4a6078; border: 1px solid rgba(255,255,255,0.08); }
+    /* ── Smart QR Cards ── */
+    .sqr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+    .sqr-card { background: #0f0f0f; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; overflow: hidden; transition: border-color 0.18s, box-shadow 0.18s; }
+    .sqr-card:hover { border-color: rgba(255,90,31,0.28); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+    .sqr-card-body { display: flex; gap: 14px; padding: 18px; align-items: flex-start; }
+    .sqr-thumb { width: 68px; height: 68px; border-radius: 10px; background: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    .sqr-thumb img { width: 64px; height: 64px; display: block; }
+    .sqr-thumb-placeholder { width: 68px; height: 68px; border-radius: 10px; background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+    .sqr-meta { flex: 1; min-width: 0; }
+    .sqr-badges { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+    .sqr-badge { font-family: 'DM Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; }
+    .b-ai { background: rgba(255,90,31,0.12); color: #ff8c55; border: 1px solid rgba(255,90,31,0.2); }
+    .b-live { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.18); }
+    .b-dyn { background: rgba(139,92,246,0.1); color: #a78bfa; border: 1px solid rgba(139,92,246,0.2); }
+    .b-basic { background: rgba(255,255,255,0.04); color: #4a6078; border: 1px solid rgba(255,255,255,0.07); }
+    .sqr-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: #f0f4f8; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sqr-url { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: #4a6078; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px; }
+    .sqr-stats { display: flex; gap: 16px; }
+    .sqr-stat-val { font-size: 1rem; font-weight: 800; color: #ff5a1f; line-height: 1; }
+    .sqr-stat-lbl { font-family: 'DM Mono', monospace; font-size: 0.52rem; color: #444d56; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
 
-    /* ── Dynamic destination editor on card ── */
-    .dynamic-dest-section {
-      background: rgba(139,92,246,0.06);
-      border: 1px solid rgba(139,92,246,0.2);
-      border-radius: 8px; padding: 12px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .dynamic-dest-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #a78bfa; letter-spacing: 0.08em; text-transform: uppercase; }
-    .dynamic-dest-url { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #8b949e; word-break: break-all; }
-    .dynamic-dest-input { width: 100%; padding: 8px 10px; background: #080b10; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.78rem; outline: none; display: none; }
-    .dynamic-dest-input:focus { border-color: #8b5cf6; }
-    .dynamic-dest-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .btn-dest-edit { padding: 6px 12px; background: transparent; color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.18s; }
-    .btn-dest-edit:hover { background: rgba(139,92,246,0.1); border-color: #8b5cf6; }
-    .btn-dest-save { padding: 6px 12px; background: #8b5cf6; color: #fff; border: none; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: background 0.18s; display: none; }
+    /* Card action grid */
+    .sqr-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid rgba(255,255,255,0.06); }
+    .sqr-act { padding: 9px 8px; background: #0f0f0f; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: #8b949e; cursor: pointer; transition: all 0.15s; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; border-right: 1px solid rgba(255,255,255,0.05); }
+    .sqr-act:last-child { border-right: none; }
+    .sqr-act:hover { background: rgba(255,90,31,0.06); color: #ff8c55; }
+    .sqr-act-icon { font-size: 0.85rem; }
+
+    /* Expandable AI specials panel */
+    .sqr-expand { padding: 0 16px 14px; display: none; }
+    .sqr-expand.open { display: block; }
+    .sqr-expand-inner { background: rgba(255,90,31,0.04); border: 1px solid rgba(255,90,31,0.12); border-radius: 9px; padding: 14px; }
+    .sqr-expand-title { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #ff8c55; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+    .sqr-field-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: #4a6078; text-transform: uppercase; letter-spacing: 0.08em; display: none; margin-bottom: 4px; }
+    .sqr-field-input { width: 100%; padding: 9px 11px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.78rem; outline: none; display: none; margin-bottom: 8px; }
+    .sqr-field-input:focus { border-color: #ff5a1f; }
+    .sqr-field-textarea { width: 100%; padding: 9px 11px; background: #080b10; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.75rem; outline: none; display: none; resize: vertical; min-height: 72px; line-height: 1.6; margin-bottom: 8px; }
+    .sqr-field-textarea:focus { border-color: #ff5a1f; }
+    .sqr-act-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-generate { padding: 9px 16px; background: #ff5a1f; color: #fff; border: none; border-radius: 7px; font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+    .btn-generate:hover { background: #ff7a45; }
+    .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-send-msg { padding: 9px 16px; background: transparent; color: #8b949e; border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-send-msg:hover { border-color: #ff5a1f; color: #ff5a1f; }
+    .btn-send-msg:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sqr-loading { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #4a6078; display: none; }
+    .sqr-sent { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #22c55e; display: none; }
+
+    /* Dynamic dest section */
+    .sqr-dest { padding: 0 16px 14px; }
+    .sqr-dest-inner { background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.16); border-radius: 9px; padding: 12px; }
+    .sqr-dest-label { font-family: 'DM Mono', monospace; font-size: 0.56rem; color: #a78bfa; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+    .sqr-dest-url-text { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #8b949e; word-break: break-all; margin-bottom: 8px; }
+    .sqr-dest-input { width: 100%; padding: 8px 10px; background: #080b10; border: 1px solid rgba(139,92,246,0.25); border-radius: 6px; color: #f0f4f8; font-family: 'DM Mono', monospace; font-size: 0.75rem; outline: none; display: none; margin-bottom: 7px; }
+    .sqr-dest-input:focus { border-color: #8b5cf6; }
+    .sqr-dest-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-dest-edit, .btn-dest-save, .btn-dest-cancel { padding: 5px 11px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.65rem; cursor: pointer; transition: all 0.15s; }
+    .btn-dest-edit { background: transparent; color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    .btn-dest-edit:hover { background: rgba(139,92,246,0.1); }
+    .btn-dest-save { background: #8b5cf6; color: #fff; border: none; display: none; }
     .btn-dest-save:hover { background: #7c3aed; }
-    .btn-dest-cancel { padding: 6px 12px; background: transparent; color: #4a6078; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.18s; display: none; }
+    .btn-dest-cancel { background: transparent; color: #4a6078; border: 1px solid rgba(255,255,255,0.07); display: none; }
     .btn-dest-cancel:hover { color: #8b949e; }
-    .dest-saved-msg { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: #22c55e; display: none; }
+    .btn-dest-saved { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #22c55e; display: none; }
 
-    .qr-delete-btn { width: 100%; margin-top: 8px; padding: 7px; background: transparent; border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; color: #ef4444; font-family: 'DM Mono', monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.18s; }
-    .qr-delete-btn:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
-    .qr-card-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-    .btn-ai { padding: 12px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: background 0.2s; }
-    .btn-ai:hover { background: #ff7a45; }
-    .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-send { padding: 12px 16px; background: transparent; color: var(--text-mid); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-display); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: border-color 0.2s, color 0.2s; }
-    .btn-send:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
-    .special-title-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-mono); font-size: 0.78rem; outline: none; display: none; }
-    .special-title-input:focus { border-color: var(--accent); }
-    .special-message-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-mono); font-size: 0.75rem; outline: none; display: none; resize: vertical; min-height: 80px; line-height: 1.6; }
-    .special-message-input:focus { border-color: var(--accent); }
-    .field-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; display: none; }
-    .sent-confirm { font-family: var(--font-mono); font-size: 0.75rem; color: #22c55e; display: none; text-align: center; }
-    .loading-text { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); text-align: center; display: none; }
-    .empty-state { text-align: center; padding: 60px 20px; border: 1px dashed rgba(255,255,255,0.1); border-radius: var(--radius); margin-top: 32px; }
-    .empty-state-icon { font-size: 3rem; margin-bottom: 16px; }
-    .empty-state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
-    .empty-state-desc { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); margin-bottom: 24px; }
-    .btn-create { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: var(--font-display); font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: background 0.18s; }
-    .btn-create:hover { background: #ff7a45; }
+    /* Empty state */
+    .sqr-empty { grid-column: 1/-1; text-align: center; padding: 60px 24px; border: 1px dashed rgba(255,255,255,0.07); border-radius: 14px; }
+    .sqr-empty-icon { font-size: 2.6rem; margin-bottom: 14px; }
+    .sqr-empty-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #f0f4f8; }
+    .sqr-empty-desc { font-family: 'DM Mono', monospace; font-size: 0.73rem; color: #444d56; margin-bottom: 24px; line-height: 1.65; }
 
-    /* ── Phone Modal ── */
+    /* Delete confirm */
+    .btn-del { width: 100%; padding: 7px; background: transparent; border: 1px solid rgba(239,68,68,0.2); border-radius: 0 0 14px 14px; color: #ef444466; font-family: 'DM Mono', monospace; font-size: 0.62rem; cursor: pointer; transition: all 0.15s; }
+    .btn-del:hover { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.4); color: #ef4444; }
+
+    /* Phone modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .modal-box { background: #0f0f0f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 40px; max-width: 460px; width: 100%; text-align: center; }
     .modal-icon { font-size: 2.5rem; margin-bottom: 16px; }
@@ -269,7 +196,7 @@
     .modal-btn-primary { width: 100%; padding: 14px; background: #ff5a1f; color: #fff; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.18s; margin-bottom: 10px; letter-spacing: 0.01em; }
     .modal-btn-primary:hover { background: #ff7a45; }
     .modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .modal-btn-skip { width: 100%; padding: 10px; background: transparent; color: #4a6078; border: none; font-family: 'DM Mono', monospace; font-size: 0.7rem; cursor: pointer; transition: color 0.18s; letter-spacing: 0.03em; }
+    .modal-btn-skip { width: 100%; padding: 10px; background: transparent; color: #4a6078; border: none; font-family: 'DM Mono', monospace; font-size: 0.7rem; cursor: pointer; transition: color 0.18s; }
     .modal-btn-skip:hover { color: #8b949e; }
     .modal-error { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #ef4444; margin-bottom: 10px; display: none; }
   </style>
@@ -286,9 +213,9 @@
       <div class="modal-stat">⚡ SMS has a 98% open rate vs 20% for email</div>
       <div class="modal-desc">Add your phone number to send SMS campaigns directly to your subscribers.</div>
       <div class="modal-benefits">
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Send SMS specials directly to all your subscribers</div>
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant alert when a customer scans your QR code</div>
-        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>New subscriber notifications straight to your phone</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Send SMS specials directly to all subscribers</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>Instant alert when a customer scans your QR</div>
+        <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>New subscriber notifications to your phone</div>
         <div class="modal-benefit"><span class="modal-benefit-icon">✓</span>3x higher conversion than push notifications</div>
       </div>
       <input type="tel" class="modal-input" id="phone-input" placeholder="+1 234 567 8900" />
@@ -298,6 +225,7 @@
     </div>
   </div>
 
+  <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-icon">⬡</div>
@@ -309,11 +237,16 @@
       <a href="dashboard.html" class="sb-item active">
         <span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span>
       </a>
-      <a href="#" class="sb-item" id="sb-create-qr">
-        <span class="sb-icon">＋</span><span class="sb-label">Create QR Code</span>
-      </a>
       <a href="analytics.html" class="sb-item">
         <span class="sb-icon">↗</span><span class="sb-label">Analytics</span>
+      </a>
+      <div class="sb-section">SMART PAGES</div>
+      <a href="dashboard.html" class="sb-item" id="sb-smart-pages">
+        <span class="sb-icon">⬡</span><span class="sb-label">Smart QR Pages</span>
+        <span class="sb-badge" id="sqr-count-badge">0</span>
+      </a>
+      <a href="#" class="sb-item" id="sb-create-sqr">
+        <span class="sb-icon">＋</span><span class="sb-label">Create New QR</span>
       </a>
       <div class="sb-section">ENGAGE</div>
       <a href="dashboard.html" class="sb-item">
@@ -330,8 +263,6 @@
       <a href="qr-panel.html" class="sb-item">
         <span class="sb-icon">⬡</span><span class="sb-label">QR Download Centre</span>
       </a>
-      
-      
       <div class="sb-section">ACCOUNT</div>
       <a href="pricing.html" class="sb-item">
         <span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span>
@@ -364,91 +295,19 @@
     <div class="noise"></div>
     <main>
       <div class="dash-wrap">
+
+        <!-- Header -->
         <div class="dash-header">
-          <h1 class="dash-title">Business <em>Dashboard</em></h1>
-          <button class="btn-new-qr" id="toggle-generator">⬡ Create New QR</button>
-        </div>
-        <p style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-dim);margin-bottom:20px">
-          Manage your QR codes, view subscribers and send AI-generated specials.
-        </p>
-
-        <!-- QR GENERATOR PANEL -->
-        <div class="qr-generator-panel" id="qr-generator-panel">
-          <div class="qr-gen-inner">
-            <div class="qr-gen-title">Create a new <span>AI QR code</span></div>
-            <div class="qr-gen-form">
-
-              <!-- URL field — always available -->
-              <div class="gen-group">
-                <label class="gen-label">Your URL *</label>
-                <input type="url" class="gen-input" id="gen-url" placeholder="https://your-website.com" autocomplete="off" />
-              </div>
-
-              <!-- Business Name — locked for free users -->
-              <div class="gen-group gen-locked-group" id="gen-business-group">
-                <label class="gen-label">Business Name — unlocks AI landing page</label>
-                <input type="text" class="gen-input" id="gen-business" placeholder="e.g. Joe's Coffee Shop" autocomplete="off" />
-                <!-- Lock overlay injected by JS for free users -->
-              </div>
-
-              <div class="gen-row">
-                <div class="gen-group">
-                  <label class="gen-label">QR Color</label>
-                  <div class="gen-color-wrap">
-                    <input type="color" id="gen-color" value="#000000" />
-                    <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#4a6078">Foreground</span>
-                  </div>
-                </div>
-                <div class="gen-group">
-                  <label class="gen-label">Background</label>
-                  <div class="gen-color-wrap">
-                    <input type="color" id="gen-bgcolor" value="#ffffff" />
-                    <span style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#4a6078">Background</span>
-                  </div>
-                </div>
-                <div class="gen-group">
-                  <label class="gen-label">Size</label>
-                  <select class="gen-select" id="gen-size">
-                    <option value="150x150">Small (150px)</option>
-                    <option value="300x300" selected>Medium (300px)</option>
-                    <option value="500x500">Large (500px)</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Dynamic QR toggle — locked for non-Pro -->
-              <div class="gen-toggle-row" id="gen-dynamic-row">
-                <div class="gen-toggle-info">
-                  <span class="gen-toggle-label">
-                    Dynamic QR <span class="gen-toggle-badge">PRO</span>
-                  </span>
-                  <span class="gen-toggle-desc">Print once — update the destination URL any time from your dashboard</span>
-                </div>
-                <div id="gen-dynamic-control">
-                  <!-- JS injects toggle or locked link based on plan -->
-                </div>
-              </div>
-
-              <div class="gen-error" id="gen-error"></div>
-              <button class="gen-btn" id="gen-btn">⬡ Generate QR Code</button>
-            </div>
-
-            <div class="gen-result" id="gen-result">
-              <img class="gen-qr-img" id="gen-qr-img" src="" alt="QR Code" />
-              <div class="gen-result-url" id="gen-result-url"></div>
-              <div class="gen-result-actions">
-                <button class="gen-result-btn primary" id="gen-copy-btn">📋 Copy Link</button>
-                <button class="gen-result-btn outline" id="gen-download-btn">⬇ Download</button>
-                <button class="gen-result-btn outline" id="gen-another-btn">＋ Create Another</button>
-              </div>
-              <div class="gen-success-msg" id="gen-success-msg">✅ QR code created and added to your dashboard!</div>
-            </div>
+          <div>
+            <h1 class="dash-title">Smart QR <em>Dashboard</em></h1>
+            <div class="dash-subtitle">Your AI-powered business engagement system</div>
           </div>
+          <button class="btn-create-sqr" id="btn-create-sqr">＋ Create New Smart QR</button>
         </div>
 
-        <!-- PLAN BANNER -->
-        <div class="plan-banner" id="plan-banner" style="display:none">
-          <div class="plan-banner-left">
+        <!-- Plan banner -->
+        <div class="plan-banner" id="plan-banner">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <span class="plan-badge" id="plan-badge-text">FREE</span>
             <span class="plan-info-text" id="plan-info-text">Loading...</span>
             <div class="plan-progress" id="plan-progress" style="display:none">
@@ -458,71 +317,50 @@
           <a href="pricing.html" class="upgrade-btn" id="upgrade-btn" style="display:none">Upgrade Plan →</a>
         </div>
 
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-label">Total QR Codes</div>
-            <div class="stat-value" id="totalQR">—</div>
+        <!-- Overview stats -->
+        <div class="dash-overview">
+          <div class="ov-card ov-accent">
+            <div class="ov-label">Smart QR Pages</div>
+            <div class="ov-val orange" id="ov-pages">—</div>
+            <div class="ov-sub">AI landing pages active</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Subscribers</div>
-            <div class="stat-value" id="totalSubs">—</div>
+          <div class="ov-card">
+            <div class="ov-label">Total Scans</div>
+            <div class="ov-val" id="ov-scans">—</div>
+            <div class="ov-sub">All time</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Scans</div>
-            <div class="stat-value" id="totalScans">—</div>
+          <div class="ov-card">
+            <div class="ov-label">Subscribers</div>
+            <div class="ov-val" id="ov-subs">—</div>
+            <div class="ov-sub">Across all QR codes</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-label">QR Codes</div>
+            <div class="ov-val" id="ov-qrs">—</div>
+            <div class="ov-sub">Total created</div>
           </div>
         </div>
-        <div id="loading" style="font-family:var(--font-mono);color:var(--text-dim);font-size:0.85rem;">Loading dashboard...</div>
-        <div class="qr-grid" id="qrGrid"></div>
+
+        <!-- Smart QR Pages grid -->
+        <div class="section-hdr">
+          <div>
+            <span class="section-title">Smart QR Pages</span>
+            <span class="section-count" id="sqr-section-count"></span>
+          </div>
+        </div>
+        <div id="sqr-loading" style="font-family:'DM Mono',monospace;color:#444d56;font-size:0.82rem;padding:20px 0">Loading your smart pages…</div>
+        <div class="sqr-grid" id="sqrGrid"></div>
+
       </div>
     </main>
-    <footer>
-      <span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span>
+    <footer style="padding:20px 36px;font-family:'DM Mono',monospace;font-size:0.65rem;color:#1e2530;border-top:1px solid rgba(255,255,255,0.04)">
+      <span>QRAIVY — Node · Express · Prisma · PostgreSQL</span>
     </footer>
   </div>
 
   <script>
     const API_BASE = 'https://api.qraivy.com';
     let currentPlanInfo = null;
-
-    // ── Plan-aware UI setup ──────────────────────────────────────────────────
-    function applyPlanToGenerator(planInfo) {
-      const canAI   = planInfo && planInfo.canCreateAI;
-      const canDyn  = planInfo && planInfo.canUseDynamic;
-      const plan    = planInfo ? planInfo.plan : 'free';
-
-      // Business name lock
-      const group   = document.getElementById('gen-business-group');
-      const input   = document.getElementById('gen-business');
-      if (!canAI) {
-        input.disabled = true;
-        input.placeholder = 'Upgrade to Starter to unlock';
-        // Inject lock overlay if not already there
-        if (!group.querySelector('.gen-lock-overlay')) {
-          const overlay = document.createElement('div');
-          overlay.className = 'gen-lock-overlay';
-          overlay.innerHTML = `<span class="gen-lock-overlay-text">🔒 AI landing pages require</span> <a href="pricing.html">Starter — $9/mo →</a>`;
-          overlay.addEventListener('click', () => window.location.href = 'pricing.html');
-          group.appendChild(overlay);
-        }
-      } else if (planInfo && planInfo.aiLimit !== null) {
-        // Starter: show remaining count
-        const remaining = planInfo.aiLimit - planInfo.aiQrCount;
-        input.placeholder = `e.g. Joe's Coffee Shop (${remaining} AI QR${remaining !== 1 ? 's' : ''} left)`;
-      }
-
-      // Dynamic QR toggle
-      const dynControl = document.getElementById('gen-dynamic-control');
-      if (canDyn) {
-        dynControl.innerHTML = `
-          <label class="toggle-switch">
-            <input type="checkbox" id="gen-dynamic-toggle" />
-            <span class="toggle-slider"></span>
-          </label>`;
-      } else {
-        dynControl.innerHTML = `<span class="gen-toggle-locked" onclick="window.location.href='pricing.html'">Unlock with Pro →</span>`;
-      }
-    }
 
     // ── Plan banner ──────────────────────────────────────────────────────────
     function showPlanBanner(planInfo) {
@@ -536,36 +374,30 @@
       const upgradeBtn  = document.getElementById('upgrade-btn');
       const sidebarBadge= document.getElementById('plan-badge');
 
-      banner.style.display = 'flex';
+      banner.classList.add('show');
       const _base = planInfo.basePlan || planInfo.plan.replace('_annual','');
       const _annual = planInfo.plan.includes('_annual');
       badgeText.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
       badgeText.className = 'plan-badge ' + _base;
       sidebarBadge.textContent = _base.toUpperCase();
-      // Show AI landing page usage for Starter
+
       if (planInfo.plan === 'free') {
         progress.style.display = 'none';
         infoText.innerHTML = `<strong>Free plan</strong> — Basic QR codes free forever. <a href='pricing.html' style='color:#ff5a1f'>Upgrade for AI landing pages →</a>`;
+        upgradeBtn.style.display = 'block';
       } else if (planInfo.aiLimit !== null) {
         infoText.innerHTML = `<strong>${planInfo.aiQrCount}</strong> of <strong>${planInfo.aiLimit}</strong> AI landing pages used`;
         const pct = Math.min((planInfo.aiQrCount / planInfo.aiLimit) * 100, 100);
         progress.style.display = 'block';
         progressBar.style.width = `${pct}%`;
-        if (pct >= 100) { progressBar.classList.add('full'); banner.classList.add('full'); }
-      } else if (planInfo.plan === 'free') {
-        infoText.innerHTML = `<strong>Free plan</strong> — Basic QR codes free forever. <a href="pricing.html" style="color:#ff5a1f">Upgrade for AI landing pages →</a>`;
+        if (pct >= 100) { progressBar.style.background = '#ef4444'; banner.classList.add('full'); }
       } else {
         infoText.innerHTML = `<strong>${planInfo.plan === 'pro' ? 'Pro' : 'Starter'} plan</strong> — Unlimited QR codes`;
       }
 
-      if (planInfo.plan === 'free') { upgradeBtn.style.display = 'block'; }
-
-      applyPlanToGenerator(planInfo);
-
-      if (!planInfo.hasPhone) { showPhoneModal(); }
+      if (!planInfo.hasPhone) showPhoneModal();
     }
 
-    // ── Phone modal ──────────────────────────────────────────────────────────
     function showPhoneModal() {
       if (!localStorage.getItem('phone-modal-skipped')) {
         setTimeout(() => { document.getElementById('phone-modal').style.display = 'flex'; }, 1500);
@@ -573,49 +405,53 @@
     }
 
     // ── Generate special ─────────────────────────────────────────────────────
-    async function generateSpecial(qr, card) {
-      const loadingEl    = card.querySelector('.loading-text');
-      const titleInput   = card.querySelector('.special-title-input');
-      const messageInput = card.querySelector('.special-message-input');
-      const titleLabel   = card.querySelectorAll('.field-label')[0];
-      const messageLabel = card.querySelectorAll('.field-label')[1];
-      const sendBtn      = card.querySelector('.btn-send');
-      const aiBtn        = card.querySelector('.btn-ai');
-      aiBtn.disabled = true; aiBtn.textContent = 'Generating...';
-      loadingEl.style.display = 'block';
-      titleInput.style.display = messageInput.style.display = 'none';
-      titleLabel.style.display = messageLabel.style.display = 'none';
+    async function generateSpecial(qr, expandEl) {
+      const loadEl   = expandEl.querySelector('.sqr-loading');
+      const titleEl  = expandEl.querySelector('.sqr-field-input');
+      const msgEl    = expandEl.querySelector('.sqr-field-textarea');
+      const titleLbl = expandEl.querySelectorAll('.sqr-field-label')[0];
+      const msgLbl   = expandEl.querySelectorAll('.sqr-field-label')[1];
+      const sendBtn  = expandEl.querySelector('.btn-send-msg');
+      const genBtn   = expandEl.querySelector('.btn-generate');
+
+      genBtn.disabled = true; genBtn.textContent = 'Generating…';
+      if (loadEl) loadEl.style.display = 'block';
+      titleEl.style.display = msgEl.style.display = 'none';
+      if (titleLbl) titleLbl.style.display = 'none';
+      if (msgLbl) msgLbl.style.display = 'none';
+
       try {
         const token = await window.Clerk.session.getToken();
-        const response = await fetch(`${API_BASE}/generate-special`, {
+        const res = await fetch(`${API_BASE}/generate-special`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ businessName: qr.businessName, originalUrl: qr.originalUrl }),
         });
-        const data = await response.json();
-        titleInput.value = `Special Offer from ${qr.businessName}`;
-        messageInput.value = data.message;
-        titleLabel.style.display = messageLabel.style.display = 'block';
-        titleInput.style.display = messageInput.style.display = 'block';
+        const data = await res.json();
+        titleEl.value = `Special Offer from ${qr.businessName}`;
+        msgEl.value = data.message;
+        if (titleLbl) titleLbl.style.display = 'block';
+        if (msgLbl) msgLbl.style.display = 'block';
+        titleEl.style.display = msgEl.style.display = 'block';
         sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
-        sendBtn.onclick = () => sendSpecial(qr.id, titleInput, messageInput, card);
+        sendBtn.onclick = () => sendSpecial(qr.id, titleEl, msgEl, expandEl);
       } catch (err) {
-        messageInput.value = 'Failed to generate. Try again.';
-        messageInput.style.display = messageLabel.style.display = 'block';
+        msgEl.value = 'Failed to generate. Please try again.';
+        msgEl.style.display = 'block';
         console.error(err);
       } finally {
-        loadingEl.style.display = 'none';
-        aiBtn.disabled = false; aiBtn.textContent = '✨ Generate Special with AI';
+        if (loadEl) loadEl.style.display = 'none';
+        genBtn.disabled = false; genBtn.textContent = '✨ Generate Special';
       }
     }
 
-    async function sendSpecial(qrId, titleInput, messageInput, card) {
-      const sendBtn = card.querySelector('.btn-send');
-      const sentConfirm = card.querySelector('.sent-confirm');
-      const title = titleInput.value.trim();
-      const message = messageInput.value.trim();
+    async function sendSpecial(qrId, titleEl, msgEl, expandEl) {
+      const sendBtn  = expandEl.querySelector('.btn-send-msg');
+      const sentEl   = expandEl.querySelector('.sqr-sent');
+      const title    = titleEl.value.trim();
+      const message  = msgEl.value.trim();
       if (!title || !message) { alert('Please fill in both title and message.'); return; }
-      sendBtn.disabled = true; sendBtn.textContent = 'Sending...';
+      sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
       try {
         const token = await window.Clerk.session.getToken();
         const res = await fetch(`${API_BASE}/send-special`, {
@@ -625,76 +461,193 @@
         });
         const data = await res.json();
         if (data.success) {
-          sentConfirm.style.display = 'block'; sentConfirm.textContent = '✅ Notification sent to all subscribers!';
+          if (sentEl) { sentEl.style.display = 'block'; sentEl.textContent = '✅ Notification sent to all subscribers!'; }
           sendBtn.style.display = 'none';
         } else {
-          sentConfirm.style.display = 'block'; sentConfirm.textContent = '❌ ' + (data.error || 'Failed to send.');
-          sentConfirm.style.color = '#ef4444'; sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
+          if (sentEl) { sentEl.style.display = 'block'; sentEl.style.color = '#ef4444'; sentEl.textContent = '❌ ' + (data.error || 'Failed to send.'); }
+          sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
         }
       } catch (err) {
         console.error(err); sendBtn.disabled = false; sendBtn.textContent = 'Send to Subscribers';
       }
     }
 
-    // ── Dynamic destination editor ────────────────────────────────────────────
-    function buildDynamicSection(qr, card) {
-      const section = card.querySelector('.dynamic-dest-section');
-      if (!section) return;
-      const urlDisplay  = section.querySelector('.dynamic-dest-url');
-      const input       = section.querySelector('.dynamic-dest-input');
-      const editBtn     = section.querySelector('.btn-dest-edit');
-      const saveBtn     = section.querySelector('.btn-dest-save');
-      const cancelBtn   = section.querySelector('.btn-dest-cancel');
-      const savedMsg    = section.querySelector('.dest-saved-msg');
-
-      urlDisplay.textContent = qr.destinationUrl || qr.originalUrl;
-
-      editBtn.addEventListener('click', () => {
+    // ── Dynamic destination ───────────────────────────────────────────────────
+    function bindDestSection(qr, destEl) {
+      if (!destEl) return;
+      const urlText  = destEl.querySelector('.sqr-dest-url-text');
+      const input    = destEl.querySelector('.sqr-dest-input');
+      const editBtn  = destEl.querySelector('.btn-dest-edit');
+      const saveBtn  = destEl.querySelector('.btn-dest-save');
+      const cancelBtn= destEl.querySelector('.btn-dest-cancel');
+      const savedMsg = destEl.querySelector('.btn-dest-saved');
+      if (urlText) urlText.textContent = qr.destinationUrl || qr.originalUrl;
+      if (editBtn) editBtn.addEventListener('click', () => {
         input.value = qr.destinationUrl || qr.originalUrl;
-        input.style.display = 'block';
-        saveBtn.style.display = 'inline-block';
-        cancelBtn.style.display = 'inline-block';
-        editBtn.style.display = 'none';
-        savedMsg.style.display = 'none';
+        input.style.display = 'block'; saveBtn.style.display = 'inline-block'; cancelBtn.style.display = 'inline-block'; editBtn.style.display = 'none'; if (savedMsg) savedMsg.style.display = 'none';
       });
-
-      cancelBtn.addEventListener('click', () => {
-        input.style.display = 'none';
-        saveBtn.style.display = cancelBtn.style.display = 'none';
-        editBtn.style.display = 'inline-block';
+      if (cancelBtn) cancelBtn.addEventListener('click', () => {
+        input.style.display = 'none'; saveBtn.style.display = 'none'; cancelBtn.style.display = 'none'; editBtn.style.display = 'inline-block';
       });
-
-      saveBtn.addEventListener('click', async () => {
+      if (saveBtn) saveBtn.addEventListener('click', async () => {
         const newUrl = input.value.trim();
-        if (!newUrl || !newUrl.startsWith('http')) {
-          input.style.borderColor = '#ef4444'; return;
-        }
-        saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+        if (!newUrl || !newUrl.startsWith('http')) { input.style.borderColor = '#ef4444'; return; }
+        saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
         try {
           const token = await window.Clerk.session.getToken();
-          const res = await fetch(`${API_BASE}/qr/${qr.id}/destination`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ destinationUrl: newUrl }),
-          });
+          const res = await fetch(`${API_BASE}/qr/${qr.id}/destination`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ destinationUrl: newUrl }) });
           const data = await res.json();
           if (data.success) {
-            qr.destinationUrl = newUrl;
-            urlDisplay.textContent = newUrl;
-            input.style.display = 'none';
-            saveBtn.style.display = cancelBtn.style.display = 'none';
-            editBtn.style.display = 'inline-block';
-            savedMsg.style.display = 'block';
-            setTimeout(() => savedMsg.style.display = 'none', 3000);
-          } else {
-            input.style.borderColor = '#ef4444';
-            alert(data.error || 'Failed to update destination.');
-          }
-        } catch (err) {
-          console.error(err); alert('Could not reach the server.');
-        } finally {
-          saveBtn.disabled = false; saveBtn.textContent = 'Save';
+            qr.destinationUrl = newUrl; if (urlText) urlText.textContent = newUrl;
+            input.style.display = 'none'; saveBtn.style.display = 'none'; cancelBtn.style.display = 'none'; editBtn.style.display = 'inline-block';
+            if (savedMsg) { savedMsg.style.display = 'inline'; setTimeout(() => savedMsg.style.display = 'none', 2500); }
+          } else { input.style.borderColor = '#ef4444'; alert(data.error || 'Failed to update.'); }
+        } catch { alert('Could not reach server.'); }
+        finally { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      });
+    }
+
+    // ── Delete QR ─────────────────────────────────────────────────────────────
+    async function deleteQR(id, cardEl) {
+      if (!confirm('Delete this QR code and all its data? This cannot be undone.')) return;
+      try {
+        const token = await window.Clerk.session.getToken();
+        const res = await fetch(API_BASE + '/qr/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.success) { cardEl.remove(); loadDashboard(); }
+        else { alert(data.error || 'Could not delete.'); }
+      } catch { alert('Could not reach server.'); }
+    }
+
+    // ── Render cards ──────────────────────────────────────────────────────────
+    function renderCards(dashboard) {
+      const grid = document.getElementById('sqrGrid');
+      const loadEl = document.getElementById('sqr-loading');
+      if (loadEl) loadEl.style.display = 'none';
+      grid.innerHTML = '';
+
+      // Update counters
+      const aiPages = dashboard.filter(q => !!q.businessName).length;
+      document.getElementById('ov-pages').textContent = aiPages;
+      document.getElementById('ov-qrs').textContent = dashboard.length;
+      document.getElementById('ov-scans').textContent = dashboard.reduce((s,q) => s + q.totalScans, 0);
+      document.getElementById('ov-subs').textContent = dashboard.reduce((s,q) => s + q.totalSubscribers, 0);
+      const badge = document.getElementById('sqr-count-badge');
+      if (badge) badge.textContent = dashboard.length;
+      const countEl = document.getElementById('sqr-section-count');
+      if (countEl) countEl.textContent = '(' + dashboard.length + ')';
+
+      if (dashboard.length === 0) {
+        grid.innerHTML = `<div class="sqr-empty">
+          <div class="sqr-empty-icon">⬡</div>
+          <div class="sqr-empty-title">No Smart QR Pages yet</div>
+          <div class="sqr-empty-desc">Create your first AI-powered QR landing page.<br>Takes less than 60 seconds.</div>
+          <button class="btn-create-sqr" onclick="window.qrairyOnboarding&&window.qrairyOnboarding.reopen('${window._dashUserId||'user'}')">＋ Create your first Smart QR</button>
+        </div>`;
+        return;
+      }
+
+      dashboard.forEach(qr => {
+        const isAI      = !!qr.businessName;
+        const isDynamic = !!qr.isDynamic;
+        const name      = qr.businessName || 'Basic QR Code';
+        const lpSlug    = qr.lpSlug || null;
+        const lpUrl     = lpSlug ? `https://api.qraivy.com/lp/${lpSlug}` : qr.originalUrl;
+        const qrImgSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=${encodeURIComponent(qr.originalUrl)}&color=111111&bgcolor=ffffff&margin=1`;
+
+        const badges = [
+          isAI ? '<span class="sqr-badge b-ai">✨ AI Page</span>' : '',
+          isAI ? '<span class="sqr-badge b-live">● Live</span>' : '',
+          isDynamic ? '<span class="sqr-badge b-dyn">⟳ Dynamic</span>' : '',
+          !isAI && !isDynamic ? '<span class="sqr-badge b-basic">Basic</span>' : '',
+        ].join('');
+
+        const destSection = isDynamic ? `
+          <div class="sqr-dest">
+            <div class="sqr-dest-inner">
+              <div class="sqr-dest-label">⟳ Destination URL</div>
+              <div class="sqr-dest-url-text"></div>
+              <input class="sqr-dest-input" type="url" placeholder="https://new-destination.com" />
+              <div class="sqr-dest-btns">
+                <button class="btn-dest-edit">Edit</button>
+                <button class="btn-dest-save">Save</button>
+                <button class="btn-dest-cancel">Cancel</button>
+                <span class="btn-dest-saved">✅ Saved!</span>
+              </div>
+            </div>
+          </div>` : '';
+
+        const aiExpand = isAI ? `
+          <div class="sqr-expand" id="expand-${qr.id}">
+            <div class="sqr-expand-inner">
+              <div class="sqr-expand-title">✨ Send AI Special</div>
+              <div class="sqr-loading">AI is crafting your message…</div>
+              <label class="sqr-field-label">Notification Title</label>
+              <input class="sqr-field-input" type="text" placeholder="Title" />
+              <label class="sqr-field-label">Message (editable)</label>
+              <textarea class="sqr-field-textarea" placeholder="Your message here…"></textarea>
+              <div class="sqr-act-row">
+                <button class="btn-generate">✨ Generate Special</button>
+                <button class="btn-send-msg" disabled>Send to Subscribers</button>
+              </div>
+              <div class="sqr-sent"></div>
+            </div>
+          </div>` : '';
+
+        const card = document.createElement('div');
+        card.className = 'sqr-card';
+        card.innerHTML = `
+          <div class="sqr-card-body">
+            <div class="sqr-thumb"><img src="${qrImgSrc}" alt="QR" loading="lazy" /></div>
+            <div class="sqr-meta">
+              <div class="sqr-badges">${badges}</div>
+              <div class="sqr-name">${name}</div>
+              <div class="sqr-url">${isAI ? `api.qraivy.com/lp/${lpSlug||'—'}` : qr.originalUrl}</div>
+              <div class="sqr-stats">
+                <div><div class="sqr-stat-val">${qr.totalScans}</div><div class="sqr-stat-lbl">Scans</div></div>
+                <div><div class="sqr-stat-val">${qr.totalSubscribers}</div><div class="sqr-stat-lbl">Subscribers</div></div>
+              </div>
+            </div>
+          </div>
+          ${destSection}
+          ${aiExpand}
+          <div class="sqr-actions">
+            ${isAI ? `<button class="sqr-act sqr-act-open" title="Open landing page"><span class="sqr-act-icon">🌐</span>View Page</button>` : ''}
+            ${isAI ? `<button class="sqr-act sqr-act-special" title="Send AI special"><span class="sqr-act-icon">✨</span>AI Special</button>` : ''}
+            <button class="sqr-act sqr-act-qr" title="QR Download Centre"><span class="sqr-act-icon">⬡</span>QR Assets</button>
+            <button class="sqr-act sqr-act-analytics" title="Analytics"><span class="sqr-act-icon">↗</span>Analytics</button>
+            ${!isAI && !isDynamic ? `<button class="sqr-act sqr-act-open" title="Open URL"><span class="sqr-act-icon">🔗</span>Open URL</button>` : ''}
+          </div>
+          <button class="btn-del" data-id="${qr.id}">Delete</button>`;
+
+        // Bind actions
+        const openBtn = card.querySelector('.sqr-act-open');
+        if (openBtn) openBtn.addEventListener('click', () => window.open(lpUrl, '_blank'));
+
+        const specialBtn = card.querySelector('.sqr-act-special');
+        const expandEl   = card.querySelector(`#expand-${qr.id}`);
+        if (specialBtn && expandEl) {
+          specialBtn.addEventListener('click', () => {
+            const isOpen = expandEl.classList.toggle('open');
+            if (isOpen) generateSpecial(qr, expandEl);
+          });
         }
+
+        const qrBtn = card.querySelector('.sqr-act-qr');
+        if (qrBtn) qrBtn.addEventListener('click', () => {
+          const slug = lpSlug || qr.id;
+          window.location.href = `qr-panel.html?slug=${slug}`;
+        });
+
+        const analyticsBtn = card.querySelector('.sqr-act-analytics');
+        if (analyticsBtn) analyticsBtn.addEventListener('click', () => window.location.href = 'analytics.html');
+
+        const delBtn = card.querySelector('.btn-del');
+        if (delBtn) delBtn.addEventListener('click', () => deleteQR(qr.id, card));
+
+        if (isDynamic) bindDestSection(qr, card.querySelector('.sqr-dest'));
+
+        grid.appendChild(card);
       });
     }
 
@@ -702,137 +655,45 @@
     async function loadDashboard() {
       try {
         const token = await window.Clerk.session.getToken();
-        const res = await fetch(`${API_BASE}/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const data = await res.json();
+        const res   = await fetch(`${API_BASE}/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data  = await res.json();
         const { dashboard, planInfo } = data;
-
         showPlanBanner(planInfo);
-
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('totalQR').textContent = dashboard.length;
-        document.getElementById('totalSubs').textContent = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
-        document.getElementById('totalScans').textContent = dashboard.reduce((s, q) => s + q.totalScans, 0);
-
-        const grid = document.getElementById('qrGrid');
-        grid.innerHTML = '';
-
-        if (dashboard.length === 0) {
-          grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1">
-              <div class="empty-state-icon">⬡</div>
-              <div class="empty-state-title">No QR codes yet</div>
-              <div class="empty-state-desc">Create your first AI-powered QR code to get started.</div>
-              <button class="btn-create" onclick="document.getElementById('toggle-generator').click();document.getElementById('qr-generator-panel').scrollIntoView({behavior:'smooth'})">⬡ Create your first QR</button>
-            </div>`;
-          return;
-        }
-
-        dashboard.forEach(qr => {
-          const isAI      = !!qr.businessName;
-          const isDynamic = !!qr.isDynamic;
-          const displayName = qr.businessName || 'Basic QR Code';
-
-          // Build badge HTML
-          let badges = '';
-          if (isAI)      badges += '<span class="qr-badge ai">✨ AI Page</span>';
-          if (isDynamic) badges += '<span class="qr-badge dynamic">⟳ Dynamic</span>';
-          if (!isAI && !isDynamic) badges += '<span class="qr-badge basic">Basic</span>';
-
-          // Build dynamic destination section (only for dynamic QRs)
-          const dynamicSection = isDynamic ? `
-            <div class="dynamic-dest-section">
-              <div class="dynamic-dest-label">⟳ Current destination</div>
-              <div class="dynamic-dest-url"></div>
-              <input class="dynamic-dest-input" type="url" placeholder="https://new-destination.com" />
-              <div class="dynamic-dest-actions">
-                <button class="btn-dest-edit">Edit destination</button>
-                <button class="btn-dest-save">Save</button>
-                <button class="btn-dest-cancel">Cancel</button>
-                <span class="dest-saved-msg">✅ Saved!</span>
-              </div>
-            </div>` : '';
-
-          // AI card actions (only if has businessName)
-          const aiActions = isAI ? `
-            <button class="btn-ai">✨ Generate Special with AI</button>
-            <div class="loading-text">AI is writing your special...</div>
-            <span class="field-label">Notification Title</span>
-            <input class="special-title-input" type="text" placeholder="Notification title" />
-            <span class="field-label">Message (editable)</span>
-            <textarea class="special-message-input" placeholder="Your message here..."></textarea>
-            <button class="btn-send" disabled>Send to Subscribers</button>
-            <div class="sent-confirm"></div>` : '';
-
-          const card = document.createElement('div');
-          card.className = 'qr-card';
-          card.innerHTML = `
-            <div class="qr-card-badges">${badges}</div>
-            <div class="qr-card-name">${displayName}</div>
-            <div class="qr-card-url">${qr.originalUrl}</div>
-            <div class="qr-card-stats">
-              <div class="qr-stat"><span class="qr-stat-label">Subscribers</span><span class="qr-stat-value">${qr.totalSubscribers}</span></div>
-              <div class="qr-stat"><span class="qr-stat-label">Scans</span><span class="qr-stat-value">${qr.totalScans}</span></div>
-            </div>
-            ${dynamicSection}
-            <div class="qr-card-actions">${aiActions}</div><button class="qr-delete-btn" data-id="${qr.id}">Delete QR</button>`;
-
-          if (isAI) {
-            card.querySelector('.btn-ai').onclick = () => generateSpecial(qr, card);
-          }
-          card.querySelector('.qr-delete-btn').onclick = () => deleteQR(qr.id, card);
-          if (isDynamic) {
-            buildDynamicSection(qr, card);
-          }
-
-          grid.appendChild(card);
-        });
+        renderCards(dashboard);
       } catch (err) {
-        document.getElementById('loading').textContent = 'Failed to load dashboard.';
+        const loadEl = document.getElementById('sqr-loading');
+        if (loadEl) loadEl.textContent = 'Failed to load dashboard.';
         console.error(err);
       }
     }
 
-    async function deleteQR(id, card) {
-      if (!confirm('Delete this QR code and all its data?')) return;
-      try {
-        const token = await window.Clerk.session.getToken();
-        const res = await fetch(API_BASE + '/qr/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        if (data.success) { card.remove(); }
-        else { alert(data.error || 'Could not delete.'); }
-      } catch (err) { alert('Could not reach server.'); }
-    }
     // ── Init ──────────────────────────────────────────────────────────────────
     async function initDashboard() {
       await window.Clerk.load();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(r => setTimeout(r, 500));
       if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
 
       const userName = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+      window._dashUserId = window.Clerk.user.id;
       document.querySelector('.sb-user-name').textContent = userName;
       document.querySelector('.sb-avatar').textContent = userName[0].toUpperCase();
-
-      document.querySelector('.sb-signout').addEventListener('click', async (e) => {
-        e.preventDefault();
-        await window.Clerk.signOut();
-        window.location.href = 'login.html';
+      document.querySelector('.sb-signout').addEventListener('click', async e => {
+        e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
       });
 
       // Sidebar collapse
       const sidebar = document.getElementById('sidebar');
       const sbToggle = document.getElementById('sb-toggle');
-      const mobBtn = document.getElementById('mob-btn');
-      const overlay = document.getElementById('sb-overlay');
       if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
       sbToggle.addEventListener('click', () => {
         const c = sidebar.classList.toggle('collapsed');
         document.body.classList.toggle('sb-collapsed', c);
         localStorage.setItem('sb-collapsed', c);
       });
-      mobBtn.addEventListener('click', () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
-      overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
+      document.getElementById('mob-btn').addEventListener('click', () => { sidebar.classList.add('mob-open'); document.getElementById('sb-overlay').classList.add('on'); });
+      document.getElementById('sb-overlay').addEventListener('click', () => { sidebar.classList.remove('mob-open'); document.getElementById('sb-overlay').classList.remove('on'); });
 
-      // Soon items toast
+      // Soon items
       document.querySelectorAll('.sb-soon-item').forEach(item => {
         item.addEventListener('click', e => {
           e.preventDefault();
@@ -844,90 +705,14 @@
         });
       });
 
-      // Generator panel toggle
-      const toggleGen = () => {
-        const panel = document.getElementById('qr-generator-panel');
-        panel.classList.toggle('open');
-        document.getElementById('toggle-generator').textContent = panel.classList.contains('open') ? '✕ Close' : '⬡ Create New QR';
+      // Create new QR — launch onboarding
+      const launchOnboarding = () => {
+        if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window.Clerk.user.id);
       };
-      document.getElementById('toggle-generator').addEventListener('click', toggleGen);
-      document.getElementById('sb-create-qr').addEventListener('click', (e) => {
-        e.preventDefault();
-        const panel = document.getElementById('qr-generator-panel');
-        if (!panel.classList.contains('open')) toggleGen();
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      document.getElementById('btn-create-sqr').addEventListener('click', launchOnboarding);
+      document.getElementById('sb-create-sqr').addEventListener('click', e => { e.preventDefault(); launchOnboarding(); });
 
-      // QR Generator submit
-      document.getElementById('gen-btn').addEventListener('click', async () => {
-        const url          = document.getElementById('gen-url').value.trim();
-        const businessName = document.getElementById('gen-business').value.trim();
-        const color        = document.getElementById('gen-color').value.replace('#', '');
-        const bgcolor      = document.getElementById('gen-bgcolor').value.replace('#', '');
-        const size         = document.getElementById('gen-size').value;
-        const dynToggle    = document.getElementById('gen-dynamic-toggle');
-        const isDynamic    = dynToggle ? dynToggle.checked : false;
-        const errorEl      = document.getElementById('gen-error');
-        const btn          = document.getElementById('gen-btn');
-
-        errorEl.style.display = 'none';
-        if (!url) { errorEl.textContent = 'Please enter a URL.'; errorEl.style.display = 'block'; return; }
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          errorEl.textContent = 'URL must start with http:// or https://'; errorEl.style.display = 'block'; return;
-        }
-
-        btn.disabled = true; btn.textContent = 'Generating...';
-
-        try {
-          const token = await window.Clerk.session.getToken();
-          const res = await fetch(`${API_BASE}/qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ url, businessName: businessName || null, isDynamic }),
-          });
-          const data = await res.json();
-
-          if (res.status === 403 && data.upgrade) {
-            errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`;
-            errorEl.style.display = 'block'; return;
-          }
-          if (!res.ok) {
-            errorEl.textContent = data.error || 'Something went wrong.'; errorEl.style.display = 'block'; return;
-          }
-
-          const { redirectUrl } = data;
-          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgcolor}`;
-
-          document.getElementById('gen-qr-img').src = qrSrc;
-          document.getElementById('gen-result-url').textContent = redirectUrl;
-          document.getElementById('gen-result').classList.add('show');
-          document.getElementById('gen-success-msg').style.display = 'block';
-
-          document.getElementById('gen-copy-btn').onclick = async () => {
-            await navigator.clipboard.writeText(redirectUrl);
-            document.getElementById('gen-copy-btn').textContent = '✓ Copied!';
-            setTimeout(() => document.getElementById('gen-copy-btn').textContent = '📋 Copy Link', 2000);
-          };
-          document.getElementById('gen-download-btn').onclick = () => {
-            const a = document.createElement('a'); a.download = 'qraivy-code.png'; a.href = qrSrc; a.click();
-          };
-          document.getElementById('gen-another-btn').onclick = () => {
-            document.getElementById('gen-result').classList.remove('show');
-            document.getElementById('gen-url').value = '';
-            document.getElementById('gen-business').value = '';
-            document.getElementById('gen-success-msg').style.display = 'none';
-            if (dynToggle) dynToggle.checked = false;
-          };
-
-          setTimeout(() => loadDashboard(), 1000);
-        } catch (err) {
-          errorEl.textContent = 'Could not reach the server. Please try again.'; errorEl.style.display = 'block'; console.error(err);
-        } finally {
-          btn.disabled = false; btn.textContent = '⬡ Generate QR Code';
-        }
-      });
-
-      // Phone modal handlers
+      // Phone modal
       document.getElementById('phone-skip-btn').addEventListener('click', () => {
         document.getElementById('phone-modal').style.display = 'none';
         localStorage.setItem('phone-modal-skipped', 'true');
@@ -937,25 +722,20 @@
         const errorEl = document.getElementById('phone-error');
         const btn = document.getElementById('phone-save-btn');
         if (!phone) { errorEl.textContent = 'Please enter a phone number.'; errorEl.style.display = 'block'; return; }
-        btn.disabled = true; btn.textContent = 'Saving...'; errorEl.style.display = 'none';
+        btn.disabled = true; btn.textContent = 'Saving…'; errorEl.style.display = 'none';
         try {
           const token = await window.Clerk.session.getToken();
-          const res = await fetch(`${API_BASE}/user/phone`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ phone }),
-          });
+          const res = await fetch(`${API_BASE}/user/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ phone }) });
           const data = await res.json();
           if (data.success) { document.getElementById('phone-modal').style.display = 'none'; }
-          else { errorEl.textContent = data.error || 'Failed to save. Try again.'; errorEl.style.display = 'block'; }
-        } catch (err) {
-          errorEl.textContent = 'Something went wrong. Try again.'; errorEl.style.display = 'block';
-        } finally {
-          btn.disabled = false; btn.textContent = 'Activate SMS Marketing →';
-        }
+          else { errorEl.textContent = data.error || 'Failed to save.'; errorEl.style.display = 'block'; }
+        } catch { errorEl.textContent = 'Something went wrong.'; errorEl.style.display = 'block'; }
+        finally { btn.disabled = false; btn.textContent = 'Activate SMS Marketing →'; }
       });
 
-      if(window.Clerk&&window.Clerk.user){window.qrairyOnboarding.init(window.Clerk.user.id);}
+      if (window.Clerk && window.Clerk.user) {
+        window.qrairyOnboarding.init(window.Clerk.user.id);
+      }
       loadDashboard();
     }
   </script>
@@ -969,8 +749,3 @@
   <script src="sidebar.js?v=3"></script>
 </body>
 </html>
-
-
-
-
-
