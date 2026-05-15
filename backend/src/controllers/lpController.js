@@ -254,6 +254,22 @@ a{color:inherit;text-decoration:none}
 .lp-sub-btn{padding:12px;border:none;border-radius:10px;background:${accent};color:#fff;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer}
 .lp-wallet-btns{display:flex;flex-direction:column;gap:7px;position:relative}
 .lp-wallet-btn{padding:11px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(240,236,224,0.5);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;width:100%}
+
+/* Chat collapsed state */
+.lp-chat-collapsed{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
+.lp-chat-collapsed:hover{border-color:rgba(255,78,0,0.3);background:rgba(255,78,0,0.04)}
+.lp-chat-collapsed-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;box-shadow:0 0 8px rgba(34,197,94,0.6);animation:lpDot 2s ease-in-out infinite}
+.lp-chat-collapsed-label{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;flex:1}
+.lp-chat-collapsed-hint{font-size:0.6rem;color:rgba(240,236,224,0.3);white-space:nowrap}
+/* Typing dots */
+.lp-typing-dots{display:inline-flex;gap:4px;align-items:center;padding:2px 0}
+.lp-typing-dots span{width:6px;height:6px;border-radius:50%;background:rgba(240,236,224,0.4);animation:lpTypeDot 1.2s ease-in-out infinite}
+.lp-typing-dots span:nth-child(2){animation-delay:0.2s}
+.lp-typing-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes lpTypeDot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+/* CTA section below subscribe */
+.lp-cta-section{padding:0 20px 28px;display:flex;flex-direction:column;align-items:center;gap:0}
+
 /* Footer */
 .lp-footer{padding:24px 20px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center}
 .lp-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
@@ -283,14 +299,14 @@ a{color:inherit;text-decoration:none}
   </div>
 </section>
 
-<!-- AI Concierge Zone -->
-<section class="lp-voice-section lp-voice-prominent">
-  <div class="lp-voice-title">Welcome Message</div>
-  <div class="lp-voice-player">
-    <button class="lp-voice-btn" id="voiceBtn">&#9654;</button>
+<!-- ── AI Concierge Zone ── -->
+<section class="lp-voice-section">
+  <div class="lp-voice-title">&#9658; Welcome from ${bizName}</div>
+  <div class="lp-voice-player" id="voicePlayer">
+    <button class="lp-voice-btn" id="voiceBtn" aria-label="Play welcome message">&#9654;</button>
     <div class="lp-voice-info">
-      <div class="lp-voice-name">From ${bizName}</div>
-      <div class="lp-voice-sub">Tap to listen &mdash; AI voice coming soon</div>
+      <div class="lp-voice-name">Personal welcome message</div>
+      <div class="lp-voice-sub" id="voiceSub">Tap to listen &mdash; unlocks AI assistant</div>
     </div>
     <div class="lp-waveform" id="waveform">
       ${Array.from({length:18},(_,i)=>`<div class="lp-bar" style="height:${Math.floor(Math.random()*22+6)}px;animation-delay:${(i*0.06).toFixed(2)}s"></div>`).join('')}
@@ -298,22 +314,27 @@ a{color:inherit;text-decoration:none}
   </div>
 </section>
 
-<section class="lp-chat-section lp-chat-prominent">
-  <div class="lp-chat-title">AI Assistant</div>
-  <div class="lp-chat-widget">
-    <div class="lp-chat-header">
-      <div class="lp-chat-avatar">&#10022;</div>
-      <div>
-        <div class="lp-chat-hname">AI Assistant</div>
-        <div class="lp-chat-status"><span class="lp-status-dot"></span>Online now</div>
+<section class="lp-chat-section" id="aiSection">
+  <div class="lp-chat-collapsed" id="chatCollapsed">
+    <div class="lp-chat-collapsed-dot"></div>
+    <span class="lp-chat-collapsed-label">AI Assistant &mdash; Online</span>
+    <span class="lp-chat-collapsed-hint">Tap welcome message to activate</span>
+  </div>
+  <div class="lp-chat-expanded" id="chatExpanded" style="display:none;opacity:0">
+    <div class="lp-chat-title">AI Assistant</div>
+    <div class="lp-chat-widget">
+      <div class="lp-chat-header">
+        <div class="lp-chat-avatar">&#10022;</div>
+        <div>
+          <div class="lp-chat-hname">AI Assistant</div>
+          <div class="lp-chat-status"><span class="lp-status-dot"></span>Online now</div>
+        </div>
       </div>
-    </div>
-    <div class="lp-chat-msgs" id="chatMsgs">
-      <div class="lp-msg lp-msg-ai"><div class="lp-bubble">Hi! I can answer questions about ${bizName}. What would you like to know?</div></div>
-    </div>
-    <div class="lp-chat-input-row">
-      <input class="lp-chat-input" id="chatInput" type="text" placeholder="Ask a question..." />
-      <button class="lp-chat-send" id="chatSend">&#10148;</button>
+      <div class="lp-chat-msgs" id="chatMsgs"></div>
+      <div class="lp-chat-input-row">
+        <input class="lp-chat-input" id="chatInput" type="text" placeholder="Ask a question..." />
+        <button class="lp-chat-send" id="chatSend">&#10148;</button>
+      </div>
     </div>
   </div>
 </section>
@@ -345,19 +366,12 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 </section>
-
-<!-- Business Info Zone -->
-<section class="lp-qr-section">
-  <div class="lp-qr-card">
-    <img src="${qrSrc}" class="lp-qr-img" alt="QR Code" />
-    <div>
-      <div class="lp-qr-label">Your Smart QR</div>
-      <div class="lp-qr-url">qrairy.ai/lp/${slug}</div>
-      <div class="lp-qr-badge">&#10022; AI Smart Page</div>
-    </div>
-  </div>
+<section class="lp-cta-section">
+  <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
+  <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary" style="margin-top:10px">${content.cta2}</a>
 </section>
 
+<!-- ── Business Info ── -->
 ${sectionsHTML}
 
 <footer class="lp-footer">
@@ -368,149 +382,118 @@ ${sectionsHTML}
   <div class="lp-footer-url">qrairy.ai/lp/${slug}</div>
   <div class="lp-footer-powered">Powered by <a href="https://qrairy.ai" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>
-
 <script>
 (function(){
-  var msgs=document.getElementById('chatMsgs');
-  var input=document.getElementById('chatInput');
-  var send=document.getElementById('chatSend');
-  if(msgs&&input&&send){
-    function addMsg(txt,isUser){
-      var d=document.createElement('div');
-      d.className='lp-msg '+(isUser?'lp-msg-user':'lp-msg-ai');
-      d.innerHTML='<div class="lp-bubble">'+(isUser?txt:'...')+'</div>';
-      msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
-      if(!isUser)setTimeout(function(){d.querySelector('.lp-bubble').textContent='Thanks for your message! Our team will get back to you soon. For immediate help please visit our website.';msgs.scrollTop=msgs.scrollHeight;},1600);
-    }
-    function submit(){var v=input.value.trim();if(!v)return;addMsg(v,true);input.value='';setTimeout(function(){addMsg('',false);},350);}
-    send.addEventListener('click',submit);
-    input.addEventListener('keydown',function(e){if(e.key==='Enter')submit();});
+  var playing = false;
+  var aiActivated = false;
+  var bizName = '${bizName}';
+
+  var voiceBtn  = document.getElementById('voiceBtn');
+  var waveform  = document.getElementById('waveform');
+  var voiceSub  = document.getElementById('voiceSub');
+  var aiSection = document.getElementById('aiSection');
+  var collapsed = document.getElementById('chatCollapsed');
+  var expanded  = document.getElementById('chatExpanded');
+  var chatMsgs  = document.getElementById('chatMsgs');
+  var chatInput = document.getElementById('chatInput');
+  var chatSend  = document.getElementById('chatSend');
+
+  // ── Voice player ────────────────────────────────────────
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', function() {
+      if (playing) return;
+      playing = true;
+      voiceBtn.textContent = '\u23F8';
+      if (waveform) waveform.classList.add('lp-waveform-active');
+      if (voiceSub) voiceSub.textContent = 'Playing welcome message\u2026';
+
+      // Simulate audio playback duration (3.5s)
+      // Future: replace setTimeout with actual ElevenLabs audio.onended
+      setTimeout(function() {
+        voiceBtn.textContent = '\u25B6';
+        if (waveform) waveform.classList.remove('lp-waveform-active');
+        if (voiceSub) voiceSub.textContent = 'Welcome message played';
+        playing = false;
+        // Trigger AI expansion after voice ends
+        if (!aiActivated) activateAI();
+      }, 3500);
+    });
   }
-  var vBtn=document.getElementById('voiceBtn');
-  var wf=document.getElementById('waveform');
-  var playing=false;
-  if(vBtn&&wf){vBtn.addEventListener('click',function(){playing=!playing;vBtn.textContent=playing?'\\u23F8':'\\u25B6';wf.classList.toggle('lp-waveform-active',playing);});}
+
+  // ── AI expansion ────────────────────────────────────────
+  function activateAI() {
+    aiActivated = true;
+    if (!collapsed || !expanded) return;
+
+    // Hide collapsed pill
+    collapsed.style.transition = 'opacity 0.3s';
+    collapsed.style.opacity = '0';
+    setTimeout(function() {
+      collapsed.style.display = 'none';
+      expanded.style.display = 'block';
+      // Animate expansion
+      expanded.style.transition = 'opacity 0.4s ease';
+      setTimeout(function() {
+        expanded.style.opacity = '1';
+        // Show typing then greeting
+        addAIMsg('typing');
+        setTimeout(function() {
+          replaceTyping('Hi! I can help answer questions about ' + bizName + '. What would you like to know?');
+          if (chatInput) setTimeout(function(){ chatInput.focus(); }, 300);
+        }, 1400);
+      }, 50);
+    }, 320);
+  }
+
+  // ── Chat ────────────────────────────────────────────────
+  function addAIMsg(type) {
+    if (!chatMsgs) return;
+    var d = document.createElement('div');
+    d.className = 'lp-msg lp-msg-ai';
+    d.id = type === 'typing' ? 'typingMsg' : '';
+    d.innerHTML = type === 'typing'
+      ? '<div class="lp-bubble"><span class="lp-typing-dots"><span></span><span></span><span></span></span></div>'
+      : '<div class="lp-bubble">' + type + '</div>';
+    chatMsgs.appendChild(d);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function replaceTyping(text) {
+    var t = document.getElementById('typingMsg');
+    if (t) t.querySelector('.lp-bubble').textContent = text;
+    if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function addUserMsg(txt) {
+    if (!chatMsgs) return;
+    var d = document.createElement('div');
+    d.className = 'lp-msg lp-msg-user';
+    d.innerHTML = '<div class="lp-bubble">' + txt + '</div>';
+    chatMsgs.appendChild(d);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+  }
+
+  function submitMsg() {
+    if (!chatInput) return;
+    var v = chatInput.value.trim();
+    if (!v) return;
+    addUserMsg(v);
+    chatInput.value = '';
+    addAIMsg('typing');
+    setTimeout(function(){
+      replaceTyping('Thanks for your message! Our team will get back to you soon. For immediate help please visit our website.');
+    }, 1600);
+  }
+
+  if (chatSend) chatSend.addEventListener('click', submitMsg);
+  if (chatInput) chatInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitMsg(); });
+
+  // Also allow tapping the collapsed card to activate
+  if (collapsed) {
+    collapsed.style.cursor = 'pointer';
+    collapsed.addEventListener('click', function() {
+      if (!aiActivated) activateAI();
+    });
+  }
 })();
 </script>
-</body>
-</html>`;
-}
-
-// ── 404 page ──────────────────────────────────────────────────────────────
-function render404(slug) {
-  return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Page Not Found — Qraivy</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;max-width:480px;margin:0 auto}
-.wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
-.logo{width:52px;height:52px;background:#FF4E00;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:#fff}
-h1{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800}
-p{font-size:0.78rem;color:rgba(240,236,224,0.4);line-height:1.7;max-width:300px}
-.slug{font-size:0.65rem;color:rgba(240,236,224,0.2);margin-top:-4px}
-a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;color:#fff;text-decoration:none}
-</style></head>
-<body><div class="wrap">
-<div class="logo">Q</div>
-<h1>Page not found</h1>
-<p>This smart landing page doesn't exist yet or may have been removed.</p>
-<div class="slug">qrairy.ai/lp/${slug}</div>
-<a href="https://qrairy.ai">Create your own AI page &rarr;</a>
-</div></body></html>`;
-}
-
-// ── Controllers ───────────────────────────────────────────────────────────
-
-// POST /lp — publish a landing page from onboarding
-async function handlePublishLP(req, res) {
-  try {
-    const {
-      slug, businessName, websiteUrl, useCase, brandColor,
-      logoUrl, userId, sections, qrType,
-    } = req.body;
-
-    if (!slug || !businessName) {
-      return res.status(400).json({ error: 'slug and businessName are required' });
-    }
-
-    // Upsert so regenerate works cleanly
-    const page = await prisma.landingPage.upsert({
-      where: { slug },
-      update: {
-        businessName, websiteUrl, useCase, brandColor,
-        logoUrl, sections: sections ? JSON.stringify(sections) : null,
-        status: 'live', updatedAt: new Date(),
-      },
-      create: {
-        slug, businessName, websiteUrl, useCase, brandColor,
-        logoUrl, userId, qrType,
-        sections: sections ? JSON.stringify(sections) : null,
-        status: 'live',
-      },
-    });
-
-    return res.json({
-      ok: true,
-      url: `https://qrairy.ai/lp/${slug}`,
-      slug,
-      id: page.id,
-    });
-  } catch (err) {
-    console.error('[LP] publish error:', err);
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-// GET /lp/:slug — serve the live landing page
-async function handleServeLP(req, res) {
-  try {
-    const { slug } = req.params;
-    const page = await prisma.landingPage.findUnique({ where: { slug } });
-
-    if (!page || page.status === 'draft') {
-      return res.status(404).send(render404(slug));
-    }
-
-    // Track scan asynchronously (fire and forget)
-    prisma.landingPage.update({
-      where: { slug },
-      data: { scanCount: { increment: 1 } },
-    }).catch(() => {});
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    return res.send(renderLP(page));
-  } catch (err) {
-    console.error('[LP] serve error:', err);
-    return res.status(500).send(render404(req.params.slug));
-  }
-}
-
-// GET /api/lp/:slug — get page data as JSON
-async function handleGetLP(req, res) {
-  try {
-    const page = await prisma.landingPage.findUnique({ where: { slug: req.params.slug } });
-    if (!page) return res.status(404).json({ error: 'not found' });
-    return res.json(page);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-// GET /api/lp — list all landing pages for a user
-async function handleListLPs(req, res) {
-  try {
-    const userId = req.query.userId;
-    const where  = userId ? { userId } : {};
-    const pages  = await prisma.landingPage.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      select: { id:true, slug:true, businessName:true, useCase:true, brandColor:true, status:true, scanCount:true, createdAt:true },
-    });
-    return res.json(pages);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-}
-
-module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };

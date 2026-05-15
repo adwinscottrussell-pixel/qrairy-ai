@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>QR Download Centre — Qraivy</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;padding:24px;max-width:900px;margin:0 auto}
+h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:4px}
+.subtitle{font-size:0.72rem;color:rgba(240,236,224,0.4);margin-bottom:28px}
+.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:640px){.panel-grid{grid-template-columns:1fr}}
+
+/* QR Preview card */
+.qr-preview-card{background:#111110;border:0.5px solid rgba(255,78,0,0.22);border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.qr-preview-badge{font-size:0.58rem;letter-spacing:0.1em;color:#FF7A35;background:rgba(255,78,0,0.1);border:0.5px solid rgba(255,78,0,0.25);border-radius:99px;padding:3px 10px}
+.qr-preview-frame{position:relative;width:180px;height:180px;background:#111;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:0.5px solid rgba(255,255,255,0.1)}
+.qr-preview-frame img{width:160px;height:160px;border-radius:8px}
+.qr-preview-glow{position:absolute;inset:-20px;background:radial-gradient(circle,rgba(255,78,0,0.12),transparent 70%);pointer-events:none}
+.qr-url{font-size:0.65rem;color:rgba(240,236,224,0.4);text-align:center;word-break:break-all}
+.qr-scan-badge{display:flex;align-items:center;gap:6px;font-size:0.6rem;color:#22c55e;background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.2);border-radius:99px;padding:4px 10px}
+.qr-scan-dot{width:6px;height:6px;border-radius:50%;background:#22c55e}
+
+/* Download section */
+.download-card{background:#111110;border:0.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px}
+.card-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:16px}
+.size-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.size-btn{padding:10px 12px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;cursor:pointer;transition:all 0.15s;text-align:left}
+.size-btn:hover{border-color:rgba(255,78,0,0.35);background:rgba(255,78,0,0.05)}
+.size-btn.active{border-color:#FF4E00;background:rgba(255,78,0,0.1)}
+.size-label{font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;color:#f0ece0;display:block}
+.size-px{font-size:0.58rem;color:rgba(240,236,224,0.35)}
+.format-row{display:flex;gap:8px;margin-bottom:20px}
+.format-btn{flex:1;padding:9px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;font-size:0.7rem;color:rgba(240,236,224,0.55);transition:all 0.15s;text-align:center}
+.format-btn:hover{border-color:rgba(255,78,0,0.35);color:#f0ece0}
+.format-btn.active{border-color:#FF4E00;color:#FF7A35;background:rgba(255,78,0,0.08)}
+.download-btn{width:100%;padding:13px;background:#FF4E00;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 20px rgba(255,78,0,0.3);transition:background 0.15s,box-shadow 0.15s}
+.download-btn:hover{background:#e04400;box-shadow:0 0 28px rgba(255,78,0,0.45)}
+
+/* Customise section */
+.custom-card{background:#111110;border:0.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px}
+.field-label{font-size:0.58rem;letter-spacing:0.1em;color:rgba(240,236,224,0.35);text-transform:uppercase;margin-bottom:6px;display:block}
+.field-row{display:flex;gap:12px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.color-field{display:flex;align-items:center;gap:8px;flex:1}
+.color-swatch{width:32px;height:32px;border-radius:6px;border:0.5px solid rgba(255,255,255,0.15);cursor:pointer;flex-shrink:0}
+.color-hex{font-size:0.72rem;color:rgba(240,236,224,0.45)}
+.toggle-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.toggle-btn{padding:7px 12px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:99px;font-size:0.65rem;color:rgba(240,236,224,0.45);cursor:pointer;transition:all 0.15s}
+.toggle-btn:hover,.toggle-btn.active{border-color:#FF4E00;color:#FF7A35;background:rgba(255,78,0,0.08)}
+.preset-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:16px}
+.preset{height:44px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color 0.15s,transform 0.12s;display:flex;align-items:center;justify-content:center;font-size:0.55rem;letter-spacing:0.06em;font-family:'DM Mono',monospace}
+.preset:hover{border-color:rgba(255,255,255,0.3);transform:scale(1.05)}
+.preset.active{border-color:#FF4E00}
+.regenerate-btn{width:100%;padding:11px;background:transparent;border:0.5px solid rgba(255,78,0,0.3);border-radius:9px;color:#FF7A35;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.15s}
+.regenerate-btn:hover{background:rgba(255,78,0,0.08)}
+
+/* Marketing exports (coming soon) */
+.exports-card{background:#111110;border:0.5px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px;opacity:0.6}
+.coming-soon{display:inline-flex;align-items:center;gap:5px;font-size:0.58rem;letter-spacing:0.1em;color:rgba(240,236,224,0.3);background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:99px;padding:3px 9px;margin-bottom:14px}
+.export-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.export-item{padding:12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:9px;text-align:center}
+.export-icon{font-size:1.2rem;margin-bottom:4px}
+.export-label{font-size:0.6rem;color:rgba(240,236,224,0.35)}
+</style>
+</head>
+<body>
+
+<h1>QR Download Centre</h1>
+<p class="subtitle">Manage, customise and download your smart QR assets</p>
+
+<div class="panel-grid">
+
+  <!-- LEFT: QR Preview -->
+  <div>
+    <div class="qr-preview-card">
+      <div class="qr-preview-badge">&#10022; AI Smart QR — Active</div>
+      <div class="qr-preview-frame">
+        <div class="qr-preview-glow"></div>
+        <img id="qrPreviewImg" src="" alt="QR Code" />
+      </div>
+      <div class="qr-url" id="qrUrlDisplay">api.qraivy.com/lp/your-slug</div>
+      <div class="qr-scan-badge"><span class="qr-scan-dot"></span><span id="scanCount">0 scans</span></div>
+    </div>
+
+    <!-- Customise card -->
+    <div class="custom-card" style="margin-top:16px">
+      <div class="card-title">Customise QR</div>
+
+      <span class="field-label">Presets</span>
+      <div class="preset-row" id="presetRow">
+        <div class="preset active" data-fg="ffffff" data-bg="111111" style="background:#111;color:#fff">Classic</div>
+        <div class="preset" data-fg="FF4E00" data-bg="0a0a0a" style="background:#0a0a0a;color:#FF4E00">Brand</div>
+        <div class="preset" data-fg="ffffff" data-bg="FF4E00" style="background:#FF4E00;color:#fff">Inverted</div>
+        <div class="preset" data-fg="0a0a0a" data-bg="f0ece0" style="background:#f0ece0;color:#0a0a0a">Light</div>
+      </div>
+
+      <span class="field-label">Custom Colours</span>
+      <div class="field-row">
+        <div class="color-field">
+          <div class="color-swatch" id="fgSwatch" style="background:#ffffff" onclick="document.getElementById('fgInput').click()"></div>
+          <input type="color" id="fgInput" value="#ffffff" style="display:none">
+          <span class="color-hex" id="fgHex">#ffffff</span>
+          <span style="font-size:0.6rem;color:rgba(240,236,224,0.3)">QR Colour</span>
+        </div>
+        <div class="color-field">
+          <div class="color-swatch" id="bgSwatch" style="background:#111111" onclick="document.getElementById('bgInput').click()"></div>
+          <input type="color" id="bgInput" value="#111111" style="display:none">
+          <span class="color-hex" id="bgHex">#111111</span>
+          <span style="font-size:0.6rem;color:rgba(240,236,224,0.3)">Background</span>
+        </div>
+      </div>
+
+      <span class="field-label">Style</span>
+      <div class="toggle-row">
+        <button class="toggle-btn active" data-style="square">Square</button>
+        <button class="toggle-btn" data-style="rounded">Rounded</button>
+        <button class="toggle-btn" data-style="dots">Dots</button>
+      </div>
+
+      <button class="regenerate-btn" id="regenerateBtn">&#8635; Update QR Preview</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Download + Exports -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Download sizes -->
+    <div class="download-card">
+      <div class="card-title">Download QR Code</div>
+
+      <span class="field-label">Size</span>
+      <div class="size-grid" id="sizeGrid">
+        <div class="size-btn" data-size="200"><span class="size-label">Small</span><span class="size-px">200 × 200 px</span></div>
+        <div class="size-btn active" data-size="400"><span class="size-label">Medium</span><span class="size-px">400 × 400 px</span></div>
+        <div class="size-btn" data-size="800"><span class="size-label">Large</span><span class="size-px">800 × 800 px</span></div>
+        <div class="size-btn" data-size="1200"><span class="size-label">Print</span><span class="size-px">1200 × 1200 px</span></div>
+      </div>
+
+      <span class="field-label">Format</span>
+      <div class="format-row" id="formatRow">
+        <button class="format-btn active" data-format="png">PNG</button>
+        <button class="format-btn" data-format="svg">SVG</button>
+        <button class="format-btn" data-format="pdf">PDF</button>
+      </div>
+
+      <button class="download-btn" id="downloadBtn">&#8659; Download QR Code</button>
+    </div>
+
+    <!-- Marketing exports (coming soon) -->
+    <div class="exports-card">
+      <div class="card-title">Marketing Assets</div>
+      <div class="coming-soon">&#9679; Coming Soon</div>
+      <div class="export-grid">
+        <div class="export-item"><div class="export-icon">🪧</div><div class="export-label">Poster</div></div>
+        <div class="export-item"><div class="export-icon">🗂</div><div class="export-label">Flyer</div></div>
+        <div class="export-item"><div class="export-icon">📇</div><div class="export-label">Business Card</div></div>
+        <div class="export-item"><div class="export-icon">🏷</div><div class="export-label">Table Tent</div></div>
+        <div class="export-item"><div class="export-icon">📦</div><div class="export-label">Packaging</div></div>
+        <div class="export-item"><div class="export-icon">📱</div><div class="export-label">Social Post</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── State ─────────────────────────────────────────────
+  var state = {
+    slug: new URLSearchParams(window.location.search).get('slug') || 'your-slug',
+    fg: 'ffffff', bg: '111111', size: 400, format: 'png',
+  };
+
+  var previewImg = document.getElementById('qrPreviewImg');
+  var urlDisplay = document.getElementById('qrUrlDisplay');
+  var scanCount  = document.getElementById('scanCount');
+  var fgSwatch   = document.getElementById('fgSwatch');
+  var bgSwatch   = document.getElementById('bgSwatch');
+  var fgHex      = document.getElementById('fgHex');
+  var bgHex      = document.getElementById('bgHex');
+  var fgInput    = document.getElementById('fgInput');
+  var bgInput    = document.getElementById('bgInput');
+
+  // ── QR URL builder ────────────────────────────────────
+  function qrURL(size) {
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=' + (size||state.size) + 'x' + (size||state.size) +
+      '&data=' + encodeURIComponent('https://api.qraivy.com/lp/' + state.slug) +
+      '&color=' + state.fg + '&bgcolor=' + state.bg + '&margin=2&format=' + (state.format === 'svg' ? 'svg' : 'png');
+  }
+
+  function updatePreview() {
+    if (previewImg) previewImg.src = qrURL(300);
+    if (urlDisplay) urlDisplay.textContent = 'api.qraivy.com/lp/' + state.slug;
+  }
+
+  // ── Load page data ────────────────────────────────────
+  function loadPageData() {
+    fetch('https://api.qraivy.com/api/lp/' + state.slug)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.scanCount !== undefined && scanCount) scanCount.textContent = d.scanCount + ' scan' + (d.scanCount !== 1 ? 's' : '');
+        if (d.brandColor) {
+          var c = d.brandColor.replace('#','');
+          state.fg = c;
+          if (fgSwatch) fgSwatch.style.background = d.brandColor;
+          if (fgHex) fgHex.textContent = d.brandColor;
+          if (fgInput) fgInput.value = d.brandColor;
+          updatePreview();
+        }
+      })
+      .catch(function(){});
+  }
+  loadPageData();
+  updatePreview();
+
+  // ── Presets ───────────────────────────────────────────
+  document.querySelectorAll('#presetRow .preset').forEach(function(p) {
+    p.addEventListener('click', function() {
+      document.querySelectorAll('#presetRow .preset').forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      state.fg = p.dataset.fg;
+      state.bg = p.dataset.bg;
+      if (fgSwatch) fgSwatch.style.background = '#' + state.fg;
+      if (bgSwatch) bgSwatch.style.background = '#' + state.bg;
+      if (fgHex) fgHex.textContent = '#' + state.fg;
+      if (bgHex) bgHex.textContent = '#' + state.bg;
+    });
+  });
+
+  // ── Custom colour pickers ─────────────────────────────
+  if (fgInput) fgInput.addEventListener('input', function() {
+    state.fg = fgInput.value.replace('#','');
+    if (fgSwatch) fgSwatch.style.background = fgInput.value;
+    if (fgHex) fgHex.textContent = fgInput.value;
+  });
+  if (bgInput) bgInput.addEventListener('input', function() {
+    state.bg = bgInput.value.replace('#','');
+    if (bgSwatch) bgSwatch.style.background = bgInput.value;
+    if (bgHex) bgHex.textContent = bgInput.value;
+  });
+
+  // ── Size selection ────────────────────────────────────
+  document.querySelectorAll('#sizeGrid .size-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#sizeGrid .size-btn').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      state.size = parseInt(b.dataset.size);
+    });
+  });
+
+  // ── Format selection ──────────────────────────────────
+  document.querySelectorAll('#formatRow .format-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#formatRow .format-btn').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      state.format = b.dataset.format;
+    });
+  });
+
+  // ── Regenerate preview ────────────────────────────────
+  var regenBtn = document.getElementById('regenerateBtn');
+  if (regenBtn) regenBtn.addEventListener('click', function() {
+    regenBtn.textContent = 'Updating\u2026';
+    updatePreview();
+    setTimeout(function(){ regenBtn.textContent = '\u21BB Update QR Preview'; }, 800);
+  });
+
+  // ── Download ──────────────────────────────────────────
+  var dlBtn = document.getElementById('downloadBtn');
+  if (dlBtn) dlBtn.addEventListener('click', function() {
+    var url = qrURL(state.size);
+    if (state.format === 'svg') {
+      url = url.replace('format=png', 'format=svg');
+    }
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'qr-' + state.slug + '-' + state.size + 'px.' + state.format;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    dlBtn.textContent = '\u2713 Download started!';
+    setTimeout(function(){ dlBtn.textContent = '\u2659 Download QR Code'; }, 2000);
+  });
+
+})();
+</script>
+</body>
+</html>
