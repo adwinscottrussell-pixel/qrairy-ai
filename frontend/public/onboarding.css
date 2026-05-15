@@ -421,3 +421,40 @@
 .qr-success-customize:hover{color:rgba(240,236,224,0.5);}
 
 @keyframes qrFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ══════════════════════════════════════
+   STEP 3 — BUSINESS SETUP
+   ══════════════════════════════════════ */
+.qr-setup-modal{max-width:600px;}
+.qr-setup-body{display:flex;flex-direction:column;gap:16px;margin-bottom:1.25rem;}
+.qr-setup-row{display:flex;gap:14px;}
+@media(max-width:540px){.qr-setup-row{flex-direction:column;}}
+.qr-field-group{display:flex;flex-direction:column;gap:6px;}
+.qr-field-label{font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;color:rgba(240,236,224,0.5);text-transform:uppercase;}
+.qr-field-required{color:#FF7A35;}
+.qr-field-opt{color:rgba(240,236,224,0.25);font-size:0.58rem;text-transform:none;letter-spacing:0;}
+.qr-field-input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0ece0;font-family:'JetBrains Mono',monospace;font-size:0.82rem;outline:none;transition:border-color 0.18s,background 0.18s;}
+.qr-field-input:focus{border-color:rgba(255,78,0,0.5);background:rgba(255,78,0,0.03);}
+.qr-field-input::placeholder{color:rgba(240,236,224,0.2);}
+.qr-input-prefix-wrap{position:relative;display:flex;align-items:center;}
+.qr-input-prefix{position:absolute;left:14px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:rgba(240,236,224,0.25);pointer-events:none;z-index:1;}
+.qr-field-input-prefixed{padding-left:72px;}
+.qr-logo-upload{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,0.03);border:0.5px dashed rgba(255,255,255,0.14);border-radius:10px;cursor:pointer;transition:border-color 0.18s,background 0.18s;}
+.qr-logo-upload:hover{border-color:rgba(255,78,0,0.35);background:rgba(255,78,0,0.03);}
+.qr-logo-preview{width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:rgba(240,236,224,0.25);flex-shrink:0;overflow:hidden;}
+.qr-logo-upload-text{display:flex;flex-direction:column;gap:2px;}
+.qr-logo-upload-main{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(240,236,224,0.55);}
+.qr-logo-upload-sub{font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(240,236,224,0.25);}
+.qr-color-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.qr-color-swatch{width:36px;height:36px;border-radius:8px;border:2px solid rgba(255,255,255,0.15);cursor:pointer;flex-shrink:0;transition:transform 0.15s;}
+.qr-color-swatch:hover{transform:scale(1.08);}
+.qr-color-hex{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:rgba(240,236,224,0.45);}
+.qr-color-presets{display:flex;gap:5px;flex-wrap:wrap;}
+.qr-color-preset{width:20px;height:20px;border-radius:5px;cursor:pointer;border:1.5px solid transparent;transition:transform 0.12s,border-color 0.12s;}
+.qr-color-preset:hover{transform:scale(1.15);}
+.qr-color-preset.active{border-color:rgba(255,255,255,0.6);transform:scale(1.15);}
+.qr-setup-summary{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(255,78,0,0.06);border:0.5px solid rgba(255,78,0,0.2);border-radius:8px;}
+.qr-setup-summary-icon{font-size:1rem;}
+.qr-setup-summary-text{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:rgba(240,236,224,0.5);}
+.qr-setup-summary-text strong{color:rgba(240,236,224,0.75);font-weight:500;}
+.qr-setup-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;}
