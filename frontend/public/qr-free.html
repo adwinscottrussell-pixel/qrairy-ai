@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Free QR Generator — Qraivy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;min-height:100vh}
+
+/* ── Top nav ── */
+.fqr-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(10,10,10,0.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.fqr-nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.fqr-nav-icon{width:30px;height:30px;background:#ff5a1f;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:800;font-family:'Syne',sans-serif}
+.fqr-nav-name{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;color:#f0f4f8;letter-spacing:-.01em}
+.fqr-nav-name span{color:#ff5a1f;font-style:italic}
+.fqr-nav-right{display:flex;align-items:center;gap:10px}
+.fqr-nav-back{font-size:.68rem;color:#7a8fa8;text-decoration:none;transition:color .15s;padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.08)}
+.fqr-nav-back:hover{color:#f0f4f8;border-color:rgba(255,255,255,0.15)}
+.fqr-nav-upgrade{font-size:.68rem;font-family:'Syne',sans-serif;font-weight:700;color:#fff;background:#ff5a1f;padding:7px 14px;border-radius:7px;text-decoration:none;transition:background .15s}
+.fqr-nav-upgrade:hover{background:#ff7a45}
+
+/* ── Page header ── */
+.fqr-header{text-align:center;padding:40px 24px 32px}
+.fqr-header-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:4px 12px;font-size:.6rem;color:#7a8fa8;letter-spacing:.08em;margin-bottom:14px}
+.fqr-header-title{font-family:'Syne',sans-serif;font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800;letter-spacing:-.03em;color:#f0f4f8;margin-bottom:8px}
+.fqr-header-sub{font-size:.75rem;color:#7a8fa8;max-width:400px;margin:0 auto;line-height:1.7}
+
+/* ── Main layout ── */
+.fqr-main{max-width:900px;margin:0 auto;padding:0 24px 60px;display:grid;grid-template-columns:1fr 1.3fr;gap:20px;align-items:start}
+@media(max-width:720px){.fqr-main{grid-template-columns:1fr}}
+
+/* ── Panel base ── */
+.fqr-panel{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden}
+.fqr-panel-hdr{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;display:flex;align-items:center;gap:8px}
+.fqr-panel-icon{font-size:.85rem}
+.fqr-panel-body{padding:18px}
+
+/* ── QR Preview ── */
+.fqr-preview-col{display:flex;flex-direction:column;gap:16px;position:sticky;top:80px}
+.fqr-qr-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.fqr-qr-wrap{position:relative;width:200px;height:200px}
+.fqr-qr-frame{width:200px;height:200px;background:#fff;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:box-shadow .3s;cursor:pointer}
+.fqr-qr-frame:hover{box-shadow:0 0 36px rgba(255,90,31,0.2)}
+.fqr-qr-frame img{width:192px;height:192px;display:block;transition:opacity .2s}
+.fqr-qr-loading{position:absolute;inset:0;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.fqr-qr-loading.show{opacity:1}
+.fqr-qr-spinner{width:24px;height:24px;border:2px solid rgba(255,90,31,0.2);border-top-color:#ff5a1f;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fqr-qr-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,0.3)}
+.fqr-qr-placeholder-icon{font-size:2.5rem;opacity:.3}
+.fqr-qr-placeholder-text{font-size:.65rem;color:#5a6473;text-align:center;max-width:140px;line-height:1.5}
+.fqr-qr-url{font-size:.62rem;color:#7a8fa8;text-align:center;max-width:200px;word-break:break-all;line-height:1.5}
+.fqr-qr-status{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;padding:4px 10px;border-radius:99px}
+.fqr-qr-status.ready{background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
+.fqr-qr-status.empty{background:rgba(255,255,255,0.04);color:#5a6473;border:1px solid rgba(255,255,255,0.07)}
+
+/* ── Download card ── */
+.fqr-dl-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px}
+.fqr-dl-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#f0f4f8;margin-bottom:12px}
+.fqr-dl-sizes{display:flex;gap:6px;margin-bottom:10px}
+.fqr-dl-size{flex:1;padding:7px 6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:7px;cursor:pointer;text-align:center;transition:all .15s}
+.fqr-dl-size:hover{border-color:rgba(255,90,31,0.3)}
+.fqr-dl-size.active{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
+.fqr-dl-size-name{display:block;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:#f0f4f8}
+.fqr-dl-size-px{display:block;font-size:.55rem;color:#7a8fa8}
+.fqr-dl-fmts{display:flex;gap:6px;margin-bottom:12px}
+.fqr-dl-fmt{flex:1;padding:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:7px;cursor:pointer;font-size:.68rem;color:#a8b4c0;text-align:center;transition:all .15s}
+.fqr-dl-fmt:hover{border-color:rgba(255,90,31,0.3);color:#f0f4f8}
+.fqr-dl-fmt.active{border-color:#ff5a1f;color:#ff5a1f;background:rgba(255,90,31,0.06)}
+.btn-dl{width:100%;padding:11px;background:#ff5a1f;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;transition:all .15s;box-shadow:0 0 16px rgba(255,90,31,0.18)}
+.btn-dl:hover{background:#ff7a45;box-shadow:0 0 24px rgba(255,90,31,0.3)}
+.btn-dl:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+
+/* ── Controls col ── */
+.fqr-controls-col{display:flex;flex-direction:column;gap:14px}
+
+/* ── URL field ── */
+.fqr-url-wrap{display:flex;flex-direction:column;gap:8px}
+.fqr-field-lbl{font-size:.58rem;color:#7a8fa8;text-transform:uppercase;letter-spacing:.1em}
+.fqr-url-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#f0f4f8;font-family:'DM Mono',monospace;font-size:.82rem;outline:none;transition:border-color .15s}
+.fqr-url-input:focus{border-color:rgba(255,90,31,0.5)}
+.fqr-url-input::placeholder{color:#5a6473}
+.fqr-url-error{font-size:.62rem;color:#ef4444;display:none}
+
+/* ── Color pickers ── */
+.fqr-presets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.fqr-preset{height:36px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;display:flex;align-items:center;justify-content:center;font-size:.52rem;font-family:'DM Mono',monospace;letter-spacing:.04em}
+.fqr-preset:hover{transform:scale(1.06)}
+.fqr-preset.active{border-color:#ff5a1f;transform:scale(1.06)}
+.fqr-colors{display:flex;gap:12px}
+.fqr-color-field{flex:1;display:flex;flex-direction:column;gap:6px}
+.fqr-color-row{display:flex;align-items:center;gap:8px}
+.fqr-swatch{width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);cursor:pointer;flex-shrink:0;transition:transform .12s}
+.fqr-swatch:hover{transform:scale(1.08)}
+.fqr-color-hex{font-size:.7rem;color:#a8b4c0}
+
+/* ── Style options ── */
+.fqr-style-row{display:flex;gap:7px}
+.fqr-style-btn{flex:1;padding:9px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;text-align:center;transition:all .15s}
+.fqr-style-btn:hover{border-color:rgba(255,90,31,0.3)}
+.fqr-style-btn.active{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
+.fqr-style-icon{font-size:1.1rem;margin-bottom:3px}
+.fqr-style-lbl{display:block;font-size:.58rem;color:#a8b4c0}
+
+/* ── Logo upload ── */
+.fqr-logo-upload{display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1);border-radius:9px;cursor:pointer;transition:all .15s}
+.fqr-logo-upload:hover{border-color:rgba(255,90,31,0.3);background:rgba(255,90,31,0.03)}
+.fqr-logo-preview{width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;overflow:hidden}
+.fqr-logo-preview img{width:100%;height:100%;object-fit:contain;border-radius:6px}
+.fqr-logo-text-wrap{display:flex;flex-direction:column;gap:2px}
+.fqr-logo-main{font-size:.72rem;color:#a8b4c0}
+.fqr-logo-sub{font-size:.6rem;color:#5a6473}
+.fqr-logo-clear{margin-left:auto;font-size:.62rem;color:#5a6473;background:none;border:none;cursor:pointer;padding:4px;transition:color .15s}
+.fqr-logo-clear:hover{color:#ef4444}
+
+/* ── Upgrade card ── */
+.fqr-upgrade-card{background:linear-gradient(135deg,rgba(255,90,31,0.08) 0%,rgba(255,90,31,0.04) 100%);border:1px solid rgba(255,90,31,0.2);border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.fqr-upgrade-glow{position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,90,31,0.15),transparent 70%);pointer-events:none;border-radius:50%}
+.fqr-upgrade-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.15);border:1px solid rgba(255,90,31,0.3);border-radius:99px;padding:3px 9px;font-size:.56rem;color:#ff8c55;letter-spacing:.08em;margin-bottom:10px}
+.fqr-upgrade-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;color:#f0f4f8;margin-bottom:6px;position:relative}
+.fqr-upgrade-sub{font-size:.7rem;color:#7a8fa8;margin-bottom:14px;line-height:1.65;position:relative}
+.fqr-upgrade-features{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;position:relative}
+.fqr-upgrade-feat{display:flex;align-items:center;gap:8px;font-size:.68rem;color:#a8b4c0}
+.fqr-upgrade-feat-dot{width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0}
+.btn-upgrade{display:block;width:100%;padding:11px;background:#ff5a1f;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;text-align:center;text-decoration:none;transition:all .15s;box-shadow:0 0 16px rgba(255,90,31,0.2);position:relative}
+.btn-upgrade:hover{background:#ff7a45;box-shadow:0 0 24px rgba(255,90,31,0.35)}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="fqr-nav">
+  <a class="fqr-nav-brand" href="dashboard.html">
+    <div class="fqr-nav-icon">Q</div>
+    <span class="fqr-nav-name">QR<span>Aivy</span></span>
+  </a>
+  <div class="fqr-nav-right">
+    <a class="fqr-nav-back" href="dashboard.html">← Dashboard</a>
+    <a class="fqr-nav-upgrade" href="dashboard.html">✨ Smart QR</a>
+  </div>
+</nav>
+
+<!-- Header -->
+<div class="fqr-header">
+  <div class="fqr-header-badge">⬡ Free QR Generator</div>
+  <h1 class="fqr-header-title">Generate a QR Code</h1>
+  <p class="fqr-header-sub">Instant, free, no signup required. Customise and download in seconds.</p>
+</div>
+
+<!-- Main grid -->
+<div class="fqr-main">
+
+  <!-- LEFT: Preview + Download -->
+  <div class="fqr-preview-col">
+
+    <div class="fqr-qr-card">
+      <div class="fqr-qr-wrap">
+        <div class="fqr-qr-frame" id="qr-frame">
+          <div id="qr-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="font-size:2.5rem;opacity:.2">⬡</div>
+            <div style="font-size:.62rem;color:#5a6473;text-align:center;max-width:140px;line-height:1.5">Enter a URL to generate your QR code</div>
+          </div>
+          <img id="qr-img" src="" alt="QR Code" style="display:none;width:192px;height:192px"/>
+        </div>
+        <div class="fqr-qr-loading" id="qr-loading">
+          <div class="fqr-qr-spinner"></div>
+        </div>
+      </div>
+      <div class="fqr-qr-url" id="qr-url-display">—</div>
+      <div class="fqr-qr-status empty" id="qr-status">Enter a URL to start</div>
+    </div>
+
+    <div class="fqr-dl-card">
+      <div class="fqr-dl-title">Download</div>
+      <div class="fqr-dl-sizes" id="dl-sizes">
+        <div class="fqr-dl-size" data-size="200"><span class="fqr-dl-size-name">S</span><span class="fqr-dl-size-px">200px</span></div>
+        <div class="fqr-dl-size active" data-size="400"><span class="fqr-dl-size-name">M</span><span class="fqr-dl-size-px">400px</span></div>
+        <div class="fqr-dl-size" data-size="800"><span class="fqr-dl-size-name">L</span><span class="fqr-dl-size-px">800px</span></div>
+      </div>
+      <div class="fqr-dl-fmts" id="dl-fmts">
+        <div class="fqr-dl-fmt active" data-fmt="png">PNG</div>
+        <div class="fqr-dl-fmt" data-fmt="svg">SVG</div>
+      </div>
+      <button class="btn-dl" id="btn-dl" disabled>⬇ Download QR Code</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="fqr-controls-col">
+
+    <!-- URL -->
+    <div class="fqr-panel">
+      <div class="fqr-panel-hdr"><span class="fqr-panel-icon">🔗</span> URL</div>
+      <div class="fqr-panel-body">
+        <div class="fqr-url-wrap">
+          <label class="fqr-field-lbl">Enter your URL *</label>
+          <input class="fqr-url-input" id="url-input" type="url" placeholder="https://yourwebsite.com" autocomplete="url"/>
+          <div class="fqr-url-error" id="url-error">Please enter a valid URL starting with https://</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customise -->
+    <div class="fqr-panel">
+      <div class="fqr-panel-hdr"><span class="fqr-panel-icon">🎨</span> Customise</div>
+      <div class="fqr-panel-body">
+
+        <label class="fqr-field-lbl" style="margin-bottom:8px;display:block">Colour Presets</label>
+        <div class="fqr-presets" id="fqr-presets">
+          <div class="fqr-preset active" data-fg="000000" data-bg="ffffff" style="background:#fff;color:#000;border-color:rgba(0,0,0,0.15)">Classic</div>
+          <div class="fqr-preset" data-fg="ff5a1f" data-bg="0a0a0a" style="background:#0a0a0a;color:#ff5a1f;border-color:rgba(255,90,31,0.3)">Brand</div>
+          <div class="fqr-preset" data-fg="ffffff" data-bg="ff5a1f" style="background:#ff5a1f;color:#fff">Invert</div>
+          <div class="fqr-preset" data-fg="1a1a2e" data-bg="e8f4f8" style="background:#e8f4f8;color:#1a1a2e">Cool</div>
+          <div class="fqr-preset" data-fg="2d4a22" data-bg="f0f7ee" style="background:#f0f7ee;color:#2d4a22">Forest</div>
+        </div>
+
+        <label class="fqr-field-lbl" style="margin-bottom:8px;display:block">Custom Colours</label>
+        <div class="fqr-colors" style="margin-bottom:14px">
+          <div class="fqr-color-field">
+            <label class="fqr-field-lbl">QR Colour</label>
+            <div class="fqr-color-row">
+              <div class="fqr-swatch" id="fg-swatch" style="background:#000" onclick="document.getElementById('fg-input').click()"></div>
+              <input type="color" id="fg-input" value="#000000" style="display:none"/>
+              <span class="fqr-color-hex" id="fg-hex">#000000</span>
+            </div>
+          </div>
+          <div class="fqr-color-field">
+            <label class="fqr-field-lbl">Background</label>
+            <div class="fqr-color-row">
+              <div class="fqr-swatch" id="bg-swatch" style="background:#fff;border-color:rgba(255,255,255,0.3)" onclick="document.getElementById('bg-input').click()"></div>
+              <input type="color" id="bg-input" value="#ffffff" style="display:none"/>
+              <span class="fqr-color-hex" id="bg-hex">#ffffff</span>
+            </div>
+          </div>
+        </div>
+
+        <label class="fqr-field-lbl" style="margin-bottom:8px;display:block">Style</label>
+        <div class="fqr-style-row" style="margin-bottom:14px">
+          <div class="fqr-style-btn active" data-style="square">
+            <div class="fqr-style-icon">▪</div>
+            <span class="fqr-style-lbl">Square</span>
+          </div>
+          <div class="fqr-style-btn" data-style="rounded">
+            <div class="fqr-style-icon">⬡</div>
+            <span class="fqr-style-lbl">Rounded</span>
+          </div>
+          <div class="fqr-style-btn" data-style="dots">
+            <div class="fqr-style-icon">⁙</div>
+            <span class="fqr-style-lbl">Dots</span>
+          </div>
+        </div>
+
+        <label class="fqr-field-lbl" style="margin-bottom:8px;display:block">Logo <span style="color:#5a6473;font-size:.56rem;text-transform:none;letter-spacing:0"> — optional</span></label>
+        <label class="fqr-logo-upload" for="logo-input" id="logo-label">
+          <div class="fqr-logo-preview" id="logo-preview">📎</div>
+          <div class="fqr-logo-text-wrap">
+            <span class="fqr-logo-main">Upload logo</span>
+            <span class="fqr-logo-sub">PNG, SVG — max 1MB</span>
+          </div>
+          <button class="fqr-logo-clear" id="logo-clear" style="display:none" onclick="clearLogo(event)">✕</button>
+          <input type="file" id="logo-input" accept="image/*" style="display:none"/>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- Upgrade card -->
+    <div class="fqr-upgrade-card">
+      <div class="fqr-upgrade-glow"></div>
+      <div class="fqr-upgrade-badge">✨ Premium</div>
+      <div class="fqr-upgrade-title">Want more than a QR?</div>
+      <div class="fqr-upgrade-sub">Upgrade to Smart QR and get a full AI-powered landing page, customer engagement system and analytics — all behind one scan.</div>
+      <div class="fqr-upgrade-features">
+        <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>AI-generated landing page</div>
+        <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>AI assistant on your page</div>
+        <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>Wallet pass &amp; subscribers</div>
+        <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>Push notifications</div>
+        <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>Smart scan analytics</div>
+      </div>
+      <a class="btn-upgrade" href="dashboard.html">✨ Create Smart QR — Free to start</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  var state = {
+    url: '', fg: '000000', bg: 'ffffff',
+    size: 400, fmt: 'png', style: 'square',
+    logo: null, debounceTimer: null, hasQR: false,
+  };
+
+  // ── Elements ──────────────────────────────────────────────────────────────
+  var urlInput   = document.getElementById('url-input');
+  var urlError   = document.getElementById('url-error');
+  var qrImg      = document.getElementById('qr-img');
+  var qrPlaceholder = document.getElementById('qr-placeholder');
+  var qrLoading  = document.getElementById('qr-loading');
+  var qrStatus   = document.getElementById('qr-status');
+  var qrUrlDisp  = document.getElementById('qr-url-display');
+  var btnDl      = document.getElementById('btn-dl');
+  var fgInput    = document.getElementById('fg-input');
+  var bgInput    = document.getElementById('bg-input');
+  var fgSwatch   = document.getElementById('fg-swatch');
+  var bgSwatch   = document.getElementById('bg-swatch');
+  var fgHex      = document.getElementById('fg-hex');
+  var bgHex      = document.getElementById('bg-hex');
+  var logoInput  = document.getElementById('logo-input');
+  var logoPreview= document.getElementById('logo-preview');
+  var logoClear  = document.getElementById('logo-clear');
+
+  // ── QR URL builder ────────────────────────────────────────────────────────
+  function buildQRUrl(size) {
+    var url = state.url || 'https://qraivy.com';
+    var base = 'https://api.qrserver.com/v1/create-qr-code/'
+      + '?size=' + size + 'x' + size
+      + '&data=' + encodeURIComponent(url)
+      + '&color=' + state.fg
+      + '&bgcolor=' + state.bg
+      + '&margin=2'
+      + '&format=' + (state.fmt === 'svg' ? 'svg' : 'png');
+    // Style hint (qrserver supports ecc levels, not full styles, but round adds visual roundness)
+    if (state.style === 'rounded') base += '&qzone=1';
+    return base;
+  }
+
+  // ── Generate QR ───────────────────────────────────────────────────────────
+  function validateURL(val) {
+    try { new URL(val); return val.startsWith('http://') || val.startsWith('https://'); }
+    catch { return false; }
+  }
+
+  function showLoading(show) {
+    qrLoading.classList.toggle('show', show);
+  }
+
+  function updateQR() {
+    var val = urlInput.value.trim();
+    urlError.style.display = 'none';
+
+    if (!val) {
+      qrImg.style.display = 'none';
+      qrPlaceholder.style.display = 'flex';
+      qrUrlDisp.textContent = '—';
+      qrStatus.textContent = 'Enter a URL to start';
+      qrStatus.className = 'fqr-qr-status empty';
+      btnDl.disabled = true;
+      state.hasQR = false;
+      return;
+    }
+
+    // Auto-prefix https if missing
+    if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+      val = 'https://' + val;
+    }
+
+    if (!validateURL(val)) {
+      urlError.style.display = 'block';
+      return;
+    }
+
+    state.url = val;
+    showLoading(true);
+    qrPlaceholder.style.display = 'none';
+
+    var src = buildQRUrl(240);
+    var img = new Image();
+    img.onload = function() {
+      qrImg.src = src;
+      qrImg.style.display = 'block';
+      showLoading(false);
+      // Shorten URL for display
+      try {
+        var u = new URL(val);
+        qrUrlDisp.textContent = u.hostname + (u.pathname !== '/' ? u.pathname.slice(0,30) : '');
+      } catch { qrUrlDisp.textContent = val.slice(0,40); }
+      qrStatus.textContent = '● Ready to download';
+      qrStatus.className = 'fqr-qr-status ready';
+      btnDl.disabled = false;
+      state.hasQR = true;
+    };
+    img.onerror = function() {
+      showLoading(false);
+      qrImg.style.display = 'none';
+      qrPlaceholder.style.display = 'flex';
+    };
+    img.src = src;
+  }
+
+  function debouncedUpdate() {
+    clearTimeout(state.debounceTimer);
+    state.debounceTimer = setTimeout(updateQR, 420);
+  }
+
+  // ── URL input ─────────────────────────────────────────────────────────────
+  urlInput.addEventListener('input', debouncedUpdate);
+  urlInput.addEventListener('paste', function() { setTimeout(updateQR, 50); });
+
+  // ── Presets ───────────────────────────────────────────────────────────────
+  document.querySelectorAll('#fqr-presets .fqr-preset').forEach(function(p) {
+    p.addEventListener('click', function() {
+      document.querySelectorAll('#fqr-presets .fqr-preset').forEach(function(x){ x.classList.remove('active'); });
+      p.classList.add('active');
+      state.fg = p.dataset.fg; state.bg = p.dataset.bg;
+      fgInput.value = '#'+state.fg; bgInput.value = '#'+state.bg;
+      fgSwatch.style.background = '#'+state.fg; bgSwatch.style.background = '#'+state.bg;
+      fgHex.textContent = '#'+state.fg; bgHex.textContent = '#'+state.bg;
+      if (state.hasQR) updateQR();
+    });
+  });
+
+  // ── Color pickers ─────────────────────────────────────────────────────────
+  fgInput.addEventListener('input', function() {
+    state.fg = fgInput.value.replace('#','');
+    fgSwatch.style.background = fgInput.value;
+    fgHex.textContent = fgInput.value;
+    if (state.hasQR) debouncedUpdate();
+  });
+  bgInput.addEventListener('input', function() {
+    state.bg = bgInput.value.replace('#','');
+    bgSwatch.style.background = bgInput.value;
+    bgHex.textContent = bgInput.value;
+    if (state.hasQR) debouncedUpdate();
+  });
+
+  // ── Style buttons ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.fqr-style-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('.fqr-style-btn').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      state.style = b.dataset.style;
+      if (state.hasQR) updateQR();
+    });
+  });
+
+  // ── Download sizes ────────────────────────────────────────────────────────
+  document.querySelectorAll('#dl-sizes .fqr-dl-size').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#dl-sizes .fqr-dl-size').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active'); state.size = parseInt(b.dataset.size);
+    });
+  });
+
+  // ── Download formats ──────────────────────────────────────────────────────
+  document.querySelectorAll('#dl-fmts .fqr-dl-fmt').forEach(function(b) {
+    b.addEventListener('click', function() {
+      document.querySelectorAll('#dl-fmts .fqr-dl-fmt').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active'); state.fmt = b.dataset.fmt;
+    });
+  });
+
+  // ── Download ──────────────────────────────────────────────────────────────
+  btnDl.addEventListener('click', function() {
+    if (!state.hasQR) return;
+    var url = buildQRUrl(state.size);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'qraivy-qr-' + state.size + 'px.' + state.fmt;
+    a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    btnDl.textContent = '✓ Download started!';
+    setTimeout(function(){ btnDl.textContent = '⬇ Download QR Code'; }, 2000);
+  });
+
+  // ── Logo upload ───────────────────────────────────────────────────────────
+  logoInput.addEventListener('change', function() {
+    var file = logoInput.files[0];
+    if (!file) return;
+    if (file.size > 1024*1024) { alert('Logo must be under 1MB'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      state.logo = e.target.result;
+      logoPreview.innerHTML = '<img src="'+state.logo+'" />';
+      logoClear.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  window.clearLogo = function(e) {
+    e.preventDefault(); e.stopPropagation();
+    state.logo = null;
+    logoPreview.innerHTML = '📎';
+    logoClear.style.display = 'none';
+    logoInput.value = '';
+  };
+
+  // ── URL params (pre-fill from ?url=) ─────────────────────────────────────
+  var params = new URLSearchParams(window.location.search);
+  var preUrl = params.get('url');
+  if (preUrl) { urlInput.value = preUrl; setTimeout(updateQR, 100); }
+
+  // ── Focus ─────────────────────────────────────────────────────────────────
+  setTimeout(function(){ urlInput.focus(); }, 200);
+
+})();
+</script>
+</body>
+</html>
