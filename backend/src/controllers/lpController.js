@@ -293,13 +293,9 @@ a{color:inherit;text-decoration:none}
   <div class="lp-hero-eyebrow">&#10022; Qraivy Smart Page</div>
   <h1 class="lp-hero-title">${headline}</h1>
   <p class="lp-hero-sub">${sub}</p>
-  <div class="lp-hero-ctas">
-    <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
-    <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
-  </div>
 </section>
 
-<!-- ── AI Concierge Zone ── -->
+<!-- AI Concierge Zone -->
 <section class="lp-voice-section">
   <div class="lp-voice-title">&#9658; Welcome from ${bizName}</div>
   <div class="lp-voice-player" id="voicePlayer">
@@ -368,10 +364,10 @@ a{color:inherit;text-decoration:none}
 </section>
 <section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
-  <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary" style="margin-top:10px">${content.cta2}</a>
+  <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
 </section>
 
-<!-- ── Business Info ── -->
+<!-- Business Info -->
 ${sectionsHTML}
 
 <footer class="lp-footer">
