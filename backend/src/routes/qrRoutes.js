@@ -1,3 +1,4 @@
+const {trackScan}=require('../utils/scanTracker');
 const express = require('express');
 const router = express.Router();
 const {
@@ -22,7 +23,7 @@ router.put('/qr/:id/destination', handleUpdateDestination);
 router.delete('/qr/:id', handleDeleteQR);  // NEW: dynamic QR destination update
 
 // Redirect
-router.get('/r/:id', handleRedirect);
+router.get('/r/:id',async(req,res,next)=>{if(req.params.id)setImmediate(()=>trackScan(req.params.id,req));return handleRedirect(req,res,next);});
 
 // Visit page data
 router.get('/visit/:id', handleVisit);

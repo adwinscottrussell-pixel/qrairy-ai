@@ -1,3 +1,4 @@
+const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS}=require('../utils/tierSystem');
 const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');

@@ -11,7 +11,8 @@ const apiKeyRoutes    = require('./routes/apiKeyRoutes');
 const stripeRoutes    = require('./routes/stripeRoutes');
 const adminRoutes     = require('./routes/adminRoutes');
 const designRoutes    = require('./routes/designRoutes');
-const lpRoutes = require('./routes/lpRoutes');
+const lpRoutes   = require('./routes/lpRoutes');
+const tierRoutes = require('./routes/tierRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/admin',    adminRoutes);
 app.use('/design',   designRoutes);
 
 app.use('/', lpRoutes);
+app.use('/tier', tierRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {

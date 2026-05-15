@@ -12,7 +12,9 @@ model User {
   email     String?
   phone     String?
   plan      String   @default("free")
-  createdAt DateTime @default(now())
+  createdAt        DateTime  @default(now())
+  trialExpiresAt   DateTime?
+  accountType      String?   @default("free")
   stripeCustomerId     String?
   stripeSubscriptionId String?
   subscriptionStatus   String?
@@ -29,6 +31,7 @@ model QR {
   destinationUrl String?
   createdAt      DateTime     @default(now())
   user           User?        @relation(fields: [userId], references: [id])
+  lastScannedAt  DateTime?
   scans          Scan[]
   subscribers    Subscriber[]
 }
@@ -37,6 +40,8 @@ model Scan {
   id        String   @id @default(uuid())
   qrId      String
   userAgent String
+  ip        String?
+  referer   String?
   createdAt DateTime @default(now())
   qr        QR       @relation(fields: [qrId], references: [id])
 }

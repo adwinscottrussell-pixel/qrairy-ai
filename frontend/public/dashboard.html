@@ -929,6 +929,9 @@
         finally { btn.disabled = false; btn.textContent = 'Activate SMS Marketing →'; }
       });
 
+      // Load tier info
+      await QrTier.loadPlan();
+
       if (window.Clerk && window.Clerk.user) {
         var launchP = new URLSearchParams(window.location.search).get('launch');
         if (launchP === 'onboarding') {
@@ -941,7 +944,171 @@
       loadDashboard();
     }
   </script>
-  <script
+  <script>
+// ── Qraivy Tier System — Frontend ────────────────────────────────────────────
+window.QrTier = (function(){
+
+  var API_BASE = 'https://api.qraivy.com';
+  var _planInfo = null;
+  var _countdownTimer = null;
+
+  // ── Load plan info ──────────────────────────────────────────────────────
+  async function loadPlan() {
+    try {
+      var token = await window.Clerk.session.getToken();
+      var res = await fetch(API_BASE+'/tier/plan', { headers:{Authorization:'Bearer '+token} });
+      var data = await res.json();
+      _planInfo = data.planInfo;
+      applyTierUI(_planInfo);
+      return _planInfo;
+    } catch(e) {
+      console.warn('[QrTier] Could not load plan:', e.message);
+      return null;
+    }
+  }
+
+  // ── Start trial ─────────────────────────────────────────────────────────
+  async function startTrial() {
+    try {
+      var token = await window.Clerk.session.getToken();
+      var res = await fetch(API_BASE+'/tier/trial', {
+        method:'POST',
+        headers:{ Authorization:'Bearer '+token, 'Content-Type':'application/json' }
+      });
+      var data = await res.json();
+      _planInfo = data.planInfo;
+      applyTierUI(_planInfo);
+      return data;
+    } catch(e) {
+      console.warn('[QrTier] Could not start trial:', e.message);
+      return null;
+    }
+  }
+
+  // ── Gate check ──────────────────────────────────────────────────────────
+  function can(capability) {
+    if (!_planInfo) return false;
+    return !!_planInfo[capability];
+  }
+
+  function requireCap(capability, onDenied) {
+    if (!can(capability)) {
+      if (typeof onDenied === 'function') {
+        onDenied(_planInfo);
+      } else {
+        window.location.href = 'upgrade.html';
+      }
+      return false;
+    }
+    return true;
+  }
+
+  // ── Apply tier UI ────────────────────────────────────────────────────────
+  function applyTierUI(planInfo) {
+    if (!planInfo) return;
+
+    // Show trial banner if on trial
+    if (planInfo.isTrial && planInfo.trialSecondsRemaining > 0) {
+      showTrialBanner(planInfo);
+    }
+
+    // Show expired trial banner
+    if (planInfo.isTrialExpired) {
+      showExpiredBanner();
+    }
+
+    // Gate premium sidebar items for free users
+    if (planInfo.isFree && !planInfo.isTrial) {
+      gateFreeUI();
+    }
+  }
+
+  // ── Trial countdown banner ───────────────────────────────────────────────
+  function showTrialBanner(planInfo) {
+    var existing = document.getElementById('trial-banner');
+    if (existing) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'trial-banner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999;background:linear-gradient(90deg,rgba(255,90,31,0.95),rgba(204,58,0,0.95));backdrop-filter:blur(8px);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:"DM Mono",monospace;font-size:.7rem;color:#fff;';
+
+    var timeEl = document.createElement('span');
+    timeEl.id = 'trial-countdown';
+
+    var left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:10px';
+    left.innerHTML = '<span style="font-family:Syne,sans-serif;font-weight:700;font-size:.82rem">⏱ Smart QR Trial Active</span>';
+    left.appendChild(timeEl);
+
+    var right = document.createElement('div');
+    right.style.cssText = 'display:flex;gap:8px;align-items:center';
+    right.innerHTML = '<span style="opacity:.7">Upgrade to keep your Smart QR pages</span>'
+      + '<a href="upgrade.html" style="background:#fff;color:#ff5a1f;padding:5px 14px;border-radius:6px;font-family:Syne,sans-serif;font-weight:700;font-size:.72rem;text-decoration:none">Upgrade Now →</a>';
+
+    banner.appendChild(left);
+    banner.appendChild(right);
+    document.body.appendChild(banner);
+
+    // Adjust main content
+    var main = document.getElementById('main-content');
+    if (main) main.style.paddingBottom = '52px';
+
+    // Start countdown
+    var seconds = planInfo.trialSecondsRemaining;
+    function tick() {
+      if (seconds <= 0) {
+        clearInterval(_countdownTimer);
+        showExpiredBanner();
+        return;
+      }
+      var h = Math.floor(seconds/3600);
+      var m = Math.floor((seconds%3600)/60);
+      var s = seconds%60;
+      var str = h > 0 ? h+'h '+m+'m left' : m > 0 ? m+'m '+s+'s left' : s+'s left';
+      timeEl.textContent = str;
+      seconds--;
+    }
+    tick();
+    _countdownTimer = setInterval(tick, 1000);
+  }
+
+  // ── Expired trial banner ─────────────────────────────────────────────────
+  function showExpiredBanner() {
+    clearInterval(_countdownTimer);
+    var existing = document.getElementById('trial-banner');
+    if (existing) existing.remove();
+    var main = document.getElementById('main-content');
+    if (main) main.style.paddingBottom = '';
+
+    var banner = document.createElement('div');
+    banner.id = 'trial-banner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999;background:rgba(15,15,15,0.97);border-top:1px solid rgba(255,90,31,0.3);backdrop-filter:blur(8px);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:"DM Mono",monospace;font-size:.7rem;color:#f0f4f8';
+
+    banner.innerHTML = '<div style="display:flex;align-items:center;gap:10px">'
+      + '<span style="font-family:Syne,sans-serif;font-weight:700;font-size:.82rem;color:#ff5a1f">⏱ Trial Expired</span>'
+      + '<span style="color:#a8b4c0">Your Smart QR trial has ended. Upgrade to reactivate your AI pages.</span>'
+      + '</div>'
+      + '<a href="upgrade.html" style="background:#ff5a1f;color:#fff;padding:6px 18px;border-radius:7px;font-family:Syne,sans-serif;font-weight:700;font-size:.78rem;text-decoration:none;box-shadow:0 0 16px rgba(255,90,31,0.3)">Upgrade to Smart QR →</a>';
+
+    document.body.appendChild(banner);
+    if (main) main.style.paddingBottom = '52px';
+  }
+
+  // ── Gate free user UI ────────────────────────────────────────────────────
+  function gateFreeUI() {
+    // Add lock overlays to premium sidebar items
+    var premiumItems = document.querySelectorAll('[data-premium]');
+    premiumItems.forEach(function(item) {
+      item.style.opacity = '.45';
+      item.style.pointerEvents = 'none';
+      item.title = 'Upgrade to Smart QR to unlock';
+    });
+  }
+
+  return { loadPlan, startTrial, can, requireCap, getPlan: function(){ return _planInfo; } };
+})();
+</script>
+<script
     data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
     type="text/javascript"
