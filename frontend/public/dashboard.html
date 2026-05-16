@@ -509,7 +509,8 @@
         infoText.innerHTML = `<strong>${planInfo.plan === 'pro' ? 'Pro' : 'Starter'} plan</strong> — Unlimited QR codes`;
       }
 
-      if (!planInfo.hasPhone) showPhoneModal();
+      // SMS not yet connected — phone modal disabled
+      // if (!planInfo.hasPhone) showPhoneModal();
       } catch(e) { console.warn('[PlanBanner]', e); }
     }
 
