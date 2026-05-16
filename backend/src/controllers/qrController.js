@@ -23,10 +23,6 @@ async function getUserFromToken(authHeader) {
     console.error('Token verify error:', err.message);
     return null;
   }
-} catch (err) {
-    console.error('Token decode error:', err.message);
-    return null;
-  }
 }
 
 async function upsertUser(userId) {
@@ -510,4 +506,6 @@ module.exports = {
   handleSendSpecial,
   handleGenerateSpecial,
 };
+
+
 
