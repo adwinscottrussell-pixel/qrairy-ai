@@ -8,69 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 <link rel="stylesheet" href="dashboard-shell.css"/>
-<style>
-.voice-player{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:12px}
-.active{border-color:#ff5a1f;color:#ff5a1f;background:rgba(255,90,31,0.06)}
-.active{border-color:#ff5a1f;transform:scale(1.05)}
-.act-item:last-child{border-bottom:none}
-.act-empty{font-family:'DM Mono',monospace;font-size:.7rem;color:#5a6473;text-align:center;padding:20px 0}
-.status-indicator{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.72rem}
-.voice-btn:active{transform:scale(.92)}
-.voice-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:#8b9ab0}
-.an-loading{font-family:'DM Mono',monospace;font-size:.8rem;color:#8b9ab0;padding:40px;text-align:center}
-.status-dot-live{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.5)}
-.activity-list{display:flex;flex-direction:column;max-height:240px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.05) transparent}
-.act-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
-.custom-colors{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-.btn-delete{width:100%;padding:9px;background:transparent;border:1px solid rgba(239,68,68,0.3);border-radius:7px;color:#ef444466;font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;transition:all .15s}
-.cp{height:40px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:all .12s;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.06em}
-.color-field{display:flex;align-items:center;gap:8px;flex:1}
-.vw-bar{width:3px;background:rgba(255,255,255,0.12);border-radius:2px}
-.act-text{font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0;flex:1;line-height:1.4}
-.danger-title{font-family:'DM Mono',monospace;font-size:.6rem;color:#ef4444;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-.sub-row:last-child{border-bottom:none}
-.vw-bar{background:#ff5a1f;animation:vwAnim .8s ease-in-out infinite alternate}
-.act-text strong{color:#f0f4f8;font-weight:500}
-.act-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
-.qr-preview-url{font-family:'DM Mono',monospace;font-size:.65rem;color:#8b9ab0;text-align:center}
-.act-time{font-family:'DM Mono',monospace;font-size:.58rem;color:#5a6473;flex-shrink:0}
-.qr-preview-frame:hover{box-shadow:0 0 32px rgba(255,90,31,0.25)}
-.btn-go-live{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3)}
-.voice-info{flex:1}
-.cp:hover{transform:scale(1.05)}
-.active .vw-bar{background:#ff5a1f;animation:vwAnim .8s ease-in-out infinite alternate}
-.color-swatch{width:32px;height:32px;border-radius:7px;border:0.5px solid rgba(255,255,255,0.12);cursor:pointer;flex-shrink:0;transition:transform .12s}
-.cp.active{border-color:#ff5a1f;transform:scale(1.05)}
-@keyframes vwAnim{0%{transform:scaleY(.3)}
-.sub-lbl{font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0}
-.sub-val.g{color:#22c55e}
-.danger-zone{padding:14px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.15);border-radius:9px;margin-top:6px}
-.sub-val.o{color:#ff5a1f}
-.qr-preview-frame{width:160px;height:160px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 0 0 0 rgba(255,90,31,0);transition:box-shadow .3s}
-.active{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
-.status-dot-off{width:7px;height:7px;border-radius:50%;background:#7a8899}
-.color-swatch:hover{transform:scale(1.08)}
-.voice-coming{font-family:'DM Mono',monospace;font-size:.58rem;color:#5a6473;text-align:center;padding:4px 0}
-.qr-preview-main{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px}
-.voice-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:1px}
-.status-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:9px;margin-bottom:12px}
-.sub-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
-.sub-val{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700}
-.color-label{font-family:'DM Mono',monospace;font-size:.6rem;color:#8b9ab0}
-.voice-wave.active .vw-bar{background:#ff5a1f;animation:vwAnim .8s ease-in-out infinite alternate}
-.color-hex{font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0;min-width:56px}
-.sub-val.p{color:#a78bfa}
-.custom-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
-footer{padding:20px 32px;font-family:'DM Mono',monospace;font-size:.65rem;color:#4a5568;border-top:1px solid rgba(255,255,255,0.04)}
-.voice-btn{width:38px;height:38px;border:none;border-radius:50%;background:#ff5a1f;color:#fff;cursor:pointer;font-size:.85rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .1s}
-.btn-toggle-status{padding:5px 14px;border-radius:7px;font-family:'DM Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .15s;border:none}
-.qr-scan-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,90,31,0.08);border:1px solid rgba(255,90,31,0.2);border-radius:99px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:.65rem;color:#ff8c55}
-.btn-unpublish{background:rgba(255,255,255,0.05);color:#a8b4c0;border:1px solid rgba(255,255,255,0.1)}
-.btn-delete:hover{background:rgba(239,68,68,0.08);border-color:#ef4444;color:#ef4444}
-.voice-wave{display:flex;align-items:center;gap:2px;height:24px}
-.qr-preview-frame img{width:152px;height:152px;border-radius:10px;display:block}
-.status-bar.offline{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}
-</style>
+<link rel="stylesheet" href="manage-page.css"/>
+
 
 </head>
 <body>
