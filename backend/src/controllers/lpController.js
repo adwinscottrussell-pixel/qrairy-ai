@@ -119,7 +119,7 @@ function renderLP(page) {
   const accent  = page.brandColor || '#ff5a1f';
   const bizName = page.businessName || 'My Business';
   const slug    = page.slug;
-  const website = page.websiteUrl || 'https://qrairy.ai';
+  const website = page.websiteUrl || 'https://qraivy.com';
   const domain  = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
   function tmpl(s) {
@@ -128,7 +128,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://qrairy.ai/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://api.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   // Accent RGB for rgba usage
   function hexToRGB(hex) {
@@ -375,8 +375,8 @@ ${sectionsHTML}
     <div class="lp-footer-Q">Q</div>
     <span class="lp-footer-name">${bizName}</span>
   </div>
-  <div class="lp-footer-url">qrairy.ai/lp/${slug}</div>
-  <div class="lp-footer-powered">Powered by <a href="https://qrairy.ai" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
+  <div class="lp-footer-url">api.qraivy.com/lp/${slug}</div>
+  <div class="lp-footer-powered">Powered by <a href="https://qraivy.com" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>
 <script>
 (function(){

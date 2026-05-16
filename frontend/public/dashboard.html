@@ -905,8 +905,10 @@
       const launchOnboarding = () => {
         if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window.Clerk.user.id);
       };
-      document.getElementById('btn-create-sqr').addEventListener('click', launchOnboarding);
-      document.getElementById('sb-create-sqr').addEventListener('click', e => { e.preventDefault(); launchOnboarding(); });
+      const btnCreate = document.getElementById('btn-create-sqr');
+      if (btnCreate) btnCreate.addEventListener('click', launchOnboarding);
+      const sbCreate = document.getElementById('sb-create-sqr');
+      if (sbCreate) sbCreate.addEventListener('click', e => { e.preventDefault(); launchOnboarding(); });
 
       // Phone modal
       document.getElementById('phone-skip-btn').addEventListener('click', () => {
