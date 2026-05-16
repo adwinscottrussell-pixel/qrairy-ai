@@ -477,6 +477,7 @@
 
     // ── Plan banner ──────────────────────────────────────────────────────────
     function showPlanBanner(planInfo) {
+      try {
       if (!planInfo) return;
       currentPlanInfo = planInfo;
       const banner      = document.getElementById('plan-banner');
@@ -492,7 +493,7 @@
       const _annual = planInfo.plan.includes('_annual');
       badgeText.textContent = _base.toUpperCase() + (_annual ? ' · ANNUAL' : '');
       badgeText.className = 'plan-badge ' + _base;
-      sidebarBadge.textContent = _base.toUpperCase();
+      if (sidebarBadge) sidebarBadge.textContent = _base.toUpperCase();
 
       if (planInfo.plan === 'free') {
         progress.style.display = 'none';
@@ -509,6 +510,7 @@
       }
 
       if (!planInfo.hasPhone) showPhoneModal();
+      } catch(e) { console.warn('[PlanBanner]', e); }
     }
 
     function showPhoneModal() {
