@@ -10,122 +10,46 @@
 <link rel="stylesheet" href="dashboard-shell.css"/> />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-/* ── Sidebar (same as dashboard) ── */
-.sb-logo-text span{color:#ff5a1f;font-style:italic}
-    #sidebar.collapsed
-#sidebar.collapsed
-.sb-section{font-size:.58rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8b9ab0;padding:10px 10px 3px;white-space:nowrap;transition:opacity .22s;font-family:'DM Mono',monospace}
-    #sidebar.collapsed .sb-section{opacity:0}
-#sidebar.collapsed
-.sb-item.active
-#sidebar.collapsed
-.sb-soon{font-size:.55rem;opacity:.4;font-family:'DM Mono',monospace;transition:opacity .22s}
-    #sidebar.collapsed .sb-soon{opacity:0}
-#sidebar.collapsed
-body.sb-collapsed
-@media(max-width:768px){
-#sidebar.mob-open{transform:translateX(0)}
-}
-
-    /* ── Analytics layout ── */
-    
-    
-
-    /* ── Header ── */
-    .an-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
-    .an-title{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:900;letter-spacing:-.03em;color:#f0f4f8}
-    .an-title em{color:#ff5a1f;font-style:normal}
-    .an-subtitle{font-family:'DM Mono',monospace;font-size:.72rem;color:#8b9ab0;margin-top:3px}
-
-    /* ── Date range filters ── */
-    .filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:28px}
-    .filter-btn{padding:6px 14px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0;cursor:pointer;transition:all .15s}
-    .filter-btn:hover{border-color:rgba(255,90,31,0.4);color:#ff8c55}
-    .filter-btn.active{background:rgba(255,90,31,0.1);border-color:#ff5a1f;color:#ff5a1f}
-    .filter-sep{width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px}
-    .filter-select{padding:6px 12px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0;cursor:pointer;outline:none}
-    .filter-select option{background:#0f0f0f;color:#f0f4f8}
-
-    /* ── KPI strip ── */
-    .an-kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:28px}
-    .an-kpi-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:16px}
-    .an-kpi-val{font-size:1.6rem;font-weight:900;color:#f0f4f8;line-height:1;margin-bottom:4px}
-    .an-kpi-val.o{color:#ff5a1f}
-    .an-kpi-val.g{color:#22c55e}
-    .an-kpi-val.p{color:#a78bfa}
-    .an-kpi-lbl{font-family:'DM Mono',monospace;font-size:.56rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em}
-    .an-kpi-delta{font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;margin-top:3px}
-    .an-kpi-delta.up{color:#22c55e}
-    .an-kpi-delta.dn{color:#ef4444}
-
-    /* ── Chart grid ── */
-    .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
-    @media(max-width:760px){.chart-grid{grid-template-columns:1fr}}
-    .chart-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:20px}
-    .chart-card.wide{grid-column:1/-1}
-    .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .cc-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8}
-    .cc-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:#8b9ab0;margin-top:2px}
-    .cc-badge{font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:99px;background:rgba(255,90,31,0.1);color:#ff8c55;border:1px solid rgba(255,90,31,0.2)}
-    .chart-wrap{position:relative;height:180px}
-    .chart-wrap.tall{height:220px}
-
-    /* ── Performance table ── */
-    .perf-section{margin-bottom:28px}
-    .perf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-    .perf-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
-    .perf-search{padding:6px 12px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#f0f4f8;outline:none;width:180px}
-    .perf-search::placeholder{color:#8b9ab0}
-    .perf-search:focus{border-color:rgba(255,90,31,0.4)}
-    .perf-table-wrap{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;overflow:hidden}
-    .perf-table{width:100%;border-collapse:collapse}
-    .perf-table th{font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);background:#0d0d0d;cursor:pointer;white-space:nowrap;user-select:none}
-    .perf-table th:hover{color:#f0f4f8}
-    .perf-table th .sort-icon{opacity:.4;margin-left:4px}
-    .perf-table th.sorted .sort-icon{opacity:1;color:#ff5a1f}
-    .perf-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'DM Mono',monospace;font-size:.72rem;color:#a8b4c0;vertical-align:middle}
-    .perf-table tr:last-child td{border-bottom:none}
-    .perf-table tr:hover td{background:rgba(255,90,31,0.03);color:#f0f4f8}
-    .pt-qr{display:flex;align-items:center;gap:10px}
-    .pt-qr-thumb{width:36px;height:36px;border-radius:6px;background:#fff;flex-shrink:0;overflow:hidden}
-    .pt-qr-thumb img{width:100%;height:100%;display:block}
-    .pt-name{font-weight:500;color:#f0f4f8;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .pt-url{font-size:.6rem;color:#5a6473;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
-    .pt-val{color:#f0f4f8;font-weight:500}
-    .pt-val.o{color:#ff5a1f}
-    .pt-badge-live{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#22c55e;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.16);border-radius:99px;padding:2px 7px}
-    .pt-badge-basic{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#7a8fa8;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:99px;padding:2px 7px}
-    .pt-cvr-bar{width:60px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
-    .pt-cvr-fill{height:100%;background:#ff5a1f;border-radius:2px}
-
-    /* ── AI & Wallet metrics ── */
-    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
-    @media(max-width:760px){.metrics-grid{grid-template-columns:1fr}}
-    .metric-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:20px}
-    .mc-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-    .mc-icon{font-size:1rem}
-    .mc-rows{display:flex;flex-direction:column;gap:10px}
-    .mc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px}
-    .mc-row-label{font-family:'DM Mono',monospace;font-size:.68rem;color:#a8b4c0}
-    .mc-row-val{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700;color:#f0f4f8}
-    .mc-row-val.o{color:#ff5a1f}
-    .mc-row-val.g{color:#22c55e}
-    .mc-row-val.p{color:#a78bfa}
-    .mc-empty{font-family:'DM Mono',monospace;font-size:.7rem;color:#5a6473;text-align:center;padding:20px 0}
-    .mc-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
-    .mc-bar-row:last-child{border-bottom:none}
-    .mc-bar-label{font-family:'DM Mono',monospace;font-size:.65rem;color:#a8b4c0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mc-bar-track{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
-    .mc-bar-fill{height:100%;border-radius:2px}
-    .mc-bar-count{font-family:'DM Mono',monospace;font-size:.62rem;color:#8b9ab0;flex-shrink:0;min-width:24px;text-align:right}
-
-    /* ── Empty/loading states ── */
-    .an-loading{font-family:'DM Mono',monospace;font-size:.8rem;color:#8b9ab0;padding:40px 0;text-align:center}
-    .an-empty{font-family:'DM Mono',monospace;font-size:.72rem;color:#5a6473;text-align:center;padding:24px 0}
-    .an-coming{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:.62rem;color:#5a6473;justify-content:center;padding:8px 0}
-
-    footer{padding:20px 36px;font-family:'DM Mono',monospace;font-size:.65rem;color:#4a5568;border-top:1px solid rgba(255,255,255,0.04)}
-  </style>
+.perf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.perf-table{width:100%;border-collapse:collapse}
+.pt-badge-basic{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#7a8fa8;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:99px;padding:2px 7px}
+.perf-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
+.pt-badge-live{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;color:#22c55e;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.16);border-radius:99px;padding:2px 7px}
+.perf-table th{font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);background:#0d0d0d;cursor:pointer;white-space:nowrap;user-select:none}
+.perf-table th .sort-icon{opacity:.4;margin-left:4px}
+.an-kpi-delta.dn{color:#ef4444}
+.perf-search::placeholder{color:#8b9ab0}
+.perf-search{padding:6px 12px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#f0f4f8;outline:none;width:180px}
+.an-coming{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:.62rem;color:#5a6473;justify-content:center;padding:8px 0}
+.an-kpi-lbl{font-family:'DM Mono',monospace;font-size:.56rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em}
+.an-loading{font-family:'DM Mono',monospace;font-size:.8rem;color:#8b9ab0;padding:40px 0;text-align:center}
+.perf-section{margin-bottom:28px}
+.perf-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'DM Mono',monospace;font-size:.72rem;color:#a8b4c0;vertical-align:middle}
+.pt-qr-thumb img{width:100%;height:100%;display:block}
+.perf-search:focus{border-color:rgba(255,90,31,0.4)}
+.perf-table tr:last-child td{border-bottom:none}
+.an-kpi-val{font-size:1.6rem;font-weight:900;color:#f0f4f8;line-height:1;margin-bottom:4px}
+.perf-table-wrap{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:13px;overflow:hidden}
+.an-kpi-val.g{color:#22c55e}
+.an-kpi-val.o{color:#ff5a1f}
+footer{padding:20px 36px;font-family:'DM Mono',monospace;font-size:.65rem;color:#4a5568;border-top:1px solid rgba(255,255,255,0.04)}
+.an-kpi-delta{font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;margin-top:3px}
+.pt-cvr-fill{height:100%;background:#ff5a1f;border-radius:2px}
+.an-kpi-card{background:#0f0f0f;border:1px solid rgba(255,255,255,0.07);border-radius:11px;padding:16px}
+.pt-val.o{color:#ff5a1f}
+.perf-table th:hover{color:#f0f4f8}
+.pt-qr-thumb{width:36px;height:36px;border-radius:6px;background:#fff;flex-shrink:0;overflow:hidden}
+.an-kpi-val.p{color:#a78bfa}
+.an-kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:28px}
+.pt-cvr-bar{width:60px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.an-kpi-delta.up{color:#22c55e}
+.pt-name{font-weight:500;color:#f0f4f8;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-qr{display:flex;align-items:center;gap:10px}
+.perf-table th.sorted .sort-icon{opacity:1;color:#ff5a1f}
+.pt-val{color:#f0f4f8;font-weight:500}
+.perf-table tr:hover td{background:rgba(255,90,31,0.03);color:#f0f4f8}
+    </style>
   
 </head>
 <body>
@@ -176,10 +100,10 @@ body.sb-collapsed
     <div class="page-wrap">
 
       <!-- Header -->
-      <div class="an-header">
+      <div class="page-header">
         <div>
-          <h1 class="an-title">Business <em>Intelligence</em></h1>
-          <div class="an-subtitle">Deep engagement reporting across all Smart QR Pages</div>
+          <h1 class="dash-title">Business <em>Intelligence</em></h1>
+          <div class="dash-sub">Deep engagement reporting across all Smart QR Pages</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select class="filter-select" id="qr-filter">
@@ -209,13 +133,13 @@ body.sb-collapsed
       </div>
 
       <!-- KPI strip -->
-      <div class="an-kpi">
-        <div class="an-kpi-card"><div class="an-kpi-val o" id="an-scans">—</div><div class="an-kpi-lbl">Total Scans</div><div class="an-kpi-delta" id="an-scans-d"></div></div>
-        <div class="an-kpi-card"><div class="an-kpi-val g" id="an-subs">—</div><div class="an-kpi-lbl">Subscribers</div><div class="an-kpi-delta" id="an-subs-d"></div></div>
-        <div class="an-kpi-card"><div class="an-kpi-val p" id="an-wallet">—</div><div class="an-kpi-lbl">Wallet Members</div></div>
-        <div class="an-kpi-card"><div class="an-kpi-val" id="an-ai">—</div><div class="an-kpi-lbl">AI Conversations</div></div>
-        <div class="an-kpi-card"><div class="an-kpi-val o" id="an-cvr">—%</div><div class="an-kpi-lbl">Conversion Rate</div></div>
-        <div class="an-kpi-card"><div class="an-kpi-val" id="an-pages">—</div><div class="an-kpi-lbl">Active Pages</div></div>
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl">Total Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
+        <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
+        <div class="kpi-card"><div class="kpi-val purple" id="an-wallet">—</div><div class="kpi-lbl">Wallet Members</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="an-ai">—</div><div class="kpi-lbl">AI Conversations</div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl">Conversion Rate</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="an-pages">—</div><div class="kpi-lbl">Active Pages</div></div>
       </div>
 
       <!-- Charts -->
@@ -270,7 +194,7 @@ body.sb-collapsed
               </tr>
             </thead>
             <tbody id="perf-tbody">
-              <tr><td colspan="7" class="an-loading">Loading data…</td></tr>
+              <tr><td colspan="7" class="state-loading">Loading data…</td></tr>
             </tbody>
           </table>
         </div>
@@ -286,7 +210,7 @@ body.sb-collapsed
             <div class="mc-row"><span class="mc-row-label">AI conversion rate</span><span class="mc-row-val o" id="ai-cvr">—%</span></div>
             <div class="mc-row"><span class="mc-row-label">Questions answered</span><span class="mc-row-val">—</span></div>
             <div class="mc-row"><span class="mc-row-label">Voice welcomes played</span><span class="mc-row-val">—</span></div>
-            <div class="an-coming">⬡ Full AI analytics — coming soon</div>
+            <div class="state-coming">⬡ Full AI analytics — coming soon</div>
           </div>
         </div>
         <div class="metric-card">
@@ -297,7 +221,7 @@ body.sb-collapsed
             <div class="mc-row"><span class="mc-row-label">Push notification opens</span><span class="mc-row-val">—</span></div>
             <div class="mc-row"><span class="mc-row-label">Repeat engagement</span><span class="mc-row-val">—</span></div>
             <div class="mc-row"><span class="mc-row-label">Active members</span><span class="mc-row-val o">—</span></div>
-            <div class="an-coming">⬡ Full wallet analytics — coming soon</div>
+            <div class="state-coming">⬡ Full wallet analytics — coming soon</div>
           </div>
         </div>
       </div>
@@ -316,7 +240,7 @@ body.sb-collapsed
 
     </div>
   </main>
-  <footer><span>QRAIVY — Business Intelligence · Powered by AI</span></footer>
+  <footer class="dash-footer">QRAIVY — Business Intelligence · Powered by AI</footer>
 </div>
 
 <script>
@@ -415,7 +339,7 @@ function renderCharts(dashboard) {
     const palette  = ['#ff5a1f','#22c55e','#a78bfa','#3b82f6','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
     if (usecaseChartInst) usecaseChartInst.destroy();
     if (ucLabels.length === 0) {
-      ucCtx.parentElement.innerHTML = '<div class="an-empty">No data yet</div>';
+      ucCtx.parentElement.innerHTML = '<div class="state-empty">No data yet</div>';
     } else {
       usecaseChartInst = new Chart(ucCtx, {
         type: 'doughnut',
@@ -443,7 +367,7 @@ function renderTable(dashboard) {
     return 0;
   });
 
-  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="an-empty">No pages found</td></tr>'; return; }
+  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="state-empty">No pages found</td></tr>'; return; }
 
   const maxScans = Math.max(...rows.map(q => q.totalScans), 1);
   tbody.innerHTML = rows.map(qr => {
@@ -551,7 +475,7 @@ async function loadAnalytics() {
     renderMetrics(allData);
   } catch (err) {
     console.error(err);
-    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="an-loading">Failed to load data.</td></tr>';
+    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="state-loading">Failed to load data.</td></tr>';
   }
 }
 
