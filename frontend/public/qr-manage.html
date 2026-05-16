@@ -250,37 +250,37 @@ footer{padding:20px 32px;font-family:'DM Mono',monospace;font-size:.65rem;color:
 <!-- SIDEBAR -->
 <div id="sidebar">
   <div class="sb-logo">
-    <div class="sb-logo-icon">⬡</div>
+    <div class="sb-logo-icon">Q</div>
     <div class="sb-logo-text">QR<span>Aivy</span></div>
   </div>
-  <button class="sb-toggle" id="sb-toggle">‹</button>
+  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
   <nav class="sb-nav">
-    <div class="sb-section">MAIN</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">⊞</span><span class="sb-label">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item"><span class="sb-icon">↗</span><span class="sb-label">Analytics</span></a>
-    <div class="sb-section">SMART PAGES</div>
-    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">⬡</span><span class="sb-label">Smart QR Pages</span></a>
-    <a href="#" class="sb-item" id="sb-create"><span class="sb-icon">＋</span><span class="sb-label">Create New QR</span></a>
-    <div class="sb-section">ENGAGE</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">🔔</span><span class="sb-label">Push Notifications</span><span class="sb-badge">LIVE</span></a>
-    <a href="#" class="sb-item sb-soon-item"><span class="sb-icon">📣</span><span class="sb-label">Campaigns</span><span class="sb-soon">SOON</span></a>
-    <div class="sb-section">CONFIGURE</div>
-    <a href="designer.html" class="sb-item"><span class="sb-icon">🎨</span><span class="sb-label">AI Designer</span></a>
-    <a href="qr-panel.html" class="sb-item"><span class="sb-icon">⬡</span><span class="sb-label">QR Download Centre</span></a>
-    <div class="sb-section">ACCOUNT</div>
-    <a href="pricing.html" class="sb-item"><span class="sb-icon">💳</span><span class="sb-label">Billing & Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
-    <a href="#" class="sb-item"><span class="sb-icon">?</span><span class="sb-label">Help & Docs</span></a>
+    <div class="sb-group">Main</div>
+    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item "><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
+    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px">Engage</div>
+    <a href="#" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
+    <a href="#" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
+    <div class="sb-group" style="margin-top:4px">Configure</div>
+    <a href="designer.html" class="sb-item"><span class="sb-icon">&#x1F3A8;</span><span class="sb-label">AI Designer</span></a>
+    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar" id="sb-avatar">?</div>
       <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading…</div>
+        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
         <div class="sb-user-role">Business Owner</div>
       </div>
     </div>
     <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">→</span><span class="sb-label">Sign Out</span></a>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
   </div>
 </div>
 
@@ -806,6 +806,30 @@ async function init() {
   document.getElementById('sb-signout').addEventListener('click', async e => {
     e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
   });
+
+  // ── Sidebar init ──────────────────────────────────────────────────────────
+  const _sidebar = document.getElementById('sidebar');
+  const _sbToggle = document.getElementById('sb-toggle');
+  if (_sidebar && _sbToggle) {
+    if (localStorage.getItem('sb-collapsed') === 'true') { _sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+    _sbToggle.addEventListener('click', function() {
+      const c = _sidebar.classList.toggle('collapsed');
+      document.body.classList.toggle('sb-collapsed', c);
+      localStorage.setItem('sb-collapsed', c);
+    });
+  }
+  const _mobBtn = document.getElementById('mob-btn');
+  const _overlay = document.getElementById('sb-overlay');
+  if (_mobBtn) _mobBtn.addEventListener('click', function() { _sidebar.classList.add('mob-open'); _overlay.classList.add('on'); });
+  if (_overlay) _overlay.addEventListener('click', function() { _sidebar.classList.remove('mob-open'); _overlay.classList.remove('on'); });
+  // Toast items (unfinished features)
+  ['sb-campaigns','sb-subscribers','sb-wallet','sb-settings'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e) { e.preventDefault(); const t=document.getElementById('cs-toast'); if(t){document.getElementById('cs-toast-msg').textContent=' Coming soon!';t.style.display='flex';setTimeout(function(){t.style.display='none';},2000);} });
+  });
+  const _sbCreate = document.getElementById('sb-create-sqr');
+  if (_sbCreate) _sbCreate.addEventListener('click', function(e) { e.preventDefault(); if(typeof launchOnboarding==='function') launchOnboarding(); });
+
 
   // Sidebar
   const sidebar = document.getElementById('sidebar');
