@@ -6,64 +6,30 @@
   <title>Analytics — Qraivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="dashboard-shell.css"/> />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{display:flex;min-height:100vh;background:var(--bg,#0a0a0a);color:#f0f4f8}
-
-    /* ── Sidebar (same as dashboard) ── */
-    #sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#0f0f0f;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;z-index:100;transition:width .22s;overflow:hidden}
-    #sidebar.collapsed{width:60px}
-    .sb-logo{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:60px;flex-shrink:0}
-    .sb-logo-icon{width:32px;height:32px;background:#ff5a1f;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-    .sb-logo-text{font-size:1rem;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:-.02em;transition:opacity .22s}
-    .sb-logo-text span{color:#ff5a1f;font-style:italic}
-    #sidebar.collapsed .sb-logo-text{opacity:0;pointer-events:none}
-    .sb-toggle{position:absolute;top:16px;right:-11px;width:22px;height:22px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#a8b4c0;font-size:11px;transition:all .22s;z-index:10}
-    .sb-toggle:hover{background:#ff5a1f;color:#fff;border-color:#ff5a1f}
-    #sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
-    .sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.05) transparent}
-    .sb-section{font-size:.58rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8b9ab0;padding:10px 10px 3px;white-space:nowrap;transition:opacity .22s;font-family:'DM Mono',monospace}
+/* ── Sidebar (same as dashboard) ── */
+.sb-logo-text span{color:#ff5a1f;font-style:italic}
+    #sidebar.collapsed
+#sidebar.collapsed
+.sb-section{font-size:.58rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8b9ab0;padding:10px 10px 3px;white-space:nowrap;transition:opacity .22s;font-family:'DM Mono',monospace}
     #sidebar.collapsed .sb-section{opacity:0}
-    .sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#a8b4c0;text-decoration:none;font-size:.84rem;font-weight:500;white-space:nowrap;transition:all .18s;margin-bottom:1px}
-    .sb-item:hover{background:rgba(255,255,255,0.05);color:#fff}
-    .sb-item.active{background:#ff5a1f;color:#fff;font-weight:600}
-    .sb-icon{width:18px;text-align:center;flex-shrink:0;font-size:15px}
-    .sb-label{transition:opacity .22s;flex:1}
-    #sidebar.collapsed .sb-label{opacity:0;width:0;overflow:hidden}
-    .sb-badge{font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:999px;background:#ff5a1f;color:#fff;letter-spacing:.05em;transition:opacity .22s}
-    .sb-item.active .sb-badge{background:rgba(255,255,255,0.25)}
-    #sidebar.collapsed .sb-badge{opacity:0;width:0;padding:0}
-    .sb-soon{font-size:.55rem;opacity:.4;font-family:'DM Mono',monospace;transition:opacity .22s}
+#sidebar.collapsed
+.sb-item.active
+#sidebar.collapsed
+.sb-soon{font-size:.55rem;opacity:.4;font-family:'DM Mono',monospace;transition:opacity .22s}
     #sidebar.collapsed .sb-soon{opacity:0}
-    .sb-divider{height:1px;background:rgba(255,255,255,0.06);margin:6px 8px}
-    .sb-footer{border-top:1px solid rgba(255,255,255,0.06);padding:10px 8px;flex-shrink:0}
-    .sb-user{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;transition:background .18s}
-    .sb-user:hover{background:rgba(255,255,255,0.05)}
-    .sb-avatar{width:30px;height:30px;border-radius:50%;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;flex-shrink:0}
-    .sb-user-info{transition:opacity .22s;overflow:hidden}
-    #sidebar.collapsed .sb-user-info{opacity:0;width:0}
-    .sb-user-name{font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap}
-    .sb-user-role{font-size:.62rem;color:#a8b4c0;font-family:'DM Mono',monospace}
-    .sb-signout{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#a8b4c0;font-size:.84rem;font-weight:500;transition:all .18s;text-decoration:none;margin-top:2px}
-    .sb-signout:hover{background:rgba(239,68,68,0.1);color:#ef4444}
-    #main-content{margin-left:240px;flex:1;min-height:100vh;transition:margin-left .22s}
-    body.sb-collapsed #main-content{margin-left:60px}
-    #mob-btn{display:none;position:fixed;top:12px;left:12px;width:46px;height:46px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200}
-    .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99}
-    .sb-overlay.on{display:block}
-    @media(max-width:768px){
-      #sidebar{transform:translateX(-100%);width:240px !important;transition:transform .22s}
-      #sidebar.mob-open{transform:translateX(0)}
-      #main-content{margin-left:0 !important;padding-top:56px}
-      #mob-btn{display:flex}
-      .sb-toggle{display:none}
-    }
+#sidebar.collapsed
+body.sb-collapsed
+@media(max-width:768px){
+#sidebar.mob-open{transform:translateX(0)}
+}
 
     /* ── Analytics layout ── */
-    .an-wrap{max-width:1040px;margin:0 auto;padding:40px 36px}
-    @media(max-width:640px){.an-wrap{padding:24px 18px}}
+    
+    
 
     /* ── Header ── */
     .an-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
@@ -207,7 +173,7 @@
 <div id="main-content">
   <div class="noise"></div>
   <main>
-    <div class="an-wrap">
+    <div class="page-wrap">
 
       <!-- Header -->
       <div class="an-header">
