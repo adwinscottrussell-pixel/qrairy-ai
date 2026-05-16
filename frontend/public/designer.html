@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIRY.AI — AI Print Designer</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="dashboard-shell.css" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { display: flex; min-height: 100vh; background: var(--bg); }
@@ -322,9 +323,43 @@
   </style></style>  <link rel="stylesheet" href="sidebar.css?v=3">
 </head>
 <body>
-  <div id="sidebar"></div>
+  <div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">Q</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
   </div>
-  <button id="mob-btn" style="display:none;position:fixed;top:14px;left:14px;width:38px;height:38px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200;">☰</button>
+  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
+  <nav class="sb-nav">
+    <div class="sb-group">Main</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span></a>
+    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px">Engage</div>
+    <a href="#" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
+    <a href="#" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
+    <div class="sb-group" style="margin-top:4px">Configure</div>
+    <a href="designer.html" class="sb-item active"><span class="sb-icon">&#x1F3A8;</span><span class="sb-label">AI Designer</span></a>
+    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
+        <div class="sb-user-role">Business Owner</div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
+  </div>
+</div>
+
+<button id="mob-btn" style="display:none;position:fixed;top:14px;left:14px;width:38px;height:38px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200;">☰</button>
 
   <div id="main-content">
     <div class="noise"></div>
@@ -511,7 +546,7 @@
   <style>
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
-<script src="sidebar.js?v=3"></script></body>
+</body>
 </html>
 
 
