@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free QR Generator — QRAIRY.AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <!--
+    NO auth-guard.js here — this page is intentionally anonymous.
+    NO Clerk script required for core functionality.
+    Clerk is loaded lazily only if user clicks "Create Smart QR Account".
+  -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  rgba(255,255,255,0.03);
+      --border:   rgba(255,255,255,0.08);
+      --border-hi:rgba(255,255,255,0.14);
+      --accent:   #ff5a1f;
+      --accent-dk:#e04a18;
+      --text:     #f0ece0;
+      --text-dim: rgba(240,236,224,0.5);
+      --text-faint:rgba(240,236,224,0.28);
+      --mono:     'DM Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────── */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(13,17,23,0.96);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+    }
+
+    .nav-logo-icon {
+      width: 30px;
+      height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .nav-logo-text {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .nav-logo-text em {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-tag {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,90,31,0.7);
+      background: rgba(255,90,31,0.07);
+      border: 1px solid rgba(255,90,31,0.18);
+      border-radius: 20px;
+      padding: 3px 9px;
+    }
+
+    /* Smart QR nav button — requires auth, handled by router.js */
+    .nav-smart-btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.77rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.14s;
+    }
+    .nav-smart-btn:hover { background: var(--accent-dk); }
+
+    /* ── Page body ───────────────────────────────────────────── */
+    .page {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 52px 20px 96px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .hero p {
+      color: var(--text-dim);
+      font-size: 0.93rem;
+      line-height: 1.7;
+    }
+
+    /* ── Card ────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.77rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .field-label-mono {
+      font-family: var(--mono);
+      font-size: 0.57rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .url-input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.14s;
+      margin-bottom: 22px;
+    }
+
+    .url-input:focus { border-color: var(--accent); }
+    .url-input::placeholder { color: var(--text-faint); }
+
+    /* ── Customise row ───────────────────────────────────────── */
+    .customise-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .customise-cell {}
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      border: 1.5px solid var(--border-hi);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.14s;
+    }
+    .color-swatch:hover { border-color: rgba(255,255,255,0.3); }
+
+    .color-hex {
+      font-family: var(--mono);
+      font-size: 0.63rem;
+      color: var(--text-faint);
+    }
+
+    input[type="color"] { display: none; }
+
+    .size-select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .size-select option { background: #1a1a1a; }
+
+    /* ── Generate button ─────────────────────────────────────── */
+    .generate-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      border: none;
+      border-radius: 11px;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.97rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.14s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .generate-btn:hover:not(:disabled) {
+      background: var(--accent-dk);
+      transform: translateY(-1px);
+    }
+    .generate-btn:active:not(:disabled) { transform: translateY(0); }
+    .generate-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* ── Error ───────────────────────────────────────────────── */
+    .error-msg {
+      display: none;
+      margin-top: 14px;
+      padding: 11px 14px;
+      background: rgba(220,60,60,0.09);
+      border: 1px solid rgba(220,60,60,0.22);
+      border-radius: 8px;
+      color: rgba(255,160,160,0.9);
+      font-size: 0.8rem;
+    }
+
+    /* ── Result ──────────────────────────────────────────────── */
+    .result {
+      display: none;
+      margin-top: 28px;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      text-align: center;
+    }
+
+    .result-qr {
+      width: 190px;
+      height: 190px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      display: block;
+      margin: 0 auto 18px;
+    }
+
+    .result-caption {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 24px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-hi);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.14s;
+    }
+    .download-btn:hover {
+      background: rgba(255,255,255,0.11);
+      border-color: rgba(255,255,255,0.22);
+    }
+
+    /* ── Upgrade prompt (shown after generation) ─────────────── */
+    .upgrade-prompt {
+      display: none;
+      margin-top: 24px;
+      background: linear-gradient(135deg, rgba(255,90,31,0.07), rgba(255,140,0,0.04));
+      border: 1px solid rgba(255,90,31,0.18);
+      border-radius: 14px;
+      padding: 26px;
+    }
+
+    .upgrade-prompt-title {
+      font-size: 0.97rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .upgrade-prompt-sub {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+      margin-bottom: 18px;
+    }
+
+    .upgrade-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .upgrade-feat {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.76rem;
+      color: rgba(240,236,224,0.65);
+    }
+
+    .upgrade-feat-dot {
+      color: var(--accent);
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    .upgrade-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Smart QR CTA — handled by router.js via data-flow="smart" */
+    .upgrade-cta {
+      flex: 1;
+      padding: 11px;
+      background: var(--accent);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.14s;
+    }
+    .upgrade-cta:hover { background: var(--accent-dk); }
+
+    .upgrade-dismiss {
+      padding: 11px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text-faint);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.14s;
+    }
+    .upgrade-dismiss:hover {
+      border-color: var(--border-hi);
+      color: var(--text-dim);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .footer-note {
+      text-align: center;
+      margin-top: 36px;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.18);
+      letter-spacing: 0.04em;
+      line-height: 2;
+    }
+
+    .footer-note a {
+      color: rgba(255,90,31,0.5);
+      text-decoration: none;
+    }
+
+    .footer-note a:hover { color: rgba(255,90,31,0.8); }
+
+    /* ── Spinner ─────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .customise-grid { grid-template-columns: 1fr 1fr; }
+      .upgrade-features { grid-template-columns: 1fr; }
+      .page { padding: 36px 16px 72px; }
+      .hero h1 { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="../index.html" class="nav-logo">
+    <div class="nav-logo-icon">Q</div>
+    <div class="nav-logo-text">QR<em>Aivy</em></div>
+  </a>
+  <div class="nav-right">
+    <span class="nav-tag">Free Tool</span>
+    <!--
+      data-flow="smart" → router.js handles auth + redirect.
+      No inline onclick. No Clerk call here.
+    -->
+    <button class="nav-smart-btn" data-flow="smart">✦ Smart QR →</button>
+  </div>
+</nav>
+
+<main class="page">
+
+  <header class="hero">
+    <h1>Free QR <em>Generator</em></h1>
+    <p>Paste your URL, pick your colours, download instantly.<br>No account. No login. No friction.</p>
+  </header>
+
+  <div class="card">
+    <span class="field-label-mono">Your URL</span>
+    <label for="url-input" class="field-label">Website or link to encode</label>
+    <input
+      type="url"
+      id="url-input"
+      class="url-input"
+      placeholder="https://yourwebsite.com"
+      autocomplete="off"
+      spellcheck="false"
+    />
+
+    <span class="field-label-mono">Customise</span>
+    <div class="customise-grid">
+
+      <div class="customise-cell">
+        <label class="field-label">QR Colour</label>
+        <div class="color-row">
+          <div
+            class="color-swatch"
+            id="fg-swatch"
+            style="background:#000000"
+            onclick="document.getElementById('fg-input').click()"
+          ></div>
+          <input type="color" id="fg-input" value="#000000" oninput="syncColor('fg')" />
+          <span class="color-hex" id="fg-hex">#000000</span>
+        </div>
+      </div>
+
+      <div class="customise-cell">
+        <label class="field-label">Background</label>
+        <div class="color-row">
+          <div
+            class="color-swatch"
+            id="bg-swatch"
+            style="background:#ffffff"
+            onclick="document.getElementById('bg-input').click()"
+          ></div>
+          <input type="color" id="bg-input" value="#ffffff" oninput="syncColor('bg')" />
+          <span class="color-hex" id="bg-hex">#ffffff</span>
+        </div>
+      </div>
+
+      <div class="customise-cell">
+        <label class="field-label">Size</label>
+        <select id="size-select" class="size-select">
+          <option value="200">Small · 200px</option>
+          <option value="300" selected>Medium · 300px</option>
+          <option value="400">Large · 400px</option>
+          <option value="600">XL · 600px</option>
+        </select>
+      </div>
+
+    </div><!-- /customise-grid -->
+
+    <button class="generate-btn" id="generate-btn" onclick="generate()">
+      <span id="btn-content">⬡ Generate QR Code</span>
+    </button>
+
+    <div class="error-msg" id="error-msg"></div>
+  </div><!-- /card -->
+
+  <!-- Result -->
+  <div class="result" id="result">
+    <div class="result-card">
+      <img id="qr-img" class="result-qr" src="" alt="Generated QR code" />
+      <p class="result-caption">Your QR code is ready</p>
+      <button class="download-btn" id="download-btn" onclick="downloadQR()">
+        ⬇ &nbsp;Download PNG
+      </button>
+    </div>
+  </div>
+
+  <!-- Upgrade prompt — shown 1.5s after successful generation -->
+  <div class="upgrade-prompt" id="upgrade-prompt">
+    <div class="upgrade-prompt-title">Want more from your QR code?</div>
+    <div class="upgrade-prompt-sub">
+      Your free QR is ready. Smart QR adds scan tracking, an AI landing page,
+      push notifications, and analytics — all from one dashboard.
+    </div>
+    <div class="upgrade-features">
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> Scan tracking &amp; analytics</div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> AI-powered landing page</div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> Push notifications</div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> Save &amp; manage all QR codes</div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> Subscriber campaigns</div>
+      <div class="upgrade-feat"><span class="upgrade-feat-dot">✦</span> Wallet passes</div>
+    </div>
+    <div class="upgrade-actions">
+      <!--
+        data-flow="smart" → router.js handles Clerk auth + redirect.
+        This button has zero auth logic of its own.
+      -->
+      <button class="upgrade-cta" data-flow="smart">✦ Create Smart QR Account</button>
+      <button class="upgrade-dismiss" onclick="dismissUpgrade()">Maybe later</button>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    QRAIRY.AI Free QR Generator &nbsp;·&nbsp;
+    No account required &nbsp;·&nbsp;
+    <a href="../index.html">← Back to homepage</a>
+  </p>
+
+</main>
+
+<!--
+  router.js is included for data-flow="smart" buttons only.
+  It lazy-loads Clerk when those buttons are clicked.
+  The free QR generation itself uses zero auth code.
+-->
+<script src="../js/router.js"></script>
+
+<script>
+  // ── State ───────────────────────────────────────────────────
+  var currentQrUrl = null;
+  var upgradeTimer = null;
+
+  // ── Colour sync ─────────────────────────────────────────────
+  function syncColor(which) {
+    var input  = document.getElementById(which + '-input');
+    var swatch = document.getElementById(which + '-swatch');
+    var hex    = document.getElementById(which + '-hex');
+    swatch.style.background = input.value;
+    hex.textContent = input.value;
+  }
+
+  // ── Generate ────────────────────────────────────────────────
+  function generate() {
+    var rawUrl = document.getElementById('url-input').value.trim();
+    var btn    = document.getElementById('generate-btn');
+    var btnC   = document.getElementById('btn-content');
+    var errEl  = document.getElementById('error-msg');
+    var resEl  = document.getElementById('result');
+    var upEl   = document.getElementById('upgrade-prompt');
+
+    // Clear state
+    errEl.style.display  = 'none';
+    errEl.textContent    = '';
+    clearTimeout(upgradeTimer);
+
+    // Validate
+    if (!rawUrl) { return showError('Please enter a URL.'); }
+
+    var url = rawUrl;
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+      document.getElementById('url-input').value = url;
+    }
+
+    if (url.length > 2048) {
+      return showError('URL is too long (max 2048 characters).');
+    }
+
+    // UI: loading
+    btn.disabled  = true;
+    btnC.innerHTML = '<div class="spinner"></div>&nbsp; Generating…';
+    resEl.style.display = 'none';
+    upEl.style.display  = 'none';
+
+    // Build QR URL (client-side, no auth needed)
+    var fg   = document.getElementById('fg-input').value.replace('#', '');
+    var bg   = document.getElementById('bg-input').value.replace('#', '');
+    var size = document.getElementById('size-select').value;
+
+    currentQrUrl = [
+      'https://api.qrserver.com/v1/create-qr-code/',
+      '?size=', size, 'x', size,
+      '&data=', encodeURIComponent(url),
+      '&color=', fg,
+      '&bgcolor=', bg,
+      '&format=png',
+      '&margin=1',
+    ].join('');
+
+    // Preload image
+    var img = new Image();
+
+    img.onload = function () {
+      document.getElementById('qr-img').src = currentQrUrl;
+      resEl.style.display = 'block';
+      resEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      btn.disabled = false;
+      btnC.textContent = '⬡ Generate Another';
+
+      // Show upgrade prompt after 1.5s — value delivered first
+      var dismissed = sessionStorage.getItem('qrairy_upgrade_dismissed');
+      if (!dismissed) {
+        upgradeTimer = setTimeout(function () {
+          upEl.style.display = 'block';
+          upEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 1500);
+      }
+    };
+
+    img.onerror = function () {
+      showError('Could not generate QR code — please check your URL and try again.');
+      btn.disabled = false;
+      btnC.textContent = '⬡ Generate QR Code';
+    };
+
+    img.src = currentQrUrl;
+  }
+
+  // ── Download ─────────────────────────────────────────────────
+  function downloadQR() {
+    if (!currentQrUrl) return;
+    fetch(currentQrUrl)
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'qraivy-qr.png';
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      })
+      .catch(function () {
+        // Fallback: open in new tab
+        window.open(currentQrUrl, '_blank');
+      });
+  }
+
+  // ── Dismiss upgrade prompt ────────────────────────────────────
+  function dismissUpgrade() {
+    sessionStorage.setItem('qrairy_upgrade_dismissed', '1');
+    document.getElementById('upgrade-prompt').style.display = 'none';
+  }
+
+  // ── Error display ─────────────────────────────────────────────
+  function showError(msg) {
+    var el = document.getElementById('error-msg');
+    el.textContent    = msg;
+    el.style.display  = 'block';
+  }
+
+  // ── Enter key on URL field ────────────────────────────────────
+  document.getElementById('url-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') generate();
+  });
+</script>
+
+</body>
+</html>
