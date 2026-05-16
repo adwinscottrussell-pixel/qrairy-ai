@@ -10,14 +10,20 @@ const PLAN_AI_LIMITS = { free: 0, starter: 10, pro: null, pro_annual: null, busi
 const PLAN_DYNAMIC = { free: false, starter: false, starter_annual: false, pro: true, pro_annual: true, business: true, business_annual: true };
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
+const { createClerkClient } = require('@clerk/backend');
+const _clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
 async function getUserFromToken(authHeader) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.split(' ')[1];
-    const base64Payload = token.split('.')[1];
-    const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf8'));
+    const payload = await _clerk.verifyToken(token);
     return payload.sub || null;
   } catch (err) {
+    console.error('Token verify error:', err.message);
+    return null;
+  }
+} catch (err) {
     console.error('Token decode error:', err.message);
     return null;
   }
@@ -504,3 +510,4 @@ module.exports = {
   handleSendSpecial,
   handleGenerateSpecial,
 };
+
