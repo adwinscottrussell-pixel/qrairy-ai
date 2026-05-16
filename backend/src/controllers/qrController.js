@@ -223,13 +223,10 @@ async function handleGetUserPlan(req, res) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await upsertUser(userId);
-    const plan = user.plan || 'free';
-    const basicLimit = PLAN_LIMITS[plan] === Infinity ? null : PLAN_LIMITS[plan];
-    const aiLimit = PLAN_AI_LIMITS[plan] === Infinity ? null : PLAN_AI_LIMITS[plan];
-
-    const aiQrCount = await prisma.qR.count({
-      where: { userId, businessName: { not: null } },
-    });
+    const { buildPlanInfo } = require('./utils/tierSystem');
+    const aiQrCount = await prisma.qR.count({ where: { userId, businessName: { not: null } } });
+    const planInfo = buildPlanInfo(user, aiQrCount);
+    return res.status(200).json(planInfo);
 
     return res.status(200).json({
       plan,
