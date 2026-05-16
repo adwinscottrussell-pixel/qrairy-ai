@@ -33,7 +33,6 @@ app.use('/user',     userRoutes);
 app.use('/api',      apiKeyRoutes);
 app.use('/stripe',   stripeRoutes);
 app.use('/admin',    adminRoutes);
-app.use('/design',   designRoutes);
 
 app.use('/', lpRoutes);
 app.use('/tier', tierRoutes);
