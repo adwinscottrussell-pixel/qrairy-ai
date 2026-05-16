@@ -190,7 +190,8 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>Smart <strong>scan analytics</strong></span></div>
       <div class="upgrade-feat"><span class="upgrade-feat-dot"></span><span>AI <strong>voice welcome</strong> message</span></div>
     </div>
-    <a class="btn-upgrade-big" href="upgrade.html">✨ Create your first Smart QR — Free</a>
+    <button class="btn-upgrade-big" id="btn-start-trial" onclick="handleStartTrial()">✨ Start AI Trial — Free</button>
+    <a class="btn-upgrade-big" href="upgrade.html" style="background:transparent;border:1px solid rgba(255,90,31,0.3);color:#ff8c55;box-shadow:none;margin-top:8px">View Smart QR Plans →</a>
     <div class="upgrade-note">No credit card required to start · Free plan available forever</div>
   </div>
 
@@ -392,6 +393,30 @@ async function init() {
   }
 
   loadDashboard();
+}
+
+// ── Trial handling ────────────────────────────────────────────────────────
+async function handleStartTrial() {
+  var btn = document.getElementById('btn-start-trial');
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting trial…'; }
+  try {
+    var token = await window.Clerk.session.getToken();
+    var res = await fetch(API_BASE+'/tier/trial', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' }
+    });
+    var data = await res.json();
+    if (data.ok) {
+      // Trial started - redirect to smart dashboard with onboarding
+      window.location.href = 'dashboard.html?launch=onboarding';
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Start AI Trial — Free'; }
+      alert(data.error || 'Could not start trial.');
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Start AI Trial — Free'; }
+    window.location.href = 'dashboard.html?launch=onboarding';
+  }
 }
 </script>
 <script
