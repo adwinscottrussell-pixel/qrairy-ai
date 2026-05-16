@@ -17,11 +17,8 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const { createClerkClient } = require('@clerk/backend');
-
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY,
-});
+const { verifyToken, createClerkClient } = require('@clerk/backend');
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // ── Security event logger ─────────────────────────────────────
 function logSecurityEvent(event, req, extra) {
@@ -55,7 +52,7 @@ async function requireAdmin(req, res, next) {
     // 2. Cryptographically verify token with Clerk
     let payload;
     try {
-      payload = await clerk.verifyToken(token);
+      payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
     } catch (verifyErr) {
       logSecurityEvent('ADMIN_ACCESS_INVALID_TOKEN', req, {
         route,
@@ -113,3 +110,5 @@ async function requireAdmin(req, res, next) {
 }
 
 module.exports = { requireAdmin, logSecurityEvent };
+
+

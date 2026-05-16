@@ -7,11 +7,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const { createClerkClient } = require('@clerk/backend');
-
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY,
-});
+const { verifyToken } = require('@clerk/backend');
 
 /**
  * requireAuth
@@ -28,7 +24,7 @@ async function requireAuth(req, res, next) {
     const token = authHeader.split(' ')[1];
 
     // Cryptographic verification — not just base64 decode
-    const payload = await clerk.verifyToken(token);
+    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
 
     if (!payload || !payload.sub) {
       return res.status(401).json({ error: 'Invalid token.' });
@@ -52,7 +48,7 @@ async function optionalAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      const payload = await clerk.verifyToken(token);
+      const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
       if (payload && payload.sub) {
         req.userId = payload.sub;
       }
@@ -64,3 +60,4 @@ async function optionalAuth(req, res, next) {
 }
 
 module.exports = { requireAuth, optionalAuth };
+
