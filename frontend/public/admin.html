@@ -562,12 +562,12 @@
 
     // ── Auth check ────────────────────────────────────────────
     if (sessionStorage.getItem('admin_auth') !== 'true') {
-      window.location.href = 'admin-login.html';
+      // auth handled by admin-guard.js
     }
 
     function signOut() {
       sessionStorage.removeItem('admin_auth');
-      window.location.href = 'admin-login.html';
+      // auth handled by admin-guard.js
     }
 
     // ── Navigation ────────────────────────────────────────────
@@ -992,6 +992,7 @@
   <script src="js/admin-guard.js"></script><script src="js/shell-admin.js"></script>
 </body>
 </html>
+
 
 
 
