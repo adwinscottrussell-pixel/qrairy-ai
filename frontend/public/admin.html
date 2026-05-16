@@ -567,7 +567,9 @@
 
     function signOut() {
       sessionStorage.removeItem('admin_auth');
-      // auth handled by admin-guard.js
+      window.Clerk.signOut().then(function() {
+        window.location.href = 'login.html';
+      });
     }
 
     // ── Navigation ────────────────────────────────────────────
@@ -998,6 +1000,7 @@
 <script src="js/shell-admin.js"></script>
 </body>
 </html>
+
 
 
 
