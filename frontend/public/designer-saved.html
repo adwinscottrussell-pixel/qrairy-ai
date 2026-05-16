@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIRY.AI — AI Print Designer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="dashboard-shell.css" />
+  
+<!-- v2 --></style>  <link rel="stylesheet" href="sidebar.css?v=3">
+</head>
+<body>
+  <div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">Q</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
+  </div>
+  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
+  <nav class="sb-nav">
+    <div class="sb-group">Main</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span></a>
+    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px">Engage</div>
+    <a href="#" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
+    <a href="#" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
+    <div class="sb-group" style="margin-top:4px">Configure</div>
+    <a href="designer.html" class="sb-item active"><span class="sb-icon">&#x1F3A8;</span><span class="sb-label">AI Designer</span></a>
+    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
+        <div class="sb-user-role">Business Owner</div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
+  </div>
+</div>
+
+<button id="mob-btn" style="display:none;position:fixed;top:14px;left:14px;width:38px;height:38px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:7px;cursor:pointer;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:200;">☰</button>
+
+  <div id="main-content">
+    <div class="noise"></div>
+    <main>
+      <div class="designer-wrap">
+        <h1 class="designer-title">AI Print <em>Designer</em></h1>
+        <p class="designer-sub">Generate print-ready marketing materials with your QR code in seconds</p>
+
+        <div class="designer-grid">
+          <div class="panel">
+            <div class="panel-title">⚙ Configuration</div>
+
+            <div class="form-group">
+              <div class="form-label">Select QR Code</div>
+              <select class="qr-select" id="qrSelect">
+                <option value="">Loading your QR codes...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">Print Size</div>
+              <div class="size-grid">
+                <button class="size-btn active" onclick="setSize('a4')" id="s-a4"><span class="sn">A4 Poster</span><span class="sd">210×297mm</span></button>
+                <button class="size-btn" onclick="setSize('a5')" id="s-a5"><span class="sn">A5 Flyer</span><span class="sd">148×210mm</span></button>
+                <button class="size-btn" onclick="setSize('dl')" id="s-dl"><span class="sn">DL Flyer</span><span class="sd">99×210mm</span></button>
+                <button class="size-btn" onclick="setSize('business')" id="s-business"><span class="sn">Business Card</span><span class="sd">85×55mm</span></button>
+                <button class="size-btn" onclick="setSize('square')" id="s-square"><span class="sn">Square Post</span><span class="sd">148×148mm</span></button>
+                <button class="size-btn" onclick="setSize('pos')" id="s-pos"><span class="sn">POS Tent</span><span class="sd">100×150mm</span></button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">Format</div>
+              <div class="format-row">
+                <button class="fmt-btn active" onclick="setFormat('pdf')" id="f-pdf">📄 PDF</button>
+                <button class="fmt-btn" onclick="setFormat('png')" id="f-png">🖼 PNG</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">Design Style (describe what you want)</div>
+              <textarea id="prompt" placeholder="e.g. Modern Italian restaurant review card, warm terracotta tones, elegant serif font, minimal clean layout with gold accents"></textarea>
+              <div class="style-chips">
+                <span class="chip" onclick="addChip('modern minimal')">modern minimal</span>
+                <span class="chip" onclick="addChip('bold vibrant')">bold vibrant</span>
+                <span class="chip" onclick="addChip('luxury dark')">luxury dark</span>
+                <span class="chip" onclick="addChip('warm friendly')">warm friendly</span>
+                <span class="chip" onclick="addChip('professional corporate')">professional</span>
+                <span class="chip" onclick="addChip('playful colorful')">playful</span>
+              </div>
+            </div>
+
+            <button class="btn-generate" id="generateBtn" onclick="generate()">✦ Generate Design</button>
+          </div>
+
+          <div class="preview-panel">
+            <div class="preview-header">
+              <div class="preview-title">✦ Preview</div>
+              <div class="preview-actions">
+                <button class="btn-dl" id="dlBtn" disabled onclick="download()">⬇ Download</button>
+              </div>
+            </div>
+            <div class="preview-area" id="previewArea">
+              <div class="preview-placeholder">
+                <div class="icon">✦</div>
+                <p>Configure your design and click Generate</p>
+                <p style="margin-top:6px;opacity:0.5;font-size:0.65rem">AI will create a unique print-ready design</p>
+              </div>
+            </div>
+            <div class="status-bar" id="statusBar">Ready to generate</div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer><span>QRAIRY.AI — Node · Express · Prisma · PostgreSQL</span></footer>
+  </div>
+
+  
+  <script
+    data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"
+    onload="window.Clerk.load().then(() => init())"
+  ></script>
+  <script>
+    const API_BASE = 'https://api.qraivy.com';
+    let currentSize = 'a4';
+    let currentFormat = 'pdf';
+    let lastBlob = null;
+
+    function setSize(s) {
+      currentSize = s;
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('s-'+s).classList.add('active');
+    }
+
+    function setFormat(f) {
+      currentFormat = f;
+      document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('f-'+f).classList.add('active');
+    }
+
+    function addChip(text) {
+      const ta = document.getElementById('prompt');
+      ta.value = ta.value ? ta.value + ', ' + text : text;
+      ta.focus();
+    }
+
+    async function init() {
+      if (!window.Clerk.session) { window.location.href = 'login.html'; return; }
+      const token = await window.Clerk.session.getToken();
+      const res = await fetch(API_BASE + '/dashboard', { headers: { 'Authorization': 'Bearer ' + token } });
+      const data = await res.json();
+      const sel = document.getElementById('qrSelect');
+      sel.innerHTML = '<option value="">— Select a QR code —</option>';
+      (data.dashboard || []).forEach(qr => {
+        const opt = document.createElement('option');
+        opt.value = qr.id;
+        opt.textContent = (qr.businessName || qr.originalUrl) + ' (' + qr.totalScans + ' scans)';
+        sel.appendChild(opt);
+      });
+    }
+
+    async function generate() {
+      const qrId = document.getElementById('qrSelect').value;
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!qrId) return alert('Please select a QR code first.');
+      if (!prompt) return alert('Please describe the design style.');
+
+      const btn = document.getElementById('generateBtn');
+      const status = document.getElementById('statusBar');
+      const area = document.getElementById('previewArea');
+
+      btn.disabled = true;
+      btn.textContent = '⟳ Generating...';
+      status.className = 'status-bar loading';
+      status.textContent = 'Claude is designing your card...';
+      area.innerHTML = '<div class="preview-placeholder"><div class="icon" style="animation:spin 2s linear infinite">✦</div><p>AI is creating your design...</p><p style="margin-top:6px;opacity:0.5;font-size:0.65rem">This takes 15-30 seconds</p></div>';
+
+      try {
+        const token = await window.Clerk.session.getToken();
+        const res = await fetch(API_BASE + '/design/generate', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrId, prompt, size: currentSize, format: currentFormat })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Generation failed');
+        }
+
+        lastBlob = await res.blob();
+        const url = URL.createObjectURL(lastBlob);
+
+        if (currentFormat === 'pdf') {
+          area.innerHTML = `<iframe src="${url}" style="width:100%;height:550px;border:none;border-radius:4px"></iframe>`;
+        } else {
+          area.innerHTML = `<img src="${url}" class="preview-img" alt="Generated design">`;
+        }
+
+        status.className = 'status-bar success';
+        status.textContent = '✓ Design generated successfully';
+        document.getElementById('dlBtn').disabled = false;
+
+      } catch (err) {
+        area.innerHTML = '<div class="preview-placeholder"><div class="icon">⚠</div><p>' + err.message + '</p></div>';
+        status.className = 'status-bar error';
+        status.textContent = '✗ ' + err.message;
+      }
+
+      btn.disabled = false;
+      btn.textContent = '✦ Generate Design';
+    }
+
+    function download() {
+      if (!lastBlob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(lastBlob);
+      a.download = 'qraivy-design.' + currentFormat;
+      a.click();
+    }
+  </script>
+  
+
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  var sb = document.getElementById('sidebar');
+  var tog = document.getElementById('sb-toggle');
+  if (sb && tog) {
+    if (localStorage.getItem('sb-collapsed') === 'true') { sb.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+    tog.addEventListener('click', function() { var c = sb.classList.toggle('collapsed'); document.body.classList.toggle('sb-collapsed',c); localStorage.setItem('sb-collapsed',c); });
+  }
+  var mob = document.getElementById('mob-btn');
+  var ov = document.getElementById('sb-overlay');
+  if (mob) mob.addEventListener('click', function(){ sb.classList.add('mob-open'); if(ov)ov.classList.add('on'); });
+  if (ov) ov.addEventListener('click', function(){ sb.classList.remove('mob-open'); ov.classList.remove('on'); });
+});
+</script>
+</body>
+</html>
+
+
