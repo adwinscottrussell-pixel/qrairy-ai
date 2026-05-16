@@ -252,7 +252,9 @@ async function initDashboard(){
 </script>
 <script src="js/auth-guard.js"></script>
 <script src="onboarding.js"></script>
+<script>document.addEventListener("DOMContentLoaded", function(){ if(window.Clerk) { initDashboard(); } else { document.querySelector('[data-clerk-publishable-key]').addEventListener('load', initDashboard); } });</script>
 
 </body>
 </html>
+
 
