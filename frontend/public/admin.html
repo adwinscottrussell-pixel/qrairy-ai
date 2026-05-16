@@ -610,7 +610,7 @@
       document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
       try {
         const res = await fetch(`${API_BASE}/admin/overview`, {
-          headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         const data = await res.json();
 
@@ -672,7 +672,7 @@
     async function loadUsers() {
       try {
         const res = await fetch(`${API_BASE}/admin/users`, {
-          headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         const data = await res.json();
         allUsers = data.users || [];
@@ -729,7 +729,7 @@
       try {
         const res = await fetch(`${API_BASE}/admin/users/${currentEditUserId}/plan`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': 'admin' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
           body: JSON.stringify({ plan: newPlan }),
         });
         const data = await res.json();
@@ -749,7 +749,7 @@
       try {
         await fetch(`${API_BASE}/admin/users/${userId}/suspend`, {
           method: 'PUT',
-          headers: { 'x-admin-key': 'qraivy-admin-2026' },
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
         });
         loadUsers();
       } catch (err) {
@@ -761,7 +761,7 @@
     async function loadApiKeys() {
       try {
         const res = await fetch(`${API_BASE}/admin/api-keys`, {
-          headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         const data = await res.json();
         const keys = data.keys || [];
@@ -786,7 +786,7 @@
       if (!confirm('Revoke this API key?')) return;
       try {
         await fetch(`${API_BASE}/admin/api-keys/${id}/revoke`, {
-          method: 'PUT', headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          method: 'PUT', headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         loadApiKeys();
       } catch (err) { alert('Failed.'); }
@@ -796,7 +796,7 @@
     async function loadRevenue() {
       try {
         const res = await fetch(`${API_BASE}/admin/revenue`, {
-          headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         const data = await res.json();
         const planPrices = { free: 0, starter: 9, pro: 29, business: 49 };
@@ -890,7 +890,7 @@
     async function loadQRAnalytics() {
       try {
         const res = await fetch(`${API_BASE}/admin/qr-analytics`, {
-          headers: { 'x-admin-key': 'qraivy-admin-2026' }
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
         const data = await res.json();
 
@@ -937,7 +937,7 @@
       const adminKey = sessionStorage.getItem('adminKey') || '';
       let checks = {};
       try {
-        const res = await fetch(API_BASE + '/admin/health', { headers: { 'x-admin-key': adminKey } });
+        const res = await fetch(API_BASE + '/admin/health', { headers: { 'Authorization': 'Bearer ' + await getAdminToken() } });
         checks = await res.json();
       } catch(e) {}
       const services = [
@@ -986,6 +986,10 @@
       a.click();
     }
 
+    async function getAdminToken() {
+      await window.Clerk.load();
+      return await window.Clerk.session.getToken();
+    }
     // ── Init ──────────────────────────────────────────────────
     loadOverview();
   </script>
@@ -994,6 +998,8 @@
 <script src="js/shell-admin.js"></script>
 </body>
 </html>
+
+
 
 
 
