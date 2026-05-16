@@ -274,9 +274,9 @@
     .modal-btn:hover { border-color: var(--accent); color: var(--accent); }
     .modal-btn.primary:hover { background: #ff7a45; }
   </style>
-  <link rel="stylesheet" href="sidebar.css?v=3">
+  
 </head>
-<body>
+<body data-shell="admin" data-active-nav="nav-overview">
 
   <!-- Change Plan Modal -->
   <div class="modal-overlay" id="plan-modal">
@@ -989,9 +989,10 @@
     // ── Init ──────────────────────────────────────────────────
     loadOverview();
   </script>
-  <script src="sidebar.js?v=3"></script>
+  <script src="js/admin-guard.js"></script><script src="js/shell-admin.js"></script>
 </body>
 </html>
+
 
 
 
