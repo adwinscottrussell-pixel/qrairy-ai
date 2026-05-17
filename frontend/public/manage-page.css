@@ -226,3 +226,363 @@
   margin-bottom: 8px;
   margin-top: 4px;
 }
+
+/* ── Settings Tab Layout ──────────────────────────────────────────────────── */
+.settings-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* ── Settings Card ────────────────────────────────────────────────────────── */
+.settings-card { padding: 0; }
+.settings-card-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.settings-card-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f0f4f8;
+  margin-bottom: 3px;
+}
+.settings-card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: .8rem;
+  color: #5a6b7d;
+  line-height: 1.4;
+}
+.settings-card-body {
+  padding: 16px 20px 20px;
+}
+
+/* ── Status Badge ─────────────────────────────────────────────────────────── */
+.settings-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+.settings-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34,197,94,0.6);
+}
+.settings-status-badge span:last-child {
+  font-family: 'Inter', sans-serif;
+  font-size: .75rem;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+/* ── Status Bar ───────────────────────────────────────────────────────────── */
+.settings-status-bar {
+  padding: 10px 14px;
+  background: rgba(34,197,94,0.04);
+  border: 1px solid rgba(34,197,94,0.1);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+.settings-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Toggle Rows ──────────────────────────────────────────────────────────── */
+.settings-toggles { display: flex; flex-direction: column; gap: 0; }
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.settings-toggle-row:last-child { border-bottom: none; }
+.settings-toggle-row--disabled { opacity: .45; }
+.settings-toggle-info { flex: 1; min-width: 0; }
+.settings-toggle-title {
+  font-family: 'Inter', sans-serif;
+  font-size: .88rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-toggle-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: .78rem;
+  color: #5a6b7d;
+  line-height: 1.4;
+}
+
+/* ── Pills ────────────────────────────────────────────────────────────────── */
+.settings-pill-soon {
+  font-family: 'Inter', sans-serif;
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255,90,31,0.12);
+  color: #ff5a1f;
+  border: 1px solid rgba(255,90,31,0.2);
+}
+.settings-coming-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+/* ── Integrations Grid ────────────────────────────────────────────────────── */
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 600px) {
+  .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.integration-item {
+  padding: 14px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  transition: border-color .15s;
+}
+.integration-item--active { border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.03); }
+.integration-item--soon { opacity: .5; }
+.integration-icon { font-size: 1.4rem; }
+.integration-name {
+  font-family: 'Inter', sans-serif;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #c8d4e0;
+}
+.integration-status {
+  font-family: 'Inter', sans-serif;
+  font-size: .68rem;
+  color: #5a6b7d;
+}
+.integration-status--connected { color: #22c55e; }
+
+/* ── Danger Zone Card ─────────────────────────────────────────────────────── */
+.settings-danger-card {
+  border-color: rgba(239,68,68,0.15) !important;
+  background: rgba(239,68,68,0.03) !important;
+}
+.settings-danger-title { color: #f87171 !important; }
+.settings-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Settings Tab Layout ──────────────────────────────────────────────────── */
+.settings-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* ── Settings Card ────────────────────────────────────────────────────────── */
+.settings-card { padding: 0; }
+.settings-card-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.settings-card-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f0f4f8;
+  margin-bottom: 3px;
+}
+.settings-card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: .8rem;
+  color: #5a6b7d;
+  line-height: 1.4;
+}
+.settings-card-body {
+  padding: 16px 20px 20px;
+}
+
+/* ── Status Badge ─────────────────────────────────────────────────────────── */
+.settings-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+.settings-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34,197,94,0.6);
+}
+.settings-status-badge span:last-child {
+  font-family: 'Inter', sans-serif;
+  font-size: .75rem;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+/* ── Status Bar ───────────────────────────────────────────────────────────── */
+.settings-status-bar {
+  padding: 10px 14px;
+  background: rgba(34,197,94,0.04);
+  border: 1px solid rgba(34,197,94,0.1);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+.settings-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Toggle Rows ──────────────────────────────────────────────────────────── */
+.settings-toggles { display: flex; flex-direction: column; gap: 0; }
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.settings-toggle-row:last-child { border-bottom: none; }
+.settings-toggle-row--disabled { opacity: .45; }
+.settings-toggle-info { flex: 1; min-width: 0; }
+.settings-toggle-title {
+  font-family: 'Inter', sans-serif;
+  font-size: .88rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-toggle-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: .78rem;
+  color: #5a6b7d;
+  line-height: 1.4;
+}
+
+/* ── Pills ────────────────────────────────────────────────────────────────── */
+.settings-pill-soon {
+  font-family: 'Inter', sans-serif;
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255,90,31,0.12);
+  color: #ff5a1f;
+  border: 1px solid rgba(255,90,31,0.2);
+}
+.settings-coming-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+/* ── Integrations Grid ────────────────────────────────────────────────────── */
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 600px) {
+  .integrations-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.integration-item {
+  padding: 14px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  transition: border-color .15s;
+}
+.integration-item--active { border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.03); }
+.integration-item--soon { opacity: .5; }
+.integration-icon { font-size: 1.4rem; }
+.integration-name {
+  font-family: 'Inter', sans-serif;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #c8d4e0;
+}
+.integration-status {
+  font-family: 'Inter', sans-serif;
+  font-size: .68rem;
+  color: #5a6b7d;
+}
+.integration-status--connected { color: #22c55e; }
+
+/* ── Danger Zone Card ─────────────────────────────────────────────────────── */
+.settings-danger-card {
+  border-color: rgba(239,68,68,0.15) !important;
+  background: rgba(239,68,68,0.03) !important;
+}
+.settings-danger-title { color: #f87171 !important; }
+.settings-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}

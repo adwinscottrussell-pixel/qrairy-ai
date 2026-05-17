@@ -211,12 +211,210 @@
 
       <!-- TAB: Settings -->
       <div class="mgr-tab-panel" id="tab-settings">
-        <div class="mgr-single-col">
-            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2699;</span> Page Controls</span></div><div class="panel-body"><div class="status-bar" id="status-bar"><div class="status-indicator"><div class="status-dot-live"></div><span id="status-text" style="color:#22c55e">Live - Page is active</span></div><button class="btn-toggle-status btn-unpublish" id="btn-status">Unpublish</button></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">AI Assistant</span><span class="toggle-desc">Chat widget on landing page</span></div><label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Voice Welcome</span><span class="toggle-desc">Auto-play introduction message</span></div><label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Wallet Subscription</span><span class="toggle-desc">Show subscribe + wallet section</span></div><label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">CTA Buttons</span><span class="toggle-desc">Primary action buttons visible</span></div><label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label></div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn-mgr btn-primary" id="btn-open-page" style="flex:1">&#x1F310; View Live Page</button><button class="btn-mgr btn-outline" id="btn-copy-url" style="flex:1">&#x1F4CB; Copy URL</button></div></div></div>
+        <div class="settings-col">
+
+          <!-- Section 1: Page Status -->
+          <div class="panel settings-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title">Page Status</div>
+                <div class="settings-card-desc">Control deployment and visibility of your AI landing page</div>
+              </div>
+              <div class="settings-status-badge" id="settings-status-badge">
+                <span class="settings-status-dot"></span>
+                <span id="settings-status-lbl">Live</span>
+              </div>
+            </div>
+            <div class="settings-card-body">
+              <div class="settings-status-bar" id="status-bar">
+                <div class="status-indicator">
+                  <div class="status-dot-live"></div>
+                  <span id="status-text" style="color:#22c55e;font-family:'Inter',sans-serif;font-size:.88rem;">Live — Page is active</span>
+                </div>
+              </div>
+              <div class="settings-action-row">
+                <button class="btn-mgr btn-primary" id="btn-open-page">&#x1F310; View Live Page</button>
+                <button class="btn-mgr btn-outline" id="btn-copy-url">&#x1F4CB; Copy URL</button>
+                <button class="btn-toggle-status btn-unpublish" id="btn-status" style="margin-left:auto">Unpublish</button>
+              </div>
+            </div>
           </div>
-          <div class="mgr-col">
-            <div class="panel"><div class="panel-body"><div class="danger-zone"><div class="danger-title">Danger Zone</div><button class="btn-delete" id="btn-delete">Delete this Smart QR Page</button></div></div></div>
+
+          <!-- Section 2: Experience Features -->
+          <div class="panel settings-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title">Experience Features</div>
+                <div class="settings-card-desc">Control which AI and engagement features appear on your landing page</div>
+              </div>
+            </div>
+            <div class="settings-card-body settings-toggles">
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">AI Assistant</div>
+                  <div class="settings-toggle-desc">Interactive chat widget shown to visitors on your landing page</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Voice Welcome</div>
+                  <div class="settings-toggle-desc">Auto-play audio introduction when visitors arrive</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Wallet Subscription</div>
+                  <div class="settings-toggle-desc">Show Apple &amp; Google Wallet subscribe section</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">CTA Buttons</div>
+                  <div class="settings-toggle-desc">Display primary call-to-action buttons on the page</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row settings-toggle-row--disabled">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Push Notifications <span class="settings-pill-soon">Pro</span></div>
+                  <div class="settings-toggle-desc">Send push notifications to wallet subscribers</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" disabled/><span class="toggle-slider"></span></label>
+              </div>
+            </div>
           </div>
+
+          <!-- Section 3: Visibility & Access -->
+          <div class="panel settings-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title">Visibility &amp; Access</div>
+                <div class="settings-card-desc">Control who can access your page and under what conditions</div>
+              </div>
+            </div>
+            <div class="settings-card-body settings-toggles">
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Public Page</div>
+                  <div class="settings-toggle-desc">Anyone with the link can view this page</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" checked/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row settings-toggle-row--disabled">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Password Protection <span class="settings-pill-soon">Pro</span></div>
+                  <div class="settings-toggle-desc">Require a password to view the page</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" disabled/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row settings-toggle-row--disabled">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Scan Limit <span class="settings-pill-soon">Pro</span></div>
+                  <div class="settings-toggle-desc">Limit how many times this QR can be scanned</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" disabled/><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-toggle-row settings-toggle-row--disabled">
+                <div class="settings-toggle-info">
+                  <div class="settings-toggle-title">Expiration Date <span class="settings-pill-soon">Pro</span></div>
+                  <div class="settings-toggle-desc">Automatically deactivate this page after a set date</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" disabled/><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: SEO & Sharing -->
+          <div class="panel settings-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title">SEO &amp; Sharing</div>
+                <div class="settings-card-desc">Control how your page appears in search engines and social sharing</div>
+              </div>
+            </div>
+            <div class="settings-card-body">
+              <div class="field-group">
+                <label class="field-lbl">Page Title</label>
+                <input type="text" class="field-input" placeholder="My Business — Smart QR Landing Page"/>
+              </div>
+              <div class="field-group">
+                <label class="field-lbl">Meta Description</label>
+                <textarea class="field-textarea" rows="2" placeholder="Welcome to our AI-powered landing page. Scan to connect instantly..."></textarea>
+              </div>
+              <div class="settings-coming-row">
+                <span class="settings-pill-soon">Coming Soon</span>
+                <span style="font-size:.8rem;color:#5a6b7d">Social share image and Open Graph preview</span>
+              </div>
+              <button class="btn-save-field" style="margin-top:4px">Save SEO Settings</button>
+            </div>
+          </div>
+
+          <!-- Section 5: Integrations -->
+          <div class="panel settings-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title">Integrations</div>
+                <div class="settings-card-desc">Connect your page to external tools and platforms</div>
+              </div>
+            </div>
+            <div class="settings-card-body">
+              <div class="integrations-grid">
+                <div class="integration-item integration-item--active">
+                  <div class="integration-icon">&#x1F4DE;</div>
+                  <div class="integration-name">ElevenLabs</div>
+                  <div class="integration-status integration-status--connected">Connected</div>
+                </div>
+                <div class="integration-item integration-item--active">
+                  <div class="integration-icon">&#x1F4B3;</div>
+                  <div class="integration-name">Wallet Passes</div>
+                  <div class="integration-status integration-status--connected">Active</div>
+                </div>
+                <div class="integration-item integration-item--soon">
+                  <div class="integration-icon">&#x26A1;</div>
+                  <div class="integration-name">Zapier</div>
+                  <div class="integration-status">Coming Soon</div>
+                </div>
+                <div class="integration-item integration-item--soon">
+                  <div class="integration-icon">&#x1F4E7;</div>
+                  <div class="integration-name">Mailchimp</div>
+                  <div class="integration-status">Coming Soon</div>
+                </div>
+                <div class="integration-item integration-item--soon">
+                  <div class="integration-icon">&#x1F4B0;</div>
+                  <div class="integration-name">Stripe</div>
+                  <div class="integration-status">Coming Soon</div>
+                </div>
+                <div class="integration-item integration-item--soon">
+                  <div class="integration-icon">&#x1F916;</div>
+                  <div class="integration-name">OpenAI</div>
+                  <div class="integration-status">Connected</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 6: Danger Zone -->
+          <div class="panel settings-card settings-danger-card">
+            <div class="settings-card-hdr">
+              <div>
+                <div class="settings-card-title settings-danger-title">Danger Zone</div>
+                <div class="settings-card-desc">Irreversible and destructive actions</div>
+              </div>
+            </div>
+            <div class="settings-card-body">
+              <div class="settings-danger-row">
+                <div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.9rem;font-weight:600;color:#f87171">Delete Smart QR Page</div>
+                  <div style="font-family:'Inter',sans-serif;font-size:.8rem;color:#7a8fa8;margin-top:2px">Permanently delete this page and all associated data. This cannot be undone.</div>
+                </div>
+                <button class="btn-delete" id="btn-delete">Delete Page</button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div><!-- end tab-settings -->
     </div>
