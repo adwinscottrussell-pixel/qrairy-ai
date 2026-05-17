@@ -1,209 +1,150 @@
-/**
- * session.js — QRairy Centralized Session Model
- * ─────────────────────────────────────────────────────────────────
- * Single source of truth for session type, entitlements, routing
- * decisions, feature gates, and upgrade prompts.
- *
- * sessionType enum:
- *   anonymous | free | trial | premium | admin
- *
- * Include on every app page (customer + admin):
- *   <script src="/js/session.js"></script>
- *
- * Do NOT duplicate entitlement checks in individual pages.
- * Call QRairySession.init() once after Clerk loads.
- * ─────────────────────────────────────────────────────────────────
- */
-
 const QRairySession = (function () {
   'use strict';
-
-  // ── Session type enum ─────────────────────────────────────────
-  var TYPE = {
-    ANONYMOUS : 'anonymous',
-    FREE      : 'free',
-    TRIAL     : 'trial',
-    PREMIUM   : 'premium',
-    ADMIN     : 'admin',
-  };
-
-  // ── Feature gate definitions ──────────────────────────────────
-  // Each feature lists the minimum session types that can access it.
+  var API_BASE = 'https://api.qraivy.com';
+  var TYPE = { ANONYMOUS:'anonymous', FREE:'free', TRIAL:'trial', PREMIUM:'premium', ADMIN:'admin' };
   var GATES = {
-    freeQrGenerator   : [TYPE.ANONYMOUS, TYPE.FREE, TYPE.TRIAL, TYPE.PREMIUM, TYPE.ADMIN],
-    dashboard         : [TYPE.FREE, TYPE.TRIAL, TYPE.PREMIUM, TYPE.ADMIN],
-    analytics         : [TYPE.TRIAL, TYPE.PREMIUM, TYPE.ADMIN],
-    subscribers       : [TYPE.TRIAL, TYPE.PREMIUM, TYPE.ADMIN],
-    campaigns         : [TYPE.PREMIUM, TYPE.ADMIN],
-    walletPasses      : [TYPE.PREMIUM, TYPE.ADMIN],
-    aiLandingPage     : [TYPE.PREMIUM, TYPE.ADMIN],
-    aiAssistant       : [TYPE.PREMIUM, TYPE.ADMIN],
-    adminPanel        : [TYPE.ADMIN],
+    freeQrGenerator:[TYPE.ANONYMOUS,TYPE.FREE,TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    dashboard:[TYPE.FREE,TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    analytics:[TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    subscribers:[TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    campaigns:[TYPE.PREMIUM,TYPE.ADMIN],
+    walletPasses:[TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    aiLandingPage:[TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    aiAssistant:[TYPE.PREMIUM,TYPE.ADMIN],
+    dynamicQr:[TYPE.PREMIUM,TYPE.ADMIN],
+    push:[TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],
+    adminPanel:[TYPE.ADMIN],
   };
-
-  // ── Route groups ──────────────────────────────────────────────
   var ROUTES = {
-    public: {
-      home    : '/',
-      pricing : '/pricing.html',
-      freeQr  : '/qr/free.html',
-      login   : '/login.html',
-    },
-    app: {
-      dashboard   : '/app/dashboard.html',
-      analytics   : '/app/analytics.html',
-      pages       : '/app/pages.html',
-      subscribers : '/app/subscribers.html',
-      wallet      : '/app/wallet.html',
-      upgrade     : '/app/upgrade.html',
-    },
-    admin: {
-      overview  : '/admin/index.html',
-      users     : '/admin/users.html',
-      revenue   : '/admin/revenue.html',
-      analytics : '/admin/analytics.html',
-      health    : '/admin/health.html',
-      billing   : '/admin/billing.html',
-      settings  : '/admin/settings.html',
-    },
+    public:{ home:'/', pricing:'/pricing.html', freeQr:'/qr/free.html', login:'/login.html' },
+    app:{ dashboard:'/dashboard.html', analytics:'/analytics.html', upgrade:'/upgrade.html' },
+    admin:{ overview:'/admin.html' },
   };
-
-  // ── Internal state ────────────────────────────────────────────
   var _session = {
-    type      : TYPE.ANONYMOUS,
-    userId    : null,
-    email     : null,
-    firstName : null,
-    plan      : null,
-    trialEnd  : null,
-    role      : null,
-    loaded    : false,
+    type:TYPE.ANONYMOUS, userId:null, email:null, firstName:null, role:null, loaded:false,
+    plan:null, rawPlan:null, basePlan:null, isFree:true, isTrial:false, isTrialExpired:false,
+    isPremium:false, isAnnual:false, trialExpiresAt:null, trialSecondsRemaining:null,
+    subscriptionStatus:null, canCreateAI:false, canUseDynamic:false, canAccessSmartDash:false,
+    canUseAnalytics:false, canUseWallet:false, canUsePush:false, canUseCampaigns:false,
+    aiLimit:0, aiQrCount:0, aiRemaining:0, hasPhone:false, planLoaded:false,
   };
-
-  // ── Derive session type from Clerk user metadata ──────────────
-  function _deriveType(user) {
-    if (!user) return TYPE.ANONYMOUS;
-
-    var meta = user.publicMetadata || {};
-
-    if (meta.role === 'admin')     return TYPE.ADMIN;
-    if (meta.plan === 'premium')   return TYPE.PREMIUM;
-
-    // Trial: plan=trial and trialEnd is in the future
-    if (meta.plan === 'trial' && meta.trialEnd) {
-      var expiry = new Date(meta.trialEnd);
-      if (expiry > new Date()) return TYPE.TRIAL;
-      // Trial expired — downgrade to free
-      return TYPE.FREE;
-    }
-
+  var _trialTimer = null;
+  function _deriveTypeFromPlan(p) {
+    if (!p) return TYPE.FREE;
+    if (p.isTrial && !p.isTrialExpired) return TYPE.TRIAL;
+    if (p.isPremium) return TYPE.PREMIUM;
     return TYPE.FREE;
   }
-
-  // ── Load session from Clerk ───────────────────────────────────
   async function init() {
-    if (!window.Clerk) {
-      _session.type   = TYPE.ANONYMOUS;
-      _session.loaded = true;
-      return _session;
-    }
-
+    if (!window.Clerk) { _session.type=TYPE.ANONYMOUS; _session.loaded=true; return _session; }
     await window.Clerk.load();
     var user = window.Clerk.user;
-
-    if (!user) {
-      _session.type   = TYPE.ANONYMOUS;
-      _session.loaded = true;
-      return _session;
-    }
-
+    if (!user) { _session.type=TYPE.ANONYMOUS; _session.loaded=true; return _session; }
     var meta = user.publicMetadata || {};
-
-    _session.type      = _deriveType(user);
-    _session.userId    = user.id;
-    _session.email     = user.primaryEmailAddress
-                           ? user.primaryEmailAddress.emailAddress : null;
+    if (meta.role === 'admin') _session.type = TYPE.ADMIN;
+    _session.userId = user.id;
+    _session.email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : null;
     _session.firstName = user.firstName || null;
-    _session.plan      = meta.plan || 'free';
-    _session.trialEnd  = meta.trialEnd || null;
-    _session.role      = meta.role || null;
-    _session.loaded    = true;
-
+    _session.role = meta.role || null;
+    _session.loaded = true;
     return _session;
   }
-
-  // ── Feature gate check ────────────────────────────────────────
-  function can(feature) {
-    var allowed = GATES[feature];
-    if (!allowed) {
-      console.warn('[QRairySession] Unknown feature gate:', feature);
-      return false;
+  async function loadPlan() {
+    if (!_session.loaded) await init();
+    if (!_session.userId || _session.type === TYPE.ANONYMOUS) return _session;
+    try {
+      var token = await window.Clerk.session.getToken();
+      var res = await fetch(API_BASE + '/tier/plan', { headers: { Authorization: 'Bearer ' + token } });
+      if (!res.ok) throw new Error('Plan fetch failed');
+      var data = await res.json();
+      var p = data.planInfo;
+      if (!p) throw new Error('No planInfo');
+      _session.plan=p.plan; _session.rawPlan=p.rawPlan; _session.basePlan=p.basePlan;
+      _session.isFree=p.isFree; _session.isTrial=p.isTrial; _session.isTrialExpired=p.isTrialExpired;
+      _session.isPremium=p.isPremium; _session.isAnnual=p.isAnnual;
+      _session.trialExpiresAt=p.trialExpiresAt; _session.trialSecondsRemaining=p.trialSecondsRemaining;
+      _session.subscriptionStatus=p.subscriptionStatus;
+      _session.canCreateAI=p.canCreateAI; _session.canUseDynamic=p.canUseDynamic;
+      _session.canAccessSmartDash=p.canAccessSmartDash; _session.canUseAnalytics=p.canUseAnalytics;
+      _session.canUseWallet=p.canUseWallet; _session.canUsePush=p.canUsePush;
+      _session.canUseCampaigns=p.canUseCampaigns; _session.aiLimit=p.aiLimit;
+      _session.aiQrCount=p.aiQrCount; _session.aiRemaining=p.aiRemaining;
+      _session.hasPhone=p.hasPhone; _session.planLoaded=true;
+      if (_session.type !== TYPE.ADMIN) _session.type = _deriveTypeFromPlan(p);
+    } catch(err) {
+      console.warn('[QRairySession] loadPlan failed:', err.message);
+      var meta = window.Clerk.user.publicMetadata || {};
+      if (meta.plan==='trial') _session.type=TYPE.TRIAL;
+      else if (['starter','pro','starter_annual','pro_annual','business','business_annual'].includes(meta.plan)) _session.type=TYPE.PREMIUM;
     }
+    return _session;
+  }
+  async function startTrial() {
+    if (!_session.userId) return null;
+    var token = await window.Clerk.session.getToken();
+    var res = await fetch(API_BASE + '/tier/trial', { method:'POST', headers:{ Authorization:'Bearer '+token } });
+    var data = await res.json();
+    if (data.planInfo) await loadPlan();
+    return data;
+  }
+  function applyTrialUI() {
+    if (_trialTimer) clearInterval(_trialTimer);
+    var pill=document.getElementById('trial-pill');
+    var dot=document.getElementById('trial-dot');
+    var txt=document.getElementById('trial-text');
+    var badge=document.getElementById('plan-badge');
+    if (badge) badge.textContent = (_session.basePlan||_session.plan||'FREE').toUpperCase();
+    if (!pill) return;
+    if (_session.isTrial && _session.trialSecondsRemaining > 0) {
+      pill.classList.add('show'); pill.classList.remove('expired');
+      var secs = _session.trialSecondsRemaining;
+      function tick() {
+        if (secs<=0) { clearInterval(_trialTimer); pill.classList.add('expired'); if(dot) dot.style.background='#ef4444'; if(txt) txt.innerHTML='<strong>Trial expired</strong> &mdash; upgrade to reactivate your AI pages'; return; }
+        var m=Math.floor(secs/60),s=secs%60;
+        if (txt) txt.innerHTML='<strong>Trial Active</strong> &middot; '+m+'m '+s+'s remaining';
+        secs--;
+      }
+      tick(); _trialTimer = setInterval(tick, 1000);
+    } else if (_session.isTrialExpired) {
+      pill.classList.add('show','expired');
+      if (dot) dot.style.background='#ef4444';
+      if (txt) txt.innerHTML='<strong>Trial expired</strong> &mdash; upgrade to reactivate your AI pages';
+    } else {
+      pill.style.display='none';
+    }
+  }
+  function can(feature) {
+    if (_session.planLoaded) {
+      var m={analytics:_session.canUseAnalytics,subscribers:_session.canUseAnalytics,campaigns:_session.canUseCampaigns,walletPasses:_session.canUseWallet,aiLandingPage:_session.canCreateAI,aiAssistant:_session.canCreateAI,dynamicQr:_session.canUseDynamic,push:_session.canUsePush,dashboard:_session.canAccessSmartDash,adminPanel:_session.type===TYPE.ADMIN,freeQrGenerator:true};
+      if (feature in m) return !!m[feature];
+    }
+    var allowed=GATES[feature];
+    if (!allowed) { console.warn('[QRairySession] Unknown gate:',feature); return false; }
     return allowed.indexOf(_session.type) !== -1;
   }
-
-  // ── Routing helpers ───────────────────────────────────────────
-
-  // Redirect if current session cannot access a feature.
-  // upgradePath: where to send them if they lack access (optional).
   function requireFeature(feature, upgradePath) {
-    if (!_session.loaded) {
-      console.warn('[QRairySession] requireFeature called before init()');
-      return;
-    }
-    if (!can(feature)) {
-      var dest = upgradePath || ROUTES.app.upgrade;
-      window.location.replace(dest);
-    }
+    if (!_session.loaded) return;
+    if (!can(feature)) window.location.replace(upgradePath||ROUTES.app.upgrade);
   }
-
-  // Used by auth-guard and admin-guard — enforce minimum session type.
   function requireType(minType, redirectTo) {
-    var ORDER = [
-      TYPE.ANONYMOUS,
-      TYPE.FREE,
-      TYPE.TRIAL,
-      TYPE.PREMIUM,
-      TYPE.ADMIN,
-    ];
-    var currentIdx = ORDER.indexOf(_session.type);
-    var requiredIdx = ORDER.indexOf(minType);
-
-    if (currentIdx < requiredIdx) {
-      window.location.replace(redirectTo || ROUTES.public.login);
-    }
+    var ORDER=[TYPE.ANONYMOUS,TYPE.FREE,TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN];
+    if (ORDER.indexOf(_session.type)<ORDER.indexOf(minType)) window.location.replace(redirectTo||ROUTES.public.login);
   }
-
-  // ── Upgrade prompt logic ──────────────────────────────────────
-  // Returns true if an upgrade prompt should be shown on this page.
   function shouldShowUpgradePrompt(feature) {
-    if (_session.type === TYPE.PREMIUM || _session.type === TYPE.ADMIN) {
-      return false;
-    }
+    if (_session.type===TYPE.PREMIUM||_session.type===TYPE.ADMIN) return false;
     return !can(feature);
   }
-
-  // ── Trial status ──────────────────────────────────────────────
   function trialDaysLeft() {
-    if (_session.type !== TYPE.TRIAL || !_session.trialEnd) return 0;
-    var msLeft = new Date(_session.trialEnd) - new Date();
-    return Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+    if (!_session.isTrial||!_session.trialExpiresAt) return 0;
+    return Math.max(0, Math.ceil((new Date(_session.trialExpiresAt)-new Date())/(1000*60*60*24)));
   }
-
-  // ── Public API ────────────────────────────────────────────────
   return {
-    TYPE                 : TYPE,
-    ROUTES               : ROUTES,
-    GATES                : GATES,
-    init                 : init,
-    get                  : function () { return Object.assign({}, _session); },
-    can                  : can,
-    requireFeature       : requireFeature,
-    requireType          : requireType,
-    shouldShowUpgradePrompt : shouldShowUpgradePrompt,
-    trialDaysLeft        : trialDaysLeft,
-    isAdmin              : function () { return _session.type === TYPE.ADMIN; },
-    isAuthenticated      : function () { return _session.type !== TYPE.ANONYMOUS; },
+    TYPE, ROUTES, GATES, init, loadPlan, startTrial, applyTrialUI,
+    get: function(){ return Object.assign({},_session); },
+    can, requireFeature, requireType, shouldShowUpgradePrompt, trialDaysLeft,
+    isAdmin: function(){ return _session.type===TYPE.ADMIN; },
+    isAuthenticated: function(){ return _session.type!==TYPE.ANONYMOUS; },
+    isPremium: function(){ return _session.type===TYPE.PREMIUM; },
+    isTrial: function(){ return _session.type===TYPE.TRIAL; },
   };
-
 })();
