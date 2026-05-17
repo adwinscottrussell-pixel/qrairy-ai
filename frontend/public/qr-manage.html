@@ -84,262 +84,60 @@
 
       <!-- TAB: Overview -->
       <div class="mgr-tab-panel active" id="tab-overview">
-      <div class="mgr-grid">
-        <div class="mgr-col">
-
-          <!-- QR Preview -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">⬡</span> QR Code</span>
-              <button class="panel-action" id="btn-refresh-qr">↻ Refresh</button>
-            </div>
-            <div class="qr-preview-main">
-              <div class="qr-preview-frame">
-                <img id="qr-main-img" src="" alt="QR Code"/>
-              </div>
-              <div class="qr-preview-url" id="qr-main-url">—</div>
-              <div class="qr-scan-pill" id="qr-scan-pill">⬡ 0 scans</div>
-            </div>
+        <div class="mgr-grid">
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2B21;</span> QR Code</span><button class="panel-action" id="btn-refresh-qr">&#x21BB; Refresh</button></div><div class="qr-preview-main"><div class="qr-preview-frame"><img id="qr-main-img" src="" alt="QR Code"/></div><div class="qr-preview-url" id="qr-main-url">&#x2014;</div><div class="qr-scan-pill" id="qr-scan-pill">&#x2B21; 0 scans</div></div></div>
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x26A1;</span> Activity Feed</span></div><div class="panel-body" style="padding:12px 16px"><div class="activity-list" id="activity-list"><div class="act-empty">No activity yet</div></div></div></div>
           </div>
-
-          <!-- QR Customise -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">🎨</span> Customise QR</span>
-            </div>
-            <div class="panel-body">
-              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Presets</div>
-              <div class="custom-presets" id="cp-row">
-                <div class="cp active" data-fg="111111" data-bg="ffffff" style="background:#fff;color:#111;font-size:.5rem">Classic</div>
-                <div class="cp" data-fg="ff5a1f" data-bg="0a0a0a" style="background:#0a0a0a;color:#ff5a1f;border-color:rgba(255,90,31,0.4)">Brand</div>
-                <div class="cp" data-fg="ffffff" data-bg="ff5a1f" style="background:#ff5a1f;color:#fff">Invert</div>
-                <div class="cp" data-fg="0a0a0a" data-bg="f0ece0" style="background:#f0ece0;color:#0a0a0a">Light</div>
-              </div>
-              <div class="custom-colors">
-                <div class="color-field">
-                  <div class="color-swatch" id="fg-swatch" style="background:#111" onclick="document.getElementById('fg-input').click()"></div>
-                  <input type="color" id="fg-input" value="#111111" style="display:none"/>
-                  <div><div class="color-label">QR Colour</div><div class="color-hex" id="fg-hex">#111111</div></div>
-                </div>
-                <div class="color-field">
-                  <div class="color-swatch" id="bg-swatch" style="background:#fff" onclick="document.getElementById('bg-input').click()"></div>
-                  <input type="color" id="bg-input" value="#ffffff" style="display:none"/>
-                  <div><div class="color-label">Background</div><div class="color-hex" id="bg-hex">#ffffff</div></div>
-                </div>
-              </div>
-              <button class="btn-update-qr" id="btn-update-qr">↻ Update QR Preview</button>
-            </div>
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2197;</span> Performance</span><a class="panel-action" href="analytics.html">Full report &#x2192;</a></div><div class="panel-body"><div class="kpi-mini"><div class="kpi-m"><div class="kpi-m-val o" id="kpi-scans">0</div><div class="kpi-m-lbl">Scans</div></div><div class="kpi-m"><div class="kpi-m-val g" id="kpi-subs">0</div><div class="kpi-m-lbl">Subscribers</div></div><div class="kpi-m"><div class="kpi-m-val p" id="kpi-cvr">0%</div><div class="kpi-m-lbl">CVR</div></div></div><div style="margin-top:10px"><div class="ai-metric-row"><span class="ai-m-lbl">Wallet installs</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">AI conversations</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Voice plays</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Last scan</span><span class="ai-m-val" id="last-scan">&#x2014;</span></div></div></div></div>
           </div>
-
-          <!-- Download Centre -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">⬇</span> Download QR</span>
-            </div>
-            <div class="panel-body">
-              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Size</div>
-              <div class="dl-sizes" id="dl-sizes">
-                <div class="dl-size" data-size="200"><span class="dl-size-name">Small</span><span class="dl-size-px">200 × 200 px</span></div>
-                <div class="dl-size active" data-size="400"><span class="dl-size-name">Medium</span><span class="dl-size-px">400 × 400 px</span></div>
-                <div class="dl-size" data-size="800"><span class="dl-size-name">Large</span><span class="dl-size-px">800 × 800 px</span></div>
-                <div class="dl-size" data-size="1200"><span class="dl-size-name">Print</span><span class="dl-size-px">1200 × 1200 px</span></div>
-              </div>
-              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Format</div>
-              <div class="dl-formats" id="dl-formats">
-                <div class="dl-fmt active" data-fmt="png">PNG</div>
-                <div class="dl-fmt" data-fmt="svg">SVG</div>
-                <div class="dl-fmt" data-fmt="pdf">PDF</div>
-              </div>
-              <button class="btn-download" id="btn-download">⬇ Download QR Code</button>
-            </div>
-          </div>
-
         </div>
-        <div class="mgr-col">
-          <!-- Analytics summary -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">↗</span> Performance</span>
-              <a class="panel-action" href="analytics.html">Full report →</a>
-            </div>
-            <div class="panel-body">
-              <div class="kpi-mini">
-                <div class="kpi-m"><div class="kpi-m-val o" id="kpi-scans">0</div><div class="kpi-m-lbl">Scans</div></div>
-                <div class="kpi-m"><div class="kpi-m-val g" id="kpi-subs">0</div><div class="kpi-m-lbl">Subscribers</div></div>
-                <div class="kpi-m"><div class="kpi-m-val p" id="kpi-cvr">0%</div><div class="kpi-m-lbl">CVR</div></div>
-              </div>
-              <div style="margin-top:10px">
-                <div class="ai-metric-row"><span class="ai-m-lbl">Wallet installs</span><span class="ai-m-val">—</span></div>
-                <div class="ai-metric-row"><span class="ai-m-lbl">AI conversations</span><span class="ai-m-val">—</span></div>
-                <div class="ai-metric-row"><span class="ai-m-lbl">Voice plays</span><span class="ai-m-val">—</span></div>
-                <div class="ai-metric-row"><span class="ai-m-lbl">CTA clicks</span><span class="ai-m-val">—</span></div>
-                <div class="ai-metric-row"><span class="ai-m-lbl">Last scan</span><span class="ai-m-val" id="last-scan">—</span></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Page controls -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">⚙</span> Page Controls</span>
-            </div>
-            <div class="panel-body">
-              <div class="status-bar" id="status-bar">
-                <div class="status-indicator">
-                  <div class="status-dot-live"></div>
-                  <span id="status-text" style="color:#22c55e">Live — Page is active</span>
-                </div>
-                <button class="btn-toggle-status btn-unpublish" id="btn-status">Unpublish</button>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-info"><span class="toggle-label">AI Assistant</span><span class="toggle-desc">Chat widget on landing page</span></div>
-                <label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-info"><span class="toggle-label">Voice Welcome</span><span class="toggle-desc">Auto-play introduction message</span></div>
-                <label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-info"><span class="toggle-label">Wallet Subscription</span><span class="toggle-desc">Show subscribe + wallet section</span></div>
-                <label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <div class="toggle-info"><span class="toggle-label">CTA Buttons</span><span class="toggle-desc">Primary action buttons visible</span></div>
-                <label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-                <button class="btn-mgr btn-primary" id="btn-open-page" style="flex:1">🌐 View Live Page</button>
-                <button class="btn-mgr btn-outline" id="btn-copy-url" style="flex:1">📋 Copy URL</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Voice welcome -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">🎙</span> Voice Welcome</span>
-              <span class="panel-action">ElevenLabs</span>
-            </div>
-            <div class="panel-body">
-              <div class="voice-player">
-                <button class="voice-btn" id="voice-play-btn">▶</button>
-                <div class="voice-info">
-                  <div class="voice-name">Welcome Message</div>
-                  <div class="voice-sub" id="voice-sub">Tap to preview</div>
-                </div>
-                <div class="voice-wave" id="voice-wave">
-                  <div class="vw-bar" style="height:8px"></div>
-                  <div class="vw-bar" style="height:16px"></div>
-                  <div class="vw-bar" style="height:12px"></div>
-                  <div class="vw-bar" style="height:20px"></div>
-                  <div class="vw-bar" style="height:10px"></div>
-                  <div class="vw-bar" style="height:18px"></div>
-                  <div class="vw-bar" style="height:8px"></div>
-                  <div class="vw-bar" style="height:14px"></div>
-                </div>
-              </div>
-              <div class="field-group">
-                <label class="field-lbl">Voice Script</label>
-                <textarea class="field-textarea" id="voice-script" placeholder="Hi! Welcome to our business. I'm your AI assistant…"></textarea>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-save-field" style="flex:1">Save Script</button>
-                <button class="btn-mgr btn-ghost" style="flex:1;padding:8px">⬡ Regenerate AI</button>
-              </div>
-              <div class="voice-coming" style="margin-top:8px">⬡ ElevenLabs voice generation — coming soon</div>
-            </div>
-          </div>
-
-          <!-- AI Assistant -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">🤖</span> AI Assistant</span>
-            </div>
-            <div class="panel-body">
-              <div class="ai-metric-row"><span class="ai-m-lbl">Status</span><span class="ai-m-val" style="color:#22c55e">● Active</span></div>
-              <div class="ai-metric-row"><span class="ai-m-lbl">Conversations started</span><span class="ai-m-val">—</span></div>
-              <div class="ai-metric-row"><span class="ai-m-lbl">Avg engagement time</span><span class="ai-m-val">—</span></div>
-              <div class="ai-metric-row"><span class="ai-m-lbl">AI conversion rate</span><span class="ai-m-val o" id="ai-cvr-val">—</span></div>
-              <div style="margin-top:14px">
-                <div class="field-group">
-                  <label class="field-lbl">Business Context</label>
-                  <textarea class="field-textarea" id="ai-context" placeholder="Describe your business, services, FAQs and key information for the AI assistant…"></textarea>
-                </div>
-                <div class="field-group">
-                  <label class="field-lbl">AI Greeting</label>
-                  <input type="text" class="field-input" id="ai-greeting" placeholder="Hi! I can help answer questions about [Business]…"/>
-                </div>
-                <button class="btn-save-field">Save AI Settings</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Subscribers & Wallet -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">💳</span> Subscribers & Wallet</span>
-            </div>
-            <div class="panel-body">
-              <div class="sub-row"><span class="sub-lbl">Total subscribers</span><span class="sub-val g" id="sub-total">—</span></div>
-              <div class="sub-row"><span class="sub-lbl">Email captures</span><span class="sub-val" id="sub-email">—</span></div>
-              <div class="sub-row"><span class="sub-lbl">Wallet installs</span><span class="sub-val p" id="sub-wallet">—</span></div>
-              <div class="sub-row"><span class="sub-lbl">Push notification opens</span><span class="sub-val">—</span></div>
-              <div class="sub-row"><span class="sub-lbl">Active members</span><span class="sub-val o">—</span></div>
-              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-                <button class="btn-mgr btn-outline" style="flex:1">⬇ Export CSV</button>
-                <button class="btn-mgr btn-primary" style="flex:1">✨ Send Campaign</button>
-              </div>
-              <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#5a6473;text-align:center;margin-top:8px">Apple & Google Wallet integration — coming soon</div>
-            </div>
-          </div>
-
-          <!-- Activity feed -->
-          <div class="panel">
-            <div class="panel-hdr">
-              <span class="panel-title"><span class="panel-icon">⚡</span> Activity Feed</span>
-            </div>
-            <div class="panel-body" style="padding:12px 16px">
-              <div class="activity-list" id="activity-list">
-                <div class="act-empty">No activity yet — publish your page to start tracking</div>
-              </div>
-            </div>
-          </div>
-
-        </div><!-- end right col overview -->
-      </div><!-- end mgr-grid overview -->
-      </div><!-- end tab-overview -->
+      </div>
 
       <!-- TAB: Design -->
       <div class="mgr-tab-panel" id="tab-design">
-      <div class="mgr-grid"><div class="mgr-col">
-          <!-- QR Preview (Design) -->
-          <!-- (panels moved here via JS show/hide — static copy below) -->
-      </div></div>
-      </div><!-- end tab-design -->
+        <div class="mgr-grid">
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F3A8;</span> Customise QR</span></div><div class="panel-body"><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Presets</div><div class="custom-presets" id="cp-row"><div class="cp active" data-fg="111111" data-bg="ffffff" style="background:#fff;color:#111;font-size:.5rem">Classic</div><div class="cp" data-fg="ff5a1f" data-bg="0a0a0a" style="background:#0a0a0a;color:#ff5a1f;border-color:rgba(255,90,31,0.4)">Brand</div><div class="cp" data-fg="ffffff" data-bg="ff5a1f" style="background:#ff5a1f;color:#fff">Invert</div><div class="cp" data-fg="0a0a0a" data-bg="f0ece0" style="background:#f0ece0;color:#0a0a0a">Light</div></div><div class="custom-colors"><div class="color-field"><div class="color-swatch" id="fg-swatch" style="background:#111" onclick="document.getElementById('fg-input').click()"></div><input type="color" id="fg-input" value="#111111" style="display:none"/><div><div class="color-label">QR Colour</div><div class="color-hex" id="fg-hex">#111111</div></div></div><div class="color-field"><div class="color-swatch" id="bg-swatch" style="background:#fff" onclick="document.getElementById('bg-input').click()"></div><input type="color" id="bg-input" value="#ffffff" style="display:none"/><div><div class="color-label">Background</div><div class="color-hex" id="bg-hex">#ffffff</div></div></div></div><button class="btn-update-qr" id="btn-update-qr">&#x21BB; Update QR Preview</button></div></div>
+          </div>
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2B07;</span> Download QR</span></div><div class="panel-body"><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Size</div><div class="dl-sizes" id="dl-sizes"><div class="dl-size" data-size="200"><span class="dl-size-name">Small</span><span class="dl-size-px">200 x 200 px</span></div><div class="dl-size active" data-size="400"><span class="dl-size-name">Medium</span><span class="dl-size-px">400 x 400 px</span></div><div class="dl-size" data-size="800"><span class="dl-size-name">Large</span><span class="dl-size-px">800 x 800 px</span></div><div class="dl-size" data-size="1200"><span class="dl-size-name">Print</span><span class="dl-size-px">1200 x 1200 px</span></div></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Format</div><div class="dl-formats" id="dl-formats"><div class="dl-fmt active" data-fmt="png">PNG</div><div class="dl-fmt" data-fmt="svg">SVG</div><div class="dl-fmt" data-fmt="pdf">PDF</div></div><button class="btn-download" id="btn-download">&#x2B07; Download QR Code</button></div></div>
+          </div>
+        </div>
+      </div>
 
       <!-- TAB: AI Experience -->
       <div class="mgr-tab-panel" id="tab-ai">
-      </div><!-- end tab-ai -->
+        <div class="mgr-grid">
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F399;</span> Voice Welcome</span><span class="panel-action">ElevenLabs</span></div><div class="panel-body"><div class="voice-player"><button class="voice-btn" id="voice-play-btn">&#x25B6;</button><div class="voice-info"><div class="voice-name">Welcome Message</div><div class="voice-sub" id="voice-sub">Tap to preview</div></div><div class="voice-wave" id="voice-wave"><div class="vw-bar" style="height:8px"></div><div class="vw-bar" style="height:16px"></div><div class="vw-bar" style="height:12px"></div><div class="vw-bar" style="height:20px"></div><div class="vw-bar" style="height:10px"></div><div class="vw-bar" style="height:18px"></div><div class="vw-bar" style="height:8px"></div><div class="vw-bar" style="height:14px"></div></div></div><div class="field-group"><label class="field-lbl">Voice Script</label><textarea class="field-textarea" id="voice-script" placeholder="Hi! Welcome to our business..."></textarea></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-save-field" style="flex:1">Save Script</button><button class="btn-mgr btn-ghost" style="flex:1;padding:8px">&#x2B21; Regenerate AI</button></div><div class="voice-coming" style="margin-top:8px">&#x2B21; ElevenLabs voice generation - coming soon</div></div></div>
+          </div>
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F916;</span> AI Assistant</span></div><div class="panel-body"><div class="ai-metric-row"><span class="ai-m-lbl">Status</span><span class="ai-m-val" style="color:#22c55e">&#x25CF; Active</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Conversations started</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Avg engagement time</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">AI conversion rate</span><span class="ai-m-val o" id="ai-cvr-val">&#x2014;</span></div><div style="margin-top:14px"><div class="field-group"><label class="field-lbl">Business Context</label><textarea class="field-textarea" id="ai-context" placeholder="Describe your business, services, FAQs..."></textarea></div><div class="field-group"><label class="field-lbl">AI Greeting</label><input type="text" class="field-input" id="ai-greeting" placeholder="Hi! I can help answer questions..."/></div><button class="btn-save-field">Save AI Settings</button></div></div></div>
+          </div>
+        </div>
+      </div>
 
       <!-- TAB: Subscribers -->
       <div class="mgr-tab-panel" id="tab-subscribers">
-      </div><!-- end tab-subscribers -->
+        <div class="mgr-grid">
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F4B3;</span> Subscribers &amp; Wallet</span></div><div class="panel-body"><div class="sub-row"><span class="sub-lbl">Total subscribers</span><span class="sub-val g" id="sub-total">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Email captures</span><span class="sub-val" id="sub-email">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Wallet installs</span><span class="sub-val p" id="sub-wallet">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Push notification opens</span><span class="sub-val">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Active members</span><span class="sub-val o">&#x2014;</span></div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn-mgr btn-outline" style="flex:1">&#x2B07; Export CSV</button><button class="btn-mgr btn-primary" style="flex:1">&#x2728; Send Campaign</button></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#5a6473;text-align:center;margin-top:8px">Apple &amp; Google Wallet - coming soon</div></div></div>
+          </div>
+        </div>
+      </div>
 
       <!-- TAB: Settings -->
       <div class="mgr-tab-panel" id="tab-settings">
-      <div class="mgr-grid"><div class="mgr-col">
-          <!-- Danger zone -->
-          <div class="panel">
-            <div class="panel-body">
-              <div class="danger-zone">
-                <div class="danger-title">Danger Zone</div>
-                <button class="btn-delete" id="btn-delete">Delete this Smart QR Page</button>
-              </div>
-            </div>
+        <div class="mgr-grid">
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2699;</span> Page Controls</span></div><div class="panel-body"><div class="status-bar" id="status-bar"><div class="status-indicator"><div class="status-dot-live"></div><span id="status-text" style="color:#22c55e">Live - Page is active</span></div><button class="btn-toggle-status btn-unpublish" id="btn-status">Unpublish</button></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">AI Assistant</span><span class="toggle-desc">Chat widget on landing page</span></div><label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Voice Welcome</span><span class="toggle-desc">Auto-play introduction message</span></div><label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Wallet Subscription</span><span class="toggle-desc">Show subscribe + wallet section</span></div><label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">CTA Buttons</span><span class="toggle-desc">Primary action buttons visible</span></div><label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label></div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn-mgr btn-primary" id="btn-open-page" style="flex:1">&#x1F310; View Live Page</button><button class="btn-mgr btn-outline" id="btn-copy-url" style="flex:1">&#x1F4CB; Copy URL</button></div></div></div>
           </div>
-
+          <div class="mgr-col">
+            <div class="panel"><div class="panel-body"><div class="danger-zone"><div class="danger-title">Danger Zone</div><button class="btn-delete" id="btn-delete">Delete this Smart QR Page</button></div></div></div>
+          </div>
         </div>
-      </div></div><!-- end settings col/grid -->
       </div><!-- end tab-settings -->
     </div>
   </main>
