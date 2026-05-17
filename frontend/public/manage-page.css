@@ -81,3 +81,148 @@
 .kpi-m-val.g { color: #22c55e; }
 .kpi-m-val.p { color: #a78bfa; }
 .kpi-m-lbl { font-family: 'Inter', sans-serif; font-size: .62rem; color: #7a8fa8; text-transform: uppercase; letter-spacing: .06em; }
+
+/* ── Design Studio Layout ─────────────────────────────────────────────────── */
+.design-studio {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .design-studio { grid-template-columns: 1fr; }
+}
+.design-col-main { display: flex; flex-direction: column; gap: 16px; }
+.design-col-side { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── QR Preview Stage ─────────────────────────────────────────────────────── */
+.design-preview-panel .panel-body { padding: 0; }
+.design-qr-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 20px;
+}
+.design-qr-glow {
+  position: relative;
+  border-radius: 16px;
+  padding: 3px;
+  background: linear-gradient(135deg, rgba(255,90,31,0.3), rgba(255,90,31,0.05));
+  box-shadow: 0 0 32px rgba(255,90,31,0.12), 0 0 80px rgba(255,90,31,0.04);
+  transition: box-shadow .3s;
+}
+.design-qr-glow:hover {
+  box-shadow: 0 0 40px rgba(255,90,31,0.2), 0 0 100px rgba(255,90,31,0.06);
+}
+.design-qr-frame {
+  background: #fff;
+  border-radius: 13px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+}
+.design-qr-frame img { width: 156px; height: 156px; display: block; }
+.design-qr-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.design-qr-label {
+  font-family: 'Inter', sans-serif;
+  font-size: .72rem;
+  font-weight: 500;
+  color: #ff5a1f;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.design-qr-scans {
+  font-family: 'DM Mono', monospace;
+  font-size: .7rem;
+  color: #5a6b7d;
+}
+
+/* ── Preset Chips ─────────────────────────────────────────────────────────── */
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preset-chip {
+  font-family: 'Inter', sans-serif;
+  font-size: .78rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #8b9ab0;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.preset-chip:hover {
+  border-color: rgba(255,90,31,0.3);
+  color: #f0f4f8;
+  background: rgba(255,90,31,0.06);
+}
+.preset-chip.active {
+  background: #ff5a1f;
+  border-color: #ff5a1f;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Brand Controls ───────────────────────────────────────────────────────── */
+.brand-controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.brand-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+.brand-control-lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  color: #c8d4e0;
+}
+.brand-swatch-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: transform .12s, border-color .12s;
+  flex-shrink: 0;
+}
+.brand-swatch:hover { transform: scale(1.1); border-color: rgba(255,90,31,0.5); }
+.brand-hex {
+  font-family: 'DM Mono', monospace;
+  font-size: .72rem;
+  color: #7a8fa8;
+  min-width: 56px;
+}
+
+/* ── Download section labels ──────────────────────────────────────────────── */
+.dl-section-lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #5a6b7d;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}

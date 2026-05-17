@@ -98,13 +98,95 @@
 
       <!-- TAB: Design -->
       <div class="mgr-tab-panel" id="tab-design">
-        <div class="mgr-grid">
-          <div class="mgr-col">
-            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F3A8;</span> Customise QR</span></div><div class="panel-body"><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Presets</div><div class="custom-presets" id="cp-row"><div class="cp active" data-fg="111111" data-bg="ffffff" style="background:#fff;color:#111;font-size:.5rem">Classic</div><div class="cp" data-fg="ff5a1f" data-bg="0a0a0a" style="background:#0a0a0a;color:#ff5a1f;border-color:rgba(255,90,31,0.4)">Brand</div><div class="cp" data-fg="ffffff" data-bg="ff5a1f" style="background:#ff5a1f;color:#fff">Invert</div><div class="cp" data-fg="0a0a0a" data-bg="f0ece0" style="background:#f0ece0;color:#0a0a0a">Light</div></div><div class="custom-colors"><div class="color-field"><div class="color-swatch" id="fg-swatch" style="background:#111" onclick="document.getElementById('fg-input').click()"></div><input type="color" id="fg-input" value="#111111" style="display:none"/><div><div class="color-label">QR Colour</div><div class="color-hex" id="fg-hex">#111111</div></div></div><div class="color-field"><div class="color-swatch" id="bg-swatch" style="background:#fff" onclick="document.getElementById('bg-input').click()"></div><input type="color" id="bg-input" value="#ffffff" style="display:none"/><div><div class="color-label">Background</div><div class="color-hex" id="bg-hex">#ffffff</div></div></div></div><button class="btn-update-qr" id="btn-update-qr">&#x21BB; Update QR Preview</button></div></div>
+        <div class="design-studio">
+
+          <!-- LEFT: QR Preview + Style Presets + Brand Controls -->
+          <div class="design-col-main">
+
+            <!-- Live QR Preview -->
+            <div class="panel design-preview-panel">
+              <div class="panel-hdr">
+                <span class="panel-title">&#x2B21; Live Preview</span>
+                <button class="panel-action" id="btn-refresh-qr2">&#x21BB; Refresh</button>
+              </div>
+              <div class="design-qr-stage">
+                <div class="design-qr-glow">
+                  <div class="design-qr-frame">
+                    <img id="qr-design-img" src="" alt="QR Preview"/>
+                  </div>
+                </div>
+                <div class="design-qr-meta">
+                  <span class="design-qr-label">Live Preview</span>
+                  <span class="design-qr-scans" id="design-scan-count">&#x2014;</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Style Presets -->
+            <div class="panel">
+              <div class="panel-hdr"><span class="panel-title">&#x1F3A8; Style Presets</span></div>
+              <div class="panel-body">
+                <div class="preset-chips" id="cp-row">
+                  <button class="preset-chip active" data-fg="111111" data-bg="ffffff">Classic</button>
+                  <button class="preset-chip" data-fg="ff5a1f" data-bg="0a0a0a">Brand</button>
+                  <button class="preset-chip" data-fg="ffffff" data-bg="ff5a1f">Invert</button>
+                  <button class="preset-chip" data-fg="0a0a0a" data-bg="f0ece0">Light</button>
+                  <button class="preset-chip" data-fg="a78bfa" data-bg="0a0a0a">Luxe</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand Controls -->
+            <div class="panel">
+              <div class="panel-hdr"><span class="panel-title">&#x1F58C; Brand Controls</span></div>
+              <div class="panel-body">
+                <div class="brand-controls">
+                  <div class="brand-control-row">
+                    <span class="brand-control-lbl">QR Colour</span>
+                    <div class="brand-swatch-group">
+                      <div class="brand-swatch" id="fg-swatch" onclick="document.getElementById('fg-input').click()"></div>
+                      <span class="brand-hex" id="fg-hex">#111111</span>
+                      <input type="color" id="fg-input" value="#111111" style="display:none"/>
+                    </div>
+                  </div>
+                  <div class="brand-control-row">
+                    <span class="brand-control-lbl">Background</span>
+                    <div class="brand-swatch-group">
+                      <div class="brand-swatch" id="bg-swatch" onclick="document.getElementById('bg-input').click()"></div>
+                      <span class="brand-hex" id="bg-hex">#ffffff</span>
+                      <input type="color" id="bg-input" value="#ffffff" style="display:none"/>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn-update-qr" id="btn-update-qr">&#x21BB; Apply to Preview</button>
+              </div>
+            </div>
+
           </div>
-          <div class="mgr-col">
-            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2B07;</span> Download QR</span></div><div class="panel-body"><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Size</div><div class="dl-sizes" id="dl-sizes"><div class="dl-size" data-size="200"><span class="dl-size-name">Small</span><span class="dl-size-px">200 x 200 px</span></div><div class="dl-size active" data-size="400"><span class="dl-size-name">Medium</span><span class="dl-size-px">400 x 400 px</span></div><div class="dl-size" data-size="800"><span class="dl-size-name">Large</span><span class="dl-size-px">800 x 800 px</span></div><div class="dl-size" data-size="1200"><span class="dl-size-name">Print</span><span class="dl-size-px">1200 x 1200 px</span></div></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#8b9ab0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Format</div><div class="dl-formats" id="dl-formats"><div class="dl-fmt active" data-fmt="png">PNG</div><div class="dl-fmt" data-fmt="svg">SVG</div><div class="dl-fmt" data-fmt="pdf">PDF</div></div><button class="btn-download" id="btn-download">&#x2B07; Download QR Code</button></div></div>
+
+          <!-- RIGHT: Download -->
+          <div class="design-col-side">
+            <div class="panel">
+              <div class="panel-hdr"><span class="panel-title">&#x2B07; Export QR</span></div>
+              <div class="panel-body">
+                <div class="dl-section-lbl">Size</div>
+                <div class="dl-sizes" id="dl-sizes">
+                  <div class="dl-size" data-size="200"><span class="dl-size-name">Small</span><span class="dl-size-px">200px</span></div>
+                  <div class="dl-size active" data-size="400"><span class="dl-size-name">Medium</span><span class="dl-size-px">400px</span></div>
+                  <div class="dl-size" data-size="800"><span class="dl-size-name">Large</span><span class="dl-size-px">800px</span></div>
+                  <div class="dl-size" data-size="1200"><span class="dl-size-name">Print</span><span class="dl-size-px">1200px</span></div>
+                </div>
+                <div class="dl-section-lbl">Format</div>
+                <div class="dl-formats" id="dl-formats">
+                  <div class="dl-fmt active" data-fmt="png">PNG</div>
+                  <div class="dl-fmt" data-fmt="svg">SVG</div>
+                  <div class="dl-fmt" data-fmt="pdf">PDF</div>
+                </div>
+                <button class="btn-download" id="btn-download">&#x2B07; Download QR Code</button>
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
 
@@ -163,6 +245,10 @@ function qrImgURL(size, fg, bg) {
 function updateQRPreview() {
   const img = document.getElementById('qr-main-img');
   if (img) img.src = qrImgURL(240);
+  const img2 = document.getElementById('qr-design-img');
+  if (img2) img2.src = qrImgURL(240);
+  const sc = document.getElementById('design-scan-count');
+  if (sc && window.qrData) sc.textContent = (window.qrData.totalScans||0) + ' scans';
 }
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -285,7 +371,7 @@ async function loadQR() {
 }
 
 // ── QR controls ──────────────────────────────────────────────────────────────
-document.querySelectorAll('#cp-row .cp').forEach(cp => {
+document.querySelectorAll('#cp-row .preset-chip, #cp-row .cp').forEach(cp => {
   cp.addEventListener('click', () => {
     document.querySelectorAll('#cp-row .cp').forEach(x => x.classList.remove('active'));
     cp.classList.add('active');
@@ -316,6 +402,7 @@ document.getElementById('btn-update-qr').addEventListener('click', () => {
 });
 
 document.getElementById('btn-refresh-qr').addEventListener('click', updateQRPreview);
+var r2=document.getElementById('btn-refresh-qr2');if(r2)r2.addEventListener('click',function(){var i=document.getElementById('qr-design-img');if(i)i.src=qrImgURL(240);});
 
 // Download size/format
 document.querySelectorAll('#dl-sizes .dl-size').forEach(b => {
