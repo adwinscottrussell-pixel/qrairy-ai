@@ -44,3 +44,31 @@
 .act-empty{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--dashboard-muted-dim);text-align:center;padding:20px 0}
 .btn-del{width:100%;padding:7px;background:transparent;border:1px solid rgba(239,68,68,.2);border-radius:0 0 14px 14px;color:#ef444466;font-family:'DM Mono',monospace;font-size:.62rem;cursor:pointer;transition:all .15s}
 .btn-del:hover{background:rgba(239,68,68,.08);border-color:#ef4444;color:#ef4444}
+
+/* ── Manager Tabs ─────────────────────────────────────────────────────────── */
+.mgr-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: 0;
+}
+.mgr-tab {
+  font-family: 'DM Mono', monospace;
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #7a8fa8;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.mgr-tab:hover { color: #f0f4f8; }
+.mgr-tab.active { color: #ff5a1f; border-bottom-color: #ff5a1f; }
+.mgr-tab-panel { display: none; }
+.mgr-tab-panel.active { display: block; }

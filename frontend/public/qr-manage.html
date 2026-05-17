@@ -73,10 +73,18 @@
         <div class="an-loading">Loading Smart QR…</div>
       </div>
 
-      <!-- 2-col grid -->
-      <div class="mgr-grid">
+      <!-- Tab navigation -->
+      <div class="mgr-tabs">
+        <button class="mgr-tab active" data-tab="overview">Overview</button>
+        <button class="mgr-tab" data-tab="design">Design</button>
+        <button class="mgr-tab" data-tab="ai">AI Experience</button>
+        <button class="mgr-tab" data-tab="subscribers">Subscribers</button>
+        <button class="mgr-tab" data-tab="settings">Settings</button>
+      </div>
 
-        <!-- LEFT column -->
+      <!-- TAB: Overview -->
+      <div class="mgr-tab-panel active" id="tab-overview">
+      <div class="mgr-grid">
         <div class="mgr-col">
 
           <!-- QR Preview -->
@@ -147,10 +155,7 @@
           </div>
 
         </div>
-
-        <!-- RIGHT column -->
         <div class="mgr-col">
-
           <!-- Analytics summary -->
           <div class="panel">
             <div class="panel-hdr">
@@ -300,6 +305,29 @@
             </div>
           </div>
 
+        </div><!-- end right col overview -->
+      </div><!-- end mgr-grid overview -->
+      </div><!-- end tab-overview -->
+
+      <!-- TAB: Design -->
+      <div class="mgr-tab-panel" id="tab-design">
+      <div class="mgr-grid"><div class="mgr-col">
+          <!-- QR Preview (Design) -->
+          <!-- (panels moved here via JS show/hide — static copy below) -->
+      </div></div>
+      </div><!-- end tab-design -->
+
+      <!-- TAB: AI Experience -->
+      <div class="mgr-tab-panel" id="tab-ai">
+      </div><!-- end tab-ai -->
+
+      <!-- TAB: Subscribers -->
+      <div class="mgr-tab-panel" id="tab-subscribers">
+      </div><!-- end tab-subscribers -->
+
+      <!-- TAB: Settings -->
+      <div class="mgr-tab-panel" id="tab-settings">
+      <div class="mgr-grid"><div class="mgr-col">
           <!-- Danger zone -->
           <div class="panel">
             <div class="panel-body">
@@ -311,7 +339,8 @@
           </div>
 
         </div>
-      </div>
+      </div></div><!-- end settings col/grid -->
+      </div><!-- end tab-settings -->
     </div>
   </main>
   <footer><span>QRAIVY — Smart QR Management</span></footer>
@@ -560,6 +589,17 @@ document.getElementById('btn-delete').addEventListener('click', async () => {
   } catch { toast('Could not reach server.'); }
 });
 
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.mgr-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.mgr-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.mgr-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    tab.classList.add('active');
+    var panel = document.getElementById('tab-' + tab.dataset.tab);
+    if (panel) panel.classList.add('active');
+  });
+});
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   await window.Clerk.load();
@@ -621,3 +661,5 @@ async function init() {
 
 </body>
 </html>
+
+
