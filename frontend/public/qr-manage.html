@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Smart QR Manager — Qraivy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="styles.css"/>
 <link rel="stylesheet" href="dashboard-shell.css"/>
 <link rel="stylesheet" href="manage-page.css"/>
@@ -109,8 +110,7 @@
 
       <!-- TAB: AI Experience -->
       <div class="mgr-tab-panel" id="tab-ai">
-        <div class="mgr-grid">
-          <div class="mgr-col">
+        <div class="mgr-single-col">
             <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F399;</span> Voice Welcome</span><span class="panel-action">ElevenLabs</span></div><div class="panel-body"><div class="voice-player"><button class="voice-btn" id="voice-play-btn">&#x25B6;</button><div class="voice-info"><div class="voice-name">Welcome Message</div><div class="voice-sub" id="voice-sub">Tap to preview</div></div><div class="voice-wave" id="voice-wave"><div class="vw-bar" style="height:8px"></div><div class="vw-bar" style="height:16px"></div><div class="vw-bar" style="height:12px"></div><div class="vw-bar" style="height:20px"></div><div class="vw-bar" style="height:10px"></div><div class="vw-bar" style="height:18px"></div><div class="vw-bar" style="height:8px"></div><div class="vw-bar" style="height:14px"></div></div></div><div class="field-group"><label class="field-lbl">Voice Script</label><textarea class="field-textarea" id="voice-script" placeholder="Hi! Welcome to our business..."></textarea></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-save-field" style="flex:1">Save Script</button><button class="btn-mgr btn-ghost" style="flex:1;padding:8px">&#x2B21; Regenerate AI</button></div><div class="voice-coming" style="margin-top:8px">&#x2B21; ElevenLabs voice generation - coming soon</div></div></div>
           </div>
           <div class="mgr-col">
@@ -121,8 +121,7 @@
 
       <!-- TAB: Subscribers -->
       <div class="mgr-tab-panel" id="tab-subscribers">
-        <div class="mgr-grid">
-          <div class="mgr-col">
+        <div class="mgr-single-col">
             <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x1F4B3;</span> Subscribers &amp; Wallet</span></div><div class="panel-body"><div class="sub-row"><span class="sub-lbl">Total subscribers</span><span class="sub-val g" id="sub-total">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Email captures</span><span class="sub-val" id="sub-email">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Wallet installs</span><span class="sub-val p" id="sub-wallet">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Push notification opens</span><span class="sub-val">&#x2014;</span></div><div class="sub-row"><span class="sub-lbl">Active members</span><span class="sub-val o">&#x2014;</span></div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn-mgr btn-outline" style="flex:1">&#x2B07; Export CSV</button><button class="btn-mgr btn-primary" style="flex:1">&#x2728; Send Campaign</button></div><div style="font-family:'DM Mono',monospace;font-size:.58rem;color:#5a6473;text-align:center;margin-top:8px">Apple &amp; Google Wallet - coming soon</div></div></div>
           </div>
         </div>
@@ -130,8 +129,7 @@
 
       <!-- TAB: Settings -->
       <div class="mgr-tab-panel" id="tab-settings">
-        <div class="mgr-grid">
-          <div class="mgr-col">
+        <div class="mgr-single-col">
             <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2699;</span> Page Controls</span></div><div class="panel-body"><div class="status-bar" id="status-bar"><div class="status-indicator"><div class="status-dot-live"></div><span id="status-text" style="color:#22c55e">Live - Page is active</span></div><button class="btn-toggle-status btn-unpublish" id="btn-status">Unpublish</button></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">AI Assistant</span><span class="toggle-desc">Chat widget on landing page</span></div><label class="toggle-switch"><input type="checkbox" id="tog-ai" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Voice Welcome</span><span class="toggle-desc">Auto-play introduction message</span></div><label class="toggle-switch"><input type="checkbox" id="tog-voice" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Wallet Subscription</span><span class="toggle-desc">Show subscribe + wallet section</span></div><label class="toggle-switch"><input type="checkbox" id="tog-wallet" checked/><span class="toggle-slider"></span></label></div><div class="toggle-row"><div class="toggle-info"><span class="toggle-label">CTA Buttons</span><span class="toggle-desc">Primary action buttons visible</span></div><label class="toggle-switch"><input type="checkbox" id="tog-cta" checked/><span class="toggle-slider"></span></label></div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn-mgr btn-primary" id="btn-open-page" style="flex:1">&#x1F310; View Live Page</button><button class="btn-mgr btn-outline" id="btn-copy-url" style="flex:1">&#x1F4CB; Copy URL</button></div></div></div>
           </div>
           <div class="mgr-col">
