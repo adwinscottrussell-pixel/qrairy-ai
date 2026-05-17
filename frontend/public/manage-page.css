@@ -424,10 +424,3 @@
   padding-right: 28px !important;
 }
 
-/* ── Override styles.css main constraints on app pages ───────────────────── */
-#main-content main {
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  position: static !important;
-}
