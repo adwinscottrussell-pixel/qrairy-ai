@@ -83,49 +83,12 @@
 </div>
 
 <script>
-window.QrTier=(function(){
-  var _plan=null,_timer=null;
-  async function loadPlan(){
-    try{
-      var tok=await window.Clerk.session.getToken();
-      var res=await fetch('https://api.qraivy.com/tier/plan',{headers:{Authorization:'Bearer '+tok}});
-      var d=await res.json();_plan=d.planInfo;_applyTrial(_plan);return _plan;
-    }catch(e){return null;}
-  }
-  async function startTrial(){
-    try{
-      var tok=await window.Clerk.session.getToken();
-      var res=await fetch('https://api.qraivy.com/tier/trial',{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json'}});
-      var d=await res.json();_plan=d.planInfo;_applyTrial(_plan);return d;
-    }catch(e){return null;}
-  }
-  function _applyTrial(p){
-    if(!p)return;
-    var pill=document.getElementById('trial-pill');
-    var txt=document.getElementById('trial-text');
-    var dot=document.getElementById('trial-dot');
-    var badge=document.getElementById('plan-badge');
-    if(badge)badge.textContent=(p.basePlan||p.plan||'free').toUpperCase();
-    if(!pill)return;
-    if(p.isTrial&&p.trialSecondsRemaining>0){
-      pill.classList.add('show');
-      var secs=p.trialSecondsRemaining;
-      function tick(){
-        if(secs<=0){clearInterval(_timer);pill.classList.add('expired');if(dot)dot.style.background='#ef4444';if(txt)txt.innerHTML='<strong>Trial expired</strong> — upgrade to reactivate your AI pages';return;}
-        var m=Math.floor(secs/60),s=secs%60;
-        if(txt)txt.innerHTML='<strong>Trial Active</strong> &middot; '+m+'m '+s+'s remaining';
-        secs--;
-      }
-      tick();_timer=setInterval(tick,1000);
-    }else if(p.isTrialExpired){
-      pill.classList.add('show','expired');
-      if(dot)dot.style.background='#ef4444';
-      if(txt)txt.innerHTML='<strong>Trial expired</strong> &mdash; upgrade to reactivate your AI pages';
-    }
-  }
-  function can(cap){return _plan?!!_plan[cap]:false;}
-  return{loadPlan,startTrial,can,get:function(){return _plan;}};
-})();
+window.QrTier={
+  loadPlan: async function(){ await QRairySession.loadPlan(); QRairySession.applyTrialUI(); return QRairySession.get(); },
+  startTrial: async function(){ return QRairySession.startTrial(); },
+  can: function(cap){ return QRairySession.can(cap); },
+  get: function(){ return QRairySession.get(); }
+};
 
 const API_BASE='https://api.qraivy.com';
 
@@ -256,5 +219,6 @@ async function initDashboard(){
 
 </body>
 </html>
+
 
 
