@@ -425,3 +425,8 @@
 }
 
 
+
+/* ── AI metric rows ──────────────────────────────────────────────────────── */
+.ai-metric-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.ai-m-lbl { font-family: 'Inter', sans-serif; font-size: .72rem; color: #9ab0c8; }
+.ai-m-val { font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 600; color: #f0f4f8; }
