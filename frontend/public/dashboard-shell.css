@@ -16,7 +16,7 @@
   --dashboard-card-bg: #0d0d0d;
   --dashboard-border: rgba(255,255,255,0.07);
   --dashboard-border-hover: rgba(255,90,31,0.25);
-  --dashboard-muted: #a8b4c0;
+  --dashboard-muted: #9ab0c8;
   --dashboard-muted-dim: #5a6b7a;
   --dashboard-accent: #ff5a1f;
   --dashboard-accent-dim: rgba(255,90,31,0.1);
@@ -485,7 +485,7 @@ p, span, label, input, textarea, select, button,
   font-family: 'Inter', sans-serif;
   font-size: .72rem;
   font-weight: 500;
-  color: #7a8fa8;
+  color: #9ab0c8;
   text-transform: uppercase;
   letter-spacing: .06em;
   display: block;
@@ -526,3 +526,5 @@ p, span, label, input, textarea, select, button,
 
 /* ── shell-customer.js group label alias ─────────────────────── */
 .sb-group-label { font-family: var(--font-body); font-size: .58rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .1em; padding: 10px 8px 3px; white-space: nowrap; }
+
+

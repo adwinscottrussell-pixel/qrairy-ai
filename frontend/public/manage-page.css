@@ -59,7 +59,7 @@
   font-weight: 500;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: #7a8fa8;
+  color: #9ab0c8;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -80,7 +80,7 @@
 .kpi-m-val.o { color: #ff5a1f; }
 .kpi-m-val.g { color: #22c55e; }
 .kpi-m-val.p { color: #a78bfa; }
-.kpi-m-lbl { font-family: 'Inter', sans-serif; font-size: .62rem; color: #7a8fa8; text-transform: uppercase; letter-spacing: .06em; }
+.kpi-m-lbl { font-family: 'Inter', sans-serif; font-size: .62rem; color: #9ab0c8; text-transform: uppercase; letter-spacing: .06em; }
 
 /* ── Design Studio Layout ─────────────────────────────────────────────────── */
 .design-studio {
@@ -211,7 +211,7 @@
 .brand-hex {
   font-family: 'DM Mono', monospace;
   font-size: .72rem;
-  color: #7a8fa8;
+  color: #9ab0c8;
   min-width: 56px;
 }
 
@@ -423,4 +423,5 @@
   padding-left: 28px !important;
   padding-right: 28px !important;
 }
+
 
