@@ -27,3 +27,11 @@
 .an-kpi-delta{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--dashboard-muted);margin-top:3px}
 .an-kpi-delta.up{color:#22c55e}
 .an-kpi-delta.dn{color:#ef4444}
+
+/* ── Metric cards ─────────────────────────────────────────────────────────── */
+.mc-title { font-family: 'Space Grotesk', sans-serif; font-size: .78rem; font-weight: 700; color: #f0f4f8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.mc-icon { font-size: .9rem; }
+.mc-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.mc-row-label { font-family: 'Inter', sans-serif; font-size: .72rem; color: #7a8fa8; }
+.mc-row-val { font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 600; color: #f0f4f8; }
+.mc-footer { font-family: 'Inter', sans-serif; font-size: .6rem; color: #4a5568; margin-top: 10px; }
