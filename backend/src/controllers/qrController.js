@@ -362,7 +362,30 @@ async function handleDashboard(req, res) {
       isDynamic: qr.isDynamic || false,
       destinationUrl: qr.destinationUrl || null,
       createdAt: qr.createdAt,
+      source: 'qr',
     }));
+
+    // Also include LandingPage records
+    const lpWhere = userId ? { userId } : {};
+    const lpData = await prisma.landingPage.findMany({
+      where: lpWhere,
+      orderBy: { createdAt: 'desc' },
+    });
+    const lpCards = lpData.map(lp => ({
+      id: lp.id,
+      originalUrl: lp.websiteUrl || '',
+      businessName: lp.businessName || null,
+      redirectUrl: `https://api.qraivy.com/lp/${lp.slug}`,
+      slug: lp.slug,
+      totalScans: lp.scanCount || 0,
+      totalSubscribers: 0,
+      hasSiteContent: true,
+      isDynamic: true,
+      destinationUrl: lp.websiteUrl || null,
+      createdAt: lp.createdAt,
+      source: 'lp',
+    }));
+    const allCards = [...dashboard, ...lpCards].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     let planInfo = null;
     if (userId) {
@@ -385,7 +408,7 @@ async function handleDashboard(req, res) {
       };
     }
 
-    return res.status(200).json({ dashboard, planInfo });
+    return res.status(200).json({ dashboard: allCards, planInfo });
   } catch (err) {
     console.error('handleDashboard error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
