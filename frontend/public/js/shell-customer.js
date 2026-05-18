@@ -25,35 +25,37 @@
 
   var NAV = [
     {
-      group: 'Overview',
+      group: 'Main',
       items: [
-        { id: 'nav-dashboard',   label: 'Dashboard',      icon: '⬡', href: '/dashboard.html' },
+        { id: 'nav-dashboard',   label: 'Dashboard',      icon: '\u229e', href: '/dashboard.html' },
+        { id: 'nav-analytics',   label: 'Analytics',      icon: '\u2197', href: '/analytics.html' },
       ]
     },
     {
-      group: 'Smart QR',
+      group: 'Smart Pages',
       items: [
-        { id: 'nav-pages',       label: 'Smart QR Pages', icon: '⬡', href: '/dashboard.html' },
-        { id: 'nav-analytics',   label: 'Analytics',      icon: '↗', href: '/analytics.html' },
+        { id: 'nav-pages',       label: 'Smart QR Pages', icon: '\u2b21', href: '/dashboard.html' },
+        { id: 'nav-create',      label: 'Create New QR',  icon: '\uff0b', href: '/dashboard.html' },
       ]
     },
     {
       group: 'Engage',
       items: [
-        { id: 'nav-subscribers', label: 'Subscribers',    icon: '◎', href: '/dashboard.html' },
-        { id: 'nav-campaigns',   label: 'Campaigns',      icon: '◈', href: '/dashboard.html' },
+        { id: 'nav-campaigns',   label: 'AI Campaigns',   icon: '\ud83d\udce3', href: '/dashboard.html' },
+        { id: 'nav-subscribers', label: 'Subscribers',    icon: '\ud83d\udc65', href: '/dashboard.html' },
       ]
     },
     {
-      group: 'Features',
+      group: 'Configure',
       items: [
-        { id: 'nav-wallet',      label: 'Wallet Passes',  icon: '⬡', href: '/dashboard.html' },
+        { id: 'nav-wallet',      label: 'Wallet Passes',  icon: '\ud83d\udcb3', href: '/dashboard.html' },
       ]
     },
     {
       group: 'Account',
       items: [
-        { id: 'nav-billing',     label: 'Billing & Plan', icon: '↑', href: '/upgrade.html' },
+        { id: 'nav-billing',     label: 'Billing & Plans', icon: '\ud83d\udcb3', href: '/upgrade.html' },
+        { id: 'nav-settings',    label: 'Settings',        icon: '\u2699', href: '/dashboard.html' },
       ]
     }
   ];
