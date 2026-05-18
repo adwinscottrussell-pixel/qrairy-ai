@@ -81,7 +81,7 @@
     return '<div id="sidebar" class="app-sidebar">' +
       '<a href="/app/dashboard.html" class="sb-logo">' +
         '<div class="sb-logo-icon">Q</div>' +
-        '<div class="sb-logo-text">QR<em>Aivy</em></div>' +
+        '<div class="sb-logo-text">QR<span>Aivy</span></div>' +
         '</a>' +
       '<nav class="sb-nav">' + nav + '</nav>' +
       '<div class="sb-footer">' +
@@ -89,11 +89,11 @@
           '<div class="sb-avatar" id="sb-avatar">?</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="sb-user-name" id="sb-name">Loading…</div>' +
-            '<div class="sb-user-sub" id="sb-role">Customer</div>' +
+            '<div class="sb-user-role" id="sb-role">Customer</div>' +
           '</div>' +
         '</div>' +
         '<div class="sb-divider"></div>' +
-        '<a href="#" class="sb-footer-link" id="sb-signout">' +
+        '<a href="#" class="sb-signout" id="sb-signout">' +
           '<span class="sb-icon">→</span>Sign Out' +
         '</a>' +
       '</div>' +
@@ -200,6 +200,7 @@
   });
 
 })();
+
 
 
 
