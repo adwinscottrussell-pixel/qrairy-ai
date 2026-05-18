@@ -14,41 +14,7 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<div id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-icon">Q</div>
-    <div class="sb-logo-text">QR<span>Aivy</span></div>
-  </div>
-  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
-  <nav class="sb-nav">
-    <div class="sb-group">Main</div>
-    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item "><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px">Engage</div>
-    <a href="#" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
-    <a href="#" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
-    <div class="sb-group" style="margin-top:4px">Configure</div>
-    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span><span class="sb-badge" id="plan-badge">FREE</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar" id="sb-avatar">?</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role">Business Owner</div>
-      </div>
-    </div>
-    <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
-  </div>
-</div>
+<div id="sidebar"></div>
 
 <button id="mob-btn">☰</button>
 <div class="sb-overlay" id="sb-overlay"></div>
@@ -739,8 +705,10 @@ async function init() {
   onload="init()"
 ></script>
 
+<script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
