@@ -3,7 +3,7 @@
 .voice-btn{width:38px;height:38px;border:none;border-radius:50%;background:var(--dashboard-accent);color:#fff;cursor:pointer;font-size:.85rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .1s}
 .voice-btn:active{transform:scale(.92)}
 .voice-info{flex:1}
-.voice-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:1px}
+.voice-name{font-family:'Space Grotesk',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:1px}
 .voice-sub{font-size:.6rem;color:var(--dashboard-muted)}
 .voice-wave{display:flex;align-items:center;gap:2px;height:24px}
 .vw-bar{width:3px;background:rgba(255,255,255,0.12);border-radius:2px}
@@ -12,10 +12,10 @@
 .voice-coming{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--dashboard-muted-dim);text-align:center;padding:4px 0}
 .status-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:9px;margin-bottom:12px}
 .status-bar.offline{background:rgba(255,255,255,0.03);border-color:var(--dashboard-border)}
-.status-indicator{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.72rem}
+.status-indicator{display:flex;align-items:center;gap:8px;font-family:'Inter',sans-serif;font-size:.72rem}
 .status-dot-live{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.5)}
 .status-dot-off{width:7px;height:7px;border-radius:50%;background:var(--dashboard-muted-dim)}
-.btn-toggle-status{padding:5px 14px;border-radius:7px;font-family:'DM Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .15s;border:none}
+.btn-toggle-status{padding:5px 14px;border-radius:7px;font-family:'Inter',sans-serif;font-size:.65rem;cursor:pointer;transition:all .15s;border:none}
 .btn-go-live{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
 .btn-unpublish{background:rgba(255,255,255,0.05);color:var(--dashboard-muted);border:1px solid var(--dashboard-border)}
 .qr-preview-main{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px}

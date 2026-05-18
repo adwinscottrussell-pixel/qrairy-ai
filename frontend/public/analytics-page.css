@@ -1,6 +1,6 @@
 /* Analytics page-specific styles — not in shell */
 .perf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.perf-title{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
+.perf-title{font-family:'Space Grotesk',sans-serif;font-size:.92rem;font-weight:700;color:#f0f4f8}
 .perf-search{padding:6px 12px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:7px;font-family:'DM Mono',monospace;font-size:.68rem;color:#f0f4f8;outline:none;width:180px}
 .perf-search::placeholder{color:var(--dashboard-muted-dim)}
 .perf-search:focus{border-color:var(--dashboard-accent-border)}
