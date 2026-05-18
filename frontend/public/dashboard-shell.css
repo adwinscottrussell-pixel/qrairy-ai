@@ -523,3 +523,6 @@ p, span, label, input, textarea, select, button,
 }
 
 
+
+/* ── shell-customer.js group label alias ─────────────────────── */
+.sb-group-label { font-family: var(--font-mono); font-size: .58rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .1em; padding: 10px 8px 3px; white-space: nowrap; }
