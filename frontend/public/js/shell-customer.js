@@ -53,7 +53,7 @@
     {
       group: 'Account',
       items: [
-        { id: 'nav-billing',     label: 'Billing & Plan', icon: '↑', href: '/app/upgrade.html', badge: 'FREE' },
+        { id: 'nav-billing',     label: 'Billing & Plan', icon: '↑', href: '/app/upgrade.html' },
       ]
     }
   ];
@@ -82,8 +82,7 @@
       '<a href="/app/dashboard.html" class="sb-logo">' +
         '<div class="sb-logo-icon">Q</div>' +
         '<div class="sb-logo-text">QR<em>Aivy</em></div>' +
-        '<span class="sb-context-badge" id="sb-plan-label">FREE</span>' +
-      '</a>' +
+        '</a>' +
       '<nav class="sb-nav">' + nav + '</nav>' +
       '<div class="sb-footer">' +
         '<div class="sb-user" id="sb-user">' +
@@ -196,3 +195,4 @@
   });
 
 })();
+
