@@ -78,7 +78,7 @@
       return '<div class="sb-group-label">' + section.group + '</div>' + items;
     }).join('');
 
-    return '<div id="qrairy-sidebar" class="app-sidebar">' +
+    return '<div id="sidebar" class="app-sidebar">' +
       '<a href="/app/dashboard.html" class="sb-logo">' +
         '<div class="sb-logo-icon">Q</div>' +
         '<div class="sb-logo-text">QR<em>Aivy</em></div>' +
@@ -114,7 +114,7 @@
   }
 
   function wireInteractions() {
-    var sb  = document.getElementById('qrairy-sidebar');
+    var sb  = document.getElementById('sidebar');
     var ov  = document.getElementById('sb-overlay');
     var mob = document.getElementById('mob-btn');
 
@@ -200,5 +200,6 @@
   });
 
 })();
+
 
 
