@@ -523,7 +523,11 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 
 async function handlePublishLP(req, res) {
   try {
-    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections, qrType } = req.body;
+    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType } = req.body;
+    let userId = req.body.userId || null;
+    if (!userId && req.headers.authorization) {
+      try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
+    }
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
     const page = await prisma.landingPage.upsert({
       where: { slug },
@@ -574,3 +578,4 @@ async function handleListLPs(req, res) {
 }
 
 module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };
+
