@@ -643,6 +643,8 @@ document.querySelectorAll('.mgr-tab').forEach(function(tab) {
     tab.classList.add('active');
     var panel = document.getElementById('tab-' + tab.dataset.tab);
     if (panel) panel.classList.add('active');
+    document.body.className = document.body.className.replace(/\btab-\S+/g, '').trim();
+    document.body.classList.add('tab-' + tab.dataset.tab);
   });
 });
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -708,6 +710,7 @@ async function init() {
 <script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
