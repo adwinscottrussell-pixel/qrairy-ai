@@ -664,7 +664,7 @@ async function init() {
   const _sbToggle = document.getElementById('sb-toggle');
   if (_sidebar && _sbToggle) {
     if (localStorage.getItem('sb-collapsed') === 'true') { _sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-    _sbToggle.addEventListener('click', function() {
+    _if (sbToggle) sbToggle.addEventListener('click', function() {
       const c = _sidebar.classList.toggle('collapsed');
       document.body.classList.toggle('sb-collapsed', c);
       localStorage.setItem('sb-collapsed', c);
@@ -687,7 +687,7 @@ async function init() {
   const sidebar = document.getElementById('sidebar');
   const sbToggle = document.getElementById('sb-toggle');
   if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-  sbToggle.addEventListener('click', () => {
+  if (sbToggle) sbToggle.addEventListener('click', () => {
     const c = sidebar.classList.toggle('collapsed');
     document.body.classList.toggle('sb-collapsed', c);
     localStorage.setItem('sb-collapsed', c);
@@ -710,6 +710,7 @@ async function init() {
 <script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
