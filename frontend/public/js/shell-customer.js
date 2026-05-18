@@ -27,33 +27,33 @@
     {
       group: 'Overview',
       items: [
-        { id: 'nav-dashboard',   label: 'Dashboard',      icon: '⬡', href: '/app/dashboard.html' },
+        { id: 'nav-dashboard',   label: 'Dashboard',      icon: '⬡', href: '/dashboard.html' },
       ]
     },
     {
       group: 'Smart QR',
       items: [
-        { id: 'nav-pages',       label: 'Smart QR Pages', icon: '⬡', href: '/app/pages.html' },
-        { id: 'nav-analytics',   label: 'Analytics',      icon: '↗', href: '/app/analytics.html' },
+        { id: 'nav-pages',       label: 'Smart QR Pages', icon: '⬡', href: '/dashboard.html' },
+        { id: 'nav-analytics',   label: 'Analytics',      icon: '↗', href: '/analytics.html' },
       ]
     },
     {
       group: 'Engage',
       items: [
-        { id: 'nav-subscribers', label: 'Subscribers',    icon: '◎', href: '/app/subscribers.html' },
-        { id: 'nav-campaigns',   label: 'Campaigns',      icon: '◈', href: '/app/campaigns.html' },
+        { id: 'nav-subscribers', label: 'Subscribers',    icon: '◎', href: '/dashboard.html' },
+        { id: 'nav-campaigns',   label: 'Campaigns',      icon: '◈', href: '/dashboard.html' },
       ]
     },
     {
       group: 'Features',
       items: [
-        { id: 'nav-wallet',      label: 'Wallet Passes',  icon: '⬡', href: '/app/wallet.html' },
+        { id: 'nav-wallet',      label: 'Wallet Passes',  icon: '⬡', href: '/dashboard.html' },
       ]
     },
     {
       group: 'Account',
       items: [
-        { id: 'nav-billing',     label: 'Billing & Plan', icon: '↑', href: '/app/upgrade.html' },
+        { id: 'nav-billing',     label: 'Billing & Plan', icon: '↑', href: '/upgrade.html' },
       ]
     }
   ];
@@ -200,6 +200,8 @@
   });
 
 })();
+
+
 
 
 
