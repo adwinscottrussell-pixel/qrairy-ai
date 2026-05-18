@@ -652,8 +652,8 @@ async function init() {
   if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
 
   const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
-  document.getElementById('sb-username').textContent = name;
-  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
+  const _sbun = document.getElementById('sb-username') || document.getElementById('sb-name'); if (_sbun) _sbun.textContent = name;
+  const _sbav = document.getElementById('sb-avatar'); if (_sbav) _sbav.textContent = name[0].toUpperCase();
   document.getElementById('sb-signout').addEventListener('click', async e => {
     e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
   });
@@ -708,6 +708,7 @@ async function init() {
 <script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
