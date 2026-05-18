@@ -182,7 +182,12 @@
   }
 
   window.initCustomerShell = function (activeId) {
-    wrapBody(buildSidebar(activeId));
+    var placeholder = document.getElementById('sidebar');
+    if (placeholder && placeholder.children.length === 0) {
+      placeholder.outerHTML = buildSidebar(activeId);
+    } else {
+      wrapBody(buildSidebar(activeId));
+    }
     wireInteractions();
     populateUser();
   };
