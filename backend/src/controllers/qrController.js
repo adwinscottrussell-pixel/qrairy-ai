@@ -514,6 +514,7 @@ async function handleDeleteQR(req, res) {
 }
 
 module.exports = {
+  getUserFromToken,
   handleCreateQR,
   handleDeleteQR,
   handleUpdateDestination,
@@ -528,6 +529,7 @@ module.exports = {
   handleSendSpecial,
   handleGenerateSpecial,
 };
+
 
 
 
