@@ -1,3 +1,4 @@
+const { getUserFromToken } = require('./qrController');
 const prisma = require('../prismaClient');
 
 // ── LP content per use case ───────────────────────────────────────────────
@@ -595,6 +596,7 @@ async function handleDeleteLP(req, res) {
   }
 }
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs };
+
 
 
 
