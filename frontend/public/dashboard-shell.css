@@ -528,3 +528,11 @@ p, span, label, input, textarea, select, button,
 .sb-group-label { font-family: var(--font-body); font-size: .58rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .1em; padding: 10px 8px 3px; white-space: nowrap; }
 
 
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.sqr-empty { text-align: center; padding: 48px 24px; }
+.sqr-empty-icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.3; }
+.sqr-empty-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--dashboard-text); margin-bottom: 8px; }
+.sqr-empty-sub { font-family: 'Inter', sans-serif; font-size: .85rem; color: var(--dashboard-muted); line-height: 1.5; margin-bottom: 24px; max-width: 360px; margin-left: auto; margin-right: auto; }
+.btn-create { background: var(--dashboard-accent); color: #fff; border: none; border-radius: 10px; padding: 12px 24px; font-family: 'Space Grotesk', sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+.btn-create:hover { opacity: .85; }
