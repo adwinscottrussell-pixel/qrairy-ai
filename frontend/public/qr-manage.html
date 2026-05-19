@@ -511,7 +511,7 @@ async function loadQR() {
     const all  = data.dashboard || [];
 
     // Find matching QR
-    const qr = all.find(q => q.id === QR_ID) || all.find(q => q.lpSlug === LP_SLUG) || all[0];
+    const qr = all.find(q => q.id === QR_ID) || all.find(q => q.slug === LP_SLUG) || all[0];
     if (!qr) {
       document.getElementById('mgr-header').innerHTML = '<div class="an-loading">QR page not found. <a href="dashboard.html" style="color:#ff5a1f">Back →</a></div>';
       return;
@@ -715,6 +715,7 @@ async function init() {
 <script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
