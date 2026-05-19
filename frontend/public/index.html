@@ -775,7 +775,7 @@
       <a href="#pricing" class="nav-link">Pricing</a>
       <a href="#" class="nav-link has-arrow">Resources</a>
       <a href="login.html" class="nav-link" id="nav-auth-link">Log in</a>
-      <a href="/qr/free.html" class="nav-cta" id="nav-cta-btn" data-flow="free">Get started free</a>
+      <a href="dashboard.html?launch=onboarding" class="nav-cta" id="nav-cta-btn" data-flow="smart">Create Smart QR</a>
     </div>
   </nav>
 
@@ -1136,7 +1136,7 @@
       <div class="section-header">
         <div class="section-badge">Free QR Generator</div>
         <h2 class="section-title">Generate your <em>QR code</em></h2>
-        <p class="section-sub">Try it free — no account needed for a basic QR. Sign up free to unlock AI features.</p>
+        <p class="section-sub">Generate a free QR code instantly — no account needed.</p>
       </div>
       <div class="wizard-steps">
         <div class="wizard-step active"><div class="wizard-step-num">1</div><span>Enter details</span></div>
@@ -1150,10 +1150,7 @@
           <label class="form-label" for="urlInput">Your URL *</label>
           <input type="url" id="urlInput" class="form-input" placeholder="https://your-website.com" autocomplete="off" />
         </div>
-        <div class="form-group">
-          <label class="form-label" for="businessName">Business Name <span style="color:var(--accent)">— unlocks AI landing page (sign up required)</span></label>
-          <input type="text" id="businessName" class="form-input" placeholder="e.g. Joe's Coffee Shop" autocomplete="off" />
-        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">QR Color</label>
@@ -1180,7 +1177,7 @@
         </div>
         <div id="errorMsg"></div>
         <button class="generate-btn" id="generateBtn">⬡ Generate QR Code</button>
-        <div class="free-badge">Free basic QR · No account needed · <a href="login.html">Sign up free</a> for AI features</div>
+
       </div>
       <div id="qr-result">
         <img id="qrImage" src="" alt="Generated QR Code" />
@@ -1189,8 +1186,18 @@
           <button class="result-btn primary" id="copyBtn">📋 Copy Link</button>
           <button class="result-btn outline" id="downloadBtn">⬇ Download QR</button>
         </div>
-        <div class="expiry-notice" id="expiryNotice" style="display:none">
-          ⏱ This AI QR expires in <strong>24 hours</strong>. <a href="login.html">Sign up free</a> to make it permanent and unlock full features.
+
+        <div id="smart-qr-upgrade" style="display:none;margin-top:24px;background:linear-gradient(135deg,rgba(255,90,31,0.08),rgba(255,90,31,0.04));border:1px solid rgba(255,90,31,0.2);border-radius:14px;padding:20px;text-align:center;">
+          <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;margin-bottom:8px;">Want more than a QR code?</div>
+          <div style="font-size:.78rem;color:#7a8fa8;margin-bottom:14px;line-height:1.6;">Turn it into an AI landing page with voice welcome, AI assistant, wallet passes, push notifications, analytics and subscribers.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left;max-width:280px;margin-left:auto;margin-right:auto;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>AI landing page</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>AI assistant</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Wallet pass</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Push notifications</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Analytics &amp; subscribers</div>
+          </div>
+          <a href="dashboard.html?launch=onboarding" style="display:inline-block;background:#ff5a1f;color:#fff;padding:11px 24px;border-radius:9px;font-family:var(--font-display);font-size:.85rem;font-weight:700;text-decoration:none;">Try Smart QR Demo</a>
         </div>
       </div>
     </div>
@@ -1434,6 +1441,7 @@
         document.getElementById('copyBtn').onclick = async () => { await navigator.clipboard.writeText(redirectUrl); document.getElementById('copyBtn').textContent = '✓ Copied!'; setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Link', 2000); };
         document.getElementById('downloadBtn').onclick = () => { const link = document.createElement('a'); link.download = 'qraivy-code.png'; link.href = qrSrc; link.click(); };
         result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var upgradeEl = document.getElementById('smart-qr-upgrade'); if (upgradeEl) upgradeEl.style.display = 'block';
       } catch (err) {
         errorEl.textContent = 'Could not reach the server. Please try again.';
         errorEl.style.display = 'block';
