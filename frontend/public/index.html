@@ -1409,9 +1409,8 @@
       if (type === 'restaurant') document.getElementById('businessName').placeholder = "e.g. Joe's Coffee Shop — required for AI page";
     }
 
-    document.getElementById('generateBtn').addEventListener('click', async () => {
+    document.getElementById('generateBtn').addEventListener('click', () => {
       const url = document.getElementById('urlInput').value.trim();
-      const businessName = document.getElementById('businessName').value.trim();
       const color = document.getElementById('qrColor').value.replace('#', '');
       const bgColor = document.getElementById('qrBgColor').value.replace('#', '');
       const size = document.getElementById('qrSize').value;
@@ -1421,33 +1420,17 @@
       if (!url.startsWith('http://') && !url.startsWith('https://')) { errorEl.textContent = 'URL must start with http:// or https://'; errorEl.style.display = 'block'; return; }
       const btn = document.getElementById('generateBtn');
       btn.textContent = 'Generating...'; btn.disabled = true;
-      try {
-        let headers = { 'Content-Type': 'application/json' };
-        if (window.Clerk && window.Clerk.session) {
-          const token = await window.Clerk.session.getToken();
-          if (token) headers['Authorization'] = `Bearer ${token}`;
-        }
-        const res = await fetch(`${API_BASE}/qr`, { method:'POST', headers, body: JSON.stringify({ url, businessName: businessName || null }) });
-        const data = await res.json();
-        if (res.status === 403 && data.upgrade) { errorEl.innerHTML = `${data.error} <a href="pricing.html" style="color:#ff5a1f">Upgrade now →</a>`; errorEl.style.display = 'block'; return; }
-        if (!res.ok) { errorEl.textContent = data.error || 'Something went wrong.'; errorEl.style.display = 'block'; return; }
-        const { redirectUrl } = data;
-        const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(redirectUrl)}&size=${size}&color=${color}&bgcolor=${bgColor}`;
-        document.getElementById('qrImage').src = qrSrc;
-        document.getElementById('redirectLink').textContent = redirectUrl;
-        const result = document.getElementById('qr-result');
-        result.classList.add('show');
-        document.getElementById('expiryNotice').style.display = businessName ? 'block' : 'none';
-        document.getElementById('copyBtn').onclick = async () => { await navigator.clipboard.writeText(redirectUrl); document.getElementById('copyBtn').textContent = '✓ Copied!'; setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Link', 2000); };
-        document.getElementById('downloadBtn').onclick = () => { const link = document.createElement('a'); link.download = 'qraivy-code.png'; link.href = qrSrc; link.click(); };
-        result.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        var upgradeEl = document.getElementById('smart-qr-upgrade'); if (upgradeEl) upgradeEl.style.display = 'block';
-      } catch (err) {
-        errorEl.textContent = 'Could not reach the server. Please try again.';
-        errorEl.style.display = 'block';
-      } finally {
-        btn.textContent = '⬡ Generate QR Code'; btn.disabled = false;
-      }
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=${size}&color=${color}&bgcolor=${bgColor}`;
+      document.getElementById('qrImage').src = qrSrc;
+      document.getElementById('redirectLink').textContent = url;
+      const result = document.getElementById('qr-result');
+      result.classList.add('show');
+      const exp = document.getElementById('expiryNotice'); if (exp) exp.style.display = 'none';
+      document.getElementById('copyBtn').onclick = async () => { await navigator.clipboard.writeText(url); document.getElementById('copyBtn').textContent = '✓ Copied!'; setTimeout(() => document.getElementById('copyBtn').textContent = '📋 Copy Link', 2000); };
+      document.getElementById('downloadBtn').onclick = () => { const link = document.createElement('a'); link.download = 'qraivy-code.png'; link.href = qrSrc; link.click(); };
+      result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const upgradeEl = document.getElementById('smart-qr-upgrade'); if (upgradeEl) upgradeEl.style.display = 'block';
+      btn.textContent = '⬡ Generate QR Code'; btn.disabled = false;
     });
 
     document.querySelectorAll('.faq-question').forEach(btn => {
@@ -1478,6 +1461,7 @@
   <script src="js/router.js"></script>
 </body>
 </html>
+
 
 
 
