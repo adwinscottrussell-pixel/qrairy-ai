@@ -577,6 +577,24 @@ async function handleListLPs(req, res) {
   }
 }
 
-module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };
+
+async function handleDeleteLP(req, res) {
+  try {
+    const { slug } = req.params;
+    if (!slug) return res.status(400).json({ error: 'slug required' });
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Not found' });
+    if (page.userId && page.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    await prisma.landingPage.delete({ where: { slug } });
+    return res.json({ ok: true, success: true });
+  } catch (err) {
+    console.error('[LP] delete error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs };
+
 
 
