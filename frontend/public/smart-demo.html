@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Your Smart QR Experience — QRAivy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0b0d;
+      --bg2:       #111318;
+      --bg3:       #181b22;
+      --border:    #1e2230;
+      --border2:   #252a3a;
+      --accent:    #ff5a1f;
+      --accent2:   #ff7a45;
+      --accent-lo: rgba(255,90,31,0.12);
+      --accent-glow: rgba(255,90,31,0.25);
+      --text:      #f0f2f7;
+      --text2:     #8b93a8;
+      --text3:     #5a6178;
+      --green:     #22d47e;
+      --green-lo:  rgba(34,212,126,0.12);
+      --radius:    14px;
+      --radius-lg: 20px;
+      --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,90,31,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,90,31,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glow orb ── */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(255,90,31,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      background: rgba(10,11,13,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-back {
+      font-size: .8rem;
+      color: var(--text2);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color var(--transition);
+    }
+    .nav-back:hover { color: var(--text); }
+    .nav-back::before { content: '←'; }
+
+    .nav-signin {
+      font-size: .8rem;
+      color: var(--text2);
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all var(--transition);
+    }
+    .nav-signin:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── MAIN ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 110px 20px 80px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--accent-lo);
+      border: 1px solid rgba(255,90,31,0.25);
+      color: var(--accent2);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 5px 13px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:.5; transform:scale(0.7); }
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.9rem, 5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero p {
+      font-size: 1rem;
+      color: var(--text2);
+      line-height: 1.65;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .progress-track {
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+      height: 2px;
+      background: var(--border);
+      transform: translateY(-50%);
+      z-index: 0;
+    }
+
+    .progress-fill {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: translateY(-50%);
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+      z-index: 1;
+    }
+
+    .progress-step {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      background: var(--bg2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--text3);
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .progress-step.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--bg2);
+      box-shadow: 0 0 0 4px var(--accent-lo);
+    }
+
+    .progress-step.done {
+      border-color: var(--green);
+      background: var(--green-lo);
+      color: var(--green);
+    }
+    .progress-step.done::after { content: '✓'; font-size: .75rem; }
+
+    .progress-spacer {
+      flex: 1;
+      position: relative;
+      z-index: 0;
+    }
+
+    /* ── STEP CARD ── */
+    .step-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      display: none;
+      animation: fadeUp 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    .step-card.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .step-label {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .step-sub {
+      font-size: .85rem;
+      color: var(--text2);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* ── INPUT ── */
+    .input-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 15px 18px;
+      font-size: 1rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .input-wrap input::placeholder { color: var(--text3); }
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-lo);
+    }
+
+    .input-hint {
+      font-size: .75rem;
+      color: var(--text3);
+    }
+
+    /* ── TYPE GRID ── */
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 480px) {
+      .type-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .type-card {
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .type-card:hover {
+      border-color: var(--accent);
+      background: var(--accent-lo);
+    }
+    .type-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-lo);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .type-icon { font-size: 1.5rem; margin-bottom: 7px; display: block; }
+    .type-name { font-size: .78rem; font-weight: 600; color: var(--text); font-family: 'Syne', sans-serif; }
+
+    /* ── STYLE GRID ── */
+    .style-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .style-card {
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      user-select: none;
+    }
+    .style-card:hover { border-color: var(--accent); background: var(--accent-lo); }
+    .style-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-lo);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .style-swatch {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .style-info { flex: 1; }
+    .style-name {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      margin-bottom: 2px;
+    }
+    .style-desc { font-size: .7rem; color: var(--text3); }
+
+    .style-check {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .6rem;
+      flex-shrink: 0;
+      transition: all var(--transition);
+    }
+    .style-card.selected .style-check {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .style-card.selected .style-check::after { content: '✓'; }
+
+    /* ── FEATURE TOGGLES ── */
+    .features-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .feature-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .feature-row:hover { border-color: var(--border); }
+    .feature-row.on { border-color: var(--accent); background: var(--accent-lo); }
+
+    .feature-icon { font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center; }
+    .feature-info { flex: 1; }
+    .feature-name {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      margin-bottom: 1px;
+    }
+    .feature-desc { font-size: .72rem; color: var(--text3); }
+
+    .toggle {
+      width: 40px; height: 22px;
+      border-radius: 11px;
+      background: var(--border2);
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.25s ease;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: all 0.25s ease;
+    }
+    .feature-row.on .toggle { background: var(--accent); }
+    .feature-row.on .toggle::after {
+      left: 21px;
+      background: #fff;
+    }
+
+    /* ── STEP 5 SUMMARY ── */
+    .summary-card {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .83rem;
+    }
+    .summary-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .summary-key { color: var(--text2); }
+    .summary-val { color: var(--text); font-weight: 600; font-family: 'Syne', sans-serif; }
+
+    .features-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .chip {
+      font-size: .68rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+      background: var(--accent-lo);
+      color: var(--accent2);
+      border: 1px solid rgba(255,90,31,0.2);
+    }
+
+    /* ── BUTTONS ── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+      align-items: center;
+    }
+
+    .btn-next {
+      flex: 1;
+      padding: 14px 24px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: .92rem;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: .01em;
+    }
+    .btn-next:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
+    .btn-next:active { transform: translateY(0); }
+    .btn-next:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-back {
+      padding: 14px 20px;
+      background: transparent;
+      color: var(--text2);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      font-size: .85rem;
+      font-weight: 600;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-back:hover { color: var(--text); border-color: var(--text3); }
+
+    .btn-generate {
+      flex: 1;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, var(--accent), #ff3d00);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: .01em;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-generate::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .btn-generate:hover::before { opacity: 1; }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 12px 32px var(--accent-glow); }
+    .btn-generate:active { transform: translateY(0); }
+
+    /* ── RESULT ── */
+    #result-section {
+      display: none;
+      text-align: center;
+      animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+    #result-section.show { display: block; }
+
+    .result-glow {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      background: var(--accent-lo);
+      border: 1px solid rgba(255,90,31,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 20px;
+    }
+
+    .result-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .result-sub {
+      font-size: .9rem;
+      color: var(--text2);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .result-qr-box {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+
+    .result-qr-placeholder {
+      width: 160px;
+      height: 160px;
+      background: var(--bg3);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: .75rem;
+      color: var(--text3);
+      margin: 0 auto 16px;
+      border: 1px dashed var(--border2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated QR grid */
+    .qr-preview-svg {
+      width: 120px; height: 120px;
+      opacity: 0.7;
+    }
+
+    .result-label {
+      font-size: .72rem;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+    .result-url {
+      font-size: .8rem;
+      color: var(--accent2);
+      font-family: monospace;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .btn-action {
+      padding: 11px 20px;
+      border-radius: var(--radius);
+      font-size: .83rem;
+      font-weight: 600;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .btn-action-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+    .btn-action-primary:hover { background: var(--accent2); }
+
+    .btn-action-secondary {
+      background: transparent;
+      color: var(--text2);
+      border: 1.5px solid var(--border2);
+    }
+    .btn-action-secondary:hover { color: var(--text); border-color: var(--text3); }
+
+    /* ── FOOTER ── */
+    .page-footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: .73rem;
+      color: var(--text3);
+      line-height: 1.7;
+    }
+    .page-footer a { color: var(--text2); text-decoration: none; }
+    .page-footer a:hover { color: var(--accent); }
+
+    /* ── ERROR ── */
+    .error-msg {
+      display: none;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #f87171;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .8rem;
+      margin-top: 12px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      nav { padding: 14px 16px; }
+      .nav-signin { display: none; }
+      main { padding: 90px 16px 60px; }
+      .step-card { padding: 24px 18px; }
+      .btn-row { flex-direction: column-reverse; }
+      .btn-back { width: 100%; text-align: center; }
+      .style-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-back">Back to home</a>
+      <a href="dashboard.html" class="nav-signin">Sign in</a>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-badge">
+        <div class="hero-badge-dot"></div>
+        Smart QR Demo
+      </div>
+      <h1>Create Your <em>Smart QR</em><br/>Experience</h1>
+      <p>Generate a live AI-powered landing page connected to your QR code in minutes. No account needed.</p>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-track"></div>
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      <div class="progress-step active" id="ps1" data-n="1">1</div>
+      <div class="progress-spacer"></div>
+      <div class="progress-step" id="ps2" data-n="2">2</div>
+      <div class="progress-spacer"></div>
+      <div class="progress-step" id="ps3" data-n="3">3</div>
+      <div class="progress-spacer"></div>
+      <div class="progress-step" id="ps4" data-n="4">4</div>
+      <div class="progress-spacer"></div>
+      <div class="progress-step" id="ps5" data-n="5">5</div>
+    </div>
+
+    <!-- STEP 1: Business Name -->
+    <div class="step-card active" id="step1">
+      <div class="step-label">Step 1 of 5</div>
+      <div class="step-title">What's your name?</div>
+      <div class="step-sub">Your business, brand, or creator name — this appears on your Smart QR landing page.</div>
+      <div class="input-wrap">
+        <input type="text" id="businessName" placeholder="e.g. Luna Coffee Co." autocomplete="off" maxlength="60"/>
+      </div>
+      <div class="input-hint">Can be a business, event, creator profile, or anything you like.</div>
+      <div class="error-msg" id="err1">Please enter a name to continue.</div>
+      <div class="btn-row">
+        <button class="btn-next" id="next1">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Business Type -->
+    <div class="step-card" id="step2">
+      <div class="step-label">Step 2 of 5</div>
+      <div class="step-title">What type are you?</div>
+      <div class="step-sub">We'll tailor your Smart QR experience to fit your category.</div>
+      <div class="type-grid">
+        <div class="type-card" data-type="restaurant"><span class="type-icon">🍽</span><div class="type-name">Restaurant</div></div>
+        <div class="type-card" data-type="creator"><span class="type-icon">🎨</span><div class="type-name">Creator</div></div>
+        <div class="type-card" data-type="event"><span class="type-icon">🎵</span><div class="type-name">Event</div></div>
+        <div class="type-card" data-type="ecommerce"><span class="type-icon">🛍</span><div class="type-name">E-commerce</div></div>
+        <div class="type-card" data-type="agency"><span class="type-icon">💼</span><div class="type-name">Agency</div></div>
+        <div class="type-card" data-type="local"><span class="type-icon">📍</span><div class="type-name">Local Business</div></div>
+        <div class="type-card" data-type="music"><span class="type-icon">🎤</span><div class="type-name">Music Artist</div></div>
+        <div class="type-card" data-type="fitness"><span class="type-icon">💪</span><div class="type-name">Fitness</div></div>
+        <div class="type-card" data-type="other"><span class="type-icon">✦</span><div class="type-name">Other</div></div>
+      </div>
+      <div class="error-msg" id="err2">Please choose a type to continue.</div>
+      <div class="btn-row">
+        <button class="btn-back" id="back2">← Back</button>
+        <button class="btn-next" id="next2">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Brand Style -->
+    <div class="step-card" id="step3">
+      <div class="step-label">Step 3 of 5</div>
+      <div class="step-title">Pick your brand style</div>
+      <div class="step-sub">This sets the visual feel of your AI-generated landing page.</div>
+      <div class="style-grid">
+        <div class="style-card" data-style="minimal">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#f8f9fa,#e9ecef)"></div>
+          <div class="style-info"><div class="style-name">Minimal</div><div class="style-desc">Clean, white space, understated</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="luxe">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#1a1208,#c9a84c)"></div>
+          <div class="style-info"><div class="style-name">Luxe</div><div class="style-desc">Gold, premium, high-end</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="neon">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#0d0d0d,#39ff14)"></div>
+          <div class="style-info"><div class="style-name">Neon</div><div class="style-desc">Bold, electric, attention-grabbing</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="creator">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#ff6b9d,#c44dff)"></div>
+          <div class="style-info"><div class="style-name">Creator</div><div class="style-desc">Vibrant, expressive, social-first</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="corporate">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#1a2744,#3a5fa0)"></div>
+          <div class="style-info"><div class="style-name">Corporate</div><div class="style-desc">Trustworthy, structured, professional</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="dark">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#0a0b0d,#ff5a1f)"></div>
+          <div class="style-info"><div class="style-name">Dark</div><div class="style-desc">Moody, premium dark mode</div></div>
+          <div class="style-check"></div>
+        </div>
+        <div class="style-card" data-style="modern">
+          <div class="style-swatch" style="background:linear-gradient(135deg,#e8f4f8,#2196f3)"></div>
+          <div class="style-info"><div class="style-name">Modern</div><div class="style-desc">Fresh, airy, contemporary</div></div>
+          <div class="style-check"></div>
+        </div>
+      </div>
+      <div class="error-msg" id="err3">Please select a style to continue.</div>
+      <div class="btn-row">
+        <button class="btn-back" id="back3">← Back</button>
+        <button class="btn-next" id="next3">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Features -->
+    <div class="step-card" id="step4">
+      <div class="step-label">Step 4 of 5</div>
+      <div class="step-title">Choose your features</div>
+      <div class="step-sub">Toggle on the tools you want on your Smart QR page. You can change these anytime.</div>
+      <div class="features-list">
+        <div class="feature-row on" data-feature="ai-assistant">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-info">
+            <div class="feature-name">AI Assistant</div>
+            <div class="feature-desc">Answers questions from visitors instantly</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+        <div class="feature-row on" data-feature="voice-welcome">
+          <div class="feature-icon">🎙</div>
+          <div class="feature-info">
+            <div class="feature-name">Voice Welcome</div>
+            <div class="feature-desc">Greet scanners with a personalised voice message</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+        <div class="feature-row on" data-feature="wallet-pass">
+          <div class="feature-icon">🎫</div>
+          <div class="feature-info">
+            <div class="feature-name">Wallet Pass</div>
+            <div class="feature-desc">Add to Apple Wallet / Google Pay with one tap</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+        <div class="feature-row" data-feature="push-notifications">
+          <div class="feature-icon">🔔</div>
+          <div class="feature-info">
+            <div class="feature-name">Push Notifications</div>
+            <div class="feature-desc">Send updates directly to subscribers</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+        <div class="feature-row on" data-feature="subscriber-capture">
+          <div class="feature-icon">📬</div>
+          <div class="feature-info">
+            <div class="feature-name">Subscriber Capture</div>
+            <div class="feature-desc">Collect emails and grow your audience</div>
+          </div>
+          <div class="toggle"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" id="back4">← Back</button>
+        <button class="btn-next" id="next4">Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Review & Generate -->
+    <div class="step-card" id="step5">
+      <div class="step-label">Step 5 of 5</div>
+      <div class="step-title">Ready to generate</div>
+      <div class="step-sub">Here's your Smart QR configuration. Hit generate to see your demo.</div>
+
+      <div class="summary-card" id="summaryCard">
+        <div class="summary-row">
+          <span class="summary-key">Name</span>
+          <span class="summary-val" id="sum-name">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Type</span>
+          <span class="summary-val" id="sum-type">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Style</span>
+          <span class="summary-val" id="sum-style">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Features</span>
+          <span class="summary-val">
+            <div class="features-chips" id="sum-features"></div>
+          </span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-back" id="back5">← Back</button>
+        <button class="btn-generate" id="generateBtn">✨ Generate Smart QR Demo</button>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-section">
+      <div class="result-glow">✨</div>
+      <div class="result-title">Your Smart QR is ready!</div>
+      <div class="result-sub">
+        Your AI-powered landing page has been previewed below.<br/>
+        <strong id="result-name-display" style="color:var(--accent)"></strong> is live.
+      </div>
+
+      <div class="result-qr-box">
+        <div class="result-qr-placeholder">
+          <!-- Decorative QR SVG -->
+          <svg class="qr-preview-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="40" height="40" rx="4" fill="none" stroke="#ff5a1f" stroke-width="3"/>
+            <rect x="16" y="16" width="24" height="24" rx="2" fill="#ff5a1f" opacity="0.6"/>
+            <rect x="72" y="8" width="40" height="40" rx="4" fill="none" stroke="#ff5a1f" stroke-width="3"/>
+            <rect x="80" y="16" width="24" height="24" rx="2" fill="#ff5a1f" opacity="0.6"/>
+            <rect x="8" y="72" width="40" height="40" rx="4" fill="none" stroke="#ff5a1f" stroke-width="3"/>
+            <rect x="16" y="80" width="24" height="24" rx="2" fill="#ff5a1f" opacity="0.6"/>
+            <rect x="58" y="58" width="8" height="8" fill="#ff5a1f" opacity="0.5"/>
+            <rect x="72" y="58" width="8" height="8" fill="#ff5a1f" opacity="0.5"/>
+            <rect x="86" y="58" width="8" height="8" fill="#ff5a1f" opacity="0.8"/>
+            <rect x="100" y="58" width="8" height="8" fill="#ff5a1f" opacity="0.3"/>
+            <rect x="58" y="72" width="8" height="8" fill="#ff5a1f" opacity="0.8"/>
+            <rect x="72" y="72" width="8" height="8" fill="#ff5a1f" opacity="0.4"/>
+            <rect x="86" y="72" width="8" height="8" fill="#ff5a1f" opacity="0.9"/>
+            <rect x="58" y="86" width="8" height="8" fill="#ff5a1f" opacity="0.3"/>
+            <rect x="72" y="86" width="8" height="8" fill="#ff5a1f" opacity="0.7"/>
+            <rect x="100" y="86" width="8" height="8" fill="#ff5a1f" opacity="0.5"/>
+            <rect x="58" y="100" width="8" height="8" fill="#ff5a1f" opacity="0.6"/>
+            <rect x="86" y="100" width="8" height="8" fill="#ff5a1f" opacity="0.4"/>
+            <rect x="100" y="100" width="8" height="8" fill="#ff5a1f" opacity="0.8"/>
+          </svg>
+        </div>
+        <div class="result-label">Demo preview URL</div>
+        <div class="result-url" id="result-url">qraivy.com/demo/preview</div>
+      </div>
+
+      <div class="result-actions">
+        <a href="dashboard.html" class="btn-action btn-action-primary">🚀 Activate Smart QR — Free</a>
+        <button class="btn-action btn-action-secondary" onclick="resetDemo()">↩ Start over</button>
+      </div>
+
+      <div style="margin-top:20px;font-size:.75rem;color:var(--text3);line-height:1.6;">
+        This is a demo preview. <a href="dashboard.html" style="color:var(--accent2);text-decoration:none;">Create a free account</a> to publish and activate your Smart QR.
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+      <div>© 2026 QRAivy · <a href="index.html">Home</a> · <a href="qr-free.html">Free QR Generator</a> · <a href="#">Privacy</a></div>
+      <div style="margin-top:4px;">No account required for this demo. Your data is not stored.</div>
+    </div>
+
+  </main>
+
+  <script>
+  (function () {
+
+    // ── State ──────────────────────────────────────────────────────────
+    const state = {
+      name: '',
+      type: '',
+      style: '',
+      features: new Set(['ai-assistant', 'voice-welcome', 'wallet-pass', 'subscriber-capture'])
+    };
+
+    const TYPE_LABELS = {
+      restaurant:'Restaurant', creator:'Creator', event:'Event',
+      ecommerce:'E-commerce', agency:'Agency', local:'Local Business',
+      music:'Music Artist', fitness:'Fitness', other:'Other'
+    };
+
+    const STYLE_LABELS = {
+      minimal:'Minimal', luxe:'Luxe', neon:'Neon', creator:'Creator',
+      corporate:'Corporate', dark:'Dark', modern:'Modern'
+    };
+
+    const FEATURE_LABELS = {
+      'ai-assistant':'AI Assistant', 'voice-welcome':'Voice Welcome',
+      'wallet-pass':'Wallet Pass', 'push-notifications':'Push Notifications',
+      'subscriber-capture':'Subscriber Capture'
+    };
+
+    let currentStep = 1;
+
+    // ── Progress ───────────────────────────────────────────────────────
+    function updateProgress(step) {
+      const fills = [0, 0, 25, 50, 75, 100];
+      document.getElementById('progressFill').style.width = fills[step] + '%';
+      for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('ps' + i);
+        el.classList.remove('active', 'done');
+        if (i < step) { el.classList.add('done'); el.textContent = ''; }
+        else if (i === step) { el.classList.add('active'); el.textContent = i; }
+        else { el.textContent = i; }
+      }
+    }
+
+    function goTo(n) {
+      document.getElementById('step' + currentStep).classList.remove('active');
+      currentStep = n;
+      document.getElementById('step' + n).classList.add('active');
+      document.getElementById('step' + n).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateProgress(n);
+    }
+
+    // ── Step 1 ─────────────────────────────────────────────────────────
+    document.getElementById('next1').addEventListener('click', () => {
+      const val = document.getElementById('businessName').value.trim();
+      if (!val) { document.getElementById('err1').style.display = 'block'; return; }
+      document.getElementById('err1').style.display = 'none';
+      state.name = val;
+      goTo(2);
+    });
+
+    document.getElementById('businessName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('next1').click();
+    });
+
+    // ── Step 2 ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.type-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        state.type = card.dataset.type;
+      });
+    });
+
+    document.getElementById('back2').addEventListener('click', () => goTo(1));
+    document.getElementById('next2').addEventListener('click', () => {
+      if (!state.type) { document.getElementById('err2').style.display = 'block'; return; }
+      document.getElementById('err2').style.display = 'none';
+      goTo(3);
+    });
+
+    // ── Step 3 ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.style-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        state.style = card.dataset.style;
+      });
+    });
+
+    document.getElementById('back3').addEventListener('click', () => goTo(2));
+    document.getElementById('next3').addEventListener('click', () => {
+      if (!state.style) { document.getElementById('err3').style.display = 'block'; return; }
+      document.getElementById('err3').style.display = 'none';
+      goTo(4);
+    });
+
+    // ── Step 4 ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.feature-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const f = row.dataset.feature;
+        row.classList.toggle('on');
+        if (row.classList.contains('on')) state.features.add(f);
+        else state.features.delete(f);
+      });
+    });
+
+    document.getElementById('back4').addEventListener('click', () => goTo(3));
+    document.getElementById('next4').addEventListener('click', () => {
+      goTo(5);
+      buildSummary();
+    });
+
+    // ── Step 5 summary ─────────────────────────────────────────────────
+    function buildSummary() {
+      document.getElementById('sum-name').textContent = state.name;
+      document.getElementById('sum-type').textContent = TYPE_LABELS[state.type] || state.type;
+      document.getElementById('sum-style').textContent = STYLE_LABELS[state.style] || state.style;
+      const chips = document.getElementById('sum-features');
+      chips.innerHTML = '';
+      if (state.features.size === 0) {
+        chips.innerHTML = '<span style="color:var(--text3);font-size:.75rem">None selected</span>';
+      } else {
+        state.features.forEach(f => {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.textContent = FEATURE_LABELS[f] || f;
+          chips.appendChild(chip);
+        });
+      }
+    }
+
+    document.getElementById('back5').addEventListener('click', () => goTo(4));
+
+    // ── Generate ───────────────────────────────────────────────────────
+    document.getElementById('generateBtn').addEventListener('click', () => {
+      const btn = document.getElementById('generateBtn');
+      btn.textContent = '✨ Generating...';
+      btn.disabled = true;
+
+      // Simulate generation delay for demo feel
+      setTimeout(() => {
+        // Hide steps
+        document.getElementById('progressBar').style.display = 'none';
+        document.getElementById('step5').classList.remove('active');
+
+        // Show result
+        const result = document.getElementById('result-section');
+        result.classList.add('show');
+
+        // Populate
+        document.getElementById('result-name-display').textContent = state.name;
+        const slug = state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        document.getElementById('result-url').textContent = `qraivy.com/demo/${slug}`;
+
+        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        btn.textContent = '✨ Generate Smart QR Demo';
+        btn.disabled = false;
+      }, 1600);
+    });
+
+    // ── Reset ──────────────────────────────────────────────────────────
+    window.resetDemo = function () {
+      state.name = ''; state.type = ''; state.style = '';
+      state.features = new Set(['ai-assistant', 'voice-welcome', 'wallet-pass', 'subscriber-capture']);
+      document.getElementById('businessName').value = '';
+      document.querySelectorAll('.type-card, .style-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.feature-row').forEach(row => {
+        const f = row.dataset.feature;
+        row.classList.toggle('on', state.features.has(f));
+      });
+      document.getElementById('result-section').classList.remove('show');
+      document.getElementById('progressBar').style.display = 'flex';
+      goTo(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // ── Init ───────────────────────────────────────────────────────────
+    updateProgress(1);
+
+  })();
+  </script>
+
+</body>
+</html>
