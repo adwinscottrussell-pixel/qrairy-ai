@@ -531,7 +531,7 @@ async function handlePublishLP(req, res) {
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
     const page = await prisma.landingPage.upsert({
       where: { slug },
-      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
+      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
     });
     return res.json({ ok: true, url: `https://api.qraivy.com/lp/${slug}`, slug, id: page.id });
@@ -578,4 +578,5 @@ async function handleListLPs(req, res) {
 }
 
 module.exports = { handlePublishLP, handleServeLP, handleGetLP, handleListLPs };
+
 
