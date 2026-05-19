@@ -627,9 +627,14 @@ document.getElementById('btn-delete').addEventListener('click', async () => {
   if (!confirm('Delete this Smart QR Page and all its data? This cannot be undone.')) return;
   try {
     const token = await window.Clerk.session.getToken();
-    const res = await fetch(`${API_BASE}/qr/${QR_ID}`, { method:'DELETE', headers:{Authorization:`Bearer ${token}`} });
+    let res;
+    if (QR_ID) {
+      res = await fetch(`${API_BASE}/qr/${QR_ID}`, { method:'DELETE', headers:{Authorization:`Bearer ${token}`} });
+    } else if (LP_SLUG) {
+      res = await fetch(`${API_BASE}/lp/${LP_SLUG}`, { method:'DELETE', headers:{Authorization:`Bearer ${token}`} });
+    } else { toast('Nothing to delete.'); return; }
     const d = await res.json();
-    if (d.success) { window.location.href = 'dashboard.html'; }
+    if (d.success || d.ok) { window.location.href = 'dashboard.html'; }
     else { toast('Delete failed: ' + (d.error||'unknown error')); }
   } catch { toast('Could not reach server.'); }
 });
@@ -710,6 +715,7 @@ async function init() {
 <script src="js/shell-customer.js"></script>
 </body>
 </html>
+
 
 
 
