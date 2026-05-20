@@ -376,9 +376,9 @@ function renderMetrics(dashboard) {
         const pct = Math.round((q.totalScans/maxS)*100);
         const name = q.businessName || 'Basic QR';
         return `<div class="mc-bar-row">
-          <span class="mc-bar-label">${name}</span>
+          <span class="mc-bar-label" style="font-family:'Space Grotesk',sans-serif;font-size:.75rem;color:#e0e6f0;text-transform:capitalize;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${name}</span>
           <div class="mc-bar-track"><div class="mc-bar-fill" style="width:${pct}%;background:#ff5a1f"></div></div>
-          <span class="mc-bar-count">${q.totalScans}</span>
+          <span class="mc-bar-count" style="font-family:'DM Mono',monospace;font-size:.65rem;color:#8b93a8">${q.totalScans}</span>
         </div>`;
       }).join('');
     }
