@@ -13,6 +13,7 @@
 
 <style>
 #claim-banner {
+  position: relative; z-index: 50;
   display: none;
   background: linear-gradient(90deg, #0a1a0a, #0f2010);
   border-bottom: 1px solid rgba(34,212,126,0.3);
@@ -76,7 +77,7 @@
 .sqr-claimed-btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: #f0f4f8; }
 
 .claim-success-overlay {
-  display:none;position:fixed;inset:0;z-index:9000;
+  display:none;position:fixed;inset:0;z-index:10000;
   background:rgba(5,5,5,0.88);backdrop-filter:blur(14px);
   align-items:center;justify-content:center;padding:20px;
 }
@@ -475,8 +476,26 @@ async function initDashboard(){
 
   // Run after dashboard init
   document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(handleClaimDemo, 800);
-    setTimeout(restoreActiveClaim, 1000);
+    setTimeout(function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('claimDemo')) {
+        handleClaimDemo();
+      } else {
+        // Check if there is an unclaimed pending demo in localStorage
+        try {
+          const pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || 'null');
+          if (pending && pending.slug && !localStorage.getItem('qraivy_active_claim')) {
+            // Inject claimDemo param and trigger
+            const url = new URL(window.location.href);
+            url.searchParams.set('claimDemo', pending.slug);
+            history.replaceState({}, '', url.toString());
+            handleClaimDemo();
+          } else {
+            restoreActiveClaim();
+          }
+        } catch(e) { restoreActiveClaim(); }
+      }
+    }, 900);
   });
 })();
 </script>
