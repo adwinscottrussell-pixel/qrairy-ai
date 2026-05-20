@@ -128,7 +128,7 @@
 
 
 <!-- CLAIM SUCCESS MODAL -->
-<div class="claim-success-overlay" id="claimSuccessOverlay">
+<div class="claim-success-overlay" id="claimSuccessOverlay" onclick="if(event.target===this){this.classList.remove('show');document.getElementById('claim-banner').classList.add('show')}">
   <div class="claim-success-modal">
     <div class="csm-glow"></div>
     <div class="csm-icon">🎉</div>
@@ -401,9 +401,12 @@ async function initDashboard(){
     if (viewBtn) viewBtn.href = pending.hostedUrl;
     if (manBtn) manBtn.onclick = function() {
       if (overlay) overlay.classList.remove('show');
+      if (banner) banner.classList.add('show');
       if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window._userId || 'user');
     };
     if (overlay) setTimeout(() => overlay.classList.add('show'), 700);
+    // Hide banner while modal is visible
+    if (banner) banner.classList.remove('show');
 
     // Show banner
     const banner = document.getElementById('claim-banner');
