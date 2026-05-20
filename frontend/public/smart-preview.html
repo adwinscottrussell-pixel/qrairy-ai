@@ -6,33 +6,30 @@
   <title>Your Smart QR is Live — QRAivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0a0b0d;
-      --bg2:        #111318;
-      --bg3:        #181b22;
-      --bg4:        #1e2230;
-      --border:     #1e2230;
-      --border2:    #252a3a;
-      --accent:     #ff5a1f;
-      --accent2:    #ff7a45;
-      --accent-lo:  rgba(255,90,31,0.10);
-      --accent-glow:rgba(255,90,31,0.22);
-      --text:       #f0f2f7;
-      --text2:      #8b93a8;
-      --text3:      #5a6178;
-      --green:      #22d47e;
-      --green-lo:   rgba(34,212,126,0.12);
-      --blue:       #3b82f6;
-      --blue-lo:    rgba(59,130,246,0.12);
-      --purple:     #a855f7;
-      --purple-lo:  rgba(168,85,247,0.12);
-      --radius:     14px;
-      --radius-lg:  22px;
-      --t:          0.2s cubic-bezier(0.4,0,0.2,1);
+      --bg:          #0a0b0d;
+      --bg2:         #111318;
+      --bg3:         #181b22;
+      --border:      #1e2230;
+      --border2:     #252a3a;
+      --accent:      #ff5a1f;
+      --accent2:     #ff7a45;
+      --accent-lo:   rgba(255,90,31,0.10);
+      --accent-glow: rgba(255,90,31,0.25);
+      --text:        #f0f2f7;
+      --text2:       #8b93a8;
+      --text3:       #5a6178;
+      --green:       #22d47e;
+      --green-lo:    rgba(34,212,126,0.12);
+      --blue:        #3b82f6;
+      --blue-lo:     rgba(59,130,246,0.12);
+      --r:           13px;
+      --r-lg:        20px;
+      --t:           0.2s cubic-bezier(0.4,0,0.2,1);
     }
 
     html { scroll-behavior: smooth; }
@@ -50,651 +47,772 @@
       content: '';
       position: fixed; inset: 0;
       background-image:
-        linear-gradient(rgba(255,90,31,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,90,31,0.025) 1px, transparent 1px);
+        linear-gradient(rgba(255,90,31,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,90,31,.025) 1px, transparent 1px);
       background-size: 48px 48px;
       pointer-events: none; z-index: 0;
     }
 
+    /* ══ TIMER BANNER ══ */
+    #timerBanner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: linear-gradient(90deg, #1a0800, #1f0d04);
+      border-bottom: 1px solid rgba(255,90,31,.35);
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 10px 20px;
+      font-size: .82rem;
+    }
+
+    .banner-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      animation: bpulse 1.4s ease infinite;
+      flex-shrink: 0;
+    }
+    @keyframes bpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    .banner-text { color: var(--text2); }
+    .banner-text strong { color: var(--accent2); }
+    #bannerTimer { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+    .banner-cta {
+      padding: 4px 14px; background: var(--accent); color: #fff;
+      border: none; border-radius: 7px; font-size: .72rem; font-weight: 700;
+      font-family: 'Syne', sans-serif; cursor: pointer; text-decoration: none;
+      white-space: nowrap; transition: background var(--t);
+    }
+    .banner-cta:hover { background: var(--accent2); }
+
+    /* ══ NAV ══ */
     nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 40px; left: 0; right: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 32px;
-      background: rgba(10,11,13,0.88); backdrop-filter: blur(16px);
+      padding: 14px 32px;
+      background: rgba(10,11,13,.9); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
-    .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.25rem; color:var(--text); text-decoration:none; letter-spacing:-0.02em; }
+    .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; color:var(--text); text-decoration:none; letter-spacing:-0.02em; }
     .nav-logo span { color:var(--accent); }
-    .nav-right { display:flex; align-items:center; gap:14px; }
+    .nav-right { display:flex; align-items:center; gap:12px; }
     .live-badge {
       display:inline-flex; align-items:center; gap:6px;
       background:var(--green-lo); border:1px solid rgba(34,212,126,.25);
-      color:var(--green); font-size:.7rem; font-weight:700; letter-spacing:.08em;
-      text-transform:uppercase; padding:5px 12px; border-radius:100px;
+      color:var(--green); font-size:.68rem; font-weight:700;
+      letter-spacing:.08em; text-transform:uppercase; padding:4px 11px; border-radius:100px;
     }
-    .live-dot { width:6px;height:6px;border-radius:50%;background:var(--green);animation:livepulse 1.6s ease infinite; }
-    @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
-    .nav-cta {
-      padding:8px 18px; background:var(--accent); color:#fff;
-      border:none; border-radius:9px; font-size:.8rem; font-weight:700;
-      font-family:'Syne',sans-serif; cursor:pointer; text-decoration:none;
-      transition:background var(--t);
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:bpulse 1.6s ease infinite; }
+    .btn-activate-nav {
+      padding:8px 18px; background:var(--accent); color:#fff; border:none;
+      border-radius:9px; font-size:.78rem; font-weight:700; font-family:'Syne',sans-serif;
+      cursor:pointer; text-decoration:none; transition:background var(--t);
     }
-    .nav-cta:hover { background:var(--accent2); }
+    .btn-activate-nav:hover { background:var(--accent2); }
 
-    main { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:100px 20px 80px; }
-    section { margin-bottom:72px; }
-
-    .sec-label { font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; font-family:'Syne',sans-serif; }
-    .sec-title { font-family:'Syne',sans-serif; font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:var(--text); letter-spacing:-0.025em; margin-bottom:8px; line-height:1.2; }
-    .sec-title em { font-style:normal; color:var(--accent); }
-    .sec-sub { font-size:.9rem; color:var(--text2); line-height:1.6; }
-
-    /* S1 HERO */
-    .hero-status {
-      text-align:center; padding:52px 28px 44px;
-      background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg);
-      position:relative; overflow:hidden;
+    /* ══ MAIN ══ */
+    main {
+      position: relative; z-index: 1;
+      max-width: 1120px; margin: 0 auto;
+      padding: 128px 20px 80px;
     }
-    .hero-status::before {
-      content:''; position:absolute; top:-80px; left:50%; transform:translateX(-50%);
-      width:500px; height:300px;
-      background:radial-gradient(ellipse, rgba(255,90,31,.1) 0%, transparent 70%);
-      pointer-events:none;
+
+    /* ══ HERO ROW ══ */
+    .hero-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      margin-bottom: 16px; flex-wrap: wrap;
     }
-    .status-badges { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:22px; }
-    .badge { display:inline-flex; align-items:center; gap:6px; font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; padding:5px 13px; border-radius:100px; }
+    .badge {
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:.67rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      padding:4px 12px; border-radius:100px;
+    }
     .badge-green { background:var(--green-lo); border:1px solid rgba(34,212,126,.25); color:var(--green); }
     .badge-orange { background:var(--accent-lo); border:1px solid rgba(255,90,31,.25); color:var(--accent2); }
-    .badge-blue { background:var(--blue-lo); border:1px solid rgba(59,130,246,.25); color:var(--blue); }
-    .hero-status h1 { font-family:'Syne',sans-serif; font-size:clamp(2rem,5vw,3.2rem); font-weight:800; letter-spacing:-0.03em; color:var(--text); margin-bottom:14px; line-height:1.1; }
-    .hero-status h1 em { font-style:normal; color:var(--accent); }
-    .hero-status p { font-size:1rem; color:var(--text2); max-width:480px; margin:0 auto 28px; line-height:1.65; }
-    .demo-notice {
-      display:inline-flex; align-items:center; gap:8px;
-      background:rgba(255,90,31,.06); border:1px solid rgba(255,90,31,.15);
-      border-radius:10px; padding:10px 18px; font-size:.78rem; color:var(--text2); line-height:1.5;
+
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem,4vw,2.8rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      color: var(--text); line-height: 1.1; margin-bottom: 10px;
     }
-    .demo-notice strong { color:var(--accent2); }
+    .page-title em { font-style: normal; color: var(--accent); }
+    .page-sub { font-size: .92rem; color: var(--text2); line-height: 1.6; margin-bottom: 36px; }
 
-    /* S2 QR */
-    .qr-display-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
-    @media(max-width:680px){ .qr-display-grid { grid-template-columns:1fr; } }
-
-    .qr-canvas {
-      background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg);
-      padding:36px; text-align:center;
+    /* ══ MAIN GRID ══ */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 28px;
+      align-items: start;
     }
-    .qr-frame {
-      width:180px; height:180px; margin:0 auto 20px;
-      background:#fff; border-radius:16px; padding:12px;
-      box-shadow:0 0 40px rgba(255,90,31,.2); position:relative;
+    @media(max-width:900px){ .preview-grid { grid-template-columns: 1fr; } }
+
+    /* ── LEFT: QR PANEL ── */
+    .qr-panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 32px 28px;
+      position: sticky; top: 100px;
     }
-    .qr-frame svg { width:100%; height:100%; }
-    .qr-corner { position:absolute; width:18px; height:18px; border-color:var(--accent); border-style:solid; }
-    .qr-corner-tl { top:-2px;left:-2px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
-    .qr-corner-tr { top:-2px;right:-2px; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
-    .qr-corner-bl { bottom:-2px;left:-2px; border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
-    .qr-corner-br { bottom:-2px;right:-2px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
-    .qr-business-name { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:var(--text); margin-bottom:4px; }
-    .qr-type-tag { display:inline-block; font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:100px; background:var(--accent-lo); color:var(--accent2); border:1px solid rgba(255,90,31,.2); margin-bottom:16px; }
-    .qr-url { font-size:.73rem; color:var(--text3); font-family:monospace; word-break:break-all; }
-    .qr-actions { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; justify-content:center; }
-    .qr-btn { padding:9px 16px; border-radius:9px; font-size:.78rem; font-weight:600; font-family:'Syne',sans-serif; cursor:pointer; transition:all var(--t); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
-    .qr-btn-primary { background:var(--accent); color:#fff; border:none; }
-    .qr-btn-primary:hover { background:var(--accent2); }
-    .qr-btn-secondary { background:transparent; color:var(--text2); border:1.5px solid var(--border2); }
-    .qr-btn-secondary:hover { color:var(--text); border-color:var(--text3); }
 
-    .qr-meta { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; }
-    .qr-meta-title { font-family:'Syne',sans-serif; font-size:.85rem; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.07em; margin-bottom:18px; }
-    .meta-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
-    .meta-row:last-child { border-bottom:none; padding-bottom:0; }
-    .meta-icon { width:34px;height:34px;border-radius:9px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0; }
-    .meta-info { flex:1; }
-    .meta-key { font-size:.72rem; color:var(--text3); margin-bottom:1px; }
-    .meta-val { font-size:.85rem; color:var(--text); font-weight:600; font-family:'Syne',sans-serif; }
-    .meta-tag { font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:100px; }
-    .tag-green { background:var(--green-lo); color:var(--green); }
-    .tag-orange { background:var(--accent-lo); color:var(--accent2); }
+    .qr-panel-label {
+      font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--text3);
+      margin-bottom: 18px; font-family: 'Syne', sans-serif;
+    }
 
-    /* S3 PHONE */
-    .phone-section { display:grid; grid-template-columns:300px 1fr; gap:52px; align-items:center; }
-    @media(max-width:780px){ .phone-section { grid-template-columns:1fr; } .phone-wrap { justify-self:center; } }
+    .qr-code-wrap {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 18px;
+      box-shadow: 0 0 32px rgba(255,90,31,.18);
+      position: relative;
+    }
 
-    .phone-wrap { position:relative; display:flex; justify-content:center; }
+    .qr-code-wrap img {
+      width: 100%; display: block; border-radius: 6px;
+    }
+
+    /* Orange corner accents */
+    .qr-corner { position:absolute; width:20px; height:20px; border-color:var(--accent); border-style:solid; }
+    .qr-corner-tl { top:-1px;left:-1px; border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
+    .qr-corner-tr { top:-1px;right:-1px; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
+    .qr-corner-bl { bottom:-1px;left:-1px; border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
+    .qr-corner-br { bottom:-1px;right:-1px; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+
+    .qr-business { font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; color:var(--text); margin-bottom:3px; }
+    .qr-type { font-size:.72rem; color:var(--text3); margin-bottom:14px; }
+
+    .qr-url-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 9px; padding: 9px 12px; margin-bottom: 12px;
+    }
+    .qr-url-text { font-size:.73rem; color:var(--accent2); font-family:monospace; flex:1; word-break:break-all; }
+    .copy-btn {
+      padding:4px 12px; background:var(--accent); color:#fff; border:none;
+      border-radius:6px; font-size:.68rem; font-weight:700; font-family:'Syne',sans-serif;
+      cursor:pointer; white-space:nowrap; transition:background var(--t); flex-shrink:0;
+    }
+    .copy-btn:hover { background:var(--accent2); }
+
+    .dl-btn {
+      width:100%; padding:11px; background:transparent;
+      border:1.5px solid var(--border2); color:var(--text2);
+      border-radius:var(--r); font-size:.8rem; font-weight:600;
+      font-family:'Syne',sans-serif; cursor:pointer; transition:all var(--t);
+      display:flex; align-items:center; justify-content:center; gap:7px;
+    }
+    .dl-btn:hover { color:var(--text); border-color:var(--text3); }
+
+    /* ── RIGHT: PHONE + FEATURES ── */
+    .right-col { display:flex; flex-direction:column; gap:24px; }
+
+    /* Phone mockup */
+    .phone-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 28px;
+      display: flex; gap: 32px; align-items: flex-start;
+    }
+    @media(max-width:640px){ .phone-card { flex-direction:column; align-items:center; } }
+
+    .phone-wrap { flex-shrink:0; }
     .phone {
-      width:258px; background:#0d0f13; border-radius:38px;
-      border:2px solid #2a2d3a; padding:14px 12px;
-      box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(255,90,31,.08);
+      width: 220px; background: #0d0f13; border-radius: 34px;
+      border: 2px solid #2a2d3a; padding: 12px 10px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 32px rgba(255,90,31,.07);
     }
-    .phone-notch { width:80px;height:26px;background:#0d0f13;border-radius:0 0 18px 18px;margin:0 auto 10px;border:2px solid #2a2d3a;border-top:none; }
-    .phone-screen { border-radius:26px; overflow:hidden; background:#12141a; min-height:460px; }
-    .lp-hero { background:linear-gradient(160deg,#1a0e06,#0d0f13 60%); padding:24px 16px 20px; border-bottom:1px solid rgba(255,90,31,.1); text-align:center; }
-    .lp-logo-chip { display:inline-flex;align-items:center;gap:5px;background:var(--accent-lo);border:1px solid rgba(255,90,31,.2);border-radius:100px;padding:3px 10px;font-size:.55rem;font-weight:700;color:var(--accent2);margin-bottom:10px;letter-spacing:.05em; }
-    .lp-name { font-family:'Syne',sans-serif; font-size:.95rem; font-weight:800; color:#fff; margin-bottom:4px; }
-    .lp-tagline { font-size:.6rem; color:rgba(255,255,255,.5); }
-    .lp-links { padding:14px 14px 0; }
-    .lp-link { display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 12px;margin-bottom:8px;cursor:pointer; }
-    .lp-link-icon { font-size:.85rem; width:20px; text-align:center; flex-shrink:0; }
-    .lp-link-text { font-size:.62rem; color:rgba(255,255,255,.8); font-weight:500; }
-    .lp-link-arr { margin-left:auto; font-size:.55rem; color:rgba(255,255,255,.3); }
-    .lp-subscribe { margin:12px 14px; background:rgba(255,90,31,.08); border:1px solid rgba(255,90,31,.2); border-radius:12px; padding:12px; }
-    .lp-sub-label { font-size:.55rem; color:var(--accent2); font-weight:700; margin-bottom:7px; text-transform:uppercase; letter-spacing:.06em; }
-    .lp-sub-input { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:7px; padding:6px 10px; font-size:.58rem; color:rgba(255,255,255,.5); width:100%; margin-bottom:7px; }
-    .lp-sub-btn { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:7px; width:100%; font-size:.6rem; font-weight:700; cursor:pointer; }
-    .lp-ai { margin:12px 14px 0; background:rgba(59,130,246,.07); border:1px solid rgba(59,130,246,.2); border-radius:12px; padding:10px 12px; }
-    .lp-ai-header { display:flex;align-items:center;gap:6px;margin-bottom:8px; }
-    .lp-ai-dot { width:6px;height:6px;border-radius:50%;background:var(--blue);animation:livepulse 2s infinite; }
-    .lp-ai-title { font-size:.55rem; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:.06em; }
-    .lp-ai-bubble { background:rgba(255,255,255,.05); border-radius:8px 8px 8px 2px; padding:7px 10px; font-size:.57rem; color:rgba(255,255,255,.7); line-height:1.5; margin-bottom:6px; }
-    .lp-wallet-btn { display:flex;align-items:center;justify-content:center;gap:6px;background:#000;border:1px solid rgba(255,255,255,.15);border-radius:9px;padding:9px;margin:10px 14px;font-size:.6rem;color:#fff;font-weight:600;cursor:pointer; }
+    .phone-notch { width:68px;height:22px;background:#0d0f13;border-radius:0 0 14px 14px;margin:0 auto 8px;border:2px solid #2a2d3a;border-top:none; }
+    .phone-screen { border-radius:22px; overflow:hidden; background:#12141a; }
 
-    .phone-info-list { display:flex; flex-direction:column; gap:22px; }
-    .phone-info-item { display:flex; align-items:flex-start; gap:14px; }
-    .phone-info-icon { width:40px;height:40px;border-radius:11px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0; }
-    .phone-info-title { font-family:'Syne',sans-serif; font-size:.88rem; font-weight:700; color:var(--text); margin-bottom:3px; }
-    .phone-info-desc { font-size:.78rem; color:var(--text2); line-height:1.5; }
+    /* Landing page inside phone */
+    .lp { font-size: 0; /* reset */ }
+    .lp-top { background:linear-gradient(160deg,#1a0e06,#0d0f13 65%); padding:18px 12px 14px; border-bottom:1px solid rgba(255,90,31,.1); text-align:center; }
+    .lp-chip { display:inline-flex;align-items:center;gap:4px;background:var(--accent-lo);border:1px solid rgba(255,90,31,.2);border-radius:100px;padding:2px 8px;font-size:.5rem;font-weight:700;color:var(--accent2);margin-bottom:8px;letter-spacing:.05em; font-family:'DM Sans',sans-serif; }
+    .lp-bname { font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800;color:#fff;margin-bottom:2px; }
+    .lp-tag { font-size:.5rem;color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif; }
 
-    /* S4 STATS */
-    .stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
-    @media(max-width:900px){ .stats-grid { grid-template-columns:repeat(3,1fr); } }
-    @media(max-width:560px){ .stats-grid { grid-template-columns:repeat(2,1fr); } }
-    .stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:20px 16px; text-align:center; position:relative; overflow:hidden; transition:border-color var(--t); }
-    .stat-card:hover { border-color:var(--border2); }
-    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-    .stat-card.c-green::before { background:var(--green); }
-    .stat-card.c-orange::before { background:var(--accent); }
-    .stat-card.c-blue::before { background:var(--blue); }
-    .stat-card.c-purple::before { background:var(--purple); }
-    .stat-card.c-teal::before { background:#14b8a6; }
-    .stat-icon { font-size:1.3rem; margin-bottom:10px; display:block; }
-    .stat-num { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800; color:var(--text); margin-bottom:3px; line-height:1; }
-    .stat-label { font-size:.7rem; color:var(--text3); margin-bottom:8px; }
-    .stat-delta { display:inline-flex;align-items:center;gap:3px;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px; }
-    .delta-up { background:var(--green-lo); color:var(--green); }
-    .delta-mock { background:var(--accent-lo); color:var(--accent2); }
+    .lp-links { padding:10px 10px 0; }
+    .lp-link { display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:7px 9px;margin-bottom:6px; }
+    .lp-li { font-size:.54rem;color:rgba(255,255,255,.8);font-weight:500;flex:1;font-family:'DM Sans',sans-serif; }
+    .lp-arr { font-size:.5rem;color:rgba(255,255,255,.3); }
 
-    /* S5 LOCKED */
-    .locked-wrap { position:relative; }
-    .locked-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:0; }
-    @media(max-width:780px){ .locked-grid { grid-template-columns:repeat(2,1fr); } }
-    @media(max-width:480px){ .locked-grid { grid-template-columns:1fr; } }
+    .lp-sub { margin:8px 10px;background:rgba(255,90,31,.08);border:1px solid rgba(255,90,31,.2);border-radius:10px;padding:9px; }
+    .lp-sub-lbl { font-size:.48rem;color:var(--accent2);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;font-family:'DM Sans',sans-serif; }
+    .lp-sub-in { background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:5px 8px;font-size:.5rem;color:rgba(255,255,255,.4);width:100%;margin-bottom:5px;font-family:'DM Sans',sans-serif; }
+    .lp-sub-btn { background:var(--accent);color:#fff;border:none;border-radius:5px;padding:5px;width:100%;font-size:.52rem;font-weight:700;font-family:'DM Sans',sans-serif; }
 
-    .locked-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:22px; pointer-events:none; user-select:none; }
-    .locked-card-title { font-family:'Syne',sans-serif; font-size:.85rem; font-weight:700; color:var(--text); margin-bottom:12px; }
-    .fake-chart { display:flex; align-items:flex-end; gap:4px; height:50px; margin-bottom:12px; }
-    .fake-bar { flex:1; border-radius:3px 3px 0 0; background:var(--border2); }
-    .fake-line { height:2px; background:var(--border2); border-radius:2px; margin-bottom:6px; }
-    .fake-line.short { width:60%; }
-    .fake-line.medium { width:80%; }
+    .lp-ai { margin:8px 10px;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:8px 10px; }
+    .lp-ai-h { display:flex;align-items:center;gap:5px;margin-bottom:6px; }
+    .lp-ai-dot { width:5px;height:5px;border-radius:50%;background:var(--blue);animation:bpulse 2s infinite; }
+    .lp-ai-lbl { font-size:.48rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;font-family:'DM Sans',sans-serif; }
+    .lp-ai-bub { background:rgba(255,255,255,.05);border-radius:6px 6px 6px 1px;padding:5px 8px;font-size:.5rem;color:rgba(255,255,255,.7);line-height:1.5;font-family:'DM Sans',sans-serif; }
 
-    .locked-frost {
-      position:absolute; inset:0; z-index:2;
-      backdrop-filter:blur(5px);
-      background:rgba(10,11,13,.35);
-      border-radius:var(--radius-lg);
-      pointer-events:none;
+    .lp-voice { margin:8px 10px;background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:7px; }
+    .lp-voice-icon { font-size:.8rem; }
+    .lp-voice-text { font-size:.5rem;color:rgba(255,255,255,.7);flex:1;line-height:1.4;font-family:'DM Sans',sans-serif; }
+    .lp-voice-btn { background:rgba(168,85,247,.3);border:none;border-radius:4px;padding:3px 7px;font-size:.48rem;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif; }
+
+    .lp-wallet { display:flex;align-items:center;justify-content:center;gap:5px;background:#000;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px;margin:8px 10px;font-size:.52rem;color:#fff;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif; }
+
+    /* Phone right text */
+    .phone-desc { flex:1; }
+    .phone-desc-title { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--text);letter-spacing:-0.02em;margin-bottom:6px; }
+    .phone-desc-sub { font-size:.83rem;color:var(--text2);line-height:1.6;margin-bottom:20px; }
+    .phone-feat-list { display:flex;flex-direction:column;gap:10px; }
+    .phone-feat { display:flex;align-items:center;gap:10px; }
+    .pf-icon { width:32px;height:32px;border-radius:9px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0; }
+    .pf-info { flex:1; }
+    .pf-name { font-size:.8rem;font-weight:600;color:var(--text);font-family:'Syne',sans-serif; }
+    .pf-desc { font-size:.7rem;color:var(--text3);line-height:1.4; }
+
+    /* ── FEATURE GRID ── */
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 12px;
     }
+    @media(max-width:520px){ .feature-grid { grid-template-columns:1fr; } }
 
-    .locked-cta-banner {
-      background:var(--bg2); border:1px solid rgba(255,90,31,.3);
-      border-radius:var(--radius-lg); padding:36px 32px;
-      text-align:center; margin-top:20px;
+    .feat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 18px 16px;
+      position: relative;
     }
-    .locked-cta-banner h3 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:var(--text); margin-bottom:8px; letter-spacing:-0.02em; }
-    .locked-cta-banner p { font-size:.85rem; color:var(--text2); margin-bottom:22px; line-height:1.6; }
-    .locked-features { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:24px; }
-    .locked-feat-chip { font-size:.7rem; font-weight:600; padding:5px 13px; border-radius:100px; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); display:flex; align-items:center; gap:5px; }
-    .locked-feat-chip .dot { width:5px;height:5px;border-radius:50%;background:var(--accent); }
+    .feat-card.locked { opacity: .7; }
 
-    /* S6 TIMER */
-    .timer-section { background:var(--bg2); border:1px solid rgba(255,90,31,.2); border-radius:var(--radius-lg); padding:44px 32px; text-align:center; position:relative; overflow:hidden; }
-    .timer-section::before { content:''; position:absolute; top:-60px; right:-60px; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(255,90,31,.08),transparent 70%); }
-    .timer-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent2); margin-bottom:12px; font-family:'Syne',sans-serif; }
-    .timer-title { font-family:'Syne',sans-serif; font-size:clamp(1.2rem,3vw,1.6rem); font-weight:800; color:var(--text); margin-bottom:6px; letter-spacing:-0.02em; }
-    .timer-sub { font-size:.85rem; color:var(--text2); margin-bottom:28px; }
-    .countdown { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:24px; }
-    .countdown-unit { background:var(--bg3); border:1px solid var(--border2); border-radius:12px; padding:14px 18px; min-width:72px; text-align:center; }
-    .countdown-num { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:var(--accent); line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums; }
-    .countdown-label { font-size:.62rem; color:var(--text3); text-transform:uppercase; letter-spacing:.07em; }
-    .countdown-sep { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; color:var(--border2); line-height:1; padding-bottom:18px; animation:blink 1s step-end infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-    .timer-notice { display:inline-flex;align-items:center;gap:7px;font-size:.75rem;color:var(--text2);background:rgba(255,90,31,.06);border:1px solid rgba(255,90,31,.15);padding:8px 16px;border-radius:9px; }
+    .feat-card-top { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px; }
+    .feat-icon { font-size:1.2rem; }
+    .feat-status-on { font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--green-lo);color:var(--green);border:1px solid rgba(34,212,126,.2); }
+    .feat-status-lock {
+      font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:100px;
+      background:rgba(255,255,255,.05);color:var(--text3);
+      border:1px solid var(--border2);
+      display:flex;align-items:center;gap:4px;
+    }
+    .feat-name { font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:3px; }
+    .feat-desc { font-size:.72rem;color:var(--text3);line-height:1.4; }
 
-    /* S7 FINAL CTA */
-    .final-cta { text-align:center; padding:60px 32px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); position:relative; overflow:hidden; }
-    .final-cta::before { content:''; position:absolute; bottom:-80px; left:50%; transform:translateX(-50%); width:600px; height:300px; background:radial-gradient(ellipse,rgba(255,90,31,.1),transparent 70%); pointer-events:none; }
-    .final-cta h2 { font-family:'Syne',sans-serif; font-size:clamp(1.6rem,4vw,2.5rem); font-weight:800; letter-spacing:-0.03em; color:var(--text); margin-bottom:12px; line-height:1.15; }
-    .final-cta h2 em { font-style:normal; color:var(--accent); }
-    .final-cta p { font-size:.95rem; color:var(--text2); max-width:460px; margin:0 auto 34px; line-height:1.65; }
-    .cta-btn-group { display:flex; flex-direction:column; align-items:center; gap:12px; }
-    .btn-activate { display:inline-flex;align-items:center;gap:10px;padding:18px 44px;background:linear-gradient(135deg,var(--accent),#ff3d00);color:#fff;border:none;border-radius:var(--radius);font-size:1.05rem;font-weight:800;font-family:'Syne',sans-serif;cursor:pointer;text-decoration:none;transition:all var(--t);box-shadow:0 8px 32px var(--accent-glow); }
-    .btn-activate:hover { transform:translateY(-2px); box-shadow:0 16px 48px rgba(255,90,31,.35); }
-    .btn-activate:active { transform:translateY(0); }
-    .btn-later { font-size:.8rem; color:var(--text3); background:none; border:none; cursor:pointer; text-decoration:none; transition:color var(--t); }
+    .lock-bar {
+      display:flex;align-items:center;gap:7px;
+      margin-top:10px;padding:7px 10px;
+      background:rgba(255,255,255,.03);border:1px solid var(--border2);
+      border-radius:8px;font-size:.68rem;color:var(--text3);
+    }
+    .lock-bar a { color:var(--accent2);text-decoration:none; }
+    .lock-bar a:hover { text-decoration:underline; }
+
+    /* ── STATS ROW ── */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    @media(max-width:700px){ .stats-row { grid-template-columns:repeat(2,1fr); } }
+
+    .stat-card {
+      background:var(--bg2); border:1px solid var(--border); border-radius:var(--r);
+      padding:16px; text-align:center; position:relative; overflow:hidden;
+    }
+    .stat-card::before { content:''; position:absolute; top:0;left:0;right:0;height:2px; }
+    .stat-card.c-g::before { background:var(--green); }
+    .stat-card.c-o::before { background:var(--accent); }
+    .stat-card.c-b::before { background:var(--blue); }
+    .stat-card.c-p::before { background:#a855f7; }
+    .stat-ico { font-size:1.1rem;margin-bottom:8px;display:block; }
+    .stat-num { font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text);line-height:1;margin-bottom:2px; }
+    .stat-lbl { font-size:.65rem;color:var(--text3); }
+
+    /* ── FINAL CTA ── */
+    .final-cta {
+      background:var(--bg2); border:1px solid rgba(255,90,31,.25);
+      border-radius:var(--r-lg); padding:44px 36px; text-align:center;
+      position:relative; overflow:hidden;
+    }
+    .final-cta::before { content:''; position:absolute;bottom:-60px;left:50%;transform:translateX(-50%);width:500px;height:250px;background:radial-gradient(ellipse,rgba(255,90,31,.1),transparent 70%); }
+    .final-cta h2 { font-family:'Syne',sans-serif;font-size:clamp(1.5rem,3.5vw,2.2rem);font-weight:800;letter-spacing:-0.03em;color:var(--text);margin-bottom:10px;line-height:1.15; }
+    .final-cta h2 em { font-style:normal;color:var(--accent); }
+    .final-cta p { font-size:.9rem;color:var(--text2);max-width:440px;margin:0 auto 28px;line-height:1.65; }
+    .btn-big {
+      display:inline-flex;align-items:center;gap:10px;
+      padding:16px 40px;
+      background:linear-gradient(135deg,var(--accent),#ff3d00);
+      color:#fff;border:none;border-radius:var(--r);
+      font-size:1rem;font-weight:800;font-family:'Syne',sans-serif;
+      cursor:pointer;text-decoration:none;
+      transition:all var(--t);
+      box-shadow:0 8px 28px var(--accent-glow);
+    }
+    .btn-big:hover { transform:translateY(-2px);box-shadow:0 14px 40px rgba(255,90,31,.35); }
+    .btn-big:active { transform:translateY(0); }
+    .btn-later { display:block;margin-top:14px;font-size:.78rem;color:var(--text3);background:none;border:none;cursor:pointer;transition:color var(--t); }
     .btn-later:hover { color:var(--text2); }
-    .cta-trust { display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:24px;font-size:.73rem;color:var(--text3); }
-    .cta-trust-item { display:flex;align-items:center;gap:5px; }
-    .cta-trust-item::before { content:'✓'; color:var(--green); font-size:.75rem; font-weight:700; }
+    .trust-row { display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:.7rem;color:var(--text3); }
+    .trust-item::before { content:'✓ ';color:var(--green);font-weight:700; }
 
-    footer { text-align:center; padding:32px 20px; border-top:1px solid var(--border); font-size:.72rem; color:var(--text3); line-height:1.8; position:relative; z-index:1; }
-    footer a { color:var(--text2); text-decoration:none; }
+    /* ══ EXPIRED MODAL ══ */
+    #expiredOverlay {
+      display:none;position:fixed;inset:0;z-index:500;
+      background:rgba(10,11,13,.92);backdrop-filter:blur(12px);
+      align-items:center;justify-content:center;padding:20px;
+    }
+    #expiredOverlay.show { display:flex; }
+    .expired-modal {
+      background:var(--bg2);border:1px solid rgba(255,90,31,.3);
+      border-radius:var(--r-lg);padding:44px 36px;text-align:center;
+      max-width:460px;width:100%;
+      animation:fadeUp .4s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .expired-icon { font-size:2.5rem;margin-bottom:16px; }
+    .expired-title { font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-0.02em; }
+    .expired-sub { font-size:.85rem;color:var(--text2);line-height:1.6;margin-bottom:28px; }
+
+    /* ══ DEMO LIMIT MODAL ══ */
+    #limitOverlay {
+      display:none;position:fixed;inset:0;z-index:600;
+      background:rgba(10,11,13,.95);backdrop-filter:blur(14px);
+      align-items:center;justify-content:center;padding:20px;
+    }
+    #limitOverlay.show { display:flex; }
+    .limit-modal {
+      background:var(--bg2);border:1px solid var(--border2);
+      border-radius:var(--r-lg);padding:44px 36px;text-align:center;
+      max-width:460px;width:100%;
+      animation:fadeUp .4s ease;
+    }
+    .limit-icon { font-size:2.5rem;margin-bottom:16px; }
+    .limit-title { font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-0.02em; }
+    .limit-sub { font-size:.85rem;color:var(--text2);line-height:1.6;margin-bottom:26px; }
+    .limit-time { font-size:.75rem;color:var(--text3);margin-bottom:22px; }
+
+    /* ══ FREEZE OVERLAY (when expired) ══ */
+    #previewFreeze {
+      display:none;position:fixed;inset:0;z-index:400;
+      background:rgba(10,11,13,.6);backdrop-filter:blur(6px);
+      pointer-events:all;
+    }
+
+    footer { text-align:center;padding:28px 20px;border-top:1px solid var(--border);font-size:.7rem;color:var(--text3);line-height:1.8;position:relative;z-index:1; }
+    footer a { color:var(--text2);text-decoration:none; }
     footer a:hover { color:var(--accent); }
 
-    .reveal { opacity:0; transform:translateY(20px); transition:opacity .5s ease,transform .5s ease; }
-    .reveal.visible { opacity:1; transform:translateY(0); }
-
     @media(max-width:600px){
-      nav { padding:12px 16px; }
-      main { padding:80px 14px 60px; }
-      .timer-section,.final-cta,.hero-status { padding:28px 18px; }
-      .qr-canvas,.qr-meta { padding:24px 18px; }
-      .locked-cta-banner { padding:24px 18px; }
-      .countdown-unit { min-width:58px; padding:12px 10px; }
-      .countdown-num { font-size:1.6rem; }
+      nav { top:38px;padding:12px 16px; }
+      #timerBanner { font-size:.72rem;gap:8px;padding:8px 14px; }
+      main { padding:118px 14px 60px; }
+      .qr-panel { position:static; }
+      .phone-card { padding:20px; }
+      .final-cta { padding:32px 20px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- TIMER BANNER -->
+  <div id="timerBanner">
+    <div class="banner-dot"></div>
+    <span class="banner-text">⚠ <strong>Demo preview active</strong> — expires in <span id="bannerTimer">59:59</span></span>
+    <a href="dashboard.html" class="banner-cta">Activate free →</a>
+  </div>
+
+  <!-- NAV -->
   <nav>
     <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
     <div class="nav-right">
-      <div class="live-badge"><div class="live-dot"></div>Demo Active</div>
-      <a href="dashboard.html" class="nav-cta">Activate →</a>
+      <div class="live-badge"><div class="live-dot"></div>Live</div>
+      <a href="dashboard.html" class="btn-activate-nav">Activate Smart QR →</a>
     </div>
   </nav>
 
   <main>
 
-    <!-- S1: HERO -->
-    <section class="reveal">
-      <div class="hero-status">
-        <div class="status-badges">
-          <div class="badge badge-green"><div class="live-dot"></div>Live Demo</div>
-          <div class="badge badge-orange">✨ Smart QR</div>
-          <div class="badge badge-blue">⏱ Demo Active</div>
+    <!-- PAGE HEADING -->
+    <div class="hero-row">
+      <div class="badge badge-green"><div class="live-dot"></div>Live Demo</div>
+      <div class="badge badge-orange">✨ Smart QR</div>
+    </div>
+    <h1 class="page-title">Your Smart QR is <em>ready</em></h1>
+    <p class="page-sub" id="heroSub">Scan it, share it, or preview the live experience below.</p>
+
+    <!-- MAIN PREVIEW GRID -->
+    <div class="preview-grid" style="margin-bottom:32px;">
+
+      <!-- LEFT: QR CODE -->
+      <div class="qr-panel">
+        <div class="qr-panel-label">Scannable QR Code</div>
+        <div class="qr-code-wrap">
+          <div class="qr-corner qr-corner-tl"></div>
+          <div class="qr-corner qr-corner-tr"></div>
+          <div class="qr-corner qr-corner-bl"></div>
+          <div class="qr-corner qr-corner-br"></div>
+          <img id="qrImg" src="" alt="Smart QR Code"/>
         </div>
-        <h1>Your Smart QR is<br/><em>Live &amp; Ready</em></h1>
-        <p id="hero-sub">Your AI-powered landing page is active. Scan the QR below or share the link to experience it.</p>
-        <div class="demo-notice">
-          ⚠ &nbsp;<span><strong>Demo mode</strong> — This Smart QR is temporary. <a href="dashboard.html" style="color:var(--accent2);text-decoration:none">Activate free</a> to make it permanent.</span>
+        <div class="qr-business" id="qrBusiness">Your Business</div>
+        <div class="qr-type" id="qrType">Smart QR · Demo</div>
+        <div class="qr-url-row">
+          <span class="qr-url-text" id="qrUrl">qraivy.com/demo/…</span>
+          <button class="copy-btn" id="copyBtn" onclick="copyLink()">Copy</button>
         </div>
+        <button class="dl-btn" onclick="downloadQR()">⬇ Download QR Code</button>
       </div>
-    </section>
 
-    <!-- S2: QR DISPLAY -->
-    <section class="reveal">
-      <div class="sec-label">Your QR Code</div>
-      <div class="sec-title">Scan-ready &amp; <em>branded</em></div>
-      <div class="sec-sub" style="margin-bottom:28px">Share this QR anywhere — print it, embed it, or add it to packaging.</div>
-      <div class="qr-display-grid">
-        <div class="qr-canvas">
-          <div class="qr-frame">
-            <div class="qr-corner qr-corner-tl"></div>
-            <div class="qr-corner qr-corner-tr"></div>
-            <div class="qr-corner qr-corner-bl"></div>
-            <div class="qr-corner qr-corner-br"></div>
-            <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="6"  y="6"  width="36" height="36" rx="4" fill="none" stroke="#1a1a1a" stroke-width="3"/>
-              <rect x="13" y="13" width="22" height="22" rx="2" fill="#1a1a1a"/>
-              <rect x="78" y="6"  width="36" height="36" rx="4" fill="none" stroke="#1a1a1a" stroke-width="3"/>
-              <rect x="85" y="13" width="22" height="22" rx="2" fill="#1a1a1a"/>
-              <rect x="6"  y="78" width="36" height="36" rx="4" fill="none" stroke="#1a1a1a" stroke-width="3"/>
-              <rect x="13" y="85" width="22" height="22" rx="2" fill="#1a1a1a"/>
-              <rect x="54" y="6"  width="8" height="8" fill="#1a1a1a"/>
-              <rect x="64" y="6"  width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="16" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="64" y="26" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="36" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="6"  y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="16" y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="36" y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="6"  y="64" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="36" y="64" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="54" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="64" y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="74" y="54" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="84" y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="94" y="54" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="104" y="54" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="64" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="74" y="64" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="84" y="64" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="104" y="64" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="74" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="64" y="74" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="84" y="74" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="94" y="74" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="54" y="84" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="74" y="84" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="94" y="84" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="104" y="84" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="54" y="94" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="64" y="94" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="74" y="94" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="84" y="94" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="104" y="94" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="54" y="104" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="74" y="104" width="8" height="8" fill="#ff5a1f"/>
-              <rect x="84" y="104" width="8" height="8" fill="#1a1a1a"/>
-              <rect x="94" y="104" width="8" height="8" fill="#1a1a1a"/>
-            </svg>
-          </div>
-          <div class="qr-business-name" id="display-name">Your Business</div>
-          <div class="qr-type-tag" id="display-type">Smart QR</div>
-          <div class="qr-url" id="display-url">qraivy.com/demo/your-business</div>
-          <div class="qr-actions">
-            <button class="qr-btn qr-btn-primary" onclick="downloadQR()">⬇ Download</button>
-            <button class="qr-btn qr-btn-secondary" id="copyBtn" onclick="copyLink()">📋 Copy link</button>
-          </div>
-        </div>
+      <!-- RIGHT COL -->
+      <div class="right-col">
 
-        <div class="qr-meta">
-          <div class="qr-meta-title">Smart QR Details</div>
-          <div class="meta-row">
-            <div class="meta-icon">✨</div>
-            <div class="meta-info"><div class="meta-key">Status</div><div class="meta-val">Demo Active</div></div>
-            <span class="meta-tag tag-green">Live</span>
-          </div>
-          <div class="meta-row">
-            <div class="meta-icon">🎨</div>
-            <div class="meta-info"><div class="meta-key">Brand Style</div><div class="meta-val" id="meta-style">Dark</div></div>
-          </div>
-          <div class="meta-row">
-            <div class="meta-icon">📍</div>
-            <div class="meta-info"><div class="meta-key">Business Type</div><div class="meta-val" id="meta-type">—</div></div>
-          </div>
-          <div class="meta-row">
-            <div class="meta-icon">🤖</div>
-            <div class="meta-info"><div class="meta-key">AI Assistant</div><div class="meta-val">Enabled</div></div>
-            <span class="meta-tag tag-orange">Demo</span>
-          </div>
-          <div class="meta-row">
-            <div class="meta-icon">🎫</div>
-            <div class="meta-info"><div class="meta-key">Wallet Pass</div><div class="meta-val">Ready</div></div>
-            <span class="meta-tag tag-orange">Demo</span>
-          </div>
-          <div class="meta-row">
-            <div class="meta-icon">⏱</div>
-            <div class="meta-info"><div class="meta-key">Expires</div><div class="meta-val">In 1 hour</div></div>
-            <span class="meta-tag tag-orange">Activate to keep</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- S3: PHONE MOCKUP -->
-    <section class="reveal">
-      <div class="sec-label">Landing Page Preview</div>
-      <div class="sec-title">What visitors <em>see</em></div>
-      <div class="sec-sub" style="margin-bottom:36px">When someone scans your QR, this is the experience they get — fully branded, AI-powered, live.</div>
-      <div class="phone-section">
-        <div class="phone-wrap">
-          <div class="phone">
-            <div class="phone-notch"></div>
-            <div class="phone-screen">
-              <div class="lp-hero">
-                <div class="lp-logo-chip">✨ Smart QR</div>
-                <div class="lp-name" id="phone-name">Your Business</div>
-                <div class="lp-tagline">Welcome — tap to explore</div>
+        <!-- PHONE MOCKUP + DESCRIPTION -->
+        <div class="phone-card">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="lp">
+                  <div class="lp-top">
+                    <div class="lp-chip">✨ Smart QR</div>
+                    <div class="lp-bname" id="phoneName">Your Business</div>
+                    <div class="lp-tag">Tap to explore</div>
+                  </div>
+                  <div class="lp-links">
+                    <div class="lp-link"><span style="font-size:.7rem">🌐</span><span class="lp-li">Visit our website</span><span class="lp-arr">›</span></div>
+                    <div class="lp-link"><span style="font-size:.7rem">📸</span><span class="lp-li">Follow on Instagram</span><span class="lp-arr">›</span></div>
+                    <div class="lp-link"><span style="font-size:.7rem">⭐</span><span class="lp-li">Leave a review</span><span class="lp-arr">›</span></div>
+                  </div>
+                  <div class="lp-sub">
+                    <div class="lp-sub-lbl">📬 Subscribe</div>
+                    <div class="lp-sub-in">your@email.com</div>
+                    <button class="lp-sub-btn">Get updates</button>
+                  </div>
+                  <div class="lp-ai">
+                    <div class="lp-ai-h"><div class="lp-ai-dot"></div><span class="lp-ai-lbl">AI Assistant</span></div>
+                    <div class="lp-ai-bub">👋 Hi! Ask me anything about hours, offers, or products.</div>
+                  </div>
+                  <div class="lp-voice">
+                    <div class="lp-voice-icon">🎙</div>
+                    <div class="lp-voice-text">Voice welcome<br/>from the owner</div>
+                    <button class="lp-voice-btn">▶ Play</button>
+                  </div>
+                  <div class="lp-wallet">🎫 Add to Apple Wallet</div>
+                </div>
               </div>
-              <div class="lp-links">
-                <div class="lp-link"><div class="lp-link-icon">🌐</div><div class="lp-link-text">Visit our website</div><div class="lp-link-arr">›</div></div>
-                <div class="lp-link"><div class="lp-link-icon">📸</div><div class="lp-link-text">Follow on Instagram</div><div class="lp-link-arr">›</div></div>
-                <div class="lp-link"><div class="lp-link-icon">⭐</div><div class="lp-link-text">Leave us a review</div><div class="lp-link-arr">›</div></div>
+            </div>
+          </div>
+
+          <div class="phone-desc">
+            <div class="phone-desc-title">Live landing page</div>
+            <div class="phone-desc-sub">This is what visitors see when they scan your QR. Fully branded, AI-powered, and ready to convert.</div>
+            <div class="phone-feat-list">
+              <div class="phone-feat">
+                <div class="pf-icon">🤖</div>
+                <div class="pf-info"><div class="pf-name">AI Assistant</div><div class="pf-desc">Answers questions instantly</div></div>
               </div>
-              <div class="lp-subscribe">
-                <div class="lp-sub-label">📬 Stay in the loop</div>
-                <div class="lp-sub-input">your@email.com</div>
-                <button class="lp-sub-btn">Subscribe for updates</button>
+              <div class="phone-feat">
+                <div class="pf-icon">🎙</div>
+                <div class="pf-info"><div class="pf-name">Voice Welcome</div><div class="pf-desc">Personal audio greeting on scan</div></div>
               </div>
-              <div class="lp-ai">
-                <div class="lp-ai-header"><div class="lp-ai-dot"></div><div class="lp-ai-title">AI Assistant</div></div>
-                <div class="lp-ai-bubble">👋 Hi! I'm here to help. Ask me anything about products, hours, or offers.</div>
+              <div class="phone-feat">
+                <div class="pf-icon">📬</div>
+                <div class="pf-info"><div class="pf-name">Subscriber Capture</div><div class="pf-desc">Grow your audience from every scan</div></div>
               </div>
-              <div class="lp-wallet-btn">🎫 Add to Apple Wallet</div>
+              <div class="phone-feat">
+                <div class="pf-icon">🎫</div>
+                <div class="pf-info"><div class="pf-name">Wallet Pass</div><div class="pf-desc">One-tap save to Apple / Google Pay</div></div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="phone-info-list">
-          <div class="phone-info-item">
-            <div class="phone-info-icon">🤖</div>
-            <div><div class="phone-info-title">AI Assistant</div><div class="phone-info-desc">Instantly answers visitor questions — menu, hours, pricing — no staff needed.</div></div>
-          </div>
-          <div class="phone-info-item">
-            <div class="phone-info-icon">📬</div>
-            <div><div class="phone-info-title">Subscriber Capture</div><div class="phone-info-desc">Grow your audience directly from the QR scan. Every subscriber is yours.</div></div>
-          </div>
-          <div class="phone-info-item">
-            <div class="phone-info-icon">🎙</div>
-            <div><div class="phone-info-title">Voice Welcome</div><div class="phone-info-desc">Greet visitors with a personalised voice message the moment they scan.</div></div>
-          </div>
-          <div class="phone-info-item">
-            <div class="phone-info-icon">🎫</div>
-            <div><div class="phone-info-title">Wallet Pass</div><div class="phone-info-desc">One tap to save to Apple Wallet or Google Pay — loyalty, offers, and more.</div></div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- S4: STATS -->
-    <section class="reveal">
-      <div class="sec-label">Demo Analytics</div>
-      <div class="sec-title">Your Smart QR <em>at a glance</em></div>
-      <div class="sec-sub" style="margin-bottom:28px">Live data starts the moment your first scan happens. This is what your dashboard looks like.</div>
-      <div class="stats-grid">
-        <div class="stat-card c-green">
-          <span class="stat-icon">📡</span>
-          <div class="stat-num" id="scanCount">0</div>
-          <div class="stat-label">Total Scans</div>
-          <div class="stat-delta delta-up">↑ Live</div>
-        </div>
-        <div class="stat-card c-orange">
-          <span class="stat-icon">📬</span>
-          <div class="stat-num">0</div>
-          <div class="stat-label">Subscribers</div>
-          <div class="stat-delta delta-mock">Demo</div>
-        </div>
-        <div class="stat-card c-blue">
-          <span class="stat-icon">🤖</span>
-          <div class="stat-num">0</div>
-          <div class="stat-label">AI Chats</div>
-          <div class="stat-delta delta-mock">Demo</div>
-        </div>
-        <div class="stat-card c-purple">
-          <span class="stat-icon">🎫</span>
-          <div class="stat-num">0</div>
-          <div class="stat-label">Wallet Installs</div>
-          <div class="stat-delta delta-mock">Demo</div>
-        </div>
-        <div class="stat-card c-teal">
-          <span class="stat-icon">🔔</span>
-          <div class="stat-num">0</div>
-          <div class="stat-label">Notifications</div>
-          <div class="stat-delta delta-mock">Demo</div>
-        </div>
-      </div>
-    </section>
+        <!-- FEATURE CARDS -->
+        <div class="feature-grid">
+          <!-- LIVE features -->
+          <div class="feat-card">
+            <div class="feat-card-top">
+              <span class="feat-icon">🤖</span>
+              <span class="feat-status-on">● Active</span>
+            </div>
+            <div class="feat-name">AI Assistant</div>
+            <div class="feat-desc">Visitors can ask your AI anything — fully live in this demo.</div>
+          </div>
 
-    <!-- S5: LOCKED PLATFORM -->
-    <section class="reveal">
-      <div class="sec-label">Full Platform Preview</div>
-      <div class="sec-title" style="margin-bottom:8px">The complete <em>Smart QR platform</em></div>
-      <div class="sec-sub" style="margin-bottom:28px">Everything you need to turn every scan into a customer. Unlock it free.</div>
-      <div class="locked-wrap">
-        <div class="locked-grid">
-          <div class="locked-card">
-            <div class="locked-card-title">📊 Analytics Dashboard</div>
-            <div class="fake-chart">
-              <div class="fake-bar" style="height:30%"></div><div class="fake-bar" style="height:55%"></div>
-              <div class="fake-bar" style="height:40%"></div><div class="fake-bar" style="height:80%"></div>
-              <div class="fake-bar" style="height:60%"></div><div class="fake-bar" style="height:90%"></div>
-              <div class="fake-bar" style="height:75%"></div>
+          <div class="feat-card">
+            <div class="feat-card-top">
+              <span class="feat-icon">📬</span>
+              <span class="feat-status-on">● Active</span>
             </div>
-            <div class="fake-line"></div><div class="fake-line short"></div>
+            <div class="feat-name">Subscriber Capture</div>
+            <div class="feat-desc">Email form is live. Activate your account to see collected leads.</div>
           </div>
-          <div class="locked-card">
-            <div class="locked-card-title">🤖 AI Campaigns</div>
-            <div class="fake-line"></div><div class="fake-line short"></div><div class="fake-line medium"></div>
-            <div style="margin-top:12px;display:flex;gap:6px;">
-              <div style="flex:1;height:28px;background:var(--border2);border-radius:6px;"></div>
-              <div style="flex:1;height:28px;background:var(--border2);border-radius:6px;"></div>
-            </div>
-          </div>
-          <div class="locked-card">
-            <div class="locked-card-title">🔔 Push Notifications</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="height:28px;background:var(--border2);border-radius:8px;"></div>
-              <div style="height:28px;background:var(--border2);border-radius:8px;"></div>
-              <div style="height:28px;background:var(--border2);border-radius:8px;opacity:.6;"></div>
-            </div>
-          </div>
-          <div class="locked-card">
-            <div class="locked-card-title">📬 Subscribers</div>
-            <div class="fake-chart">
-              <div class="fake-bar" style="height:20%"></div><div class="fake-bar" style="height:35%"></div>
-              <div class="fake-bar" style="height:50%"></div><div class="fake-bar" style="height:65%"></div>
-              <div class="fake-bar" style="height:80%"></div><div class="fake-bar" style="height:95%"></div>
-            </div>
-            <div class="fake-line short"></div>
-          </div>
-          <div class="locked-card">
-            <div class="locked-card-title">🎫 Wallet Passes</div>
-            <div style="height:52px;background:linear-gradient(135deg,#1a1208,#333);border-radius:10px;margin-bottom:10px;"></div>
-            <div class="fake-line medium"></div><div class="fake-line short"></div>
-          </div>
-          <div class="locked-card">
-            <div class="locked-card-title">⚙️ Smart QR Builder</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-              <div style="height:38px;background:var(--border2);border-radius:8px;"></div>
-              <div style="height:38px;background:var(--border2);border-radius:8px;"></div>
-              <div style="height:38px;background:var(--border2);border-radius:8px;"></div>
-              <div style="height:38px;background:var(--border2);border-radius:8px;"></div>
-            </div>
-          </div>
-        </div>
-        <div class="locked-frost"></div>
-      </div>
-      <div class="locked-cta-banner">
-        <h3>Unlock the full Smart QR platform</h3>
-        <p>Everything above is ready and waiting. Activate your Smart QR in seconds — free to start, no credit card required.</p>
-        <div class="locked-features">
-          <div class="locked-feat-chip"><div class="dot"></div>Analytics Dashboard</div>
-          <div class="locked-feat-chip"><div class="dot"></div>AI Campaigns</div>
-          <div class="locked-feat-chip"><div class="dot"></div>Push Notifications</div>
-          <div class="locked-feat-chip"><div class="dot"></div>Subscriber Management</div>
-          <div class="locked-feat-chip"><div class="dot"></div>Wallet Passes</div>
-          <div class="locked-feat-chip"><div class="dot"></div>Custom Domain</div>
-        </div>
-        <a href="dashboard.html" class="btn-activate" style="font-size:.9rem;padding:14px 32px;">🚀 Unlock Platform — Free</a>
-      </div>
-    </section>
 
-    <!-- S6: TIMER -->
-    <section class="reveal">
-      <div class="timer-section">
-        <div class="timer-eyebrow">⚡ Demo Expiry</div>
-        <div class="timer-title">This Smart QR demo expires in</div>
-        <div class="timer-sub">Activate now to keep your QR alive permanently — takes 30 seconds.</div>
-        <div class="countdown">
-          <div class="countdown-unit"><div class="countdown-num" id="cd-h">01</div><div class="countdown-label">Hours</div></div>
-          <div class="countdown-sep">:</div>
-          <div class="countdown-unit"><div class="countdown-num" id="cd-m">00</div><div class="countdown-label">Mins</div></div>
-          <div class="countdown-sep">:</div>
-          <div class="countdown-unit"><div class="countdown-num" id="cd-s">00</div><div class="countdown-label">Secs</div></div>
-        </div>
-        <div class="timer-notice"><div class="live-dot"></div>Demo started just now · Your QR is active until the timer ends</div>
-      </div>
-    </section>
+          <div class="feat-card">
+            <div class="feat-card-top">
+              <span class="feat-icon">🎫</span>
+              <span class="feat-status-on">● Preview</span>
+            </div>
+            <div class="feat-name">Wallet Pass</div>
+            <div class="feat-desc">Apple Wallet button is visible. Full pass requires activation.</div>
+          </div>
 
-    <!-- S7: FINAL CTA -->
-    <section class="reveal">
-      <div class="final-cta">
-        <h2>Make your Smart QR<br/><em>permanent</em></h2>
-        <p>Your demo is live right now. Activate in 30 seconds to keep it forever — analytics, AI, wallet passes, everything.</p>
-        <div class="cta-btn-group">
-          <a href="dashboard.html" class="btn-activate">🚀 Activate My Smart QR — Free</a>
-          <a href="index.html" class="btn-later">Maybe later — return to homepage</a>
+          <div class="feat-card">
+            <div class="feat-card-top">
+              <span class="feat-icon">🎙</span>
+              <span class="feat-status-on">● Preview</span>
+            </div>
+            <div class="feat-name">Voice Welcome</div>
+            <div class="feat-desc">Demo voice greeting shown. Record your own after activating.</div>
+          </div>
+
+          <!-- LOCKED features -->
+          <div class="feat-card locked">
+            <div class="feat-card-top">
+              <span class="feat-icon">🔔</span>
+              <span class="feat-status-lock">🔒 Locked</span>
+            </div>
+            <div class="feat-name">Push Notifications</div>
+            <div class="feat-desc">Send offers and updates directly to subscribers' devices.</div>
+            <div class="lock-bar">🔒 <a href="dashboard.html">Activate account</a> to enable</div>
+          </div>
+
+          <div class="feat-card locked">
+            <div class="feat-card-top">
+              <span class="feat-icon">📊</span>
+              <span class="feat-status-lock">🔒 Locked</span>
+            </div>
+            <div class="feat-name">Scan Analytics</div>
+            <div class="feat-desc">Track every scan: location, device, time, conversion rate.</div>
+            <div class="lock-bar">🔒 <a href="dashboard.html">Activate account</a> to enable</div>
+          </div>
+
+          <div class="feat-card locked">
+            <div class="feat-card-top">
+              <span class="feat-icon">🤖</span>
+              <span class="feat-status-lock">🔒 Locked</span>
+            </div>
+            <div class="feat-name">AI Campaigns</div>
+            <div class="feat-desc">Auto-generate targeted campaigns from your scan data.</div>
+            <div class="lock-bar">🔒 <a href="dashboard.html">Activate account</a> to enable</div>
+          </div>
+
+          <div class="feat-card locked">
+            <div class="feat-card-top">
+              <span class="feat-icon">🌐</span>
+              <span class="feat-status-lock">🔒 Locked</span>
+            </div>
+            <div class="feat-name">Custom Domain</div>
+            <div class="feat-desc">Use your own domain instead of qraivy.com/demo/…</div>
+            <div class="lock-bar">🔒 <a href="dashboard.html">Activate account</a> to enable</div>
+          </div>
         </div>
-        <div class="cta-trust">
-          <div class="cta-trust-item">No credit card</div>
-          <div class="cta-trust-item">Free to start</div>
-          <div class="cta-trust-item">Live in 30 seconds</div>
-          <div class="cta-trust-item">No account needed for demo</div>
+
+        <!-- STATS ROW -->
+        <div class="stats-row">
+          <div class="stat-card c-g">
+            <span class="stat-ico">📡</span>
+            <div class="stat-num" id="scanCount">0</div>
+            <div class="stat-lbl">Scans (demo)</div>
+          </div>
+          <div class="stat-card c-o">
+            <span class="stat-ico">📬</span>
+            <div class="stat-num">0</div>
+            <div class="stat-lbl">Subscribers</div>
+          </div>
+          <div class="stat-card c-b">
+            <span class="stat-ico">🤖</span>
+            <div class="stat-num">0</div>
+            <div class="stat-lbl">AI Chats</div>
+          </div>
+          <div class="stat-card c-p">
+            <span class="stat-ico">🎫</span>
+            <div class="stat-num">0</div>
+            <div class="stat-lbl">Wallet Saves</div>
+          </div>
         </div>
+
+      </div><!-- /right-col -->
+    </div><!-- /preview-grid -->
+
+    <!-- FINAL CTA -->
+    <div class="final-cta">
+      <h2>Make it <em>permanent</em> in 30 seconds</h2>
+      <p>Your demo is live right now. Activate a free account to keep it forever — full analytics, AI campaigns, push notifications, and more.</p>
+      <a href="dashboard.html" class="btn-big">🚀 Activate My Smart QR — Free</a>
+      <button class="btn-later" onclick="window.location.href='index.html'">Maybe later — return to homepage</button>
+      <div class="trust-row">
+        <span class="trust-item">No credit card</span>
+        <span class="trust-item">Free to start</span>
+        <span class="trust-item">30 seconds to activate</span>
+        <span class="trust-item">Your QR keeps working</span>
       </div>
-    </section>
+    </div>
 
   </main>
 
   <footer>
     <div>© 2026 QRAivy · <a href="index.html">Home</a> · <a href="qr-free.html">Free QR</a> · <a href="smart-demo.html">Start over</a> · <a href="#">Privacy</a></div>
-    <div style="margin-top:4px;">Demo data is not stored. No account was created.</div>
+    <div style="margin-top:4px;">Demo data is not stored. No account was created during this session.</div>
   </footer>
+
+  <!-- EXPIRED OVERLAY -->
+  <div id="expiredOverlay">
+    <div class="expired-modal">
+      <div class="expired-icon">⏱</div>
+      <div class="expired-title">Your demo has expired</div>
+      <div class="expired-sub">This Smart QR demo was active for 1 hour. Create a free account to activate it permanently — your QR, your audience, your data.</div>
+      <a href="dashboard.html" class="btn-big" style="margin-bottom:12px;">🚀 Activate Smart QR — Free</a><br/>
+      <a href="smart-demo.html" style="font-size:.78rem;color:var(--text3);text-decoration:none;">Create a new demo instead</a>
+    </div>
+  </div>
+
+  <!-- PREVIEW FREEZE -->
+  <div id="previewFreeze" onclick="document.getElementById('expiredOverlay').classList.add('show')"></div>
+
+  <!-- DEMO LIMIT MODAL -->
+  <div id="limitOverlay">
+    <div class="limit-modal">
+      <div class="limit-icon">🚫</div>
+      <div class="limit-title">Demo limit reached</div>
+      <div class="limit-sub">You already created a Smart QR demo recently. Create a free account for unlimited Smart QR pages — no limits, no expiry.</div>
+      <div class="limit-time" id="limitTime"></div>
+      <a href="dashboard.html" class="btn-big" style="margin-bottom:14px;">Create Free Account →</a><br/>
+      <button onclick="bypassLimit()" style="font-size:.72rem;color:var(--text3);background:none;border:none;cursor:pointer;">I understand — show my demo anyway</button>
+    </div>
+  </div>
 
   <script>
   (function () {
-    // ── State from URL params ──────────────────────────────────────────
-    const params  = new URLSearchParams(window.location.search);
-    const name    = params.get('name')  || 'Your Business';
-    const type    = params.get('type')  || 'Smart QR';
-    const style   = params.get('style') || 'Dark';
-    const slug    = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+    // ── Read URL params ────────────────────────────────────────────────
+    const p      = new URLSearchParams(window.location.search);
+    const name   = p.get('name')  || 'Your Business';
+    const type   = p.get('type')  || 'Smart QR';
+    const style  = p.get('style') || 'Dark';
+    const slug   = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const demoUrl = `qraivy.com/demo/${slug}`;
 
-    const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-    set('display-name', name);
-    set('display-type', type);
-    set('display-url',  demoUrl);
-    set('phone-name',   name);
-    set('meta-type',    type);
-    set('meta-style',   style);
-    set('hero-sub',     `"${name}" is live and ready. Scan the QR or share the link to experience your Smart QR page.`);
+    // ── Demo limit (localStorage) ──────────────────────────────────────
+    const LIMIT_KEY = 'qraivy_demo_ts';
+    const LIMIT_MS  = 24 * 60 * 60 * 1000; // 24h
 
-    // ── Countdown: 1 hour from load ───────────────────────────────────
-    const expiry = Date.now() + 3600000;
-    function tick() {
-      const left = Math.max(0, expiry - Date.now());
-      const h = Math.floor(left / 3600000);
-      const m = Math.floor((left % 3600000) / 60000);
-      const s = Math.floor((left % 60000) / 1000);
-      const p = n => String(n).padStart(2,'0');
-      set('cd-h', p(h)); set('cd-m', p(m)); set('cd-s', p(s));
-      if (left > 0) setTimeout(tick, 1000);
+    function checkLimit() {
+      try {
+        const last = localStorage.getItem(LIMIT_KEY);
+        if (!last) {
+          localStorage.setItem(LIMIT_KEY, Date.now().toString());
+          return false; // first time — allow
+        }
+        const age = Date.now() - parseInt(last, 10);
+        if (age < LIMIT_MS) return true; // within 24h — limit
+        localStorage.setItem(LIMIT_KEY, Date.now().toString());
+        return false;
+      } catch (e) { return false; }
     }
-    tick();
 
-    // ── Demo scan ticker ──────────────────────────────────────────────
-    let scans = 0;
-    function tickScans() {
-      if (Math.random() < 0.3) { scans++; set('scanCount', scans); }
-      setTimeout(tickScans, 5000 + Math.random() * 9000);
+    window.bypassLimit = function () {
+      document.getElementById('limitOverlay').classList.remove('show');
+    };
+
+    function showLimitModal() {
+      try {
+        const last = parseInt(localStorage.getItem(LIMIT_KEY) || '0', 10);
+        const resetIn = LIMIT_MS - (Date.now() - last);
+        const h = Math.floor(resetIn / 3600000);
+        const m = Math.floor((resetIn % 3600000) / 60000);
+        document.getElementById('limitTime').textContent =
+          `Your next demo will be available in ${h}h ${m}m.`;
+      } catch (e) {}
+      document.getElementById('limitOverlay').classList.add('show');
     }
-    setTimeout(tickScans, 4000);
 
-    // ── Copy link ─────────────────────────────────────────────────────
+    if (checkLimit()) showLimitModal();
+
+    // ── Populate UI ────────────────────────────────────────────────────
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('qrBusiness', name);
+    set('qrType', `${type} · Smart QR`);
+    set('qrUrl', demoUrl);
+    set('phoneName', name);
+    set('heroSub', `"${name}" is live. Scan, share, or preview the experience below.`);
+
+    // ── Real QR code (api.qrserver.com) ───────────────────────────────
+    const qrData = `https://${demoUrl}`;
+    const qrImg  = document.getElementById('qrImg');
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=280x280&color=1a1a1a&bgcolor=ffffff&margin=8`;
+    qrImg.onerror = function () {
+      // Fallback: try without margin param
+      this.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=280x280`;
+    };
+
+    // ── Copy link ──────────────────────────────────────────────────────
     window.copyLink = function () {
       navigator.clipboard.writeText('https://' + demoUrl).then(() => {
         const btn = document.getElementById('copyBtn');
-        if (btn) { btn.textContent = '✓ Copied!'; setTimeout(()=>btn.textContent='📋 Copy link', 2000); }
-      }).catch(()=>{});
+        if (btn) { btn.textContent = '✓ Done'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+      }).catch(() => {
+        // Fallback for browsers that block clipboard
+        const ta = document.createElement('textarea');
+        ta.value = 'https://' + demoUrl;
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        const btn = document.getElementById('copyBtn');
+        if (btn) { btn.textContent = '✓ Done'; setTimeout(() => btn.textContent = 'Copy', 2000); }
+      });
     };
 
-    // ── Download QR ───────────────────────────────────────────────────
+    // ── Download QR ────────────────────────────────────────────────────
     window.downloadQR = function () {
       const a = document.createElement('a');
       a.download = `qraivy-${slug}.png`;
-      a.href = `https://api.qrserver.com/v1/create-qr-code/?data=https://${demoUrl}&size=400x400&color=1a1a1a&bgcolor=ffffff`;
+      a.href = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=600x600&color=1a1a1a&bgcolor=ffffff&margin=10`;
       a.click();
     };
 
-    // ── Scroll reveal ─────────────────────────────────────────────────
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } });
-    }, { threshold: 0.08 });
-    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    // ── Countdown: 60 minutes from page load ───────────────────────────
+    const SESSION_KEY = 'qraivy_demo_expiry';
+    let expiry;
+    try {
+      const stored = sessionStorage.getItem(SESSION_KEY);
+      expiry = stored ? parseInt(stored, 10) : Date.now() + 60 * 60 * 1000;
+      if (!stored) sessionStorage.setItem(SESSION_KEY, expiry.toString());
+    } catch (e) {
+      expiry = Date.now() + 60 * 60 * 1000;
+    }
+
+    let expired = false;
+
+    function updateCountdown() {
+      const left = Math.max(0, expiry - Date.now());
+      const m    = Math.floor(left / 60000);
+      const s    = Math.floor((left % 60000) / 1000);
+      const pad  = n => String(n).padStart(2, '0');
+      const str  = `${pad(m)}:${pad(s)}`;
+
+      const el = document.getElementById('bannerTimer');
+      if (el) el.textContent = str;
+
+      if (left === 0 && !expired) {
+        expired = true;
+        onExpire();
+        return;
+      }
+      if (left > 0) setTimeout(updateCountdown, 1000);
+    }
+    updateCountdown();
+
+    function onExpire() {
+      document.getElementById('previewFreeze').style.display = 'block';
+      document.getElementById('expiredOverlay').classList.add('show');
+      const banner = document.getElementById('timerBanner');
+      if (banner) {
+        banner.style.background = 'linear-gradient(90deg,#1a0000,#1f0000)';
+        const t = banner.querySelector('#bannerTimer');
+        if (t) t.style.color = '#ef4444';
+      }
+    }
+
+    // ── Demo scan ticker ───────────────────────────────────────────────
+    let scans = 0;
+    function tickScans() {
+      if (!expired && Math.random() < 0.35) {
+        scans++;
+        set('scanCount', scans);
+      }
+      if (!expired) setTimeout(tickScans, 5000 + Math.random() * 10000);
+    }
+    setTimeout(tickScans, 5000);
 
   })();
   </script>
