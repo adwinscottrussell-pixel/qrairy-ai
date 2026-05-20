@@ -33,13 +33,17 @@
     async function initClerk() {
       await window.Clerk.load();
       if (window.Clerk.user) {
-        window.location.href = 'dashboard.html';
+        const _r = new URLSearchParams(window.location.search).get('redirect');
+        window.location.href = _r || 'dashboard.html';
         return;
       }
+      const _rp = new URLSearchParams(window.location.search).get('redirect');
+      const _base = 'https://www.qraivy.com/';
+      const _target = _rp ? _base + _rp : _base + 'dashboard.html';
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-        afterSignInUrl: 'https://www.qraivy.com/dashboard.html',
-        afterSignUpUrl: 'https://www.qraivy.com/dashboard.html',
-        redirectUrl: 'https://www.qraivy.com/dashboard.html'
+        afterSignInUrl: _target,
+        afterSignUpUrl: _target,
+        redirectUrl: _target
       });
     }
   </script>

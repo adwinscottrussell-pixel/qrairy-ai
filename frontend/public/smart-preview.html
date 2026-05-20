@@ -1029,7 +1029,13 @@
       savePendingDemo();
       const pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || '{}');
       const claimSlug = pending.slug || slug;
-      window.location.href = 'dashboard.html?claimDemo=' + encodeURIComponent(claimSlug);
+      const redirectTarget = 'dashboard.html?claimDemo=' + encodeURIComponent(claimSlug);
+      try { localStorage.setItem('qraivy_post_auth_redirect', redirectTarget); } catch(e) {}
+      if (window.Clerk && window.Clerk.user) {
+        window.location.href = redirectTarget;
+      } else {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(redirectTarget);
+      }
     });
 
   })();

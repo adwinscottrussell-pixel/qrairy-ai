@@ -74,10 +74,79 @@
 .sqr-claimed-btn-primary:hover { background: #ff7a45; }
 .sqr-claimed-btn-secondary { background: transparent; color: rgba(240,244,248,0.7); border: 1px solid rgba(255,255,255,0.1); }
 .sqr-claimed-btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: #f0f4f8; }
+
+.claim-success-overlay {
+  display:none;position:fixed;inset:0;z-index:9000;
+  background:rgba(5,5,5,0.88);backdrop-filter:blur(14px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.claim-success-overlay.show{display:flex;}
+.claim-success-modal {
+  background:#111110;border:0.5px solid rgba(255,78,0,0.25);
+  border-radius:20px;padding:44px 36px;text-align:center;
+  max-width:500px;width:100%;position:relative;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,0.75);
+  animation:qrModalIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+}
+.csm-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:400px;height:200px;
+  background:radial-gradient(ellipse,rgba(255,78,0,0.1),transparent 70%);
+  pointer-events:none;}
+.csm-icon{width:72px;height:72px;border-radius:50%;border:2px solid #ff5a1f;
+  display:flex;align-items:center;justify-content:center;font-size:1.8rem;
+  margin:0 auto 20px;background:rgba(255,90,31,0.08);}
+.csm-title{font-family:'Space Grotesk',sans-serif;font-size:1.45rem;font-weight:700;
+  color:#f0f4f8;margin-bottom:10px;letter-spacing:-0.02em;}
+.csm-sub{font-size:.84rem;color:rgba(240,244,248,0.65);line-height:1.65;
+  margin-bottom:24px;max-width:380px;margin-left:auto;margin-right:auto;}
+.csm-qr-row{display:flex;align-items:center;gap:14px;
+  background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);
+  border-radius:12px;padding:14px 16px;margin-bottom:24px;text-align:left;}
+.csm-qr-img{width:56px;height:56px;border-radius:8px;background:#fff;flex-shrink:0;}
+.csm-qr-name{font-family:'Space Grotesk',sans-serif;font-size:.9rem;font-weight:700;
+  color:#f0f4f8;margin-bottom:2px;}
+.csm-qr-url{font-family:'DM Mono',monospace;font-size:.6rem;color:rgba(240,244,248,0.45);}
+.csm-live{display:inline-flex;align-items:center;gap:5px;
+  background:rgba(34,212,126,0.12);border:0.5px solid rgba(34,212,126,0.25);
+  color:#22d47e;font-size:.6rem;font-weight:700;padding:2px 8px;
+  border-radius:100px;letter-spacing:.06em;margin-left:auto;flex-shrink:0;}
+.csm-live-dot{width:5px;height:5px;border-radius:50%;background:#22d47e;}
+.csm-actions{display:flex;flex-direction:column;gap:10px;}
+.csm-btn-primary{width:100%;padding:14px;background:#ff5a1f;color:#fff;border:none;
+  border-radius:12px;font-size:.92rem;font-weight:700;font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;transition:background .18s;box-shadow:0 4px 20px rgba(255,90,31,0.3);}
+.csm-btn-primary:hover{background:#ff7a45;}
+.csm-btn-secondary{width:100%;padding:12px;background:transparent;
+  color:rgba(240,244,248,0.7);border:0.5px solid rgba(255,255,255,0.12);
+  border-radius:12px;font-size:.85rem;font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;transition:all .18s;text-decoration:none;display:block;}
+.csm-btn-secondary:hover{border-color:rgba(255,255,255,0.25);color:#f0f4f8;}
 </style>
 </head>
 <body>
 
+
+<!-- CLAIM SUCCESS MODAL -->
+<div class="claim-success-overlay" id="claimSuccessOverlay">
+  <div class="claim-success-modal">
+    <div class="csm-glow"></div>
+    <div class="csm-icon">🎉</div>
+    <div class="csm-title">Your Smart QR is now live</div>
+    <div class="csm-sub">You successfully claimed your Smart QR. Manage analytics, subscribers, AI tools, wallet passes, and campaigns from your dashboard.</div>
+    <div class="csm-qr-row">
+      <img class="csm-qr-img" id="csmQrImg" src="" alt="QR"/>
+      <div style="flex:1">
+        <div class="csm-qr-name" id="csmQrName">Your Smart QR</div>
+        <div class="csm-qr-url" id="csmQrUrl"></div>
+      </div>
+      <div class="csm-live"><div class="csm-live-dot"></div>LIVE</div>
+    </div>
+    <div class="csm-actions">
+      <button class="csm-btn-primary" id="csmManageBtn">Manage Smart QR →</button>
+      <a class="csm-btn-secondary" id="csmViewBtn" href="#" target="_blank">🌐 View Live Landing Page</a>
+    </div>
+  </div>
+</div>
 <!-- CLAIM SUCCESS BANNER -->
 <div id="claim-banner">
   <div class="claim-banner-left">
@@ -307,54 +376,107 @@ async function initDashboard(){
     const claimSlug = params.get('claimDemo');
     if (!claimSlug) return;
 
-    // Read pending demo from localStorage
     let pending = null;
     try { pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || 'null'); } catch(e) {}
-    if (!pending) pending = { slug: claimSlug, businessName: claimSlug, hostedUrl: 'https://api.qraivy.com/lp/' + claimSlug };
+    if (!pending) pending = {
+      slug: claimSlug,
+      businessName: claimSlug.replace(/^demo-/,'').replace(/-[a-z0-9]{3,6}$/,'').replace(/-/g,' '),
+      hostedUrl: 'https://api.qraivy.com/lp/' + claimSlug
+    };
 
-    // Show success banner
+    const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data='
+      + encodeURIComponent(pending.hostedUrl) + '&color=1a1a1a&bgcolor=ffffff&margin=4';
+
+    // Populate + show success modal
+    const overlay = document.getElementById('claimSuccessOverlay');
+    const imgEl   = document.getElementById('csmQrImg');
+    const nameEl  = document.getElementById('csmQrName');
+    const urlEl   = document.getElementById('csmQrUrl');
+    const viewBtn = document.getElementById('csmViewBtn');
+    const manBtn  = document.getElementById('csmManageBtn');
+    if (imgEl)  imgEl.src  = qrSrc;
+    if (nameEl) nameEl.textContent = pending.businessName || 'Your Smart QR';
+    if (urlEl)  urlEl.textContent  = pending.hostedUrl;
+    if (viewBtn) viewBtn.href = pending.hostedUrl;
+    if (manBtn) manBtn.onclick = function() {
+      if (overlay) overlay.classList.remove('show');
+      if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window._userId || 'user');
+    };
+    if (overlay) setTimeout(() => overlay.classList.add('show'), 700);
+
+    // Show banner
     const banner = document.getElementById('claim-banner');
     if (banner) banner.classList.add('show');
+    const manageBtn = document.getElementById('claim-manage-btn');
+    if (manageBtn) manageBtn.onclick = function() {
+      if (overlay) overlay.classList.add('show');
+    };
 
-    // Show claimed QR card at top of dashboard
-    const grid = document.getElementById('sqr-grid');
+    // Inject claimed card into grid
+    const grid = document.getElementById('sqrGrid');
     if (grid) {
-      const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=' + encodeURIComponent(pending.hostedUrl) + '&color=1a1a1a&bgcolor=ffffff&margin=4';
+      const existing = grid.querySelector('.sqr-claimed-card');
+      if (existing) existing.remove();
       const card = document.createElement('div');
       card.className = 'sqr-claimed-card';
-      card.innerHTML = `
-        <div class="sqr-claimed-top">
-          <img class="sqr-claimed-qr" src="${qrSrc}" alt="QR Code"/>
+      card.innerHTML = `<div class="sqr-claimed-top">
+          <img class="sqr-claimed-qr" src="${qrSrc}" alt="QR"/>
           <div class="sqr-claimed-info">
-            <div class="sqr-claimed-name">${pending.businessName || 'Your Smart QR'}</div>
+            <div class="sqr-claimed-name">${pending.businessName||'Your Smart QR'}</div>
             <div class="sqr-claimed-url">${pending.hostedUrl}</div>
           </div>
           <div class="sqr-claimed-badge"><div class="sqr-claimed-badge-dot"></div>LIVE</div>
         </div>
         <div class="sqr-claimed-actions">
           <a href="${pending.hostedUrl}" target="_blank" class="sqr-claimed-btn sqr-claimed-btn-primary">🌐 View Live Page</a>
-          <button class="sqr-claimed-btn sqr-claimed-btn-secondary" onclick="window.qrairyOnboarding&&window.qrairyOnboarding.reopen(window._userId)">✏️ Manage</button>
+          <button class="sqr-claimed-btn sqr-claimed-btn-secondary" onclick="document.getElementById('claimSuccessOverlay').classList.add('show')">✏️ Manage</button>
           <a href="analytics.html" class="sqr-claimed-btn sqr-claimed-btn-secondary">📊 Analytics</a>
-          <a href="${qrSrc.replace('128x128','600x600')}" download="smart-qr.png" class="sqr-claimed-btn sqr-claimed-btn-secondary">⬇ Download QR</a>
+          <a href="${qrSrc.replace('128x128','600x600')}" download="smart-qr.png" class="sqr-claimed-btn sqr-claimed-btn-secondary">⬇ QR</a>
         </div>`;
       grid.insertBefore(card, grid.firstChild);
     }
 
-    // Wire manage button
-    const manageBtn = document.getElementById('claim-manage-btn');
-    if (manageBtn) {
-      manageBtn.onclick = function() {
-        if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window._userId || 'user');
-      };
-    }
+    // Persist for refresh
+    try { localStorage.setItem('qraivy_active_claim', JSON.stringify(pending)); } catch(e) {}
 
-    // Clean URL without reloading
+    // Restore on next plain dashboard load
     try { history.replaceState({}, '', 'dashboard.html'); } catch(e) {}
+  }
+
+  // Restore claim on plain dashboard load (no ?claimDemo param)
+  function restoreActiveClaim() {
+    if (new URLSearchParams(window.location.search).get('claimDemo')) return;
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem('qraivy_active_claim')||'null'); } catch(e) {}
+    if (!p||!p.slug) return;
+    const banner = document.getElementById('claim-banner');
+    if (banner) banner.classList.add('show');
+    const grid = document.getElementById('sqrGrid');
+    if (grid && !grid.querySelector('.sqr-claimed-card')) {
+      const qr = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data='
+        +encodeURIComponent(p.hostedUrl)+'&color=1a1a1a&bgcolor=ffffff&margin=4';
+      const c=document.createElement('div'); c.className='sqr-claimed-card';
+      c.innerHTML=`<div class="sqr-claimed-top">
+        <img class="sqr-claimed-qr" src="${qr}"/>
+        <div class="sqr-claimed-info">
+          <div class="sqr-claimed-name">${p.businessName||'Your Smart QR'}</div>
+          <div class="sqr-claimed-url">${p.hostedUrl}</div>
+        </div>
+        <div class="sqr-claimed-badge"><div class="sqr-claimed-badge-dot"></div>LIVE</div>
+      </div>
+      <div class="sqr-claimed-actions">
+        <a href="${p.hostedUrl}" target="_blank" class="sqr-claimed-btn sqr-claimed-btn-primary">🌐 View Live</a>
+        <button class="sqr-claimed-btn sqr-claimed-btn-secondary" onclick="document.getElementById('claimSuccessOverlay').classList.add('show')">✏️ Manage</button>
+        <a href="analytics.html" class="sqr-claimed-btn sqr-claimed-btn-secondary">📊 Analytics</a>
+      </div>`;
+      grid.insertBefore(c,grid.firstChild);
+    }
   }
 
   // Run after dashboard init
   document.addEventListener('DOMContentLoaded', function() {
     setTimeout(handleClaimDemo, 800);
+    setTimeout(restoreActiveClaim, 1000);
   });
 })();
 </script>
