@@ -6,7 +6,7 @@
   <title>Create Your Smart QR Experience — QRAivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -125,7 +125,7 @@
     main {
       position: relative;
       z-index: 1;
-      max-width: 680px;
+      max-width: 640px;
       margin: 0 auto;
       padding: 110px 20px 80px;
     }
@@ -164,7 +164,7 @@
 
     .hero h1 {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(1.9rem, 5vw, 2.8rem);
+      font-size: clamp(1.8rem, 4.5vw, 2.4rem);
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: -0.03em;
@@ -215,21 +215,22 @@
     }
 
     .progress-step {
-      width: 32px; height: 32px;
+      width: 28px; height: 28px;
       border-radius: 50%;
-      border: 2px solid var(--border2);
+      border: 1.5px solid var(--border2);
       background: var(--bg2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: .72rem;
+      font-size: .65rem;
       font-weight: 700;
       color: var(--text3);
       position: relative;
       z-index: 2;
       flex-shrink: 0;
-      transition: all 0.3s ease;
-      font-family: 'Syne', sans-serif;
+      transition: all 0.25s ease;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0;
     }
 
     .progress-step.active {
@@ -254,12 +255,13 @@
 
     /* ── STEP CARD ── */
     .step-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 36px 32px;
+      background: #0f1014;
+      border: 1px solid rgba(255,90,31,0.12);
+      border-radius: 18px;
+      padding: 40px 36px;
       display: none;
-      animation: fadeUp 0.35s cubic-bezier(0.4,0,0.2,1);
+      animation: fadeUp 0.3s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 2px 40px rgba(0,0,0,0.4);
     }
     .step-card.active { display: block; }
 
@@ -269,22 +271,24 @@
     }
 
     .step-label {
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .1em;
+      font-size: .65rem;
+      font-weight: 500;
+      letter-spacing: .06em;
       text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 8px;
-      font-family: 'Syne', sans-serif;
+      color: var(--accent2);
+      margin-bottom: 10px;
+      font-family: 'DM Mono', monospace;
+      opacity: 0.8;
     }
 
     .step-title {
       font-family: 'Syne', sans-serif;
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: 1.4rem;
+      font-weight: 800;
       color: var(--text);
-      margin-bottom: 6px;
-      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
     }
 
     .step-sub {
@@ -302,15 +306,15 @@
 
     .input-wrap input {
       width: 100%;
-      background: var(--bg3);
-      border: 1.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 15px 18px;
-      font-size: 1rem;
+      background: #0a0b0d;
+      border: 1px solid #252a3a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: .95rem;
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       outline: none;
-      transition: border-color var(--transition), box-shadow var(--transition);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
     }
     .input-wrap input::placeholder { color: var(--text3); }
     .input-wrap input:focus {
@@ -336,13 +340,13 @@
     }
 
     .type-card {
-      background: var(--bg3);
-      border: 1.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 16px 12px;
+      background: #13151a;
+      border: 1px solid #1e2230;
+      border-radius: 12px;
+      padding: 18px 12px;
       text-align: center;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       user-select: none;
     }
     .type-card:hover {
@@ -367,12 +371,12 @@
     }
 
     .style-card {
-      background: var(--bg3);
-      border: 1.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 18px 16px;
+      background: #13151a;
+      border: 1px solid #1e2230;
+      border-radius: 12px;
+      padding: 16px;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       display: flex;
       align-items: center;
       gap: 14px;
@@ -430,12 +434,12 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      background: var(--bg3);
-      border: 1.5px solid var(--border2);
-      border-radius: var(--radius);
+      background: #13151a;
+      border: 1px solid #1e2230;
+      border-radius: 12px;
       padding: 14px 16px;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       user-select: none;
     }
     .feature-row:hover { border-color: var(--border); }
@@ -477,10 +481,10 @@
 
     /* ── STEP 5 SUMMARY ── */
     .summary-card {
-      background: var(--bg3);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 20px;
+      background: #13151a;
+      border: 1px solid rgba(255,90,31,0.1);
+      border-radius: 12px;
+      padding: 20px 22px;
       margin-bottom: 24px;
     }
 
@@ -522,17 +526,18 @@
 
     .btn-next {
       flex: 1;
-      padding: 14px 24px;
+      padding: 15px 24px;
       background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: var(--radius);
+      border-radius: 12px;
       font-size: .92rem;
       font-weight: 700;
       font-family: 'Syne', sans-serif;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       letter-spacing: .01em;
+      box-shadow: 0 4px 20px rgba(255,90,31,0.25);
     }
     .btn-next:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
     .btn-next:active { transform: translateY(0); }
@@ -542,13 +547,13 @@
       padding: 14px 20px;
       background: transparent;
       color: var(--text2);
-      border: 1.5px solid var(--border2);
-      border-radius: var(--radius);
+      border: 1px solid #1e2230;
+      border-radius: 12px;
       font-size: .85rem;
-      font-weight: 600;
-      font-family: 'Syne', sans-serif;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       white-space: nowrap;
     }
     .btn-back:hover { color: var(--text); border-color: var(--text3); }
@@ -556,18 +561,19 @@
     .btn-generate {
       flex: 1;
       padding: 16px 24px;
-      background: linear-gradient(135deg, var(--accent), #ff3d00);
+      background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: var(--radius);
+      border-radius: 12px;
       font-size: 1rem;
-      font-weight: 700;
+      font-weight: 800;
       font-family: 'Syne', sans-serif;
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.18s ease;
       letter-spacing: .01em;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 4px 24px rgba(255,90,31,0.3);
     }
     .btn-generate::before {
       content: '';
@@ -727,7 +733,7 @@
       nav { padding: 14px 16px; }
       .nav-signin { display: none; }
       main { padding: 90px 16px 60px; }
-      .step-card { padding: 24px 18px; }
+      .step-card { padding: 28px 22px; }
       .btn-row { flex-direction: column-reverse; }
       .btn-back { width: 100%; text-align: center; }
       .style-grid { grid-template-columns: 1fr; }
