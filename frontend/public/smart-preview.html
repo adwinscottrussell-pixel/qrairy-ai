@@ -428,6 +428,62 @@
       text-overflow: ellipsis;
       opacity: 0;
     }
+
+    /* ── Claim overlay ── */
+    #claimOverlay {
+      display: none; position: fixed; inset: 0; z-index: 700;
+      background: rgba(10,11,13,0.88); backdrop-filter: blur(14px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #claimOverlay.show { display: flex; }
+    .claim-modal {
+      background: #14171f;
+      border: 1px solid rgba(255,90,31,0.25);
+      border-radius: 20px; padding: 44px 36px;
+      text-align: center; max-width: 480px; width: 100%;
+      animation: fadeUp .35s ease;
+      box-shadow: 0 16px 80px rgba(0,0,0,0.7);
+    }
+    .claim-icon {
+      width: 64px; height: 64px; border-radius: 16px;
+      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; margin: 0 auto 20px;
+    }
+    .claim-title {
+      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
+      color: var(--text); margin-bottom: 10px; letter-spacing: -0.02em;
+    }
+    .claim-sub {
+      font-size: .85rem; color: var(--text2); line-height: 1.65;
+      margin-bottom: 24px; max-width: 360px; margin-left: auto; margin-right: auto;
+    }
+    .claim-features {
+      display: flex; flex-direction: column; gap: 8px;
+      margin-bottom: 28px; text-align: left;
+    }
+    .claim-feat {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .8rem; color: var(--text2);
+    }
+    .claim-feat::before {
+      content: '✓'; color: var(--green); font-weight: 700;
+      font-size: .78rem; flex-shrink: 0;
+    }
+    .claim-cta {
+      width: 100%; padding: 15px;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 12px; font-size: .95rem; font-weight: 800;
+      font-family: 'Syne', sans-serif; cursor: pointer;
+      transition: all .18s ease; margin-bottom: 10px;
+      box-shadow: 0 4px 20px rgba(255,90,31,0.3);
+    }
+    .claim-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+    .claim-skip {
+      font-size: .78rem; color: var(--text3); background: none;
+      border: none; cursor: pointer; transition: color .18s ease;
+    }
+    .claim-skip:hover { color: var(--text2); }
     @media(max-width:600px){
       nav { top:38px;padding:12px 16px; }
       #timerBanner { font-size:.72rem;gap:8px;padding:8px 14px; }
@@ -445,7 +501,7 @@
     <div class="banner-dot"></div>
     <span class="banner-text">⚠ <strong>Demo preview active</strong> — expires in <span id="bannerTimer">59:59</span></span>
     <span id="activityTicker"></span>
-    <a href="dashboard.html" class="banner-cta">Activate free →</a>
+    <button class="banner-cta" onclick="showClaimOverlay()">Activate free →</button>
   </div>
 
   <!-- NAV -->
@@ -453,7 +509,7 @@
     <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
     <div class="nav-right">
       <div class="live-badge"><div class="live-dot"></div>Live</div>
-      <a href="dashboard.html" class="btn-activate-nav">Activate Smart QR →</a>
+      <button class="btn-activate-nav" onclick="showClaimOverlay()">Activate Smart QR →</button>
     </div>
   </nav>
 
@@ -665,7 +721,7 @@
     <div class="final-cta">
       <h2>Make it <em>permanent</em> in 30 seconds</h2>
       <p>Your demo is live right now. Activate a free account to keep it forever — full analytics, AI campaigns, push notifications, and more.</p>
-      <a href="dashboard.html" class="btn-big">🚀 Activate My Smart QR — Free</a>
+      <button class="btn-big" onclick="showClaimOverlay()">🚀 Activate My Smart QR — Free</button>
       <button class="btn-later" onclick="window.location.href='index.html'">Maybe later — return to homepage</button>
       <div class="trust-row">
         <span class="trust-item">No credit card</span>
@@ -677,6 +733,23 @@
 
   </main>
 
+  <!-- CLAIM OVERLAY -->
+  <div id="claimOverlay">
+    <div class="claim-modal">
+      <div class="claim-icon">🎯</div>
+      <div class="claim-title">Claim your Smart QR</div>
+      <div class="claim-sub">Create a free QRAivy account to keep this Smart QR live, manage analytics, subscribers, wallet passes, and AI tools.</div>
+      <div class="claim-features">
+        <div class="claim-feat">Keep your Smart QR live permanently</div>
+        <div class="claim-feat">Access scan analytics &amp; insights</div>
+        <div class="claim-feat">Manage subscribers &amp; push notifications</div>
+        <div class="claim-feat">Customise your landing page anytime</div>
+        <div class="claim-feat">Unlock wallet passes &amp; AI campaigns</div>
+      </div>
+      <button class="claim-cta" id="claimContinueBtn">Continue to Claim →</button>
+      <button class="claim-skip" onclick="document.getElementById('claimOverlay').classList.remove('show')">Not now</button>
+    </div>
+  </div>
   <footer>
     <div>© 2026 QRAivy · <a href="index.html">Home</a> · <a href="qr-free.html">Free QR</a> · <a href="smart-demo.html">Start over</a> · <a href="#">Privacy</a></div>
     <div style="margin-top:4px;">Demo data is not stored. No account was created during this session.</div>
@@ -688,7 +761,7 @@
       <div class="expired-icon">⏱</div>
       <div class="expired-title">Your demo has expired</div>
       <div class="expired-sub">This Smart QR demo was active for 1 hour. Create a free account to activate it permanently — your QR, your audience, your data.</div>
-      <a href="dashboard.html" class="btn-big" style="margin-bottom:12px;">🚀 Activate Smart QR — Free</a><br/>
+      <button class="btn-big" style="margin-bottom:12px;" onclick="showClaimOverlay()">🚀 Activate Smart QR — Free</button><br/>
       <a href="smart-demo.html" style="font-size:.78rem;color:var(--text3);text-decoration:none;">Create a new demo instead</a>
     </div>
   </div>
@@ -703,7 +776,7 @@
       <div class="limit-title">Demo limit reached</div>
       <div class="limit-sub">You already created a Smart QR demo recently. Create a free account for unlimited Smart QR pages — no limits, no expiry.</div>
       <div class="limit-time" id="limitTime"></div>
-      <a href="dashboard.html" class="btn-big" style="margin-bottom:14px;font-size:.88rem;padding:14px 28px;">Create Free Account →</a><br/>
+      <button class="btn-big" style="margin-bottom:14px;font-size:.88rem;padding:14px 28px;" onclick="showClaimOverlay()">Create Free Account →</button><br/>
       <button onclick="bypassLimit()" style="font-size:.72rem;color:var(--text3);background:none;border:none;cursor:pointer;">I understand — show my demo anyway</button>
     </div>
   </div>
@@ -932,6 +1005,34 @@
     }, 2000);
 
   })();
+
+    // ── Claim overlay ──────────────────────────────────────────────────
+    function savePendingDemo() {
+      try {
+        const pending = {
+          slug: lpSlug || slug,
+          hostedUrl: realLpUrl || ('https://' + demoUrl),
+          businessName: name,
+          useCase: type,
+          brandColor: style,
+          selectedFeatures: new URLSearchParams(window.location.search).get('features') || '',
+          createdAt: new Date().toISOString()
+        };
+        localStorage.setItem('qraivy_pending_demo', JSON.stringify(pending));
+      } catch(e) {}
+    }
+
+    window.showClaimOverlay = function() {
+      savePendingDemo();
+      document.getElementById('claimOverlay').classList.add('show');
+    };
+
+    document.getElementById('claimContinueBtn').addEventListener('click', function() {
+      savePendingDemo();
+      const pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || '{}');
+      const claimSlug = pending.slug || slug;
+      window.location.href = 'dashboard.html?claimDemo=' + encodeURIComponent(claimSlug);
+    });
   </script>
 
 </body>

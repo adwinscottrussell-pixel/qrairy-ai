@@ -10,8 +10,86 @@
 <link rel="stylesheet" href="dashboard-shell.css"/>
 
 <link rel="stylesheet" href="onboarding.css"/>
+
+<style>
+#claim-banner {
+  display: none;
+  background: linear-gradient(90deg, #0a1a0a, #0f2010);
+  border-bottom: 1px solid rgba(34,212,126,0.3);
+  padding: 12px 24px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 50;
+}
+#claim-banner.show { display: flex; }
+.claim-banner-left { display: flex; align-items: center; gap: 10px; }
+.claim-banner-dot { width: 8px; height: 8px; border-radius: 50%; background: #22d47e; animation: cbpulse 1.6s ease infinite; flex-shrink: 0; }
+@keyframes cbpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+.claim-banner-title { font-family: 'Space Grotesk', sans-serif; font-size: .88rem; font-weight: 700; color: #f0f4f8; }
+.claim-banner-sub { font-size: .72rem; color: rgba(240,244,248,0.65); margin-top: 1px; }
+.claim-banner-btn {
+  padding: 7px 18px; background: #22d47e; color: #0a0a0a;
+  border: none; border-radius: 8px; font-size: .75rem; font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif; cursor: pointer; white-space: nowrap;
+  transition: opacity .18s ease; flex-shrink: 0;
+}
+.claim-banner-btn:hover { opacity: .85; }
+.claim-banner-close { background: none; border: none; color: rgba(240,244,248,0.4); cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0 4px; }
+
+/* Claimed QR card */
+.sqr-claimed-card {
+  background: #13151a;
+  border: 1px solid rgba(34,212,126,0.2);
+  border-radius: 14px; padding: 20px;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.sqr-claimed-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #22d47e, transparent);
+}
+.sqr-claimed-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.sqr-claimed-qr { width: 64px; height: 64px; border-radius: 8px; background: #fff; flex-shrink: 0; }
+.sqr-claimed-info { flex: 1; }
+.sqr-claimed-name { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 700; color: #f0f4f8; margin-bottom: 3px; }
+.sqr-claimed-url { font-family: 'DM Mono', monospace; font-size: .62rem; color: rgba(240,244,248,0.5); word-break: break-all; }
+.sqr-claimed-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(34,212,126,0.12); border: 1px solid rgba(34,212,126,0.25);
+  color: #22d47e; font-size: .62rem; font-weight: 700; padding: 3px 9px;
+  border-radius: 100px; letter-spacing: .06em;
+}
+.sqr-claimed-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: #22d47e; }
+.sqr-claimed-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sqr-claimed-btn {
+  padding: 7px 14px; border-radius: 8px; font-size: .72rem; font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif; cursor: pointer; transition: all .18s ease;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+}
+.sqr-claimed-btn-primary { background: #ff5a1f; color: #fff; border: none; }
+.sqr-claimed-btn-primary:hover { background: #ff7a45; }
+.sqr-claimed-btn-secondary { background: transparent; color: rgba(240,244,248,0.7); border: 1px solid rgba(255,255,255,0.1); }
+.sqr-claimed-btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: #f0f4f8; }
+</style>
 </head>
 <body>
+
+<!-- CLAIM SUCCESS BANNER -->
+<div id="claim-banner">
+  <div class="claim-banner-left">
+    <div class="claim-banner-dot"></div>
+    <div>
+      <div class="claim-banner-title">✓ Your Smart QR has been claimed</div>
+      <div class="claim-banner-sub">You can now manage your landing page, analytics, subscribers, and Smart QR tools from this dashboard.</div>
+    </div>
+  </div>
+  <button class="claim-banner-btn" id="claim-manage-btn">Manage Smart QR</button>
+  <button class="claim-banner-close" onclick="document.getElementById('claim-banner').classList.remove('show')">✕</button>
+</div>
 <div id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-icon">Q</div>
@@ -221,6 +299,65 @@ async function initDashboard(){
 <script src="onboarding.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ initDashboard(); });</script>
 
+
+<script>
+(function() {
+  function handleClaimDemo() {
+    const params = new URLSearchParams(window.location.search);
+    const claimSlug = params.get('claimDemo');
+    if (!claimSlug) return;
+
+    // Read pending demo from localStorage
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || 'null'); } catch(e) {}
+    if (!pending) pending = { slug: claimSlug, businessName: claimSlug, hostedUrl: 'https://api.qraivy.com/lp/' + claimSlug };
+
+    // Show success banner
+    const banner = document.getElementById('claim-banner');
+    if (banner) banner.classList.add('show');
+
+    // Show claimed QR card at top of dashboard
+    const grid = document.getElementById('sqr-grid');
+    if (grid) {
+      const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=' + encodeURIComponent(pending.hostedUrl) + '&color=1a1a1a&bgcolor=ffffff&margin=4';
+      const card = document.createElement('div');
+      card.className = 'sqr-claimed-card';
+      card.innerHTML = `
+        <div class="sqr-claimed-top">
+          <img class="sqr-claimed-qr" src="${qrSrc}" alt="QR Code"/>
+          <div class="sqr-claimed-info">
+            <div class="sqr-claimed-name">${pending.businessName || 'Your Smart QR'}</div>
+            <div class="sqr-claimed-url">${pending.hostedUrl}</div>
+          </div>
+          <div class="sqr-claimed-badge"><div class="sqr-claimed-badge-dot"></div>LIVE</div>
+        </div>
+        <div class="sqr-claimed-actions">
+          <a href="${pending.hostedUrl}" target="_blank" class="sqr-claimed-btn sqr-claimed-btn-primary">🌐 View Live Page</a>
+          <button class="sqr-claimed-btn sqr-claimed-btn-secondary" onclick="window.qrairyOnboarding&&window.qrairyOnboarding.reopen(window._userId)">✏️ Manage</button>
+          <a href="analytics.html" class="sqr-claimed-btn sqr-claimed-btn-secondary">📊 Analytics</a>
+          <a href="${qrSrc.replace('128x128','600x600')}" download="smart-qr.png" class="sqr-claimed-btn sqr-claimed-btn-secondary">⬇ Download QR</a>
+        </div>`;
+      grid.insertBefore(card, grid.firstChild);
+    }
+
+    // Wire manage button
+    const manageBtn = document.getElementById('claim-manage-btn');
+    if (manageBtn) {
+      manageBtn.onclick = function() {
+        if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window._userId || 'user');
+      };
+    }
+
+    // Clean URL without reloading
+    try { history.replaceState({}, '', 'dashboard.html'); } catch(e) {}
+  }
+
+  // Run after dashboard init
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(handleClaimDemo, 800);
+  });
+})();
+</script>
 </body>
 </html>
 
