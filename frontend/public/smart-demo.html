@@ -1143,23 +1143,13 @@
 
       // Simulate generation delay for demo feel
       setTimeout(() => {
-        // Hide steps
-        document.getElementById('progressBar').style.display = 'none';
-        document.getElementById('step5').classList.remove('active');
-
-        // Show result
-        const result = document.getElementById('result-section');
-        result.classList.add('show');
-
-        // Populate
-        document.getElementById('result-name-display').textContent = state.name;
-        const slug = state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        document.getElementById('result-url').textContent = `qraivy.com/demo/${slug}`;
-
-        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        btn.textContent = '✨ Generate Smart QR Demo';
-        btn.disabled = false;
+        const params = new URLSearchParams({
+          name:  state.name,
+          type:  TYPE_LABELS[state.type]  || state.type,
+          style: STYLE_LABELS[state.style] || state.style,
+          features: Array.from(state.features).join(',')
+        });
+        window.location.href = 'smart-preview.html?' + params.toString();
       }, 1600);
     });
 
