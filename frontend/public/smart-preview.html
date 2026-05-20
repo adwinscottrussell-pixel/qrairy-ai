@@ -701,8 +701,12 @@
     const name   = p.get('name')  || 'Your Business';
     const type   = p.get('type')  || 'Smart QR';
     const style  = p.get('style') || 'Dark';
+    const lpSlug = p.get('slug')  || '';
+    const lpUrl  = p.get('lpUrl') || '';
     const slug   = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const demoUrl = `qraivy.com/demo/${slug}`;
+    // Use real hosted LP URL if available, else show demo URL
+    const demoUrl = lpSlug ? `api.qraivy.com/lp/${lpSlug}` : `qraivy.com/demo/${slug}`;
+    const realLpUrl = lpUrl || (lpSlug ? `https://api.qraivy.com/lp/${lpSlug}` : '');
 
     // ── Demo limit (localStorage) ──────────────────────────────────────
     const LIMIT_KEY = 'qraivy_demo_ts';
@@ -745,11 +749,21 @@
     set('qrBusiness', name);
     set('qrType', `${type} · Smart QR`);
     set('qrUrl', demoUrl);
+    // Show "View live page" link if real LP exists
+    if (realLpUrl) {
+      const urlRow = document.getElementById('qrUrl');
+      if (urlRow) {
+        urlRow.style.cursor = 'pointer';
+        urlRow.title = 'Open live page';
+        urlRow.addEventListener('click', () => window.open(realLpUrl, '_blank'));
+      }
+    }
     set('phoneName', name);
     set('heroSub', `"${name}" is live. Scan, share, or preview the experience below.`);
 
     // ── Real QR code (api.qrserver.com) ───────────────────────────────
-    const qrData = `https://qraivy.com/smart-preview.html?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&style=${encodeURIComponent(style)}`;
+    // QR points to real hosted LP if available, else self-referential preview
+    const qrData = realLpUrl || `https://qraivy.com/smart-preview.html?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&style=${encodeURIComponent(style)}`;
     const qrImg  = document.getElementById('qrImg');
     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=280x280&color=1a1a1a&bgcolor=ffffff&margin=8`;
     qrImg.onerror = function () {

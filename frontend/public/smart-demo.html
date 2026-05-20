@@ -1142,21 +1142,77 @@
     document.getElementById('back5').addEventListener('click', () => goTo(4));
 
     // ── Generate ───────────────────────────────────────────────────────
-    document.getElementById('generateBtn').addEventListener('click', () => {
+    document.getElementById('generateBtn').addEventListener('click', async () => {
       const btn = document.getElementById('generateBtn');
       btn.textContent = '✨ Generating...';
       btn.disabled = true;
 
       // Simulate generation delay for demo feel
-      setTimeout(() => {
+      // ── Generate a real demo landing page ──────────────────────────
+      const btn = document.getElementById('generateBtn');
+      btn.textContent = '✨ Creating your Smart QR…';
+      btn.disabled = true;
+
+      try {
+        const slug = 'demo-' + state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 7);
+
+        // Map wizard type to LP useCase
+        const USE_CASE_MAP = {
+          restaurant: 'restaurant', creator: 'social', event: 'event',
+          ecommerce: 'ecommerce', agency: 'leadgen', local: 'restaurant',
+          music: 'social', fitness: 'gym', other: 'bizcard'
+        };
+        const useCase = USE_CASE_MAP[state.type] || 'bizcard';
+
+        // Map wizard style to brand colour
+        const COLOR_MAP = {
+          minimal: '#1a1a1a', luxe: '#c9a84c', neon: '#39ff14',
+          creator: '#ff6b9d', corporate: '#3a5fa0', dark: '#ff5a1f', modern: '#2196f3'
+        };
+        const brandColor = COLOR_MAP[state.style] || '#ff5a1f';
+
+        const res = await fetch('https://api.qraivy.com/lp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            businessName: state.name,
+            useCase,
+            brandColor,
+            websiteUrl: 'https://qraivy.com',
+            qrType: 'demo'
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.slug) throw new Error(data.error || 'Failed to create demo page');
+
         const params = new URLSearchParams({
           name:  state.name,
           type:  TYPE_LABELS[state.type]  || state.type,
           style: STYLE_LABELS[state.style] || state.style,
-          features: Array.from(state.features).join(',')
+          slug:  data.slug,
+          lpUrl: data.url
         });
         window.location.href = 'smart-preview.html?' + params.toString();
-      }, 1600);
+
+      } catch (err) {
+        console.error('Demo LP creation failed:', err);
+        // Fallback: redirect without real LP (shows preview only)
+        const slug = 'demo-' + state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-fallback';
+        const params = new URLSearchParams({
+          name:  state.name,
+          type:  TYPE_LABELS[state.type]  || state.type,
+          style: STYLE_LABELS[state.style] || state.style,
+          slug,
+          lpUrl: ''
+        });
+        window.location.href = 'smart-preview.html?' + params.toString();
+      } finally {
+        btn.textContent = '✨ Generate Smart QR Demo';
+        btn.disabled = false;
+      }
     });
 
     // ── Reset ──────────────────────────────────────────────────────────
