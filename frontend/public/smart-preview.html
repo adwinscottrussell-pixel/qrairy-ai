@@ -729,7 +729,7 @@
     set('heroSub', `"${name}" is live. Scan, share, or preview the experience below.`);
 
     // ── Real QR code (api.qrserver.com) ───────────────────────────────
-    const qrData = `https://${demoUrl}`;
+    const qrData = `https://qraivy.com/smart-preview.html?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&style=${encodeURIComponent(style)}`;
     const qrImg  = document.getElementById('qrImg');
     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=280x280&color=1a1a1a&bgcolor=ffffff&margin=8`;
     qrImg.onerror = function () {
