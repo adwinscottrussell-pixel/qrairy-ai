@@ -414,6 +414,20 @@
     footer a { color:var(--text2);text-decoration:none; }
     footer a:hover { color:var(--accent); }
 
+
+    /* live activity */
+    #activityTicker {
+      font-family: 'DM Mono', monospace;
+      font-size: .6rem;
+      color: rgba(255,90,31,0.55);
+      letter-spacing: .04em;
+      transition: opacity 0.55s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 200px;
+      text-overflow: ellipsis;
+      opacity: 0;
+    }
     @media(max-width:600px){
       nav { top:38px;padding:12px 16px; }
       #timerBanner { font-size:.72rem;gap:8px;padding:8px 14px; }
@@ -430,6 +444,7 @@
   <div id="timerBanner">
     <div class="banner-dot"></div>
     <span class="banner-text">⚠ <strong>Demo preview active</strong> — expires in <span id="bannerTimer">59:59</span></span>
+    <span id="activityTicker"></span>
     <a href="dashboard.html" class="banner-cta">Activate free →</a>
   </div>
 
@@ -541,7 +556,7 @@
         <!-- FEATURE CARDS -->
         <div class="feature-grid">
           <!-- LIVE features -->
-          <div class="feat-card">
+          <div class="feat-card" id="aiAssistantCard">
             <div class="feat-card-top">
               <span class="feat-icon">🤖</span>
               <span class="feat-status-on">● Active</span>
@@ -628,17 +643,17 @@
           </div>
           <div class="stat-card c-o">
             <span class="stat-ico">📬</span>
-            <div class="stat-num">0</div>
+            <div class="stat-num" id="subCount">0</div>
             <div class="stat-lbl">Subscribers</div>
           </div>
           <div class="stat-card c-b">
             <span class="stat-ico">🤖</span>
-            <div class="stat-num">0</div>
+            <div class="stat-num" id="aiCount">0</div>
             <div class="stat-lbl">AI Chats</div>
           </div>
           <div class="stat-card c-p">
             <span class="stat-ico">🎫</span>
-            <div class="stat-num">0</div>
+            <div class="stat-num" id="walletCount">0</div>
             <div class="stat-lbl">Wallet Saves</div>
           </div>
         </div>
@@ -837,16 +852,84 @@
       }
     }
 
-    // ── Demo scan ticker ───────────────────────────────────────────────
-    let scans = 0;
-    function tickScans() {
-      if (!expired && Math.random() < 0.35) {
-        scans++;
-        set('scanCount', scans);
-      }
-      if (!expired) setTimeout(tickScans, 5000 + Math.random() * 10000);
+    // ── Live activity system ──────────────────────────────────────────
+    let scans = 0, subs = 0, aiChats = 0, wallets = 0;
+
+    const ACTIVITIES = [
+      'AI assistant opened',
+      'New scan detected',
+      'Wallet pass viewed',
+      'Smart QR shared',
+      'Landing page viewed',
+      'Subscriber captured',
+      'AI chat started',
+      'QR code scanned',
+    ];
+    let actIdx = 0;
+
+    function animateStat(id, val) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.transition = 'opacity 0.15s ease';
+      el.style.opacity = '0';
+      setTimeout(() => { el.textContent = val; el.style.opacity = '1'; }, 160);
     }
-    setTimeout(tickScans, 5000);
+
+    function tickActivity() {
+      if (expired) return;
+      const ticker = document.getElementById('activityTicker');
+      if (ticker) {
+        ticker.style.opacity = '0';
+        setTimeout(() => {
+          actIdx = (actIdx + 1) % ACTIVITIES.length;
+          ticker.textContent = '· ' + ACTIVITIES[actIdx];
+          ticker.style.opacity = '1';
+        }, 600);
+      }
+      setTimeout(tickActivity, 8000 + Math.random() * 4000);
+    }
+
+    function tickScans() {
+      if (expired) return;
+      if (Math.random() < 0.4) { scans++; animateStat('scanCount', scans); }
+      setTimeout(tickScans, 5000 + Math.random() * 10000);
+    }
+
+    function tickSubs() {
+      if (expired) return;
+      if (Math.random() < 0.18 && subs < 8) { subs++; animateStat('subCount', subs); }
+      setTimeout(tickSubs, 18000 + Math.random() * 22000);
+    }
+
+    function tickAI() {
+      if (expired) return;
+      if (Math.random() < 0.3) {
+        aiChats++; animateStat('aiCount', aiChats);
+        const card = document.getElementById('aiAssistantCard');
+        if (card) {
+          card.style.transition = 'box-shadow 0.5s ease';
+          card.style.boxShadow = '0 0 0 1px rgba(59,130,246,0.35), 0 4px 16px rgba(59,130,246,0.1)';
+          setTimeout(() => { card.style.boxShadow = ''; }, 2200);
+        }
+      }
+      setTimeout(tickAI, 12000 + Math.random() * 16000);
+    }
+
+    function tickWallet() {
+      if (expired) return;
+      if (Math.random() < 0.12 && wallets < 4) { wallets++; animateStat('walletCount', wallets); }
+      setTimeout(tickWallet, 25000 + Math.random() * 30000);
+    }
+
+    setTimeout(tickScans,   4000);
+    setTimeout(tickSubs,   12000);
+    setTimeout(tickAI,      8000);
+    setTimeout(tickWallet, 20000);
+    setTimeout(tickActivity, 6000);
+    setTimeout(() => {
+      const t = document.getElementById('activityTicker');
+      if (t) { t.textContent = '· ' + ACTIVITIES[0]; t.style.opacity = '1'; }
+    }, 2000);
 
   })();
   </script>
