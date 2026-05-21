@@ -400,9 +400,8 @@ async function initDashboard(){
     if (urlEl)  urlEl.textContent  = pending.hostedUrl;
     if (viewBtn) viewBtn.href = pending.hostedUrl;
     if (manBtn) manBtn.onclick = function() {
-      if (overlay) overlay.classList.remove('show');
-      if (banner) banner.classList.add('show');
-      if (window.qrairyOnboarding) window.qrairyOnboarding.reopen(window._userId || 'user');
+      const cl = pending.slug || claimSlug;
+      window.location.href = 'smart-qr-detail.html?slug=' + encodeURIComponent(cl);
     };
     if (overlay) setTimeout(() => overlay.classList.add('show'), 700);
     // Hide banner while modal is visible
