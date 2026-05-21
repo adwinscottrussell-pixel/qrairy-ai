@@ -747,7 +747,7 @@
         <div class="claim-feat">Unlock wallet passes &amp; AI campaigns</div>
       </div>
       <button class="claim-cta" id="claimContinueBtn">Continue to Claim →</button>
-      <button class="claim-skip" onclick="document.getElementById('claimOverlay').classList.remove('show')">Not now</button>
+      <button class="claim-skip" id="claimSkipBtn">Not now</button>
     </div>
   </div>
   <footer>
@@ -1021,8 +1021,19 @@
     }
 
     window.showClaimOverlay = function() {
+      // Only show once per session unless user explicitly clicks again
+      var seenKey = 'qraivy_claim_overlay_seen_' + slug;
       savePendingDemo();
       document.getElementById('claimOverlay').classList.add('show');
+      // Wire skip to set seen flag
+      var skipBtn = document.getElementById('claimSkipBtn');
+      if (skipBtn && !skipBtn._wired) {
+        skipBtn._wired = true;
+        skipBtn.addEventListener('click', function() {
+          document.getElementById('claimOverlay').classList.remove('show');
+          try { sessionStorage.setItem(seenKey, 'true'); } catch(e){}
+        });
+      }
     };
 
     document.getElementById('claimContinueBtn').addEventListener('click', function() {
@@ -1030,7 +1041,11 @@
       const pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || '{}');
       const claimSlug = pending.slug || slug;
       const redirectTarget = 'dashboard.html?claimDemo=' + encodeURIComponent(claimSlug);
-      try { localStorage.setItem('qraivy_post_auth_redirect', redirectTarget); } catch(e) {}
+      try {
+        localStorage.setItem('qraivy_post_auth_redirect', redirectTarget);
+        localStorage.setItem('qraivy_flow_type', 'smart_demo');
+        localStorage.setItem('qraivy_current_demo_slug', claimSlug);
+      } catch(e) {}
       if (window.Clerk && window.Clerk.user) {
         window.location.href = redirectTarget;
       } else {

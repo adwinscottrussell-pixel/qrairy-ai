@@ -128,6 +128,37 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
 .fqr-upgrade-feat-dot{width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0}
 .btn-upgrade{display:block;width:100%;padding:11px;background:#ff5a1f;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:#fff;cursor:pointer;text-align:center;text-decoration:none;transition:all .15s;box-shadow:0 0 16px rgba(255,90,31,0.2);position:relative}
 .btn-upgrade:hover{background:#ff7a45;box-shadow:0 0 24px rgba(255,90,31,0.35)}
+
+  /* Smart QR upgrade block */
+  #smart-qr-upgrade {
+    display: none;
+    margin: 28px auto 0;
+    max-width: 560px;
+    background: rgba(255,90,31,0.06);
+    border: 0.5px solid rgba(255,90,31,0.22);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  #smart-qr-upgrade.show { display: block; }
+  .upgrade-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem; font-weight: 700; color: #f0f4f8;
+    margin-bottom: 6px;
+  }
+  .upgrade-sub {
+    font-size: .75rem; color: rgba(240,244,248,0.55);
+    line-height: 1.6; margin-bottom: 16px;
+  }
+  .upgrade-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 24px; background: #ff5a1f; color: #fff;
+    border: none; border-radius: 10px; font-size: .82rem;
+    font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer; text-decoration: none;
+    transition: background .18s ease;
+  }
+  .upgrade-btn:hover { background: #ff7a45; }
 </style>
 </head>
 <body>
@@ -530,8 +561,44 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
   // ── Focus ─────────────────────────────────────────────────────────────────
   setTimeout(function(){ urlInput.focus(); }, 200);
 
+  // ── Flow state: FREE QR FLOW ─────────────────────────────────────────────
+  // This is the free QR tool. Do NOT trigger Smart QR claim flows from here.
+  try { sessionStorage.setItem('qraivy_flow_type', 'free_qr'); } catch(e){}
+
+  // Show upgrade block after first QR generation
+  var upgradeShown = false;
+  var origUpdateQR = window.updateQR || updateQR;
+  function showUpgradeOnce() {
+    if (!upgradeShown) {
+      upgradeShown = true;
+      var block = document.getElementById('smart-qr-upgrade');
+      if (block) { block.classList.add('show'); block.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+    }
+  }
+  // Hook into generate button
+  var genBtn = document.getElementById('generateBtn') || document.querySelector('[onclick*="generateQR"],[onclick*="updateQR"]');
+  if (genBtn) genBtn.addEventListener('click', function(){ setTimeout(showUpgradeOnce, 800); });
+
+  // Wire "Try Smart QR Demo" to set flow type
+  var tryBtn = document.getElementById('try-smart-btn');
+  if (tryBtn) tryBtn.addEventListener('click', function() {
+    try {
+      localStorage.setItem('qraivy_flow_type', 'smart_demo');
+      sessionStorage.removeItem('qraivy_flow_type');
+    } catch(e){}
+  });
+
 })();
 </script>
+
+  <!-- Smart QR upgrade block — shown after QR generation, FREE QR FLOW ONLY -->
+  <div id="smart-qr-upgrade">
+    <div class="upgrade-title">✨ Turn this into a Smart QR experience</div>
+    <div class="upgrade-sub">Add AI assistant, voice welcome, wallet passes, subscriber capture and analytics — all hosted for you.</div>
+    <a class="upgrade-btn" href="smart-demo.html" id="try-smart-btn">
+      Try Smart QR Demo →
+    </a>
+  </div>
 </body>
 </html>
 

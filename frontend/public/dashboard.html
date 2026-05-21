@@ -406,7 +406,16 @@ async function initDashboard(){
       const cl = pending.slug || claimSlug;
       window.location.href = 'smart-qr-detail.html?slug=' + encodeURIComponent(cl);
     };
-    if (overlay) setTimeout(() => overlay.classList.add('show'), 700);
+    // Only show success modal once per claimed slug
+    var successSeenKey = 'qraivy_claim_success_seen_' + (pending.slug||claimSlug);
+    var alreadySeen = false;
+    try { alreadySeen = !!localStorage.getItem(successSeenKey); } catch(e){}
+    if (overlay && !alreadySeen) {
+      setTimeout(() => {
+        overlay.classList.add('show');
+        try { localStorage.setItem(successSeenKey, 'true'); } catch(e){}
+      }, 700);
+    }
     // Hide banner while modal is visible
     if (banner) banner.classList.remove('show');
 
@@ -489,7 +498,10 @@ async function initDashboard(){
         // Check if there is an unclaimed pending demo in localStorage
         try {
           const pending = JSON.parse(localStorage.getItem('qraivy_pending_demo') || 'null');
-          if (pending && pending.slug && !localStorage.getItem('qraivy_active_claim')) {
+          // Only auto-claim if: pending demo exists, not already claimed, and flow is smart_demo
+          const flowType = localStorage.getItem('qraivy_flow_type');
+          const alreadyClaimed = pending && pending.slug ? !!localStorage.getItem('qraivy_claimed_demo_' + pending.slug) : true;
+          if (pending && pending.slug && !localStorage.getItem('qraivy_active_claim') && !alreadyClaimed && flowType === 'smart_demo') {
             // Inject claimDemo param and trigger
             const url = new URL(window.location.href);
             url.searchParams.set('claimDemo', pending.slug);
