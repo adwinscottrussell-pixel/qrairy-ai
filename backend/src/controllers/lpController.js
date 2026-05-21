@@ -271,6 +271,48 @@ a{color:inherit;text-decoration:none}
 /* CTA section below subscribe */
 .lp-cta-section{padding:0 24px 28px;display:flex;flex-direction:column;align-items:center;gap:0}
 
+
+/* ── Qraivy growth CTA ── */
+.qraivy-growth-cta{padding:24px 24px 8px;text-align:center;}
+.qraivy-growth-inner{display:inline-flex;flex-direction:column;align-items:center;gap:10px;}
+.qraivy-growth-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;
+  background:rgba(255,255,255,0.04);
+  border:0.5px solid rgba(255,90,31,0.22);
+  border-radius:100px;
+  color:rgba(240,236,224,0.75);
+  font-family:'DM Mono',monospace;
+  font-size:.72rem;
+  letter-spacing:.02em;
+  text-decoration:none;
+  transition:all 0.22s ease;
+  box-shadow:0 2px 16px rgba(255,90,31,0.06);
+  animation:qrGrowthPulse 12s ease-in-out infinite;
+  animation-delay:3s;
+}
+.qraivy-growth-btn:hover{
+  background:rgba(255,90,31,0.08);
+  border-color:rgba(255,90,31,0.4);
+  color:rgba(240,236,224,0.95);
+  transform:translateY(-1px);
+  box-shadow:0 4px 24px rgba(255,90,31,0.14);
+}
+.qraivy-growth-icon{
+  width:18px;height:18px;border-radius:5px;
+  background:rgba(255,90,31,0.18);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:.65rem;
+  color:rgba(255,90,31,0.9);flex-shrink:0;
+}
+.qraivy-growth-sub{
+  font-size:.58rem;color:rgba(240,236,224,0.35);
+  letter-spacing:.03em;
+}
+@keyframes qrGrowthPulse{
+  0%,85%,100%{box-shadow:0 2px 16px rgba(255,90,31,0.06);}
+  90%{box-shadow:0 2px 24px rgba(255,90,31,0.18);}
+}
 /* Footer */
 .lp-footer{padding:24px 24px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center}
 .lp-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
@@ -371,6 +413,15 @@ a{color:inherit;text-decoration:none}
 <!-- Business Info -->
 ${sectionsHTML}
 
+<div class="qraivy-growth-cta">
+  <div class="qraivy-growth-inner">
+    <a class="qraivy-growth-btn" href="https://qraivy.com/smart-demo.html" target="_blank">
+      <div class="qraivy-growth-icon">Q</div>
+      Create Your Own Smart QR
+    </a>
+    <div class="qraivy-growth-sub">Launch an AI-powered landing page in under 60 seconds.</div>
+  </div>
+</div>
 <footer class="lp-footer">
   <div class="lp-footer-brand">
     <div class="lp-footer-Q">Q</div>
