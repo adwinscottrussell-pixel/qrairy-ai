@@ -413,12 +413,41 @@ a{color:inherit;text-decoration:none}
 <!-- Business Info -->
 ${sectionsHTML}
 
+<!-- Growth modal -->
+<div id="qrGrowthModal">
+  <div class="qrgm-wrap">
+    <div class="qrgm-glow"></div>
+    <button class="qrgm-close" id="qrgmClose">&#x2715;</button>
+    <div class="qrgm-preview">
+      <div class="qrgm-qr-pulse"><div class="qrgm-qr-inner"></div><div class="qrgm-live-ring"></div></div>
+      <div class="qrgm-preview-info">
+        <div class="qrgm-preview-title">AI Smart Page &mdash; Live</div>
+        <div class="qrgm-preview-meta"><div class="qrgm-live-dot"></div><span class="qrgm-preview-status">Scanning active &bull; AI online</span></div>
+        <div class="qrgm-feature-pills"><span class="qrgm-pill">AI Chat</span><span class="qrgm-pill">Wallet</span><span class="qrgm-pill">Analytics</span></div>
+      </div>
+    </div>
+    <div class="qrgm-title">Launch Your Own AI Smart Page</div>
+    <div class="qrgm-sub">You just experienced an AI-powered Smart QR. Create your own in under 60 seconds.</div>
+    <div class="qrgm-features">
+      <div class="qrgm-feat">Voice welcome message</div>
+      <div class="qrgm-feat">AI assistant for visitors</div>
+      <div class="qrgm-feat">Apple &amp; Google Wallet passes</div>
+      <div class="qrgm-feat">Smart QR analytics</div>
+      <div class="qrgm-feat">Live hosted landing page</div>
+    </div>
+    <input class="qrgm-input" id="qrgmName" type="text" placeholder="Your brand, event, or store name" maxlength="48" autocomplete="off"/>
+    <div class="qrgm-url-preview" id="qrgmUrlPreview">qraivy.com/demo-yourbrand</div>
+    <button class="qrgm-cta" id="qrgmCta">Generate My Smart QR &rarr;</button>
+    <button class="qrgm-skip" id="qrgmSkip">Maybe later</button>
+  </div>
+</div>
+<!-- Growth CTA -->
 <div class="qraivy-growth-cta">
   <div class="qraivy-growth-inner">
-    <a class="qraivy-growth-btn" href="https://qraivy.com/smart-demo.html" target="_blank">
+    <button class="qraivy-growth-btn" id="qrGrowthBtn">
       <div class="qraivy-growth-icon">Q</div>
       Create Your Own Smart QR
-    </a>
+    </button>
     <div class="qraivy-growth-sub">Launch an AI-powered landing page in under 60 seconds.</div>
   </div>
 </div>
@@ -535,6 +564,30 @@ ${sectionsHTML}
 
   if (chatSend) chatSend.addEventListener('click', submitMsg);
   if (chatInput) chatInput.addEventListener('keydown', function(e){ if(e.key==='Enter') submitMsg(); });
+  // growth modal
+  (function(){
+    var modal=document.getElementById("qrGrowthModal");
+    var openBtn=document.getElementById("qrGrowthBtn");
+    var closeBtn=document.getElementById("qrgmClose");
+    var skipBtn=document.getElementById("qrgmSkip");
+    var nameIn=document.getElementById("qrgmName");
+    var urlPrev=document.getElementById("qrgmUrlPreview");
+    var ctaBtn=document.getElementById("qrgmCta");
+    function slugify(s){return(s||"yourbrand").toLowerCase().replace(/[^a-z0-9\s-]/g,"").trim().replace(/\s+/g,"-").replace(/-+/g,"-").slice(0,28)||"yourbrand";}
+    if(openBtn)openBtn.addEventListener("click",function(){if(modal)modal.classList.add("show");});
+    function closeModal(){if(modal)modal.classList.remove("show");}
+    if(closeBtn)closeBtn.addEventListener("click",closeModal);
+    if(skipBtn)skipBtn.addEventListener("click",closeModal);
+    if(modal)modal.addEventListener("click",function(e){if(e.target===modal)closeModal();});
+    if(nameIn&&urlPrev){nameIn.addEventListener("input",function(){var sl=slugify(nameIn.value);urlPrev.textContent=nameIn.value.trim()?"qraivy.com/demo-"+sl:"qraivy.com/demo-yourbrand";});}
+    if(ctaBtn){ctaBtn.addEventListener("click",function(){
+      var name=nameIn?nameIn.value.trim():"";
+      try{localStorage.setItem("qraivy_growth_source",JSON.stringify({sourceSlug:slug,sourceBiz:bizName,referredAt:new Date().toISOString()}));if(name)localStorage.setItem("qraivy_prefill_name",name);}catch(e){}
+      var url="https://qraivy.com/smart-demo.html";
+      url+=name?"?name="+encodeURIComponent(name)+"&src=lp":"?src=lp";
+      window.location.href=url;
+    });}
+  })();
 
   // Also allow tapping the collapsed card to activate
   if (collapsed) {
