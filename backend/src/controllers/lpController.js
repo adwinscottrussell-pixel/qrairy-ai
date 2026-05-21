@@ -165,10 +165,10 @@ function renderLP(page) {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;max-width:480px;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;max-width:560px;width:100%;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 /* Nav */
-.lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
+.lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
 .lp-nav-brand{display:flex;align-items:center;gap:10px}
 .lp-logo-img{width:32px;height:32px;border-radius:8px;object-fit:contain}
 .lp-logo-letter{width:32px;height:32px;border-radius:8px;border:0.5px solid;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800}
@@ -177,31 +177,31 @@ a{color:inherit;text-decoration:none}
 .lp-nav-dot{width:6px;height:6px;border-radius:50%;background:${accent};animation:lpDot 2s ease-in-out infinite}
 @keyframes lpDot{0%,100%{opacity:1}50%{opacity:0.3}}
 /* Hero */
-.lp-hero{padding:36px 20px 28px;text-align:center;background:linear-gradient(160deg,${accentDim} 0%,transparent 55%)}
+.lp-hero{padding:36px 24px 28px;text-align:center;background:linear-gradient(160deg,${accentDim} 0%,transparent 55%)}
 .lp-hero-eyebrow{display:inline-flex;align-items:center;gap:6px;border:0.5px solid ${accentBorder};border-radius:99px;padding:5px 14px;font-size:0.6rem;color:${accent};letter-spacing:0.1em;margin-bottom:18px}
 .lp-hero-title{font-family:'Syne',sans-serif;font-size:clamp(1.7rem,6vw,2.2rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:14px}
-.lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:340px;margin:0 auto 28px;line-height:1.75}
+.lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:420px;margin:0 auto 28px;line-height:1.75}
 .lp-hero-ctas{display:flex;flex-direction:column;gap:10px;align-items:center}
 /* Buttons */
-.lp-btn{display:block;width:100%;max-width:320px;padding:15px 24px;border-radius:12px;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
+.lp-btn{display:block;width:100%;max-width:380px;padding:15px 24px;border-radius:12px;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
 .lp-btn:active{transform:scale(0.97)}
 .lp-btn-primary{color:#fff;background:${accent};box-shadow:0 0 28px ${accentGlow}}
 .lp-btn-secondary{background:rgba(255,255,255,0.06);color:rgba(240,236,224,0.7);border:0.5px solid rgba(255,255,255,0.14)}
 /* QR section */
-.lp-qr-section{padding:0 20px 24px}
+.lp-qr-section{padding:0 24px 24px}
 .lp-qr-card{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px}
 .lp-qr-img{width:72px;height:72px;border-radius:8px;flex-shrink:0;background:#fff}
 .lp-qr-label{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:3px}
 .lp-qr-url{font-size:0.62rem;color:rgba(240,236,224,0.55);margin-bottom:8px;word-break:break-all}
 .lp-qr-badge{display:inline-flex;align-items:center;gap:5px;border:0.5px solid ${accentBorder};border-radius:99px;padding:3px 9px;font-size:0.55rem;color:${accent};background:${accentDim}}
 /* Sections */
-.lp-section{padding:22px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-section{padding:22px 24px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-section-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:14px;color:#f0ece0}
 .lp-items{display:flex;flex-direction:column;gap:8px}
 .lp-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:9px;font-size:0.78rem;color:rgba(240,236,224,0.7)}
 .lp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 /* AI Chat */
-.lp-chat-section{padding:28px 20px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-chat-section{padding:28px 24px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-chat-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:14px}
 .lp-chat-widget{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden}
 .lp-chat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border-bottom:0.5px solid rgba(255,255,255,0.07)}
@@ -222,7 +222,7 @@ a{color:inherit;text-decoration:none}
 .lp-chat-input::placeholder{color:rgba(240,236,224,0.65)}
 .lp-chat-send{width:36px;height:36px;border:none;border-radius:8px;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0}
 /* Voice */
-.lp-voice-section{padding:28px 20px;border-top:0.5px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.01)}
+.lp-voice-section{padding:28px 24px;border-top:0.5px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.01)}
 .lp-voice-title{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:14px}
 .lp-voice-player{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:8px}
 .lp-voice-btn{width:40px;height:40px;border:none;border-radius:50%;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:transform 0.1s}
@@ -236,7 +236,7 @@ a{color:inherit;text-decoration:none}
 @keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
 .lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.6);text-align:center}
 /* Subscribe */
-.lp-subscribe-section{padding:28px 20px 32px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-subscribe-section{padding:28px 24px 32px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-subscribe-card{position:relative;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid ${accentBorder};border-radius:18px;padding:24px 20px}
 .lp-sub-glow{position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,${accentDim},transparent 70%);pointer-events:none;border-radius:50%}
 .lp-wallet-preview{display:flex;justify-content:center;margin-bottom:20px;position:relative}
@@ -269,10 +269,10 @@ a{color:inherit;text-decoration:none}
 .lp-typing-dots span:nth-child(3){animation-delay:0.4s}
 @keyframes lpTypeDot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
 /* CTA section below subscribe */
-.lp-cta-section{padding:0 20px 28px;display:flex;flex-direction:column;align-items:center;gap:0}
+.lp-cta-section{padding:0 24px 28px;display:flex;flex-direction:column;align-items:center;gap:0}
 
 /* Footer */
-.lp-footer{padding:24px 20px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center}
+.lp-footer{padding:24px 24px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center}
 .lp-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
 .lp-footer-Q{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem}
 .lp-footer-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700}
