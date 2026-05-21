@@ -125,11 +125,46 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   border-radius:12px;font-size:.85rem;font-family:'Space Grotesk',sans-serif;
   cursor:pointer;transition:all .18s;text-decoration:none;display:block;}
 .csm-btn-secondary:hover{border-color:rgba(255,255,255,0.25);color:#f0f4f8;}
+
+/* ── Demo Smart QR upgrade banner ── */
+#demo-upgrade-banner {
+  display:none;
+  background:linear-gradient(90deg,rgba(255,90,31,0.1),rgba(255,90,31,0.06));
+  border-bottom:1px solid rgba(255,90,31,0.22);
+  padding:12px 24px;
+  align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  position:relative;z-index:49;
+}
+#demo-upgrade-banner.show{display:flex;}
+.dub-left{display:flex;align-items:center;gap:10px;}
+.dub-badge{background:rgba(255,90,31,0.15);border:0.5px solid rgba(255,90,31,0.3);
+  color:#ff5a1f;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:100px;
+  letter-spacing:.06em;flex-shrink:0;}
+.dub-text{font-size:.8rem;color:rgba(240,244,248,0.75);line-height:1.4;}
+.dub-text strong{color:#f0f4f8;}
+.dub-btn{padding:8px 18px;background:#ff5a1f;color:#fff;border:none;border-radius:8px;
+  font-size:.75rem;font-weight:700;font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;text-decoration:none;
+  transition:background .18s;}
+.dub-btn:hover{background:#ff7a45;}
+.dub-close{background:none;border:none;color:rgba(240,244,248,0.3);cursor:pointer;
+  font-size:1rem;padding:0 4px;flex-shrink:0;transition:color .18s;}
+.dub-close:hover{color:rgba(240,244,248,0.6);}
 </style>
 </head>
 <body>
 
 
+
+<!-- DEMO UPGRADE BANNER — shown when user has claimed demo but is on free plan -->
+<div id="demo-upgrade-banner">
+  <div class="dub-left">
+    <div class="dub-badge">DEMO ACTIVE</div>
+    <div class="dub-text"><strong>Your Smart QR demo is active.</strong> Upgrade to keep it live permanently and unlock the full platform.</div>
+  </div>
+  <a href="upgrade.html" class="dub-btn">Upgrade to Keep Live →</a>
+  <button class="dub-close" onclick="document.getElementById('demo-upgrade-banner').classList.remove('show')">✕</button>
+</div>
 <!-- CLAIM SUCCESS MODAL -->
 <div class="claim-success-overlay" id="claimSuccessOverlay" onclick="if(event.target===this){this.classList.remove('show');document.getElementById('claim-banner').classList.add('show')}">
   <div class="claim-success-modal">
@@ -368,6 +403,7 @@ async function initDashboard(){
   src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
   type="text/javascript">
 </script>
+<script src="js/session.js"></script>
 <script src="js/auth-guard.js"></script>
 <script src="onboarding.js"></script>
 <script>document.addEventListener("DOMContentLoaded", function(){ initDashboard(); });</script>
@@ -422,6 +458,16 @@ async function initDashboard(){
     // Show banner
     const banner = document.getElementById('claim-banner');
     if (banner) banner.classList.add('show');
+
+    // Show demo upgrade banner for free/demo plan users
+    setTimeout(function() {
+      var sess = (window.QrTier && window.QrTier.get) ? window.QrTier.get() : null;
+      var isPaid = sess && (sess.isPremium || sess.type === 'premium');
+      if (!isPaid) {
+        var dub = document.getElementById('demo-upgrade-banner');
+        if (dub) dub.classList.add('show');
+      }
+    }, 2000);
     const manageBtn = document.getElementById('claim-manage-btn');
     if (manageBtn) manageBtn.onclick = function() {
       if (overlay) overlay.classList.add('show');

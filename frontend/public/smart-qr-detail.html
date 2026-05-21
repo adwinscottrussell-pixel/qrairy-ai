@@ -96,6 +96,32 @@
 .sqd-check-item.done .sqd-check-circle { background:#22d47e; border-color:#22d47e; color:#0a0b0d; font-weight:700; }
 .sqd-check-label { font-family:'Space Grotesk',sans-serif; font-size:.8rem; font-weight:500; color:#f0f4f8; }
 .sqd-check-sub { font-size:.65rem; color:rgba(240,244,248,0.45); margin-top:1px; }
+
+/* Demo status badge */
+.sqd-demo-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);
+  color:#ff5a1f;font-size:.62rem;font-weight:700;
+  padding:3px 9px;border-radius:100px;letter-spacing:.06em;
+  margin-bottom:8px;
+}
+/* Upgrade strip on detail page */
+.sqd-upgrade-strip {
+  display:none;
+  background:rgba(255,90,31,0.07);
+  border:0.5px solid rgba(255,90,31,0.2);
+  border-radius:12px;padding:14px 16px;
+  margin-bottom:24px;
+  align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.sqd-upgrade-strip.show{display:flex;}
+.sqd-upgrade-strip-text{font-size:.78rem;color:rgba(240,244,248,0.7);line-height:1.5;}
+.sqd-upgrade-strip-text strong{color:#f0f4f8;}
+.sqd-upgrade-strip-btn{padding:8px 16px;background:#ff5a1f;color:#fff;border:none;
+  border-radius:8px;font-size:.72rem;font-weight:700;
+  font-family:'Space Grotesk',sans-serif;cursor:pointer;
+  text-decoration:none;white-space:nowrap;flex-shrink:0;transition:background .18s;}
+.sqd-upgrade-strip-btn:hover{background:#ff7a45;}
 </style>
 </head>
 <body>
@@ -147,6 +173,7 @@
       <div class="sqd-hero-top">
         <img class="sqd-qr-img" id="sqd-qr-img" src="" alt="QR Code"/>
         <div class="sqd-hero-info">
+          <div class="sqd-demo-badge" id="sqd-demo-badge" style="display:none">⏱ DEMO</div>
           <div class="sqd-live-badge"><div class="sqd-live-dot"></div>LIVE</div>
           <div class="sqd-biz-name" id="sqd-biz-name">Loading…</div>
           <div class="sqd-url-row">
@@ -172,6 +199,11 @@
           <div class="sqd-stat-val purple" id="sqd-wallet">0</div>
           <div class="sqd-stat-lbl">Wallet Saves</div>
         </div>
+      </div>
+      <!-- Upgrade strip for demo/free users -->
+      <div class="sqd-upgrade-strip" id="sqd-upgrade-strip">
+        <div class="sqd-upgrade-strip-text"><strong>Demo Smart QR active.</strong> Upgrade to keep it live permanently and remove the demo limit.</div>
+        <a href="upgrade.html" class="sqd-upgrade-strip-btn">Upgrade to Keep Live →</a>
       </div>
       <div class="sqd-actions">
         <a class="sqd-btn sqd-btn-primary" id="sqd-view-btn" href="#" target="_blank">🌐 View Live Page</a>
@@ -396,6 +428,26 @@ async function initPage() {
   // ── Phone iframe ──────────────────────────────────────────────────────
   document.getElementById('sqd-iframe').src = hostedUrl;
 
+  // ── Plan boundary check ───────────────────────────────────────────────
+  // Show demo badge and upgrade strip for free/demo users
+  setTimeout(async function() {
+    try {
+      await QRairySession.loadPlan();
+      var sess = QRairySession.get();
+      var isPaid = sess.isPremium || sess.type === 'premium';
+      if (!isPaid) {
+        var demoBadge = document.getElementById('sqd-demo-badge');
+        var upgradeStrip = document.getElementById('sqd-upgrade-strip');
+        if (demoBadge) demoBadge.style.display = 'inline-flex';
+        if (upgradeStrip) upgradeStrip.classList.add('show');
+      }
+    } catch(e) {
+      // Default to showing upgrade strip if plan check fails
+      var upgradeStrip = document.getElementById('sqd-upgrade-strip');
+      if (upgradeStrip) upgradeStrip.classList.add('show');
+    }
+  }, 800);
+
   // ── Copy button ───────────────────────────────────────────────────────
   document.getElementById('sqd-copy-btn').addEventListener('click', function() {
     navigator.clipboard.writeText(hostedUrl).then(() => {
@@ -437,6 +489,7 @@ document.addEventListener('DOMContentLoaded', initPage);
   src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
   type="text/javascript">
 </script>
+<script src="js/session.js"></script>
 <script src="js/auth-guard.js"></script>
 </body>
 </html>
