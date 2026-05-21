@@ -77,6 +77,30 @@
     }
     .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 0 30px rgba(255,90,31,0.4); }
 
+
+    /* ── Free QR utility banner ── */
+    .fq-banner {
+      background: rgba(255,255,255,0.03);
+      border-bottom: 0.5px solid rgba(255,255,255,0.07);
+      padding: 10px 48px;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .fq-banner-text {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--text-dim); letter-spacing: 0.02em;
+    }
+    .fq-banner-text strong { color: var(--text-mid); }
+    .fq-banner-btn {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--accent); background: none; border: none;
+      cursor: pointer; padding: 0; text-decoration: underline;
+      text-underline-offset: 3px; letter-spacing: 0.02em;
+      transition: opacity .18s;
+    }
+    .fq-banner-btn:hover { opacity: 0.75; }
+    @media(max-width:640px){ .fq-banner { padding: 10px 20px; } }
     /* ── HERO ── */
     .hero {
       position: relative; min-height: 100vh;
@@ -779,6 +803,12 @@
     </div>
   </nav>
 
+
+  <!-- FREE QR UTILITY BANNER — lightweight entry point for free QR tool -->
+  <div class="fq-banner">
+    <div class="fq-banner-text"><strong>Need a basic QR code?</strong> Generate a free QR code in seconds — no signup required.</div>
+    <a href="qr-free.html" class="fq-banner-btn" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Create Free QR →</a>
+  </div>
   <!-- HERO -->
   <div class="hero-bg-glow"></div>
   <div style="max-width:1200px;margin:0 auto;position:relative">
@@ -791,8 +821,8 @@
         <h1>Turn every<br/>QR code into an<br/><em>engaging experience.</em></h1>
         <p>Create beautiful QR codes, optimised landing pages and marketing campaigns in seconds with AI.</p>
         <div class="hero-btns">
-          <a href="/qr/free.html" class="btn-primary" data-flow="free">Start creating for free →</a>
-          <a href="#how-it-works" class="btn-secondary">▶ Watch demo</a>
+          <a href="smart-demo.html" class="btn-primary" data-flow="smart">Create Smart QR →</a>
+          <a href="qr-free.html" class="btn-secondary" data-flow="free" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Create Free QR</a>
         </div>
         <div class="hero-stats">
           <div class="hero-stat">
