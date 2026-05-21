@@ -80,8 +80,11 @@
   display:none;position:fixed;inset:0;z-index:10000;
   background:rgba(5,5,5,0.88);backdrop-filter:blur(14px);
   align-items:center;justify-content:center;padding:20px;
+  margin-left:var(--sidebar-width,240px);
 }
 .claim-success-overlay.show{display:flex;}
+body.sb-collapsed .claim-success-overlay{margin-left:56px;}
+@media(max-width:768px){.claim-success-overlay{margin-left:0 !important;}}
 .claim-success-modal {
   background:#111110;border:0.5px solid rgba(255,78,0,0.25);
   border-radius:20px;padding:44px 36px;text-align:center;
