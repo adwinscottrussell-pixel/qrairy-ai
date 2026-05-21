@@ -345,7 +345,7 @@ a{color:inherit;text-decoration:none}
 .qrgm-sub{font-size:.78rem;color:rgba(240,236,224,0.55);line-height:1.65;margin-bottom:20px;}
 .qrgm-features{display:flex;flex-direction:column;gap:5px;margin-bottom:22px;}
 .qrgm-feat{font-size:.72rem;color:rgba(240,236,224,0.7);display:flex;align-items:center;gap:7px;}
-.qrgm-feat::before{content:"\2713";color:#22d47e;font-weight:700;font-size:.7rem;flex-shrink:0;}
+.qrgm-feat::before{content:"\u2713";color:#22d47e;font-weight:700;font-size:.7rem;flex-shrink:0;}
 .qrgm-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:11px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:.82rem;outline:none;transition:border-color .2s ease;box-sizing:border-box;margin-bottom:6px;}
 .qrgm-input:focus{border-color:rgba(255,90,31,0.4);}
 .qrgm-input::placeholder{color:rgba(240,236,224,0.3);}
