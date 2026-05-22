@@ -658,13 +658,10 @@
       btnC.textContent = '⬡ Generate Another';
 
       // Show upgrade prompt after 1.5s — value delivered first
-      var dismissed = sessionStorage.getItem('qrairy_upgrade_dismissed');
-      if (!dismissed) {
-        upgradeTimer = setTimeout(function () {
-          upEl.style.display = 'block';
-          upEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 1500);
-      }
+      upgradeTimer = setTimeout(function () {
+        upEl.style.display = 'block';
+        upEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 1500);
     };
 
     img.onerror = function () {
@@ -696,7 +693,6 @@
 
   // ── Dismiss upgrade prompt ────────────────────────────────────
   function dismissUpgrade() {
-    sessionStorage.setItem('qrairy_upgrade_dismissed', '1');
     document.getElementById('upgrade-prompt').style.display = 'none';
   }
 
