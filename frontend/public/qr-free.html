@@ -118,7 +118,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
 .fqr-logo-clear:hover{color:#ef4444}
 
 /* ── Upgrade card ── */
-.fqr-upgrade-card{background:linear-gradient(135deg,rgba(255,90,31,0.08) 0%,rgba(255,90,31,0.04) 100%);border:1px solid rgba(255,90,31,0.2);border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.fqr-upgrade-card{display:none;background:linear-gradient(135deg,rgba(255,90,31,0.08) 0%,rgba(255,90,31,0.04) 100%);border:1px solid rgba(255,90,31,0.2);border-radius:14px;padding:20px;position:relative;overflow:hidden}
 .fqr-upgrade-glow{position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,90,31,0.15),transparent 70%);pointer-events:none;border-radius:50%}
 .fqr-upgrade-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.15);border:1px solid rgba(255,90,31,0.3);border-radius:99px;padding:3px 9px;font-size:.56rem;color:#ff8c55;letter-spacing:.08em;margin-bottom:10px}
 .fqr-upgrade-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;color:#f0f4f8;margin-bottom:6px;position:relative}
@@ -316,7 +316,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
         <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>Smart scan analytics</div>
       </div>
       <a class="btn-upgrade" href="smart-demo.html">✨ Try Smart QR Demo</a>
-      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="document.getElementById('smart-qr-upgrade').classList.remove('show');return false;" style="font-size:.65rem;color:#5a6473;text-decoration:none;">Maybe later</a></div>
+      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="this.closest('.fqr-upgrade-card').style.display='none';return false;" style="font-size:.65rem;color:#5a6473;text-decoration:none;">Maybe later</a></div>
     </div>
 
   </div>
@@ -422,9 +422,8 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       state.hasQR = true;
       // Show Smart QR upgrade block on every successful generation
       setTimeout(function() {
-        var upg = document.getElementById('smart-qr-upgrade');
-        console.log('[QRAivy] upgrade block el:', upg, 'classes:', upg ? upg.className : 'NOT FOUND');
-        if (upg) { upg.classList.add('show'); upg.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+        var upg = document.querySelector('.fqr-upgrade-card');
+        if (upg) { upg.style.display='block'; upg.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
       }, 400);
       // Save to localStorage for dashboard
       try {
