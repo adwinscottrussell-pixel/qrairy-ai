@@ -565,7 +565,7 @@
         data-flow="smart" → router.js handles Clerk auth + redirect.
         This button has zero auth logic of its own.
       -->
-      <button class="upgrade-cta" data-flow="smart">✦ Create Smart QR Account</button>
+      <a class="upgrade-cta" href="smart-demo.html" onclick="try{localStorage.setItem('qraivy_flow_type','smart_demo')}catch(e){}">✦ Try Smart QR Demo</a>
       <button class="upgrade-dismiss" onclick="dismissUpgrade()">Maybe later</button>
     </div>
   </div>
