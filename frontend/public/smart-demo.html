@@ -799,16 +799,32 @@
       <div class="step-label">Step 2 of 5</div>
       <div class="step-title">What type are you?</div>
       <div class="step-sub">We'll tailor your Smart QR experience to fit your category.</div>
-      <div class="type-grid">
-        <div class="type-card" data-type="restaurant"><span class="type-icon">🍽</span><div class="type-name">Restaurant</div></div>
-        <div class="type-card" data-type="creator"><span class="type-icon">🎨</span><div class="type-name">Creator</div></div>
-        <div class="type-card" data-type="event"><span class="type-icon">🎵</span><div class="type-name">Event</div></div>
-        <div class="type-card" data-type="ecommerce"><span class="type-icon">🛍</span><div class="type-name">E-commerce</div></div>
-        <div class="type-card" data-type="agency"><span class="type-icon">💼</span><div class="type-name">Agency</div></div>
-        <div class="type-card" data-type="local"><span class="type-icon">📍</span><div class="type-name">Local Business</div></div>
-        <div class="type-card" data-type="music"><span class="type-icon">🎤</span><div class="type-name">Music Artist</div></div>
+      <script>
+      // Render category grid from shared config (safe — runs before wizard click binding)
+      document.addEventListener('DOMContentLoaded', function() {
+        var grid = document.getElementById('type-grid-dynamic');
+        var cats = window.QRAIVY_SMART_QR_CATEGORIES;
+        if (!grid || !cats || !cats.length) return; // keep fallback static cards
+        grid.innerHTML = cats.map(function(cat) {
+          return '<div class="type-card" data-type="' + cat.slug + '">' +
+            '<span class="type-icon">' + cat.icon + '</span>' +
+            '<div class="type-name">' + cat.label + '</div>' +
+            '<div style="font-size:.6rem;color:var(--text2);margin-top:2px;line-height:1.3;opacity:0.85;">' + cat.description + '</div>' +
+          '</div>';
+        }).join('');
+        // Existing wizard click handler uses querySelectorAll('.type-card') — no rebind needed
+      });
+      </script>
+      <div class="type-grid" id="type-grid-dynamic">
+        <!-- Rendered from window.QRAIVY_SMART_QR_CATEGORIES; fallback cards shown if config unavailable -->
+        <div class="type-card" data-type="restaurant"><span class="type-icon">🍽️</span><div class="type-name">Restaurant</div></div>
+        <div class="type-card" data-type="creator"><span class="type-icon">✨</span><div class="type-name">Creator</div></div>
+        <div class="type-card" data-type="artist_music"><span class="type-icon">🎵</span><div class="type-name">Artist / Music</div></div>
+        <div class="type-card" data-type="event"><span class="type-icon">🎟️</span><div class="type-name">Event</div></div>
+        <div class="type-card" data-type="ecommerce"><span class="type-icon">🛒</span><div class="type-name">Ecommerce</div></div>
+        <div class="type-card" data-type="local_business"><span class="type-icon">🏪</span><div class="type-name">Local Business</div></div>
         <div class="type-card" data-type="fitness"><span class="type-icon">💪</span><div class="type-name">Fitness</div></div>
-        <div class="type-card" data-type="other"><span class="type-icon">✦</span><div class="type-name">Other</div></div>
+        <div class="type-card" data-type="other"><span class="type-icon">⚡</span><div class="type-name">Other</div></div>
       </div>
       <div class="error-msg" id="err2">Please choose a type to continue.</div>
       <div class="btn-row">
@@ -1156,10 +1172,17 @@
         const slug = 'demo-' + state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 7);
 
         // Map wizard type to LP useCase
+        // USE_CASE_MAP — maps shared category slugs → LP useCase
+        // Slugs match window.QRAIVY_SMART_QR_CATEGORIES
         const USE_CASE_MAP = {
-          restaurant: 'restaurant', creator: 'social', event: 'event',
-          ecommerce: 'ecommerce', agency: 'leadgen', local: 'restaurant',
-          music: 'social', fitness: 'gym', other: 'bizcard'
+          restaurant:     'restaurant',
+          creator:        'social',
+          artist_music:   'social',
+          event:          'event',
+          ecommerce:      'ecommerce',
+          local_business: 'restaurant',
+          fitness:        'gym',
+          other:          'bizcard'
         };
         const useCase = USE_CASE_MAP[state.type] || 'bizcard';
 
