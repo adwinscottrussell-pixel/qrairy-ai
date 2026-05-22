@@ -423,6 +423,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       // Show Smart QR upgrade block on every successful generation
       setTimeout(function() {
         var upg = document.getElementById('smart-qr-upgrade');
+        console.log('[QRAivy] upgrade block el:', upg, 'classes:', upg ? upg.className : 'NOT FOUND');
         if (upg) { upg.classList.add('show'); upg.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
       }, 400);
       // Save to localStorage for dashboard
