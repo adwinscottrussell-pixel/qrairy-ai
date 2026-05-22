@@ -418,6 +418,11 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       qrStatus.className = 'fqr-qr-status ready';
       btnDl.disabled = false;
       state.hasQR = true;
+      // Show Smart QR upgrade block on every successful generation
+      setTimeout(function() {
+        var upg = document.getElementById('smart-qr-upgrade');
+        if (upg) { upg.classList.add('show'); upg.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+      }, 400);
       // Save to localStorage for dashboard
       try {
         var stored = JSON.parse(localStorage.getItem('qraivy_free_qrs')||'[]');
@@ -565,15 +570,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
   // This is the free QR tool. Do NOT trigger Smart QR claim flows from here.
   try { sessionStorage.setItem('qraivy_flow_type', 'free_qr'); } catch(e){}
 
-  // Show upgrade block on every new QR generation — wrap updateQR directly
-  var _origUpdateQR = updateQR;
-  updateQR = function() {
-    _origUpdateQR.apply(this, arguments);
-    setTimeout(function() {
-      var block = document.getElementById('smart-qr-upgrade');
-      if (block && state.hasQR) block.classList.add('show');
-    }, 600);
-  };
+  // upgrade block wired in updateQR img.onload below
 
   // Wire "Try Smart QR Demo" to set flow type
   var tryBtn = document.getElementById('try-smart-btn');
