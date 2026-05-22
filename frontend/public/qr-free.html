@@ -314,7 +314,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
         <div class="fqr-upgrade-feat"><span class="fqr-upgrade-feat-dot"></span>Smart scan analytics</div>
       </div>
       <a class="btn-upgrade" href="smart-demo.html">✨ Try Smart QR Demo</a>
-      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="this.closest('.fqr-upgrade-card').style.display='none';return false;" style="font-size:.65rem;color:#5a6473;text-decoration:none;">Maybe later</a></div>
+      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="document.getElementById('smart-qr-upgrade').classList.remove('show');return false;" style="font-size:.65rem;color:#5a6473;text-decoration:none;">Maybe later</a></div>
     </div>
 
   </div>
@@ -565,19 +565,14 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
   // This is the free QR tool. Do NOT trigger Smart QR claim flows from here.
   try { sessionStorage.setItem('qraivy_flow_type', 'free_qr'); } catch(e){}
 
-  // Show upgrade block after first QR generation
-  var upgradeShown = false;
-  var origUpdateQR = window.updateQR || updateQR;
-  function showUpgradeOnce() {
-    if (!upgradeShown) {
-      upgradeShown = true;
-      var block = document.getElementById('smart-qr-upgrade');
-      if (block) { block.classList.add('show'); block.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
-    }
+  // Show upgrade block on every new QR generation — never suppressed
+  function showUpgradeBlock() {
+    var block = document.getElementById('smart-qr-upgrade');
+    if (block) { block.classList.add('show'); block.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
   }
-  // Hook into generate button
+  // Hook into generate button — fires every time, no guard
   var genBtn = document.getElementById('generateBtn') || document.querySelector('[onclick*="generateQR"],[onclick*="updateQR"]');
-  if (genBtn) genBtn.addEventListener('click', function(){ setTimeout(showUpgradeOnce, 800); });
+  if (genBtn) genBtn.addEventListener('click', function(){ setTimeout(showUpgradeBlock, 800); });
 
   // Wire "Try Smart QR Demo" to set flow type
   var tryBtn = document.getElementById('try-smart-btn');
