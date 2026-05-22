@@ -1194,6 +1194,9 @@
         };
         const brandColor = COLOR_MAP[state.style] || '#ff5a1f';
 
+        // Fetch category config from shared source of truth
+        const catConfig = (window.QRAIVY_SMART_QR_CATEGORIES_UTIL && window.QRAIVY_SMART_QR_CATEGORIES_UTIL.get(state.type)) || null;
+
         const res = await fetch('https://api.qraivy.com/lp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1203,7 +1206,14 @@
             useCase,
             brandColor,
             websiteUrl: 'https://qraivy.com',
-            qrType: 'demo'
+            qrType: 'demo',
+            // Category config fields — used by backend for page generation
+            categorySlug:     state.type,
+            categoryLabel:    catConfig ? catConfig.label        : state.type,
+            defaultCTA:       catConfig ? catConfig.defaultCTA   : 'Learn More',
+            defaultTheme:     catConfig ? catConfig.defaultTheme : 'default-dark',
+            defaultSections:  catConfig ? catConfig.defaultSections : ['hero','voice_welcome','ai_assistant','subscribe'],
+            aiPromptHint:     catConfig ? catConfig.aiPromptHint : 'Generate a Smart QR landing page.'
           })
         });
 
