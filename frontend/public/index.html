@@ -80,24 +80,24 @@
 
     /* ── Free QR utility banner ── */
     .fq-banner {
-      background: rgba(255,255,255,0.03);
-      border-bottom: 0.5px solid rgba(255,255,255,0.07);
-      padding: 10px 48px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 0.5px solid rgba(255,255,255,0.1);
+      padding: 11px 48px;
       display: flex; align-items: center;
       justify-content: space-between;
       gap: 16px; flex-wrap: wrap;
     }
     .fq-banner-text {
-      font-family: var(--font-mono); font-size: 0.68rem;
-      color: var(--text-dim); letter-spacing: 0.02em;
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: rgba(240,236,224,0.6); letter-spacing: 0.02em;
     }
-    .fq-banner-text strong { color: var(--text-mid); }
+    .fq-banner-text strong { color: rgba(240,236,224,0.85); }
     .fq-banner-btn {
-      font-family: var(--font-mono); font-size: 0.68rem;
+      font-family: var(--font-mono); font-size: 0.72rem;
       color: var(--accent); background: none; border: none;
       cursor: pointer; padding: 0; text-decoration: underline;
       text-underline-offset: 3px; letter-spacing: 0.02em;
-      transition: opacity .18s;
+      transition: opacity .18s; white-space: nowrap;
     }
     .fq-banner-btn:hover { opacity: 0.75; }
     @media(max-width:640px){ .fq-banner { padding: 10px 20px; } }
@@ -793,11 +793,9 @@
   <nav>
     <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
     <div class="nav-links">
-      <a href="#" class="nav-link has-arrow">Product</a>
-      <a href="#" class="nav-link has-arrow">Solutions</a>
-      <a href="#" class="nav-link has-arrow">Templates</a>
+      <a href="qr-free.html" class="nav-link" data-flow="free" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Free QR</a>
+      <a href="smart-demo.html" class="nav-link" data-flow="smart">Smart QR</a>
       <a href="#pricing" class="nav-link">Pricing</a>
-      <a href="#" class="nav-link has-arrow">Resources</a>
       <a href="login.html" class="nav-link" id="nav-auth-link">Log in</a>
       <a href="smart-demo.html" class="nav-cta" id="nav-cta-btn" data-flow="smart">Create Smart QR</a>
     </div>
