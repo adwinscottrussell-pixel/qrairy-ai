@@ -579,6 +579,13 @@ document.addEventListener('DOMContentLoaded', initPage);
       sections = window._sqd_lp_sections;
     }
 
+    // Inject renderer base styles if not already present
+    if (!document.getElementById('qraivy-renderer-styles') && window.QRAIVY_RENDERER_BASE_STYLES) {
+      var s = document.createElement('style');
+      s.id = 'qraivy-renderer-styles';
+      s.textContent = ':root{--accent:' + getAccent() + '}' + window.QRAIVY_RENDERER_BASE_STYLES;
+      document.head.appendChild(s);
+    }
     window.QRAIVY_SMART_BLOCK_EDITOR.init({
       container:  container,
       sections:   sections,
