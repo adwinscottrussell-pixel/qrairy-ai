@@ -565,14 +565,15 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
   // This is the free QR tool. Do NOT trigger Smart QR claim flows from here.
   try { sessionStorage.setItem('qraivy_flow_type', 'free_qr'); } catch(e){}
 
-  // Show upgrade block on every new QR generation — never suppressed
-  function showUpgradeBlock() {
-    var block = document.getElementById('smart-qr-upgrade');
-    if (block) { block.classList.add('show'); block.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
-  }
-  // Hook into generate button — fires every time, no guard
-  var genBtn = document.getElementById('generateBtn') || document.querySelector('[onclick*="generateQR"],[onclick*="updateQR"]');
-  if (genBtn) genBtn.addEventListener('click', function(){ setTimeout(showUpgradeBlock, 800); });
+  // Show upgrade block on every new QR generation — wrap updateQR directly
+  var _origUpdateQR = updateQR;
+  updateQR = function() {
+    _origUpdateQR.apply(this, arguments);
+    setTimeout(function() {
+      var block = document.getElementById('smart-qr-upgrade');
+      if (block && state.hasQR) block.classList.add('show');
+    }, 600);
+  };
 
   // Wire "Try Smart QR Demo" to set flow type
   var tryBtn = document.getElementById('try-smart-btn');
