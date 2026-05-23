@@ -521,7 +521,7 @@ async function initPage() {
   iframeEl.src = hostedUrl;
   iframeEl.addEventListener('load', function() {
     var frame = iframeEl.closest('.sqd-phone-frame') || iframeEl.parentElement;
-    if (frame) frame.scrollTop = 0;
+    if (frame) { frame.scrollTop = 0; setTimeout(function(){ frame.scrollTop = 0; }, 300); }
   });
 
   // ── Plan boundary check ───────────────────────────────────────────────
