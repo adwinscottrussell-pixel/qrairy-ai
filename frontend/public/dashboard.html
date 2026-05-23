@@ -326,7 +326,7 @@ function renderCards(dashboard){
     var card=document.createElement('div');
     card.className='sqr-card';
     card.innerHTML='<div class="sqr-card-top"><div class="sqr-thumb"><img src="'+qrImg+'" alt="QR" loading="lazy"/></div><div class="sqr-meta"><div style="margin-bottom:6px"><span class="sqr-status live">&#x25CF; Live</span><span class="sqr-status ai">&#x2728; AI</span></div><div class="sqr-name">'+qr.businessName+'</div><div class="sqr-url">'+(slug?'api.qraivy.com/lp/'+slug:qr.originalUrl)+'</div><div class="sqr-stats"><div><div class="sqr-stat-v">'+qr.totalScans+'</div><div class="sqr-stat-l">Scans</div></div><div><div class="sqr-stat-v">'+qr.totalSubscribers+'</div><div class="sqr-stat-l">Subs</div></div><div><div class="sqr-stat-v">'+cvr+'%</div><div class="sqr-stat-l">CVR</div></div></div></div></div><div class="sqr-divider"></div><div class="sqr-actions"><button class="sqr-act primary sqr-manage">&#x2699; Manage</button><button class="sqr-act sqr-open">&#x1F310; View</button><button class="sqr-act sqr-analytics">&#x2197; Analytics</button></div>';
-    card.querySelector('.sqr-manage').onclick=function(){window.location.href='qr-manage.html?id='+(qr.source==='lp'?'':qr.id)+'&slug='+encodeURIComponent(slug);};
+    card.querySelector('.sqr-manage').onclick=function(){window.location.href='smart-qr-detail.html?slug='+encodeURIComponent(slug);};
     card.querySelector('.sqr-open').onclick=function(){window.open(lpUrl,'_blank');};
     card.querySelector('.sqr-analytics').onclick=function(){window.location.href='analytics.html';};
     grid.appendChild(card);
