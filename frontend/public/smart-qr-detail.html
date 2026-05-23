@@ -519,6 +519,15 @@ async function initPage() {
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
   iframeEl.src = hostedUrl;
+  var phoneFrame = document.querySelector('.sqd-phone-frame');
+  if (phoneFrame) {
+    phoneFrame.addEventListener('wheel', function(e) {
+      e.stopPropagation();
+    }, { passive: true });
+    phoneFrame.addEventListener('touchmove', function(e) {
+      e.stopPropagation();
+    }, { passive: true });
+  }
   iframeEl.addEventListener('load', function() {
     var frame = document.querySelector('.sqd-phone-frame');
     if (!frame) return;
