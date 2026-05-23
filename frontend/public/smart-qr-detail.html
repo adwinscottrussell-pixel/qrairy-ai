@@ -240,17 +240,15 @@
     <div id="sqd-upgrade-strip" style="display:none;">
       <a href="upgrade.html" style="padding:7px 14px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;white-space:nowrap;">Upgrade →</a>
     </div>
-    <button id="sqd-edit-page-btn" style="padding:7px 14px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">✏️ Edit Sections</button>
   </div>
 </div>
 
 <!-- MAIN EDITOR LAYOUT -->
 <div style="
   display:grid;
-  grid-template-columns:1fr 320px;
-  height:100vh;
-  padding-top:52px;
-  overflow:hidden;
+  grid-template-columns:1fr 300px;
+  min-height:calc(100vh - 52px);
+  margin-top:52px;
 ">
 
   <!-- LEFT: LIVE PREVIEW -->
@@ -258,11 +256,11 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:flex-start;
-    padding:32px 24px;
+    justify-content:center;
+    padding:24px;
     overflow-y:auto;
     background:#0a0c10;
-    height:100%;
+    min-height:calc(100vh - 52px);
   ">
     <!-- Phone preview label -->
     <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.3);margin-bottom:16px;">
@@ -272,9 +270,9 @@
     <!-- Phone frame — larger and centered -->
     <div style="position:relative;flex-shrink:0;margin-bottom:20px;">
       <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.06),transparent 70%);border-radius:50px;pointer-events:none;z-index:0;"></div>
-      <div class="sqd-phone-frame" style="position:relative;z-index:1;width:300px;height:620px;">
+      <div class="sqd-phone-frame" style="position:relative;z-index:1;width:320px;height:650px;">
         <div class="sqd-phone-notch"></div>
-        <iframe class="sqd-phone-iframe" id="sqd-iframe" src="" sandbox="allow-scripts allow-same-origin" loading="lazy" style="width:640px;height:1030px;border:none;transform-origin:top left;transform:scale(0.469);margin-bottom:-450px;"></iframe>
+        <iframe class="sqd-phone-iframe" id="sqd-iframe" src="" sandbox="allow-scripts allow-same-origin" loading="lazy" style="width:640px;height:1030px;border:none;transform-origin:top left;transform:scale(0.5);margin-bottom:-435px;"></iframe>
         <div class="sqd-phone-overlay"></div>
       </div>
     </div>
@@ -318,44 +316,29 @@
     display:flex;
     flex-direction:column;
   ">
-    <!-- QR Info -->
-    <div style="padding:16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <img id="sqd-qr-img" src="" alt="QR Code" style="width:52px;height:52px;border-radius:8px;background:#111;border:0.5px solid rgba(255,255,255,0.1);"/>
-        <div style="flex:1;min-width:0;">
-          <div id="sqd-biz-name" style="font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;">Loading…</div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span id="sqd-url" style="font-family:'DM Mono',monospace;font-size:.58rem;color:rgba(240,244,248,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">—</span>
-            <button id="sqd-copy-btn" style="padding:2px 8px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:5px;color:#ff5a1f;font-size:.58rem;cursor:pointer;font-family:'DM Mono',monospace;flex-shrink:0;">Copy</button>
-          </div>
-        </div>
-      </div>
-      <!-- Stats row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px;text-align:center;">
-          <div id="sqd-scans" style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:#ff5a1f;">0</div>
-          <div style="font-size:.58rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;">Scans</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px;text-align:center;">
-          <div id="sqd-subs" style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;color:#22d47e;">0</div>
-          <div style="font-size:.58rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;">Subscribers</div>
-        </div>
+    <!-- Page identity (slim) -->
+    <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
+      <div id="sqd-biz-name" style="font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;">Loading…</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="sqd-url" style="font-family:'DM Mono',monospace;font-size:.58rem;color:rgba(240,244,248,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">—</span>
+        <button id="sqd-copy-btn" style="padding:2px 8px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:5px;color:#ff5a1f;font-size:.58rem;cursor:pointer;font-family:'DM Mono',monospace;flex-shrink:0;">Copy</button>
       </div>
     </div>
 
-    <!-- Actions -->
-    <div style="padding:12px 16px;border-bottom:0.5px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;gap:8px;">
-      <div id="sqd-upgrade-strip-panel" style="display:none;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.2);border-radius:10px;padding:10px 12px;">
-        <div style="font-size:.7rem;color:rgba(240,244,248,0.8);margin-bottom:7px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;">Demo active.</strong> Upgrade to keep live.</div>
-        <a href="upgrade.html" style="display:block;text-align:center;padding:8px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade to Keep Live →</a>
-      </div>
-      <a id="sqd-download-btn" href="#" download="smart-qr.png" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;text-decoration:none;">⬇ Download QR Code</a>
-      <a href="analytics.html" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;text-decoration:none;">📊 Analytics</a>
+    <!-- Upgrade strip (hidden unless demo/free) -->
+    <div id="sqd-upgrade-strip-panel" style="display:none;margin:12px 16px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.2);border-radius:10px;padding:10px 12px;">
+      <div style="font-size:.7rem;color:rgba(240,244,248,0.8);margin-bottom:7px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;">Demo active.</strong> Upgrade to keep live.</div>
+      <a href="upgrade.html" style="display:block;text-align:center;padding:8px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade to Keep Live →</a>
     </div>
+    <!-- Hidden elements JS needs -->
+    <div style="display:none;"><a id="sqd-download-btn" href="#" download="smart-qr.png"></a><img id="sqd-qr-img" src="" alt=""/><div id="sqd-scans">0</div><div id="sqd-subs">0</div></div>
 
     <!-- Page Sections placeholder -->
     <div style="padding:16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.35);margin-bottom:10px;">Page Sections</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.35);">Page Sections</div>
+        <button id="sqd-edit-page-btn" style="padding:4px 10px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff5a1f;font-size:.62rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">✏️ Edit</button>
+      </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
           <span style="font-size:.8rem;">🏠</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">Hero</span><span style="margin-left:auto;font-size:.58rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">locked</span>
