@@ -467,7 +467,7 @@ async function initPage() {
   const name = (window.Clerk && window.Clerk.user) ? (window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress) : '';
   const avatarEl = document.getElementById('sb-avatar');
   const nameEl   = document.getElementById('sb-username');
-  if (avatarEl) avatarEl.textContent = name[0].toUpperCase();
+  if (avatarEl && name) avatarEl.textContent = name[0].toUpperCase();
   if (nameEl)   nameEl.textContent   = name;
 
   document.getElementById('sb-signout').addEventListener('click', async function(e) {
@@ -477,18 +477,18 @@ async function initPage() {
   // ── Sidebar ───────────────────────────────────────────────────────────
   const sidebar  = document.getElementById('sidebar');
   const sbToggle = document.getElementById('sb-toggle');
-  if (localStorage.getItem('sb-collapsed') === 'true') {
+  if (sidebar && localStorage.getItem('sb-collapsed') === 'true') {
     sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed');
   }
-  sbToggle.addEventListener('click', function() {
+  if (sbToggle) sbToggle.addEventListener('click', function() {
     const c = sidebar.classList.toggle('collapsed');
     document.body.classList.toggle('sb-collapsed', c);
     localStorage.setItem('sb-collapsed', c);
   });
   const mobBtn  = document.getElementById('mob-btn');
   const overlay = document.getElementById('sb-overlay');
-  if (mobBtn)  mobBtn.addEventListener('click',  () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
-  if (overlay) overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
+  if (mobBtn && sidebar)  mobBtn.addEventListener('click',  () => { sidebar.classList.add('mob-open'); if(overlay) overlay.classList.add('on'); });
+  if (overlay && sidebar) overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
   ['sb-campaigns','sb-subscribers','sb-wallet','sb-settings','sb-create-sqr'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => { e.preventDefault(); toast('Coming soon — stay tuned!'); });
