@@ -271,8 +271,7 @@
     <div style="position:relative;flex-shrink:0;margin-bottom:20px;">
       <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.06),transparent 70%);border-radius:50px;pointer-events:none;z-index:0;"></div>
       <div class="sqd-phone-frame" style="position:relative;z-index:1;width:375px;height:780px;overflow-y:auto;overflow-x:hidden;border-radius:32px;-webkit-overflow-scrolling:touch;">
-        <div class="sqd-phone-notch"></div>
-        <iframe id="sqd-iframe" src="" loading="lazy" style="width:375px;height:2400px;border:none;display:block;" scrolling="no"></iframe>
+        <iframe id="sqd-iframe" src="" loading="lazy" style="width:375px;height:2600px;border:none;display:block;" scrolling="no"></iframe>
         <div class="sqd-phone-overlay"></div>
       </div>
     </div>
@@ -518,7 +517,12 @@ async function initPage() {
   document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
 
   // ── Phone iframe ──────────────────────────────────────────────────────
-  document.getElementById('sqd-iframe').src = hostedUrl;
+  var iframeEl = document.getElementById('sqd-iframe');
+  iframeEl.src = hostedUrl;
+  iframeEl.addEventListener('load', function() {
+    var frame = iframeEl.closest('.sqd-phone-frame') || iframeEl.parentElement;
+    if (frame) frame.scrollTop = 0;
+  });
 
   // ── Plan boundary check ───────────────────────────────────────────────
   // Show demo badge and upgrade strip for free/demo users
