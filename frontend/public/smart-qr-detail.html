@@ -460,18 +460,18 @@ window.QrTier={
 
 async function initPage() {
   // ── Auth ──────────────────────────────────────────────────────────────
-  await window.Clerk.load();
+  if (window.Clerk) { try { await window.Clerk.load(); } catch(e) {} }
   await new Promise(r => setTimeout(r, 300));
-  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+  if (window.Clerk && !window.Clerk.user) { window.location.href = 'login.html'; return; }
 
-  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  const name = (window.Clerk && window.Clerk.user) ? (window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress) : '';
   const avatarEl = document.getElementById('sb-avatar');
   const nameEl   = document.getElementById('sb-username');
   if (avatarEl) avatarEl.textContent = name[0].toUpperCase();
   if (nameEl)   nameEl.textContent   = name;
 
   document.getElementById('sb-signout').addEventListener('click', async function(e) {
-    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
+    e.preventDefault(); if(window.Clerk) await window.Clerk.signOut(); window.location.href = 'login.html';
   });
 
   // ── Sidebar ───────────────────────────────────────────────────────────
@@ -588,7 +588,7 @@ async function initPage() {
   // ── Fetch live stats if slug available ────────────────────────────────
   if (pending.slug) {
     try {
-      const token = await window.Clerk.session.getToken();
+      const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;
       const res = await fetch(`https://api.qraivy.com/api/lp/${pending.slug}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
