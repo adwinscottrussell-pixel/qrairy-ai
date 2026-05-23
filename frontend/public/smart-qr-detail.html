@@ -272,7 +272,7 @@
       <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.06),transparent 70%);border-radius:50px;pointer-events:none;z-index:0;"></div>
       <div class="sqd-phone-frame" style="position:relative;z-index:1;width:375px;height:780px;">
         <div class="sqd-phone-notch"></div>
-        <iframe class="sqd-phone-iframe" id="sqd-iframe" src="" sandbox="allow-scripts allow-same-origin" loading="lazy" style="width:640px;height:1200px;border:none;transform-origin:top left;transform:scale(0.586);margin-bottom:-500px;"></iframe>
+        <iframe class="sqd-phone-iframe" id="sqd-iframe" src="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy" style="width:640px;height:1200px;border:none;transform-origin:top left;transform:scale(0.586);margin-bottom:-500px;"></iframe>
         <div class="sqd-phone-overlay"></div>
       </div>
     </div>
@@ -522,8 +522,15 @@ async function initPage() {
     } catch(e) {}
   }
 
+  // If still no pending, build a minimal fallback from the slug itself
+  if (!pending && slug) {
+    pending = {
+      slug:         slug,
+      businessName: slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
+      hostedUrl:    'https://api.qraivy.com/lp/' + slug
+    };
+  }
   if (!pending) {
-    // Fallback: go to dashboard
     window.location.href = 'dashboard.html';
     return;
   }
