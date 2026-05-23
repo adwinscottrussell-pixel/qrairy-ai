@@ -520,8 +520,15 @@ async function initPage() {
   var iframeEl = document.getElementById('sqd-iframe');
   iframeEl.src = hostedUrl;
   iframeEl.addEventListener('load', function() {
-    var frame = iframeEl.closest('.sqd-phone-frame') || iframeEl.parentElement;
-    if (frame) { frame.scrollTop = 0; setTimeout(function(){ frame.scrollTop = 0; }, 300); }
+    var frame = document.querySelector('.sqd-phone-frame');
+    if (!frame) return;
+    frame.scrollTop = 0;
+    var attempts = 0;
+    var reset = setInterval(function() {
+      frame.scrollTop = 0;
+      attempts++;
+      if (attempts >= 5) clearInterval(reset);
+    }, 100);
   });
 
   // ── Plan boundary check ───────────────────────────────────────────────
