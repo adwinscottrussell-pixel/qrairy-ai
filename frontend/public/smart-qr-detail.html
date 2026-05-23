@@ -306,111 +306,253 @@
     </div>
   </div>
 
-  <!-- RIGHT: EDIT PANEL -->
+  <!-- RIGHT: EDIT PANEL — Tab-based editor shell -->
   <div style="
     border-left:0.5px solid rgba(255,255,255,0.08);
     background:#0d1117;
-    height:100%;
-    overflow-y:auto;
+    min-height:100vh;
     display:flex;
     flex-direction:column;
+    overflow:hidden;
   ">
-    <!-- Page identity (slim) -->
-    <div style="padding:14px 16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <div id="sqd-biz-name" style="font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;">Loading…</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span id="sqd-url" style="font-family:'DM Mono',monospace;font-size:.58rem;color:rgba(240,244,248,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">—</span>
-        <button id="sqd-copy-btn" style="padding:2px 8px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:5px;color:#ff5a1f;font-size:.58rem;cursor:pointer;font-family:'DM Mono',monospace;flex-shrink:0;">Copy</button>
-      </div>
+    <!-- Hidden JS elements -->
+    <div style="display:none;">
+      <div id="sqd-biz-name">Loading…</div>
+      <span id="sqd-url">—</span>
+      <button id="sqd-copy-btn"></button>
+      <a id="sqd-download-btn" href="#" download="smart-qr.png"></a>
+      <img id="sqd-qr-img" src="" alt=""/>
+      <div id="sqd-scans">0</div>
+      <div id="sqd-subs">0</div>
+      <button id="sqd-edit-page-btn" style="display:none;"></button>
     </div>
 
-    <!-- Upgrade strip (hidden unless demo/free) -->
-    <div id="sqd-upgrade-strip-panel" style="display:none;margin:12px 16px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.2);border-radius:10px;padding:10px 12px;">
-      <div style="font-size:.7rem;color:rgba(240,244,248,0.8);margin-bottom:7px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;">Demo active.</strong> Upgrade to keep live.</div>
-      <a href="upgrade.html" style="display:block;text-align:center;padding:8px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade to Keep Live →</a>
-    </div>
-    <!-- Hidden elements JS needs -->
-    <div style="display:none;"><a id="sqd-download-btn" href="#" download="smart-qr.png"></a><img id="sqd-qr-img" src="" alt=""/><div id="sqd-scans">0</div><div id="sqd-subs">0</div></div>
-
-    <!-- Page Sections placeholder -->
-    <div style="padding:16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.35);">Page Sections</div>
-        <button id="sqd-edit-page-btn" style="padding:4px 10px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff5a1f;font-size:.62rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">✏️ Edit</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
-          <span style="font-size:.8rem;">🏠</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">Hero</span><span style="margin-left:auto;font-size:.58rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">locked</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
-          <span style="font-size:.8rem;">🎙</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">Voice Welcome</span><span style="margin-left:auto;font-size:.58rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">locked</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
-          <span style="font-size:.8rem;">🤖</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">AI Assistant</span><span style="margin-left:auto;font-size:.58rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">locked</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
-          <span style="font-size:.8rem;">📧</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">Subscribe</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;">
-          <span style="font-size:.8rem;">👛</span><span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">Wallet Pass</span>
-        </div>
-      </div>
-      <button style="width:100%;margin-top:8px;padding:8px;background:transparent;border:0.5px dashed rgba(255,90,31,0.25);border-radius:7px;color:rgba(255,90,31,0.6);font-size:.72rem;cursor:pointer;font-family:'Inter',sans-serif;">+ Add Block</button>
+    <!-- Upgrade strip -->
+    <div id="sqd-upgrade-strip-panel" style="display:none;margin:10px 12px 0;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.2);border-radius:9px;padding:9px 12px;">
+      <div style="font-size:.68rem;color:rgba(240,244,248,0.8);margin-bottom:6px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;">Demo active.</strong> Upgrade to keep live.</div>
+      <a href="upgrade.html" style="display:block;text-align:center;padding:7px;background:#ff5a1f;border-radius:7px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade →</a>
     </div>
 
-    <!-- Feature status compact -->
-    <div style="padding:16px;border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.35);margin-bottom:10px;">Features</div>
-      <div style="display:flex;flex-direction:column;gap:4px;" id="sqd-feat-panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:7px;">
-          <span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">🤖 AI Assistant</span>
-          <span style="font-size:.6rem;font-weight:700;color:#22d47e;">● Active</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:7px;">
-          <span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">🎙 Voice Welcome</span>
-          <span style="font-size:.6rem;font-weight:700;color:#22d47e;">● Active</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:7px;">
-          <span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">📬 Subscribers</span>
-          <span style="font-size:.6rem;font-weight:700;color:#22d47e;">● Active</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:7px;">
-          <span style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;">🎫 Wallet Pass</span>
-          <span style="font-size:.6rem;font-weight:700;color:#22d47e;">● Active</span>
-        </div>
-        <a href="upgrade.html" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;text-decoration:none;">
-          <span style="font-size:.72rem;color:rgba(240,244,248,0.5);font-family:'Inter',sans-serif;">🔔 Push + 3 more</span>
-          <span style="font-size:.6rem;color:rgba(255,90,31,0.7);">Unlock →</span>
-        </a>
-      </div>
+    <!-- Section tabs -->
+    <div id="sqd-tabs" style="
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      padding:12px 12px 0;
+      border-bottom:0.5px solid rgba(255,255,255,0.06);
+      padding-bottom:10px;
+    ">
+      <button class="sqd-tab" data-tab="hero"       style="padding:5px 10px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;color:#ff5a1f;font-size:.62rem;font-weight:600;cursor:pointer;font-family:'DM Mono',monospace;" data-active="true">🏠 Hero</button>
+      <button class="sqd-tab" data-tab="voice"      style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">🎙 Voice</button>
+      <button class="sqd-tab" data-tab="ai"         style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">🤖 AI</button>
+      <button class="sqd-tab" data-tab="loop"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">📬 Loop</button>
+      <button class="sqd-tab" data-tab="buttons"    style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">🔗 Buttons</button>
+      <button class="sqd-tab" data-tab="featured"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">⭐ Featured</button>
+      <button class="sqd-tab" data-tab="info"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">ℹ️ Info</button>
+      <button class="sqd-tab" data-tab="appearance" style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">🎨 Style</button>
+      <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.6);font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;">⚙️ Settings</button>
     </div>
 
-    <!-- Activation checklist compact -->
-    <div style="padding:16px;">
-      <div style="font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.35);margin-bottom:10px;">Setup Checklist</div>
-      <div style="display:flex;flex-direction:column;gap:5px;">
-        <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#22d47e;font-family:'Inter',sans-serif;">
-          <div style="width:16px;height:16px;border-radius:50%;background:#22d47e;display:flex;align-items:center;justify-content:center;font-size:.55rem;color:#0a0a0a;font-weight:700;flex-shrink:0;">✓</div>
-          Smart QR is live
+    <!-- Tab content panels -->
+    <div id="sqd-tab-content" style="flex:1;overflow-y:auto;padding:16px;">
+
+      <!-- HERO -->
+      <div class="sqd-tab-panel" data-panel="hero">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🏠 Hero Section</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Position locked · Always first</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Page Title</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Coming next — edit title here</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Subtitle</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Coming next — edit subtitle here</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Logo / Image</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px dashed rgba(255,255,255,0.12);border-radius:6px;padding:16px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.25);font-family:'Inter',sans-serif;">Upload logo coming next</div>
+          </div>
         </div>
-        <div class="sqd-check-item-compact" style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:rgba(240,244,248,0.55);font-family:'Inter',sans-serif;">
-          <div style="width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
-          Upload your logo
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;">Hero editing coming in next step</div>
+      </div>
+
+      <!-- VOICE -->
+      <div class="sqd-tab-panel" data-panel="voice" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎙 Voice Welcome</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Position locked · Always second</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Welcome Text</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Coming next — edit welcome text</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Voice Recording</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px dashed rgba(255,255,255,0.12);border-radius:6px;padding:16px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.25);font-family:'Inter',sans-serif;">🎙 Record or upload audio — coming next</div>
+          </div>
         </div>
-        <div class="sqd-check-item-compact" style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:rgba(240,244,248,0.55);font-family:'Inter',sans-serif;">
-          <div style="width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
-          Add social links
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;">Voice editing coming in next step</div>
+      </div>
+
+      <!-- AI -->
+      <div class="sqd-tab-panel" data-panel="ai" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🤖 AI Assistant</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Position locked · Always third</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">AI Greeting</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Coming next — edit AI greeting</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Assistant Tone</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Friendly · Professional · Casual</div>
+          </div>
         </div>
-        <div class="sqd-check-item-compact" style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:rgba(240,244,248,0.55);font-family:'Inter',sans-serif;">
-          <div style="width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
-          Record voice welcome
-        </div>
-        <div class="sqd-check-item-compact" style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:rgba(240,244,248,0.55);font-family:'Inter',sans-serif;">
-          <div style="width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
-          Enable wallet pass
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;">AI editing coming in next step</div>
+      </div>
+
+      <!-- LOOP -->
+      <div class="sqd-tab-panel" data-panel="loop" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">📬 Stay in the Loop</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Email capture + Wallet pass</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Section Title</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Stay in the loop</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Description</div>
+            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Coming next — edit description</div>
+          </div>
+          <div style="background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:#22d47e;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Email Capture · Active</div>
+            <div style="font-size:.72rem;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;">Collecting subscriber emails</div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <!-- BUTTONS -->
+      <div class="sqd-tab-panel" data-panel="buttons" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔗 Buttons & Links</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">CTAs and navigation links</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">Reserve a Table</div>
+              <div style="font-size:.6rem;color:rgba(240,244,248,0.35);font-family:'DM Mono',monospace;margin-top:2px;">Primary button</div>
+            </div>
+            <div style="font-size:.62rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">Edit →</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">View Menu</div>
+              <div style="font-size:.6rem;color:rgba(240,244,248,0.35);font-family:'DM Mono',monospace;margin-top:2px;">Secondary button</div>
+            </div>
+            <div style="font-size:.62rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">Edit →</div>
+          </div>
+          <button style="width:100%;padding:9px;background:transparent;border:0.5px dashed rgba(255,90,31,0.25);border-radius:8px;color:rgba(255,90,31,0.6);font-size:.72rem;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;">+ Add Button</button>
+        </div>
+      </div>
+
+      <!-- FEATURED -->
+      <div class="sqd-tab-panel" data-panel="featured" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⭐ Featured Section</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Products, events, offers</div>
+        <div style="background:rgba(255,255,255,0.03);border:0.5px dashed rgba(255,255,255,0.1);border-radius:9px;padding:24px;text-align:center;">
+          <div style="font-size:1.4rem;margin-bottom:8px;">⭐</div>
+          <div style="font-size:.75rem;color:rgba(240,244,248,0.5);font-family:'Inter',sans-serif;margin-bottom:4px;">Featured cards editing</div>
+          <div style="font-size:.65rem;color:rgba(240,244,248,0.25);font-family:'DM Mono',monospace;">Coming in next step</div>
+        </div>
+      </div>
+
+      <!-- INFO -->
+      <div class="sqd-tab-panel" data-panel="info" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">ℹ️ Info Section</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Hours, menu, location, services</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Our Menu</div>
+            <div style="font-size:.72rem;color:rgba(240,244,248,0.5);font-family:'Inter',sans-serif;">4 items · Starters, Mains, Desserts, Drinks</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Opening Hours</div>
+            <div style="font-size:.72rem;color:rgba(240,244,248,0.5);font-family:'Inter',sans-serif;">Mon–Fri 12:00–23:00 · Sat–Sun 11:00</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Find Us</div>
+            <div style="font-size:.72rem;color:rgba(240,244,248,0.5);font-family:'Inter',sans-serif;">2 links · qraivy.com + reservations</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;">Info editing coming in next step</div>
+      </div>
+
+      <!-- APPEARANCE -->
+      <div class="sqd-tab-panel" data-panel="appearance" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎨 Appearance</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">Theme, colors, button style</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Brand Color</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="sqd-color-preview" style="width:32px;height:32px;border-radius:7px;background:#ff5a1f;border:0.5px solid rgba(255,255,255,0.15);"></div>
+              <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:#f0f4f8;" id="sqd-color-hex">#ff5a1f</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Theme Preset</div>
+            <div style="font-size:.72rem;color:rgba(240,244,248,0.35);font-family:'Inter',sans-serif;">Dark · Light · Custom — coming next</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="sqd-tab-panel" data-panel="settings" style="display:none;">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⚙️ Page Settings</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;margin-bottom:16px;">URL, SEO, branding</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Smart URL</div>
+            <div id="sqd-settings-url" style="font-family:'DM Mono',monospace;font-size:.65rem;color:rgba(240,244,248,0.6);word-break:break-all;">—</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Page Name</div>
+            <div id="sqd-settings-name" style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;">—</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="font-size:.6rem;color:rgba(240,244,248,0.4);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Scan Count</div>
+            <div id="sqd-settings-scans" style="font-size:1.1rem;font-weight:700;color:#ff5a1f;font-family:'Space Grotesk',sans-serif;">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end tab content -->
+
+    <!-- Tab JS -->
+    <script>
+    (function() {
+      var tabs = document.querySelectorAll('.sqd-tab');
+      var panels = document.querySelectorAll('.sqd-tab-panel');
+      tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var target = this.getAttribute('data-tab');
+          // Update tab styles
+          tabs.forEach(function(t) {
+            t.style.background = 'rgba(255,255,255,0.03)';
+            t.style.borderColor = 'rgba(255,255,255,0.08)';
+            t.style.color = 'rgba(240,244,248,0.6)';
+          });
+          this.style.background = 'rgba(255,90,31,0.12)';
+          this.style.borderColor = 'rgba(255,90,31,0.3)';
+          this.style.color = '#ff5a1f';
+          // Show correct panel
+          panels.forEach(function(p) {
+            p.style.display = p.getAttribute('data-panel') === target ? 'block' : 'none';
+          });
+        });
+      });
+    })();
+    </script>
+
   </div>
 </div>
 
@@ -511,6 +653,11 @@ async function initPage() {
   document.getElementById('sqd-qr-img').src     = qrSrc;
   document.getElementById('sqd-biz-name').textContent = pending.businessName || 'Your Smart QR';
   var tb=document.getElementById('sqd-topbar-name'); if(tb) tb.textContent = pending.businessName || 'Your Smart QR';
+  var sn=document.getElementById('sqd-settings-name'); if(sn) sn.textContent = pending.businessName || '—';
+  var su=document.getElementById('sqd-settings-url'); if(su) su.textContent = hostedUrl;
+  var sc=document.getElementById('sqd-settings-scans'); if(sc) sc.textContent = pending.scanCount || '—';
+  var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
+  var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
   document.getElementById('sqd-url').textContent      = hostedUrl;
   document.getElementById('sqd-view-btn').href        = hostedUrl;
   document.getElementById('sqd-view-btn2').href       = hostedUrl;
