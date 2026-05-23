@@ -452,6 +452,156 @@
 
 
 <script>
+window.QrTier={
+  loadPlan:async function(){},
+  can:function(){return true;},
+  get:function(){return {};}
+};
+
+async function initPage() {
+  // ── Auth ──────────────────────────────────────────────────────────────
+  await window.Clerk.load();
+  await new Promise(r => setTimeout(r, 300));
+  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+
+  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  const avatarEl = document.getElementById('sb-avatar');
+  const nameEl   = document.getElementById('sb-username');
+  if (avatarEl) avatarEl.textContent = name[0].toUpperCase();
+  if (nameEl)   nameEl.textContent   = name;
+
+  document.getElementById('sb-signout').addEventListener('click', async function(e) {
+    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
+  });
+
+  // ── Sidebar ───────────────────────────────────────────────────────────
+  const sidebar  = document.getElementById('sidebar');
+  const sbToggle = document.getElementById('sb-toggle');
+  if (localStorage.getItem('sb-collapsed') === 'true') {
+    sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed');
+  }
+  sbToggle.addEventListener('click', function() {
+    const c = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', c);
+    localStorage.setItem('sb-collapsed', c);
+  });
+  const mobBtn  = document.getElementById('mob-btn');
+  const overlay = document.getElementById('sb-overlay');
+  if (mobBtn)  mobBtn.addEventListener('click',  () => { sidebar.classList.add('mob-open'); overlay.classList.add('on'); });
+  if (overlay) overlay.addEventListener('click', () => { sidebar.classList.remove('mob-open'); overlay.classList.remove('on'); });
+  ['sb-campaigns','sb-subscribers','sb-wallet','sb-settings','sb-create-sqr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', e => { e.preventDefault(); toast('Coming soon — stay tuned!'); });
+  });
+
+  // ── Load Smart QR data ────────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const slug   = params.get('slug');
+
+  // Read from localStorage first (instant hydration)
+  let pending = null;
+  try {
+    pending = JSON.parse(localStorage.getItem('qraivy_active_claim') || null)
+           || JSON.parse(localStorage.getItem('qraivy_pending_demo') || null);
+  } catch(e) {}
+
+  // If slug in URL, try to fetch from API
+  if (slug) {
+    try {
+      const res  = await fetch(`https://api.qraivy.com/api/lp/${slug}`);
+      const data = await res.json();
+      if (data && data.slug) {
+        pending = {
+          slug:         data.slug,
+          businessName: data.businessName,
+          hostedUrl:    `https://api.qraivy.com/lp/${data.slug}`,
+          useCase:      data.useCase,
+          brandColor:   data.brandColor
+        };
+      }
+    } catch(e) {}
+  }
+
+  if (!pending) {
+    // Fallback: go to dashboard
+    window.location.href = 'dashboard.html';
+    return;
+  }
+
+  const hostedUrl = pending.hostedUrl || `https://api.qraivy.com/lp/${pending.slug}`;
+  const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
+
+  // ── Populate hero ─────────────────────────────────────────────────────
+  document.title = `${pending.businessName || 'Smart QR'} — QRAivy`;
+  document.getElementById('sqd-qr-img').src     = qrSrc;
+  document.getElementById('sqd-biz-name').textContent = pending.businessName || 'Your Smart QR';
+  var tb=document.getElementById('sqd-topbar-name'); if(tb) tb.textContent = pending.businessName || 'Your Smart QR';
+  document.getElementById('sqd-url').textContent      = hostedUrl;
+  document.getElementById('sqd-view-btn').href        = hostedUrl;
+  document.getElementById('sqd-view-btn2').href       = hostedUrl;
+  document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
+
+  // ── Phone iframe ──────────────────────────────────────────────────────
+  document.getElementById('sqd-iframe').src = hostedUrl;
+
+  // ── Plan boundary check ───────────────────────────────────────────────
+  // Show demo badge and upgrade strip for free/demo users
+  setTimeout(async function() {
+    try {
+      await QRairySession.loadPlan();
+      var sess = QRairySession.get();
+      var isPaid = sess.isPremium || sess.type === 'premium';
+      if (!isPaid) {
+        var demoBadge = document.getElementById('sqd-demo-badge');
+        var upgradeStrip = document.getElementById('sqd-upgrade-strip-panel');
+        if (demoBadge) demoBadge.style.display = 'inline-flex';
+        if (upgradeStrip) upgradeStrip.classList.add('show');
+      }
+    } catch(e) {
+      // Default to showing upgrade strip if plan check fails
+      var upgradeStrip = document.getElementById('sqd-upgrade-strip-panel');
+      if (upgradeStrip) upgradeStrip.classList.add('show');
+    }
+  }, 800);
+
+  // ── Copy button ───────────────────────────────────────────────────────
+  document.getElementById('sqd-copy-btn').addEventListener('click', function() {
+    navigator.clipboard.writeText(hostedUrl).then(() => {
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy URL'; }, 2000);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = hostedUrl; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy URL'; }, 2000);
+    });
+  });
+
+  // ── Fetch live stats if slug available ────────────────────────────────
+  if (pending.slug) {
+    try {
+      const token = await window.Clerk.session.getToken();
+      const res = await fetch(`https://api.qraivy.com/api/lp/${pending.slug}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.scanCount !== undefined) document.getElementById('sqd-scans').textContent  = data.scanCount;
+    } catch(e) {}
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('cs-toast');
+  document.getElementById('cs-toast-msg').textContent = ' ' + msg;
+  t.style.display = 'flex';
+  setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+
+document.addEventListener('DOMContentLoaded', initPage);
+</script>
+
+<script>
 // ── Smart Block Editor init for smart-qr-detail.html ─────────────────────
 (function() {
   // Default demo sections for editor preview
