@@ -67,7 +67,7 @@
 .sqd-phone-frame {
   width:260px; flex-shrink:0;
   background:#0a0b0d; border:1.5px solid rgba(255,255,255,0.12);
-  border-radius:32px; overflow:scroll;
+  border-radius:32px; overflow:hidden;
   box-shadow:0 12px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06), 0 0 40px rgba(255,90,31,0.08);
   position:relative; height:480px;
 }
@@ -270,9 +270,9 @@
     <!-- Phone frame — larger and centered -->
     <div style="position:relative;flex-shrink:0;margin-bottom:20px;">
       <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.06),transparent 70%);border-radius:50px;pointer-events:none;z-index:0;"></div>
-      <div class="sqd-phone-frame" style="position:relative;z-index:1;width:375px;height:780px;">
+      <div class="sqd-phone-frame" style="position:relative;z-index:1;width:375px;height:780px;overflow:hidden;">
         <div class="sqd-phone-notch"></div>
-        <iframe class="sqd-phone-iframe" id="sqd-iframe" src="" loading="lazy" style="width:640px;height:1200px;border:none;transform-origin:top left;transform:scale(0.586);margin-bottom:-500px;"></iframe>
+        <div style="width:375px;height:780px;overflow-y:auto;overflow-x:hidden;border-radius:0 0 26px 26px;-webkit-overflow-scrolling:touch;"><iframe id="sqd-iframe" src="" loading="lazy" style="width:375px;height:900px;border:none;display:block;"></iframe></div>
         <div class="sqd-phone-overlay"></div>
       </div>
     </div>
