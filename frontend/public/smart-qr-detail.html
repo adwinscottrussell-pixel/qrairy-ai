@@ -923,4 +923,82 @@ document.addEventListener('DOMContentLoaded', initPage);
   }
 })();
 </script>
+
+<script>
+// ── QRAIVY EDITOR STATE (Step 11) ─────────────────────────────────────────
+window.QRAIVY_EDITOR_STATE = {
+  pageName: '', slug: '', dirty: false,
+  hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' }
+};
+
+(function() {
+  var DRAFT_KEY_PREFIX = 'qraivy_editor_draft_';
+  function getDraftKey() { return DRAFT_KEY_PREFIX + (window.QRAIVY_EDITOR_STATE.slug || 'demo'); }
+  function saveDraft() { try { localStorage.setItem(getDraftKey(), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {} }
+  function loadDraft(slug) { try { var r = localStorage.getItem(DRAFT_KEY_PREFIX+(slug||'demo')); return r?JSON.parse(r):null; } catch(e) { return null; } }
+  function setStatus(msg, color) { var el=document.getElementById('hero-save-status'); if(el){el.textContent=msg;el.style.color=color||'rgba(240,244,248,0.50)';} }
+  function updateDraftSummary() {
+    var s=window.QRAIVY_EDITOR_STATE.hero;
+    var summary=document.getElementById('hero-draft-summary');
+    var pt=document.getElementById('draft-preview-title');
+    var ps=document.getElementById('draft-preview-subtitle');
+    if(summary) summary.style.display=window.QRAIVY_EDITOR_STATE.dirty?'block':'none';
+    if(pt) pt.textContent=s.title||'—';
+    if(ps) ps.textContent=s.subtitle||'—';
+  }
+  function hydrateFields(hero) {
+    var ti=document.getElementById('hero-title-input');
+    var si=document.getElementById('hero-subtitle-input');
+    var bi=document.getElementById('hero-badge-input');
+    var li=document.getElementById('hero-logo-input');
+    var lp=document.getElementById('hero-logo-preview');
+    if(ti) ti.value=hero.title||'';
+    if(si) si.value=hero.subtitle||'';
+    if(bi) bi.value=hero.badgeText||'Qraivy Smart Page';
+    if(li) li.value=hero.logoInitial||'A';
+    if(lp) lp.textContent=(hero.logoInitial||'A').toUpperCase().slice(0,2);
+  }
+  function wireHeroFields() {
+    var ti=document.getElementById('hero-title-input');
+    var si=document.getElementById('hero-subtitle-input');
+    var bi=document.getElementById('hero-badge-input');
+    var li=document.getElementById('hero-logo-input');
+    var lp=document.getElementById('hero-logo-preview');
+    function onChange() {
+      var s=window.QRAIVY_EDITOR_STATE.hero;
+      s.title=ti?ti.value:s.title; s.subtitle=si?si.value:s.subtitle;
+      s.badgeText=bi?bi.value:s.badgeText; s.logoInitial=li?li.value:s.logoInitial;
+      if(lp&&li) lp.textContent=(li.value||'A').toUpperCase().slice(0,2);
+      window.QRAIVY_EDITOR_STATE.dirty=true;
+      updateDraftSummary(); setStatus('Unsaved changes','#ff5a1f');
+    }
+    if(ti) ti.addEventListener('input',onChange);
+    if(si) si.addEventListener('input',onChange);
+    if(bi) bi.addEventListener('input',onChange);
+    if(li) li.addEventListener('input',onChange);
+  }
+  var saveBtn=document.getElementById('sqd-save-draft-btn');
+  if(saveBtn) saveBtn.addEventListener('click',function(){
+    saveDraft(); setStatus('Saved just now ✓','#22d47e');
+    window.QRAIVY_EDITOR_STATE.dirty=false; updateDraftSummary();
+    setTimeout(function(){setStatus('No changes');},3000);
+  });
+  window.QRAIVY_HERO_EDITOR = {
+    init: function(pending) {
+      var slug=pending.slug||'demo';
+      window.QRAIVY_EDITOR_STATE.slug=slug;
+      window.QRAIVY_EDITOR_STATE.pageName=pending.businessName||'';
+      var draft=loadDraft(slug);
+      var hero=(draft&&draft.hero)?draft.hero:{
+        title: pending.businessName?'Welcome to '+pending.businessName:'',
+        subtitle:'', badgeText:'Qraivy Smart Page',
+        logoInitial: pending.businessName?pending.businessName[0].toUpperCase():'A'
+      };
+      window.QRAIVY_EDITOR_STATE.hero=hero;
+      hydrateFields(hero); wireHeroFields();
+      if(draft&&draft.dirty){ window.QRAIVY_EDITOR_STATE.dirty=true; updateDraftSummary(); setStatus('Draft loaded','#22d47e'); setTimeout(function(){setStatus('No changes');},2500); }
+    }
+  };
+})();
+</script>
 </body>
