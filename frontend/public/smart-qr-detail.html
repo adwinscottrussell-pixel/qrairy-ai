@@ -637,7 +637,7 @@
           var pf = document.querySelector('.sqd-phone-frame');
           if (pf) pf.scrollTop = SECTION_SCROLL[target] || 0;
           // Render buttons panel
-          if (target === 'buttons') setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); }, 50);
+          if (target === 'buttons') { setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); }, 50); if(window.QRAIVY_PREVIEW && window.QRAIVY_PREVIEW.getMode()==='draft') setTimeout(function(){ window.QRAIVY_PREVIEW.render(); }, 80); }
         });
       });
     })();
