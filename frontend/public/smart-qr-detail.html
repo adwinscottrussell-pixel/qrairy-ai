@@ -1210,8 +1210,8 @@ window.QRAIVY_EDITOR_STATE = {
       var defaults = DEFAULT_BUTTONS[useCase] || DEFAULT_BUTTONS['other'];
       window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
     }
-    // Always render after init
     setTimeout(renderButtons, 100);
+  }
   };
 })();
 </script>
