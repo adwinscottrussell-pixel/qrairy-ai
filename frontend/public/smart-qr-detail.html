@@ -1423,6 +1423,16 @@ window.QRAIVY_EDITOR_STATE = {
       html += '</div>';
     }
     html += '<span style="font-size:.78rem;font-weight:600;color:#f0f4f8;">' + (s.pageName || 'Smart Page') + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:.55rem;font-weight:700;color:' + brandColor + ';background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.2);border-radius:100px;padding:2px 8px;">● AI Powered</div>';
+    html += '</div>';
+
+    // ── Hero content ──
+    html += '<div style="background:linear-gradient(135deg,#0d1117 0%,#111827 100%);padding:28px 20px 24px;">';
+    if (hero.badgeText) {
+      html += '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:100px;padding:4px 12px;margin-bottom:14px;"><span style="color:#ff5a1f;font-size:.58rem;">✦</span><span style="font-size:.62rem;color:rgba(255,90,31,0.9);">' + esc(hero.badgeText) + '</span></div>';
+    }
+    html += '<h1 style="font-size:1.55rem;font-weight:800;color:#f0f4f8;line-height:1.15;margin:0 0 10px;">' + esc(hero.title || s.pageName || 'Welcome') + '</h1>';
     if (hero.subtitle) {
       html += '<p style="font-size:.8rem;color:rgba(240,244,248,0.72);line-height:1.55;margin:0;">' + esc(hero.subtitle) + '</p>';
     }
