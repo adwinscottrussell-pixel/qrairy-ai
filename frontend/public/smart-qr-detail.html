@@ -1419,12 +1419,12 @@ window.QRAIVY_EDITOR_STATE = {
     if (hero.badgeText) {
       html += '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:100px;padding:4px 12px;margin-bottom:14px;">';
       html += '<span style="color:' + brandColor + ';font-size:.58rem;">✦</span>';
-      html += '<span style="font-size:.62rem;color:rgba(255,90,31,0.9);font-family:'DM Mono',sans-serif;letter-spacing:.05em;">' + esc(hero.badgeText) + '</span>';
+      html += '<span style="font-size:.62rem;color:rgba(255,90,31,0.9);letter-spacing:.05em;">' + esc(hero.badgeText) + '</span>';
       html += '</div>';
     }
     html += '<span style="font-size:.78rem;font-weight:600;color:#f0f4f8;">' + (s.pageName || 'Smart Page') + '</span>';
     if (hero.subtitle) {
-      html += '<p style="font-size:.8rem;color:rgba(240,244,248,0.72);line-height:1.55;margin:0;font-family:'Inter',sans-serif;">' + esc(hero.subtitle) + '</p>';
+      html += '<p style="font-size:.8rem;color:rgba(240,244,248,0.72);line-height:1.55;margin:0;">' + esc(hero.subtitle) + '</p>';
     }
     html += '</div>';
 
@@ -1459,7 +1459,7 @@ window.QRAIVY_EDITOR_STATE = {
 
     // ── Loop section ──
     html += '<div style="margin:4px 16px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px 16px;">';
-    html += '<h3 style="font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:700;color:#f0f4f8;margin:0 0 6px;">' + esc(loop.title||'Stay in the loop') + '</h3>';
+    html += '<h3 style="font-size:.95rem;font-weight:700;color:#f0f4f8;margin:0 0 6px;">' + esc(loop.title||'Stay in the loop') + '</h3>';
     if (loop.description) {
       html += '<p style="font-size:.72rem;color:rgba(240,244,248,0.65);margin:0 0 12px;line-height:1.5;">' + esc(loop.description) + '</p>';
     }
@@ -1475,11 +1475,11 @@ window.QRAIVY_EDITOR_STATE = {
 
     // ── Footer ──
     html += '<div style="padding:20px 16px;text-align:center;border-top:0.5px solid rgba(255,255,255,0.06);margin-top:12px;">';
-    html += '<div style="font-size:.65rem;color:rgba(240,244,248,0.35);font-family:'DM Mono',sans-serif;">Powered by <span style="color:' + brandColor + ';">Qraivy</span> — AI Smart Pages</div>';
+    html += '<div style="font-size:.65rem;color:rgba(240,244,248,0.35);">Powered by <span style="color:' + brandColor + ';">Qraivy</span> — AI Smart Pages</div>';
     html += '</div>';
 
     // ── Draft watermark ──
-    html += '<div style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,90,31,0.9);color:#fff;font-size:.55rem;font-weight:700;padding:3px 10px;border-radius:100px;font-family:'DM Mono',sans-serif;letter-spacing:.05em;pointer-events:none;">DRAFT PREVIEW</div>';
+    html += '<div style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,90,31,0.9);color:#fff;font-size:.55rem;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.05em;pointer-events:none;">DRAFT PREVIEW</div>';
 
     stage.innerHTML = html;
   }
