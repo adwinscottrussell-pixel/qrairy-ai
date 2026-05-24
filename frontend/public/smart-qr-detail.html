@@ -746,12 +746,12 @@ async function initPage() {
   if (window.QRAIVY_HERO_EDITOR) window.QRAIVY_HERO_EDITOR.init(pending);
   if (window.QRAIVY_BUTTONS_EDITOR) window.QRAIVY_BUTTONS_EDITOR.init(pending);
   if (window.QRAIVY_LOOP_EDITOR) window.QRAIVY_LOOP_EDITOR.init(pending);
-  // Start in DRAFT preview mode
+  // Start in DRAFT preview mode - after state is populated
   setTimeout(function() {
     if (window.QRAIVY_PREVIEW) {
       window.QRAIVY_PREVIEW.setMode('draft');
     }
-  }, 200);
+  }, 400);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
   var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
   document.getElementById('sqd-url').textContent      = hostedUrl;
@@ -1496,6 +1496,7 @@ window.QRAIVY_EDITOR_STATE = {
     var draftBtn = document.getElementById('sqd-preview-draft-btn');
     var liveBtn = document.getElementById('sqd-preview-live-btn');
     var label = document.getElementById('sqd-preview-mode-label');
+    var previewLabel = document.getElementById('sqd-preview-label');
 
     if (mode === 'draft') {
       if (iframe) iframe.style.display = 'none';
@@ -1503,6 +1504,7 @@ window.QRAIVY_EDITOR_STATE = {
       if (draftBtn) { draftBtn.style.background='rgba(255,90,31,0.15)'; draftBtn.style.borderColor='rgba(255,90,31,0.3)'; draftBtn.style.color='#ff5a1f'; }
       if (liveBtn) { liveBtn.style.background='transparent'; liveBtn.style.borderColor='transparent'; liveBtn.style.color='rgba(240,244,248,0.55)'; }
       if (label) label.textContent = 'DRAFT PREVIEW';
+      if (previewLabel) previewLabel.textContent = 'DRAFT PREVIEW';
       renderDraftPreview();
     } else {
       if (iframe) iframe.style.display = 'block';
@@ -1510,6 +1512,7 @@ window.QRAIVY_EDITOR_STATE = {
       if (liveBtn) { liveBtn.style.background='rgba(34,212,126,0.1)'; liveBtn.style.borderColor='rgba(34,212,126,0.25)'; liveBtn.style.color='#22d47e'; }
       if (draftBtn) { draftBtn.style.background='transparent'; draftBtn.style.borderColor='transparent'; draftBtn.style.color='rgba(240,244,248,0.55)'; }
       if (label) label.textContent = 'LIVE PREVIEW';
+      if (previewLabel) previewLabel.textContent = 'LIVE PREVIEW';
     }
   }
 
