@@ -1039,14 +1039,38 @@ window.QRAIVY_EDITOR_STATE = {
 
       // Label input
       var labelWrap = document.createElement('div');
-      labelWrap.innerHTML = '<label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Label</label>' +
-        '<input data-field="label" data-idx="' + idx + '" type="text" value="' + (btn.label||'').replace(/"/g,'&quot;') + '" placeholder="Button label" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;" onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>';
+      var labelEl = document.createElement('label');
+      labelEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
+      labelEl.textContent = 'Label';
+      var labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.setAttribute('data-field','label');
+      labelInput.setAttribute('data-idx', idx);
+      labelInput.value = btn.label || '';
+      labelInput.placeholder = 'Button label';
+      labelInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;';
+      labelInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
+      labelInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
+      labelWrap.appendChild(labelEl);
+      labelWrap.appendChild(labelInput);
       card.appendChild(labelWrap);
 
       // URL input
       var urlWrap = document.createElement('div');
-      urlWrap.innerHTML = '<label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">URL</label>' +
-        '<input data-field="url" data-idx="' + idx + '" type="url" value="' + (btn.url||'').replace(/"/g,'&quot;') + '" placeholder="https://" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;font-family:'DM Mono',monospace;outline:none;" onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>';
+      var urlEl = document.createElement('label');
+      urlEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
+      urlEl.textContent = 'URL';
+      var urlInput = document.createElement('input');
+      urlInput.type = 'url';
+      urlInput.setAttribute('data-field','url');
+      urlInput.setAttribute('data-idx', idx);
+      urlInput.value = btn.url || '';
+      urlInput.placeholder = 'https://';
+      urlInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;';
+      urlInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
+      urlInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
+      urlWrap.appendChild(urlEl);
+      urlWrap.appendChild(urlInput);
       card.appendChild(urlWrap);
 
       // Style selector
