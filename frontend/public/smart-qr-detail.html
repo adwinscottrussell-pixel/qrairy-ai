@@ -1196,6 +1196,16 @@ window.QRAIVY_EDITOR_STATE = {
     });
   }
 
+  // Wire global save bar
+  document.addEventListener('DOMContentLoaded', function() {
+    var globalSave = document.getElementById('sqd-save-draft-btn');
+    var globalStatus = document.getElementById('sqd-save-global-status');
+    if (globalSave) globalSave.addEventListener('click', function() {
+      try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
+      if (globalStatus) { globalStatus.textContent = 'Saved ✓'; globalStatus.style.color = '#22d47e'; setTimeout(function(){ globalStatus.textContent='No changes'; globalStatus.style.color='rgba(240,244,248,0.50)'; }, 3000); }
+    });
+  });
+
   // Wire buttons save button
   document.addEventListener('DOMContentLoaded', function() {
     var btnSave = document.getElementById('btn-save-btn');
