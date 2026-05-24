@@ -359,22 +359,65 @@
       <!-- HERO -->
       <div class="sqd-tab-panel" data-panel="hero">
         <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🏠 Hero Section</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:16px;">Position locked · Always first</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;margin-bottom:14px;">Position locked · Always first</div>
+
         <div style="display:flex;flex-direction:column;gap:10px;">
+
+          <!-- Page Title -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Page Title</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Coming next — edit title here</div>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Page Title</label>
+            <input id="hero-title-input" type="text" placeholder="e.g. Welcome to My Business"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.8rem;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;outline:none;"
+              onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            />
           </div>
+
+          <!-- Subtitle -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Subtitle</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Coming next — edit subtitle here</div>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Subtitle</label>
+            <textarea id="hero-subtitle-input" rows="2" placeholder="e.g. Authentic flavours, unforgettable experiences."
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;resize:vertical;line-height:1.5;"
+              onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            ></textarea>
           </div>
+
+          <!-- Badge Text -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Logo / Image</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px dashed rgba(255,255,255,0.12);border-radius:6px;padding:16px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.65);font-family:'Inter',sans-serif;">Upload logo coming next</div>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Badge Text</label>
+            <input id="hero-badge-input" type="text" placeholder="e.g. Qraivy Smart Page"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;"
+              onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            />
           </div>
+
+          <!-- Logo Initial -->
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Logo Initial</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="hero-logo-preview" style="width:36px;height:36px;border-radius:8px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#fff;flex-shrink:0;">A</div>
+              <input id="hero-logo-input" type="text" maxlength="2" placeholder="A"
+                style="width:56px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.9rem;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;outline:none;text-align:center;font-weight:700;"
+                onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+              />
+              <span style="font-size:.62rem;color:rgba(240,244,248,0.65);font-family:'DM Mono',monospace;">Full upload coming soon</span>
+            </div>
+          </div>
+
         </div>
-        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;">Hero editing coming in next step</div>
+
+        <!-- Draft preview summary -->
+        <div id="hero-draft-summary" style="display:none;margin-top:14px;background:rgba(255,90,31,0.05);border:0.5px solid rgba(255,90,31,0.18);border-radius:9px;padding:12px;">
+          <div style="font-size:.6rem;color:rgba(255,90,31,0.8);font-family:'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;">Draft Preview</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:.88rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;" id="draft-preview-title">—</div>
+          <div style="font-size:.68rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;line-height:1.5;" id="draft-preview-subtitle">—</div>
+        </div>
+
+        <!-- Save status + helper -->
+        <div style="margin-top:12px;">
+          <div id="hero-save-status" style="font-size:.62rem;color:rgba(240,244,248,0.50);font-family:'DM Mono',monospace;text-align:center;margin-bottom:8px;">No changes</div>
+          <div style="font-size:.6rem;color:rgba(240,244,248,0.40);font-family:'DM Mono',monospace;line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">Draft changes saved locally.<br>Live preview update coming in next step.</div>
+        </div>
+
       </div>
 
       <!-- VOICE -->
@@ -656,6 +699,7 @@ async function initPage() {
   var sn=document.getElementById('sqd-settings-name'); if(sn) sn.textContent = pending.businessName || '—';
   var su=document.getElementById('sqd-settings-url'); if(su) su.textContent = hostedUrl;
   var sc=document.getElementById('sqd-settings-scans'); if(sc) sc.textContent = pending.scanCount || '—';
+  if (window.QRAIVY_HERO_EDITOR) window.QRAIVY_HERO_EDITOR.init(pending);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
   var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
   document.getElementById('sqd-url').textContent      = hostedUrl;
