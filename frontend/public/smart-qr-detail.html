@@ -1422,7 +1422,7 @@ window.QRAIVY_EDITOR_STATE = {
       html += '<span style="font-size:.62rem;color:rgba(255,90,31,0.9);font-family:'DM Mono',sans-serif;letter-spacing:.05em;">' + esc(hero.badgeText) + '</span>';
       html += '</div>';
     }
-    html += '<h1 style="font-family:'Space Grotesk',sans-serif;font-size:1.55rem;font-weight:800;color:#f0f4f8;line-height:1.15;margin:0 0 10px;">' + esc(hero.title || s.pageName || 'Welcome') + '</h1>';
+    html += '<span style="font-size:.78rem;font-weight:600;color:#f0f4f8;">' + (s.pageName || 'Smart Page') + '</span>';
     if (hero.subtitle) {
       html += '<p style="font-size:.8rem;color:rgba(240,244,248,0.72);line-height:1.55;margin:0;font-family:'Inter',sans-serif;">' + esc(hero.subtitle) + '</p>';
     }
