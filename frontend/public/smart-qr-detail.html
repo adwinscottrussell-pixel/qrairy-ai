@@ -460,22 +460,57 @@
       </div>
 
       <!-- LOOP -->
+            <!-- LOOP -->
       <div class="sqd-tab-panel" data-panel="loop" style="display:none;">
         <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">📬 Stay in the Loop</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:16px;">Email capture + Wallet pass</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Section Title</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Stay in the loop</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:14px;">Collect subscribers and keep visitors connected.</div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+          <!-- Section Title -->
+          <div>
+            <label id="loop-label-title" style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Section Title</label>
+            <input id="loop-input-title" type="text" placeholder="Stay in the loop"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Description</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Coming next — edit description</div>
+
+          <!-- Description -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Description</label>
+            <textarea id="loop-input-desc" rows="3" placeholder="Subscribe for updates..."
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;resize:vertical;font-family:inherit;"></textarea>
           </div>
-          <div style="background:rgba(34,212,126,0.04);border:0.5px solid rgba(34,212,126,0.15);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:#22d47e;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Email Capture · Active</div>
-            <div style="font-size:.72rem;color:rgba(240,244,248,0.86);font-family:'Inter',sans-serif;">Collecting subscriber emails</div>
+
+          <!-- Email Placeholder -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Email Field Placeholder</label>
+            <input id="loop-input-email-placeholder" type="text" placeholder="your@email.com"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
+
+          <!-- Button Label -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Subscribe Button Label</label>
+            <input id="loop-input-btn-label" type="text" placeholder="Subscribe →"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
+          </div>
+
+          <!-- Wallet Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div>
+              <div style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">Apple / Google Wallet Buttons</div>
+              <div style="font-size:.6rem;color:rgba(240,244,248,0.55);font-family:'DM Mono',monospace;margin-top:2px;">Show wallet pass buttons below form</div>
+            </div>
+            <button id="loop-wallet-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid;font-family:'DM Mono',monospace;">On</button>
+          </div>
+
+          <!-- Status note -->
+          <div style="font-size:.6rem;color:rgba(240,244,248,0.40);font-family:'DM Mono',monospace;line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">
+            Subscriber collection and wallet passes require activation.<br>Draft changes saved locally.
+          </div>
+
+          <!-- Loop save status -->
+          <div id="loop-save-status" style="font-size:.62rem;color:rgba(240,244,248,0.50);font-family:'DM Mono',monospace;text-align:center;">No changes</div>
         </div>
       </div>
 
@@ -699,6 +734,7 @@ async function initPage() {
   window.QRAIVY_EDITOR_STATE.useCase = pending.useCase || 'restaurant';
   if (window.QRAIVY_HERO_EDITOR) window.QRAIVY_HERO_EDITOR.init(pending);
   if (window.QRAIVY_BUTTONS_EDITOR) window.QRAIVY_BUTTONS_EDITOR.init(pending);
+  if (window.QRAIVY_LOOP_EDITOR) window.QRAIVY_LOOP_EDITOR.init(pending);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
   var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
   document.getElementById('sqd-url').textContent      = hostedUrl;
@@ -1236,6 +1272,96 @@ window.QRAIVY_EDITOR_STATE = {
       var defaults = DEFAULT_BUTTONS[useCase] || DEFAULT_BUTTONS['other'];
       window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
       setTimeout(renderButtons, 100);
+    }
+  };
+})();
+
+// ── QRAIVY LOOP EDITOR (Step 13) ───────────────────────────────────────────
+(function() {
+  function getEl(id) { return document.getElementById(id); }
+
+  function markDirty() {
+    window.QRAIVY_EDITOR_STATE.dirty = true;
+    var st = getEl('loop-save-status');
+    if (st) { st.textContent = 'Unsaved changes'; st.style.color = 'rgba(255,90,31,0.8)'; }
+    var gs = getEl('sqd-save-global-status');
+    if (gs) { gs.textContent = 'Unsaved changes'; gs.style.color = 'rgba(255,90,31,0.8)'; }
+  }
+
+  function updateWalletToggleStyle() {
+    var btn = getEl('loop-wallet-toggle');
+    if (!btn) return;
+    var on = window.QRAIVY_EDITOR_STATE.loop.showWalletButtons;
+    btn.textContent = on ? 'On' : 'Off';
+    btn.style.background = on ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)';
+    btn.style.borderColor = on ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)';
+    btn.style.color = on ? '#22d47e' : 'rgba(240,244,248,0.50)';
+  }
+
+  function hydrate(loop) {
+    var t = getEl('loop-input-title'); if (t) t.value = loop.title || 'Stay in the loop';
+    var d = getEl('loop-input-desc'); if (d) d.value = loop.description || '';
+    var e = getEl('loop-input-email-placeholder'); if (e) e.value = loop.emailPlaceholder || 'your@email.com';
+    var b = getEl('loop-input-btn-label'); if (b) b.value = loop.buttonLabel || 'Subscribe →';
+    updateWalletToggleStyle();
+  }
+
+  function wireInputs() {
+    var fields = [
+      { id: 'loop-input-title', key: 'title' },
+      { id: 'loop-input-desc', key: 'description' },
+      { id: 'loop-input-email-placeholder', key: 'emailPlaceholder' },
+      { id: 'loop-input-btn-label', key: 'buttonLabel' }
+    ];
+    fields.forEach(function(f) {
+      var el = getEl(f.id);
+      if (!el) return;
+      el.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
+      el.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
+      el.addEventListener('input', function() {
+        window.QRAIVY_EDITOR_STATE.loop[f.key] = this.value;
+        markDirty();
+      });
+    });
+
+    var walletBtn = getEl('loop-wallet-toggle');
+    if (walletBtn) {
+      walletBtn.addEventListener('click', function() {
+        window.QRAIVY_EDITOR_STATE.loop.showWalletButtons = !window.QRAIVY_EDITOR_STATE.loop.showWalletButtons;
+        updateWalletToggleStyle();
+        markDirty();
+      });
+    }
+  }
+
+  window.QRAIVY_LOOP_EDITOR = {
+    init: function(pending) {
+      var slug = pending.slug || 'demo';
+      var biz = pending.businessName || 'us';
+      // Set default description with business name
+      if (!window.QRAIVY_EDITOR_STATE.loop.description) {
+        window.QRAIVY_EDITOR_STATE.loop.description = 'Subscribe for updates, exclusive offers and early access from ' + biz + '.';
+      }
+      // Check wallet_pass in sections
+      var sections = pending.sections || [];
+      var hasWallet = sections.some(function(s){ return s.type === 'wallet_pass'; });
+      window.QRAIVY_EDITOR_STATE.loop.showWalletButtons = hasWallet;
+
+      // Check draft
+      try {
+        var raw = localStorage.getItem('qraivy_editor_draft_' + slug);
+        if (raw) {
+          var draft = JSON.parse(raw);
+          if (draft.loop) {
+            window.QRAIVY_EDITOR_STATE.loop = draft.loop;
+          }
+        }
+      } catch(e) {}
+
+      setTimeout(function() {
+        wireInputs();
+        hydrate(window.QRAIVY_EDITOR_STATE.loop);
+      }, 50);
     }
   };
 })();
