@@ -690,6 +690,7 @@ async function initPage() {
   var sn=document.getElementById('sqd-settings-name'); if(sn) sn.textContent = pending.businessName || '—';
   var su=document.getElementById('sqd-settings-url'); if(su) su.textContent = hostedUrl;
   var sc=document.getElementById('sqd-settings-scans'); if(sc) sc.textContent = pending.scanCount || '—';
+  window.QRAIVY_EDITOR_STATE.useCase = pending.useCase || 'restaurant';
   if (window.QRAIVY_HERO_EDITOR) window.QRAIVY_HERO_EDITOR.init(pending);
   if (window.QRAIVY_BUTTONS_EDITOR) window.QRAIVY_BUTTONS_EDITOR.init(pending);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
@@ -1019,6 +1020,12 @@ window.QRAIVY_EDITOR_STATE = {
   function renderButtons() {
     var list = document.getElementById('btn-list');
     if (!list) return;
+    // If no buttons yet, load defaults
+    if (!window.QRAIVY_EDITOR_STATE.buttons || window.QRAIVY_EDITOR_STATE.buttons.length === 0) {
+      var uc = (window.QRAIVY_EDITOR_STATE.useCase || 'restaurant').toLowerCase().replace(/\s/g,'_');
+      var defs = DEFAULT_BUTTONS[uc] || DEFAULT_BUTTONS['other'];
+      window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defs));
+    }
     var btns = window.QRAIVY_EDITOR_STATE.buttons;
     list.innerHTML = '';
     btns.forEach(function(btn, idx) {
