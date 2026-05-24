@@ -201,7 +201,7 @@
 
   </style>
 </head>
-<body data-shell="customer" data-active-nav="nav-pages" style="margin:0;padding:0;overflow:hidden;display:flex;flex-direction:column;">
+<body data-shell="customer" data-active-nav="nav-pages" style="margin:0;padding:0;overflow:hidden;">
 
 <!-- EDITOR TOP BAR -->
 <div id="sqd-topbar" style="
@@ -256,7 +256,7 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;
     padding:24px;
     overflow-y:auto;
     background:#0a0c10;
@@ -310,12 +310,10 @@
   <div style="
     border-left:0.5px solid rgba(255,255,255,0.08);
     background:#0d1117;
+    height:calc(100vh - 52px);
     display:flex;
     flex-direction:column;
     overflow:hidden;
-    position:sticky;
-    top:0;
-    height:100vh;
   ">
     <!-- Hidden JS elements -->
     <div style="display:none;">
