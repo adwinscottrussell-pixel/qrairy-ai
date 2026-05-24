@@ -1032,27 +1032,56 @@ window.QRAIVY_EDITOR_STATE = {
       var card = document.createElement('div');
       card.style.cssText = 'background:rgba(255,255,255,0.03);border:0.5px solid ' + (btn.active ? 'rgba(255,90,31,0.2)' : 'rgba(255,255,255,0.07)') + ';border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:8px;opacity:' + (btn.active ? '1' : '0.55') + ';';
 
-      // Top row: index badge + active toggle + move + delete
+      // Top row
       var topRow = document.createElement('div');
       topRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
-      topRow.innerHTML =
-        '<span style="font-size:.55rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.2);border-radius:4px;padding:1px 6px;">' + (btn.style === 'primary' ? 'PRIMARY' : 'SECONDARY') + '</span>' +
-        '<span style="flex:1;"></span>' +
-        '<button data-action="up" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;" title="Move up">↑</button>' +
-        '<button data-action="down" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;" title="Move down">↓</button>' +
-        '<button data-action="toggle" data-idx="' + idx + '" style="padding:3px 8px;background:' + (btn.active ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid ' + (btn.active ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)') + ';border-radius:5px;color:' + (btn.active ? '#22d47e' : 'rgba(240,244,248,0.50)') + ';font-size:.62rem;cursor:pointer;">' + (btn.active ? '● On' : '○ Off') + '</button>' +
-        '<button data-action="delete" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,60,60,0.06);border:0.5px solid rgba(255,60,60,0.15);border-radius:5px;color:rgba(255,100,100,0.7);font-size:.65rem;cursor:pointer;" title="Delete">✕</button>';
+
+      var badge = document.createElement('span');
+      badge.style.cssText = 'font-size:.55rem;color:rgba(255,90,31,0.7);background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.2);border-radius:4px;padding:1px 6px;';
+      badge.textContent = btn.style === 'primary' ? 'PRIMARY' : 'SECONDARY';
+      topRow.appendChild(badge);
+
+      var spacer = document.createElement('span');
+      spacer.style.flex = '1';
+      topRow.appendChild(spacer);
+
+      function makeTopBtn(text, action, title) {
+        var b = document.createElement('button');
+        b.setAttribute('data-action', action);
+        b.setAttribute('data-idx', idx);
+        b.style.cssText = 'padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;';
+        b.textContent = text;
+        if (title) b.title = title;
+        return b;
+      }
+
+      topRow.appendChild(makeTopBtn('↑','up','Move up'));
+      topRow.appendChild(makeTopBtn('↓','down','Move down'));
+
+      var toggleBtn = document.createElement('button');
+      toggleBtn.setAttribute('data-action','toggle');
+      toggleBtn.setAttribute('data-idx', idx);
+      toggleBtn.style.cssText = 'padding:3px 8px;background:' + (btn.active ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid ' + (btn.active ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)') + ';border-radius:5px;color:' + (btn.active ? '#22d47e' : 'rgba(240,244,248,0.50)') + ';font-size:.62rem;cursor:pointer;';
+      toggleBtn.textContent = btn.active ? '● On' : '○ Off';
+      topRow.appendChild(toggleBtn);
+
+      var delBtn = document.createElement('button');
+      delBtn.setAttribute('data-action','delete');
+      delBtn.setAttribute('data-idx', idx);
+      delBtn.style.cssText = 'padding:3px 7px;background:rgba(255,60,60,0.06);border:0.5px solid rgba(255,60,60,0.15);border-radius:5px;color:rgba(255,100,100,0.7);font-size:.65rem;cursor:pointer;';
+      delBtn.textContent = '✕';
+      topRow.appendChild(delBtn);
       card.appendChild(topRow);
 
       // Label input
       var labelWrap = document.createElement('div');
       var labelEl = document.createElement('label');
-      labelEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
+      labelEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
       labelEl.textContent = 'Label';
       var labelInput = document.createElement('input');
       labelInput.type = 'text';
       labelInput.setAttribute('data-field','label');
-      labelInput.setAttribute('data-idx', idx);
+      labelInput.setAttribute('data-idx', String(idx));
       labelInput.value = btn.label || '';
       labelInput.placeholder = 'Button label';
       labelInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;';
@@ -1065,12 +1094,12 @@ window.QRAIVY_EDITOR_STATE = {
       // URL input
       var urlWrap = document.createElement('div');
       var urlEl = document.createElement('label');
-      urlEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
+      urlEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
       urlEl.textContent = 'URL';
       var urlInput = document.createElement('input');
-      urlInput.type = 'url';
+      urlInput.type = 'text';
       urlInput.setAttribute('data-field','url');
-      urlInput.setAttribute('data-idx', idx);
+      urlInput.setAttribute('data-idx', String(idx));
       urlInput.value = btn.url || '';
       urlInput.placeholder = 'https://';
       urlInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;';
@@ -1086,18 +1115,15 @@ window.QRAIVY_EDITOR_STATE = {
       ['primary','secondary'].forEach(function(s) {
         var sb = document.createElement('button');
         sb.setAttribute('data-action','style');
-        sb.setAttribute('data-idx', idx);
+        sb.setAttribute('data-idx', String(idx));
         sb.setAttribute('data-style', s);
-        sb.style.cssText = 'flex:1;padding:5px;border-radius:6px;font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;border:0.5px solid ' + (btn.style===s ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.08)') + ';background:' + (btn.style===s ? 'rgba(255,90,31,0.1)' : 'rgba(255,255,255,0.03)') + ';color:' + (btn.style===s ? '#ff5a1f' : 'rgba(240,244,248,0.65)') + ';';
+        sb.style.cssText = 'flex:1;padding:5px;border-radius:6px;font-size:.62rem;cursor:pointer;border:0.5px solid ' + (btn.style===s ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.08)') + ';background:' + (btn.style===s ? 'rgba(255,90,31,0.1)' : 'rgba(255,255,255,0.03)') + ';color:' + (btn.style===s ? '#ff5a1f' : 'rgba(240,244,248,0.65)') + ';';
         sb.textContent = s.charAt(0).toUpperCase()+s.slice(1);
         styleWrap.appendChild(sb);
       });
       card.appendChild(styleWrap);
-
       list.appendChild(card);
     });
-
-    // Wire events
     list.querySelectorAll('[data-action]').forEach(function(el) {
       el.addEventListener('click', function() {
         var action = this.getAttribute('data-action');
