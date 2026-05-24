@@ -1101,11 +1101,20 @@ window.QRAIVY_EDITOR_STATE = {
     }
   });
 
-  // Tab click — render buttons when Buttons tab opened
-  document.addEventListener('click', function(e) {
-    var tab = e.target.closest('.sqd-tab');
-    if (tab && tab.getAttribute('data-tab') === 'buttons') {
-      setTimeout(renderButtons, 0);
+  // Tab click — render buttons + scroll iframe to buttons section
+  document.querySelectorAll && document.addEventListener('click', function(e) {
+    var tab = e.target.closest ? e.target.closest('.sqd-tab') : null;
+    if (!tab) return;
+    var target = tab.getAttribute('data-tab');
+    if (target === 'buttons') {
+      setTimeout(renderButtons, 50);
+      // Scroll iframe to buttons section
+      var iframe = document.getElementById('sqd-iframe');
+      var frame = iframe ? (iframe.closest('.sqd-phone-frame') || iframe.parentElement) : null;
+      if (frame) frame.scrollTop = 600;
+    } else if (target === 'hero') {
+      var frame2 = document.querySelector('.sqd-phone-frame');
+      if (frame2) frame2.scrollTop = 0;
     }
   });
 
@@ -1138,8 +1147,9 @@ window.QRAIVY_EDITOR_STATE = {
       // Use category defaults
       var defaults = DEFAULT_BUTTONS[useCase] || DEFAULT_BUTTONS['other'];
       window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
-      renderButtons();
     }
+    // Always render after init
+    setTimeout(renderButtons, 100);
   };
 })();
 </script>
