@@ -562,10 +562,10 @@
     (function() {
       var tabs = document.querySelectorAll('.sqd-tab');
       var panels = document.querySelectorAll('.sqd-tab-panel');
+      var SECTION_SCROLL = {hero:0,voice:200,ai:400,loop:600,buttons:900,featured:1200,info:1400,appearance:0,settings:0};
       tabs.forEach(function(tab) {
         tab.addEventListener('click', function() {
           var target = this.getAttribute('data-tab');
-          // Update tab styles
           tabs.forEach(function(t) {
             t.style.background = 'rgba(255,255,255,0.03)';
             t.style.borderColor = 'rgba(255,255,255,0.08)';
@@ -574,10 +574,14 @@
           this.style.background = 'rgba(255,90,31,0.12)';
           this.style.borderColor = 'rgba(255,90,31,0.3)';
           this.style.color = '#ff5a1f';
-          // Show correct panel
           panels.forEach(function(p) {
             p.style.display = p.getAttribute('data-panel') === target ? 'block' : 'none';
           });
+          // Scroll phone to section
+          var pf = document.querySelector('.sqd-phone-frame');
+          if (pf) pf.scrollTop = SECTION_SCROLL[target] || 0;
+          // Render buttons panel
+          if (target === 'buttons') setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); }, 50);
         });
       });
     })();
@@ -1011,6 +1015,7 @@ window.QRAIVY_EDITOR_STATE = {
 
   function makeid() { return 'b' + Math.random().toString(36).slice(2,7); }
 
+  window.renderButtonsFn = renderButtons;
   function renderButtons() {
     var list = document.getElementById('btn-list');
     if (!list) return;
