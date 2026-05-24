@@ -527,16 +527,20 @@
 
       <!-- BUTTONS -->
       <div class="sqd-tab-panel" data-panel="buttons" style="display:none;">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔗 Buttons & Links</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Add links and calls-to-action for your visitors.</div>
+        <div style="font-weight:700;color:#f0f4f8;margin-bottom:4px;font-size:.82rem;">🔗 Buttons & Links</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:14px;">Add links and calls-to-action for your visitors.</div>
+
+        <!-- Button list -->
         <div id="btn-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <button id="btn-add" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.3);border-radius:8px;color:rgba(255,90,31,0.8);font-size:.75rem;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;">+ Add Button</button>
-        <button id="btn-save-btn" style="width:100%;margin-top:10px;padding:9px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Save Draft</button>
-        <div id="btn-save-status" style="margin-top:6px;font-size:.62rem;color:rgba(240,244,248,0.50);text-align:center;">No changes</div>
-        <div style="margin-top:8px;font-size:.6rem;color:rgba(240,244,248,0.40);line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">Draft changes saved locally.<br>Live preview update coming in next step.</div>
+
+        <!-- Add Button -->
+        <button id="btn-add" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.4);border-radius:8px;color:rgba(255,90,31,0.9);font-size:.75rem;cursor:pointer;font-weight:600;transition:all .15s;">+ Add Button</button>
+
+        <!-- Status -->
+        <div id="btn-save-status" style="margin-top:8px;font-size:.62rem;color:rgba(240,244,248,0.45);text-align:center;">No changes</div>
       </div>
 
-      <!-- FEATURED -->
+      <!-- FEATURED -->      <!-- FEATURED -->
       <div class="sqd-tab-panel" data-panel="featured" style="display:none;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⭐ Featured Section</div>
         <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">Products, events, offers</div>
@@ -1077,489 +1081,293 @@ window.QRAIVY_EDITOR_STATE = {
 
   function makeid() { return 'b' + Math.random().toString(36).slice(2,7); }
 
-  window.renderButtonsFn = renderButtons;
+  // ── QRAIVY BUTTONS EDITOR v2 — Step 15 (Linktree-style) ──────────────────
+(function() {
+
+  // ── Status ──────────────────────────────────────────────────────────────
+  function setStatus(msg, color) {
+    var el = document.getElementById('btn-save-status');
+    if (el) { el.textContent = msg; el.style.color = color || 'rgba(240,244,248,0.45)'; }
+    var gs = document.getElementById('sqd-save-global-status');
+    if (gs) { gs.textContent = msg; gs.style.color = color || 'rgba(240,244,248,0.45)'; }
+  }
+
+  function markDirty() {
+    window.QRAIVY_EDITOR_STATE.dirty = true;
+    setStatus('Unsaved changes', 'rgba(255,90,31,0.9)');
+    schedulePreviewRerender();
+  }
+
+  function schedulePreviewRerender() {
+    clearTimeout(window._btnPreviewTimer);
+    window._btnPreviewTimer = setTimeout(function() {
+      if (window.QRAIVY_PREVIEW && window.QRAIVY_PREVIEW.getMode() === 'draft') {
+        window.QRAIVY_PREVIEW.render();
+      }
+    }, 60);
+  }
+
+  // ── Track open card ────────────────────────────────────────────────────
+  var openCardId = null;
+
+  // ── Render button list ─────────────────────────────────────────────────
   function renderButtons() {
     var list = document.getElementById('btn-list');
     if (!list) return;
-    // If no buttons yet, load defaults
-    if (!window.QRAIVY_EDITOR_STATE.buttons || window.QRAIVY_EDITOR_STATE.buttons.length === 0) {
-      var uc = (window.QRAIVY_EDITOR_STATE.useCase || 'restaurant').toLowerCase().replace(/\s/g,'_');
-      var defs = DEFAULT_BUTTONS[uc] || DEFAULT_BUTTONS['other'];
-      window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defs));
-    }
-    var btns = window.QRAIVY_EDITOR_STATE.buttons;
+    var btns = window.QRAIVY_EDITOR_STATE.buttons || [];
     list.innerHTML = '';
+
     btns.forEach(function(btn, idx) {
+      var isOpen = (openCardId === btn.id || (btns.length === 1));
       var card = document.createElement('div');
-      card.style.cssText = 'background:rgba(255,255,255,0.03);border:0.5px solid ' + (btn.active ? 'rgba(255,90,31,0.2)' : 'rgba(255,255,255,0.07)') + ';border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:8px;opacity:' + (btn.active ? '1' : '0.55') + ';';
+      card.setAttribute('data-btn-id', btn.id);
+      card.style.cssText = 'background:rgba(255,255,255,0.04);border:0.5px solid ' +
+        (btn.active ? 'rgba(255,90,31,0.25)' : 'rgba(255,255,255,0.08)') +
+        ';border-radius:10px;overflow:hidden;transition:border-color .15s;';
 
-      // Top row
-      var topRow = document.createElement('div');
-      topRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+      // ── Card header (always visible) ──
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;';
 
-      var badge = document.createElement('span');
-      badge.style.cssText = 'font-size:.55rem;color:rgba(255,90,31,0.7);background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.2);border-radius:4px;padding:1px 6px;';
-      badge.textContent = btn.style === 'primary' ? 'PRIMARY' : 'SECONDARY';
-      topRow.appendChild(badge);
+      // Drag handle placeholder
+      var drag = document.createElement('div');
+      drag.style.cssText = 'color:rgba(240,244,248,0.25);font-size:.7rem;flex-shrink:0;user-select:none;';
+      drag.textContent = '⠿';
+      header.appendChild(drag);
 
-      var spacer = document.createElement('span');
-      spacer.style.flex = '1';
-      topRow.appendChild(spacer);
+      // Label preview
+      var labelPreview = document.createElement('div');
+      labelPreview.style.cssText = 'flex:1;font-size:.75rem;font-weight:500;color:' +
+        (btn.active ? '#f0f4f8' : 'rgba(240,244,248,0.4)') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      labelPreview.textContent = btn.label || 'Untitled button';
+      header.appendChild(labelPreview);
 
-      function makeTopBtn(text, action, title) {
-        var b = document.createElement('button');
-        b.setAttribute('data-action', action);
-        b.setAttribute('data-idx', idx);
-        b.style.cssText = 'padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;';
-        b.textContent = text;
-        if (title) b.title = title;
-        return b;
+      // Active toggle
+      var toggle = document.createElement('button');
+      toggle.style.cssText = 'padding:3px 8px;border-radius:20px;font-size:.6rem;font-weight:600;cursor:pointer;flex-shrink:0;border:0.5px solid;transition:all .15s;';
+      if (btn.active) {
+        toggle.style.background = 'rgba(34,212,126,0.12)';
+        toggle.style.borderColor = 'rgba(34,212,126,0.3)';
+        toggle.style.color = '#22d47e';
+        toggle.textContent = 'On';
+      } else {
+        toggle.style.background = 'rgba(255,255,255,0.04)';
+        toggle.style.borderColor = 'rgba(255,255,255,0.1)';
+        toggle.style.color = 'rgba(240,244,248,0.4)';
+        toggle.textContent = 'Off';
+      }
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.QRAIVY_EDITOR_STATE.buttons[idx].active = !window.QRAIVY_EDITOR_STATE.buttons[idx].active;
+        markDirty(); renderButtons();
+      });
+      header.appendChild(toggle);
+
+      // Chevron
+      var chevron = document.createElement('div');
+      chevron.style.cssText = 'color:rgba(240,244,248,0.3);font-size:.65rem;flex-shrink:0;transition:transform .15s;';
+      chevron.textContent = isOpen ? '▲' : '▼';
+      header.appendChild(chevron);
+
+      header.addEventListener('click', function() {
+        openCardId = isOpen ? null : btn.id;
+        renderButtons();
+      });
+      card.appendChild(header);
+
+      // ── Expanded body ──
+      if (isOpen) {
+        var body = document.createElement('div');
+        body.style.cssText = 'padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(255,255,255,0.06);';
+
+        // Label field
+        var labelWrap = document.createElement('div');
+        var labelLbl = document.createElement('label');
+        labelLbl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;margin-top:10px;';
+        labelLbl.textContent = 'Label';
+        var labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.value = btn.label || '';
+        labelInput.placeholder = 'Button label';
+        labelInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:7px;padding:8px 10px;font-size:.78rem;color:#f0f4f8;outline:none;';
+        labelInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
+        labelInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
+        labelInput.addEventListener('input', function() {
+          window.QRAIVY_EDITOR_STATE.buttons[idx].label = this.value;
+          // Update preview without full re-render
+          var lp = card.querySelector('[data-label-preview]');
+          if (lp) lp.textContent = this.value || 'Untitled button';
+          markDirty();
+        });
+        labelWrap.appendChild(labelLbl);
+        labelWrap.appendChild(labelInput);
+        body.appendChild(labelWrap);
+
+        // URL field
+        var urlWrap = document.createElement('div');
+        var urlLbl = document.createElement('label');
+        urlLbl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;';
+        urlLbl.textContent = 'URL';
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.value = btn.url || '';
+        urlInput.placeholder = 'https://';
+        urlInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:7px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;';
+        urlInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
+        urlInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
+        urlInput.addEventListener('input', function() {
+          window.QRAIVY_EDITOR_STATE.buttons[idx].url = this.value;
+          markDirty();
+        });
+        urlWrap.appendChild(urlLbl);
+        urlWrap.appendChild(urlInput);
+        body.appendChild(urlWrap);
+
+        // Style selector
+        var styleWrap = document.createElement('div');
+        styleWrap.style.cssText = 'display:flex;gap:6px;';
+        ['primary','secondary'].forEach(function(s) {
+          var sb = document.createElement('button');
+          var isActive = btn.style === s;
+          sb.style.cssText = 'flex:1;padding:5px;border-radius:6px;font-size:.62rem;cursor:pointer;border:0.5px solid ' +
+            (isActive ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.08)') +
+            ';background:' + (isActive ? 'rgba(255,90,31,0.1)' : 'rgba(255,255,255,0.03)') +
+            ';color:' + (isActive ? '#ff5a1f' : 'rgba(240,244,248,0.55)') + ';';
+          sb.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+          sb.addEventListener('click', function() {
+            window.QRAIVY_EDITOR_STATE.buttons[idx].style = s;
+            markDirty(); renderButtons();
+          });
+          styleWrap.appendChild(sb);
+        });
+        body.appendChild(styleWrap);
+
+        // Actions row
+        var actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:6px;margin-top:2px;';
+
+        function makeAction(label, color, fn) {
+          var b = document.createElement('button');
+          b.textContent = label;
+          b.style.cssText = 'flex:1;padding:5px 4px;border-radius:6px;font-size:.6rem;cursor:pointer;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);color:' + (color||'rgba(240,244,248,0.6)') + ';';
+          b.addEventListener('click', fn);
+          return b;
+        }
+
+        // Duplicate
+        actions.appendChild(makeAction('⧉ Copy', null, function() {
+          var copy = JSON.parse(JSON.stringify(window.QRAIVY_EDITOR_STATE.buttons[idx]));
+          copy.id = 'b' + Math.random().toString(36).slice(2,7);
+          copy.label = copy.label + ' (copy)';
+          window.QRAIVY_EDITOR_STATE.buttons.splice(idx+1, 0, copy);
+          openCardId = copy.id;
+          markDirty(); renderButtons();
+        }));
+
+        // Move up
+        actions.appendChild(makeAction('↑ Up', null, function() {
+          if (idx === 0) return;
+          var arr = window.QRAIVY_EDITOR_STATE.buttons;
+          var tmp = arr[idx-1]; arr[idx-1] = arr[idx]; arr[idx] = tmp;
+          markDirty(); renderButtons();
+        }));
+
+        // Move down
+        actions.appendChild(makeAction('↓ Down', null, function() {
+          var arr = window.QRAIVY_EDITOR_STATE.buttons;
+          if (idx === arr.length-1) return;
+          var tmp = arr[idx+1]; arr[idx+1] = arr[idx]; arr[idx] = tmp;
+          markDirty(); renderButtons();
+        }));
+
+        // Delete
+        actions.appendChild(makeAction('✕ Delete', 'rgba(255,80,80,0.7)', function() {
+          window.QRAIVY_EDITOR_STATE.buttons.splice(idx, 1);
+          if (openCardId === btn.id) openCardId = null;
+          markDirty(); renderButtons();
+        }));
+
+        body.appendChild(actions);
+        card.appendChild(body);
       }
 
-      topRow.appendChild(makeTopBtn('↑','up','Move up'));
-      topRow.appendChild(makeTopBtn('↓','down','Move down'));
-
-      var toggleBtn = document.createElement('button');
-      toggleBtn.setAttribute('data-action','toggle');
-      toggleBtn.setAttribute('data-idx', idx);
-      toggleBtn.style.cssText = 'padding:3px 8px;background:' + (btn.active ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid ' + (btn.active ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)') + ';border-radius:5px;color:' + (btn.active ? '#22d47e' : 'rgba(240,244,248,0.50)') + ';font-size:.62rem;cursor:pointer;';
-      toggleBtn.textContent = btn.active ? '● On' : '○ Off';
-      topRow.appendChild(toggleBtn);
-
-      var delBtn = document.createElement('button');
-      delBtn.setAttribute('data-action','delete');
-      delBtn.setAttribute('data-idx', idx);
-      delBtn.style.cssText = 'padding:3px 7px;background:rgba(255,60,60,0.06);border:0.5px solid rgba(255,60,60,0.15);border-radius:5px;color:rgba(255,100,100,0.7);font-size:.65rem;cursor:pointer;';
-      delBtn.textContent = '✕';
-      topRow.appendChild(delBtn);
-      card.appendChild(topRow);
-
-      // Label input
-      var labelWrap = document.createElement('div');
-      var labelEl = document.createElement('label');
-      labelEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
-      labelEl.textContent = 'Label';
-      var labelInput = document.createElement('input');
-      labelInput.type = 'text';
-      labelInput.setAttribute('data-field','label');
-      labelInput.setAttribute('data-idx', String(idx));
-      labelInput.value = btn.label || '';
-      labelInput.placeholder = 'Button label';
-      labelInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;';
-      labelInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
-      labelInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
-      labelWrap.appendChild(labelEl);
-      labelWrap.appendChild(labelInput);
-      card.appendChild(labelWrap);
-
-      // URL input
-      var urlWrap = document.createElement('div');
-      var urlEl = document.createElement('label');
-      urlEl.style.cssText = 'display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;';
-      urlEl.textContent = 'URL';
-      var urlInput = document.createElement('input');
-      urlInput.type = 'text';
-      urlInput.setAttribute('data-field','url');
-      urlInput.setAttribute('data-idx', String(idx));
-      urlInput.value = btn.url || '';
-      urlInput.placeholder = 'https://';
-      urlInput.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;';
-      urlInput.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
-      urlInput.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
-      urlWrap.appendChild(urlEl);
-      urlWrap.appendChild(urlInput);
-      card.appendChild(urlWrap);
-
-      // Style selector
-      var styleWrap = document.createElement('div');
-      styleWrap.style.cssText = 'display:flex;gap:6px;';
-      ['primary','secondary'].forEach(function(s) {
-        var sb = document.createElement('button');
-        sb.setAttribute('data-action','style');
-        sb.setAttribute('data-idx', String(idx));
-        sb.setAttribute('data-style', s);
-        sb.style.cssText = 'flex:1;padding:5px;border-radius:6px;font-size:.62rem;cursor:pointer;border:0.5px solid ' + (btn.style===s ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.08)') + ';background:' + (btn.style===s ? 'rgba(255,90,31,0.1)' : 'rgba(255,255,255,0.03)') + ';color:' + (btn.style===s ? '#ff5a1f' : 'rgba(240,244,248,0.65)') + ';';
-        sb.textContent = s.charAt(0).toUpperCase()+s.slice(1);
-        styleWrap.appendChild(sb);
-      });
-      card.appendChild(styleWrap);
       list.appendChild(card);
     });
-    list.querySelectorAll('[data-action]').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var action = this.getAttribute('data-action');
-        var idx = parseInt(this.getAttribute('data-idx'));
-        var btns = window.QRAIVY_EDITOR_STATE.buttons;
-        if (action === 'delete') { btns.splice(idx,1); }
-        else if (action === 'toggle') { btns[idx].active = !btns[idx].active; }
-        else if (action === 'up' && idx > 0) { var t=btns[idx]; btns[idx]=btns[idx-1]; btns[idx-1]=t; }
-        else if (action === 'down' && idx < btns.length-1) { var t=btns[idx]; btns[idx]=btns[idx+1]; btns[idx+1]=t; }
-        else if (action === 'style') { btns[idx].style = this.getAttribute('data-style'); }
-        markDirty(); renderButtons();
-      });
-    });
-    list.querySelectorAll('[data-field]').forEach(function(el) {
-      el.addEventListener('input', function() {
-        var idx = parseInt(this.getAttribute('data-idx'));
-        var field = this.getAttribute('data-field');
-        window.QRAIVY_EDITOR_STATE.buttons[idx][field] = this.value;
-        markDirty();
-      });
-    });
-  }
 
-  function markDirty() {
-    window.QRAIVY_EDITOR_STATE.dirty = true;
-    setStatus('Unsaved changes', '#ff5a1f');
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
+    // Wire Add Button
     var addBtn = document.getElementById('btn-add');
     if (addBtn) {
-      addBtn.addEventListener('click', function() {
-        var btns = window.QRAIVY_EDITOR_STATE.buttons;
-        btns.push({ id: makeid(), label: 'New Button', url: '', active: true, style: btns.length === 0 ? 'primary' : 'secondary' });
+      // Remove old listeners by cloning
+      var newAdd = addBtn.cloneNode(true);
+      addBtn.parentNode.replaceChild(newAdd, addBtn);
+      newAdd.addEventListener('click', function() {
+        var newBtn = { id: 'b' + Math.random().toString(36).slice(2,7), label: 'New Button', url: '', active: true, style: 'primary' };
+        window.QRAIVY_EDITOR_STATE.buttons.push(newBtn);
+        openCardId = newBtn.id;
         markDirty(); renderButtons();
+      });
+    }
+  }
+
+  window.renderButtonsFn = renderButtons;
+
+  // ── Wire global save button ────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    var globalSave = document.getElementById('sqd-save-draft-btn');
+    if (globalSave) {
+      var ns = globalSave.cloneNode(true);
+      globalSave.parentNode.replaceChild(ns, globalSave);
+      ns.addEventListener('click', function() {
+        try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
+        setStatus('Saved just now ✓', '#22d47e');
+        var gs = document.getElementById('sqd-save-global-status');
+        if (gs) { gs.textContent = 'Saved ✓'; gs.style.color = '#22d47e'; setTimeout(function(){ gs.textContent='No changes'; gs.style.color=''; }, 3000); }
+        setTimeout(function(){ setStatus('No changes'); }, 3000);
       });
     }
   });
 
-  // Tab click — render buttons + scroll iframe to buttons section
-  document.querySelectorAll && document.addEventListener('click', function(e) {
-    var tab = e.target.closest ? e.target.closest('.sqd-tab') : null;
-    if (!tab) return;
-    var target = tab.getAttribute('data-tab');
-    if (target === 'buttons') {
-      setTimeout(renderButtons, 50);
-      // Scroll iframe to buttons section
-      var iframe = document.getElementById('sqd-iframe');
-      var frame = iframe ? (iframe.closest('.sqd-phone-frame') || iframe.parentElement) : null;
-      if (frame) frame.scrollTop = 600;
-    } else if (target === 'hero') {
-      var frame2 = document.querySelector('.sqd-phone-frame');
-      if (frame2) frame2.scrollTop = 0;
-    }
-  });
+  // ── DEFAULT_BUTTONS fallback ───────────────────────────────────────────
+  var DEFAULT_BUTTONS = {
+    restaurant: [
+      { id:'b1', label:'Reserve a Table', url:'', active:true, style:'primary' },
+      { id:'b2', label:'View Menu', url:'', active:true, style:'secondary' }
+    ],
+    other: [
+      { id:'b1', label:'Visit Website', url:'', active:true, style:'primary' },
+      { id:'b2', label:'Learn More', url:'', active:true, style:'secondary' }
+    ]
+  };
 
-  // Extend save draft to include buttons
-  var origSave = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE._saveFn;
-  var saveBtn = document.getElementById('sqd-save-draft-btn');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', function() {
-      setStatus('Saved just now ✓', '#22d47e');
-      setTimeout(function(){ setStatus('No changes'); }, 3000);
-    });
-  }
-
-  // Wire global save bar
-  document.addEventListener('DOMContentLoaded', function() {
-    var globalSave = document.getElementById('sqd-save-draft-btn');
-    var globalStatus = document.getElementById('sqd-save-global-status');
-    if (globalSave) globalSave.addEventListener('click', function() {
-      try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
-      if (globalStatus) { globalStatus.textContent = 'Saved ✓'; globalStatus.style.color = '#22d47e'; setTimeout(function(){ globalStatus.textContent='No changes'; globalStatus.style.color='rgba(240,244,248,0.50)'; }, 3000); }
-    });
-  });
-
-  // Wire buttons save button
-  document.addEventListener('DOMContentLoaded', function() {
-    var btnSave = document.getElementById('btn-save-btn');
-    if (btnSave) btnSave.addEventListener('click', function() {
-      try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
-      var st = document.getElementById('btn-save-status');
-      if (st) { st.textContent = 'Saved just now ✓'; st.style.color = '#22d47e'; setTimeout(function(){ st.textContent='No changes'; st.style.color=''; }, 3000); }
-    });
-  });
-
+  // ── QRAIVY_BUTTONS_EDITOR ─────────────────────────────────────────────
   window.QRAIVY_BUTTONS_EDITOR = {
     init: function(pending) {
       var slug = pending.slug || 'demo';
-      var useCase = (pending.useCase || 'other').toLowerCase().replace(/s/g,'_');
-      // Check draft first
-      try {
-        var raw = localStorage.getItem('qraivy_editor_draft_' + slug);
-        if (raw) {
-          var draft = JSON.parse(raw);
-          if (draft._v && draft._v < window.QRAIVY_DRAFT_VERSION) { localStorage.removeItem('qraivy_editor_draft_' + slug); raw = null; }
-          if (raw && draft.buttons && draft.buttons.length) {
-            window.QRAIVY_EDITOR_STATE.buttons = draft.buttons;
-            renderButtons();
-            return;
-          }
-        }
-      } catch(e) {}
-      // Use category defaults
-      var defaults = DEFAULT_BUTTONS[useCase] || DEFAULT_BUTTONS['other'];
-      window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
-      setTimeout(renderButtons, 100);
-    }
-  };
-})();
-
-// ── QRAIVY LOOP EDITOR (Step 13) ───────────────────────────────────────────
-(function() {
-  function getEl(id) { return document.getElementById(id); }
-
-  function markDirty() {
-    window.QRAIVY_EDITOR_STATE.dirty = true;
-    var st = getEl('loop-save-status');
-    if (st) { st.textContent = 'Unsaved changes'; st.style.color = 'rgba(255,90,31,0.8)'; }
-    var gs = getEl('sqd-save-global-status');
-    if (gs) { gs.textContent = 'Unsaved changes'; gs.style.color = 'rgba(255,90,31,0.8)'; }
-  }
-
-  function updateWalletToggleStyle() {
-    var btn = getEl('loop-wallet-toggle');
-    if (!btn) return;
-    var on = window.QRAIVY_EDITOR_STATE.loop.showWalletButtons;
-    btn.textContent = on ? 'On' : 'Off';
-    btn.style.background = on ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)';
-    btn.style.borderColor = on ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)';
-    btn.style.color = on ? '#22d47e' : 'rgba(240,244,248,0.50)';
-  }
-
-  function hydrate(loop) {
-    var t = getEl('loop-input-title'); if (t) t.value = loop.title || 'Stay in the loop';
-    var d = getEl('loop-input-desc'); if (d) d.value = loop.description || '';
-    var e = getEl('loop-input-email-placeholder'); if (e) e.value = loop.emailPlaceholder || 'your@email.com';
-    var b = getEl('loop-input-btn-label'); if (b) b.value = loop.buttonLabel || 'Subscribe →';
-    updateWalletToggleStyle();
-  }
-
-  function wireInputs() {
-    var fields = [
-      { id: 'loop-input-title', key: 'title' },
-      { id: 'loop-input-desc', key: 'description' },
-      { id: 'loop-input-email-placeholder', key: 'emailPlaceholder' },
-      { id: 'loop-input-btn-label', key: 'buttonLabel' }
-    ];
-    fields.forEach(function(f) {
-      var el = getEl(f.id);
-      if (!el) return;
-      el.addEventListener('focus', function(){ this.style.borderColor='rgba(255,90,31,0.5)'; });
-      el.addEventListener('blur', function(){ this.style.borderColor='rgba(255,255,255,0.12)'; });
-      el.addEventListener('input', function() {
-        window.QRAIVY_EDITOR_STATE.loop[f.key] = this.value;
-        markDirty();
-      });
-    });
-
-    var walletBtn = getEl('loop-wallet-toggle');
-    if (walletBtn) {
-      walletBtn.addEventListener('click', function() {
-        window.QRAIVY_EDITOR_STATE.loop.showWalletButtons = !window.QRAIVY_EDITOR_STATE.loop.showWalletButtons;
-        updateWalletToggleStyle();
-        markDirty();
-      });
-    }
-  }
-
-  window.QRAIVY_LOOP_EDITOR = {
-    init: function(pending) {
-      var slug = pending.slug || 'demo';
-      var biz = pending.businessName || 'us';
-      // Set default description with business name
-      if (!window.QRAIVY_EDITOR_STATE.loop.description) {
-        window.QRAIVY_EDITOR_STATE.loop.description = 'Subscribe for updates, exclusive offers and early access from ' + biz + '.';
-      }
-      // Check wallet_pass in sections
-      var sections = pending.sections || [];
-      var hasWallet = sections.some(function(s){ return s.type === 'wallet_pass'; });
-      window.QRAIVY_EDITOR_STATE.loop.showWalletButtons = hasWallet;
+      var uc = (pending.useCase || 'other').toLowerCase().replace(/\s/g,'_');
 
       // Check draft
       try {
         var raw = localStorage.getItem('qraivy_editor_draft_' + slug);
         if (raw) {
           var draft = JSON.parse(raw);
-          if (draft.loop) {
-            window.QRAIVY_EDITOR_STATE.loop = draft.loop;
+          if (draft.buttons && draft.buttons.length) {
+            // Ensure all buttons have IDs
+            draft.buttons.forEach(function(b,i){ if(!b.id) b.id='b'+i; });
+            window.QRAIVY_EDITOR_STATE.buttons = draft.buttons;
+            setTimeout(renderButtons, 100);
+            return;
           }
         }
       } catch(e) {}
 
-      setTimeout(function() {
-        wireInputs();
-        hydrate(window.QRAIVY_EDITOR_STATE.loop);
-      }, 50);
+      // Use defaults
+      var defaults = DEFAULT_BUTTONS[uc] || DEFAULT_BUTTONS['other'];
+      window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
+      setTimeout(renderButtons, 100);
     }
   };
+
 })();
-
-// ── QRAIVY DUAL PREVIEW (Step 14) ─────────────────────────────────────────
-(function() {
-  var currentMode = 'draft';
-
-  // ── Renderer ──────────────────────────────────────────────────────────────
-  function renderDraftPreview() {
-    var stage = document.getElementById('sqd-draft-stage');
-    if (!stage) return;
-    var s = window.QRAIVY_EDITOR_STATE;
-    if (!s) return;
-
-    var hero = s.hero || {};
-    var loop = s.loop || {};
-    var buttons = s.buttons || [];
-    var brandColor = '#ff5a1f';
-
-    // Build HTML
-    var html = '';
-
-    // ── Top navbar ──
-    html += '<div style="position:sticky;top:0;z-index:10;background:rgba(10,12,16,0.95);backdrop-filter:blur(8px);border-bottom:0.5px solid rgba(255,255,255,0.07);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">';
-    html += '<div style="display:flex;align-items:center;gap:8px;">';
-    html += '<div style="width:28px;height:28px;border-radius:7px;background:' + brandColor + ';display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;">' + (hero.logoInitial || 'A') + '</div>';
-    html += '<span style="font-size:.78rem;font-weight:600;color:#f0f4f8;font-family:sans-serif;">' + (s.pageName || 'Smart Page') + '</span>';
-    html += '</div>';
-    html += '<div style="font-size:.55rem;font-weight:700;color:' + brandColor + ';background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.2);border-radius:100px;padding:2px 8px;">● AI Powered</div>';
-    html += '</div>';
-
-    // ── Hero ──
-    html += '<div style="background:linear-gradient(135deg,#0d1117 0%,#111827 100%);padding:28px 20px 24px;">';
-    if (hero.badgeText) {
-      html += '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:100px;padding:4px 12px;margin-bottom:14px;">';
-      html += '<span style="color:' + brandColor + ';font-size:.58rem;">✦</span>';
-      html += '<span style="font-size:.62rem;color:rgba(255,90,31,0.9);letter-spacing:.05em;">' + esc(hero.badgeText) + '</span>';
-      html += '</div>';
-    }
-    html += '<span style="font-size:.78rem;font-weight:600;color:#f0f4f8;">' + (s.pageName || 'Smart Page') + '</span>';
-    html += '</div>';
-    html += '<div style="font-size:.55rem;font-weight:700;color:' + brandColor + ';background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.2);border-radius:100px;padding:2px 8px;">● AI Powered</div>';
-    html += '</div>';
-
-    // ── Hero content ──
-    html += '<div style="background:linear-gradient(135deg,#0d1117 0%,#111827 100%);padding:28px 20px 24px;">';
-    if (hero.badgeText) {
-      html += '<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.25);border-radius:100px;padding:4px 12px;margin-bottom:14px;"><span style="color:#ff5a1f;font-size:.58rem;">✦</span><span style="font-size:.62rem;color:rgba(255,90,31,0.9);">' + esc(hero.badgeText) + '</span></div>';
-    }
-    html += '<h1 style="font-size:1.55rem;font-weight:800;color:#f0f4f8;line-height:1.15;margin:0 0 10px;">' + esc(hero.title || s.pageName || 'Welcome') + '</h1>';
-    if (hero.subtitle) {
-      html += '<p style="font-size:.8rem;color:rgba(240,244,248,0.72);line-height:1.55;margin:0;">' + esc(hero.subtitle) + '</p>';
-    }
-    html += '</div>';
-
-    // ── Voice placeholder ──
-    html += '<div style="margin:0 16px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;">';
-    html += '<div style="font-size:.72rem;color:rgba(240,244,248,0.85);font-weight:500;margin-bottom:4px;">▶ Welcome from ' + esc(s.pageName || 'us') + '</div>';
-    html += '<div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;">';
-    html += '<div style="width:30px;height:30px;border-radius:50%;background:' + brandColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem;">▶</div>';
-    html += '<div><div style="font-size:.72rem;color:#f0f4f8;font-weight:500;">Personal welcome message</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);margin-top:2px;">Tap to listen</div></div>';
-    html += '</div></div>';
-
-    // ── AI placeholder ──
-    html += '<div style="margin:0 16px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;">';
-    html += '<div style="width:8px;height:8px;border-radius:50%;background:#22d47e;flex-shrink:0;"></div>';
-    html += '<div style="font-size:.72rem;color:rgba(240,244,248,0.85);">AI Assistant <span style="color:rgba(240,244,248,0.45);">— Online</span></div>';
-    html += '<div style="margin-left:auto;font-size:.6rem;color:rgba(240,244,248,0.45);">Tap welcome message to activate</div>';
-    html += '</div>';
-
-    // ── Buttons ──
-    var activeButtons = buttons.filter(function(b){ return b.active !== false; });
-    if (activeButtons.length > 0) {
-      html += '<div style="padding:8px 16px 12px;display:flex;flex-direction:column;gap:8px;">';
-      activeButtons.forEach(function(btn) {
-        if (btn.style === 'primary') {
-          html += '<a href="' + esc(btn.url||'#') + '" style="display:block;text-align:center;padding:12px;background:' + brandColor + ';border-radius:10px;color:#fff;font-size:.82rem;font-weight:600;text-decoration:none;">' + esc(btn.label||'Button') + ' →</a>';
-        } else {
-          html += '<a href="' + esc(btn.url||'#') + '" style="display:block;text-align:center;padding:12px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.82rem;text-decoration:none;">' + esc(btn.label||'Button') + '</a>';
-        }
-      });
-      html += '</div>';
-    }
-
-    // ── Loop section ──
-    html += '<div style="margin:4px 16px 12px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px 16px;">';
-    html += '<h3 style="font-size:.95rem;font-weight:700;color:#f0f4f8;margin:0 0 6px;">' + esc(loop.title||'Stay in the loop') + '</h3>';
-    if (loop.description) {
-      html += '<p style="font-size:.72rem;color:rgba(240,244,248,0.65);margin:0 0 12px;line-height:1.5;">' + esc(loop.description) + '</p>';
-    }
-    html += '<input type="email" placeholder="' + esc(loop.emailPlaceholder||'your@email.com') + '" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;font-size:.78rem;color:#f0f4f8;margin-bottom:8px;"/>';
-    html += '<button style="width:100%;padding:11px;background:' + brandColor + ';border:none;border-radius:8px;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">' + esc(loop.buttonLabel||'Subscribe →') + '</button>';
-    if (loop.showWalletButtons) {
-      html += '<div style="display:flex;gap:6px;margin-top:8px;">';
-      html += '<div style="flex:1;padding:8px;background:rgba(0,0,0,0.3);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;text-align:center;font-size:.6rem;color:rgba(240,244,248,0.6);">🍎 Add to Apple Wallet</div>';
-      html += '<div style="flex:1;padding:8px;background:rgba(0,0,0,0.3);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;text-align:center;font-size:.6rem;color:rgba(240,244,248,0.6);">🤖 Google Wallet</div>';
-      html += '</div>';
-    }
-    html += '</div>';
-
-    // ── Footer ──
-    html += '<div style="padding:20px 16px;text-align:center;border-top:0.5px solid rgba(255,255,255,0.06);margin-top:12px;">';
-    html += '<div style="font-size:.65rem;color:rgba(240,244,248,0.35);">Powered by <span style="color:' + brandColor + ';">Qraivy</span> — AI Smart Pages</div>';
-    html += '</div>';
-
-    // ── Draft watermark ──
-    html += '<div style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,90,31,0.9);color:#fff;font-size:.55rem;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.05em;pointer-events:none;">DRAFT PREVIEW</div>';
-
-    stage.innerHTML = html;
-  }
-
-  function esc(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ── Mode switching ─────────────────────────────────────────────────────────
-  function setMode(mode) {
-    currentMode = mode;
-    var iframe = document.getElementById('sqd-iframe');
-    var stage = document.getElementById('sqd-draft-stage');
-    var draftBtn = document.getElementById('sqd-preview-draft-btn');
-    var liveBtn = document.getElementById('sqd-preview-live-btn');
-    var label = document.getElementById('sqd-preview-mode-label');
-    var previewLabel = document.getElementById('sqd-preview-label');
-
-    if (mode === 'draft') {
-      if (iframe) iframe.style.display = 'none';
-      if (stage) stage.style.display = 'block';
-      if (draftBtn) { draftBtn.style.background='rgba(255,90,31,0.15)'; draftBtn.style.borderColor='rgba(255,90,31,0.3)'; draftBtn.style.color='#ff5a1f'; }
-      if (liveBtn) { liveBtn.style.background='transparent'; liveBtn.style.borderColor='transparent'; liveBtn.style.color='rgba(240,244,248,0.55)'; }
-      if (label) label.textContent = 'DRAFT PREVIEW';
-      if (previewLabel) previewLabel.textContent = 'DRAFT PREVIEW';
-      renderDraftPreview();
-    } else {
-      if (iframe) iframe.style.display = 'block';
-      if (stage) stage.style.display = 'none';
-      if (liveBtn) { liveBtn.style.background='rgba(34,212,126,0.1)'; liveBtn.style.borderColor='rgba(34,212,126,0.25)'; liveBtn.style.color='#22d47e'; }
-      if (draftBtn) { draftBtn.style.background='transparent'; draftBtn.style.borderColor='transparent'; draftBtn.style.color='rgba(240,244,248,0.55)'; }
-      if (label) label.textContent = 'LIVE PREVIEW';
-      if (previewLabel) previewLabel.textContent = 'LIVE PREVIEW';
-    }
-  }
-
-  // ── Expose globally ────────────────────────────────────────────────────────
-  window.QRAIVY_PREVIEW = {
-    setMode: setMode,
-    render: renderDraftPreview,
-    getMode: function() { return currentMode; }
-  };
-
-  // ── Auto-rerender on state changes ────────────────────────────────────────
-  // Patch markDirty calls to also rerender draft
-  var _origMarkDirty = window._markDirty;
-  function scheduleRerender() {
-    if (currentMode === 'draft') {
-      clearTimeout(window._previewRenderTimer);
-      window._previewRenderTimer = setTimeout(renderDraftPreview, 80);
-    }
-  }
-  window.QRAIVY_PREVIEW._scheduleRerender = scheduleRerender;
-
-  // ── Init: start in DRAFT mode after page data loads ───────────────────────
-  document.addEventListener('DOMContentLoaded', function() {
-    // Watch all input/textarea changes in the editor panel
-    document.addEventListener('input', function(e) {
-      if (e.target.closest && e.target.closest('#sqd-tab-content')) {
-        scheduleRerender();
-      }
-    });
-    document.addEventListener('click', function(e) {
-      // Wallet toggle, button toggles etc
-      if (e.target.id === 'loop-wallet-toggle' || e.target.closest && e.target.closest('[data-action="toggle"]')) {
-        scheduleRerender();
-      }
-    });
-  });
-
 })();
 </script>
 </body>
