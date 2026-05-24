@@ -477,24 +477,11 @@
       <!-- BUTTONS -->
       <div class="sqd-tab-panel" data-panel="buttons" style="display:none;">
         <div style="font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔗 Buttons & Links</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:16px;">CTAs and navigation links</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">Reserve a Table</div>
-              <div style="font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;margin-top:2px;">Primary button</div>
-            </div>
-            <div style="font-size:.62rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">Edit →</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">View Menu</div>
-              <div style="font-size:.6rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;margin-top:2px;">Secondary button</div>
-            </div>
-            <div style="font-size:.62rem;color:rgba(255,90,31,0.6);font-family:'DM Mono',monospace;">Edit →</div>
-          </div>
-          <button style="width:100%;padding:9px;background:transparent;border:0.5px dashed rgba(255,90,31,0.25);border-radius:8px;color:rgba(255,90,31,0.6);font-size:.72rem;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;">+ Add Button</button>
-        </div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:14px;">Add links and calls-to-action for your visitors.</div>
+        <div id="btn-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button id="btn-add" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.3);border-radius:8px;color:rgba(255,90,31,0.8);font-size:.75rem;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;">+ Add Button</button>
+        <div id="btn-save-status" style="margin-top:10px;font-size:.62rem;color:rgba(240,244,248,0.50);font-family:'DM Mono',monospace;text-align:center;">No changes</div>
+        <div style="margin-top:8px;font-size:.6rem;color:rgba(240,244,248,0.40);font-family:'DM Mono',monospace;line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">Draft changes saved locally.<br>Live preview update coming in next step.</div>
       </div>
 
       <!-- FEATURED -->
@@ -700,6 +687,7 @@ async function initPage() {
   var su=document.getElementById('sqd-settings-url'); if(su) su.textContent = hostedUrl;
   var sc=document.getElementById('sqd-settings-scans'); if(sc) sc.textContent = pending.scanCount || '—';
   if (window.QRAIVY_HERO_EDITOR) window.QRAIVY_HERO_EDITOR.init(pending);
+  if (window.QRAIVY_BUTTONS_EDITOR) window.QRAIVY_BUTTONS_EDITOR.init(pending);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
   var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
   document.getElementById('sqd-url').textContent      = hostedUrl;
@@ -928,7 +916,8 @@ document.addEventListener('DOMContentLoaded', initPage);
 // ── QRAIVY EDITOR STATE (Step 11) ─────────────────────────────────────────
 window.QRAIVY_EDITOR_STATE = {
   pageName: '', slug: '', dirty: false,
-  hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' }
+  hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' },
+  buttons: []
 };
 
 (function() {
@@ -997,6 +986,159 @@ window.QRAIVY_EDITOR_STATE = {
       window.QRAIVY_EDITOR_STATE.hero=hero;
       hydrateFields(hero); wireHeroFields();
       if(draft&&draft.dirty){ window.QRAIVY_EDITOR_STATE.dirty=true; updateDraftSummary(); setStatus('Draft loaded','#22d47e'); setTimeout(function(){setStatus('No changes');},2500); }
+    }
+  };
+})();
+
+
+// ── BUTTONS EDITOR (Step 12) ───────────────────────────────────────────────
+(function() {
+  var DEFAULT_BUTTONS = {
+    restaurant:     [{id:'b1',label:'Reserve a Table',url:'',active:true,style:'primary'},{id:'b2',label:'View Menu',url:'',active:true,style:'secondary'}],
+    event:          [{id:'b1',label:'Get Tickets',url:'',active:true,style:'primary'},{id:'b2',label:'View Lineup',url:'',active:true,style:'secondary'}],
+    creator:        [{id:'b1',label:'Follow on Instagram',url:'',active:true,style:'primary'},{id:'b2',label:'Watch Latest Video',url:'',active:true,style:'secondary'}],
+    ecommerce:      [{id:'b1',label:'Shop Now',url:'',active:true,style:'primary'},{id:'b2',label:'View Offer',url:'',active:true,style:'secondary'}],
+    fitness:        [{id:'b1',label:'Start Training',url:'',active:true,style:'primary'},{id:'b2',label:'Book a Session',url:'',active:true,style:'secondary'}],
+    artist_music:   [{id:'b1',label:'Listen Now',url:'',active:true,style:'primary'},{id:'b2',label:'Tour Dates',url:'',active:true,style:'secondary'}],
+    local_business: [{id:'b1',label:'Book Now',url:'',active:true,style:'primary'},{id:'b2',label:'Visit Website',url:'',active:true,style:'secondary'}],
+    other:          [{id:'b1',label:'Visit Website',url:'',active:true,style:'primary'},{id:'b2',label:'Learn More',url:'',active:true,style:'secondary'}]
+  };
+
+  function setStatus(msg, color) {
+    var el = document.getElementById('btn-save-status');
+    if (el) { el.textContent = msg; el.style.color = color || 'rgba(240,244,248,0.50)'; }
+  }
+
+  function makeid() { return 'b' + Math.random().toString(36).slice(2,7); }
+
+  function renderButtons() {
+    var list = document.getElementById('btn-list');
+    if (!list) return;
+    var btns = window.QRAIVY_EDITOR_STATE.buttons;
+    list.innerHTML = '';
+    btns.forEach(function(btn, idx) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:rgba(255,255,255,0.03);border:0.5px solid ' + (btn.active ? 'rgba(255,90,31,0.2)' : 'rgba(255,255,255,0.07)') + ';border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:8px;opacity:' + (btn.active ? '1' : '0.55') + ';';
+
+      // Top row: index badge + active toggle + move + delete
+      var topRow = document.createElement('div');
+      topRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+      topRow.innerHTML =
+        '<span style="font-size:.55rem;color:rgba(255,90,31,0.7);font-family:'DM Mono',monospace;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.2);border-radius:4px;padding:1px 6px;">' + (btn.style === 'primary' ? 'PRIMARY' : 'SECONDARY') + '</span>' +
+        '<span style="flex:1;"></span>' +
+        '<button data-action="up" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;" title="Move up">↑</button>' +
+        '<button data-action="down" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:5px;color:rgba(240,244,248,0.76);font-size:.65rem;cursor:pointer;" title="Move down">↓</button>' +
+        '<button data-action="toggle" data-idx="' + idx + '" style="padding:3px 8px;background:' + (btn.active ? 'rgba(34,212,126,0.1)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid ' + (btn.active ? 'rgba(34,212,126,0.3)' : 'rgba(255,255,255,0.1)') + ';border-radius:5px;color:' + (btn.active ? '#22d47e' : 'rgba(240,244,248,0.50)') + ';font-size:.62rem;cursor:pointer;">' + (btn.active ? '● On' : '○ Off') + '</button>' +
+        '<button data-action="delete" data-idx="' + idx + '" style="padding:3px 7px;background:rgba(255,60,60,0.06);border:0.5px solid rgba(255,60,60,0.15);border-radius:5px;color:rgba(255,100,100,0.7);font-size:.65rem;cursor:pointer;" title="Delete">✕</button>';
+      card.appendChild(topRow);
+
+      // Label input
+      var labelWrap = document.createElement('div');
+      labelWrap.innerHTML = '<label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Label</label>' +
+        '<input data-field="label" data-idx="' + idx + '" type="text" value="' + (btn.label||'').replace(/"/g,'&quot;') + '" placeholder="Button label" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;" onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>';
+      card.appendChild(labelWrap);
+
+      // URL input
+      var urlWrap = document.createElement('div');
+      urlWrap.innerHTML = '<label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">URL</label>' +
+        '<input data-field="url" data-idx="' + idx + '" type="url" value="' + (btn.url||'').replace(/"/g,'&quot;') + '" placeholder="https://" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;font-family:'DM Mono',monospace;outline:none;" onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"/>';
+      card.appendChild(urlWrap);
+
+      // Style selector
+      var styleWrap = document.createElement('div');
+      styleWrap.style.cssText = 'display:flex;gap:6px;';
+      ['primary','secondary'].forEach(function(s) {
+        var sb = document.createElement('button');
+        sb.setAttribute('data-action','style');
+        sb.setAttribute('data-idx', idx);
+        sb.setAttribute('data-style', s);
+        sb.style.cssText = 'flex:1;padding:5px;border-radius:6px;font-size:.62rem;cursor:pointer;font-family:'DM Mono',monospace;border:0.5px solid ' + (btn.style===s ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.08)') + ';background:' + (btn.style===s ? 'rgba(255,90,31,0.1)' : 'rgba(255,255,255,0.03)') + ';color:' + (btn.style===s ? '#ff5a1f' : 'rgba(240,244,248,0.65)') + ';';
+        sb.textContent = s.charAt(0).toUpperCase()+s.slice(1);
+        styleWrap.appendChild(sb);
+      });
+      card.appendChild(styleWrap);
+
+      list.appendChild(card);
+    });
+
+    // Wire events
+    list.querySelectorAll('[data-action]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var action = this.getAttribute('data-action');
+        var idx = parseInt(this.getAttribute('data-idx'));
+        var btns = window.QRAIVY_EDITOR_STATE.buttons;
+        if (action === 'delete') { btns.splice(idx,1); }
+        else if (action === 'toggle') { btns[idx].active = !btns[idx].active; }
+        else if (action === 'up' && idx > 0) { var t=btns[idx]; btns[idx]=btns[idx-1]; btns[idx-1]=t; }
+        else if (action === 'down' && idx < btns.length-1) { var t=btns[idx]; btns[idx]=btns[idx+1]; btns[idx+1]=t; }
+        else if (action === 'style') { btns[idx].style = this.getAttribute('data-style'); }
+        markDirty(); renderButtons();
+      });
+    });
+    list.querySelectorAll('[data-field]').forEach(function(el) {
+      el.addEventListener('input', function() {
+        var idx = parseInt(this.getAttribute('data-idx'));
+        var field = this.getAttribute('data-field');
+        window.QRAIVY_EDITOR_STATE.buttons[idx][field] = this.value;
+        markDirty();
+      });
+    });
+  }
+
+  function markDirty() {
+    window.QRAIVY_EDITOR_STATE.dirty = true;
+    setStatus('Unsaved changes', '#ff5a1f');
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var addBtn = document.getElementById('btn-add');
+    if (addBtn) {
+      addBtn.addEventListener('click', function() {
+        var btns = window.QRAIVY_EDITOR_STATE.buttons;
+        btns.push({ id: makeid(), label: 'New Button', url: '', active: true, style: btns.length === 0 ? 'primary' : 'secondary' });
+        markDirty(); renderButtons();
+      });
+    }
+  });
+
+  // Tab click — render buttons when Buttons tab opened
+  document.addEventListener('click', function(e) {
+    var tab = e.target.closest('.sqd-tab');
+    if (tab && tab.getAttribute('data-tab') === 'buttons') {
+      setTimeout(renderButtons, 0);
+    }
+  });
+
+  // Extend save draft to include buttons
+  var origSave = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE._saveFn;
+  var saveBtn = document.getElementById('sqd-save-draft-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      setStatus('Saved just now ✓', '#22d47e');
+      setTimeout(function(){ setStatus('No changes'); }, 3000);
+    });
+  }
+
+  window.QRAIVY_BUTTONS_EDITOR = {
+    init: function(pending) {
+      var slug = pending.slug || 'demo';
+      var useCase = (pending.useCase || 'other').toLowerCase().replace(/s/g,'_');
+      // Check draft first
+      try {
+        var raw = localStorage.getItem('qraivy_editor_draft_' + slug);
+        if (raw) {
+          var draft = JSON.parse(raw);
+          if (draft.buttons && draft.buttons.length) {
+            window.QRAIVY_EDITOR_STATE.buttons = draft.buttons;
+            renderButtons();
+            return;
+          }
+        }
+      } catch(e) {}
+      // Use category defaults
+      var defaults = DEFAULT_BUTTONS[useCase] || DEFAULT_BUTTONS['other'];
+      window.QRAIVY_EDITOR_STATE.buttons = JSON.parse(JSON.stringify(defaults));
+      renderButtons();
     }
   };
 })();
