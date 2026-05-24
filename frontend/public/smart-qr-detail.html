@@ -480,7 +480,8 @@
         <div style="font-size:.65rem;color:rgba(240,244,248,0.76);font-family:'DM Mono',monospace;margin-bottom:14px;">Add links and calls-to-action for your visitors.</div>
         <div id="btn-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         <button id="btn-add" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.3);border-radius:8px;color:rgba(255,90,31,0.8);font-size:.75rem;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;">+ Add Button</button>
-        <div id="btn-save-status" style="margin-top:10px;font-size:.62rem;color:rgba(240,244,248,0.50);font-family:'DM Mono',monospace;text-align:center;">No changes</div>
+        <button id="btn-save-btn" style="width:100%;margin-top:10px;padding:9px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Save Draft</button>
+        <div id="btn-save-status" style="margin-top:6px;font-size:.62rem;color:rgba(240,244,248,0.50);font-family:'DM Mono',monospace;text-align:center;">No changes</div>
         <div style="margin-top:8px;font-size:.6rem;color:rgba(240,244,248,0.40);font-family:'DM Mono',monospace;line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">Draft changes saved locally.<br>Live preview update coming in next step.</div>
       </div>
 
@@ -562,7 +563,7 @@
     (function() {
       var tabs = document.querySelectorAll('.sqd-tab');
       var panels = document.querySelectorAll('.sqd-tab-panel');
-      var SECTION_SCROLL = {hero:0,voice:200,ai:400,loop:600,buttons:900,featured:1200,info:1400,appearance:0,settings:0};
+      var SECTION_SCROLL = {hero:0,voice:250,ai:450,loop:650,buttons:1050,featured:1300,info:1500,appearance:0,settings:0};
       tabs.forEach(function(tab) {
         tab.addEventListener('click', function() {
           var target = this.getAttribute('data-tab');
@@ -1189,6 +1190,16 @@ window.QRAIVY_EDITOR_STATE = {
       setTimeout(function(){ setStatus('No changes'); }, 3000);
     });
   }
+
+  // Wire buttons save button
+  document.addEventListener('DOMContentLoaded', function() {
+    var btnSave = document.getElementById('btn-save-btn');
+    if (btnSave) btnSave.addEventListener('click', function() {
+      try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
+      var st = document.getElementById('btn-save-status');
+      if (st) { st.textContent = 'Saved just now ✓'; st.style.color = '#22d47e'; setTimeout(function(){ st.textContent='No changes'; st.style.color=''; }, 3000); }
+    });
+  });
 
   window.QRAIVY_BUTTONS_EDITOR = {
     init: function(pending) {
