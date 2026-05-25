@@ -151,6 +151,11 @@ function renderLP(page) {
       if (storedSections && Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
     } catch(_) {}
   }
+  // Section order
+  const DEFAULT_ORDER = ['hero','voice','ai','buttons','loop','footer'];
+  const sectionOrder = (Array.isArray(storedSections.order) && storedSections.order.length)
+    ? storedSections.order : DEFAULT_ORDER;
+
   const sh = storedSections.hero   || {};
   const sv = storedSections.voice  || {};
   const sa = storedSections.ai     || {};
@@ -385,14 +390,13 @@ a{color:inherit;text-decoration:none}
   </div>
   <div class="lp-nav-pill"><span class="lp-nav-dot"></span>AI Powered</div>
 </nav>
-<section class="lp-hero">
+${(function() {
+  const heroHTML = `<section class="lp-hero">
   <div class="lp-hero-eyebrow">&#10022; ${sh.badge || 'Qraivy Smart Page'}</div>
   <h1 class="lp-hero-title">${sh.title || headline}</h1>
   <p class="lp-hero-sub">${sh.subtitle || sub}</p>
-</section>
-
-<!-- AI Concierge Zone -->
-<section class="lp-voice-section" style="${sv.enabled === false ? 'display:none' : ''}">
+</section>`;
+  const voiceHTML = sv.enabled === false ? '' : `<section class="lp-voice-section">
   <div class="lp-voice-title">&#9658; Welcome from ${bizName}</div>
   <div class="lp-voice-player" id="voicePlayer">
     <button class="lp-voice-btn" id="voiceBtn" aria-label="Play welcome message">&#9654;</button>
@@ -404,9 +408,8 @@ a{color:inherit;text-decoration:none}
       ${Array.from({length:18},(_,i)=>`<div class="lp-bar" style="height:${Math.floor(Math.random()*22+6)}px;animation-delay:${(i*0.06).toFixed(2)}s"></div>`).join('')}
     </div>
   </div>
-</section>
-
-<section class="lp-chat-section" id="aiSection" style="${sa.enabled === false ? 'display:none' : ''}">
+</section>`;
+  const aiHTML = sa.enabled === false ? '' : `<section class="lp-chat-section" id="aiSection">
   <div class="lp-chat-collapsed" id="chatCollapsed">
     <div class="lp-chat-collapsed-dot"></div>
     <span class="lp-chat-collapsed-label">AI Assistant &mdash; Online</span>
@@ -429,43 +432,32 @@ a{color:inherit;text-decoration:none}
       </div>
     </div>
   </div>
-</section>
-
-<section class="lp-subscribe-section lp-subscribe-prominent" style="${sl.enabled === false ? 'display:none' : ''}">
+</section>`;
+  const loopHTML = sl.enabled === false ? '' : `<section class="lp-subscribe-section lp-subscribe-prominent">
   <div class="lp-subscribe-card">
     <div class="lp-sub-glow"></div>
-    <div class="lp-wallet-preview">
-      <div class="lp-wallet-card">
-        <div class="lp-wallet-top">
-          <span class="lp-wallet-brand">${bizName}</span>
-          <span class="lp-wallet-type">SMART PASS</span>
-        </div>
-        <div class="lp-wallet-bottom">
-          <span class="lp-wallet-id">QRAIVY MEMBER</span>
-          <span class="lp-wallet-circles">&#9711; &#9711;</span>
-        </div>
-      </div>
-    </div>
+    <div class="lp-wallet-preview"><div class="lp-wallet-card"><div class="lp-wallet-top"><span class="lp-wallet-brand">${bizName}</span><span class="lp-wallet-type">SMART PASS</span></div><div class="lp-wallet-bottom"><span class="lp-wallet-id">QRAIVY MEMBER</span><span class="lp-wallet-circles">&#9711; &#9711;</span></div></div></div>
     <h3 class="lp-sub-title">${sl.title || 'Stay in the loop'}</h3>
     <p class="lp-sub-text">${sl.description || ('Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
-    <div class="lp-sub-form">
-      <input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" />
-      <button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button>
-    </div>
-    <div class="lp-wallet-btns">
-      <button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button>
-      <button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>
-    </div>
+    <div class="lp-sub-form"><input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button></div>
+    <div class="lp-wallet-btns"><button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button><button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button></div>
   </div>
-</section>
+</section>`;
+  const buttonsBlock = buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
+  const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
+  <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
+  <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
+  <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
+</footer>`;
+  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, loop: loopHTML, footer: footerBlock };
+  return sectionOrder.map(function(k){ return sectionMap[k] || ''; }).join('\n');
+})()}
 <section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
   <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
 </section>
-
 <!-- Business Info -->
 ${sectionsHTML}
-${buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : ''}
 
 <!-- Growth modal -->
 <div id="qrGrowthModal">
@@ -505,14 +497,7 @@ ${buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + butto
     <div class="qraivy-growth-sub">Launch an AI-powered landing page in under 60 seconds.</div>
   </div>
 </div>
-${sf.enabled === false ? '' : `<footer class="lp-footer">
-  <div class="lp-footer-brand">
-    <div class="lp-footer-Q">Q</div>
-    <span class="lp-footer-name">${sf.businessName || bizName}</span>
-  </div>
-  <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
-  <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
-</footer>`}
+
 <script>
 (function(){
   var playing = false;
