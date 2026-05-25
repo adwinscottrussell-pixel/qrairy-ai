@@ -1517,6 +1517,7 @@ window.QRAIVY_EDITOR_STATE = {
 
             // Store the REAL QR id from dashboard (not LP id)
             window._sqd_qrId = card.id;
+             window._sqd_source = card.source || 'qr';
           })
           .catch(function() { fallbackFromLP(slug, lpUrl); });
       });
