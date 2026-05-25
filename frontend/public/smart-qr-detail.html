@@ -1568,7 +1568,10 @@ window.QRAIVY_EDITOR_STATE = {
         if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
         var headers = { 'Content-Type': 'application/json' };
         var doIt = function(h) {
-          fetch('https://api.qraivy.com/qr/' + qrId, { method: 'DELETE', headers: h })
+          var deleteUrl = window._sqd_source === 'lp'
+            ? 'https://api.qraivy.com/lp/' + getSlug()
+            : 'https://api.qraivy.com/qr/' + qrId;
+          fetch(deleteUrl, { method: 'DELETE', headers: h })
             .then(function(r) {
               if (r.ok) { window.location.href = 'dashboard.html'; }
               else { return r.json().then(function(d) { throw new Error(d.error || 'Delete failed'); }); }
