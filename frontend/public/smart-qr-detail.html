@@ -1055,6 +1055,7 @@ window.QRAIVY_EDITOR_STATE = {
     var state = window.QRAIVY_EDITOR_STATE;
     var slug = state.slug;
     if (!slug) { setStatus('No slug — cannot publish', '#f87171'); return; }
+    if (!window.confirm('Publish this page? This will update your live Smart QR page immediately.')) return;
     setStatus('Publishing…', '#ff5a1f');
     try {
       var tok = null;
@@ -1139,6 +1140,13 @@ window.QRAIVY_EDITOR_STATE = {
     });
   }
   wirePublishBtns();
+  window.addEventListener('beforeunload', function(e) {
+    if (window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.dirty) {
+      e.preventDefault();
+      e.returnValue = 'You have unsaved changes. Leave anyway?';
+      return e.returnValue;
+    }
+  });
   window.QRAIVY_HERO_EDITOR = {
     init: function(pending) {
       var slug=pending.slug||'demo';
