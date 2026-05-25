@@ -845,6 +845,8 @@ async function initPage() {
   document.getElementById('sqd-url').textContent      = hostedUrl;
   document.getElementById('sqd-view-btn').href        = hostedUrl;
   document.getElementById('sqd-view-btn2').href       = hostedUrl;
+  window.QRAIVY_EDITOR_STATE.hostedUrl = hostedUrl;
+  window.QRAIVY_EDITOR_STATE.slug = pending.slug || '';
   document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
 
   // ── Phone iframe ──────────────────────────────────────────────────────
@@ -1701,6 +1703,8 @@ window.QRAIVY_EDITOR_STATE = {
     // Set view button immediately
     var vb = document.getElementById('sqd-ov-view-btn');
     if (vb) vb.href = lpUrl;
+    var tvb = document.getElementById('sqd-view-btn');
+    if (tvb) tvb.href = lpUrl;
 
     // Wait for Clerk then fetch dashboard to get correct QR id + stats
     var attempts = 0;
