@@ -1341,7 +1341,7 @@ window.QRAIVY_EDITOR_STATE = {
       (function(key, idx) {
       var sec = window.QRAIVY_EDITOR_STATE.sections[key] || {};
       var enabled = sec.enabled !== false;
-      var locked = (key === 'hero' || key === 'voice' || key === 'ai');
+      var locked = (key === 'hero' || key === 'voice' || key === 'ai' || key === 'footer');
       var row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;background:' + (locked ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;opacity:' + (locked ? '0.6' : '1') + ';';
 
