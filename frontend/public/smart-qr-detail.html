@@ -1572,9 +1572,15 @@ window.QRAIVY_EDITOR_STATE = {
               if (btn) { btn.textContent = '🗑 Delete QR'; btn.disabled = false; }
             });
         };
-        var tok = window._clerkToken;
-        if (tok) headers['Authorization'] = 'Bearer ' + tok;
-        doIt(headers);
+        if (window.Clerk && window.Clerk.session) {
+          window.Clerk.session.getToken().then(function(tok) {
+            if (tok) headers['Authorization'] = 'Bearer ' + tok;
+            doIt(headers);
+          });
+        } else if (window._clerkToken) {
+          headers['Authorization'] = 'Bearer ' + window._clerkToken;
+          doIt(headers);
+        } else { doIt(headers); }
       };
     }
   };
