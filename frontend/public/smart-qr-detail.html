@@ -496,35 +496,37 @@
       <!-- VOICE -->
       <div class="sqd-tab-panel" data-panel="voice" style="display:none;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎙 Voice Welcome</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">Position locked · Always second</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Welcome Text</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Coming next — edit welcome text</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Voice Recording</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px dashed rgba(255,255,255,0.12);border-radius:6px;padding:16px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.65);font-family:'Inter',sans-serif;">🎙 Record or upload audio — coming next</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Edit the voice section shown on your live page.</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Section Title</label>
+          <input id="voice-input-title" type="text" placeholder="Voice Welcome" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Description</label>
+          <textarea id="voice-input-desc" rows="2" placeholder="A personal welcome from us…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;resize:vertical;font-family:inherit;"></textarea></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Button Label</label>
+          <input id="voice-input-btn" type="text" placeholder="Play" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:.72rem;color:#f0f4f8;">Show Voice Section</div>
+            <button id="voice-enabled-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
           </div>
         </div>
-        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);">Voice editing coming in next step</div>
       </div>
 
       <!-- AI -->
       <div class="sqd-tab-panel" data-panel="ai" style="display:none;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🤖 AI Assistant</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">Position locked · Always third</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">AI Greeting</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Coming next — edit AI greeting</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Assistant Tone</div>
-            <div style="background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 11px;font-size:.75rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Friendly · Professional · Casual</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Edit the AI chat section shown on your live page.</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Section Title</label>
+          <input id="ai-input-title" type="text" placeholder="AI Assistant" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Description</label>
+          <textarea id="ai-input-desc" rows="2" placeholder="Ask me anything about us…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.72rem;color:#f0f4f8;outline:none;resize:vertical;font-family:inherit;"></textarea></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Chat Placeholder</label>
+          <input id="ai-input-placeholder" type="text" placeholder="Ask a question…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:.72rem;color:#f0f4f8;">Show AI Section</div>
+            <button id="ai-enabled-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
           </div>
         </div>
-        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);">AI editing coming in next step</div>
       </div>
 
       <!-- LOOP -->
@@ -1044,7 +1046,15 @@ window.QRAIVY_EDITOR_STATE = {
   pageName: '', slug: '', dirty: false,
   hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' },
   buttons: [],
-  loop: { title: 'Stay in the loop', description: '', emailPlaceholder: 'your@email.com', buttonLabel: 'Subscribe →', showWalletButtons: true }
+  loop: { title: 'Stay in the loop', description: '', emailPlaceholder: 'your@email.com', buttonLabel: 'Subscribe →', showWalletButtons: true },
+  sections: {
+    hero:  { enabled: true, title: '', subtitle: '', badge: '', logoText: '', logoUrl: '' },
+    voice: { enabled: true, title: 'Voice Welcome', description: '', buttonLabel: 'Play' },
+    ai:    { enabled: true, title: 'AI Assistant', description: '', placeholder: 'Ask a question…' },
+    loop:  { enabled: true, title: 'Stay in the loop', description: '', emailPlaceholder: 'your@email.com', buttonLabel: 'Subscribe →' },
+    footer:{ enabled: true, businessName: '', footerText: '', footerLink: '' },
+    buttons: []
+  }
 };
 
 (function() {
@@ -1069,7 +1079,7 @@ window.QRAIVY_EDITOR_STATE = {
         useCase: state.useCase || 'restaurant',
         brandColor: state.brandColor || '#ff5a1f',
         logoUrl: state.logoUrl || '',
-        sections: { buttons: (state.buttons || []) }
+        sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []) })
       };
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
@@ -1140,6 +1150,92 @@ window.QRAIVY_EDITOR_STATE = {
     });
   }
   wirePublishBtns();
+
+  // ── Wire Voice inputs ──────────────────────────────────────────────
+  (function() {
+    function sync() {
+      var s = window.QRAIVY_EDITOR_STATE.sections.voice;
+      var t=document.getElementById('voice-input-title');
+      var d=document.getElementById('voice-input-desc');
+      var b=document.getElementById('voice-input-btn');
+      if(t) s.title=t.value;
+      if(d) s.description=d.value;
+      if(b) s.buttonLabel=b.value;
+      markDirty();
+    }
+    ['voice-input-title','voice-input-desc','voice-input-btn'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.addEventListener('input',sync);
+    });
+    var tog=document.getElementById('voice-enabled-toggle');
+    if(tog) tog.addEventListener('click',function(){
+      var s=window.QRAIVY_EDITOR_STATE.sections.voice;
+      s.enabled=!s.enabled;
+      tog.textContent=s.enabled?'On':'Off';
+      tog.style.background=s.enabled?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      tog.style.color=s.enabled?'#ff5a1f':'rgba(240,244,248,0.5)';
+      markDirty();
+    });
+    // hydrate
+    var saved=window.QRAIVY_EDITOR_STATE.sections.voice;
+    if(document.getElementById('voice-input-title')) document.getElementById('voice-input-title').value=saved.title||'';
+    if(document.getElementById('voice-input-desc')) document.getElementById('voice-input-desc').value=saved.description||'';
+    if(document.getElementById('voice-input-btn')) document.getElementById('voice-input-btn').value=saved.buttonLabel||'';
+  })();
+
+  // ── Wire AI inputs ─────────────────────────────────────────────────
+  (function() {
+    function sync() {
+      var s = window.QRAIVY_EDITOR_STATE.sections.ai;
+      var t=document.getElementById('ai-input-title');
+      var d=document.getElementById('ai-input-desc');
+      var p=document.getElementById('ai-input-placeholder');
+      if(t) s.title=t.value;
+      if(d) s.description=d.value;
+      if(p) s.placeholder=p.value;
+      markDirty();
+    }
+    ['ai-input-title','ai-input-desc','ai-input-placeholder'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.addEventListener('input',sync);
+    });
+    var tog=document.getElementById('ai-enabled-toggle');
+    if(tog) tog.addEventListener('click',function(){
+      var s=window.QRAIVY_EDITOR_STATE.sections.ai;
+      s.enabled=!s.enabled;
+      tog.textContent=s.enabled?'On':'Off';
+      tog.style.background=s.enabled?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      tog.style.color=s.enabled?'#ff5a1f':'rgba(240,244,248,0.5)';
+      markDirty();
+    });
+    var saved=window.QRAIVY_EDITOR_STATE.sections.ai;
+    if(document.getElementById('ai-input-title')) document.getElementById('ai-input-title').value=saved.title||'';
+    if(document.getElementById('ai-input-desc')) document.getElementById('ai-input-desc').value=saved.description||'';
+    if(document.getElementById('ai-input-placeholder')) document.getElementById('ai-input-placeholder').value=saved.placeholder||'';
+  })();
+
+  // ── Wire Loop inputs to sections.loop ─────────────────────────────
+  (function() {
+    function sync() {
+      var s = window.QRAIVY_EDITOR_STATE.sections.loop;
+      var t=document.getElementById('loop-input-title');
+      var d=document.getElementById('loop-input-desc');
+      var e=document.getElementById('loop-input-email-placeholder');
+      var b=document.getElementById('loop-input-btn-label');
+      if(t) s.title=t.value;
+      if(d) s.description=d.value;
+      if(e) s.emailPlaceholder=e.value;
+      if(b) s.buttonLabel=b.value;
+      // also keep legacy state.loop in sync
+      window.QRAIVY_EDITOR_STATE.loop = Object.assign({}, window.QRAIVY_EDITOR_STATE.loop, {
+        title: s.title, description: s.description,
+        emailPlaceholder: s.emailPlaceholder, buttonLabel: s.buttonLabel
+      });
+      markDirty();
+    }
+    ['loop-input-title','loop-input-desc','loop-input-email-placeholder','loop-input-btn-label'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.addEventListener('input',sync);
+    });
+  })();
+
   window.addEventListener('beforeunload', function(e) {
     if (window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.dirty) {
       e.preventDefault();

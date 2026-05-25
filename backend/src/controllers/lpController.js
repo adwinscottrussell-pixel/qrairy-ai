@@ -142,14 +142,19 @@ function renderLP(page) {
   const accentBorder = `rgba(${rgb},0.28)`;
   const accentGlow   = `rgba(${rgb},0.4)`;
 
-  // Parse stored buttons from page.sections JSON
+  // Parse stored sections JSON
   let storedButtons = [];
+  let storedSections = {};
   if (page.sections) {
     try {
-      const stored = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
-      if (stored && Array.isArray(stored.buttons)) storedButtons = stored.buttons;
+      storedSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
+      if (storedSections && Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
     } catch(_) {}
   }
+  const sv = storedSections.voice  || {};
+  const sa = storedSections.ai     || {};
+  const sl = storedSections.loop   || {};
+  const sf = storedSections.footer || {};
   const buttonsHTML = storedButtons.filter(b => b.active !== false).map(b => {
     const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
     const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
@@ -418,7 +423,7 @@ a{color:inherit;text-decoration:none}
       </div>
       <div class="lp-chat-msgs" id="chatMsgs"></div>
       <div class="lp-chat-input-row">
-        <input class="lp-chat-input" id="chatInput" type="text" placeholder="Ask a question..." />
+        <input class="lp-chat-input" id="chatInput" type="text" placeholder="${sa.placeholder || 'Ask a question...'}" />
         <button class="lp-chat-send" id="chatSend">&#10148;</button>
       </div>
     </div>
@@ -440,11 +445,11 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
     </div>
-    <h3 class="lp-sub-title">Stay in the loop</h3>
-    <p class="lp-sub-text">Subscribe for updates, exclusive offers and early access from ${bizName}.</p>
+    <h3 class="lp-sub-title">${sl.title || 'Stay in the loop'}</h3>
+    <p class="lp-sub-text">${sl.description || ('Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form">
-      <input class="lp-sub-input" type="email" placeholder="your@email.com" />
-      <button class="lp-sub-btn">Subscribe &rarr;</button>
+      <input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" />
+      <button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button>
     </div>
     <div class="lp-wallet-btns">
       <button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button>
