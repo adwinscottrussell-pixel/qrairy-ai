@@ -1435,6 +1435,9 @@
     function setType(type) {
       selectedType = type;
       if (type === 'restaurant') document.getElementById('businessName').placeholder = "e.g. Joe's Coffee Shop — required for AI page";
+      document.querySelectorAll('.qr-type-card').forEach(function(c) { c.classList.remove('selected'); });
+      var clicked = document.querySelector('.qr-type-card[onclick*="' + type + '"]');
+      if (clicked) clicked.classList.add('selected');
     }
 
     document.getElementById('generateBtn').addEventListener('click', () => {
