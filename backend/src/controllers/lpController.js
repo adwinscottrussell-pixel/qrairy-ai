@@ -449,15 +449,17 @@ ${(function() {
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
   <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>`;
-  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, loop: loopHTML, footer: footerBlock };
-  return sectionOrder.map(function(k){ return sectionMap[k] || ''; }).join('\n');
   const ctaHTML = `<section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
   <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
 </section>
 <!-- Business Info -->
 ${sectionsHTML}`;
-  return [...sectionOrder.map(function(k){ return sectionMap[k] || ''; }), ctaHTML].join('\n');
+  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, loop: loopHTML, footer: footerBlock };
+  const orderedSections = sectionOrder.map(function(k){ return sectionMap[k] || ''; });
+  const footerIdx = orderedSections.length - 1;
+  orderedSections.splice(footerIdx, 0, ctaHTML);
+  return orderedSections.join('\n');
 })()}
 
 <!-- Growth modal -->
