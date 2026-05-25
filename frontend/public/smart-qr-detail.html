@@ -1588,20 +1588,20 @@ window.QRAIVY_EDITOR_STATE = {
 
   window.renderButtonsFn = renderButtons;
 
-  // ── Wire global save button ────────────────────────────────────────────
+  // ── Wire global save + publish buttons ───────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    var globalSave = document.getElementById('sqd-save-draft-btn');
-    if (globalSave) {
-      var ns = globalSave.cloneNode(true);
-      globalSave.parentNode.replaceChild(ns, globalSave);
-      ns.addEventListener('click', function() {
+    document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
         try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
         setStatus('Saved just now ✓', '#22d47e');
-        var gs = document.getElementById('sqd-save-global-status');
-        if (gs) { gs.textContent = 'Saved ✓'; gs.style.color = '#22d47e'; setTimeout(function(){ gs.textContent='No changes'; gs.style.color=''; }, 3000); }
+        window.QRAIVY_EDITOR_STATE.dirty = false;
         setTimeout(function(){ setStatus('No changes'); }, 3000);
       });
-    }
+    });
+    ['sqd-publish-btn','sqd-publish-btn-2'].forEach(function(id){
+      var btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', function(){ if(window.publishPage) window.publishPage(); });
+    });
   });
 
   // ── DEFAULT_BUTTONS fallback ───────────────────────────────────────────
