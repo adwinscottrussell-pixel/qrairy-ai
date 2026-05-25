@@ -142,6 +142,20 @@ function renderLP(page) {
   const accentBorder = `rgba(${rgb},0.28)`;
   const accentGlow   = `rgba(${rgb},0.4)`;
 
+  // Parse stored buttons from page.sections JSON
+  let storedButtons = [];
+  if (page.sections) {
+    try {
+      const stored = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
+      if (stored && Array.isArray(stored.buttons)) storedButtons = stored.buttons;
+    } catch(_) {}
+  }
+  const buttonsHTML = storedButtons.filter(b => b.active !== false).map(b => {
+    const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
+    const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
+    return `<a href="${url}" target="_blank" rel="noopener" class="${cls}">${b.label || 'Learn More'}</a>`;
+  }).join('\n');
+
   const sectionsHTML = content.sections.map(sec => {
     const items = (sec.items || []).map(item =>
       `<div class="lp-item"><span class="lp-dot" style="background:${accent}"></span><span>${tmpl(item)}</span></div>`
@@ -445,6 +459,7 @@ a{color:inherit;text-decoration:none}
 
 <!-- Business Info -->
 ${sectionsHTML}
+${buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : ''}
 
 <!-- Growth modal -->
 <div id="qrGrowthModal">

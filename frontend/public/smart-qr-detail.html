@@ -351,6 +351,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
         <span style="font-size:.85rem;font-weight:700;color:#f0f4f8;">✏️ Page Section Editor</span>
         <div style="display:flex;gap:8px;">
+          <button id="sqd-publish-btn" style="padding:6px 14px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.02em;">Publish</button>
           <button id="sqd-save-draft-btn" style="padding:6px 14px;background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);color:#ff5a1f;border-radius:8px;font-size:.68rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Save Draft</button>
           <button id="sqd-exit-edit-btn" style="padding:6px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(240,236,224,0.86);border-radius:8px;font-size:.68rem;cursor:pointer;font-family:'Inter',sans-serif;">Exit Editor</button>
         </div>
@@ -421,6 +422,7 @@
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button id="sqd-publish-btn-2" style="flex:1;padding:8px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">Publish</button>
       <button id="sqd-save-draft-btn" style="flex:1;padding:8px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">💾 Save Draft</button>
       <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:70px;text-align:right;">No changes</div>
     </div>
@@ -1049,6 +1051,39 @@ window.QRAIVY_EDITOR_STATE = {
   var DRAFT_KEY_PREFIX = 'qraivy_editor_draft_';
   function getDraftKey() { return DRAFT_KEY_PREFIX + (window.QRAIVY_EDITOR_STATE.slug || 'demo'); }
   function saveDraft() { try { localStorage.setItem(getDraftKey(), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {} }
+  async function publishPage() {
+    var state = window.QRAIVY_EDITOR_STATE;
+    var slug = state.slug;
+    if (!slug) { setStatus('No slug — cannot publish', '#f87171'); return; }
+    setStatus('Publishing…', '#ff5a1f');
+    try {
+      var tok = null;
+      if (window.Clerk && window.Clerk.session) tok = await window.Clerk.session.getToken();
+      var headers = { 'Content-Type': 'application/json' };
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+      var payload = {
+        slug: slug,
+        businessName: state.pageName || state.hero.title || slug,
+        websiteUrl: state.websiteUrl || '',
+        useCase: state.useCase || 'restaurant',
+        brandColor: state.brandColor || '#ff5a1f',
+        logoUrl: state.logoUrl || '',
+        sections: { buttons: (state.buttons || []) }
+      };
+      var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Publish failed');
+      saveDraft();
+      setStatus('Published just now ✓', '#22d47e');
+      window.QRAIVY_EDITOR_STATE.dirty = false;
+      // Reload LIVE iframe
+      var iframe = document.getElementById('sqd-live-iframe') || document.querySelector('iframe');
+      if (iframe) { var src = iframe.src; iframe.src = ''; setTimeout(function(){ iframe.src = src; }, 100); }
+      setTimeout(function(){ setStatus('No changes'); }, 4000);
+    } catch(e) {
+      setStatus('Publish failed: ' + e.message, '#f87171');
+    }
+  }
   function loadDraft(slug) { try { var r = localStorage.getItem(DRAFT_KEY_PREFIX+(slug||'demo')); return r?JSON.parse(r):null; } catch(e) { return null; } }
   function setStatus(msg, color) { var el=document.getElementById('hero-save-status'); if(el){el.textContent=msg;el.style.color=color||'rgba(240,244,248,0.50)';} }
   function updateDraftSummary() {
@@ -1097,6 +1132,13 @@ window.QRAIVY_EDITOR_STATE = {
     window.QRAIVY_EDITOR_STATE.dirty=false; updateDraftSummary();
     setTimeout(function(){setStatus('No changes');},3000);
   });
+  function wirePublishBtns() {
+    ['sqd-publish-btn','sqd-publish-btn-2'].forEach(function(id){
+      var btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', function(){ publishPage(); });
+    });
+  }
+  wirePublishBtns();
   window.QRAIVY_HERO_EDITOR = {
     init: function(pending) {
       var slug=pending.slug||'demo';
