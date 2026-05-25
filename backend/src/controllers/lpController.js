@@ -451,13 +451,14 @@ ${(function() {
 </footer>`;
   const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, loop: loopHTML, footer: footerBlock };
   return sectionOrder.map(function(k){ return sectionMap[k] || ''; }).join('\n');
-})()}
-<section class="lp-cta-section">
+  const ctaHTML = `<section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
   <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
 </section>
 <!-- Business Info -->
-${sectionsHTML}
+${sectionsHTML}`;
+  return [...sectionOrder.map(function(k){ return sectionMap[k] || ''; }), ctaHTML].join('\n');
+})()}
 
 <!-- Growth modal -->
 <div id="qrGrowthModal">
