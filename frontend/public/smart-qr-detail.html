@@ -1338,15 +1338,18 @@ window.QRAIVY_EDITOR_STATE = {
     var order = (window.QRAIVY_EDITOR_STATE.sections.order || ['hero','voice','ai','buttons','loop','footer']).slice();
     list.innerHTML = '';
     order.forEach(function(key, idx) {
+      (function(key, idx) {
       var sec = window.QRAIVY_EDITOR_STATE.sections[key] || {};
       var enabled = sec.enabled !== false;
+      var locked = (key === 'hero' || key === 'voice' || key === 'ai');
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;';
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;background:' + (locked ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)') + ';border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:9px 12px;opacity:' + (locked ? '0.6' : '1') + ';';
 
       // Label
       var label = document.createElement('div');
       label.style.cssText = 'flex:1;font-size:.75rem;font-weight:500;color:' + (enabled ? '#f0f4f8' : 'rgba(240,244,248,0.35)') + ';';
       label.textContent = SECTION_LABELS[key] || key;
+      if (locked) { var lockSpan = document.createElement('span'); lockSpan.textContent = ' 🔒'; lockSpan.style.fontSize='.6rem'; label.appendChild(lockSpan); }
       row.appendChild(label);
 
       // Status badge
@@ -1356,31 +1359,34 @@ window.QRAIVY_EDITOR_STATE = {
       badge.textContent = enabled ? 'On' : 'Off';
       row.appendChild(badge);
 
-      // Up button
-      var upBtn = document.createElement('button');
-      upBtn.textContent = '↑';
-      upBtn.disabled = idx === 0;
-      upBtn.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:.7rem;cursor:pointer;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);color:' + (idx===0?'rgba(240,244,248,0.2)':'#f0f4f8') + ';';
-      upBtn.addEventListener('click', function() {
-        var o = window.QRAIVY_EDITOR_STATE.sections.order;
-        var tmp = o[idx-1]; o[idx-1] = o[idx]; o[idx] = tmp;
-        markDirty(); renderOrderList(); reloadIframePreview();
-      });
-      row.appendChild(upBtn);
+      if (!locked) {
+        // Up button
+        var upBtn = document.createElement('button');
+        upBtn.textContent = '↑';
+        upBtn.disabled = idx === 0;
+        upBtn.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:.7rem;cursor:pointer;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);color:' + (idx===0?'rgba(240,244,248,0.2)':'#f0f4f8') + ';';
+        upBtn.addEventListener('click', (function(i){ return function() {
+          var o = window.QRAIVY_EDITOR_STATE.sections.order;
+          var tmp = o[i-1]; o[i-1] = o[i]; o[i] = tmp;
+          markDirty(); renderOrderList(); reloadIframePreview();
+        };})(idx));
+        row.appendChild(upBtn);
 
-      // Down button
-      var downBtn = document.createElement('button');
-      downBtn.textContent = '↓';
-      downBtn.disabled = idx === order.length - 1;
-      downBtn.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:.7rem;cursor:pointer;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);color:' + (idx===order.length-1?'rgba(240,244,248,0.2)':'#f0f4f8') + ';';
-      downBtn.addEventListener('click', function() {
-        var o = window.QRAIVY_EDITOR_STATE.sections.order;
-        var tmp = o[idx+1]; o[idx+1] = o[idx]; o[idx] = tmp;
-        markDirty(); renderOrderList(); reloadIframePreview();
-      });
-      row.appendChild(downBtn);
+        // Down button
+        var downBtn = document.createElement('button');
+        downBtn.textContent = '↓';
+        downBtn.disabled = idx === order.length - 1;
+        downBtn.style.cssText = 'padding:3px 8px;border-radius:5px;font-size:.7rem;cursor:pointer;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);color:' + (idx===order.length-1?'rgba(240,244,248,0.2)':'#f0f4f8') + ';';
+        downBtn.addEventListener('click', (function(i){ return function() {
+          var o = window.QRAIVY_EDITOR_STATE.sections.order;
+          var tmp = o[i+1]; o[i+1] = o[i]; o[i] = tmp;
+          markDirty(); renderOrderList(); reloadIframePreview();
+        };})(idx));
+        row.appendChild(downBtn);
+      }
 
       list.appendChild(row);
+      })(key, idx);
     });
   }
 
