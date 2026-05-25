@@ -151,6 +151,7 @@ function renderLP(page) {
       if (storedSections && Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
     } catch(_) {}
   }
+  const sh = storedSections.hero   || {};
   const sv = storedSections.voice  || {};
   const sa = storedSections.ai     || {};
   const sl = storedSections.loop   || {};
@@ -385,13 +386,13 @@ a{color:inherit;text-decoration:none}
   <div class="lp-nav-pill"><span class="lp-nav-dot"></span>AI Powered</div>
 </nav>
 <section class="lp-hero">
-  <div class="lp-hero-eyebrow">&#10022; Qraivy Smart Page</div>
-  <h1 class="lp-hero-title">${headline}</h1>
-  <p class="lp-hero-sub">${sub}</p>
+  <div class="lp-hero-eyebrow">&#10022; ${sh.badge || 'Qraivy Smart Page'}</div>
+  <h1 class="lp-hero-title">${sh.title || headline}</h1>
+  <p class="lp-hero-sub">${sh.subtitle || sub}</p>
 </section>
 
 <!-- AI Concierge Zone -->
-<section class="lp-voice-section">
+<section class="lp-voice-section" style="${sv.enabled === false ? 'display:none' : ''}">
   <div class="lp-voice-title">&#9658; Welcome from ${bizName}</div>
   <div class="lp-voice-player" id="voicePlayer">
     <button class="lp-voice-btn" id="voiceBtn" aria-label="Play welcome message">&#9654;</button>
@@ -405,7 +406,7 @@ a{color:inherit;text-decoration:none}
   </div>
 </section>
 
-<section class="lp-chat-section" id="aiSection">
+<section class="lp-chat-section" id="aiSection" style="${sa.enabled === false ? 'display:none' : ''}">
   <div class="lp-chat-collapsed" id="chatCollapsed">
     <div class="lp-chat-collapsed-dot"></div>
     <span class="lp-chat-collapsed-label">AI Assistant &mdash; Online</span>
@@ -430,7 +431,7 @@ a{color:inherit;text-decoration:none}
   </div>
 </section>
 
-<section class="lp-subscribe-section lp-subscribe-prominent">
+<section class="lp-subscribe-section lp-subscribe-prominent" style="${sl.enabled === false ? 'display:none' : ''}">
   <div class="lp-subscribe-card">
     <div class="lp-sub-glow"></div>
     <div class="lp-wallet-preview">
@@ -504,14 +505,14 @@ ${buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + butto
     <div class="qraivy-growth-sub">Launch an AI-powered landing page in under 60 seconds.</div>
   </div>
 </div>
-<footer class="lp-footer">
+${sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand">
     <div class="lp-footer-Q">Q</div>
-    <span class="lp-footer-name">${bizName}</span>
+    <span class="lp-footer-name">${sf.businessName || bizName}</span>
   </div>
-  <div class="lp-footer-url">api.qraivy.com/lp/${slug}</div>
-  <div class="lp-footer-powered">Powered by <a href="https://qraivy.com" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
-</footer>
+  <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
+  <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
+</footer>`}
 <script>
 (function(){
   var playing = false;

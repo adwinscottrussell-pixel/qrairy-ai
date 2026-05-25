@@ -417,6 +417,7 @@
       <button class="sqd-tab" data-tab="featured"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⭐ Featured</button>
       <button class="sqd-tab" data-tab="info"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">ℹ️ Info</button>
       <button class="sqd-tab" data-tab="appearance" style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🎨 Style</button>
+      <button class="sqd-tab" data-tab="footer"       style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">Footer</button>
       <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⚙️ Settings</button>
     </div>
 
@@ -579,6 +580,12 @@
             Subscriber collection and wallet passes require activation.<br>Draft changes saved locally.
           </div>
 
+          <!-- Loop enable toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:.72rem;color:#f0f4f8;">Show Subscribe Section</div>
+            <button id="loop-enabled-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+          </div>
+
           <!-- Loop save status -->
           <div id="loop-save-status" style="font-size:.62rem;color:rgba(240,244,248,0.50);text-align:center;">No changes</div>
         </div>
@@ -651,6 +658,24 @@
       </div>
 
       <!-- SETTINGS -->
+      <!-- FOOTER TAB (injected) -->
+      <div class="sqd-tab-panel" data-panel="footer" style="display:none;">
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔻 Footer</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Customize the footer shown on your live page.</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Business Name</label>
+          <input id="footer-input-bizname" type="text" placeholder="Your Business Name" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Footer Text / URL</label>
+          <input id="footer-input-text" type="text" placeholder="api.qraivy.com/lp/your-slug" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Powered By Link</label>
+          <input id="footer-input-link" type="text" placeholder="https://qraivy.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:.72rem;color:#f0f4f8;">Show Footer</div>
+            <button id="footer-enabled-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+          </div>
+        </div>
+      </div>
+
       <div class="sqd-tab-panel" data-panel="settings" style="display:none;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⚙️ Page Settings</div>
         <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">URL, SEO, branding</div>
@@ -1129,6 +1154,9 @@ window.QRAIVY_EDITOR_STATE = {
       s.title=ti?ti.value:s.title; s.subtitle=si?si.value:s.subtitle;
       s.badgeText=bi?bi.value:s.badgeText; s.logoInitial=li?li.value:s.logoInitial;
       if(lp&&li) lp.textContent=(li.value||'A').toUpperCase().slice(0,2);
+      // sync to sections.hero too
+      var sh = window.QRAIVY_EDITOR_STATE.sections.hero;
+      if(sh) { sh.title=ti?ti.value:sh.title; sh.subtitle=si?si.value:sh.subtitle; sh.badge=bi?bi.value:sh.badge; sh.logoText=li?li.value:sh.logoText; }
       window.QRAIVY_EDITOR_STATE.dirty=true;
       updateDraftSummary(); setStatus('Unsaved changes','#ff5a1f');
     }
@@ -1212,6 +1240,19 @@ window.QRAIVY_EDITOR_STATE = {
     if(document.getElementById('ai-input-placeholder')) document.getElementById('ai-input-placeholder').value=saved.placeholder||'';
   })();
 
+  // ── Wire Hero enabled toggle ───────────────────────────────────────
+  (function() {
+    var tog = document.getElementById('hero-enabled-toggle');
+    if(tog) tog.addEventListener('click', function(){
+      var s = window.QRAIVY_EDITOR_STATE.sections.hero;
+      s.enabled = !s.enabled;
+      tog.textContent = s.enabled ? 'On' : 'Off';
+      tog.style.background = s.enabled ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+      tog.style.color = s.enabled ? '#ff5a1f' : 'rgba(240,244,248,0.5)';
+      markDirty();
+    });
+  })();
+
   // ── Wire Loop inputs to sections.loop ─────────────────────────────
   (function() {
     function sync() {
@@ -1233,6 +1274,41 @@ window.QRAIVY_EDITOR_STATE = {
     }
     ['loop-input-title','loop-input-desc','loop-input-email-placeholder','loop-input-btn-label'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.addEventListener('input',sync);
+    });
+    var loopTog = document.getElementById('loop-enabled-toggle');
+    if(loopTog) loopTog.addEventListener('click', function(){
+      var s = window.QRAIVY_EDITOR_STATE.sections.loop;
+      s.enabled = !s.enabled;
+      loopTog.textContent = s.enabled ? 'On' : 'Off';
+      loopTog.style.background = s.enabled ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+      loopTog.style.color = s.enabled ? '#ff5a1f' : 'rgba(240,244,248,0.5)';
+      markDirty();
+    });
+  })();
+
+  // ── Wire Footer inputs ─────────────────────────────────────────────
+  (function() {
+    function syncFooter() {
+      var s = window.QRAIVY_EDITOR_STATE.sections.footer;
+      var bn = document.getElementById('footer-input-bizname');
+      var ft = document.getElementById('footer-input-text');
+      var fl = document.getElementById('footer-input-link');
+      if(bn) s.businessName = bn.value;
+      if(ft) s.footerText = ft.value;
+      if(fl) s.footerLink = fl.value;
+      markDirty();
+    }
+    ['footer-input-bizname','footer-input-text','footer-input-link'].forEach(function(id){
+      var el = document.getElementById(id); if(el) el.addEventListener('input', syncFooter);
+    });
+    var tog = document.getElementById('footer-enabled-toggle');
+    if(tog) tog.addEventListener('click', function(){
+      var s = window.QRAIVY_EDITOR_STATE.sections.footer;
+      s.enabled = !s.enabled;
+      tog.textContent = s.enabled ? 'On' : 'Off';
+      tog.style.background = s.enabled ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+      tog.style.color = s.enabled ? '#ff5a1f' : 'rgba(240,244,248,0.5)';
+      markDirty();
     });
   })();
 
