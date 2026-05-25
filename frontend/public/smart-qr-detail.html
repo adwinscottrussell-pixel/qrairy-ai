@@ -231,7 +231,7 @@
   <!-- Center -->
   <div style="flex:1;text-align:center;">
     <div id="sqd-topbar-name" style="font-size:.88rem;font-weight:600;color:#f0f4f8;">Loading…</div>
-    <div style="font-size:.6rem;color:rgba(240,244,248,0.72);margin-top:1px;">Smart QR Editor</div>
+    <div id="sqd-topbar-mode" style="font-size:.6rem;color:rgba(240,244,248,0.72);margin-top:1px;">Smart QR</div>
   </div>
 
   <!-- Right -->
@@ -243,7 +243,56 @@
   </div>
 </div>
 
+<!-- MANAGE OVERVIEW PANEL -->
+<div id="sqd-manage-panel" style="max-width:780px;margin:80px auto 40px;padding:0 20px;">
+
+  <!-- Header row -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div id="sqd-ov-name" style="font-size:1.4rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">Loading…</div>
+      <div id="sqd-ov-url" style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-top:4px;font-family:'DM Mono',monospace;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(34,212,126,0.1);border:0.5px solid rgba(34,212,126,0.25);border-radius:100px;padding:4px 12px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:#22d47e;"></div>
+      <span style="font-size:.62rem;font-weight:700;color:#22d47e;letter-spacing:.08em;">LIVE</span>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
+      <div id="sqd-ov-scans" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
+      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;">Total Scans</div>
+    </div>
+    <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
+      <div id="sqd-ov-subs" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
+      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;">Subscribers</div>
+    </div>
+    <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
+      <div id="sqd-ov-cvr" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
+      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;">CVR</div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;">
+    <a id="sqd-ov-view-btn" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;text-decoration:none;">🌐 View Live Page</a>
+    <button id="sqd-ov-edit-btn" onclick="window.QRAIVY_MANAGE.openEditor()" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:#ff5a1f;border:none;border-radius:10px;color:#fff;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;">✏️ Edit Smart Landing Page</button>
+    <button id="sqd-ov-analytics-btn" onclick="window.location.href='analytics.html'" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;cursor:pointer;">↗ Analytics</button>
+  </div>
+
+  <!-- Danger zone -->
+  <div style="border:0.5px solid rgba(255,80,80,0.2);border-radius:14px;padding:20px 24px;background:rgba(255,80,80,0.03);">
+    <div style="font-size:.75rem;font-weight:600;color:rgba(240,244,248,0.7);margin-bottom:8px;letter-spacing:.04em;">DANGER ZONE</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);">Permanently delete this Smart QR and all its data. This cannot be undone.</div>
+      <button id="sqd-ov-delete-btn" onclick="window.QRAIVY_MANAGE.confirmDelete()" style="padding:8px 18px;background:transparent;border:0.5px solid rgba(255,80,80,0.5);border-radius:8px;color:#ff5050;font-size:.72rem;font-family:'Inter',sans-serif;cursor:pointer;">🗑 Delete QR</button>
+    </div>
+  </div>
+</div>
+
 <!-- MAIN EDITOR LAYOUT -->
+<div id="sqd-editor-layout-wrap" style="display:none;">
 <div style="
   display:grid;
   grid-template-columns:1fr 300px;
@@ -1370,4 +1419,151 @@ window.QRAIVY_EDITOR_STATE = {
 })();
 })();
 </script>
+</div><!-- /sqd-editor-layout-wrap -->
+
+<script>
+// ── QRAIVY MANAGE CONTROLLER ─────────────────────────────────────────────
+(function() {
+  var API_BASE = 'https://api.qraivy.com';
+
+  function getSlug() {
+    var p = new URLSearchParams(window.location.search);
+    return p.get('slug') || '';
+  }
+
+  function getToken() {
+    return window.Clerk ? window.Clerk.session && window.Clerk.session.lastActiveToken && window.Clerk.session.lastActiveToken.getRawString() : null;
+  }
+
+  function showManage() {
+    var mp = document.getElementById('sqd-manage-panel');
+    var ew = document.getElementById('sqd-editor-layout-wrap');
+    var tb = document.getElementById('sqd-topbar-mode');
+    if (mp) mp.style.display = 'block';
+    if (ew) ew.style.display = 'none';
+    if (tb) tb.textContent = 'Smart QR';
+  }
+
+  function showEditor() {
+    var mp = document.getElementById('sqd-manage-panel');
+    var ew = document.getElementById('sqd-editor-layout-wrap');
+    var tb = document.getElementById('sqd-topbar-mode');
+    if (mp) mp.style.display = 'none';
+    if (ew) ew.style.display = '';
+    if (tb) tb.textContent = 'Smart QR Editor';
+  }
+
+  function populateOverview() {
+    var slug = getSlug();
+    if (!slug) return;
+    var lpUrl = API_BASE + '/lp/' + slug;
+
+    // Try to get data from the dashboard API
+    var token = null;
+    if (window.Clerk && window.Clerk.session) {
+      window.Clerk.session.getToken().then(function(t) { token = t; fetchData(token); });
+    } else {
+      // fallback: use slug-based LP data endpoint
+      fetchData(null);
+    }
+
+    function fetchData(tok) {
+      var headers = { 'Content-Type': 'application/json' };
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+
+      fetch(API_BASE + '/qr/dashboard', { headers: headers })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var cards = (data.dashboard || []);
+          var card = cards.find(function(c) { return c.slug === slug; });
+          if (!card) return;
+
+          var scans = card.totalScans || 0;
+          var subs  = card.totalSubscribers || 0;
+          var cvr   = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
+
+          var nameEl  = document.getElementById('sqd-ov-name');
+          var urlEl   = document.getElementById('sqd-ov-url');
+          var scansEl = document.getElementById('sqd-ov-scans');
+          var subsEl  = document.getElementById('sqd-ov-subs');
+          var cvrEl   = document.getElementById('sqd-ov-cvr');
+          var viewBtn = document.getElementById('sqd-ov-view-btn');
+
+          if (nameEl)  nameEl.textContent  = card.businessName || slug;
+          if (urlEl)   urlEl.textContent   = 'api.qraivy.com/lp/' + slug;
+          if (scansEl) scansEl.textContent = scans;
+          if (subsEl)  subsEl.textContent  = subs;
+          if (cvrEl)   cvrEl.textContent   = cvr + '%';
+          if (viewBtn) viewBtn.href = lpUrl;
+
+          // Also store qrId for delete
+          window._sqd_qrId = card.id;
+        })
+        .catch(function(e) { console.warn('[MANAGE] dashboard fetch failed', e); });
+    }
+
+    // Set view button even before data loads
+    var vb = document.getElementById('sqd-ov-view-btn');
+    if (vb) vb.href = lpUrl;
+  }
+
+  window.QRAIVY_MANAGE = {
+    openEditor: function() {
+      showEditor();
+      // Init editor if not already done
+      var editBtn = document.getElementById('sqd-edit-btn');
+      if (editBtn && typeof initEditor === 'function') {
+        initEditor();
+      }
+    },
+    confirmDelete: function() {
+      var name = (document.getElementById('sqd-ov-name') || {}).textContent || 'this QR';
+      if (!confirm('Delete "' + name + '"? This will permanently remove the QR code, all scan data, and subscriber data. This cannot be undone.')) return;
+      var qrId = window._sqd_qrId;
+      if (!qrId) { alert('QR ID not loaded yet. Please wait a moment and try again.'); return; }
+
+      var headers = { 'Content-Type': 'application/json' };
+      if (window.Clerk && window.Clerk.session) {
+        window.Clerk.session.getToken().then(function(tok) {
+          if (tok) headers['Authorization'] = 'Bearer ' + tok;
+          doDelete(qrId, headers);
+        });
+      } else {
+        doDelete(qrId, headers);
+      }
+    }
+  };
+
+  function doDelete(qrId, headers) {
+    var btn = document.getElementById('sqd-ov-delete-btn');
+    if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+
+    fetch(API_BASE + '/qr/' + qrId, { method: 'DELETE', headers: headers })
+      .then(function(r) {
+        if (r.ok) {
+          alert('QR code deleted successfully.');
+          window.location.href = 'dashboard.html';
+        } else {
+          return r.json().then(function(d) { throw new Error(d.error || 'Delete failed'); });
+        }
+      })
+      .catch(function(e) {
+        alert('Delete failed: ' + e.message);
+        if (btn) { btn.textContent = '🗑 Delete QR'; btn.disabled = false; }
+      });
+  }
+
+  // On load: decide manage vs editor mode
+  document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('edit') === 'true') {
+      showEditor();
+    } else {
+      showManage();
+      populateOverview();
+    }
+  });
+})();
+</script>
+
 </body>
