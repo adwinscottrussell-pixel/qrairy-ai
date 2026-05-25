@@ -301,9 +301,12 @@
 <div id="sqd-editor-layout-wrap" style="display:none;">
 <div style="
   display:grid;
-  grid-template-columns:1fr 300px;
+  grid-template-columns:1fr 380px;
   min-height:calc(100vh - 52px);
   margin-top:52px;
+  max-width:1400px;
+  margin-left:auto;
+  margin-right:auto;
 ">
 
   <!-- LEFT: LIVE PREVIEW -->
@@ -423,9 +426,9 @@
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button id="sqd-publish-btn-2" style="flex:1;padding:8px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">Publish</button>
-      <button id="sqd-save-draft-btn" style="flex:1;padding:8px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">💾 Save Draft</button>
-      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:70px;text-align:right;">No changes</div>
+      <button id="sqd-publish-btn-2" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
+      <button id="sqd-save-draft-btn" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">💾 Save Draft</button>
+      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;">No changes</div>
     </div>
     <!-- Tab content panels -->
     <div id="sqd-tab-content" style="flex:1;overflow-y:auto;padding:16px;padding-bottom:40px;">
