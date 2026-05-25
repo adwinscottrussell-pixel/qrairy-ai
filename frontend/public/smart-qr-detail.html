@@ -1520,19 +1520,47 @@ window.QRAIVY_EDITOR_STATE = {
     },
     confirmDelete: function() {
       var name = (document.getElementById('sqd-ov-name') || {}).textContent || 'this QR';
-      if (!confirm('Delete "' + name + '"? This will permanently remove the QR code, all scan data, and subscriber data. This cannot be undone.')) return;
       var qrId = window._sqd_qrId;
-      if (!qrId) { alert('QR ID not loaded yet. Please wait a moment and try again.'); return; }
-
-      var headers = { 'Content-Type': 'application/json' };
-      if (window.Clerk && window.Clerk.session) {
-        window.Clerk.session.getToken().then(function(tok) {
-          if (tok) headers['Authorization'] = 'Bearer ' + tok;
-          doDelete(qrId, headers);
-        });
-      } else {
-        doDelete(qrId, headers);
-      }
+      if (!qrId) { console.warn('No QR ID'); return; }
+      var panel = document.getElementById('sqd-manage-panel');
+      var old = document.getElementById('sqd-del-box');
+      if (old) { old.remove(); return; }
+      var box = document.createElement('div');
+      box.id = 'sqd-del-box';
+      box.style.cssText = 'margin:16px 0;padding:16px;background:rgba(255,50,50,0.08);border:0.5px solid rgba(255,80,80,0.4);border-radius:10px;font-family:Inter,sans-serif;';
+      box.innerHTML = '<div style="font-size:.75rem;color:#f0f4f8;margin-bottom:10px;">Delete <strong>' + name + '</strong>? This removes the QR code, all scan data and subscribers permanently.</div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '<button id="sqd-del-yes" style="padding:7px 16px;background:#e53e3e;border:none;border-radius:7px;color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">Yes, Delete</button>'
+        + '<button id="sqd-del-no" style="padding:7px 16px;background:rgba(255,255,255,0.07);border:0.5px solid rgba(255,255,255,0.15);border-radius:7px;color:#f0f4f8;font-size:.72rem;cursor:pointer;font-family:Inter,sans-serif;">Cancel</button>'
+        + '</div>';
+      panel.appendChild(box);
+      document.getElementById('sqd-del-no').onclick = function() { box.remove(); };
+      document.getElementById('sqd-del-yes').onclick = function() {
+        box.remove();
+        var btn = document.getElementById('sqd-ov-delete-btn');
+        if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+        var headers = { 'Content-Type': 'application/json' };
+        var doIt = function(h) {
+          fetch('https://api.qraivy.com/qr/' + qrId, { method: 'DELETE', headers: h })
+            .then(function(r) {
+              if (r.ok) { window.location.href = 'dashboard.html'; }
+              else { return r.json().then(function(d) { throw new Error(d.error || 'Delete failed'); }); }
+            })
+            .catch(function(e) {
+              var errBox = document.createElement('div');
+              errBox.style.cssText = 'margin:8px 0;padding:10px;background:rgba(255,50,50,0.1);border:0.5px solid rgba(255,80,80,0.4);border-radius:8px;color:#ff5050;font-size:.72rem;font-family:Inter,sans-serif;';
+              errBox.textContent = 'Delete failed: ' + e.message;
+              panel.appendChild(errBox);
+              if (btn) { btn.textContent = '🗑 Delete QR'; btn.disabled = false; }
+            });
+        };
+        if (window.Clerk && window.Clerk.session) {
+          window.Clerk.session.getToken().then(function(tok) {
+            if (tok) headers['Authorization'] = 'Bearer ' + tok;
+            doIt(headers);
+          });
+        } else { doIt(headers); }
+      };
     }
   };
 
