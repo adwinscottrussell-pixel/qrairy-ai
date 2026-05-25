@@ -1456,55 +1456,57 @@ window.QRAIVY_EDITOR_STATE = {
   function populateOverview() {
     var slug = getSlug();
     if (!slug) return;
-    var lpUrl = API_BASE + '/lp/' + slug;
+    var lpUrl = 'https://api.qraivy.com/lp/' + slug;
 
-    // Try to get data from the dashboard API
-    var token = null;
-    if (window.Clerk && window.Clerk.session) {
-      window.Clerk.session.getToken().then(function(t) { token = t; fetchData(token); });
-    } else {
-      // fallback: use slug-based LP data endpoint
-      fetchData(null);
-    }
+    // Set view button immediately
+    var vb = document.getElementById('sqd-ov-view-btn');
+    if (vb) vb.href = lpUrl;
 
-    function fetchData(tok) {
-      var headers = { 'Content-Type': 'application/json' };
-      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    // Poll for window.QRAIVY_PAGE_DATA which is set by the existing page init
+    var attempts = 0;
+    var timer = setInterval(function() {
+      attempts++;
+      // Read from the existing page's pending data via DOM (topbar name is set by existing JS)
+      var topbarName = document.getElementById('sqd-topbar-name');
+      var name = topbarName ? topbarName.textContent : '';
+      if (!name || name === 'Loading…' || name === 'Your Smart QR') {
+        if (attempts > 30) { clearInterval(timer); } // give up after 3s
+        return;
+      }
+      clearInterval(timer);
 
-      fetch(API_BASE + '/qr/dashboard', { headers: headers })
+      // Fetch LP data directly (same endpoint the page uses)
+      fetch('https://api.qraivy.com/api/lp/' + slug)
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          var cards = (data.dashboard || []);
-          var card = cards.find(function(c) { return c.slug === slug; });
-          if (!card) return;
-
-          var scans = card.totalScans || 0;
-          var subs  = card.totalSubscribers || 0;
-          var cvr   = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
-
           var nameEl  = document.getElementById('sqd-ov-name');
           var urlEl   = document.getElementById('sqd-ov-url');
           var scansEl = document.getElementById('sqd-ov-scans');
           var subsEl  = document.getElementById('sqd-ov-subs');
           var cvrEl   = document.getElementById('sqd-ov-cvr');
-          var viewBtn = document.getElementById('sqd-ov-view-btn');
 
-          if (nameEl)  nameEl.textContent  = card.businessName || slug;
-          if (urlEl)   urlEl.textContent   = 'api.qraivy.com/lp/' + slug;
+          var biz    = data.businessName || name;
+          var scans  = data.scanCount || data.totalScans || 0;
+          var subs   = data.subscriberCount || data.totalSubscribers || 0;
+          var cvr    = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
+
+          if (nameEl)  nameEl.textContent = biz;
+          if (urlEl)   urlEl.textContent  = 'api.qraivy.com/lp/' + slug;
           if (scansEl) scansEl.textContent = scans;
           if (subsEl)  subsEl.textContent  = subs;
           if (cvrEl)   cvrEl.textContent   = cvr + '%';
-          if (viewBtn) viewBtn.href = lpUrl;
 
-          // Also store qrId for delete
-          window._sqd_qrId = card.id;
+          // Store qrId for delete (use data.id or data.qrId)
+          window._sqd_qrId = data.id || data.qrId || null;
         })
-        .catch(function(e) { console.warn('[MANAGE] dashboard fetch failed', e); });
-    }
-
-    // Set view button even before data loads
-    var vb = document.getElementById('sqd-ov-view-btn');
-    if (vb) vb.href = lpUrl;
+        .catch(function() {
+          // Fallback: just use name from topbar, stats stay as dashes
+          var nameEl = document.getElementById('sqd-ov-name');
+          var urlEl  = document.getElementById('sqd-ov-url');
+          if (nameEl) nameEl.textContent = name;
+          if (urlEl)  urlEl.textContent  = 'api.qraivy.com/lp/' + slug;
+        });
+    }, 100);
   }
 
   window.QRAIVY_MANAGE = {
