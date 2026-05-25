@@ -1368,7 +1368,7 @@ window.QRAIVY_EDITOR_STATE = {
         upBtn.addEventListener('click', (function(i){ return function() {
           var o = window.QRAIVY_EDITOR_STATE.sections.order;
           var tmp = o[i-1]; o[i-1] = o[i]; o[i] = tmp;
-          markDirty(); renderOrderList(); reloadIframePreview();
+          window.QRAIVY_EDITOR_STATE.dirty=true; if(window.markDirty) window.markDirty(); renderOrderList(); reloadIframePreview();
         };})(idx));
         row.appendChild(upBtn);
 
@@ -1380,7 +1380,7 @@ window.QRAIVY_EDITOR_STATE = {
         downBtn.addEventListener('click', (function(i){ return function() {
           var o = window.QRAIVY_EDITOR_STATE.sections.order;
           var tmp = o[i+1]; o[i+1] = o[i]; o[i] = tmp;
-          markDirty(); renderOrderList(); reloadIframePreview();
+          window.QRAIVY_EDITOR_STATE.dirty=true; if(window.markDirty) window.markDirty(); renderOrderList(); reloadIframePreview();
         };})(idx));
         row.appendChild(downBtn);
       }
@@ -1470,7 +1470,7 @@ window.QRAIVY_EDITOR_STATE = {
     if (gs) { gs.textContent = msg; gs.style.color = color || 'rgba(240,244,248,0.45)'; }
   }
 
-  function markDirty() {
+  window.markDirty = function markDirty() {
     window.QRAIVY_EDITOR_STATE.dirty = true;
     setStatus('Unsaved changes', 'rgba(255,90,31,0.9)');
     schedulePreviewRerender();
