@@ -1077,7 +1077,7 @@ window.QRAIVY_EDITOR_STATE = {
       setStatus('Published just now ✓', '#22d47e');
       window.QRAIVY_EDITOR_STATE.dirty = false;
       // Reload LIVE iframe
-      var iframe = document.getElementById('sqd-live-iframe') || document.querySelector('iframe');
+      var iframe = document.getElementById('sqd-iframe') || document.querySelector('iframe');
       if (iframe) { var src = iframe.src; iframe.src = ''; setTimeout(function(){ iframe.src = src; }, 100); }
       setTimeout(function(){ setStatus('No changes'); }, 4000);
     } catch(e) {
