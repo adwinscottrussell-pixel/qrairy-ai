@@ -2109,11 +2109,11 @@ window.QRAIVY_EDITOR_STATE = {
   // On load: decide manage vs editor mode
   document.addEventListener('DOMContentLoaded', function() {
     var params = new URLSearchParams(window.location.search);
-    if (params.get('edit') === 'true') {
-      showEditor();
-    } else {
+    if (params.get('manage') === 'true') {
       showManage();
       populateOverview();
+    } else {
+      showEditor();
     }
   });
 })();
