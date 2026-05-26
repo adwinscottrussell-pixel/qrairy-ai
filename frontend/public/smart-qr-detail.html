@@ -865,7 +865,7 @@ async function initPage() {
 
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
-  iframeEl.src = hostedUrl;
+  iframeEl.src = hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1");
   var phoneFrame = document.querySelector('.sqd-phone-frame');
   if (phoneFrame) {
     phoneFrame.addEventListener('wheel', function(e) {
@@ -1131,7 +1131,7 @@ window.QRAIVY_EDITOR_STATE = {
       window.QRAIVY_EDITOR_STATE.dirty = false;
       // Reload LIVE iframe
       var iframe = document.getElementById('sqd-iframe') || document.querySelector('iframe');
-      if (iframe) { var src = iframe.src; iframe.src = ''; setTimeout(function(){ iframe.src = src; }, 100); }
+      if (iframe) { var src = iframe.src.split("?")[0] + "?preview=1"; iframe.src = ''; setTimeout(function(){ iframe.src = src; }, 100); }
       setTimeout(function(){ setStatus('No changes'); }, 4000);
     } catch(e) {
       setStatus('Publish failed: ' + e.message, '#f87171');
@@ -1393,7 +1393,7 @@ window.QRAIVY_EDITOR_STATE = {
   function reloadIframePreview() {
     var iframe = document.getElementById('sqd-iframe');
     if (iframe && iframe.src && iframe.src !== '' && iframe.src !== window.location.href) {
-      var src = iframe.src; iframe.src = ''; setTimeout(function(){ iframe.src = src; }, 80);
+      var base = iframe.src.split("?")[0]; iframe.src = ''; setTimeout(function(){ iframe.src = base + "?preview=1"; }, 80);
     }
   }
 
