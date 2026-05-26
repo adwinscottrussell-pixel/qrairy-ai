@@ -117,7 +117,6 @@ const LP_CONTENT = {
 // ── HTML generator ────────────────────────────────────────────────────────
 function renderLP(page) {
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
-  const accent  = (storedSections && storedSections.theme && storedSections.theme.accentColor) || page.brandColor || '#ff5a1f';
   const bizName = page.businessName || 'My Business';
   const slug    = page.slug;
   const website = page.websiteUrl || 'https://qraivy.com';
@@ -127,14 +126,25 @@ function renderLP(page) {
     return (s || '').replace(/\{name\}/g, bizName).replace(/\{website\}/g, website).replace(/\{domain\}/g, domain);
   }
 
-  const _bgColor    = themeBg === 'light' ? '#f5f0e8' : themeBg === 'gradient' ? '#0d0d14' : '#0a0a0a';
-  const _textColor  = themeBg === 'light' ? '#1a1209' : '#f0ece0';
-  const _fontFamily = themeFontStyle === 'elegant' ? 'Georgia,serif' : themeFontStyle === 'bold' ? 'Syne,sans-serif' : 'DM Mono,monospace';
-  const _btnRadius  = themeButtonStyle === 'pill' ? '999px' : themeButtonStyle === 'square' ? '4px' : '12px';
+  // Parse stored sections FIRST so theme vars are available
+  let storedButtons = [];
+  let storedSections = {};
+  if (page.sections) {
+    try {
+      storedSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
+      if (storedSections && Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
+    } catch(_) {}
+  }
 
-  const headline = tmpl(content.headline);
-  const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://api.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  // Theme
+  const st = storedSections.theme || {};
+  const themeBg          = st.background   || 'dark';
+  const themeButtonStyle = st.buttonStyle  || 'rounded';
+  const themeFontStyle   = st.fontStyle    || 'modern';
+  const themeLogoMode    = st.logoMode     || 'initials';
+
+  // Accent (theme overrides brandColor)
+  const accent = st.accentColor || page.brandColor || '#ff5a1f';
 
   // Accent RGB for rgba usage
   function hexToRGB(hex) {
@@ -147,27 +157,20 @@ function renderLP(page) {
   const accentBorder = `rgba(${rgb},0.28)`;
   const accentGlow   = `rgba(${rgb},0.4)`;
 
-  // Parse stored sections JSON
-  let storedButtons = [];
-  let storedSections = {};
-  if (page.sections) {
-    try {
-      storedSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
-      if (storedSections && Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
-    } catch(_) {}
-  }
+  // Pre-computed theme CSS vars
+  const _bgColor    = themeBg === 'light' ? '#f5f0e8' : themeBg === 'gradient' ? '#0d0d14' : '#0a0a0a';
+  const _textColor  = themeBg === 'light' ? '#1a1209' : '#f0ece0';
+  const _fontFamily = themeFontStyle === 'elegant' ? 'Georgia,serif' : themeFontStyle === 'bold' ? 'Syne,sans-serif' : 'DM Mono,monospace';
+  const _btnRadius  = themeButtonStyle === 'pill' ? '999px' : themeButtonStyle === 'square' ? '4px' : '12px';
+
   // Section order
   const DEFAULT_ORDER = ['hero','voice','ai','buttons','loop','footer'];
   const sectionOrder = (Array.isArray(storedSections.order) && storedSections.order.length)
     ? storedSections.order : DEFAULT_ORDER;
 
-  // Theme
-  const st = storedSections.theme || {};
-  const themeAccent     = st.accentColor  || null;
-  const themeBg         = st.background   || 'dark';
-  const themeButtonStyle= st.buttonStyle  || 'rounded';
-  const themeFontStyle  = st.fontStyle    || 'modern';
-  const themeLogoMode   = st.logoMode     || 'initials';
+  const headline = tmpl(content.headline);
+  const sub      = tmpl(content.sub);
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://api.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   const sh = storedSections.hero   || {};
   const sv = storedSections.voice  || {};
