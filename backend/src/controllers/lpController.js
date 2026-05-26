@@ -127,10 +127,6 @@ function renderLP(page) {
     return (s || '').replace(/\{name\}/g, bizName).replace(/\{website\}/g, website).replace(/\{domain\}/g, domain);
   }
 
-  const logoHTMLFinal = themeLogoMode === 'hidden' ? ''
-    : (themeLogoMode === 'image' && page.logoUrl) ? logoHTML
-    : (bizName[0] ? `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName[0].toUpperCase()}</div>` : logoHTML);
-
   const _bgColor    = themeBg === 'light' ? '#f5f0e8' : themeBg === 'gradient' ? '#0d0d14' : '#0a0a0a';
   const _textColor  = themeBg === 'light' ? '#1a1209' : '#f0ece0';
   const _fontFamily = themeFontStyle === 'elegant' ? 'Georgia,serif' : themeFontStyle === 'bold' ? 'Syne,sans-serif' : 'DM Mono,monospace';
@@ -193,6 +189,9 @@ function renderLP(page) {
 
   const logoHTML = page.logoUrl
     ? `<img src="${page.logoUrl}" class="lp-logo-img" alt="${bizName}" />`
+    : `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName.charAt(0).toUpperCase()}</div>`;
+  const logoHTMLFinal = themeLogoMode === 'hidden' ? ''
+    : (themeLogoMode === 'image' && page.logoUrl) ? logoHTML
     : `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName.charAt(0).toUpperCase()}</div>`;
 
   return `<!DOCTYPE html>
