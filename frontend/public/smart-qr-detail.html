@@ -646,20 +646,61 @@
 
       <!-- APPEARANCE -->
       <div class="sqd-tab-panel" data-panel="appearance" style="display:none;">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎨 Appearance</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">Theme, colors, button style</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Brand Color</div>
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎨 Theme</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Customize the look of your live page.</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+          <!-- Accent Color -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;">Accent Color</label>
             <div style="display:flex;align-items:center;gap:10px;">
-              <div id="sqd-color-preview" style="width:32px;height:32px;border-radius:7px;background:#ff5a1f;border:0.5px solid rgba(255,255,255,0.15);"></div>
-              <div style="font-size:.72rem;color:#f0f4f8;" id="sqd-color-hex">#ff5a1f</div>
+              <input id="theme-accent-picker" type="color" value="#ff5a1f" style="width:36px;height:36px;border:none;border-radius:7px;cursor:pointer;padding:2px;background:none;"/>
+              <input id="theme-accent-hex" type="text" value="#ff5a1f" placeholder="#ff5a1f" maxlength="7" style="width:90px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.75rem;color:#f0f4f8;outline:none;font-family:'DM Mono',monospace;"/>
+              <div id="sqd-color-preview" style="width:28px;height:28px;border-radius:6px;background:#ff5a1f;border:0.5px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
             </div>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Theme Preset</div>
-            <div style="font-size:.72rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;">Dark · Light · Custom — coming next</div>
+
+          <!-- Background -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;">Background</label>
+            <div style="display:flex;gap:6px;" id="theme-bg-btns">
+              <button data-val="dark"     style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Dark</button>
+              <button data-val="light"    style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Light</button>
+              <button data-val="gradient" style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Gradient</button>
+            </div>
           </div>
+
+          <!-- Button Style -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;">Button Style</label>
+            <div style="display:flex;gap:6px;" id="theme-btn-btns">
+              <button data-val="rounded" style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Rounded</button>
+              <button data-val="pill"    style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Pill</button>
+              <button data-val="square"  style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Square</button>
+            </div>
+          </div>
+
+          <!-- Font Style -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;">Font Style</label>
+            <div style="display:flex;gap:6px;" id="theme-font-btns">
+              <button data-val="modern"  style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Modern</button>
+              <button data-val="elegant" style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Elegant</button>
+              <button data-val="bold"    style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Bold</button>
+            </div>
+          </div>
+
+          <!-- Logo Mode -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;">Logo Display</label>
+            <div style="display:flex;gap:6px;" id="theme-logo-btns">
+              <button data-val="initials" style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Initials</button>
+              <button data-val="image"    style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Image</button>
+              <button data-val="hidden"   style="flex:1;padding:7px 4px;border-radius:7px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Hidden</button>
+            </div>
+          </div>
+
+          <div id="sqd-color-hex" style="display:none;"></div>
         </div>
       </div>
 
@@ -1095,7 +1136,8 @@ window.QRAIVY_EDITOR_STATE = {
     loop:  { enabled: true, title: 'Stay in the loop', description: '', emailPlaceholder: 'your@email.com', buttonLabel: 'Subscribe →' },
     footer:{ enabled: true, businessName: '', footerText: '', footerLink: '' },
     buttons: [],
-    order: ['hero','voice','ai','buttons','loop','footer']
+    order: ['hero','voice','ai','buttons','loop','footer'],
+    theme: { background: 'dark', accentColor: '#ff5a1f', buttonStyle: 'rounded', fontStyle: 'modern', logoMode: 'initials' }
   }
 };
 
@@ -1121,7 +1163,7 @@ window.QRAIVY_EDITOR_STATE = {
         useCase: state.useCase || 'restaurant',
         brandColor: state.brandColor || '#ff5a1f',
         logoUrl: state.logoUrl || '',
-        sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'] })
+        sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'], theme: (state.sections && state.sections.theme) || { background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' } })
       };
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
@@ -1410,6 +1452,74 @@ window.QRAIVY_EDITOR_STATE = {
     setTimeout(renderOrderList, 200);
   })();
 
+  // ── Wire Theme Controls ────────────────────────────────────────────────
+  (function() {
+    var th = window.QRAIVY_EDITOR_STATE.sections.theme;
+
+    function setActive(groupId, val) {
+      var grp = document.getElementById(groupId);
+      if (!grp) return;
+      grp.querySelectorAll('button').forEach(function(b) {
+        var active = b.getAttribute('data-val') === val;
+        b.style.borderColor = active ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.1)';
+        b.style.background  = active ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+        b.style.color       = active ? '#ff5a1f' : 'rgba(240,244,248,0.6)';
+      });
+    }
+
+    function wireGroup(groupId, key) {
+      var grp = document.getElementById(groupId);
+      if (!grp) return;
+      grp.querySelectorAll('button').forEach(function(b) {
+        b.addEventListener('click', function() {
+          window.QRAIVY_EDITOR_STATE.sections.theme[key] = b.getAttribute('data-val');
+          setActive(groupId, b.getAttribute('data-val'));
+          if(window.markDirty) window.markDirty(); else window.QRAIVY_EDITOR_STATE.dirty = true;
+          reloadIframePreview();
+        });
+      });
+    }
+
+    wireGroup('theme-bg-btns',   'background');
+    wireGroup('theme-btn-btns',  'buttonStyle');
+    wireGroup('theme-font-btns', 'fontStyle');
+    wireGroup('theme-logo-btns', 'logoMode');
+
+    // Accent color picker
+    var picker = document.getElementById('theme-accent-picker');
+    var hexInput = document.getElementById('theme-accent-hex');
+    var preview = document.getElementById('sqd-color-preview');
+    function applyAccent(val) {
+      window.QRAIVY_EDITOR_STATE.sections.theme.accentColor = val;
+      window.QRAIVY_EDITOR_STATE.brandColor = val;
+      if (picker) picker.value = val;
+      if (hexInput) hexInput.value = val;
+      if (preview) preview.style.background = val;
+      if(window.markDirty) window.markDirty(); else window.QRAIVY_EDITOR_STATE.dirty = true;
+      reloadIframePreview();
+    }
+    if (picker) picker.addEventListener('input', function(){ applyAccent(this.value); });
+    if (hexInput) hexInput.addEventListener('change', function(){
+      var v = this.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) applyAccent(v);
+    });
+
+    // Hydrate from state
+    setTimeout(function() {
+      var t = window.QRAIVY_EDITOR_STATE.sections.theme;
+      if (!t) return;
+      setActive('theme-bg-btns',   t.background   || 'dark');
+      setActive('theme-btn-btns',  t.buttonStyle  || 'rounded');
+      setActive('theme-font-btns', t.fontStyle    || 'modern');
+      setActive('theme-logo-btns', t.logoMode     || 'initials');
+      if (t.accentColor) {
+        if (picker) picker.value = t.accentColor;
+        if (hexInput) hexInput.value = t.accentColor;
+        if (preview) preview.style.background = t.accentColor;
+      }
+    }, 300);
+  })();
+
   window.addEventListener('beforeunload', function(e) {
     if (window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.dirty) {
       e.preventDefault();
@@ -1425,6 +1535,10 @@ window.QRAIVY_EDITOR_STATE = {
       var draft=loadDraft(slug);
       if (draft && draft.sections && Array.isArray(draft.sections.order)) {
         window.QRAIVY_EDITOR_STATE.sections.order = draft.sections.order;
+      }
+      if (draft && draft.sections && draft.sections.theme) {
+        window.QRAIVY_EDITOR_STATE.sections.theme = Object.assign({}, window.QRAIVY_EDITOR_STATE.sections.theme, draft.sections.theme);
+        if (draft.sections.theme.accentColor) window.QRAIVY_EDITOR_STATE.brandColor = draft.sections.theme.accentColor;
       }
       var hero=(draft&&draft.hero)?draft.hero:{
         title: pending.businessName?'Welcome to '+pending.businessName:'',

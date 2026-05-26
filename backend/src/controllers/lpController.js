@@ -117,7 +117,7 @@ const LP_CONTENT = {
 // ── HTML generator ────────────────────────────────────────────────────────
 function renderLP(page) {
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
-  const accent  = page.brandColor || '#ff5a1f';
+  const accent  = (storedSections && storedSections.theme && storedSections.theme.accentColor) || page.brandColor || '#ff5a1f';
   const bizName = page.businessName || 'My Business';
   const slug    = page.slug;
   const website = page.websiteUrl || 'https://qraivy.com';
@@ -126,6 +126,10 @@ function renderLP(page) {
   function tmpl(s) {
     return (s || '').replace(/\{name\}/g, bizName).replace(/\{website\}/g, website).replace(/\{domain\}/g, domain);
   }
+
+  const logoHTMLFinal = themeLogoMode === 'hidden' ? ''
+    : (themeLogoMode === 'image' && page.logoUrl) ? logoHTML
+    : (bizName[0] ? `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName[0].toUpperCase()}</div>` : logoHTML);
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
@@ -155,6 +159,14 @@ function renderLP(page) {
   const DEFAULT_ORDER = ['hero','voice','ai','buttons','loop','footer'];
   const sectionOrder = (Array.isArray(storedSections.order) && storedSections.order.length)
     ? storedSections.order : DEFAULT_ORDER;
+
+  // Theme
+  const st = storedSections.theme || {};
+  const themeAccent     = st.accentColor  || null;
+  const themeBg         = st.background   || 'dark';
+  const themeButtonStyle= st.buttonStyle  || 'rounded';
+  const themeFontStyle  = st.fontStyle    || 'modern';
+  const themeLogoMode   = st.logoMode     || 'initials';
 
   const sh = storedSections.hero   || {};
   const sv = storedSections.voice  || {};
@@ -190,7 +202,7 @@ function renderLP(page) {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;max-width:560px;width:100%;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{background:${themeBg==='light'?'#f5f0e8':themeBg==='gradient'?'linear-gradient(160deg,#0d0d14 0%,#1a0a00 100%)':'#0a0a0a'};color:${themeBg==='light'?'#1a1209':'#f0ece0'};font-family:${themeFontStyle==='elegant'?"'Georgia',serif":themeFontStyle==='bold'?"'Syne',sans-serif":"'DM Mono',monospace"};max-width:560px;width:100%;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 /* Nav */
 .lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
@@ -208,7 +220,7 @@ a{color:inherit;text-decoration:none}
 .lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:420px;margin:0 auto 28px;line-height:1.75}
 .lp-hero-ctas{display:flex;flex-direction:column;gap:10px;align-items:center}
 /* Buttons */
-.lp-btn{display:block;width:100%;max-width:380px;padding:15px 24px;border-radius:12px;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
+.lp-btn{display:block;width:100%;max-width:380px;padding:15px 24px;border-radius:${themeButtonStyle==='pill'?'999px':themeButtonStyle==='square'?'4px':'12px'};font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
 .lp-btn:active{transform:scale(0.97)}
 .lp-btn-primary{color:#fff;background:${accent};box-shadow:0 0 28px ${accentGlow}}
 .lp-btn-secondary{background:rgba(255,255,255,0.06);color:rgba(240,236,224,0.7);border:0.5px solid rgba(255,255,255,0.14)}
@@ -385,7 +397,7 @@ a{color:inherit;text-decoration:none}
 
 <nav class="lp-nav">
   <div class="lp-nav-brand">
-    ${logoHTML}
+    ${logoHTMLFinal}
     <span class="lp-nav-name">${bizName}</span>
   </div>
   <div class="lp-nav-pill"><span class="lp-nav-dot"></span>AI Powered</div>
