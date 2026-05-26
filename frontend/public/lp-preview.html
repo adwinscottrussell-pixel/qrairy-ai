@@ -7,10 +7,16 @@
 </head>
 <body>
 <script>
-  var slug = new URLSearchParams(window.location.search).get('slug');
-  var preview = new URLSearchParams(window.location.search).get('preview');
+  var p = new URLSearchParams(window.location.search);
+  var slug = p.get('slug');
+  var preview = p.get('preview');
+  var t = p.get('t') || '';
   if (slug) {
-    document.write('<iframe src="https://api.qraivy.com/lp/' + encodeURIComponent(slug) + (preview ? '?preview=1' : '') + '" style="width:100%;height:100%;border:none;"></iframe>');
+    var url = 'https://api.qraivy.com/lp/' + encodeURIComponent(slug) + '?preview=1' + (t ? '&t=' + t : '');
+    var iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.style.cssText = 'width:100%;height:100%;border:none;';
+    document.body.appendChild(iframe);
   }
 </script>
 </body>
