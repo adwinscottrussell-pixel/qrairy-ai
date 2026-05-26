@@ -716,8 +716,8 @@ async function handleServeLP(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     res.setHeader('Content-Security-Policy', "frame-ancestors *");
-    if (req.query.preview) {
-      res.setHeader('Cache-Control', 'no-store');
+    if (req.query.preview || req.query.t) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     } else {
       res.setHeader('Cache-Control', 'public, max-age=60');
     }
