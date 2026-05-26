@@ -855,7 +855,8 @@ async function initPage() {
           businessName: data.businessName,
           hostedUrl:    `https://api.qraivy.com/lp/${data.slug}`,
           useCase:      data.useCase,
-          brandColor:   data.brandColor
+          brandColor:   data.brandColor,
+          sections:     data.sections
         };
       }
     } catch(e) {}
@@ -902,6 +903,23 @@ async function initPage() {
   document.getElementById('sqd-view-btn2').href       = hostedUrl;
   window.QRAIVY_EDITOR_STATE.hostedUrl = hostedUrl;
   window.QRAIVY_EDITOR_STATE.slug = pending.slug || '';
+  // Hydrate sections from API response
+  if (pending.sections) {
+    try {
+      var apiSections = typeof pending.sections === 'string' ? JSON.parse(pending.sections) : pending.sections;
+      if (apiSections && typeof apiSections === 'object') {
+        if (apiSections.hero)   Object.assign(window.QRAIVY_EDITOR_STATE.sections.hero,   apiSections.hero);
+        if (apiSections.voice)  Object.assign(window.QRAIVY_EDITOR_STATE.sections.voice,  apiSections.voice);
+        if (apiSections.ai)     Object.assign(window.QRAIVY_EDITOR_STATE.sections.ai,     apiSections.ai);
+        if (apiSections.loop)   Object.assign(window.QRAIVY_EDITOR_STATE.sections.loop,   apiSections.loop);
+        if (apiSections.footer) Object.assign(window.QRAIVY_EDITOR_STATE.sections.footer, apiSections.footer);
+        if (Array.isArray(apiSections.buttons)) window.QRAIVY_EDITOR_STATE.buttons = apiSections.buttons;
+        if (Array.isArray(apiSections.order))   window.QRAIVY_EDITOR_STATE.sections.order = apiSections.order;
+        if (apiSections.theme)  Object.assign(window.QRAIVY_EDITOR_STATE.sections.theme,  apiSections.theme);
+        if (apiSections.theme && apiSections.theme.accentColor) window.QRAIVY_EDITOR_STATE.brandColor = apiSections.theme.accentColor;
+      }
+    } catch(e) { console.warn('[initPage] sections hydration error:', e); }
+  }
   document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
 
   // ── Phone iframe ──────────────────────────────────────────────────────
