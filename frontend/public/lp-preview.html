@@ -3,21 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<style>*{margin:0;padding:0}html,body,iframe{width:100%;height:100%;border:none;overflow:hidden}</style>
+<style>*{margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden}iframe{width:100%;height:100%;border:none;}</style>
 </head>
 <body>
+<iframe id="inner" src=""></iframe>
 <script>
   var p = new URLSearchParams(window.location.search);
   var slug = p.get('slug');
-  var preview = p.get('preview');
   var t = p.get('t') || '';
+  var inner = document.getElementById('inner');
   if (slug) {
-    var url = 'https://api.qraivy.com/lp/' + encodeURIComponent(slug) + '?preview=1' + (t ? '&t=' + t : '');
-    var iframe = document.createElement('iframe');
-    iframe.src = url;
-    iframe.style.cssText = 'width:100%;height:100%;border:none;';
-    document.body.appendChild(iframe);
+    inner.src = 'https://api.qraivy.com/lp/' + encodeURIComponent(slug) + '?preview=1' + (t ? '&t=' + t : '');
   }
+  // Listen for theme CSS from parent editor
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'QRAIVY_THEME_CSS') {
+      inner.addEventListener('load', function applyOnce() {
+        try {
+          var doc = inner.contentDocument;
+          if (!doc) return;
+          var el = doc.getElementById('qraivy-theme-preview');
+          if (!el) { el = doc.createElement('style'); el.id = 'qraivy-theme-preview'; doc.head.appendChild(el); }
+          el.textContent = e.data.css;
+        } catch(err) {}
+        inner.removeEventListener('load', applyOnce);
+      });
+      // Also try immediately if already loaded
+      try {
+        var doc = inner.contentDocument;
+        if (doc && doc.head) {
+          var el = doc.getElementById('qraivy-theme-preview');
+          if (!el) { el = doc.createElement('style'); el.id = 'qraivy-theme-preview'; doc.head.appendChild(el); }
+          el.textContent = e.data.css;
+        }
+      } catch(err) {}
+    }
+  });
 </script>
 </body>
 </html>

@@ -1470,21 +1470,19 @@ window.QRAIVY_EDITOR_STATE = {
     if (_themeReloadTimer) clearTimeout(_themeReloadTimer);
     _themeReloadTimer = setTimeout(function() {
       var iframe = document.getElementById('sqd-iframe');
-      var sl = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
-      if (!iframe || !sl) return;
-      var wrap = iframe.parentElement;
-      var ov = document.getElementById('sqd-preview-overlay');
-      if (!ov) {
-        ov = document.createElement('div');
-        ov.id = 'sqd-preview-overlay';
-        ov.style.cssText = 'position:absolute;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit;';
-        ov.innerHTML = '<div style="color:#555;font-size:11px;font-family:DM Mono,monospace;text-align:center;">&#x21BB; Updating preview…</div>';
-        if (wrap) { wrap.style.position = 'relative'; wrap.appendChild(ov); }
-      }
-      ov.style.display = 'flex';
-      iframe.src = 'lp-preview.html?slug=' + encodeURIComponent(sl) + '&preview=1&t=' + Date.now();
-      iframe.onload = function() { if (ov) ov.style.display = 'none'; };
-    }, 600);
+      if (!iframe || !iframe.contentWindow) return;
+      var t = (window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.sections && window.QRAIVY_EDITOR_STATE.sections.theme) || {};
+      var accent = t.accentColor || '#ff5a1f';
+      var bg = t.background === 'light' ? '#f5f0e8' : t.background === 'gradient' ? '#0d0d14' : '#0a0a0a';
+      var text = t.background === 'light' ? '#1a1209' : '#f0ece0';
+      var btnR = t.buttonStyle === 'pill' ? '999px' : t.buttonStyle === 'square' ? '4px' : '12px';
+      var font = t.fontStyle === 'elegant' ? 'Georgia,serif' : t.fontStyle === 'bold' ? 'Syne,sans-serif' : 'DM Mono,monospace';
+      var css = 'body{background:' + bg + '!important;color:' + text + '!important;font-family:' + font + '!important}'
+        + '.lp-btn{border-radius:' + btnR + '!important}'
+        + '.lp-btn-primary,.lp-sub-btn,.lp-voice-btn,.lp-nav-dot{background:' + accent + '!important}'
+        + '.lp-hero-eyebrow,.lp-nav-pill{color:' + accent + '!important}';
+      iframe.contentWindow.postMessage({ type: 'QRAIVY_THEME_CSS', css: css }, '*');
+    }, 100);
   }
 
   // Re-render order list when tab is clicked
