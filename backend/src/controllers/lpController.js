@@ -714,7 +714,13 @@ async function handleServeLP(req, res) {
     if (!page || page.status === 'draft') return res.status(404).send(render404(slug));
     if (!req.query.preview) prisma.landingPage.update({ where: { slug }, data: { scanCount: { increment: 1 } } }).catch(() => {});
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('Content-Security-Policy', "frame-ancestors *");
+    if (req.query.preview) {
+      res.setHeader('Cache-Control', 'no-store');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=60');
+    }
     return res.send(renderLP(page));
   } catch (err) {
     console.error('[LP] serve error:', err);
