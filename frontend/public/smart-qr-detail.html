@@ -928,7 +928,8 @@ async function initPage() {
 
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
-  iframeEl.src = hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1");
+  var _iframeSlug = (window.QRAIVY_EDITOR_STATE.slug || '');
+  iframeEl.src = _iframeSlug ? ('lp-preview.html?slug=' + encodeURIComponent(_iframeSlug) + '&preview=1') : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
   var phoneFrame = document.querySelector('.sqd-phone-frame');
   if (phoneFrame) {
     phoneFrame.addEventListener('wheel', function(e) {
@@ -1458,7 +1459,9 @@ window.QRAIVY_EDITOR_STATE = {
   function reloadIframePreview() {
     var iframe = document.getElementById('sqd-iframe');
     if (iframe && iframe.src && iframe.src !== '' && iframe.src !== window.location.href) {
-      var base = iframe.src.split("?")[0]; iframe.src = ''; setTimeout(function(){ iframe.src = base + "?preview=1"; }, 80);
+      var _sl = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
+      var base = _sl ? ('lp-preview.html?slug=' + encodeURIComponent(_sl)) : iframe.src.split("?")[0];
+      iframe.src = ''; setTimeout(function(){ iframe.src = base + '&preview=1'; }, 80);
     }
   }
 

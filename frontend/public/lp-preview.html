@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>*{margin:0;padding:0}html,body,iframe{width:100%;height:100%;border:none;overflow:hidden}</style>
+</head>
+<body>
+<script>
+  var slug = new URLSearchParams(window.location.search).get('slug');
+  var preview = new URLSearchParams(window.location.search).get('preview');
+  if (slug) {
+    document.write('<iframe src="https://api.qraivy.com/lp/' + encodeURIComponent(slug) + (preview ? '?preview=1' : '') + '" style="width:100%;height:100%;border:none;"></iframe>');
+  }
+</script>
+</body>
+</html>
