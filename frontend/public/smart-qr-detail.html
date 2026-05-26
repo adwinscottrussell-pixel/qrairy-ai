@@ -847,7 +847,11 @@ async function initPage() {
   // If slug in URL, try to fetch from API
   if (slug) {
     try {
-      const res  = await fetch(`https://api.qraivy.com/api/lp/${slug}`);
+      let _apiToken = '';
+      try { if(window.Clerk && window.Clerk.session) _apiToken = await window.Clerk.session.getToken() || ''; } catch(_){}
+      const res  = await fetch(`https://api.qraivy.com/api/lp/${slug}`, {
+        headers: _apiToken ? { Authorization: 'Bearer ' + _apiToken } : {}
+      });
       const data = await res.json();
       if (data && data.slug) {
         pending = {
