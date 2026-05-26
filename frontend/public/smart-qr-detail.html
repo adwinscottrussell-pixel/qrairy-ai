@@ -1471,10 +1471,20 @@ window.QRAIVY_EDITOR_STATE = {
     _themeReloadTimer = setTimeout(function() {
       var iframe = document.getElementById('sqd-iframe');
       var sl = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
-      if (iframe && sl) {
-        iframe.src = 'lp-preview.html?slug=' + encodeURIComponent(sl) + '&preview=1&t=' + Date.now();
+      if (!iframe || !sl) return;
+      var wrap = iframe.parentElement;
+      var ov = document.getElementById('sqd-preview-overlay');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'sqd-preview-overlay';
+        ov.style.cssText = 'position:absolute;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit;';
+        ov.innerHTML = '<div style="color:#555;font-size:11px;font-family:DM Mono,monospace;text-align:center;">&#x21BB; Updating preview…</div>';
+        if (wrap) { wrap.style.position = 'relative'; wrap.appendChild(ov); }
       }
-    }, 800);
+      ov.style.display = 'flex';
+      iframe.src = 'lp-preview.html?slug=' + encodeURIComponent(sl) + '&preview=1&t=' + Date.now();
+      iframe.onload = function() { if (ov) ov.style.display = 'none'; };
+    }, 600);
   }
 
   // Re-render order list when tab is clicked
