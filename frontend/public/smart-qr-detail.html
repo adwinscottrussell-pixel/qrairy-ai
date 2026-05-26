@@ -1481,8 +1481,7 @@ window.QRAIVY_EDITOR_STATE = {
       '.lp-nav-dot, .lp-sub-btn, .lp-voice-btn { background: ' + accent + ' !important; }',
       '.lp-nav-pill { color: ' + accent + ' !important; }',
       '.lp-hero-eyebrow { color: ' + accent + ' !important; }',
-    ].join('
-');
+    ].join('\n');
     var existing = iframe.contentDocument.getElementById('qraivy-theme-preview');
     if (!existing) {
       existing = iframe.contentDocument.createElement('style');
