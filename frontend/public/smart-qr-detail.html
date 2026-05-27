@@ -1187,6 +1187,8 @@ document.addEventListener('DOMContentLoaded', initPage);
     stage.innerHTML = buildDraftHTML();
     // Add click-through to hotspots
     if (window.QRAIVY_HOTSPOTS) window.QRAIVY_HOTSPOTS.rebuild();
+    // Mark editable elements for click-to-edit
+    if (window.QRAIVY_DRAFT_EDIT) window.QRAIVY_DRAFT_EDIT.init();
   }
 
   function setMode(mode) {
@@ -1217,6 +1219,169 @@ document.addEventListener('DOMContentLoaded', initPage);
 
   window.QRAIVY_PREVIEW = { setMode: setMode, render: render, getMode: getMode };
 })();
+
+// ── STEP 25: Draft preview click-to-edit ──────────────────────────────────
+(function() {
+  var _listenerAttached = false;
+
+  // Map: [data-edit] value → { tab, inputId }
+  var EDIT_MAP = {
+    'hero-title':       { tab: 'hero',   input: 'hero-title-input' },
+    'hero-subtitle':    { tab: 'hero',   input: 'hero-subtitle-input' },
+    'hero-badge':       { tab: 'hero',   input: 'hero-badge-input' },
+    'voice-title':      { tab: 'voice',  input: 'voice-input-title' },
+    'voice-desc':       { tab: 'voice',  input: 'voice-input-desc' },
+    'ai-title':         { tab: 'ai',     input: 'ai-input-title' },
+    'ai-placeholder':   { tab: 'ai',     input: 'ai-input-placeholder' },
+    'loop-title':       { tab: 'loop',   input: 'loop-input-title' },
+    'loop-desc':        { tab: 'loop',   input: 'loop-input-desc' },
+    'loop-btn':         { tab: 'loop',   input: 'loop-input-btn-label' },
+    'footer-bizname':   { tab: 'footer', input: 'footer-input-bizname' },
+    'footer-text':      { tab: 'footer', input: 'footer-input-text' }
+  };
+
+  // Called after every render() — tags specific child elements
+  function markEditables(stage) {
+    if (!stage) return;
+
+    function tag(el, key) {
+      if (!el) return;
+      el.setAttribute('data-edit', key);
+      el.style.cursor = 'text';
+    }
+
+    // Hero
+    var hero = stage.querySelector('[data-section="hero"]');
+    if (hero) {
+      tag(hero.querySelector('h1'), 'hero-title');
+      tag(hero.querySelector('p'),  'hero-subtitle');
+      // badge = first inline-flex div
+      var badge = hero.querySelector('div[style*="inline-flex"]');
+      tag(badge, 'hero-badge');
+    }
+
+    // Voice
+    var voice = stage.querySelector('[data-section="voice"]');
+    if (voice) {
+      // title is first div inside the inner card that has font-weight:600
+      var vTitle = voice.querySelector('div[style*="font-weight:600"]');
+      tag(vTitle, 'voice-title');
+      var vDesc = voice.querySelector('div[style*="font-size:.64rem"]');
+      tag(vDesc, 'voice-desc');
+    }
+
+    // AI
+    var ai = stage.querySelector('[data-section="ai"]');
+    if (ai) {
+      var aiLabel = ai.querySelector('span[style*="font-size:.72rem"]');
+      tag(aiLabel, 'ai-title');
+      var aiTap = ai.querySelector('span[style*="font-size:.62rem"]');
+      tag(aiTap, 'ai-placeholder');
+    }
+
+    // Loop
+    var loop = stage.querySelector('[data-section="loop"]');
+    if (loop) {
+      var lTitle = loop.querySelector('div[style*="font-weight:700"]');
+      tag(lTitle, 'loop-title');
+      var lDesc = loop.querySelector('div[style*="font-size:.7rem"]');
+      tag(lDesc, 'loop-desc');
+      var lBtn = loop.querySelector('div[style*="text-align:center"][style*="background"]');
+      tag(lBtn, 'loop-btn');
+    }
+
+    // Footer
+    var footer = stage.querySelector('[data-section="footer"]');
+    if (footer) {
+      var fBiz = footer.querySelector('div[style*="font-size:.72rem"]');
+      tag(fBiz, 'footer-bizname');
+      var fTxt = footer.querySelector('div[style*="font-size:.62rem"]');
+      tag(fTxt, 'footer-text');
+    }
+  }
+
+  // Activate a tab and focus its input
+  function activateEdit(key) {
+    var mapping = EDIT_MAP[key];
+    if (!mapping) return;
+
+    // Click the tab button
+    var tabBtn = document.querySelector('.sqd-tab[data-tab="' + mapping.tab + '"]');
+    if (tabBtn) tabBtn.click();
+
+    // Focus input after panel becomes visible
+    setTimeout(function() {
+      var inp = document.getElementById(mapping.input);
+      if (inp) {
+        inp.focus();
+        inp.select();
+        // Brief highlight flash on the input
+        inp.style.borderColor = 'rgba(255,90,31,0.8)';
+        inp.style.boxShadow = '0 0 0 2px rgba(255,90,31,0.2)';
+        setTimeout(function() {
+          inp.style.borderColor = '';
+          inp.style.boxShadow = '';
+        }, 1200);
+      }
+    }, 80);
+  }
+
+  // Attach delegated listener to draft stage — only once
+  function attachListener() {
+    var stage = document.getElementById('sqd-draft-stage');
+    if (!stage || _listenerAttached) return;
+    _listenerAttached = true;
+
+    stage.addEventListener('click', function(e) {
+      var el = e.target;
+      // Walk up to find data-edit attribute (max 4 levels)
+      for (var i = 0; i < 4; i++) {
+        if (!el || el === stage) break;
+        var key = el.getAttribute('data-edit');
+        if (key) {
+          e.stopPropagation();
+          // Flash the clicked element
+          var origOutline = el.style.outline;
+          el.style.outline = '1.5px solid rgba(255,90,31,0.7)';
+          el.style.borderRadius = '3px';
+          setTimeout(function(){ el.style.outline = origOutline; }, 700);
+          activateEdit(key);
+          return;
+        }
+        el = el.parentElement;
+      }
+    });
+  }
+
+  // Inject hover CSS once
+  function injectHoverCSS() {
+    if (document.getElementById('step25-edit-css')) return;
+    var s = document.createElement('style');
+    s.id = 'step25-edit-css';
+    s.textContent = [
+      '[data-edit]{transition:outline .1s,background .1s;border-radius:3px;cursor:text !important;}',
+      '[data-edit]:hover{outline:1px dashed rgba(255,90,31,0.45) !important;background:rgba(255,90,31,0.06) !important;}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  // Public API — called by QRAIVY_PREVIEW.render() after innerHTML update
+  window.QRAIVY_DRAFT_EDIT = {
+    mark: markEditables,
+    attach: attachListener,
+    init: function() {
+      injectHoverCSS();
+      attachListener();
+      markEditables(document.getElementById('sqd-draft-stage'));
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    injectHoverCSS();
+    setTimeout(attachListener, 400);
+  });
+})();
+
 
 
 
