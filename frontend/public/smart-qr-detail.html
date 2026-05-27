@@ -297,6 +297,56 @@
   </div>
 </div>
 
+
+<style id="step25-styles">
+/* Step 25: Click-to-edit overlay hotspots */
+.sqd-section-hotspot {
+  position:absolute;
+  left:0;right:0;
+  cursor:pointer;
+  z-index:20;
+  transition:background 0.15s,box-shadow 0.15s;
+  border-radius:4px;
+}
+.sqd-section-hotspot:hover {
+  background:rgba(255,90,31,0.07);
+  box-shadow:inset 0 0 0 1px rgba(255,90,31,0.3);
+}
+.sqd-section-hotspot:hover .sqd-hotspot-label {
+  opacity:1;
+}
+.sqd-hotspot-label {
+  position:absolute;
+  top:4px;right:8px;
+  background:rgba(255,90,31,0.9);
+  color:#fff;
+  font-size:9px;
+  font-weight:700;
+  padding:2px 7px;
+  border-radius:4px;
+  opacity:0;
+  transition:opacity 0.15s;
+  pointer-events:none;
+  font-family:'Inter',sans-serif;
+  letter-spacing:0.04em;
+  white-space:nowrap;
+}
+.sqd-hotspot-active {
+  background:rgba(255,90,31,0.1) !important;
+  box-shadow:inset 0 0 0 1.5px rgba(255,90,31,0.5) !important;
+}
+#sqd-hotspot-overlay {
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  pointer-events:none;
+  z-index:15;
+  display:none;
+}
+#sqd-hotspot-overlay.active {
+  pointer-events:all;
+  display:block;
+}
+</style>
 <!-- MAIN EDITOR LAYOUT -->
 <div id="sqd-editor-layout-wrap" style="display:none;">
 <div style="
@@ -350,6 +400,8 @@
         <div class="sqd-phone-frame" style="width:355px;height:700px;overflow-y:auto;overflow-x:hidden;border-radius:32px;-webkit-overflow-scrolling:touch;background:#000;">
           <iframe id="sqd-iframe" src="" loading="lazy" style="width:355px;height:2600px;border:none;display:block;" scrolling="no"></iframe>
           <div id="sqd-draft-stage" style="display:none;width:355px;min-height:2600px;background:#0a0c10;font-family:'Inter',sans-serif;overflow:hidden;"></div>
+          <!-- Step 25: Click-to-edit hotspot overlay -->
+          <div id="sqd-hotspot-overlay"></div>
         </div>
         <!-- Home indicator -->
         <div style="display:flex;justify-content:center;height:24px;align-items:center;">
@@ -1031,6 +1083,83 @@ function toast(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', initPage);
+
+
+// ── STEP 25: Click-to-edit hotspots ───────────────────────────────────────
+(function() {
+  // Section definitions: tab name, label, approximate top offset in LP, height
+  var HOTSPOTS = [
+    { tab: 'hero',    label: '🏠 Hero',    top: 0,    height: 280 },
+    { tab: 'voice',   label: '🎙 Voice',   top: 280,  height: 120 },
+    { tab: 'ai',      label: '🤖 AI',      top: 400,  height: 100 },
+    { tab: 'buttons', label: '🔗 Buttons', top: 500,  height: 140 },
+    { tab: 'loop',    label: '📬 Loop',    top: 640,  height: 260 },
+    { tab: 'footer',  label: '🦶 Footer',  top: 900,  height: 120 }
+  ];
+
+  function activateTab(tabName) {
+    var tab = document.querySelector('.sqd-tab[data-tab="' + tabName + '"]');
+    if (tab) {
+      tab.click();
+      // Focus first input in the tab panel after short delay
+      setTimeout(function() {
+        var panel = document.getElementById('sqd-tab-' + tabName);
+        if (!panel) panel = document.querySelector('[data-panel="' + tabName + '"]');
+        if (panel) {
+          var input = panel.querySelector('input,textarea');
+          if (input) { input.focus(); input.select(); }
+        }
+      }, 120);
+    }
+  }
+
+  function buildHotspots() {
+    var overlay = document.getElementById('sqd-hotspot-overlay');
+    if (!overlay) return;
+    overlay.innerHTML = '';
+    HOTSPOTS.forEach(function(h) {
+      var div = document.createElement('div');
+      div.className = 'sqd-section-hotspot';
+      div.style.top = h.top + 'px';
+      div.style.height = h.height + 'px';
+      div.dataset.tab = h.tab;
+      div.innerHTML = '<div class="sqd-hotspot-label">' + h.label + '</div>';
+      div.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Clear previous active
+        document.querySelectorAll('.sqd-hotspot-active').forEach(function(el){ el.classList.remove('sqd-hotspot-active'); });
+        div.classList.add('sqd-hotspot-active');
+        setTimeout(function(){ div.classList.remove('sqd-hotspot-active'); }, 800);
+        activateTab(h.tab);
+      });
+      overlay.appendChild(div);
+    });
+  }
+
+  function enableHotspots() {
+    var overlay = document.getElementById('sqd-hotspot-overlay');
+    if (overlay) overlay.classList.add('active');
+  }
+  function disableHotspots() {
+    var overlay = document.getElementById('sqd-hotspot-overlay');
+    if (overlay) overlay.classList.remove('active');
+  }
+
+  // Build hotspots on load
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(buildHotspots, 600);
+    // Enable in draft mode, disable in live mode
+    var draftBtn = document.getElementById('sqd-preview-draft-btn');
+    var liveBtn  = document.getElementById('sqd-preview-live-btn');
+    if (draftBtn) draftBtn.addEventListener('click', function(){ setTimeout(enableHotspots, 100); });
+    if (liveBtn)  liveBtn.addEventListener('click',  function(){ disableHotspots(); });
+    // Enable by default since we start in draft
+    setTimeout(enableHotspots, 800);
+  });
+
+  window.QRAIVY_HOTSPOTS = { enable: enableHotspots, disable: disableHotspots, rebuild: buildHotspots };
+})();
+
 </script>
 
 <script>
