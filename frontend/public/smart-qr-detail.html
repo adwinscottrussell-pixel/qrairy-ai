@@ -2397,12 +2397,111 @@ window.QRAIVY_EDITOR_STATE = {
 
   // ── Wire global save + publish buttons ───────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        try { localStorage.setItem('qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug||'demo'), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {}
-        setStatus('Saved just now ✓', '#22d47e');
-        window.QRAIVY_EDITOR_STATE.dirty = false;
-        setTimeout(function(){ setStatus('No changes'); }, 3000);
+    // ── Collect all input values into EDITOR_STATE before save ──────────────
+  function collectEditorStateFromInputs() {
+    var S = window.QRAIVY_EDITOR_STATE;
+    if (!S) return;
+    function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+    // Hero
+    S.sections.hero.title    = val('hero-title-input');
+    S.sections.hero.subtitle = val('hero-subtitle-input');
+    S.sections.hero.badge    = val('hero-badge-input');
+    S.sections.hero.logoText = val('hero-logo-input');
+    S.hero.title      = S.sections.hero.title;
+    S.hero.subtitle   = S.sections.hero.subtitle;
+    S.hero.badgeText  = S.sections.hero.badge;
+    S.hero.logoInitial= S.sections.hero.logoText;
+    S.pageName        = S.sections.hero.title || S.pageName;
+    // Voice
+    S.sections.voice.title       = val('voice-input-title');
+    S.sections.voice.description = val('voice-input-desc');
+    S.sections.voice.buttonLabel = val('voice-input-btn');
+    // AI
+    S.sections.ai.title       = val('ai-input-title');
+    S.sections.ai.description = val('ai-input-desc');
+    S.sections.ai.placeholder = val('ai-input-placeholder');
+    // Loop
+    S.sections.loop.title            = val('loop-input-title');
+    S.sections.loop.description      = val('loop-input-desc');
+    S.sections.loop.emailPlaceholder = val('loop-input-email-placeholder');
+    S.sections.loop.buttonLabel      = val('loop-input-btn-label');
+    // Footer
+    S.sections.footer.businessName = val('footer-input-bizname');
+    S.sections.footer.footerText   = val('footer-input-text');
+    S.sections.footer.footerLink   = val('footer-input-link');
+  }
+
+  function setDraftSaveStatus(msg, color) {
+    setStatus(msg, color);
+    // Also update any visible status element in save bar
+    var gs = document.getElementById('sqd-save-global-status');
+    if (gs) { gs.textContent = msg; gs.style.color = color || 'rgba(240,244,248,0.50)'; }
+  }
+
+  async function saveDraftToBackend() {
+    collectEditorStateFromInputs();
+    var S = window.QRAIVY_EDITOR_STATE;
+    var slug = S.slug;
+
+    // Always save to localStorage first
+    try { localStorage.setItem('qraivy_editor_draft_' + (slug||'demo'), JSON.stringify(S)); } catch(e) {}
+
+    if (!slug) {
+      setDraftSaveStatus('Saved locally ✓', '#22d47e');
+      S.dirty = false;
+      setTimeout(function(){ setDraftSaveStatus('No changes'); }, 3000);
+      return;
+    }
+
+    setDraftSaveStatus('Saving…', '#ff5a1f');
+    // Set all buttons to saving state
+    document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(b){
+      b.textContent = 'Saving…'; b.disabled = true;
+    });
+
+    try {
+      var tok = null;
+      if (window.Clerk && window.Clerk.session) tok = await window.Clerk.session.getToken();
+      var headers = { 'Content-Type': 'application/json' };
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+      var payload = {
+        slug: slug,
+        businessName: S.pageName || S.sections.hero.title || slug,
+        websiteUrl: S.websiteUrl || '',
+        useCase: S.useCase || 'restaurant',
+        brandColor: S.brandColor || (S.sections.theme && S.sections.theme.accentColor) || '#ff5a1f',
+        logoUrl: S.logoUrl || '',
+        draft: true,
+        sections: Object.assign({}, S.sections || {}, {
+          buttons: (S.buttons || []),
+          order:   (S.sections && S.sections.order) || ['hero','voice','ai','buttons','loop','footer'],
+          theme:   (S.sections && S.sections.theme) || { background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }
+        })
+      };
+      var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setDraftSaveStatus('Draft saved ✓', '#22d47e');
+      S.dirty = false;
+      setTimeout(function(){ setDraftSaveStatus('No changes'); }, 3000);
+    } catch(e) {
+      setDraftSaveStatus('Saved locally ✓', '#22d47e');
+      S.dirty = false;
+      setTimeout(function(){ setDraftSaveStatus('No changes'); }, 3000);
+    } finally {
+      document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(b){
+        b.textContent = 'Save Draft'; b.disabled = false;
+      });
+    }
+  }
+
+  window.saveDraftToBackend = saveDraftToBackend;
+  window.collectEditorStateFromInputs = collectEditorStateFromInputs;
+
+  document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        saveDraftToBackend();
       });
     });
     ['sqd-publish-btn','sqd-publish-btn-2'].forEach(function(id){
