@@ -301,12 +301,13 @@
 <div id="sqd-editor-layout-wrap" style="display:none;">
 <div style="
   display:grid;
-  grid-template-columns:1fr 380px;
+  grid-template-columns:380px 1fr;
   min-height:calc(100vh - 52px);
   margin-top:52px;
   max-width:1400px;
   margin-left:auto;
   margin-right:auto;
+  overflow:hidden;
 ">
 
   <!-- LEFT: LIVE PREVIEW -->
@@ -314,24 +315,46 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:flex-start;
-    padding:24px;
-    overflow-y:auto;
+    justify-content:center;
+    padding:24px 16px;
     background:#0a0c10;
-    min-height:calc(100vh - 52px);
+    height:calc(100vh - 52px);
+    position:sticky;
+    top:52px;
+    overflow:hidden;
+    border-right:0.5px solid rgba(255,255,255,0.06);
   ">
     <!-- Phone preview label -->
     <div style="font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.68);margin-bottom:16px;">
       Live Mobile Preview
     </div>
 
-    <!-- Phone frame — larger and centered -->
-    <div style="position:relative;flex-shrink:0;margin-bottom:20px;">
-      <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.06),transparent 70%);border-radius:50px;pointer-events:none;z-index:0;"></div>
-      <div class="sqd-phone-frame" style="position:relative;z-index:1;width:375px;height:780px;overflow-y:auto;overflow-x:hidden;border-radius:28px;-webkit-overflow-scrolling:touch;padding-top:0;">
-        <iframe id="sqd-iframe" src="" loading="lazy" style="width:375px;height:2600px;border:none;display:block;margin-top:-1px;" scrolling="no"></iframe>
-        <div id="sqd-draft-stage" style="display:none;width:375px;min-height:2600px;background:#0a0c10;font-family:'Inter',sans-serif;overflow:hidden;"></div>
-        <div class="sqd-phone-overlay"></div>
+    <!-- Phone frame — real device chrome -->
+    <div style="position:relative;flex-shrink:0;">
+      <div style="position:absolute;inset:-40px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.07),transparent 65%);border-radius:60px;pointer-events:none;z-index:0;"></div>
+      <!-- Device shell -->
+      <div style="position:relative;z-index:1;background:#1a1a1f;border-radius:44px;padding:10px;box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 32px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.1);">
+        <!-- Notch bar -->
+        <div style="display:flex;align-items:center;justify-content:center;height:28px;margin-bottom:2px;position:relative;">
+          <div style="width:90px;height:22px;background:#111;border-radius:0 0 16px 16px;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#222;border:1px solid #333;"></div>
+            <div style="width:40px;height:4px;border-radius:2px;background:#222;"></div>
+          </div>
+          <!-- Status bar time -->
+          <div style="position:absolute;left:16px;font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);font-family:'Inter',sans-serif;">9:41</div>
+          <div style="position:absolute;right:16px;display:flex;gap:4px;align-items:center;">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);font-family:'Inter',sans-serif;">●●●●</div>
+          </div>
+        </div>
+        <!-- Screen -->
+        <div class="sqd-phone-frame" style="width:355px;height:700px;overflow-y:auto;overflow-x:hidden;border-radius:32px;-webkit-overflow-scrolling:touch;background:#000;">
+          <iframe id="sqd-iframe" src="" loading="lazy" style="width:355px;height:2600px;border:none;display:block;" scrolling="no"></iframe>
+          <div id="sqd-draft-stage" style="display:none;width:355px;min-height:2600px;background:#0a0c10;font-family:'Inter',sans-serif;overflow:hidden;"></div>
+        </div>
+        <!-- Home indicator -->
+        <div style="display:flex;justify-content:center;height:24px;align-items:center;">
+          <div style="width:100px;height:4px;border-radius:2px;background:rgba(255,255,255,0.2);"></div>
+        </div>
       </div>
     </div>
 
@@ -376,6 +399,7 @@
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    order:2;
   ">
     <!-- Hidden JS elements -->
     <div style="display:none;">
