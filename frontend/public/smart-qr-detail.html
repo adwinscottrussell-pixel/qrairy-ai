@@ -1924,6 +1924,99 @@ window.QRAIVY_EDITOR_STATE = {
     schedulePreviewRerender();
   }
 
+  // ── STEP 25: Wire all section inputs to EDITOR_STATE + live preview ────────
+  (function() {
+    function wire(id, stateWriter) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function() {
+        stateWriter(this.value);
+        if (window.markDirty) window.markDirty();
+      });
+    }
+
+    function hydrate(id, val) {
+      var el = document.getElementById(id);
+      if (el && val) el.value = val;
+    }
+
+    function initStep25() {
+      var S = window.QRAIVY_EDITOR_STATE;
+      if (!S) return;
+      var sec = S.sections || {};
+
+      // ── Hero ──
+      wire('hero-title-input', function(v) {
+        S.sections.hero.title = v; S.hero.title = v; S.pageName = v;
+      });
+      wire('hero-subtitle-input', function(v) {
+        S.sections.hero.subtitle = v; S.hero.subtitle = v;
+      });
+      wire('hero-badge-input', function(v) {
+        S.sections.hero.badge = v; S.hero.badgeText = v;
+      });
+      wire('hero-logo-input', function(v) {
+        S.sections.hero.logoText = v; S.hero.logoInitial = v;
+        var lp = document.getElementById('hero-logo-preview');
+        if (lp) lp.textContent = (v||'A').toUpperCase().slice(0,2);
+      });
+
+      // ── Voice ──
+      wire('voice-input-title', function(v) { S.sections.voice.title = v; });
+      wire('voice-input-desc',  function(v) { S.sections.voice.description = v; });
+      wire('voice-input-btn',   function(v) { S.sections.voice.buttonLabel = v; });
+
+      // ── Loop ──
+      wire('loop-input-title',            function(v) { S.sections.loop.title = v; });
+      wire('loop-input-desc',             function(v) { S.sections.loop.description = v; });
+      wire('loop-input-email-placeholder',function(v) { S.sections.loop.emailPlaceholder = v; });
+      wire('loop-input-btn-label',        function(v) { S.sections.loop.buttonLabel = v; });
+
+      // ── Footer ──
+      wire('footer-input-bizname', function(v) { S.sections.footer.businessName = v; });
+      wire('footer-input-text',    function(v) { S.sections.footer.footerText = v; });
+      wire('footer-input-link',    function(v) { S.sections.footer.footerLink = v; });
+
+      // ── AI ──
+      wire('ai-input-title',       function(v) { S.sections.ai.title = v; });
+      wire('ai-input-placeholder', function(v) { S.sections.ai.placeholder = v; });
+
+      // ── Hydrate all inputs from state ──
+      var h = sec.hero || {};
+      hydrate('hero-title-input',    h.title || S.hero && S.hero.title || '');
+      hydrate('hero-subtitle-input', h.subtitle || S.hero && S.hero.subtitle || '');
+      hydrate('hero-badge-input',    h.badge || S.hero && S.hero.badgeText || '');
+      hydrate('hero-logo-input',     h.logoText || S.hero && S.hero.logoInitial || '');
+
+      var v = sec.voice || {};
+      hydrate('voice-input-title', v.title || '');
+      hydrate('voice-input-desc',  v.description || '');
+      hydrate('voice-input-btn',   v.buttonLabel || '');
+
+      var l = sec.loop || {};
+      hydrate('loop-input-title',             l.title || '');
+      hydrate('loop-input-desc',              l.description || '');
+      hydrate('loop-input-email-placeholder', l.emailPlaceholder || '');
+      hydrate('loop-input-btn-label',         l.buttonLabel || '');
+
+      var f = sec.footer || {};
+      hydrate('footer-input-bizname', f.businessName || '');
+      hydrate('footer-input-text',    f.footerText || '');
+      hydrate('footer-input-link',    f.footerLink || '');
+
+      var lp = document.getElementById('hero-logo-preview');
+      var li = document.getElementById('hero-logo-input');
+      if (lp && li && li.value) lp.textContent = li.value.toUpperCase().slice(0,2);
+    }
+
+    // Run after initPage hydrates state
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(initStep25, 600);
+    });
+
+    window.QRAIVY_STEP25_REINIT = initStep25;
+  })();
+
   function schedulePreviewRerender() {
     clearTimeout(window._btnPreviewTimer);
     window._btnPreviewTimer = setTimeout(function() {
