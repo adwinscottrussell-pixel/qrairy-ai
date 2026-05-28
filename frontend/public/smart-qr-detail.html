@@ -429,7 +429,7 @@
         <span style="font-size:.85rem;font-weight:700;color:#f0f4f8;">✏️ Page Section Editor</span>
         <div style="display:flex;gap:8px;">
           <button id="sqd-publish-btn" style="padding:6px 14px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.02em;">Publish</button>
-          <button id="sqd-save-draft-btn" style="padding:6px 14px;background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);color:#ff5a1f;border-radius:8px;font-size:.68rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Save Draft</button>
+          <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="padding:6px 14px;background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);color:#ff5a1f;border-radius:8px;font-size:.68rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Save Draft</button>
           <button id="sqd-exit-edit-btn" style="padding:6px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(240,236,224,0.86);border-radius:8px;font-size:.68rem;cursor:pointer;font-family:'Inter',sans-serif;">Exit Editor</button>
         </div>
       </div>
@@ -505,7 +505,7 @@
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="sqd-publish-btn-2" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
-      <button id="sqd-save-draft-btn" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">💾 Save Draft</button>
+      <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">💾 Save Draft</button>
       <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;">No changes</div>
     </div>
     <!-- Tab content panels -->
