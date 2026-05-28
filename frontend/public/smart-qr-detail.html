@@ -1739,6 +1739,7 @@ window.QRAIVY_EDITOR_STATE = {
     });
   }
   wirePublishBtns();
+  window.publishPage = publishPage;
 
   // ── Wire Voice inputs ──────────────────────────────────────────────
   (function() {
@@ -2007,6 +2008,13 @@ window.QRAIVY_EDITOR_STATE = {
     wireGroup('theme-bg-btns',   'background');
     wireGroup('theme-btn-btns',  'buttonStyle');
     wireGroup('theme-font-btns', 'fontStyle');
+    // Also trigger draft preview rerender on theme change
+    ['theme-bg-btns','theme-btn-btns','theme-font-btns'].forEach(function(gid){
+      var g = document.getElementById(gid);
+      if(g) g.addEventListener('click', function(){
+        setTimeout(function(){ if(window.markDirty) window.markDirty(); }, 50);
+      });
+    });
     wireGroup('theme-logo-btns', 'logoMode');
 
     // Accent color picker
@@ -2021,6 +2029,7 @@ window.QRAIVY_EDITOR_STATE = {
       if (preview) preview.style.background = val;
       if(window.markDirty) window.markDirty(); else window.QRAIVY_EDITOR_STATE.dirty = true;
       setTimeout(injectThemePreview, 50);
+      if(window.markDirty) window.markDirty();
     }
     if (picker) picker.addEventListener('input', function(){ applyAccent(this.value); });
     if (hexInput) hexInput.addEventListener('change', function(){
