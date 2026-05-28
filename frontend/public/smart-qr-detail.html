@@ -1011,13 +1011,15 @@ async function initPage() {
         if (_draft.sections.ai)     Object.assign(window.QRAIVY_EDITOR_STATE.sections.ai,     _draft.sections.ai);
         if (_draft.sections.loop)   Object.assign(window.QRAIVY_EDITOR_STATE.sections.loop,   _draft.sections.loop);
         if (_draft.sections.footer) Object.assign(window.QRAIVY_EDITOR_STATE.sections.footer, _draft.sections.footer);
-        if (Array.isArray(_draft.buttons)) window.QRAIVY_EDITOR_STATE.buttons = _draft.buttons;
+        if (Array.isArray(_draft.buttons) && _draft.buttons.length > 0) window.QRAIVY_EDITOR_STATE.buttons = _draft.buttons;
         if (_draft.sections.theme)  Object.assign(window.QRAIVY_EDITOR_STATE.sections.theme,  _draft.sections.theme);
         if (_draft.pageName) window.QRAIVY_EDITOR_STATE.pageName = _draft.pageName;
         console.log('[initPage] localStorage draft restored');
       }
     }
   } catch(e) { console.warn('[initPage] draft restore error:', e); }
+  // Render buttons list now that state is fully hydrated
+  setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); }, 50);
   document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
 
   // ── Phone iframe ──────────────────────────────────────────────────────
@@ -2417,12 +2419,6 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   window.renderButtonsFn = renderButtons;
-  // Auto-render buttons list when page loads (so existing buttons show immediately)
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-      if (window.renderButtonsFn) window.renderButtonsFn();
-    }, 700);
-  });
 
   // ── Wire global save + publish buttons ───────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
