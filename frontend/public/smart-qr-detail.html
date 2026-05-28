@@ -364,13 +364,13 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
-    padding:24px 16px;
+    justify-content:flex-start;
+    padding:20px 16px 16px;
     background:#0a0c10;
     height:calc(100vh - 52px);
     position:sticky;
     top:52px;
-    overflow:visible;
+    overflow:hidden;
     border-right:0.5px solid rgba(255,255,255,0.06);
   ">
     <!-- Phone preview label -->
@@ -1184,6 +1184,9 @@ document.addEventListener('DOMContentLoaded', initPage);
     var iframe = document.getElementById('sqd-iframe');
     if (!stage) return;
     stage.innerHTML = buildDraftHTML();
+    // Reset scroll to top after DOM update
+    var _pf = document.querySelector('.sqd-phone-frame');
+    if (_pf) { _pf.scrollTop = 0; requestAnimationFrame(function(){ _pf.scrollTop = 0; }); }
     // Add click-through to hotspots
     if (window.QRAIVY_HOTSPOTS) window.QRAIVY_HOTSPOTS.rebuild();
     // Mark editable elements for click-to-edit
@@ -1200,6 +1203,8 @@ document.addEventListener('DOMContentLoaded', initPage);
     if (mode === 'draft') {
       if (stage) stage.style.display = 'block';
       if (iframe) iframe.style.display = 'none';
+      var _pf2 = document.querySelector('.sqd-phone-frame');
+      if (_pf2) _pf2.scrollTop = 0;
       render();
       // Update button styles
       if (draftBtn) { draftBtn.style.background='rgba(255,90,31,0.15)'; draftBtn.style.borderColor='rgba(255,90,31,0.3)'; draftBtn.style.color='#ff5a1f'; }
