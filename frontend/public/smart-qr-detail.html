@@ -681,7 +681,7 @@
         <div id="btn-list" style="display:flex;flex-direction:column;gap:8px;"></div>
 
         <!-- Add Button -->
-        <button id="btn-add" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.4);border-radius:8px;color:rgba(255,90,31,0.9);font-size:.75rem;cursor:pointer;font-weight:600;transition:all .15s;">+ Add Button</button>
+        <button id="btn-add" onclick="if(window.renderButtonsFn){var nb={id:'b'+Math.random().toString(36).slice(2,7),label:'New Button',url:'',active:true,style:'primary'};window.QRAIVY_EDITOR_STATE.buttons.push(nb);if(window.markDirty)window.markDirty();window.renderButtonsFn();}" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:0.5px dashed rgba(255,90,31,0.4);border-radius:8px;color:rgba(255,90,31,0.9);font-size:.75rem;cursor:pointer;font-weight:600;transition:all .15s;">+ Add Button</button>
 
         <!-- Status -->
         <div id="btn-save-status" style="margin-top:8px;font-size:.62rem;color:rgba(240,244,248,0.45);text-align:center;">No changes</div>
@@ -2417,6 +2417,12 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   window.renderButtonsFn = renderButtons;
+  // Auto-render buttons list when page loads (so existing buttons show immediately)
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      if (window.renderButtonsFn) window.renderButtonsFn();
+    }, 700);
+  });
 
   // ── Wire global save + publish buttons ───────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
