@@ -351,13 +351,12 @@
 <div id="sqd-editor-layout-wrap" style="display:none;">
 <div style="
   display:grid;
-  grid-template-columns:380px 1fr;
+  grid-template-columns:430px 1fr;
   min-height:calc(100vh - 52px);
   margin-top:52px;
   max-width:1400px;
   margin-left:auto;
   margin-right:auto;
-  overflow:hidden;
 ">
 
   <!-- LEFT: LIVE PREVIEW -->
@@ -371,7 +370,7 @@
     height:calc(100vh - 52px);
     position:sticky;
     top:52px;
-    overflow:hidden;
+    overflow:visible;
     border-right:0.5px solid rgba(255,255,255,0.06);
   ">
     <!-- Phone preview label -->
@@ -381,9 +380,9 @@
 
     <!-- Phone frame — real device chrome -->
     <div style="position:relative;flex-shrink:0;">
-      <div style="position:absolute;inset:-40px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.07),transparent 65%);border-radius:60px;pointer-events:none;z-index:0;"></div>
+      <div style="position:absolute;inset:-20px;background:radial-gradient(ellipse at center,rgba(255,90,31,0.09),transparent 65%);border-radius:60px;pointer-events:none;z-index:0;"></div>
       <!-- Device shell -->
-      <div style="position:relative;z-index:1;background:#1a1a1f;border-radius:44px;padding:10px;box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 32px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.1);">
+      <div style="position:relative;z-index:1;background:#242428;border-radius:44px;padding:10px;box-shadow:0 0 0 1.5px rgba(255,255,255,0.14),0 40px 80px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.12);">
         <!-- Notch bar -->
         <div style="display:flex;align-items:center;justify-content:center;height:28px;margin-bottom:2px;position:relative;">
           <div style="width:90px;height:22px;background:#111;border-radius:0 0 16px 16px;display:flex;align-items:center;justify-content:center;gap:6px;">
