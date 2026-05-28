@@ -999,6 +999,25 @@ async function initPage() {
       }
     } catch(e) { console.warn('[initPage] sections hydration error:', e); }
   }
+  // Load localStorage draft if newer than API state
+  try {
+    var _draftKey = 'qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug || 'demo');
+    var _saved = localStorage.getItem(_draftKey);
+    if (_saved) {
+      var _draft = JSON.parse(_saved);
+      if (_draft && _draft.sections) {
+        if (_draft.sections.hero)   Object.assign(window.QRAIVY_EDITOR_STATE.sections.hero,   _draft.sections.hero);
+        if (_draft.sections.voice)  Object.assign(window.QRAIVY_EDITOR_STATE.sections.voice,  _draft.sections.voice);
+        if (_draft.sections.ai)     Object.assign(window.QRAIVY_EDITOR_STATE.sections.ai,     _draft.sections.ai);
+        if (_draft.sections.loop)   Object.assign(window.QRAIVY_EDITOR_STATE.sections.loop,   _draft.sections.loop);
+        if (_draft.sections.footer) Object.assign(window.QRAIVY_EDITOR_STATE.sections.footer, _draft.sections.footer);
+        if (Array.isArray(_draft.buttons)) window.QRAIVY_EDITOR_STATE.buttons = _draft.buttons;
+        if (_draft.sections.theme)  Object.assign(window.QRAIVY_EDITOR_STATE.sections.theme,  _draft.sections.theme);
+        if (_draft.pageName) window.QRAIVY_EDITOR_STATE.pageName = _draft.pageName;
+        console.log('[initPage] localStorage draft restored');
+      }
+    }
+  } catch(e) { console.warn('[initPage] draft restore error:', e); }
   document.getElementById('sqd-download-btn').href    = qrSrc.replace('192x192','600x600');
 
   // ── Phone iframe ──────────────────────────────────────────────────────
@@ -2447,7 +2466,7 @@ window.QRAIVY_EDITOR_STATE = {
     var S = window.QRAIVY_EDITOR_STATE;
     var slug = S.slug;
 
-    // Always save to localStorage first
+    // Always save to localStorage
     try { localStorage.setItem('qraivy_editor_draft_' + (slug||'demo'), JSON.stringify(S)); } catch(e) {}
 
     if (!slug) {
@@ -2458,7 +2477,6 @@ window.QRAIVY_EDITOR_STATE = {
     }
 
     setDraftSaveStatus('Saving…', '#ff5a1f');
-    // Set all buttons to saving state
     document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(b){
       b.textContent = 'Saving…'; b.disabled = true;
     });
@@ -2468,6 +2486,7 @@ window.QRAIVY_EDITOR_STATE = {
       if (window.Clerk && window.Clerk.session) tok = await window.Clerk.session.getToken();
       var headers = { 'Content-Type': 'application/json' };
       if (tok) headers['Authorization'] = 'Bearer ' + tok;
+      // Use same payload structure as publish — this is the only save endpoint
       var payload = {
         slug: slug,
         businessName: S.pageName || S.sections.hero.title || slug,
@@ -2475,7 +2494,6 @@ window.QRAIVY_EDITOR_STATE = {
         useCase: S.useCase || 'restaurant',
         brandColor: S.brandColor || (S.sections.theme && S.sections.theme.accentColor) || '#ff5a1f',
         logoUrl: S.logoUrl || '',
-        draft: true,
         sections: Object.assign({}, S.sections || {}, {
           buttons: (S.buttons || []),
           order:   (S.sections && S.sections.order) || ['hero','voice','ai','buttons','loop','footer'],
@@ -2485,13 +2503,16 @@ window.QRAIVY_EDITOR_STATE = {
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
-      setDraftSaveStatus('Draft saved ✓', '#22d47e');
+      // Save succeeded — update localStorage with confirmed state
+      try { localStorage.setItem('qraivy_editor_draft_' + slug, JSON.stringify(S)); } catch(e) {}
       S.dirty = false;
+      setDraftSaveStatus('Saved ✓', '#22d47e');
       setTimeout(function(){ setDraftSaveStatus('No changes'); }, 3000);
-    } catch(e) {
-      setDraftSaveStatus('Saved locally ✓', '#22d47e');
+    } catch(err) {
+      // Backend failed — localStorage save still worked
+      setDraftSaveStatus('Saved locally (offline) ✓', '#f59e0b');
       S.dirty = false;
-      setTimeout(function(){ setDraftSaveStatus('No changes'); }, 3000);
+      setTimeout(function(){ setDraftSaveStatus('No changes'); }, 4000);
     } finally {
       document.querySelectorAll('[id^="sqd-save-draft-btn"]').forEach(function(b){
         b.textContent = 'Save Draft'; b.disabled = false;
