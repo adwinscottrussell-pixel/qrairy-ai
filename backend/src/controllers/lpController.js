@@ -223,11 +223,15 @@ body{background:#f2ede8!important}
 .lp-voice-section{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:16px!important}
 .lp-voice-title{color:#0f0a05!important;font-weight:600!important}
 .lp-voice-meta{color:rgba(15,10,5,0.5)!important}
-.lp-ai-card{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:16px!important}
-.lp-ai-status,.lp-ai-label{color:rgba(15,10,5,0.6)!important}
-.lp-loop-card{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:18px!important}
-.lp-loop-title{color:#0f0a05!important;font-weight:700!important}
-.lp-loop-sub{color:rgba(15,10,5,0.55)!important}
+.lp-chat-section{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:16px!important;margin:0 16px!important}
+.lp-chat-collapsed{background:transparent!important}
+.lp-chat-collapsed-label{color:#0f0a05!important;font-weight:600!important}
+.lp-chat-collapsed-hint{color:rgba(15,10,5,0.5)!important}
+.lp-chat-widget{background:#f9f7f5!important;border:1px solid rgba(0,0,0,0.07)!important}
+.lp-chat-input{background:#fff!important;border:1px solid rgba(0,0,0,0.1)!important;color:#1a1209!important}
+.lp-subscribe-section{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:18px!important}
+.lp-sub-title{color:#0f0a05!important;font-weight:700!important;text-transform:none!important;font-size:1.1rem!important}
+.lp-sub-description{color:rgba(15,10,5,0.55)!important}
 .lp-sub-input{background:#f7f4f1!important;border:1px solid rgba(0,0,0,0.1)!important;color:#1a1209!important;border-radius:10px!important}
 .lp-btn-primary{color:#fff!important;box-shadow:0 4px 14px rgba(0,0,0,0.15)!important}
 .lp-btn-secondary{background:#fff!important;color:#1a1209!important;border:1px solid rgba(0,0,0,0.12)!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
