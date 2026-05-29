@@ -287,7 +287,20 @@ body.theme-light .lp-footer{background:#FFFFFF;border-top:1px solid #E8E3DC;padd
 body.theme-light .lp-footer-url{display:none}
 body.theme-light .lp-footer-name{font-size:1rem;font-weight:700;color:#111111}
 body.theme-light .lp-footer-powered{font-size:0.82rem;color:#8A8A8A;margin-top:6px}
-body.theme-light .lp-footer-powered a{color:${accent};font-weight:700;text-decoration:none;display:inline-block;margin-top:4px;font-size:0.88rem}` : ''}
+body.theme-light .lp-footer-powered a{color:${accent};font-weight:700;text-decoration:none;display:inline-block;margin-top:4px;font-size:0.88rem}
+/* ── PASS 3: Featured + Wallet reduction ───────── */
+body.theme-light .lp-featured-section{display:block;padding:0 16px;margin-bottom:20px}
+body.theme-light .lp-featured-header{margin-bottom:14px;text-align:center}
+body.theme-light .lp-featured-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.14em;color:#8A8A8A;font-weight:600}
+body.theme-light .lp-featured-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+body.theme-light .lp-featured-card{background:#FFFFFF;border:1px solid #E8E3DC;border-radius:16px;padding:18px 12px;box-shadow:0 8px 24px rgba(0,0,0,.04);text-align:center}
+body.theme-light .lp-featured-icon{font-size:1.3rem;display:block;margin-bottom:8px}
+body.theme-light .lp-featured-card-title{font-size:0.78rem;font-weight:700;color:#111111;margin-bottom:4px}
+body.theme-light .lp-featured-card-desc{font-size:0.68rem;color:#8A8A8A;line-height:1.5}
+body.theme-light .lp-subscribe-card{padding:22px 20px}
+body.theme-light .lp-wallet-card{transform:scale(1.01)}
+body.theme-light .lp-sub-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}` : ''}
+.lp-featured-section{display:none}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
 /* Nav */
@@ -543,6 +556,15 @@ ${(function() {
   </div>
 </section>`;
   const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
+  const sfeat = storedSections.featured || {};
+  const featuredHTML = sfeat.enabled === false ? '' :
+    '<section class="lp-featured-section">'+
+    '<div class="lp-featured-header"><h2 class="lp-featured-title">'+(sfeat.title||'Why Choose Us')+'</h2></div>'+
+    '<div class="lp-featured-cards">'+
+    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x2728;</div><div class="lp-featured-card-title">AI Concierge</div><div class="lp-featured-card-desc">Customers get instant answers.</div></div>'+
+    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x1F39F;</div><div class="lp-featured-card-title">Digital Wallet</div><div class="lp-featured-card-desc">One-tap membership and rewards.</div></div>'+
+    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x1F514;</div><div class="lp-featured-card-title">Smart Updates</div><div class="lp-featured-card-desc">Reconnect with every scan.</div></div>'+
+    '</div></section>';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
@@ -554,9 +576,13 @@ ${(function() {
 </section>
 <!-- Business Info -->
 ${sectionsHTML}`;
-  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, loop: loopHTML, footer: footerBlock };
+  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, featured: featuredHTML, loop: loopHTML, footer: footerBlock };
   const orderedSections = sectionOrder.map(function(k){ return sectionMap[k] || ''; });
   const footerIdx = orderedSections.length - 1;
+  if (!sectionOrder.includes('featured')) {
+    const _bi = sectionOrder.indexOf('buttons');
+    orderedSections.splice(_bi !== -1 ? _bi + 1 : orderedSections.length - 1, 0, featuredHTML);
+  }
   orderedSections.splice(footerIdx, 0, ctaHTML);
   return orderedSections.join('\n');
 })()}
