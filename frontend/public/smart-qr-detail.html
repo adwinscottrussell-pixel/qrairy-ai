@@ -1036,7 +1036,7 @@ async function initPage() {
     }, { passive: true });
   }
   iframeEl.addEventListener('load', function() {
-    setTimeout(injectThemePreview, 200);
+    setTimeout(function(){ if(window.injectThemePreview) window.injectThemePreview(); }, 200);
     var frame = document.querySelector('.sqd-phone-frame');
     if (!frame) return;
     frame.scrollTop = 0;
@@ -1945,7 +1945,7 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   var _themeReloadTimer = null;
-  function injectThemePreview() {
+  window.injectThemePreview = function injectThemePreview() {
     if (_themeReloadTimer) clearTimeout(_themeReloadTimer);
     _themeReloadTimer = setTimeout(function() {
       var iframe = document.getElementById('sqd-iframe');
@@ -2000,7 +2000,7 @@ window.QRAIVY_EDITOR_STATE = {
           window.QRAIVY_EDITOR_STATE.sections.theme[key] = b.getAttribute('data-val');
           setActive(groupId, b.getAttribute('data-val'));
           if(window.markDirty) window.markDirty(); else window.QRAIVY_EDITOR_STATE.dirty = true;
-          setTimeout(injectThemePreview, 100);
+          setTimeout(function(){ if(window.injectThemePreview) window.injectThemePreview(); }, 100);
         });
       });
     }
@@ -2107,7 +2107,7 @@ window.QRAIVY_EDITOR_STATE = {
   function makeid() { return 'b' + Math.random().toString(36).slice(2,7); }
 
   // ── QRAIVY BUTTONS EDITOR v2 — Step 15 (Linktree-style) ──────────────────
-(function() {
+;(function() {
 
   // ── Status ──────────────────────────────────────────────────────────────
   function setStatus(msg, color) {
