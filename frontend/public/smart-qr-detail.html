@@ -1965,7 +1965,7 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   // Re-render order list when tab is clicked
-  (function() {
+  ;(function() {
     var orderTab = document.querySelector('[data-tab="order"]');
     if (orderTab) orderTab.addEventListener('click', function(){ setTimeout(renderOrderList, 50); });
     // Also re-render when enabled toggles change
@@ -2124,7 +2124,7 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   // ── STEP 25: Wire all section inputs to EDITOR_STATE + live preview ────────
-  (function() {
+  ;(function() {
     function wire(id, stateWriter) {
       var el = document.getElementById(id);
       if (!el) return;
