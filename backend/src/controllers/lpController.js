@@ -483,7 +483,7 @@ ${(function() {
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
   <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
 </footer>`;
-  const ctaHTML = `<section class="lp-cta-section">
+  const ctaHTML = hasEditorSections ? (sectionsHTML ? `<!-- Business Info -->${sectionsHTML}` : '') : `<section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
   <a href="${website}" target="_blank" class="lp-btn lp-btn-secondary">${content.cta2}</a>
 </section>
