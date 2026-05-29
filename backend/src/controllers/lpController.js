@@ -213,19 +213,31 @@ function renderLP(page) {
 html{scroll-behavior:smooth}
 body{background:${_bgColor};color:${_textColor};font-family:${_fontFamily};max-width:560px;width:100%;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
-${themeBg === 'light' ? `/* Light theme */
-.lp-nav{background:rgba(245,240,232,0.95)!important;border-bottom:0.5px solid rgba(0,0,0,0.08)!important}
-.lp-hero-sub{color:rgba(26,18,9,0.6)!important}
-.lp-btn-secondary{background:rgba(0,0,0,0.06)!important;color:rgba(26,18,9,0.7)!important;border:0.5px solid rgba(0,0,0,0.14)!important}
-.lp-section{background:rgba(0,0,0,0.04)!important;border:0.5px solid rgba(0,0,0,0.08)!important}
-.lp-section-title{color:rgba(26,18,9,0.6)!important}
-.lp-item{background:rgba(0,0,0,0.03)!important;border:0.5px solid rgba(0,0,0,0.06)!important;color:#1a1209!important}
-.lp-qr-card{background:rgba(0,0,0,0.03)!important;border:0.5px solid rgba(0,0,0,0.08)!important}
-.lp-voice-section,.lp-ai-card,.lp-loop-card{background:rgba(0,0,0,0.03)!important;border:0.5px solid rgba(0,0,0,0.08)!important}
-.lp-voice-title,.lp-voice-meta,.lp-ai-status,.lp-ai-label,.lp-loop-title,.lp-loop-sub,.lp-nav-name{color:#1a1209!important}
-.lp-sub-input,.lp-chat-input{background:rgba(0,0,0,0.04)!important;border:0.5px solid rgba(0,0,0,0.12)!important;color:#1a1209!important}
-.lp-btn-primary{color:#fff!important}
-.lp-footer{color:rgba(26,18,9,0.5)!important}` : ''}
+${themeBg === 'light' ? `/* Light theme — refined */
+body{background:#f2ede8!important}
+.lp-nav{background:rgba(255,255,255,0.96)!important;border-bottom:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 1px 12px rgba(0,0,0,0.06)!important}
+.lp-nav-name{color:#1a1209!important}
+.lp-hero{background:linear-gradient(160deg,rgba(255,255,255,0.9) 0%,rgba(242,237,232,0.4) 100%)!important}
+.lp-hero-title{color:#0f0a05!important}
+.lp-hero-sub{color:rgba(15,10,5,0.55)!important;font-weight:400!important}
+.lp-voice-section{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:16px!important}
+.lp-voice-title{color:#0f0a05!important;font-weight:600!important}
+.lp-voice-meta{color:rgba(15,10,5,0.5)!important}
+.lp-ai-card{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:16px!important}
+.lp-ai-status,.lp-ai-label{color:rgba(15,10,5,0.6)!important}
+.lp-loop-card{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 16px rgba(0,0,0,0.06),0 1px 4px rgba(0,0,0,0.04)!important;border-radius:18px!important}
+.lp-loop-title{color:#0f0a05!important;font-weight:700!important}
+.lp-loop-sub{color:rgba(15,10,5,0.55)!important}
+.lp-sub-input{background:#f7f4f1!important;border:1px solid rgba(0,0,0,0.1)!important;color:#1a1209!important;border-radius:10px!important}
+.lp-btn-primary{color:#fff!important;box-shadow:0 4px 14px rgba(0,0,0,0.15)!important}
+.lp-btn-secondary{background:#fff!important;color:#1a1209!important;border:1px solid rgba(0,0,0,0.12)!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
+.lp-buttons-section .lp-btn{box-shadow:0 2px 10px rgba(0,0,0,0.08)!important}
+.lp-section{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 12px rgba(0,0,0,0.05)!important}
+.lp-section-title{color:rgba(15,10,5,0.5)!important;font-size:0.62rem!important;letter-spacing:0.12em!important;text-transform:uppercase!important}
+.lp-item{background:#f9f7f5!important;border:1px solid rgba(0,0,0,0.06)!important;color:#1a1209!important}
+.lp-qr-card{background:#fff!important;border:1px solid rgba(0,0,0,0.07)!important;box-shadow:0 2px 12px rgba(0,0,0,0.05)!important}
+.lp-footer{color:rgba(15,10,5,0.4)!important;border-top:1px solid rgba(0,0,0,0.08)!important}
+.lp-footer a{color:rgba(15,10,5,0.5)!important}` : ''}
 /* Nav */
 .lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
 .lp-nav-brand{display:flex;align-items:center;gap:10px}
