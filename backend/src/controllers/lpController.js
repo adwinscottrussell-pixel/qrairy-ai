@@ -299,7 +299,10 @@ body.theme-light .lp-featured-card-title{font-size:0.78rem;font-weight:700;color
 body.theme-light .lp-featured-card-desc{font-size:0.68rem;color:#8A8A8A;line-height:1.5}
 body.theme-light .lp-subscribe-card{padding:22px 20px}
 body.theme-light .lp-wallet-card{transform:scale(1.01)}
-body.theme-light .lp-sub-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}` : ''}
+body.theme-light .lp-sub-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.theme-light .qraivy-growth-btn{color:#111111;background:rgba(0,0,0,0.05);border:1px solid #E8E3DC}
+body.theme-light .qraivy-growth-btn .qraivy-growth-icon{color:#111111}
+body.theme-light .qraivy-growth-sub{color:#8A8A8A}` : ''}
 .lp-featured-section{display:none}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
