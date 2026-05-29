@@ -180,7 +180,8 @@ function renderLP(page) {
   const buttonsHTML = storedButtons.filter(b => b.active !== false).map(b => {
     const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
     const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
-    return `<a href="${url}" target="_blank" rel="noopener" class="${cls}">${b.label || 'Learn More'}</a>`;
+    const bDom = b.url ? b.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] : '';
+    return '<a href="' + url + '" target="_blank" rel="noopener" class="' + cls + '"><span class="lp-btn-inner"><span class="lp-btn-label">' + (b.label || 'Learn More') + '</span>' + (bDom ? '<span class="lp-btn-sub">' + bDom + '</span>' : '') + '</span><span class="lp-btn-arr">&rarr;</span></a>';
   }).join('\n');
 
   // Only show legacy LP_CONTENT sections if page has no new editor sections
@@ -264,7 +265,31 @@ body.theme-light .lp-sub-title{font-size:1.3rem;letter-spacing:-0.02em;line-heig
 body.theme-light .lp-voice-section{margin-bottom:16px}
 body.theme-light .lp-chat-section{margin-bottom:16px}
 body.theme-light .lp-section{margin-bottom:16px}
-body.theme-light .lp-subscribe-section{margin-bottom:20px}` : ''}
+body.theme-light .lp-subscribe-section{margin-bottom:20px}
+/* ── PASS 2: Buttons, Loop/Wallet, Footer ──────── */
+body.theme-light .lp-btn::after{display:none}
+body.theme-light .lp-btn{display:flex;align-items:center;padding:20px 24px;gap:16px;text-align:left}
+body.theme-light .lp-btn-inner{display:flex;flex-direction:column;gap:3px;flex:1}
+body.theme-light .lp-btn-label{font-size:0.95rem;font-weight:700;color:#111111;display:block}
+body.theme-light .lp-btn-sub{display:block;font-size:0.72rem;color:#8A8A8A;font-weight:400}
+body.theme-light .lp-btn-arr{display:block;font-size:1.1rem;color:#8A8A8A;flex-shrink:0}
+body.theme-light .lp-buttons-section{background:transparent;border:none;box-shadow:none;padding:0 16px;margin-bottom:16px}
+body.theme-light .lp-hero-ctas{display:flex;flex-direction:column;gap:10px}
+body.theme-light .lp-hero-ctas .lp-btn{background:#FFFFFF;border:1px solid #E8E3DC;border-radius:18px;box-shadow:0 12px 35px rgba(0,0,0,.045)}
+body.theme-light .lp-hero-ctas .lp-btn:hover{transform:translateY(-2px);box-shadow:0 20px 50px rgba(0,0,0,.075)}
+body.theme-light .lp-subscribe-section{background:transparent;border:none;box-shadow:none;padding:0 16px;margin-bottom:20px}
+body.theme-light .lp-subscribe-card{background:#FFFFFF;border:1px solid #E8E3DC;box-shadow:0 24px 70px rgba(0,0,0,.07);border-radius:28px;padding:32px 24px}
+body.theme-light .lp-sub-glow{display:none}
+body.theme-light .lp-wallet-card{box-shadow:0 28px 70px rgba(0,0,0,.16) !important;transform:scale(1.03)}
+body.theme-light .lp-sub-text{color:#5F5F5F;font-size:0.88rem;line-height:1.65;margin-bottom:20px}
+body.theme-light .lp-wallet-btn{background:#FFFFFF;border:1px solid #E8E3DC;color:#5F5F5F;border-radius:12px;font-size:0.76rem}
+body.theme-light .lp-footer{background:#FFFFFF;border-top:1px solid #E8E3DC;padding:32px 24px;margin:0 16px 16px;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.04)}
+body.theme-light .lp-footer-url{display:none}
+body.theme-light .lp-footer-name{font-size:1rem;font-weight:700;color:#111111}
+body.theme-light .lp-footer-powered{font-size:0.82rem;color:#8A8A8A;margin-top:6px}
+body.theme-light .lp-footer-powered a{color:${accent};font-weight:700;text-decoration:none;display:inline-block;margin-top:4px;font-size:0.88rem}` : ''}
+.lp-btn-sub,.lp-btn-arr{display:none}
+.lp-btn-inner{display:block}
 /* Nav */
 .lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
 .lp-nav-brand{display:flex;align-items:center;gap:10px}
@@ -517,7 +542,7 @@ ${(function() {
     <div class="lp-wallet-btns"><button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button><button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button></div>
   </div>
 </section>`;
-  const buttonsBlock = buttonsHTML ? '<section class="lp-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
+  const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
