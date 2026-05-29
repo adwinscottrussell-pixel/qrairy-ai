@@ -183,7 +183,9 @@ function renderLP(page) {
     return `<a href="${url}" target="_blank" rel="noopener" class="${cls}">${b.label || 'Learn More'}</a>`;
   }).join('\n');
 
-  const sectionsHTML = content.sections.map(sec => {
+  // Only show legacy LP_CONTENT sections if page has no new editor sections
+  const hasEditorSections = Object.keys(storedSections).some(k => ['hero','voice','ai','loop','footer'].includes(k));
+  const sectionsHTML = hasEditorSections ? '' : content.sections.map(sec => {
     const items = (sec.items || []).map(item =>
       `<div class="lp-item"><span class="lp-dot" style="background:${accent}"></span><span>${tmpl(item)}</span></div>`
     ).join('');
