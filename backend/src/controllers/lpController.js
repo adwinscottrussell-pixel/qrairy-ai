@@ -203,6 +203,10 @@ function renderLP(page) {
   const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://api.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   const sh = storedSections.hero   || {};
+  // Use AI-generated hero text if available and hero title is generic
+  if (storedSections.aiGenerated && storedSections.hero) {
+    if (storedSections.hero.aiTitle) { sh.title = storedSections.hero.aiTitle; sh.subtitle = storedSections.hero.aiSubtitle || sh.subtitle; }
+  }
   const sv = storedSections.voice  || {};
   const sa = storedSections.ai     || {};
   const sl = storedSections.loop   || {};
@@ -901,7 +905,7 @@ async function handlePublishLP(req, res) {
               const cur = await prisma.landingPage.findUnique({ where: { slug } });
               const existing = cur && cur.sections ? JSON.parse(cur.sections) : {};
               const merged = Object.assign({}, existing, {
-                hero: Object.assign({}, existing.hero||{}, aiData.headline ? { title: aiData.headline, subtitle: aiData.sub||'' } : {}),
+                hero: Object.assign({}, existing.hero||{}, aiData.headline ? { aiTitle: aiData.headline, aiSubtitle: aiData.sub||'' } : {}),
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null },
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent
