@@ -1218,7 +1218,9 @@ document.addEventListener('DOMContentLoaded', initPage);
         </div>` : ''
     };
 
-    var body = order.map(function(k){ return sections[k] || ''; }).join('');
+    var _ord = order.map(function(k){ return sections[k] || ''; });
+    if (!order.includes('featured')) { var _fbi=order.indexOf('buttons'); _ord.splice(_fbi!==-1?_fbi+1:_ord.length-1,0,sections.featured||''); }
+    var body = _ord.join('');
 
     return `<div style="background:${bg};color:${textColor};font-family:${font};min-height:100%;width:100%;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:${theme.background === 'light' ? 'rgba(245,240,232,0.95)' : 'rgba(10,10,10,0.95)'};border-bottom:0.5px solid ${cardBorder};">
