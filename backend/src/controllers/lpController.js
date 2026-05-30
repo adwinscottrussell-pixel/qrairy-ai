@@ -892,7 +892,9 @@ async function handlePublishLP(req, res) {
     if (websiteUrl && websiteUrl.startsWith('http')) {
       setImmediate(async () => {
         try {
+          console.log('[Firecrawl] Starting scrape for', websiteUrl);
           const siteContent = await scrapeWithFirecrawl(websiteUrl);
+          console.log('[Firecrawl] scrape result:', siteContent ? 'got ' + siteContent.length + ' chars' : 'null/empty');
           if (siteContent) {
             const aiData = await generateLPFromSite(businessName, websiteUrl, siteContent);
             if (aiData) {
