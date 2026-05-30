@@ -740,24 +740,54 @@
       </div>
 
       <!-- INFO -->
-      <div class="sqd-tab-panel" data-panel="info" style="display:none;">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">ℹ️ Info Section</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">Hours, menu, location, services</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="sqd-tab-panel" data-panel="info" style="display:none;">
+        <div style="font-weight:700;color:#f0f4f8;margin-bottom:4px;font-size:.82rem;">ℹ️ Info Section</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:14px;">Business contact information shown on your page.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Our Menu</div>
-            <div style="font-size:.72rem;color:rgba(240,244,248,0.82);font-family:'Inter',sans-serif;">4 items · Starters, Mains, Desserts, Drinks</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label style="font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;">📍 Address</label>
+              <button id="info-address-toggle" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+            </div>
+            <input id="info-input-address" type="text" placeholder="123 Main Street, Miami FL" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
+
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Opening Hours</div>
-            <div style="font-size:.72rem;color:rgba(240,244,248,0.82);font-family:'Inter',sans-serif;">Mon–Fri 12:00–23:00 · Sat–Sun 11:00</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label style="font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;">📞 Phone</label>
+              <button id="info-phone-toggle" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+            </div>
+            <input id="info-input-phone" type="text" placeholder="+1 (555) 123-4567" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
+
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Find Us</div>
-            <div style="font-size:.72rem;color:rgba(240,244,248,0.82);font-family:'Inter',sans-serif;">2 links · qraivy.com + reservations</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label style="font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;">🌐 Website</label>
+              <button id="info-website-toggle" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+            </div>
+            <input id="info-input-website" type="text" placeholder="https://business.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label style="font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;">🕒 Business Hours</label>
+              <button id="info-hours-toggle" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+            </div>
+            <textarea id="info-input-hours" rows="2" placeholder="Mon-Fri 9am - 5pm" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;resize:vertical;font-family:inherit;"></textarea>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <label style="font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;">✉ Email</label>
+              <button id="info-email-toggle" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+            </div>
+            <input id="info-input-email" type="text" placeholder="hello@business.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
+          </div>
+
+          <div id="info-save-status" style="font-size:.62rem;color:rgba(240,244,248,0.50);text-align:center;">No changes</div>
         </div>
-        <div style="margin-top:14px;padding:10px 12px;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.15);border-radius:8px;font-size:.65rem;color:rgba(255,90,31,0.7);">Info editing coming in next step</div>
+      </div>
       </div>
 
       <!-- APPEARANCE -->
@@ -1170,6 +1200,7 @@ document.addEventListener('DOMContentLoaded', initPage);
     var loop = sec.loop || {};
     var footer = sec.footer || {};
     var featCards = Array.isArray(sec.featured) ? sec.featured : [];
+    var si = sec.info || {};
     var buttons = s.buttons || [];
     var order = sec.order || ['hero','voice','ai','buttons','loop','footer'];
     var bizName = s.pageName || hero.title || s.slug || 'My Business';
@@ -1242,6 +1273,18 @@ document.addEventListener('DOMContentLoaded', initPage);
           </div>
         </div>` : '',
 
+      info: (function(){
+        if (!si||(!si.address&&!si.phone&&!si.website&&!si.hours&&!si.email)) return '';
+        var rows=[], rs='display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid '+cardBorder+';', rl='display:flex;align-items:flex-start;gap:10px;padding:8px 0;', ts='font-size:.75rem;color:'+textColor+';line-height:1.4;';
+        if(si.address&&si.addressEnabled!==false) rows.push('<div style="'+rs+'"><span>📍</span><span style="'+ts+'">'+si.address+'</span></div>');
+        if(si.phone&&si.phoneEnabled!==false)     rows.push('<div style="'+rs+'"><span>📞</span><span style="'+ts+'">'+si.phone+'</span></div>');
+        if(si.website&&si.websiteEnabled!==false)  rows.push('<div style="'+rs+'"><span>🌐</span><span style="'+ts+'">'+si.website+'</span></div>');
+        if(si.hours&&si.hoursEnabled!==false)      rows.push('<div style="'+rs+'"><span>🕒</span><span style="'+ts+'">'+si.hours.replace(/\n/g,'<br>')+'</span></div>');
+        if(si.email&&si.emailEnabled!==false)      rows.push('<div style="'+(rows.length?rl:rs)+'"><span>✉</span><span style="'+ts+'">'+si.email+'</span></div>');
+        if(!rows.length) return '';
+        return '<div data-section="info" style="padding:8px 20px 16px;"><div style="background:'+cardBg+';border:0.5px solid '+cardBorder+';border-radius:16px;padding:16px;">'+rows.join('')+'</div></div>';
+      })(),
+
       footer: footer.enabled !== false ? `
         <div data-section="footer" style="padding:24px 20px 32px;text-align:center;border-top:0.5px solid ${cardBorder};margin-top:8px;">
           <div style="font-size:.72rem;color:${subColor};margin-bottom:4px;">${footer.businessName || bizName}</div>
@@ -1250,7 +1293,8 @@ document.addEventListener('DOMContentLoaded', initPage);
     };
 
     var _ord = order.map(function(k){ return sections[k] || ''; });
-    if (!order.includes('featured')) { var _fbi=order.indexOf('loop'); _ord.splice(_fbi!==-1?_fbi+1:_ord.length-1,0,sections.featured||''); }
+    var _fi2=-1; if (!order.includes('featured')) { var _fbi=order.indexOf('loop'); _fi2=_fbi!==-1?_fbi+1:_ord.length-1; _ord.splice(_fi2,0,sections.featured||''); } else { _fi2=order.indexOf('featured'); }
+    if (!order.includes('info')) { _ord.splice(_fi2+1,0,sections.info||''); }
     var body = _ord.join('');
 
     return `<div style="background:${bg};color:${textColor};font-family:${font};min-height:100%;width:100%;">
@@ -2298,6 +2342,11 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('loop-input-wallet-subtitle',    l.walletSubtitle || '');
 
       var f = sec.footer || {};
+      hydrate('info-input-address', (S.sections.info||{}).address||'');
+      hydrate('info-input-phone',   (S.sections.info||{}).phone||'');
+      hydrate('info-input-website',  (S.sections.info||{}).website||'');
+      hydrate('info-input-hours',    (S.sections.info||{}).hours||'');
+      hydrate('info-input-email',    (S.sections.info||{}).email||'');
       hydrate('footer-input-bizname', f.businessName || '');
       hydrate('footer-input-text',    f.footerText || '');
       hydrate('footer-input-link',    f.footerLink || '');
@@ -2733,6 +2782,56 @@ window.QRAIVY_EDITOR_STATE = {
 
 })();
 
+;(function() {
+  function ensureInfo() {
+    var S = window.QRAIVY_EDITOR_STATE;
+    if (!S || !S.sections) return null;
+    if (!S.sections.info || typeof S.sections.info !== 'object' || Array.isArray(S.sections.info)) {
+      S.sections.info = { address:'', addressEnabled:true, phone:'', phoneEnabled:true, website:'', websiteEnabled:true, hours:'', hoursEnabled:true, email:'', emailEnabled:true };
+    }
+    return S.sections.info;
+  }
+  function syncInfo() {
+    var si = ensureInfo(); if (!si) return;
+    var a=document.getElementById('info-input-address');
+    var p=document.getElementById('info-input-phone');
+    var w=document.getElementById('info-input-website');
+    var h=document.getElementById('info-input-hours');
+    var e=document.getElementById('info-input-email');
+    if(a) si.address=a.value;
+    if(p) si.phone=p.value;
+    if(w) si.website=w.value;
+    if(h) si.hours=h.value;
+    if(e) si.email=e.value;
+    if(window.markDirty) window.markDirty();
+  }
+  function wireInfoToggle(id, field) {
+    var btn=document.getElementById(id); if(!btn) return;
+    btn.addEventListener('click', function(){
+      var si=ensureInfo(); if(!si) return;
+      si[field] = si[field]===false ? true : false;
+      var on=si[field]!==false;
+      btn.textContent=on?'On':'Off';
+      btn.style.background=on?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      btn.style.color=on?'#ff5a1f':'rgba(240,244,248,0.5)';
+      btn.style.border=on?'0.5px solid rgba(255,90,31,0.4)':'0.5px solid rgba(255,255,255,0.15)';
+      if(window.markDirty) window.markDirty();
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    ['info-input-address','info-input-phone','info-input-website','info-input-hours','info-input-email'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.addEventListener('input',syncInfo);
+    });
+    wireInfoToggle('info-address-toggle','addressEnabled');
+    wireInfoToggle('info-phone-toggle','phoneEnabled');
+    wireInfoToggle('info-website-toggle','websiteEnabled');
+    wireInfoToggle('info-hours-toggle','hoursEnabled');
+    wireInfoToggle('info-email-toggle','emailEnabled');
+  });
+  window.ensureInfoSection = ensureInfo;
+})();
+
+
 
 
   // ── Wire global save + publish buttons ───────────────────────────────
@@ -2768,6 +2867,12 @@ window.QRAIVY_EDITOR_STATE = {
     S.sections.loop.walletTitle      = val('loop-input-wallet-title');
     S.sections.loop.walletSubtitle   = val('loop-input-wallet-subtitle');
     // Footer
+    if(!S.sections.info||typeof S.sections.info!=='object') S.sections.info={};
+    S.sections.info.address  = val('info-input-address');
+    S.sections.info.phone    = val('info-input-phone');
+    S.sections.info.website  = val('info-input-website');
+    S.sections.info.hours    = val('info-input-hours');
+    S.sections.info.email    = val('info-input-email');
     S.sections.footer.businessName = val('footer-input-bizname');
     S.sections.footer.footerText   = val('footer-input-text');
     S.sections.footer.footerLink   = val('footer-input-link');

@@ -309,7 +309,18 @@ body.theme-light .qraivy-growth-sub{color:#8A8A8A}
 body.theme-light .lp-featured-card{padding:22px 16px}
 body.theme-light .lp-featured-icon{font-size:1.6rem;margin-bottom:10px}
 body.theme-light .qraivy-growth-btn{color:#fff !important;background:${accent} !important;border:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
-body.theme-light .qraivy-growth-icon{color:#fff !important}` : ''}
+body.theme-light .qraivy-growth-icon{color:#fff !important}
+body.theme-light .lp-info-card{background:#FFFFFF;border:1px solid #E8E3DC;box-shadow:0 10px 30px rgba(0,0,0,.04)}
+body.theme-light .lp-info-row{border-bottom-color:#F0ECE6}
+body.theme-light .lp-info-text{color:#111111}
+body.theme-light .lp-info-link{color:#111111}` : ''}
+.lp-info-section{margin-bottom:16px}
+.lp-info-card{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px 20px;margin:0 16px}
+.lp-info-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:0.5px solid rgba(255,255,255,0.07)}
+.lp-info-row:last-child{border-bottom:none;padding-bottom:0}
+.lp-info-icon{font-size:.95rem;flex-shrink:0;margin-top:2px}
+.lp-info-text{font-size:.82rem;line-height:1.5}
+.lp-info-link{font-size:.82rem;text-decoration:none}
 .lp-featured-section{display:none}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
@@ -576,6 +587,15 @@ ${(function() {
     '<div class="lp-featured-cards">'+
     _fc.map(f => '<div class="lp-featured-card"><div class="lp-featured-icon">'+(f.icon||'&#x2728;')+'</div><div class="lp-featured-card-title">'+(f.title||'')+'</div><div class="lp-featured-card-desc">'+(f.description||'')+'</div></div>').join('')+
     '</div></section>';
+  const si=storedSections.info||{};
+  const _ir=[];
+  if(si.address&&si.addressEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">📍</span><span class="lp-info-text">'+si.address+'</span></div>');
+  if(si.phone&&si.phoneEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">📞</span><a href="tel:'+si.phone+'" class="lp-info-link">'+si.phone+'</a></div>');
+  if(si.website&&si.websiteEnabled!==false){const _wu=si.website.startsWith('http')?si.website:'https://'+si.website;_ir.push('<div class="lp-info-row"><span class="lp-info-icon">🌐</span><a href="'+_wu+'" target="_blank" class="lp-info-link">'+si.website+'</a></div>');}
+  if(si.hours&&si.hoursEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">🕒</span><span class="lp-info-text">'+si.hours.replace(/
+/g,'<br>')+'</span></div>');
+  if(si.email&&si.emailEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">✉</span><a href="mailto:'+si.email+'" class="lp-info-link">'+si.email+'</a></div>');
+  const infoHTML=_ir.length===0?'':'<section class="lp-info-section"><div class="lp-info-card">'+_ir.join('')+'</div></section>';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
@@ -587,14 +607,12 @@ ${(function() {
 </section>
 <!-- Business Info -->
 ${sectionsHTML}`;
-  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, featured: featuredHTML, loop: loopHTML, footer: footerBlock };
+  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, featured: featuredHTML, loop: loopHTML, info: infoHTML, footer: footerBlock };
   const orderedSections = sectionOrder.map(function(k){ return sectionMap[k] || ''; });
   const footerIdx = orderedSections.length - 1;
-  if (!sectionOrder.includes('featured')) {
-    const _bi = sectionOrder.indexOf('loop');
-    orderedSections.splice(_bi !== -1 ? _bi + 1 : orderedSections.length - 1, 0, featuredHTML);
-  }
-  orderedSections.splice(footerIdx, 0, ctaHTML);
+  var _fi3=-1;if(!sectionOrder.includes('featured')){const _bi=sectionOrder.indexOf('loop');_fi3=_bi!==-1?_bi+1:orderedSections.length-1;orderedSections.splice(_fi3,0,featuredHTML);}else{_fi3=sectionOrder.indexOf('featured');}
+  if(!sectionOrder.includes('info')){orderedSections.splice(_fi3+1,0,infoHTML);}
+  orderedSections.splice(footerIdx,0,ctaHTML);
   return orderedSections.join('\n');
 })()}
 

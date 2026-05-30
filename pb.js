@@ -1,0 +1,10 @@
+const fs=require('fs');
+let fe=fs.readFileSync('frontend/public/smart-qr-detail.html','utf8').replace(/\r\n/g,'\n');
+const o6="      hydrate('footer-input-bizname',";
+const n6="      hydrate('info-input-address', (S.sections.info||{}).address||'');\n      hydrate('info-input-phone',   (S.sections.info||{}).phone||'');\n      hydrate('info-input-website',  (S.sections.info||{}).website||'');\n      hydrate('info-input-hours',    (S.sections.info||{}).hours||'');\n      hydrate('info-input-email',    (S.sections.info||{}).email||'');\n      hydrate('footer-input-bizname',";
+if(fe.includes(o6)){fe=fe.replace(o6,n6);console.log('6 done');}else console.log('6 FAIL');
+const o7="    S.sections.footer.businessName = val('footer-input-bizname');";
+const n7="    if(!S.sections.info||typeof S.sections.info!=='object') S.sections.info={};\n    S.sections.info.address  = val('info-input-address');\n    S.sections.info.phone    = val('info-input-phone');\n    S.sections.info.website  = val('info-input-website');\n    S.sections.info.hours    = val('info-input-hours');\n    S.sections.info.email    = val('info-input-email');\n    S.sections.footer.businessName = val('footer-input-bizname');";
+if(fe.includes(o7)){fe=fe.replace(o7,n7);console.log('7 done');}else console.log('7 FAIL');
+fs.writeFileSync('frontend/public/smart-qr-detail.html',fe,'utf8');
+console.log('hydrate='+fe.includes("hydrate('info-input-address")+' collect='+fe.includes('S.sections.info.address'));
