@@ -1230,10 +1230,15 @@ document.addEventListener('DOMContentLoaded', initPage);
       loop: loop.enabled !== false ? `
         <div data-section="loop" style="padding:16px 20px;">
           <div style="background:${cardBg};border:0.5px solid ${cardBorder};border-radius:16px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:${accent}22;border:0.5px solid ${accent}44;border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+              <div><div style="font-size:.72rem;font-weight:800;color:${textColor};font-family:Syne,sans-serif;">${loop.walletTitle || bizName}</div><div style="font-size:.58rem;color:${subColor};margin-top:2px;">${loop.walletSubtitle || 'QRAIVY MEMBER'}</div></div>
+              <div style="font-size:.62rem;color:${subColor};">SMART PASS</div>
+            </div>
             <div style="font-size:.9rem;font-weight:700;color:${textColor};margin-bottom:6px;">${loop.title || 'Stay in the loop'}</div>
             <div style="font-size:.7rem;color:${subColor};margin-bottom:14px;">${loop.description || 'Subscribe for updates and early access.'}</div>
             <div style="background:rgba(255,255,255,0.05);border:0.5px solid ${cardBorder};border-radius:8px;padding:10px 12px;font-size:.72rem;color:${subColor};margin-bottom:10px;">${loop.emailPlaceholder || 'your@email.com'}</div>
             <div style="display:block;width:100%;padding:11px 20px;border-radius:${btnR};font-family:Syne,sans-serif;font-size:.8rem;font-weight:700;text-align:center;background:${accent};color:#fff;box-sizing:border-box;">${loop.buttonLabel || 'Subscribe →'}</div>
+            ${loop.appleEnabled!==false||loop.googleEnabled!==false ? '<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">'+(loop.appleEnabled!==false?'<div style="padding:8px;border-radius:8px;border:0.5px solid '+cardBorder+';font-size:.65rem;color:'+subColor+';text-align:center;">&#9679; Add to Apple Wallet</div>':'')+(loop.googleEnabled!==false?'<div style="padding:8px;border-radius:8px;border:0.5px solid '+cardBorder+';font-size:.65rem;color:'+subColor+';text-align:center;">&#9632; Add to Google Wallet</div>':'')+'</div>' : ''}
           </div>
         </div>` : '',
 
@@ -2289,6 +2294,8 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('loop-input-desc',              l.description || '');
       hydrate('loop-input-email-placeholder', l.emailPlaceholder || '');
       hydrate('loop-input-btn-label',         l.buttonLabel || '');
+      hydrate('loop-input-wallet-title',       l.walletTitle || '');
+      hydrate('loop-input-wallet-subtitle',    l.walletSubtitle || '');
 
       var f = sec.footer || {};
       hydrate('footer-input-bizname', f.businessName || '');
