@@ -421,6 +421,11 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-sub-btn{padding:12px;border:none;border-radius:10px;background:${accent};color:#fff;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer}
 .lp-wallet-btns{display:flex;flex-direction:column;gap:7px;position:relative}
 .lp-wallet-btn{padding:11px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(240,236,224,0.7);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;width:100%}
+.lp-wallet-btn--apple{background:#1a6e3a;border:1.5px solid #22c55e;color:#fff;font-size:0.82rem;font-weight:700;border-radius:12px;padding:14px;letter-spacing:0.04em;box-shadow:0 0 0 0 rgba(34,197,94,0.7);animation:walletPulse 2s ease-in-out infinite}
+.lp-wallet-cta-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
+.lp-wallet-cta-hint{font-family:'Syne',sans-serif;font-size:0.72rem;color:rgba(34,197,94,0.9);margin:0;animation:walletHintFade 2s ease-in-out infinite;text-align:center}
+@keyframes walletPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.7)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@keyframes walletHintFade{0%,100%{opacity:0.6}50%{opacity:1}}
 
 /* Chat collapsed state */
 .lp-chat-collapsed{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s}
@@ -582,7 +587,7 @@ ${(function() {
     <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
     <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button></div>
-    ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?`<a href="/lp/wallet/apple/${slug}" class="lp-wallet-btn" style="text-decoration:none;display:block;">&#9679; Add to Apple Wallet</a>`:(''))+(sl.googleEnabled!==false?'<button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>':'')+'</div>':''}
+    ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?`<div class="lp-wallet-cta-wrap"><p class="lp-wallet-cta-hint">👇 Tap to save your pass</p><a href="/lp/wallet/apple/${slug}" class="lp-wallet-btn lp-wallet-btn--apple" style="text-decoration:none;display:block;">&#9679; Add to Apple Wallet</a></div>`:(''))+(sl.googleEnabled!==false?'<button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>':'')+'</div>':''}
   </div>
 </section>`;
   const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
