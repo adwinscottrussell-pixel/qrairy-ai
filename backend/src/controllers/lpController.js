@@ -302,7 +302,12 @@ body.theme-light .lp-wallet-card{transform:scale(1.01)}
 body.theme-light .lp-sub-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 body.theme-light .qraivy-growth-btn{color:#111111;background:rgba(0,0,0,0.05);border:1px solid #E8E3DC}
 body.theme-light .qraivy-growth-btn .qraivy-growth-icon{color:#111111}
-body.theme-light .qraivy-growth-sub{color:#8A8A8A}` : ''}
+body.theme-light .qraivy-growth-sub{color:#8A8A8A}
+/* ── Refinement Pass ─────── */
+body.theme-light .lp-featured-card{padding:22px 16px}
+body.theme-light .lp-featured-icon{font-size:1.6rem;margin-bottom:10px}
+body.theme-light .qraivy-growth-btn{color:#fff !important;background:${accent} !important;border:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+body.theme-light .qraivy-growth-icon{color:#fff !important}` : ''}
 .lp-featured-section{display:none}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
@@ -552,8 +557,8 @@ ${(function() {
   <div class="lp-subscribe-card">
     <div class="lp-sub-glow"></div>
     <div class="lp-wallet-preview"><div class="lp-wallet-card"><div class="lp-wallet-top"><span class="lp-wallet-brand">${bizName}</span><span class="lp-wallet-type">SMART PASS</span></div><div class="lp-wallet-bottom"><span class="lp-wallet-id">QRAIVY MEMBER</span><span class="lp-wallet-circles">&#9711; &#9711;</span></div></div></div>
-    <h3 class="lp-sub-title">${sl.title || 'Stay in the loop'}</h3>
-    <p class="lp-sub-text">${sl.description || ('Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
+    <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
+    <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button></div>
     <div class="lp-wallet-btns"><button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button><button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button></div>
   </div>
@@ -571,7 +576,7 @@ ${(function() {
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
   <div class="lp-footer-url">${sf.footerText || ('api.qraivy.com/lp/' + slug)}</div>
-  <div class="lp-footer-powered">Powered by <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a> &mdash; AI Smart Landing Pages</div>
+  <div class="lp-footer-powered">Built with <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a><br>AI-powered customer engagement.</div>
 </footer>`;
   const ctaHTML = hasEditorSections ? (sectionsHTML ? `<!-- Business Info -->${sectionsHTML}` : '') : `<section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
