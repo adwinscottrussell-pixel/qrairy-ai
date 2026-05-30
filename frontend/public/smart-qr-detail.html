@@ -1179,11 +1179,13 @@ document.addEventListener('DOMContentLoaded', initPage);
           </div>
         </div>` : '',
 
-      buttons: buttons.filter(function(b){ return b.active !== false; }).length > 0 ? `
+      buttons: buttons.filter(function(b){ return b.enabled!==false&&b.active !== false; }).length > 0 ? `
         <div data-section="buttons" style="padding:8px 20px 16px;display:flex;flex-direction:column;gap:8px;">` +
-          buttons.filter(function(b){ return b.active !== false; }).map(function(b) {
+          buttons.filter(function(b){ return b.enabled!==false&&b.active !== false; }).map(function(b) {
             var isPrimary = b.style !== 'secondary';
-            return `<div style="display:block;width:100%;padding:13px 20px;border-radius:${btnR};font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;text-align:center;box-sizing:border-box;${isPrimary ? 'background:'+accent+';color:#fff;' : 'background:'+cardBg+';color:'+textColor+';border:0.5px solid '+cardBorder+';'}">${b.label || 'Button'}</div>`;
+            var _im = window._ICON_MAP_BTN||{}; var _ico = b.icon&&_im[b.icon]?_im[b.icon]+' ':'';
+            var _lbl = _ico + (b.title||b.label||'Button');
+            return `<div style="display:block;width:100%;padding:13px 20px;border-radius:${btnR};font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;text-align:center;box-sizing:border-box;${isPrimary ? 'background:'+accent+';color:#fff;' : 'background:'+cardBg+';color:'+textColor+';border:0.5px solid '+cardBorder+';'}">${_lbl}</div>`;
           }).join('') + `</div>` : '',
 
       loop: loop.enabled !== false ? `

@@ -181,7 +181,9 @@ function renderLP(page) {
     const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
     const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
     const bDom = b.url ? b.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] : '';
-    return '<a href="' + url + '" target="_blank" rel="noopener" class="' + cls + '"><span class="lp-btn-inner"><span class="lp-btn-label">' + (b.label || 'Learn More') + '</span>' + (bDom ? '<span class="lp-btn-sub">' + bDom + '</span>' : '') + '</span><span class="lp-btn-arr">&rarr;</span></a>';
+var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'📅',shop:'🛒',instagram:'📸',tiktok:'🎵',facebook:'📘',youtube:'▶',custom:'🔗'};
+        var _ico=b.icon&&_ICON_MAP[b.icon]?_ICON_MAP[b.icon]+' ':'';
+    return '<a href="' + url + '" target="_blank" rel="noopener" class="' + cls + '"><span class="lp-btn-inner"><span class="lp-btn-label">' + (_ico+(b.title||b.label||'Button')) + '</span>' + (bDom ? '<span class="lp-btn-sub">' + bDom + '</span>' : '') + '</span><span class="lp-btn-arr">&rarr;</span></a>';
   }).join('\n');
 
   // Only show legacy LP_CONTENT sections if page has no new editor sections
