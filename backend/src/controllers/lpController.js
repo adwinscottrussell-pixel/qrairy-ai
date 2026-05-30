@@ -926,9 +926,10 @@ async function handleGenerateAppleWalletPass(req, res) {
   try {
     const { slug } = req.params;
     const { generateSmartQRPass } = require('../services/passService');
+    const _prisma = require('../prismaClient');
 
     // Load the Smart QR page
-    const page = await prisma.smartQRPage.findUnique({ where: { slug } });
+    const page = await _prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
 
     const sections = page.sections || {};
