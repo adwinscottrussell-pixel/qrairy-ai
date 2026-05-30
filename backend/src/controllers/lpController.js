@@ -1,5 +1,35 @@
 const { getUserFromToken } = require('./qrController');
 const prisma = require('../prismaClient');
+const https = require('https');
+
+async function scrapeWithFirecrawl(url) {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey || !url) return null;
+  try {
+    const body = JSON.stringify({ url, formats: ['markdown'], onlyMainContent: true });
+    return await new Promise((resolve) => {
+      const req = https.request({ hostname: 'api.firecrawl.dev', path: '/v1/scrape', method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Content-Length': Buffer.byteLength(body) } }, (res) => {
+        let d = ''; res.on('data', c => d += c); res.on('end', () => { try { const j = JSON.parse(d); resolve(j.data && j.data.markdown ? j.data.markdown.slice(0, 8000) : null); } catch { resolve(null); } });
+      });
+      req.on('error', () => resolve(null)); req.write(body); req.end();
+    });
+  } catch(e) { return null; }
+}
+
+async function generateLPFromSite(businessName, websiteUrl, siteContent) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !siteContent) return null;
+  try {
+    const prompt = 'Based on this scraped website content, generate a JSON object with these exact fields: headline (hero headline), sub (1-2 sentence description), cta (primary button text), cta2 (secondary button text), features (array of exactly 3 objects each with icon (emoji), title, description pulled from real content), hours (opening hours string or null), address (physical address or null), phone (phone number or null). Return ONLY valid JSON, no markdown fences.\n\nBusiness: ' + businessName + '\nWebsite: ' + websiteUrl + '\nScraped content:\n' + siteContent;
+    const body = JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] });
+    return await new Promise((resolve) => {
+      const req = https.request({ hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
+        let d = ''; res.on('data', c => d += c); res.on('end', () => { try { const j = JSON.parse(d); const text = j.content[0].text; resolve(JSON.parse(text.replace(/```json|```/g,'').trim())); } catch(e) { console.error('[Firecrawl] AI parse error:', e.message); resolve(null); } });
+      });
+      req.on('error', () => resolve(null)); req.write(body); req.end();
+    });
+  } catch(e) { return null; }
+}
 
 // ── LP content per use case ───────────────────────────────────────────────
 const LP_CONTENT = {
