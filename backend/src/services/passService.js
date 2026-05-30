@@ -63,18 +63,18 @@ async function generateSmartQRPass(slug, sections) {
   const keyPem  = Buffer.from(process.env.APPLE_PASS_KEY_PEM  || '', 'base64');
   const wwdr    = await getWWDRCert();
 
-  const pass = await PKPass.from({
-    model: {
+  const pass = new PKPass(
+    {
       'pass.json':  Buffer.from(JSON.stringify(passJson)),
       'icon.png':   getDefaultIcon(),
       'icon@2x.png':getDefaultIcon(),
     },
-    certificates: {
+    {
       wwdr,
       signerCert: certPem,
       signerKey:  keyPem,
     }
-  });
+  );
 
   return pass.getAsBuffer();
 }
