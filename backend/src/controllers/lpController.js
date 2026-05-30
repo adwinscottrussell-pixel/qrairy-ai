@@ -558,11 +558,11 @@ ${(function() {
   const loopHTML = sl.enabled === false ? '' : `<section class="lp-subscribe-section lp-subscribe-prominent">
   <div class="lp-subscribe-card">
     <div class="lp-sub-glow"></div>
-    <div class="lp-wallet-preview"><div class="lp-wallet-card"><div class="lp-wallet-top"><span class="lp-wallet-brand">${bizName}</span><span class="lp-wallet-type">SMART PASS</span></div><div class="lp-wallet-bottom"><span class="lp-wallet-id">QRAIVY MEMBER</span><span class="lp-wallet-circles">&#9711; &#9711;</span></div></div></div>
+    <div class="lp-wallet-preview"><div class="lp-wallet-card"><div class="lp-wallet-top"><span class="lp-wallet-brand">${sl.walletTitle || bizName}</span><span class="lp-wallet-type">SMART PASS</span></div><div class="lp-wallet-bottom"><span class="lp-wallet-id">${sl.walletSubtitle || 'QRAIVY MEMBER'}</span><span class="lp-wallet-circles">&#9711; &#9711;</span></div></div></div>
     <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
     <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button></div>
-    <div class="lp-wallet-btns"><button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button><button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button></div>
+    ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?'<button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button>':'')+(sl.googleEnabled!==false?'<button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>':'')+'</div>':''}
   </div>
 </section>`;
   const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';

@@ -665,14 +665,39 @@
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
           </div>
 
-          <!-- Wallet Toggle -->
+
+          <!-- Wallet Card Title -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Wallet Card Title</label>
+            <input id="loop-input-wallet-title" type="text" placeholder="SCAN ME BIZ"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
+          </div>
+
+          <!-- Wallet Card Subtitle -->
+          <div>
+            <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Wallet Card Subtitle</label>
+            <input id="loop-input-wallet-subtitle" type="text" placeholder="QRAIVY MEMBER"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
+          </div>
+
+          <!-- Apple Wallet Toggle -->
           <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
             <div>
-              <div style="font-size:.72rem;color:#f0f4f8;font-family:'Inter',sans-serif;font-weight:500;">Apple / Google Wallet Buttons</div>
-              <div style="font-size:.6rem;color:rgba(240,244,248,0.55);margin-top:2px;">Show wallet pass buttons below form</div>
+              <div style="font-size:.72rem;color:#f0f4f8;font-weight:500;">Apple Wallet Button</div>
+              <div style="font-size:.6rem;color:rgba(240,244,248,0.55);margin-top:2px;">Show Add to Apple Wallet</div>
             </div>
-            <button id="loop-wallet-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid;">On</button>
+            <button id="loop-apple-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
           </div>
+
+          <!-- Google Wallet Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
+            <div>
+              <div style="font-size:.72rem;color:#f0f4f8;font-weight:500;">Google Wallet Button</div>
+              <div style="font-size:.6rem;color:rgba(240,244,248,0.55);margin-top:2px;">Show Add to Google Wallet</div>
+            </div>
+            <button id="loop-google-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
+          </div>
+
 
           <!-- Status note -->
           <div style="font-size:.6rem;color:rgba(240,244,248,0.40);line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">
@@ -1867,28 +1892,47 @@ window.QRAIVY_EDITOR_STATE = {
       var d=document.getElementById('loop-input-desc');
       var e=document.getElementById('loop-input-email-placeholder');
       var b=document.getElementById('loop-input-btn-label');
+      var wt=document.getElementById('loop-input-wallet-title');
+      var ws=document.getElementById('loop-input-wallet-subtitle');
       if(t) s.title=t.value;
       if(d) s.description=d.value;
       if(e) s.emailPlaceholder=e.value;
       if(b) s.buttonLabel=b.value;
-      // also keep legacy state.loop in sync
-      window.QRAIVY_EDITOR_STATE.loop = Object.assign({}, window.QRAIVY_EDITOR_STATE.loop, {
+      if(wt) s.walletTitle=wt.value;
+      if(ws) s.walletSubtitle=ws.value;
+      window.QRAIVY_EDITOR_STATE.loop = Object.assign({}, window.QRAIVY_EDITOR_STATE.loop||{}, {
         title: s.title, description: s.description,
-        emailPlaceholder: s.emailPlaceholder, buttonLabel: s.buttonLabel
+        emailPlaceholder: s.emailPlaceholder, buttonLabel: s.buttonLabel,
+        walletTitle: s.walletTitle, walletSubtitle: s.walletSubtitle
       });
-      markDirty();
+      if(window.markDirty) window.markDirty();
     }
-    ['loop-input-title','loop-input-desc','loop-input-email-placeholder','loop-input-btn-label'].forEach(function(id){
+    ['loop-input-title','loop-input-desc','loop-input-email-placeholder','loop-input-btn-label','loop-input-wallet-title','loop-input-wallet-subtitle'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.addEventListener('input',sync);
     });
-    var loopTog = document.getElementById('loop-enabled-toggle');
+    function wireToggle(id, field) {
+      var btn=document.getElementById(id); if(!btn) return;
+      btn.addEventListener('click', function(){
+        var s=window.QRAIVY_EDITOR_STATE.sections.loop;
+        s[field] = s[field]===false ? true : false;
+        var on = s[field]!==false;
+        btn.textContent=on?'On':'Off';
+        btn.style.background=on?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+        btn.style.color=on?'#ff5a1f':'rgba(240,244,248,0.5)';
+        btn.style.border=on?'0.5px solid rgba(255,90,31,0.4)':'0.5px solid rgba(255,255,255,0.15)';
+        if(window.markDirty) window.markDirty();
+      });
+    }
+    wireToggle('loop-apple-toggle','appleEnabled');
+    wireToggle('loop-google-toggle','googleEnabled');
+    var loopTog=document.getElementById('loop-enabled-toggle');
     if(loopTog) loopTog.addEventListener('click', function(){
-      var s = window.QRAIVY_EDITOR_STATE.sections.loop;
-      s.enabled = !s.enabled;
-      loopTog.textContent = s.enabled ? 'On' : 'Off';
-      loopTog.style.background = s.enabled ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
-      loopTog.style.color = s.enabled ? '#ff5a1f' : 'rgba(240,244,248,0.5)';
-      markDirty();
+      var s=window.QRAIVY_EDITOR_STATE.sections.loop;
+      s.enabled=!s.enabled;
+      loopTog.textContent=s.enabled?'On':'Off';
+      loopTog.style.background=s.enabled?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      loopTog.style.color=s.enabled?'#ff5a1f':'rgba(240,244,248,0.5)';
+      if(window.markDirty) window.markDirty();
     });
   })();
 
@@ -2714,6 +2758,8 @@ window.QRAIVY_EDITOR_STATE = {
     S.sections.loop.description      = val('loop-input-desc');
     S.sections.loop.emailPlaceholder = val('loop-input-email-placeholder');
     S.sections.loop.buttonLabel      = val('loop-input-btn-label');
+    S.sections.loop.walletTitle      = val('loop-input-wallet-title');
+    S.sections.loop.walletSubtitle   = val('loop-input-wallet-subtitle');
     // Footer
     S.sections.footer.businessName = val('footer-input-bizname');
     S.sections.footer.footerText   = val('footer-input-text');
