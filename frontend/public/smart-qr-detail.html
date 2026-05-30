@@ -1840,7 +1840,7 @@ window.QRAIVY_EDITOR_STATE = {
       var payload = {
         slug: slug,
         businessName: state.pageName || state.hero.title || slug,
-        websiteUrl: state.websiteUrl || '',
+        websiteUrl: state.websiteUrl || (state.sections && state.sections.info && state.sections.info.website) || '',
         useCase: state.useCase || 'restaurant',
         brandColor: state.brandColor || '#ff5a1f',
         logoUrl: state.logoUrl || '',
