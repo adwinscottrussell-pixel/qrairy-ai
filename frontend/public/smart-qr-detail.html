@@ -545,7 +545,25 @@
             />
           </div>
 
-          <!-- Logo Initial -->
+          <!-- CTA Button Text -->
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">CTA Button Text</label>
+            <input id="hero-cta-text-input" type="text" placeholder="Start a Conversation →"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;outline:none;"
+              onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            />
+          </div>
+
+          <!-- CTA Link -->
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">CTA Link <span style="font-size:.55rem;color:rgba(240,244,248,0.4);text-transform:none;">(optional)</span></label>
+            <input id="hero-cta-url-input" type="text" placeholder="https://... or blank for AI chat"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;outline:none;"
+              onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
+            />
+          </div>
+
+                    <!-- Logo Initial -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
             <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Logo Initial</label>
             <div style="display:flex;align-items:center;gap:10px;">
@@ -1130,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', initPage);
     var buttons = s.buttons || [];
     var order = sec.order || ['hero','voice','ai','buttons','loop','footer'];
     var bizName = s.pageName || hero.title || s.slug || 'My Business';
-    var logoInitial = (bizName[0] || 'A').toUpperCase();
+    var logoInitial = ((hero.logoText&&hero.logoText.trim())?hero.logoText.trim():(bizName[0]||'A')).toUpperCase().slice(0,2);
 
     var sections = {
       hero: hero.enabled !== false ? `
@@ -1139,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', initPage);
           <div style="width:36px;height:36px;border-radius:10px;background:${accent}20;border:0.5px solid ${accent}44;display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-size:1rem;font-weight:800;color:${accent};margin:0 auto 12px;">${logoInitial}</div>
           <h1 style="font-family:Syne,sans-serif;font-size:1.6rem;font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:10px;color:${textColor};">${hero.title || 'Welcome to ' + bizName}</h1>
           <p style="font-size:.8rem;color:${subColor};max-width:300px;margin:0 auto 20px;line-height:1.7;">${hero.subtitle || ''}</p>
+          ${(theme.background==='light'||hero.ctaText)?'<a href="'+(hero.ctaUrl||'#aiSection')+'" style="display:inline-flex;align-items:center;gap:6px;background:'+accent+';color:#fff;padding:11px 22px;border-radius:50px;font-family:Syne,sans-serif;font-weight:700;font-size:.82rem;text-decoration:none;margin-top:8px;">'+(hero.ctaText||'Start a Conversation \u2192')+'</a>':''}        
         </div>` : '',
 
       voice: voice.enabled !== false ? `
@@ -1698,11 +1717,15 @@ window.QRAIVY_EDITOR_STATE = {
     var bi=document.getElementById('hero-badge-input');
     var li=document.getElementById('hero-logo-input');
     var lp=document.getElementById('hero-logo-preview');
+    var ct=document.getElementById('hero-cta-text-input');
+    var cu=document.getElementById('hero-cta-url-input');
     if(ti) ti.value=hero.title||'';
     if(si) si.value=hero.subtitle||'';
     if(bi) bi.value=hero.badgeText||'Qraivy Smart Page';
-    if(li) li.value=hero.logoInitial||'A';
-    if(lp) lp.textContent=(hero.logoInitial||'A').toUpperCase().slice(0,2);
+    if(li) li.value=hero.logoInitial||'';
+    if(lp) lp.textContent=(hero.logoInitial||(hero.title&&hero.title[0])||'A').toUpperCase().slice(0,2);
+    if(ct) ct.value=hero.ctaText!==undefined?hero.ctaText:'Start a Conversation →';
+    if(cu) cu.value=hero.ctaUrl||'';
   }
   function wireHeroFields() {
     var ti=document.getElementById('hero-title-input');
@@ -1710,21 +1733,24 @@ window.QRAIVY_EDITOR_STATE = {
     var bi=document.getElementById('hero-badge-input');
     var li=document.getElementById('hero-logo-input');
     var lp=document.getElementById('hero-logo-preview');
+    var ct=document.getElementById('hero-cta-text-input');
+    var cu=document.getElementById('hero-cta-url-input');
     function onChange() {
       var s=window.QRAIVY_EDITOR_STATE.hero;
       s.title=ti?ti.value:s.title; s.subtitle=si?si.value:s.subtitle;
       s.badgeText=bi?bi.value:s.badgeText; s.logoInitial=li?li.value:s.logoInitial;
-      if(lp&&li) lp.textContent=(li.value||'A').toUpperCase().slice(0,2);
-      // sync to sections.hero too
+      s.ctaText=ct?ct.value:s.ctaText; s.ctaUrl=cu?cu.value:s.ctaUrl;
+      if(lp&&li) lp.textContent=(li.value||(s.title&&s.title[0])||'A').toUpperCase().slice(0,2);
       var sh = window.QRAIVY_EDITOR_STATE.sections.hero;
-      if(sh) { sh.title=ti?ti.value:sh.title; sh.subtitle=si?si.value:sh.subtitle; sh.badge=bi?bi.value:sh.badge; sh.logoText=li?li.value:sh.logoText; }
-      window.QRAIVY_EDITOR_STATE.dirty=true;
-      updateDraftSummary(); setStatus('Unsaved changes','#ff5a1f');
+      if(sh) { sh.title=ti?ti.value:sh.title; sh.subtitle=si?si.value:sh.subtitle; sh.badge=bi?bi.value:sh.badge; sh.logoText=li?li.value:sh.logoText; sh.ctaText=ct?ct.value:sh.ctaText; sh.ctaUrl=cu?cu.value:sh.ctaUrl; }
+      if(window.markDirty) window.markDirty();
     }
     if(ti) ti.addEventListener('input',onChange);
     if(si) si.addEventListener('input',onChange);
     if(bi) bi.addEventListener('input',onChange);
     if(li) li.addEventListener('input',onChange);
+    if(ct) ct.addEventListener('input',onChange);
+    if(cu) cu.addEventListener('input',onChange);
   }
   var saveBtn=document.getElementById('sqd-save-draft-btn');
   if(saveBtn) saveBtn.addEventListener('click',function(){
@@ -2159,6 +2185,8 @@ window.QRAIVY_EDITOR_STATE = {
         var lp = document.getElementById('hero-logo-preview');
         if (lp) lp.textContent = (v||'A').toUpperCase().slice(0,2);
       });
+      wire('hero-cta-text-input', function(v) { if(S.sections&&S.sections.hero) S.sections.hero.ctaText=v; if(S.hero) S.hero.ctaText=v; });
+      wire('hero-cta-url-input',  function(v) { if(S.sections&&S.sections.hero) S.sections.hero.ctaUrl=v;  if(S.hero) S.hero.ctaUrl=v; });
 
       // ── Voice ──
       wire('voice-input-title', function(v) { S.sections.voice.title = v; });
@@ -2186,6 +2214,8 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('hero-subtitle-input', h.subtitle || S.hero && S.hero.subtitle || '');
       hydrate('hero-badge-input',    h.badge || S.hero && S.hero.badgeText || '');
       hydrate('hero-logo-input',     h.logoText || S.hero && S.hero.logoInitial || '');
+      hydrate('hero-cta-text-input', h.ctaText!==undefined ? h.ctaText : (S.hero&&S.hero.ctaText!==undefined ? S.hero.ctaText : 'Start a Conversation →'));
+      hydrate('hero-cta-url-input',  h.ctaUrl || (S.hero&&S.hero.ctaUrl) || '');
 
       var v = sec.voice || {};
       hydrate('voice-input-title', v.title || '');
