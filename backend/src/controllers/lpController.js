@@ -592,8 +592,7 @@ ${(function() {
   if(si.address&&si.addressEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">📍</span><span class="lp-info-text">'+si.address+'</span></div>');
   if(si.phone&&si.phoneEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">📞</span><a href="tel:'+si.phone+'" class="lp-info-link">'+si.phone+'</a></div>');
   if(si.website&&si.websiteEnabled!==false){const _wu=si.website.startsWith('http')?si.website:'https://'+si.website;_ir.push('<div class="lp-info-row"><span class="lp-info-icon">🌐</span><a href="'+_wu+'" target="_blank" class="lp-info-link">'+si.website+'</a></div>');}
-  if(si.hours&&si.hoursEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">🕒</span><span class="lp-info-text">'+si.hours.replace(/
-/g,'<br>')+'</span></div>');
+  if(si.hours&&si.hoursEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">🕒</span><span class="lp-info-text">'+si.hours.split('\n').join('<br>')+'</span></div>');
   if(si.email&&si.emailEnabled!==false)_ir.push('<div class="lp-info-row"><span class="lp-info-icon">✉</span><a href="mailto:'+si.email+'" class="lp-info-link">'+si.email+'</a></div>');
   const infoHTML=_ir.length===0?'':'<section class="lp-info-section"><div class="lp-info-card">'+_ir.join('')+'</div></section>';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
