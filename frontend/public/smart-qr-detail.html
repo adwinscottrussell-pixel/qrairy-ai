@@ -886,21 +886,61 @@
       </div>
 
       <div class="sqd-tab-panel" data-panel="settings" style="display:none;">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⚙️ Page Settings</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:16px;">URL, SEO, branding</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Smart URL</div>
-            <div id="sqd-settings-url" style="font-size:.65rem;color:rgba(240,244,248,0.86);word-break:break-all;">—</div>
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⚙️ Settings</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:14px;">Control how your page behaves.</div>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <div style="flex:1;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px;">
+            <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:4px;">Page Name</div>
+            <div id="sqd-settings-name" style="font-size:.72rem;color:#f0f4f8;">—</div>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Page Name</div>
-            <div id="sqd-settings-name" style="font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;">—</div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px;min-width:60px;text-align:center;">
+            <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:4px;">Scans</div>
+            <div id="sqd-settings-scans" style="font-size:.9rem;font-weight:700;color:#ff5a1f;">—</div>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <div style="font-size:.6rem;color:rgba(240,244,248,0.76);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Scan Count</div>
-            <div id="sqd-settings-scans" style="font-size:1.1rem;font-weight:700;color:#ff5a1f;">—</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px;margin-bottom:14px;">
+          <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:4px;">Smart URL</div>
+          <div id="sqd-settings-url" style="font-size:.62rem;color:rgba(240,244,248,0.8);word-break:break-all;">—</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:7px;">
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Landing Page Active</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Enable or disable public access.</div></div>
+            <button id="settings-pageActive-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
           </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Voice Welcome Message</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Play welcome message before chat.</div></div>
+            <button id="settings-voice-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">AI Assistant</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Allow visitors to chat with AI.</div></div>
+            <button id="settings-ai-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Collect Subscribers</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Enable email collection.</div></div>
+            <button id="settings-subscribers-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Digital Wallet Pass</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Allow visitors to save wallet pass.</div></div>
+            <button id="settings-wallet-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Show Qraivy Branding</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Display Powered by Qraivy.</div></div>
+            <button id="settings-branding-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+            <div><div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:2px;">Track Visitor Analytics</div><div style="font-size:.6rem;color:rgba(240,244,248,0.5);">Enable visit tracking.</div></div>
+            <button id="settings-analytics-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;margin-left:12px;">On</button>
+          </div>
+
         </div>
       </div>
 
@@ -2376,6 +2416,20 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('info-input-email',    (S.sections.info||{}).email||'');
       hydrate('footer-input-bizname', f.businessName || '');
       hydrate('footer-input-text',    f.footerText || '');
+      // Settings toggles hydration
+      (function(){
+        var ss=(S.sections.settings&&typeof S.sections.settings==='object')?S.sections.settings:{};
+        var _d={pageActive:true,voiceEnabled:true,aiEnabled:true,subscribersEnabled:true,walletEnabled:true,brandingEnabled:true,analyticsEnabled:true};
+        var _ids={pageActive:'settings-pageActive-toggle',voiceEnabled:'settings-voice-toggle',aiEnabled:'settings-ai-toggle',subscribersEnabled:'settings-subscribers-toggle',walletEnabled:'settings-wallet-toggle',brandingEnabled:'settings-branding-toggle',analyticsEnabled:'settings-analytics-toggle'};
+        Object.keys(_ids).forEach(function(f){
+          var btn=document.getElementById(_ids[f]); if(!btn) return;
+          var on=(ss[f]!==undefined?ss[f]:_d[f])!==false;
+          btn.textContent=on?'On':'Off';
+          btn.style.background=on?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+          btn.style.color=on?'#ff5a1f':'rgba(240,244,248,0.5)';
+          btn.style.border=on?'0.5px solid rgba(255,90,31,0.4)':'0.5px solid rgba(255,255,255,0.15)';
+        });
+      })();
       hydrate('footer-input-link',    f.footerLink || '');
 
       var lp = document.getElementById('hero-logo-preview');
@@ -2858,6 +2912,40 @@ window.QRAIVY_EDITOR_STATE = {
   window.ensureInfoSection = ensureInfo;
 })();
 
+;(function() {
+  function ensureSettings() {
+    var S=window.QRAIVY_EDITOR_STATE; if(!S||!S.sections) return null;
+    if(!S.sections.settings||typeof S.sections.settings!=='object'){
+      S.sections.settings={pageActive:true,voiceEnabled:true,aiEnabled:true,subscribersEnabled:true,walletEnabled:true,brandingEnabled:true,analyticsEnabled:true};
+    }
+    return S.sections.settings;
+  }
+  function wireST(id,field){
+    var btn=document.getElementById(id); if(!btn) return;
+    btn.addEventListener('click',function(){
+      var ss=ensureSettings(); if(!ss) return;
+      ss[field]=ss[field]===false?true:false;
+      var on=ss[field]!==false;
+      btn.textContent=on?'On':'Off';
+      btn.style.background=on?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      btn.style.color=on?'#ff5a1f':'rgba(240,244,248,0.5)';
+      btn.style.border=on?'0.5px solid rgba(255,90,31,0.4)':'0.5px solid rgba(255,255,255,0.15)';
+      if(window.markDirty) window.markDirty();
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    wireST('settings-pageActive-toggle','pageActive');
+    wireST('settings-voice-toggle','voiceEnabled');
+    wireST('settings-ai-toggle','aiEnabled');
+    wireST('settings-subscribers-toggle','subscribersEnabled');
+    wireST('settings-wallet-toggle','walletEnabled');
+    wireST('settings-branding-toggle','brandingEnabled');
+    wireST('settings-analytics-toggle','analyticsEnabled');
+  });
+  window.ensureSettingsSection=ensureSettings;
+})();
+
+
 
 
 
@@ -2900,6 +2988,7 @@ window.QRAIVY_EDITOR_STATE = {
     S.sections.info.website  = val('info-input-website');
     S.sections.info.hours    = val('info-input-hours');
     S.sections.info.email    = val('info-input-email');
+    if(!S.sections.settings||typeof S.sections.settings!=='object')S.sections.settings={pageActive:true,voiceEnabled:true,aiEnabled:true,subscribersEnabled:true,walletEnabled:true,brandingEnabled:true,analyticsEnabled:true};
     S.sections.footer.businessName = val('footer-input-bizname');
     S.sections.footer.footerText   = val('footer-input-text');
     S.sections.footer.footerLink   = val('footer-input-link');
