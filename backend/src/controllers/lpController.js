@@ -582,7 +582,7 @@ ${(function() {
     <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
     <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn">${sl.buttonLabel || 'Subscribe →'}</button></div>
-    ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?'<button class="lp-wallet-btn">&#9679; Add to Apple Wallet &mdash; coming soon</button>':'')+(sl.googleEnabled!==false?'<button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>':'')+'</div>':''}
+    ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?`<a href="/lp/wallet/apple/${slug}" class="lp-wallet-btn" style="text-decoration:none;display:block;">&#9679; Add to Apple Wallet</a>`:(''))+(sl.googleEnabled!==false?'<button class="lp-wallet-btn">&#9632; Add to Google Wallet &mdash; coming soon</button>':'')+'</div>':''}
   </div>
 </section>`;
   const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
@@ -920,7 +920,35 @@ async function handleDeleteLP(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs };
+
+// ── GET /lp/wallet/apple/:slug — generate .pkpass for Smart QR LP ──
+async function handleGenerateAppleWalletPass(req, res) {
+  try {
+    const { slug } = req.params;
+    const { generateSmartQRPass } = require('../services/passService');
+
+    // Load the Smart QR page
+    const page = await prisma.smartQRPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+
+    const sections = page.sections || {};
+    const pkpassBuffer = await generateSmartQRPass(slug, sections);
+
+    res.set({
+      'Content-Type': 'application/vnd.apple.pkpass',
+      'Content-Disposition': `attachment; filename="qraivy-${slug}.pkpass"`,
+      'Content-Length': pkpassBuffer.length,
+    });
+    return res.send(pkpassBuffer);
+  } catch (err) {
+    console.error('handleGenerateAppleWalletPass error:', err);
+    return res.status(500).json({ error: 'Could not generate wallet pass: ' + err.message });
+  }
+}
+
+module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
+  handleGenerateAppleWalletPass,
+};
 
 
 

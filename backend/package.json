@@ -20,6 +20,7 @@
     "jszip": "^3.10.1",
     "multer": "^2.1.1",
     "node-forge": "^1.4.0",
+    "passkit-generator": "^3.5.7",
     "puppeteer-core": "^24.43.0",
     "stripe": "^22.1.1"
   },
