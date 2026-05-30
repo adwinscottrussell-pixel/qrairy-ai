@@ -1250,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', initPage);
     };
 
     var _ord = order.map(function(k){ return sections[k] || ''; });
-    if (!order.includes('featured')) { var _fbi=order.indexOf('buttons'); _ord.splice(_fbi!==-1?_fbi+1:_ord.length-1,0,sections.featured||''); }
+    if (!order.includes('featured')) { var _fbi=order.indexOf('loop'); _ord.splice(_fbi!==-1?_fbi+1:_ord.length-1,0,sections.featured||''); }
     var body = _ord.join('');
 
     return `<div style="background:${bg};color:${textColor};font-family:${font};min-height:100%;width:100%;">

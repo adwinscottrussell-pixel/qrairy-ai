@@ -591,7 +591,7 @@ ${sectionsHTML}`;
   const orderedSections = sectionOrder.map(function(k){ return sectionMap[k] || ''; });
   const footerIdx = orderedSections.length - 1;
   if (!sectionOrder.includes('featured')) {
-    const _bi = sectionOrder.indexOf('buttons');
+    const _bi = sectionOrder.indexOf('loop');
     orderedSections.splice(_bi !== -1 ? _bi + 1 : orderedSections.length - 1, 0, featuredHTML);
   }
   orderedSections.splice(footerIdx, 0, ctaHTML);
