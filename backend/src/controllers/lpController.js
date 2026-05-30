@@ -901,7 +901,7 @@ async function handlePublishLP(req, res) {
               const cur = await prisma.landingPage.findUnique({ where: { slug } });
               const existing = cur && cur.sections ? JSON.parse(cur.sections) : {};
               const merged = Object.assign({}, existing, {
-                hero: Object.assign({}, existing.hero||{}, { headline: aiData.headline||undefined, sub: aiData.sub||undefined, cta: aiData.cta||undefined, cta2: aiData.cta2||undefined }),
+                hero: Object.assign({}, existing.hero||{}, { title: aiData.headline||undefined, subtitle: aiData.sub||undefined, cta: aiData.cta||undefined, cta2: aiData.cta2||undefined }),
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null },
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent
