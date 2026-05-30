@@ -20,7 +20,7 @@ async function generateLPFromSite(businessName, websiteUrl, siteContent) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || !siteContent) return null;
   try {
-    const prompt = 'Based on this scraped website content, generate a JSON object with these exact fields: headline (hero headline), sub (1-2 sentence description), cta (primary button text), cta2 (secondary button text), features (array of exactly 3 objects each with icon (emoji), title, description pulled from real content), hours (opening hours string or null), address (physical address or null), phone (phone number or null). Return ONLY valid JSON, no markdown fences.\n\nBusiness: ' + businessName + '\nWebsite: ' + websiteUrl + '\nScraped content:\n' + siteContent;
+    const prompt = 'Based on this scraped website content, generate a JSON object with these exact fields: headline (hero headline), sub (1-2 sentence description), cta (primary button text), cta2 (secondary button text), features (array of exactly 3 objects each with icon (emoji), title, description pulled from real content), hours (opening hours string or null), address (physical address or null), phone (phone number or null), brandColor (the primary hex brand color of the business e.g. #DA291C for McDonalds, #006241 for Starbucks - make your best guess from the brand), useCase (one of: restaurant, ecommerce, gym, realestate, event, leadgen, portfolio, ai-support). Return ONLY valid JSON, no markdown fences.\n\nBusiness: ' + businessName + '\nWebsite: ' + websiteUrl + '\nScraped content:\n' + siteContent;
     const body = JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] });
     return await new Promise((resolve) => {
       const req = https.request({ hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
@@ -908,7 +908,8 @@ async function handlePublishLP(req, res) {
                 hero: Object.assign({}, existing.hero||{}, aiData.headline ? { aiTitle: aiData.headline, aiSubtitle: aiData.sub||'' } : {}),
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null },
-                aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent
+                aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent,
+                theme: Object.assign({}, existing.theme||{}, aiData.brandColor ? { accentColor: aiData.brandColor } : {})
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
               console.log('[Firecrawl] Auto-generated LP for', slug);
