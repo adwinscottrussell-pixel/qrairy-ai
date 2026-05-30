@@ -966,6 +966,8 @@
           panels.forEach(function(p) {
             p.style.display = p.getAttribute('data-panel') === target ? 'block' : 'none';
           });
+          // Reset editor tab scroll to top on every tab switch
+          var tc=document.getElementById('sqd-tab-content'); if(tc) tc.scrollTop=0;
           // Scroll phone to section
           var pf = document.querySelector('.sqd-phone-frame');
           if (pf) pf.scrollTop = SECTION_SCROLL[target] || 0;
