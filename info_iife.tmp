@@ -1,0 +1,48 @@
+;(function() {
+  function ensureInfo() {
+    var S = window.QRAIVY_EDITOR_STATE;
+    if (!S || !S.sections) return null;
+    if (!S.sections.info || typeof S.sections.info !== 'object' || Array.isArray(S.sections.info)) {
+      S.sections.info = { address:'', addressEnabled:true, phone:'', phoneEnabled:true, website:'', websiteEnabled:true, hours:'', hoursEnabled:true, email:'', emailEnabled:true };
+    }
+    return S.sections.info;
+  }
+  function syncInfo() {
+    var si = ensureInfo(); if (!si) return;
+    var a=document.getElementById('info-input-address');
+    var p=document.getElementById('info-input-phone');
+    var w=document.getElementById('info-input-website');
+    var h=document.getElementById('info-input-hours');
+    var e=document.getElementById('info-input-email');
+    if(a) si.address=a.value;
+    if(p) si.phone=p.value;
+    if(w) si.website=w.value;
+    if(h) si.hours=h.value;
+    if(e) si.email=e.value;
+    if(window.markDirty) window.markDirty();
+  }
+  function wireInfoToggle(id, field) {
+    var btn=document.getElementById(id); if(!btn) return;
+    btn.addEventListener('click', function(){
+      var si=ensureInfo(); if(!si) return;
+      si[field] = si[field]===false ? true : false;
+      var on=si[field]!==false;
+      btn.textContent=on?'On':'Off';
+      btn.style.background=on?'rgba(255,90,31,0.12)':'rgba(255,255,255,0.04)';
+      btn.style.color=on?'#ff5a1f':'rgba(240,244,248,0.5)';
+      btn.style.border=on?'0.5px solid rgba(255,90,31,0.4)':'0.5px solid rgba(255,255,255,0.15)';
+      if(window.markDirty) window.markDirty();
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    ['info-input-address','info-input-phone','info-input-website','info-input-hours','info-input-email'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.addEventListener('input',syncInfo);
+    });
+    wireInfoToggle('info-address-toggle','addressEnabled');
+    wireInfoToggle('info-phone-toggle','phoneEnabled');
+    wireInfoToggle('info-website-toggle','websiteEnabled');
+    wireInfoToggle('info-hours-toggle','hoursEnabled');
+    wireInfoToggle('info-email-toggle','emailEnabled');
+  });
+  window.ensureInfoSection = ensureInfo;
+})();
