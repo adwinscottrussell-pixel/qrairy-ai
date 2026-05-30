@@ -1,0 +1,14 @@
+      featured: Array.isArray(featCards) && featCards.filter(function(f){ return f.enabled!==false; }).length>0 ?
+        '<div data-section="featured" style="padding:8px 20px 16px;">'+
+        '<div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.1em;color:'+subColor+';margin-bottom:10px;text-align:center;">Why Choose Us</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'+
+        featCards.filter(function(f){ return f.enabled!==false; }).map(function(f){
+          return '<div style="background:'+cardBg+';border:0.5px solid '+cardBorder+';border-radius:10px;padding:10px 6px;text-align:center;">'+
+            '<div style="font-size:1.1rem;margin-bottom:4px;">'+(f.icon||'\u2728')+'</div>'+
+            '<div style="font-size:.65rem;font-weight:700;color:'+textColor+';margin-bottom:2px;">'+(f.title||'Feature')+'</div>'+
+            '<div style="font-size:.58rem;color:'+subColor+';line-height:1.4;">'+(f.description||'')+'</div>'+
+            '</div>';
+        }).join('')+
+        '</div></div>' : '',
+
+      

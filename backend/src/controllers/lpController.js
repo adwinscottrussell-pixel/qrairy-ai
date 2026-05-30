@@ -566,14 +566,15 @@ ${(function() {
   </div>
 </section>`;
   const buttonsBlock = buttonsHTML ? '<section class="lp-section lp-buttons-section"><div class="lp-hero-ctas">' + buttonsHTML + '</div></section>' : '';
-  const sfeat = storedSections.featured || {};
-  const featuredHTML = sfeat.enabled === false ? '' :
+  const sfeatArr = Array.isArray(storedSections.featured) ? storedSections.featured : null;
+  const sfeat = sfeatArr ? {} : (storedSections.featured || {});
+  const _dfc = [{icon:'&#x2728;',title:'AI Concierge',description:'Customers get instant answers.'},{icon:'&#x1F39F;',title:'Digital Wallet',description:'One-tap membership and rewards.'},{icon:'&#x1F514;',title:'Smart Updates',description:'Reconnect with every scan.'}];
+  const _fc = sfeatArr ? sfeatArr.filter(f => f.enabled !== false) : _dfc;
+  const featuredHTML = (!sfeatArr && sfeat.enabled === false) || _fc.length === 0 ? '' :
     '<section class="lp-featured-section">'+
     '<div class="lp-featured-header"><h2 class="lp-featured-title">'+(sfeat.title||'Why Choose Us')+'</h2></div>'+
     '<div class="lp-featured-cards">'+
-    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x2728;</div><div class="lp-featured-card-title">AI Concierge</div><div class="lp-featured-card-desc">Customers get instant answers.</div></div>'+
-    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x1F39F;</div><div class="lp-featured-card-title">Digital Wallet</div><div class="lp-featured-card-desc">One-tap membership and rewards.</div></div>'+
-    '<div class="lp-featured-card"><div class="lp-featured-icon">&#x1F514;</div><div class="lp-featured-card-title">Smart Updates</div><div class="lp-featured-card-desc">Reconnect with every scan.</div></div>'+
+    _fc.map(f => '<div class="lp-featured-card"><div class="lp-featured-icon">'+(f.icon||'&#x2728;')+'</div><div class="lp-featured-card-title">'+(f.title||'')+'</div><div class="lp-featured-card-desc">'+(f.description||'')+'</div></div>').join('')+
     '</div></section>';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>

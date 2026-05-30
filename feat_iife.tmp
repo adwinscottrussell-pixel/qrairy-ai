@@ -1,0 +1,104 @@
+;(function() {
+  var FEAT_ICONS = ['✨','💳','🔔','📍','📞','🌐','⭐','❤️','🎯','🤖'];
+  var FEAT_DEFAULTS = [
+    { icon:'✨', title:'AI Concierge',  description:'Customers get instant answers.',    enabled:true },
+    { icon:'💳', title:'Digital Wallet', description:'One-tap membership and rewards.',   enabled:true },
+    { icon:'🔔', title:'Smart Updates',  description:'Reconnect after every scan.',       enabled:true }
+  ];
+
+  function getFeats() {
+    var S = window.QRAIVY_EDITOR_STATE;
+    if (!S || !S.sections) return [];
+    if (!Array.isArray(S.sections.featured)) {
+      S.sections.featured = JSON.parse(JSON.stringify(FEAT_DEFAULTS));
+    }
+    return S.sections.featured;
+  }
+
+  var _fl = false;
+
+  function renderFeatured() {
+    var list = document.getElementById('feat-list');
+    if (!list) return;
+    var feats = getFeats();
+    list.innerHTML = '';
+
+    if (!feats.length) {
+      list.innerHTML = '<div style="text-align:center;padding:24px;font-size:.72rem;color:rgba(240,244,248,0.32);">No features yet — click + Add Feature.</div>';
+    } else {
+      var BL = 'display:block;font-size:.56rem;color:rgba(240,244,248,0.48);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;';
+      var BI = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.75rem;color:#f0f4f8;outline:none;';
+      var BTA = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.72rem;color:#f0f4f8;outline:none;resize:vertical;font-family:inherit;line-height:1.5;';
+      var BB = 'flex:1;padding:5px 0;border-radius:6px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);';
+      var BD = 'flex:1;padding:5px 0;border-radius:6px;font-size:.62rem;cursor:not-allowed;border:0.5px solid rgba(255,255,255,0.04);background:transparent;color:rgba(240,244,248,0.18);';
+
+      feats.forEach(function(f, idx) {
+        var on = f.enabled !== false;
+        var card = document.createElement('div');
+        card.dataset.idx = idx;
+        card.style.cssText = 'background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,'+(on?'0.12':'0.05')+');border-radius:10px;padding:12px;opacity:'+(on?'1':'0.5')+';';
+
+        var h = '';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+        h += '<span style="color:rgba(240,244,248,0.2);font-size:.75rem;letter-spacing:2px;user-select:none;">⋮⋮</span>';
+        h += '<span style="flex:1;font-size:.78rem;font-weight:700;color:#f0f4f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(f.icon||'✨')+' '+(f.title||'Feature')+'</span>';
+        h += '<button data-ftoggle="'+idx+'" style="padding:3px 9px;border-radius:20px;font-size:.58rem;font-weight:700;cursor:pointer;border:0.5px solid '+(on?'rgba(255,90,31,0.5)':'rgba(255,255,255,0.12)')+';background:'+(on?'rgba(255,90,31,0.15)':'transparent')+';color:'+(on?'#ff5a1f':'rgba(240,244,248,0.35)')+'">'+(on?'On':'Off')+'</button>';
+        h += '<button data-fdel="'+idx+'" style="padding:3px 8px;border-radius:6px;font-size:.68rem;cursor:pointer;border:0.5px solid rgba(255,80,80,0.2);background:rgba(255,80,80,0.06);color:rgba(255,110,110,0.65);" title="Delete">🗑</button>';
+        h += '</div>';
+
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+        h += '<label style="'+BL+'white-space:nowrap;margin-bottom:0;">Icon</label>';
+        h += '<select data-ficon="'+idx+'" style="flex:1;background:#1e1e2e;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;font-size:.9rem;color:#f0f4f8;outline:none;">';
+        FEAT_ICONS.forEach(function(ic){ h += '<option value="'+ic+'" style="background:#1e1e2e;color:#e8e8f0;"'+(ic===f.icon?' selected':'')+'>'+ic+'</option>'; });
+        h += '</select></div>';
+
+        h += '<div style="margin-bottom:8px;"><label style="'+BL+'">Title</label>';
+        h += '<input data-ftitle="'+idx+'" type="text" value="'+(f.title||'').replace(/"/g,'&quot;')+'" placeholder="e.g. AI Concierge" style="'+BI+'" onfocus="this.style.borderColor=\'rgba(255,90,31,0.5)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'"/></div>';
+
+        h += '<div style="margin-bottom:10px;"><label style="'+BL+'">Description</label>';
+        h += '<textarea data-fdesc="'+idx+'" rows="2" placeholder="e.g. Customers get instant answers." style="'+BTA+'" onfocus="this.style.borderColor=\'rgba(255,90,31,0.5)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'">'+(f.description||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</textarea></div>';
+
+        h += '<div style="display:flex;gap:6px;">';
+        h += '<button data-fup="'+idx+'" style="'+(idx===0?BD:BB)+'"'+(idx===0?' disabled':'')+'>↑ Up</button>';
+        h += '<button data-fdn="'+idx+'" style="'+(idx===feats.length-1?BD:BB)+'"'+(idx===feats.length-1?' disabled':'')+'>↓ Down</button>';
+        h += '</div>';
+
+        card.innerHTML = h;
+        list.appendChild(card);
+      });
+    }
+
+    if (!_fl) {
+      _fl = true;
+      list.addEventListener('input', function(e) {
+        var t=e.target, fa=getFeats();
+        if (t.dataset.ftitle!==undefined){ var f2=fa[+t.dataset.ftitle]; if(f2){f2.title=t.value;} if(window.markDirty)window.markDirty(); }
+        if (t.dataset.fdesc!==undefined){  var f3=fa[+t.dataset.fdesc];  if(f3){f3.description=t.value;} if(window.markDirty)window.markDirty(); }
+      });
+      list.addEventListener('change', function(e) {
+        var t=e.target, fa=getFeats();
+        if (t.dataset.ficon!==undefined){ var f4=fa[+t.dataset.ficon]; if(f4){f4.icon=t.value; if(window.markDirty)window.markDirty(); renderFeatured();} }
+      });
+      list.addEventListener('click', function(e) {
+        var t=e.target, arr=getFeats();
+        if (t.dataset.ftoggle!==undefined){ var i=+t.dataset.ftoggle; if(arr[i]){arr[i].enabled=!(arr[i].enabled!==false);if(window.markDirty)window.markDirty();renderFeatured();} }
+        if (t.dataset.fdel!==undefined)   { var i2=+t.dataset.fdel; arr.splice(i2,1); if(window.markDirty)window.markDirty(); renderFeatured(); }
+        if (t.dataset.fup!==undefined)    { var i3=+t.dataset.fup; if(i3>0){var tmp=arr[i3];arr[i3]=arr[i3-1];arr[i3-1]=tmp;if(window.markDirty)window.markDirty();renderFeatured();} }
+        if (t.dataset.fdn!==undefined)    { var i4=+t.dataset.fdn; if(i4<arr.length-1){var tmp2=arr[i4];arr[i4]=arr[i4+1];arr[i4+1]=tmp2;if(window.markDirty)window.markDirty();renderFeatured();} }
+      });
+    }
+
+    var ab=document.getElementById('feat-add');
+    if(ab){
+      var fr=ab.cloneNode(true); ab.parentNode.replaceChild(fr,ab);
+      fr.addEventListener('click',function(){
+        getFeats().push({icon:'✨',title:'New Feature',description:'',enabled:true});
+        if(window.markDirty)window.markDirty(); renderFeatured();
+        setTimeout(function(){ var els=document.querySelectorAll('[data-ftitle]'); var last=els[els.length-1]; if(last){last.focus();last.select();} },60);
+      });
+    }
+  }
+
+  window.renderFeaturedFn = renderFeatured;
+
+})();
