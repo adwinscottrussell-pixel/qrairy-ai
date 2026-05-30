@@ -2505,8 +2505,8 @@ window.QRAIVY_EDITOR_STATE = {
         h+='</div>';
         h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
         h+='<label style="'+BL+'white-space:nowrap;margin-bottom:0;">Icon</label>';
-        h+='<select data-icon="'+b.id+'" style="flex:1;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:5px 8px;font-size:.72rem;color:#f0f4f8;outline:none;">';
-        ICON_OPTS.forEach(function(o){ h+='<option value="'+o[0]+'"'+(o[0]===icon?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'; });
+        h+='<select data-icon="'+b.id+'" style="flex:1;background:#1e1e2e;border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;font-size:.72rem;color:#f0f4f8;outline:none;">';
+        ICON_OPTS.forEach(function(o){ h+='<option value="'+o[0]+'" style="background:#1e1e2e;color:#e8e8f0;"'+(o[0]===icon?' selected':'')+'>'+o[1]+' '+o[2]+'</option>'; });
         h+='</select></div>';
         h+='<div style="margin-bottom:8px;"><label style="'+BL+'">Button Title</label>';
         h+='<input data-title="'+b.id+'" type="text" value="'+title.replace(/"/g,'&quot;')+'" placeholder="e.g. Visit Website" style="'+BI+'" onfocus="this.style.borderColor=\'rgba(255,90,31,0.5)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'"/></div>';
