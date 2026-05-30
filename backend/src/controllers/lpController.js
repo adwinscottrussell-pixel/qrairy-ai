@@ -291,23 +291,15 @@ body.theme-light .lp-footer-name{font-size:1rem;font-weight:700;color:#111111}
 body.theme-light .lp-footer-powered{font-size:0.82rem;color:#8A8A8A;margin-top:6px}
 body.theme-light .lp-footer-powered a{color:${accent};font-weight:700;text-decoration:none;display:inline-block;margin-top:4px;font-size:0.88rem}
 /* ── PASS 3: Featured + Wallet reduction ───────── */
-body.theme-light .lp-featured-section{display:block;padding:0 16px;margin-bottom:20px}
-body.theme-light .lp-featured-header{margin-bottom:14px;text-align:center}
-body.theme-light .lp-featured-title{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.14em;color:#8A8A8A;font-weight:600}
-body.theme-light .lp-featured-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-body.theme-light .lp-featured-card{background:#FFFFFF;border:1px solid #E8E3DC;border-radius:16px;padding:18px 12px;box-shadow:0 8px 24px rgba(0,0,0,.04);text-align:center}
-body.theme-light .lp-featured-icon{font-size:1.3rem;display:block;margin-bottom:8px}
-body.theme-light .lp-featured-card-title{font-size:0.78rem;font-weight:700;color:#111111;margin-bottom:4px}
-body.theme-light .lp-featured-card-desc{font-size:0.68rem;color:#8A8A8A;line-height:1.5}
-body.theme-light .lp-subscribe-card{padding:22px 20px}
-body.theme-light .lp-wallet-card{transform:scale(1.01)}
-body.theme-light .lp-sub-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-body.theme-light .qraivy-growth-btn{color:#111111;background:rgba(0,0,0,0.05);border:1px solid #E8E3DC}
-body.theme-light .qraivy-growth-btn .qraivy-growth-icon{color:#111111}
-body.theme-light .qraivy-growth-sub{color:#8A8A8A}
-/* ── Refinement Pass ─────── */
-body.theme-light .lp-featured-card{padding:22px 16px}
-body.theme-light .lp-featured-icon{font-size:1.6rem;margin-bottom:10px}
+body.theme-light .lp-featured-section{padding:0 0 28px}
+body.theme-light .lp-featured-header{padding:8px 20px 20px;text-align:center}
+body.theme-light .lp-featured-title{color:#111111;font-size:1.2rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;text-transform:none;margin-bottom:6px}
+body.theme-light .lp-featured-subtitle{color:rgba(26,18,9,0.45);font-size:.74rem}
+body.theme-light .lp-featured-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px}
+body.theme-light .lp-featured-card{background:#FFFFFF;border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:20px 12px 18px;box-shadow:0 14px 40px rgba(0,0,0,.08);text-align:center}
+body.theme-light .lp-featured-icon{font-size:1.8rem;display:block;margin-bottom:10px}
+body.theme-light .lp-featured-card-title{color:#111111;font-size:.78rem;font-weight:800;margin-bottom:6px;line-height:1.3}
+body.theme-light .lp-featured-card-desc{color:rgba(26,18,9,0.52);font-size:.67rem;line-height:1.55}
 body.theme-light .qraivy-growth-btn{color:#fff !important;background:${accent} !important;border:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
 body.theme-light .qraivy-growth-icon{color:#fff !important}
 body.theme-light .lp-info-row{background:#FFFFFF;border:1px solid #E8E3DC}
@@ -330,7 +322,15 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-info-val{font-size:.82rem;font-weight:500;line-height:1.3;word-break:break-all}
 .lp-info-text{color:#f0ece0}
 .lp-info-link{color:#f0ece0;text-decoration:none}
-.lp-featured-section{display:none}
+.lp-featured-section{padding:0 0 28px}
+.lp-featured-header{text-align:center;padding:8px 20px 20px}
+.lp-featured-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:#f0ece0;margin-bottom:6px;letter-spacing:-.02em;line-height:1.2;text-transform:none}
+.lp-featured-subtitle{font-size:.74rem;color:rgba(240,236,224,0.5);margin-top:3px}
+.lp-featured-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px}
+.lp-featured-card{background:rgba(255,255,255,.03);border:0.5px solid rgba(255,255,255,.07);border-radius:20px;padding:20px 12px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.lp-featured-icon{font-size:1.8rem;margin-bottom:10px;display:block}
+.lp-featured-card-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800;color:#f0ece0;margin-bottom:6px;line-height:1.3}
+.lp-featured-card-desc{font-size:.67rem;color:rgba(240,236,224,0.52);line-height:1.55}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
 /* Nav */
@@ -592,7 +592,7 @@ ${(function() {
   const _fc = sfeatArr ? sfeatArr.filter(f => f.enabled !== false) : _dfc;
   const featuredHTML = (!sfeatArr && sfeat.enabled === false) || _fc.length === 0 ? '' :
     '<section class="lp-featured-section">'+
-    '<div class="lp-featured-header"><h2 class="lp-featured-title">'+(sfeat.title||'Why Choose Us')+'</h2></div>'+
+    '<div class="lp-featured-header"><h2 class="lp-featured-title">'+(sfeat.title||'Why Choose Us')+'</h2><p class="lp-featured-subtitle">Discover what makes us different.</p></div>'+
     '<div class="lp-featured-cards">'+
     _fc.map(f => '<div class="lp-featured-card"><div class="lp-featured-icon">'+(f.icon||'&#x2728;')+'</div><div class="lp-featured-card-title">'+(f.title||'')+'</div><div class="lp-featured-card-desc">'+(f.description||'')+'</div></div>').join('')+
     '</div></section>';
