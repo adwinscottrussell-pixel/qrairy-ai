@@ -1076,6 +1076,21 @@ async function handleSendPush(req, res) {
   }
 }
 
+
+// ── GET /lp/push/:slug/count — get number of devices with pass ──
+async function handlePushCount(req, res) {
+  try {
+    const { slug } = req.params;
+    const serial = 'sqr-' + slug;
+    const count = await prisma.passDevice.count({
+      where: { pass: { serialNumber: serial } }
+    });
+    return res.json({ ok: true, count });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 async function handleServeLP(req, res) {
   try {
     const { slug } = req.params;
@@ -1163,7 +1178,7 @@ async function handleGenerateAppleWalletPass(req, res) {
 }
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount,
 };
 
 

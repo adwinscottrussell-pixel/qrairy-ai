@@ -14,6 +14,7 @@ router.post('/lp/chat', handleChatLP);
 
 // Push notification endpoint
 router.post('/lp/push/:slug', handleSendPush);
+router.get('/lp/push/:slug/count', handlePushCount);
 
 // API: publish a new landing page
 router.post('/lp', handlePublishLP);
