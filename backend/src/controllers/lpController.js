@@ -804,6 +804,7 @@ ${sectionsHTML}`;
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
+  var chatHistory = [];
   function submitMsg() {
     if (!chatInput) return;
     var v = chatInput.value.trim();
@@ -811,9 +812,11 @@ ${sectionsHTML}`;
     addUserMsg(v);
     chatInput.value = '';
     addAIMsg('typing');
-    setTimeout(function(){
-      replaceTyping('Thanks for your message! Our team will get back to you soon. For immediate help please visit our website.');
-    }, 1600);
+    chatHistory.push({role:'user',content:v});
+    fetch('/lp/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:slug,message:v,history:chatHistory.slice(-6)})})
+    .then(function(r){return r.json();})
+    .then(function(d){replaceTyping(d.reply||'Sorry, try again.');chatHistory.push({role:'assistant',content:d.reply||''});})
+    .catch(function(){replaceTyping('Sorry, something went wrong.');});
   }
 
   if (chatSend) chatSend.addEventListener('click', submitMsg);
@@ -879,6 +882,39 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 }
 
 // ── Controllers ───────────────────────────────────────────────────────────
+
+async function handleChatLP(req, res) {
+  try {
+    const { slug, message, history } = req.body;
+    if (!slug || !message) return res.status(400).json({ error: 'missing params' });
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ reply: 'Business not found.' });
+    const sections = page.sections ? JSON.parse(page.sections) : {};
+    const siteContent = sections.siteContent || '';
+    const bizName = page.businessName || slug;
+    const businessInfo = sections.businessInfo || {};
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.json({ reply: 'AI not configured.' });
+    const sys = 'You are a friendly AI assistant for ' + bizName + '. Answer customer questions based on the info below. Be concise and helpful.' + (siteContent ? '
+
+Website content:
+' + siteContent.slice(0,6000) : '') + (businessInfo.hours ? '
+
+Hours: ' + businessInfo.hours : '') + (businessInfo.address ? '
+Address: ' + businessInfo.address : '') + (businessInfo.phone ? '
+Phone: ' + businessInfo.phone : '');
+    const msgs = (history||[]).slice(-6).concat([{role:'user',content:message}]);
+    const body = JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:sys,messages:msgs});
+    const https = require('https');
+    const reply = await new Promise((resolve) => {
+      const r = https.request({hostname:'api.anthropic.com',path:'/v1/messages',method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Length':Buffer.byteLength(body)}},(res2)=>{
+        let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{try{resolve(JSON.parse(d).content[0].text);}catch{resolve('Sorry, I could not process that.');}});
+      });
+      r.on('error',()=>resolve('Sorry, something went wrong.')); r.write(body); r.end();
+    });
+    return res.json({ reply });
+  } catch(e) { return res.status(500).json({ reply: 'Sorry, something went wrong.' }); }
+}
 
 async function handlePublishLP(req, res) {
   try {
