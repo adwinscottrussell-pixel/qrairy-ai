@@ -808,7 +808,6 @@ ${sectionsHTML}`;
     var md = text
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
-      .replace(/\[(.*?)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" style="color:#ff9d6e;text-decoration:underline">$1</a>')
       .replace(/\n/g,'<br>');
     b.innerHTML = md;
     d.appendChild(b);
