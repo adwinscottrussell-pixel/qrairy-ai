@@ -1,4 +1,21 @@
 const https = require('https');
+const crypto = require('crypto');
+
+function generateJWT() {
+  const keyId = process.env.APNS_KEY_ID;
+  const teamId = process.env.APPLE_TEAM_ID;
+  const keyP8 = Buffer.from(process.env.APNS_KEY_P8_BASE64 || '', 'base64').toString('utf8');
+
+  const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid: keyId })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ iss: teamId, iat: Math.floor(Date.now() / 1000) })).toString('base64url');
+
+  const sign = crypto.createSign('SHA256');
+  sign.update(header + '.' + payload);
+  const signature = sign.sign({ key: keyP8, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+
+  return header + '.' + payload + '.' + signature;
+}
+
 const http2 = require('http2');
 
 // ============================================================
@@ -38,6 +55,7 @@ async function sendPushNotification(pushToken) {
     const payload = JSON.stringify({});
     const host = process.env.NODE_ENV === 'production' ? APNS_HOST_PROD : APNS_HOST_DEV;
 
+    const jwt = generateJWT();
     const options = {
       hostname: host,
       port: APNS_PORT,
@@ -49,12 +67,8 @@ async function sendPushNotification(pushToken) {
         'apns-priority': '5',
         'content-type': 'application/json',
         'content-length': Buffer.byteLength(payload),
-        // Authorization via .p8 key (configured in Phase 2)
-        // 'authorization': `bearer ${getJWT()}`,
+        'authorization': `bearer ${jwt}`,
       },
-      // Phase 2: Add .p8 key or .p12 cert for auth
-      // key: fs.readFileSync(process.env.APNS_KEY_PATH),
-      // cert: fs.readFileSync(process.env.APNS_CERT_PATH),
     };
 
     const req = https.request(options, (res) => {
