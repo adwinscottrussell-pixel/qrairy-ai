@@ -789,6 +789,10 @@
         <input type="text" id="businessName" placeholder="e.g. Luna Coffee Co." autocomplete="off" maxlength="60"/>
       </div>
       <div class="input-hint">Can be a business, event, creator profile, or anything you like.</div>
+      <div class="input-wrap" style="margin-top:12px">
+        <input type="url" id="businessWebsite" placeholder="e.g. https://www.yourbusiness.com (optional)" autocomplete="off"/>
+      </div>
+      <div class="input-hint">We'll use your website to personalise your landing page with real content.</div>
       <div class="error-msg" id="err1">Please enter a name to continue.</div>
       <div class="btn-row">
         <button class="btn-next" id="next1">Continue →</button>
@@ -1213,7 +1217,7 @@
             businessName: state.name,
             useCase,
             brandColor,
-            websiteUrl: 'https://qraivy.com',
+            websiteUrl: document.getElementById('businessWebsite')?.value?.trim() || '',
             qrType: 'demo',
             // Category config fields — used by backend for page generation
             categorySlug:     state.type,
