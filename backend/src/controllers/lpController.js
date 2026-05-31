@@ -777,7 +777,7 @@ ${sectionsHTML}`;
     }, 320);
   }
 
-  // ── Chat ────────────────────────────────────────────────
+  // ── Chat (v2) ────────────────────────────────────────────────
   function addAIMsg(type) {
     var m = document.getElementById('chatMsgs');
     if (!m) return;
