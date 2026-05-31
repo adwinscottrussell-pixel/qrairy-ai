@@ -12,6 +12,9 @@ router.get('/lp/:slug', handleServeLP);
 // AI chat endpoint
 router.post('/lp/chat', handleChatLP);
 
+// Push notification endpoint
+router.post('/lp/push/:slug', handleSendPush);
+
 // API: publish a new landing page
 router.post('/lp', handlePublishLP);
 router.delete('/lp/:slug', handleDeleteLP);
