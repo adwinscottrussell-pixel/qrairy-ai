@@ -1165,6 +1165,14 @@ async function handleGenerateAppleWalletPass(req, res) {
     const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
     const pkpassBuffer = await generateSmartQRPass(slug, sections);
 
+    // Ensure Pass record exists in DB for device registration
+    const serialNumber = 'sqr-' + slug;
+    await _prisma.pass.upsert({
+      where: { serialNumber },
+      update: { updatedAt: new Date() },
+      create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet' }
+    });
+
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
       'Content-Disposition': `attachment; filename="qraivy-${slug}.pkpass"`,
