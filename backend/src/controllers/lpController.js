@@ -781,31 +781,30 @@ ${sectionsHTML}`;
   function addAIMsg(type) {
     var m = document.getElementById('chatMsgs');
     if (!m) return;
-    if (type === 'typing') { var old = document.getElementById('typingMsg'); if (old) old.parentNode.removeChild(old); }
+    var old = document.getElementById('typingMsg');
+    if (old) old.parentNode.removeChild(old);
     var d = document.createElement('div');
     d.className = 'lp-msg lp-msg-ai';
-    d.id = type === 'typing' ? 'typingMsg' : '';
-    d.innerHTML = type === 'typing'
-      ? '<div class="lp-bubble"><span class="lp-typing-dots"><span></span><span></span><span></span></span></div>'
-      : '<div class="lp-bubble">' + type + '</div>';
+    if (type === 'typing') {
+      d.id = 'typingMsg';
+      d.innerHTML = '<div class="lp-bubble lp-bubble-ai"><span class="lp-typing-dots"><span></span><span></span><span></span></span></div>';
+    } else {
+      d.innerHTML = '<div class="lp-bubble lp-bubble-ai">' + type + '</div>';
+    }
     m.appendChild(d);
     m.scrollTop = m.scrollHeight;
   }
 
   function replaceTyping(text) {
-    var t = document.getElementById('typingMsg');
     var m = document.getElementById('chatMsgs');
-    if (t && m) {
-      var newMsg = document.createElement('div');
-      newMsg.className = 'lp-msg lp-msg-ai';
-      var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      safe = safe.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-      newMsg.innerHTML = '<div class="lp-bubble">' + safe + '</div>';
-      m.replaceChild(newMsg, t);
-      m.scrollTop = m.scrollHeight;
-    } else if (t) {
-      t.querySelector('.lp-bubble').textContent = text;
-    }
+    var t = document.getElementById('typingMsg');
+    if (t) t.parentNode.removeChild(t);
+    if (!m) return;
+    var d = document.createElement('div');
+    d.className = 'lp-msg lp-msg-ai';
+    d.innerHTML = '<div class="lp-bubble lp-bubble-ai">' + text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>') + '</div>';
+    m.appendChild(d);
+    m.scrollTop = m.scrollHeight;
   }
 
   function addUserMsg(txt) {
