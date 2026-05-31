@@ -72,29 +72,31 @@ model LandingPage {
 }
 
 model Pass {
-  id           String         @id @default(cuid())
-  serialNumber String         @unique
-  passTypeId   String
-  updatedAt    DateTime       @default(now()) @updatedAt
-  devices      PassDevice[]
+  id            String             @id @default(cuid())
+  serialNumber  String             @unique
+  passTypeId    String
+  authToken     String?
+  updatedAt     DateTime           @default(now()) @updatedAt
+  devices       PassDevice[]
   registrations PassRegistration[]
 }
 
 model PassDevice {
-  id           String   @id @default(cuid())
-  deviceId     String
-  pushToken    String
-  passId       String
-  pass         Pass     @relation(fields: [passId], references: [id])
-  createdAt    DateTime @default(now())
-  @@unique([deviceId, passId])
+  id                    String   @id @default(cuid())
+  deviceLibraryId       String
+  pushToken             String
+  walletType            String   @default("apple")
+  passId                String
+  pass                  Pass     @relation(fields: [passId], references: [id])
+  createdAt             DateTime @default(now())
+  @@unique([passId, deviceLibraryId])
 }
 
 model PassRegistration {
-  id           String   @id @default(cuid())
-  deviceId     String
-  serialNumber String
-  passId       String
-  pass         Pass     @relation(fields: [passId], references: [id])
-  createdAt    DateTime @default(now())
+  id                    String   @id @default(cuid())
+  deviceLibraryId       String
+  serialNumber          String
+  passId                String
+  pass                  Pass     @relation(fields: [passId], references: [id])
+  createdAt             DateTime @default(now())
 }

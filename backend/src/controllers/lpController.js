@@ -1167,10 +1167,12 @@ async function handleGenerateAppleWalletPass(req, res) {
 
     // Ensure Pass record exists in DB for device registration
     const serialNumber = 'sqr-' + slug;
+    const crypto = require('crypto');
+    const authToken = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
     await _prisma.pass.upsert({
       where: { serialNumber },
       update: { updatedAt: new Date() },
-      create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet' }
+      create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken }
     });
 
     res.set({
