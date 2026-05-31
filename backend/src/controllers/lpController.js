@@ -979,6 +979,23 @@ async function handlePublishLP(req, res) {
         } catch(e) { console.error('[Firecrawl] Error:', e.message); }
       });
     }
+    // Generate voice if not already generated
+    setImmediate(async () => {
+      try {
+        const currentPage = await prisma.landingPage.findUnique({ where: { slug } });
+        if (!currentPage) return;
+        const cs = currentPage.sections ? JSON.parse(currentPage.sections) : {};
+        if (cs.voice && cs.voice.audioUrl) return; // already has audio
+        const { generateAndUploadVoice } = require('../services/voiceService');
+        const vs = (cs.voice && cs.voice.voiceKey) || 'sarah';
+        const ct = (cs.voice && cs.voice.customText) || null;
+        const bizName = currentPage.businessName || slug;
+        const audioUrl = await generateAndUploadVoice(bizName, slug, vs, ct);
+        cs.voice = Object.assign({}, cs.voice || {}, { audioUrl });
+        await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(cs) } });
+        console.log('[Voice] Generated on publish for', slug, audioUrl);
+      } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
+    });
     return res.json({ ok: true, url: `https://api.qraivy.com/lp/${slug}`, slug, id: page.id });
   } catch (err) {
     console.error('[LP] publish error:', err);
