@@ -578,7 +578,7 @@ ${(function() {
   ${themeBg === 'light' ? '<a href="#aiSection" class="lp-hero-cta-btn">Start a Conversation &rarr;</a>' : ''}
 </section>`;
   const voiceHTML = sv.enabled === false ? '' : `<section class="lp-voice-section">
-  <div class="lp-voice-title">&#9658; Welcome from ${page.businessName || bizName}</div>
+  <div class="lp-voice-title">&#9658; Welcome from ${(page.businessName || bizName).replace(/^Welcome to /i,'').replace(/^Welcome /i,'')}</div>
   <div class="lp-voice-player" id="voicePlayer">
     <button class="lp-voice-btn" id="voiceBtn" aria-label="Play welcome message">&#9654;</button>
     <div class="lp-voice-info">
