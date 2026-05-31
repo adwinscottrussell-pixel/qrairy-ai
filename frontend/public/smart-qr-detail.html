@@ -717,6 +717,18 @@
       </div>
 
       <!-- BUTTONS -->
+
+      <!-- PUSH NOTIFICATIONS -->
+      <div class="sqd-tab-panel" data-panel="push" style="display:none;">
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔔 Push Notifications</div>
+        <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">Send a silent push to all Apple Wallet pass holders. Their pass will update instantly on their lock screen.</div>
+        <div id="push-device-count" style="font-size:.72rem;color:rgba(240,244,248,0.6);margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">Loading devices...</div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:.68rem;color:rgba(240,244,248,0.4);margin-bottom:10px;">This triggers Apple Wallet to silently refresh all passes for this page. Customers will see the latest version of their pass.</div>
+          <button id="push-send-btn" onclick="sendWalletPush()" style="width:100%;padding:10px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🔔 Send Push to All Pass Holders</button>
+          <div id="push-result" style="margin-top:10px;font-size:.72rem;color:rgba(240,244,248,0.6);display:none;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"></div>
+        </div>
+      </div>
       <div class="sqd-tab-panel" data-panel="buttons" style="display:none;">
         <div style="font-weight:700;color:#f0f4f8;margin-bottom:4px;font-size:.82rem;">🔗 Buttons & Links</div>
         <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:14px;">Add links and calls-to-action for your visitors.</div>
