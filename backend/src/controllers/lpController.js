@@ -409,7 +409,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-chat-hname{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700}
 .lp-chat-status{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:rgba(240,236,224,0.6)}
 .lp-status-dot{width:5px;height:5px;border-radius:50%;background:#22c55e}
-.lp-chat-msgs{min-height:80px;max-height:180px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.lp-chat-msgs{min-height:120px;max-height:320px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
 .lp-chat-msgs::-webkit-scrollbar{display:none}
 .lp-msg{display:flex}
 .lp-msg-ai{justify-content:flex-start}
