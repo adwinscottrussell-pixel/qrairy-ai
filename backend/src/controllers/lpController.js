@@ -1015,7 +1015,7 @@ async function handleDeleteLP(req, res) {
 }
 
 // ── GET /lp/wallet/apple/:slug — generate .pkpass for Smart QR LP ──
-async function handleGenerateAppleWalletPass(req, res) {
+async function handleGenerateAppleWalletPass, handleChatLP(req, res) {
   try {
     const { slug } = req.params;
     const { generateSmartQRPass } = require('../services/passService');
