@@ -33,6 +33,56 @@ async function generateLPFromSite(businessName, websiteUrl, siteContent) {
 
 // ── LP content per use case ───────────────────────────────────────────────
 const LP_CONTENT = {
+  local_business: {
+    headline: 'Welcome to {name}',
+    sub: 'Your local experts. Visit us today or get in touch — we are here to help.',
+    cta: 'Contact Us', cta2: 'Learn More',
+    sections: [
+      { title: 'Our Services', items: ['Professional Service', 'Expert Advice', 'Local Knowledge', 'Customer Support'] },
+      { title: 'Opening Hours', items: ['Mon–Fri: 09:00 – 18:00', 'Saturday: 10:00 – 16:00', 'Sunday: Closed'] },
+      { title: 'Find Us', items: ['{website}'] },
+    ],
+  },
+  event: {
+    headline: '{name}',
+    sub: 'Join us for an unforgettable experience. Get your tickets before they sell out.',
+    cta: 'Get Tickets', cta2: 'Learn More',
+    sections: [
+      { title: 'Event Details', items: ['Date & Time TBC', 'Venue & Location', 'What to Expect', 'Special Guests'] },
+      { title: 'Tickets', items: ['Early Bird — Limited availability', 'General Admission', 'VIP Experience', 'Group Bookings'] },
+      { title: 'More Info', items: ['{website}'] },
+    ],
+  },
+  fitness: {
+    headline: 'Train with {name}',
+    sub: 'Expert coaching, real results. Start your fitness journey today.',
+    cta: 'Book a Session', cta2: 'View Programs',
+    sections: [
+      { title: 'Programs', items: ['Personal Training', 'Group Classes', 'Online Coaching', 'Nutrition Plans'] },
+      { title: 'Why Choose Us', items: ['Certified coaches', 'Proven results', 'Flexible scheduling', 'Community support'] },
+      { title: 'Get Started', items: ['{website}'] },
+    ],
+  },
+  creator: {
+    headline: '{name}',
+    sub: 'Follow for exclusive content, behind the scenes and special offers.',
+    cta: 'Follow Me', cta2: 'My Content',
+    sections: [
+      { title: 'My Links', items: ['Instagram', 'TikTok', 'YouTube', 'Newsletter'] },
+      { title: 'Work With Me', items: ['Brand partnerships', 'Sponsored content', 'Events & appearances', 'Affiliate programs'] },
+      { title: 'Connect', items: ['{website}'] },
+    ],
+  },
+  artist: {
+    headline: '{name}',
+    sub: 'Music, art, and soul. Stream, follow and catch me live.',
+    cta: 'Stream Now', cta2: 'Tour Dates',
+    sections: [
+      { title: 'Latest Releases', items: ['New Single', 'Latest Album', 'Music Videos', 'Remixes & Collabs'] },
+      { title: 'Live Shows', items: ['Upcoming Tour Dates', 'Festival Appearances', 'Private Events', 'Ticket Links'] },
+      { title: 'Connect', items: ['{website}'] },
+    ],
+  },
   restaurant: {
     headline: 'Welcome to {name}',
     sub: 'Authentic flavours, unforgettable experiences. Reserve your table or browse our menu.',
