@@ -718,6 +718,7 @@ ${sectionsHTML}`;
   var playing = false;
   var aiActivated = false;
   var bizName = '${bizName}';
+  var slug = '${slug}';
 
   var voiceBtn  = document.getElementById('voiceBtn');
   var waveform  = document.getElementById('waveform');
