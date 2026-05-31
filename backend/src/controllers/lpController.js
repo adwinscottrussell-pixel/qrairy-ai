@@ -895,14 +895,7 @@ async function handleChatLP(req, res) {
     const businessInfo = sections.businessInfo || {};
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.json({ reply: 'AI not configured.' });
-    const sys = 'You are a friendly AI assistant for ' + bizName + '. Answer customer questions based on the info below. Be concise and helpful.' + (siteContent ? '
-
-Website content:
-' + siteContent.slice(0,6000) : '') + (businessInfo.hours ? '
-
-Hours: ' + businessInfo.hours : '') + (businessInfo.address ? '
-Address: ' + businessInfo.address : '') + (businessInfo.phone ? '
-Phone: ' + businessInfo.phone : '');
+        const sys = 'You are a friendly AI assistant for ' + bizName + '. Answer customer questions based on the info below. Be concise and helpful.' + (siteContent ? ' Website content: ' + siteContent.slice(0,6000) : '') + (businessInfo.hours ? ' Hours: ' + businessInfo.hours : '') + (businessInfo.address ? ' Address: ' + businessInfo.address : '') + (businessInfo.phone ? ' Phone: ' + businessInfo.phone : '');
     const msgs = (history||[]).slice(-6).concat([{role:'user',content:message}]);
     const body = JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:sys,messages:msgs});
     const https = require('https');
