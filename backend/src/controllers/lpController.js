@@ -734,21 +734,26 @@ ${sectionsHTML}`;
   if (voiceBtn) {
     voiceBtn.addEventListener('click', function() {
       if (playing) return;
+      var audioUrl = '${sv.audioUrl || ""}';
       playing = true;
       voiceBtn.textContent = '\u23F8';
       if (waveform) waveform.classList.add('lp-waveform-active');
       if (voiceSub) voiceSub.textContent = 'Playing welcome message\u2026';
-
-      // Simulate audio playback duration (3.5s)
-      // Future: replace setTimeout with actual ElevenLabs audio.onended
-      setTimeout(function() {
+      function onVoiceEnd() {
         voiceBtn.textContent = '\u25B6';
         if (waveform) waveform.classList.remove('lp-waveform-active');
         if (voiceSub) voiceSub.textContent = 'Welcome message played';
         playing = false;
-        // Trigger AI expansion after voice ends
         if (!aiActivated) activateAI();
-      }, 3500);
+      }
+      if (audioUrl) {
+        var audio = new Audio(audioUrl);
+        audio.onended = onVoiceEnd;
+        audio.onerror = onVoiceEnd;
+        audio.play().catch(onVoiceEnd);
+      } else {
+        setTimeout(onVoiceEnd, 3500);
+      }
     });
   }
 
@@ -958,6 +963,17 @@ async function handlePublishLP(req, res) {
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
               console.log('[Firecrawl] Auto-generated LP for', slug);
+
+              // Generate voice welcome message
+              try {
+                const { generateAndUploadVoice } = require('../services/voiceService');
+                const vs = (merged.voice && merged.voice.voiceKey) || 'sarah';
+                const ct = (merged.voice && merged.voice.customText) || null;
+                const audioUrl = await generateAndUploadVoice(businessName, slug, vs, ct);
+                merged.voice = Object.assign({}, merged.voice || {}, { audioUrl });
+                await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
+                console.log('[Voice] Generated for', slug, audioUrl);
+              } catch(ve) { console.error('[Voice] Error:', ve.message); }
             }
           }
         } catch(e) { console.error('[Firecrawl] Error:', e.message); }
