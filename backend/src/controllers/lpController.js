@@ -244,7 +244,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 <title>${bizName} — Smart Landing Page</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -293,7 +293,7 @@ body.theme-light .lp-footer-powered{color:#5F5F5F}
 body.theme-light .lp-footer-Q{background:#F7F5F2;border:1px solid #E8E3DC;color:#111111}
 body.theme-light .lp-footer-powered a{color:#111111;text-decoration:underline}
 body.theme-light .lp-hero{padding:48px 28px 40px}
-body.theme-light .lp-hero-title{font-size:clamp(1.2rem,5vw,2.2rem);letter-spacing:-0.04em;line-height:1.1}
+body.theme-light .lp-hero-title{font-size:clamp(1.1rem,4.5vw,2rem);letter-spacing:-0.03em;line-height:1.1}
 body.theme-light .lp-hero-sub{font-size:0.92rem;line-height:1.8;max-width:380px;margin:0 auto 28px}
 body.theme-light .lp-hero-cta-btn{display:inline-flex;align-items:center;gap:8px;background:${accent};color:#fff;padding:14px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;text-decoration:none;letter-spacing:.01em;transition:opacity .2s ease,transform .2s ease}
 body.theme-light .lp-hero-cta-btn:hover{opacity:.88;transform:translateY(-1px)}
@@ -379,7 +379,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 /* Hero */
 .lp-hero{padding:36px 28px 28px;text-align:center;background:linear-gradient(160deg,${accentDim} 0%,transparent 55%)}
 .lp-hero-eyebrow{display:inline-flex;align-items:center;gap:6px;border:0.5px solid ${accentBorder};border-radius:99px;padding:5px 14px;font-size:0.6rem;color:${accent};letter-spacing:0.1em;margin-bottom:18px}
-.lp-hero-title{font-family:'Syne',sans-serif;font-size:clamp(1.2rem,5vw,2.2rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:14px}
+.lp-hero-title{font-family:'Inter',sans-serif;font-size:clamp(1.1rem,4.5vw,2rem);font-weight:800;word-break:break-word;overflow-wrap:break-word;hyphens:auto;line-height:1.1;letter-spacing:-0.02em;margin-bottom:14px}
 .lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:420px;margin:0 auto 28px;line-height:1.75}
 .lp-hero-ctas{display:flex;flex-direction:column;gap:10px;align-items:center}
 /* Buttons */
