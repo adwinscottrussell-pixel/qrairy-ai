@@ -414,7 +414,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-msg{display:flex}
 .lp-msg-ai{justify-content:flex-start}
 .lp-msg-user{justify-content:flex-end}
-.lp-bubble{max-width:82%;padding:9px 12px;border-radius:12px;font-size:0.75rem;line-height:1.5}
+.lp-bubble{max-width:82%;padding:9px 12px;border-radius:12px;font-size:0.75rem;line-height:1.5}.lp-bubble-ai{background:rgba(255,255,255,0.08);color:#f0ece0}
 .lp-msg-ai .lp-bubble{background:rgba(255,255,255,0.05);border:0.5px solid ${accentBorder};color:rgba(240,236,224,0.7)}
 .lp-msg-user .lp-bubble{background:${accentDim};border:0.5px solid ${accentBorder};color:rgba(240,236,224,0.85)}
 .lp-chat-input-row{display:flex;gap:8px;padding:10px 12px;border-top:0.5px solid rgba(255,255,255,0.07)}
