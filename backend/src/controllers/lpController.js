@@ -792,13 +792,18 @@ ${sectionsHTML}`;
 
   function replaceTyping(text) {
     var t = document.getElementById('typingMsg');
-    if (t) {
+    var m = document.getElementById('chatMsgs');
+    if (t && m) {
       var newMsg = document.createElement('div');
       newMsg.className = 'lp-msg lp-msg-ai';
-      newMsg.innerHTML = '<div class="lp-bubble">' + text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\[(.*?)\]\((.*?)\)/g,'<a href="$2" target="_blank">$1</a>') + '</div>';
-      chatMsgs.replaceChild(newMsg, t);
+      var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      safe = safe.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      newMsg.innerHTML = '<div class="lp-bubble">' + safe + '</div>';
+      m.replaceChild(newMsg, t);
+      m.scrollTop = m.scrollHeight;
+    } else if (t) {
+      t.querySelector('.lp-bubble').textContent = text;
     }
-    if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
   function addUserMsg(txt) {
