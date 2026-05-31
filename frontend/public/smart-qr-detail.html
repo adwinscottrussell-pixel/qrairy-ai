@@ -985,6 +985,8 @@
           if (pf) pf.scrollTop = SECTION_SCROLL[target] || 0;
           // Load push device count when push tab opens
           if (target === 'push' && window.loadPushDeviceCount) loadPushDeviceCount();
+          // Load push device count when push tab opens
+          if (target === 'push' && window.loadPushDeviceCount) loadPushDeviceCount();
           // Render buttons panel
           if (target === 'buttons') { setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
           if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
