@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP} = require('../controllers/lpController');
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
