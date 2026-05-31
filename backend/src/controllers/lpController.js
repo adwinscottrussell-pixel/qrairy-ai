@@ -1041,7 +1041,7 @@ async function handleGenerateAppleWalletPass(req, res) {
     const page = await _prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
 
-    const sections = page.sections || {};
+    const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
     const pkpassBuffer = await generateSmartQRPass(slug, sections);
 
     res.set({

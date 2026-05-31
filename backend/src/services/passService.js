@@ -24,7 +24,7 @@ async function generateSmartQRPass(slug, sections) {
   const theme   = sections.theme   || {};
 
   const accent       = theme.accentColor || '#ff5a1f';
-  const brandName    = hero.title        || 'QRaivy';
+  const brandName    = hero.title || hero.aiTitle || sections.businessName || 'Smart Pass';
   const walletTitle  = loop.walletTitle  || brandName;
   const walletSub    = loop.walletSubtitle || 'Scan to visit';
   const lpUrl        = `${'https://qraivy.com'}/lp/${slug}`;
