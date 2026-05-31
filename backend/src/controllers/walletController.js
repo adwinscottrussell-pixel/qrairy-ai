@@ -18,7 +18,7 @@ async function handleGetPasses(req, res) {
 
     const where = {
       deviceLibraryId: deviceLibraryIdentifier,
-      pass: { passTypeId: passTypeIdentifier, deletedAt: null },
+      pass: { passTypeId: passTypeIdentifier },
     };
 
     if (passesUpdatedSince) {
