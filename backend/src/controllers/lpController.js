@@ -1053,6 +1053,29 @@ async function handlePublishLP(req, res) {
   }
 }
 
+
+// ── POST /lp/push/:slug — send push to all wallet pass holders ──
+async function handleSendPush(req, res) {
+  try {
+    const { slug } = req.params;
+    if (!slug) return res.status(400).json({ error: 'missing slug' });
+    const serial = 'sqr-' + slug;
+    const devices = await prisma.passDevice.findMany({
+      where: { pass: { serialNumber: serial } },
+      select: { pushToken: true }
+    });
+    if (!devices.length) return res.json({ ok: true, sent: 0, message: 'No devices registered yet' });
+    await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
+    const { pushUpdateToDevices } = require('../services/apnsService');
+    const results = await pushUpdateToDevices(devices);
+    console.log('[Push] Sent to', devices.length, 'devices for', slug, results);
+    return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length });
+  } catch(e) {
+    console.error('[Push] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 async function handleServeLP(req, res) {
   try {
     const { slug } = req.params;
@@ -1140,7 +1163,7 @@ async function handleGenerateAppleWalletPass(req, res) {
 }
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush,
 };
 
 
