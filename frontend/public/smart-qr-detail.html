@@ -3333,6 +3333,37 @@ window.QRAIVY_EDITOR_STATE = {
     }
   });
 })();
+
+function sendWalletPush() {
+  var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
+  if (!slug) { alert('No page loaded'); return; }
+  var btn = document.getElementById('push-send-btn');
+  var result = document.getElementById('push-result');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  result.style.display = 'none';
+  fetch('https://api.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      btn.disabled = false;
+      btn.textContent = 'Send Push to All Pass Holders';
+      result.style.display = 'block';
+      if (d.ok) {
+        result.style.color = '#4ade80';
+        result.textContent = d.sent > 0 ? 'Push sent to ' + d.sent + ' device(s)!' : 'No devices have added this pass yet.';
+      } else {
+        result.style.color = '#f87171';
+        result.textContent = 'Error: ' + (d.error || 'Unknown error');
+      }
+    })
+    .catch(function(e){
+      btn.disabled = false;
+      btn.textContent = 'Send Push to All Pass Holders';
+      result.style.display = 'block';
+      result.style.color = '#f87171';
+      result.textContent = 'Error: ' + e.message;
+    });
+}
 </script>
 
 </body>
