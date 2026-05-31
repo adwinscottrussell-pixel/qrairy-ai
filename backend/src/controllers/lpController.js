@@ -779,15 +779,17 @@ ${sectionsHTML}`;
 
   // ── Chat ────────────────────────────────────────────────
   function addAIMsg(type) {
-    if (!chatMsgs) return;
+    var m = document.getElementById('chatMsgs');
+    if (!m) return;
+    if (type === 'typing') { var old = document.getElementById('typingMsg'); if (old) old.parentNode.removeChild(old); }
     var d = document.createElement('div');
     d.className = 'lp-msg lp-msg-ai';
     d.id = type === 'typing' ? 'typingMsg' : '';
     d.innerHTML = type === 'typing'
       ? '<div class="lp-bubble"><span class="lp-typing-dots"><span></span><span></span><span></span></span></div>'
       : '<div class="lp-bubble">' + type + '</div>';
-    chatMsgs.appendChild(d);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    m.appendChild(d);
+    m.scrollTop = m.scrollHeight;
   }
 
   function replaceTyping(text) {
