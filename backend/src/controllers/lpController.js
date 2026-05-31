@@ -792,7 +792,12 @@ ${sectionsHTML}`;
 
   function replaceTyping(text) {
     var t = document.getElementById('typingMsg');
-    if (t) t.querySelector('.lp-bubble').textContent = text;
+    if (t) {
+      var newMsg = document.createElement('div');
+      newMsg.className = 'lp-msg lp-msg-ai';
+      newMsg.innerHTML = '<div class="lp-bubble">' + text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\[(.*?)\]\((.*?)\)/g,'<a href="$2" target="_blank">$1</a>') + '</div>';
+      chatMsgs.replaceChild(newMsg, t);
+    }
     if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
