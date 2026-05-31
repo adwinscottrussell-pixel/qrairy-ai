@@ -34,7 +34,7 @@ async function generateSmartQRPass(slug, sections) {
 
   const passTypeId = process.env.APPLE_PASS_TYPE_ID || WALLET_CONFIG.passTypeId;
   const teamId     = process.env.APPLE_TEAM_ID      || WALLET_CONFIG.teamId;
-  const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet/v1`;
+  const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet`;
 
   const passJson = {
     formatVersion: 1,
