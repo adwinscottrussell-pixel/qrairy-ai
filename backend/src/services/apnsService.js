@@ -53,7 +53,7 @@ async function sendPushNotification(pushToken) {
     // APNs Wallet push payload is empty — Apple just pings the device
     // to call your /wallet/v1/passes/:passTypeId/:serialNumber endpoint
     const payload = JSON.stringify({});
-    const host = process.env.NODE_ENV === 'production' ? APNS_HOST_PROD : APNS_HOST_DEV;
+    const host = APNS_HOST_PROD; // always use production APNs
 
     const jwt = generateJWT();
     const options = {
