@@ -141,7 +141,7 @@ async function handleGetLatestPass(req, res) {
 
     const pass = await prisma.pass.findFirst({
       where: { serialNumber, passTypeId: passTypeIdentifier, authToken },
-      include: { user: true },
+
     });
 
     if (!pass) return res.status(401).send();
