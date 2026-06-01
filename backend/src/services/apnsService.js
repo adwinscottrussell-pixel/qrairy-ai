@@ -50,40 +50,40 @@ async function pushUpdateToDevices(devices) {
 // ─── Send single APNs push ────────────────────────────────────
 async function sendPushNotification(pushToken) {
   return new Promise((resolve, reject) => {
-    // APNs Wallet push payload is empty — Apple just pings the device
-    // to call your /wallet/v1/passes/:passTypeId/:serialNumber endpoint
     const payload = JSON.stringify({});
-    const host = APNS_HOST_PROD; // always use production APNs
-
     const jwt = generateJWT();
-    const options = {
-      hostname: host,
-      port: APNS_PORT,
-      path: `/3/device/${pushToken}`,
-      method: 'POST',
-      headers: {
-        'apns-topic': process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet',
-        'apns-push-type': 'background',
-        'apns-priority': '5',
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(payload),
-        'authorization': `bearer ${jwt}`,
-      },
-    };
 
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          resolve({ statusCode: 200 });
-        } else {
-          reject(new Error(`APNs returned ${res.statusCode}: ${data}`));
-        }
-      });
+    const client = http2.connect(`https://${APNS_HOST_PROD}`);
+    client.on('error', (err) => { client.destroy(); reject(err); });
+
+    const req = client.request({
+      ':method': 'POST',
+      ':path': `/3/device/${pushToken}`,
+      ':scheme': 'https',
+      ':authority': APNS_HOST_PROD,
+      'apns-topic': process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.smartqr',
+      'apns-push-type': 'background',
+      'apns-priority': '5',
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(payload),
+      'authorization': `bearer ${jwt}`,
     });
 
-    req.on('error', reject);
+    let status;
+    req.on('response', (headers) => { status = headers[':status']; });
+
+    let data = '';
+    req.on('data', chunk => data += chunk);
+    req.on('end', () => {
+      client.close();
+      if (status === 200) {
+        resolve({ statusCode: 200 });
+      } else {
+        reject(new Error(`APNs returned ${status}: ${data}`));
+      }
+    });
+
+    req.on('error', (err) => { client.destroy(); reject(err); });
     req.write(payload);
     req.end();
   });
