@@ -154,7 +154,16 @@ async function handleGetLatestPass(req, res) {
       }
     }
 
-    const pkpassBuffer = await passService.generatePkpass(pass);
+    // Derive slug from serialNumber (sqr-{slug})
+    const slug = pass.serialNumber.replace(/^sqr-/, '');
+    const { PrismaClient } = require('@prisma/client');
+    const _prisma = new PrismaClient();
+    const page = await _prisma.landingPage.findUnique({ where: { slug } });
+    await _prisma.$disconnect();
+    if (!page) return res.status(404).send();
+    const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
+    const { generateSmartQRPass } = require('../services/passService');
+    const pkpassBuffer = await generateSmartQRPass(slug, sections);
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
