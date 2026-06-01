@@ -3348,6 +3348,22 @@ window.QRAIVY_EDITOR_STATE = {
   });
 })();
 
+
+function loadPushDeviceCount() {
+  var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
+  if (!slug) return;
+  var el = document.getElementById('push-device-count');
+  if (el) el.textContent = 'Loading devices...';
+  fetch('https://api.qraivy.com/lp/push/' + slug + '/count')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (el) el.textContent = d.count > 0
+        ? '📱 ' + d.count + ' device(s) have added this pass to Apple Wallet'
+        : 'No devices have added this pass yet.';
+    }).catch(function(e){
+      if (el) el.textContent = 'Could not load device count.';
+    });
+}
 function sendWalletPush() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) { alert('No page loaded'); return; }
