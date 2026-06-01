@@ -27,7 +27,7 @@ async function generateSmartQRPass(slug, sections) {
   const brandName    = hero.title || hero.aiTitle || sections.businessName || 'Smart Pass';
   const walletTitle  = loop.walletTitle  || brandName;
   const walletSub    = loop.walletSubtitle || 'Scan to visit';
-  const lpUrl        = `${'https://qraivy.com'}/lp/${slug}`;
+  const lpUrl        = `https://api.qraivy.com/lp/${slug}`;
   const serial       = `sqr-${slug}`;
   const authTok      = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
   const bgRgb        = hexToRgb(accent) || 'rgb(255,90,31)';
