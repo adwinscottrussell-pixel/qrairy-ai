@@ -54,6 +54,7 @@ async function generateSmartQRPass(slug, sections) {
     generic: {
       primaryFields:   [{ key:'title',    label:'',        value: walletTitle }],
       secondaryFields: [{ key:'sub',      label:'',        value: walletSub   }],
+      auxiliaryFields: sections._lastMsg ? [{ key:'push', label: sections._lastMsgTitle || 'LATEST UPDATE', value: sections._lastMsg }] : [],
       backFields:      (function(){
         var bf = [{ key:'url', label:'VISIT PAGE', value: lpUrl, attributedValue: '<a href="'+lpUrl+'">Open Smart QR Page</a>' }];
         if (sections._lastMsg) {
