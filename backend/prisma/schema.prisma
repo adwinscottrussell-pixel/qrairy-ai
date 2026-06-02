@@ -72,13 +72,16 @@ model LandingPage {
 }
 
 model Pass {
-  id            String             @id @default(cuid())
-  serialNumber  String             @unique
-  passTypeId    String
-  authToken     String?
-  updatedAt     DateTime           @default(now()) @updatedAt
-  devices       PassDevice[]
-  registrations PassRegistration[]
+  id              String             @id @default(cuid())
+  serialNumber    String             @unique
+  passTypeId      String
+  authToken       String?
+  lastMsgTitle    String?
+  lastMsg         String?
+  lastMsgLink     String?
+  updatedAt       DateTime           @default(now()) @updatedAt
+  devices         PassDevice[]
+  registrations   PassRegistration[]
 }
 
 model PassDevice {

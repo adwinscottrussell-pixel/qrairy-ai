@@ -162,6 +162,8 @@ async function handleGetLatestPass(req, res) {
     await _prisma.$disconnect();
     if (!page) return res.status(404).send();
     const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
+    // Inject latest push message into sections so it appears on pass back
+    if (pass.lastMsg) { sections._lastMsgTitle = pass.lastMsgTitle; sections._lastMsg = pass.lastMsg; sections._lastMsgLink = pass.lastMsgLink; }
     const { generateSmartQRPass } = require('../services/passService');
     const pkpassBuffer = await generateSmartQRPass(slug, sections);
 

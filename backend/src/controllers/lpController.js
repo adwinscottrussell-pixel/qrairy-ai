@@ -1071,6 +1071,11 @@ async function handleSendPush(req, res) {
     await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
     const { pushUpdateToDevices } = require('../services/apnsService');
     const results = await pushUpdateToDevices(devices);
+    // Save message to Pass record so it appears on pass back
+    await prisma.pass.updateMany({
+      where: { serialNumber: serial },
+      data: { lastMsgTitle: title, lastMsg: message, lastMsgLink: linkUrl || null }
+    });
     // Save campaign to history
     await prisma.pushCampaign.create({
       data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success }
