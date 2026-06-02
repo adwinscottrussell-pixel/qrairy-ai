@@ -1054,6 +1054,72 @@ async function handlePublishLP(req, res) {
 }
 
 
+
+// ── POST /lp/subscribe/:slug ──
+async function handleSubscribe(req, res) {
+  try {
+    const { slug } = req.params;
+    const { email, gdprConsent } = req.body || {};
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+    if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
+    // Check for duplicate
+    const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
+    if (existing) return res.json({ ok: true, message: 'Already subscribed' });
+    await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
+    return res.json({ ok: true, message: 'Subscribed successfully' });
+  } catch(e) {
+    console.error('[Subscribe] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── GET /lp/subscribers/:slug ──
+async function handleGetSubscribers(req, res) {
+  try {
+    const { slug } = req.params;
+    const subscribers = await prisma.subscriber.findMany({
+      where: { slug },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ ok: true, count: subscribers.length, subscribers });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+
+// ── POST /lp/subscribe/:slug ──
+async function handleSubscribe(req, res) {
+  try {
+    const { slug } = req.params;
+    const { email, gdprConsent } = req.body || {};
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+    if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
+    // Check for duplicate
+    const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
+    if (existing) return res.json({ ok: true, message: 'Already subscribed' });
+    await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
+    return res.json({ ok: true, message: 'Subscribed successfully' });
+  } catch(e) {
+    console.error('[Subscribe] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── GET /lp/subscribers/:slug ──
+async function handleGetSubscribers(req, res) {
+  try {
+    const { slug } = req.params;
+    const subscribers = await prisma.subscriber.findMany({
+      where: { slug },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ ok: true, count: subscribers.length, subscribers });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 // ── POST /lp/push/:slug — send push to all wallet pass holders ──
 async function handleSendPush(req, res) {
   try {
@@ -1215,7 +1281,7 @@ async function handleGenerateAppleWalletPass(req, res) {
 }
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers, handleSubscribe, handleGetSubscribers,
 };
 
 

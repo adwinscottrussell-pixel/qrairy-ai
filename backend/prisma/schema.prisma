@@ -47,11 +47,14 @@ model Scan {
 }
 
 model Subscriber {
-  id          String   @id @default(uuid())
-  qrId        String
-  oneSignalId String
-  createdAt   DateTime @default(now())
-  qr          QR       @relation(fields: [qrId], references: [id])
+  id           String   @id @default(uuid())
+  qrId         String?
+  slug         String?
+  oneSignalId  String?
+  email        String?
+  gdprConsent  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  qr           QR?      @relation(fields: [qrId], references: [id])
 }
 
 model LandingPage {
