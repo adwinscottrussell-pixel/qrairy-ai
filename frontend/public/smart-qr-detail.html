@@ -721,12 +721,33 @@
       <!-- PUSH NOTIFICATIONS -->
       <div class="sqd-tab-panel" data-panel="push" style="display:none;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🔔 Push Notifications</div>
-        <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">Send a silent push to all Apple Wallet pass holders. Their pass will update instantly on their lock screen.</div>
-        <div id="push-device-count" style="font-size:.72rem;color:rgba(240,244,248,0.6);margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">Loading devices...</div>
+        <div id="push-device-count" style="font-size:.72rem;color:rgba(240,244,248,0.6);margin-bottom:14px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">Loading devices...</div>
+
+        <!-- Campaign composer -->
+        <div style="margin-bottom:10px;">
+          <label style="font-size:.68rem;color:rgba(240,244,248,0.5);font-weight:600;display:block;margin-bottom:4px;">NOTIFICATION TITLE *</label>
+          <input id="push-title" type="text" placeholder="🔥 New Drop Just Landed" maxlength="60"
+            style="width:100%;box-sizing:border-box;padding:9px 11px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;outline:none;" />
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:.68rem;color:rgba(240,244,248,0.5);font-weight:600;display:block;margin-bottom:4px;">MESSAGE * <span id="push-msg-count" style="font-weight:400;opacity:.6;">0/90</span></label>
+          <textarea id="push-message" placeholder="Summer collection is live. Tap to shop now →" maxlength="90" rows="3"
+            oninput="document.getElementById('push-msg-count').textContent=this.value.length+'/90'"
+            style="width:100%;box-sizing:border-box;padding:9px 11px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;outline:none;resize:vertical;"></textarea>
+        </div>
         <div style="margin-bottom:16px;">
-          <div style="font-size:.68rem;color:rgba(240,244,248,0.4);margin-bottom:10px;">This triggers Apple Wallet to silently refresh all passes for this page. Customers will see the latest version of their pass.</div>
-          <button id="push-send-btn" onclick="sendWalletPush()" style="width:100%;padding:10px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🔔 Send Push to All Pass Holders</button>
-          <div id="push-result" style="margin-top:10px;font-size:.72rem;color:rgba(240,244,248,0.6);display:none;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"></div>
+          <label style="font-size:.68rem;color:rgba(240,244,248,0.5);font-weight:600;display:block;margin-bottom:4px;">LINK URL (optional)</label>
+          <input id="push-link" type="url" placeholder="https://yoursite.com/promo"
+            style="width:100%;box-sizing:border-box;padding:9px 11px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;outline:none;" />
+        </div>
+
+        <button id="push-send-btn" onclick="sendWalletPush()" style="width:100%;padding:10px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;">🔔 Send Push to All Pass Holders</button>
+        <div id="push-result" style="margin-top:10px;font-size:.72rem;color:rgba(240,244,248,0.6);display:none;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"></div>
+
+        <!-- Campaign history -->
+        <div style="margin-top:20px;">
+          <div style="font-size:.72rem;font-weight:700;color:#f0f4f8;margin-bottom:8px;">Campaign History</div>
+          <div id="push-history" style="font-size:.68rem;color:rgba(240,244,248,0.4);">Loading...</div>
         </div>
       </div>
       <div class="sqd-tab-panel" data-panel="buttons" style="display:none;">
@@ -984,7 +1005,7 @@
           var pf = document.querySelector('.sqd-phone-frame');
           if (pf) pf.scrollTop = SECTION_SCROLL[target] || 0;
           // Load push device count when push tab opens
-          if (target === 'push') { loadPushDeviceCount(); }
+          if (target === 'push') { loadPushDeviceCount(); loadPushHistory(); }
           // Render buttons panel
           if (target === 'buttons') { setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
           if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
@@ -3364,15 +3385,42 @@ function loadPushDeviceCount() {
       if (el) el.textContent = 'Could not load device count.';
     });
 }
+function loadPushHistory() {
+  var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
+  if (!slug) return;
+  var el = document.getElementById('push-history');
+  fetch('https://api.qraivy.com/lp/push/' + slug + '/history')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!el) return;
+      if (!d.campaigns || !d.campaigns.length) { el.textContent = 'No campaigns sent yet.'; return; }
+      el.innerHTML = d.campaigns.map(function(c){
+        var date = new Date(c.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        return '<div style="padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:6px;">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">' +
+          '<span style="color:#f0f4f8;font-weight:600;">'+c.title+'</span>' +
+          '<span style="color:rgba(240,244,248,0.4);">'+date+'</span></div>' +
+          '<div style="color:rgba(240,244,248,0.6);">'+c.message+'</div>' +
+          '<div style="color:#4ade80;margin-top:2px;">✅ Sent to '+c.sent+' device(s)</div>' +
+          '</div>';
+      }).join('');
+    }).catch(function(){ if(el) el.textContent = 'Could not load history.'; });
+}
+
 function sendWalletPush() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) { alert('No page loaded'); return; }
+  var title = (document.getElementById('push-title')||{}).value || '';
+  var message = (document.getElementById('push-message')||{}).value || '';
+  var linkUrl = (document.getElementById('push-link')||{}).value || '';
+  if (!title.trim()) { alert('Please enter a notification title'); return; }
+  if (!message.trim()) { alert('Please enter a message'); return; }
   var btn = document.getElementById('push-send-btn');
   var result = document.getElementById('push-result');
   btn.disabled = true;
   btn.textContent = 'Sending...';
   result.style.display = 'none';
-  fetch('https://api.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+  fetch('https://api.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       btn.disabled = false;
@@ -3381,6 +3429,7 @@ function sendWalletPush() {
       if (d.ok) {
         result.style.color = '#4ade80';
         result.textContent = d.sent > 0 ? 'Push sent to ' + d.sent + ' device(s)!' : 'No devices have added this pass yet.';
+        if (d.sent > 0) { document.getElementById('push-title').value=''; document.getElementById('push-message').value=''; document.getElementById('push-msg-count').textContent='0/90'; loadPushHistory(); }
       } else {
         result.style.color = '#f87171';
         result.textContent = 'Error: ' + (d.error || 'Unknown error');

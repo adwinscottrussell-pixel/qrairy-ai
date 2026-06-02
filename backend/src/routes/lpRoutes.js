@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount } = require('../controllers/lpController');
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
@@ -15,6 +15,7 @@ router.post('/lp/chat', handleChatLP);
 // Push notification endpoint
 router.post('/lp/push/:slug', handleSendPush);
 router.get('/lp/push/:slug/count', handlePushCount);
+router.get('/lp/push/:slug/history', handlePushHistory);
 
 // API: publish a new landing page
 router.post('/lp', handlePublishLP);

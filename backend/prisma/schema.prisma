@@ -100,3 +100,13 @@ model PassRegistration {
   pass                  Pass     @relation(fields: [passId], references: [id])
   createdAt             DateTime @default(now())
 }
+
+model PushCampaign {
+  id           String   @id @default(cuid())
+  slug         String
+  title        String
+  message      String
+  linkUrl      String?
+  sent         Int      @default(0)
+  createdAt    DateTime @default(now())
+}

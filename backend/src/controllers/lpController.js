@@ -1058,20 +1058,42 @@ async function handlePublishLP(req, res) {
 async function handleSendPush(req, res) {
   try {
     const { slug } = req.params;
+    const { title, message, linkUrl } = req.body || {};
     if (!slug) return res.status(400).json({ error: 'missing slug' });
+    if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
     const serial = 'sqr-' + slug;
     const devices = await prisma.passDevice.findMany({
       where: { pass: { serialNumber: serial } },
       select: { pushToken: true }
     });
     if (!devices.length) return res.json({ ok: true, sent: 0, message: 'No devices registered yet' });
+    // Update pass updatedAt so Apple fetches latest
     await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
     const { pushUpdateToDevices } = require('../services/apnsService');
     const results = await pushUpdateToDevices(devices);
+    // Save campaign to history
+    await prisma.pushCampaign.create({
+      data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success }
+    });
     console.log('[Push] Sent to', devices.length, 'devices for', slug, results);
     return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length });
   } catch(e) {
     console.error('[Push] Error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── GET /lp/push/:slug/history — get campaign history ──
+async function handlePushHistory(req, res) {
+  try {
+    const { slug } = req.params;
+    const campaigns = await prisma.pushCampaign.findMany({
+      where: { slug },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+    return res.json({ ok: true, campaigns });
+  } catch(e) {
     return res.status(500).json({ error: e.message });
   }
 }
@@ -1188,7 +1210,7 @@ async function handleGenerateAppleWalletPass(req, res) {
 }
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory,
 };
 
 
