@@ -23,6 +23,7 @@
     "node-forge": "^1.4.0",
     "passkit-generator": "^3.5.7",
     "puppeteer-core": "^24.43.0",
+    "resend": "^6.12.4",
     "stripe": "^22.1.1"
   },
   "devDependencies": {

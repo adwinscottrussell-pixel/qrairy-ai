@@ -1152,8 +1152,17 @@ async function handleSendPush(req, res) {
     await prisma.pushCampaign.create({
       data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success }
     });
+    // Also send email to all subscribers
+    const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
+    let emailResults = { success: 0, failed: 0 };
+    if (emailSubs.length > 0) {
+      const { sendCampaignEmail } = require('../services/emailService');
+      const page = await prisma.landingPage.findUnique({ where: { slug } });
+      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });
+    }
     console.log('[Push] Sent to', devices.length, 'devices for', slug, results);
-    return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length });
+    console.log('[Email] Sent to', emailSubs?.length || 0, 'subscribers', emailResults);
+    return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length, emailSent: emailResults.success, emailFailed: emailResults.failed });
   } catch(e) {
     console.error('[Push] Error:', e.message);
     return res.status(500).json({ error: e.message });
