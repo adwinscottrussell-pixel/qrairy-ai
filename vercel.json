@@ -1,7 +1,7 @@
 {
   "outputDirectory": "frontend/public",
-  "rewrites": [
-    { "source": "/lp/:slug", "destination": "https://api.qraivy.com/lp/:slug" },
-    { "source": "/(.*)", "destination": "/$1" }
+  "routes": [
+    { "src": "/lp/(.*)", "dest": "https://api.qraivy.com/lp/$1" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
