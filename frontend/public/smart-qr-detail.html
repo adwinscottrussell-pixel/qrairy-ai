@@ -1402,6 +1402,8 @@ async function initPage() {
   // Load localStorage draft if newer than API state
   try {
     var _draftKey = 'qraivy_editor_draft_' + (window.QRAIVY_EDITOR_STATE.slug || 'demo');
+  var _urlSlug = new URLSearchParams(window.location.search).get('slug') || '';
+  if (_urlSlug && _draftKey !== 'qraivy_editor_draft_' + _urlSlug) { _saved = null; } // don't load wrong slug draft
     var _saved = localStorage.getItem(_draftKey);
     if (_saved) {
       var _draft = JSON.parse(_saved);
