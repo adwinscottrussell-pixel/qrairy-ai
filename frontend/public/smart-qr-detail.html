@@ -1324,7 +1324,7 @@ async function initPage() {
     try {
       let _apiToken = '';
       try { if(window.Clerk && window.Clerk.session) _apiToken = await window.Clerk.session.getToken() || ''; } catch(_){}
-      const res  = await fetch(`https://api.qraivy.com/api/lp/${slug}`, {
+      const res  = await fetch(`https://api.qraivy.com/lp/${slug}`, {
         headers: _apiToken ? { Authorization: 'Bearer ' + _apiToken } : {}
       });
       const data = await res.json();
@@ -1469,7 +1469,7 @@ async function initPage() {
   if (pending.slug) {
     try {
       const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;
-      const res = await fetch(`https://api.qraivy.com/api/lp/${pending.slug}`, {
+      const res = await fetch(`https://api.qraivy.com/lp/${pending.slug}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
@@ -3494,7 +3494,7 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   function fallbackFromLP(slug, lpUrl) {
-    fetch('https://api.qraivy.com/api/lp/' + slug)
+    fetch('https://api.qraivy.com/lp/' + slug)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var nameEl  = document.getElementById('sqd-ov-name');
