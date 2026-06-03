@@ -51,7 +51,7 @@ async function generateSmartQRPass(slug, sections) {
     authenticationToken: authTok,
     barcode:  { message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
     barcodes: [{ message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
-    generic: {
+    storeCard: {
       primaryFields:   [{ key:'title',    label:'',        value: walletTitle }],
       secondaryFields: [{ key:'sub',      label:'',        value: walletSub   }],
       auxiliaryFields: sections._lastMsg ? [{ key:'push', label: sections._lastMsgTitle || 'LATEST UPDATE', value: sections._lastMsg, changeMessage: '%@' }] : [],
