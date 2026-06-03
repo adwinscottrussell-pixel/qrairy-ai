@@ -1354,7 +1354,7 @@ async function initPage() {
     return;
   }
 
-  const hostedUrl = pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`;
+  const hostedUrl = (pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`).replace('https://api.qraivy.com/lp/', 'https://qraivy.com/lp/');
   const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
 
   // ── Populate hero ─────────────────────────────────────────────────────
