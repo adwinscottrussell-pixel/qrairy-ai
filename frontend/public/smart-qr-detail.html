@@ -3540,7 +3540,7 @@ window.QRAIVY_EDITOR_STATE = {
         var headers = { 'Content-Type': 'application/json' };
         var doIt = function(h) {
           var deleteUrl = window._sqd_source === 'lp'
-            ? 'https://qraivy.com/lp/' + getSlug()
+            ? 'https://api.qraivy.com/lp/' + getSlug()
             : 'https://api.qraivy.com/qr/' + qrId;
           fetch(deleteUrl, { method: 'DELETE', headers: h })
             .then(function(r) {
