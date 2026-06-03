@@ -956,7 +956,7 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 <p>This smart landing page doesn't exist yet or may have been removed.</p>
 <div class="slug">api.qraivy.com/lp/${slug}</div>
 <a href="https://qraivy.com">Create your own AI page &rarr;</a>
-</div></body></html>`;
+</div><script>(function(){var p=new URLSearchParams(window.location.search);var v=p.get('voice');if(v&&'speechSynthesis'in window){var s=function(){var u=new SpeechSynthesisUtterance(decodeURIComponent(v));u.rate=0.95;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u);};if(document.readyState==='complete'){setTimeout(s,800);}else{window.addEventListener('load',function(){setTimeout(s,800);});}}})();</script></body></html>`;
 }
 
 // ── Controllers ───────────────────────────────────────────────────────────
