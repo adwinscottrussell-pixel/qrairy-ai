@@ -388,8 +388,9 @@
     };
 
     function getUrl() {
+      var slug = new URLSearchParams(window.location.search).get('slug');
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window._sqd_hostedUrl || new URLSearchParams(window.location.search).get('slug') && ('https://qraivy.com/lp/' + new URLSearchParams(window.location.search).get('slug')) || window.location.href;
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://qraivy.com/lp/' + slug : window.location.href);
     }
     window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
@@ -524,7 +525,7 @@
       }, 800);
 
       // Initial render
-      setTimeout(renderQR, 300);
+      setTimeout(renderQR, 1200);
     });
   })();
   </script>
@@ -3518,7 +3519,7 @@ window.QRAIVY_EDITOR_STATE = {
       var name = (document.getElementById('sqd-ov-name') || {}).textContent || 'this QR';
       var qrId = window._sqd_qrId;
       var slug = getSlug();
-      if (!qrId && !slug) { console.warn('No QR ID or slug'); return; }
+      if (!slug) { console.warn('No slug'); return; }
       var panel = document.getElementById('sqd-manage-panel');
       var old = document.getElementById('sqd-del-box');
       if (old) { old.remove(); return; }
