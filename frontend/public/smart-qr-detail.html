@@ -390,7 +390,7 @@
     function getUrl() {
       var slug = new URLSearchParams(window.location.search).get('slug');
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://qraivy.com/lp/' + slug : window.location.href);
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://api.qraivy.com/lp/' + slug : window.location.href);
     }
     window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
@@ -1346,7 +1346,7 @@ async function initPage() {
     pending = {
       slug:         slug,
       businessName: slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
-      hostedUrl:    'https://qraivy.com/lp/' + slug
+      hostedUrl:    'https://api.qraivy.com/lp/' + slug
     };
   }
   if (!pending) {
@@ -1354,7 +1354,7 @@ async function initPage() {
     return;
   }
 
-  const hostedUrl = (pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`).replace('https://api.qraivy.com/lp/', 'https://qraivy.com/lp/');
+  const hostedUrl = (pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`);
   const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
 
   // ── Populate hero ─────────────────────────────────────────────────────
@@ -3440,10 +3440,10 @@ window.QRAIVY_EDITOR_STATE = {
   function populateOverview() {
     var slug = getSlug();
     if (!slug) return;
-    var lpUrl = 'https://qraivy.com/lp/' + slug;
+    var lpUrl = 'https://api.qraivy.com/lp/' + slug;
 
     // Set view button immediately
-    var lpUrl2 = 'https://qraivy.com/lp/' + slug;
+    var lpUrl2 = 'https://api.qraivy.com/lp/' + slug;
     var vb = document.getElementById('sqd-ov-view-btn');
     if (vb) vb.href = lpUrl2;
     var tvb = document.getElementById('sqd-view-btn');
@@ -3484,7 +3484,7 @@ window.QRAIVY_EDITOR_STATE = {
 
             if (nameEl)  nameEl.textContent  = card.businessName || slug;
             // Trigger QR render now that data is ready
-            window._sqd_hostedUrl = 'https://qraivy.com/lp/' + slug;
+            window._sqd_hostedUrl = 'https://api.qraivy.com/lp/' + slug;
             if (window.QRAIVY_QR_READY) window.QRAIVY_QR_READY(window._sqd_hostedUrl);
             if (urlEl)   urlEl.textContent   = 'qraivy.com/lp/' + slug;
             if (scansEl) scansEl.textContent = scans;
