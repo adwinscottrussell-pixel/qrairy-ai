@@ -399,8 +399,8 @@
       var apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?'
         + 'size=200x200'
         + '&data=' + encodeURIComponent(url)
-        + '&color=' + QR_STATE.fg.replace('#',''')
-        + '&bgcolor=' + QR_STATE.bg.replace('#',''')
+        + '&color=' + QR_STATE.fg.replace('#','')
+        + '&bgcolor=' + QR_STATE.bg.replace('#','')
         + '&margin=' + QR_STATE.margin;
       var canvas = document.getElementById('ov-qr-canvas');
       if (!canvas) return;
@@ -425,8 +425,8 @@
         dl.href = 'https://api.qrserver.com/v1/create-qr-code/?'
           + 'size=' + sz + 'x' + sz
           + '&data=' + encodeURIComponent(url)
-          + '&color=' + QR_STATE.fg.replace('#',''')
-          + '&bgcolor=' + QR_STATE.bg.replace('#',''')
+          + '&color=' + QR_STATE.fg.replace('#','')
+          + '&bgcolor=' + QR_STATE.bg.replace('#','')
           + '&margin=' + QR_STATE.margin;
       } catch(e) {}
     }
