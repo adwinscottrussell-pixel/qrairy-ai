@@ -1206,24 +1206,7 @@ async function initPage() {
   });
 
   // ── Plan boundary check ───────────────────────────────────────────────
-  // Show demo badge and upgrade strip for free/demo users
-  setTimeout(async function() {
-    try {
-      await QRairySession.loadPlan();
-      var sess = QRairySession.get();
-      var isPaid = sess.isPremium || sess.type === 'premium';
-      if (!isPaid) {
-        var demoBadge = document.getElementById('sqd-demo-badge');
-        var upgradeStrip = document.getElementById('sqd-upgrade-strip-panel');
-        if (demoBadge) demoBadge.style.display = 'inline-flex';
-        if (upgradeStrip) upgradeStrip.classList.add('show');
-      }
-    } catch(e) {
-      // Default to showing upgrade strip if plan check fails
-      var upgradeStrip = document.getElementById('sqd-upgrade-strip-panel');
-      if (upgradeStrip) upgradeStrip.classList.add('show');
-    }
-  }, 800);
+  // Upsell suppressed — Smart QR users are paid customers
 
   // ── Copy button ───────────────────────────────────────────────────────
   document.getElementById('sqd-copy-btn').addEventListener('click', function() {
