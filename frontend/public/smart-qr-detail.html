@@ -908,7 +908,7 @@
           <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Business Name</label>
           <input id="footer-input-bizname" type="text" placeholder="Your Business Name" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
           <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Footer Text / URL</label>
-          <input id="footer-input-text" type="text" placeholder="api.qraivy.com/lp/your-slug" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
+          <input id="footer-input-text" type="text" placeholder="qraivy.com/lp/your-slug" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
           <div><label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Powered By Link</label>
           <input id="footer-input-link" type="text" placeholder="https://qraivy.com" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/></div>
           <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;">
@@ -1089,7 +1089,7 @@ async function initPage() {
         pending = {
           slug:         data.slug,
           businessName: data.businessName,
-          hostedUrl:    `https://api.qraivy.com/lp/${data.slug}`,
+          hostedUrl:    `https://qraivy.com/lp/${data.slug}`,
           useCase:      data.useCase,
           brandColor:   data.brandColor,
           sections:     data.sections
@@ -1103,7 +1103,7 @@ async function initPage() {
     pending = {
       slug:         slug,
       businessName: slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
-      hostedUrl:    'https://api.qraivy.com/lp/' + slug
+      hostedUrl:    'https://qraivy.com/lp/' + slug
     };
   }
   if (!pending) {
@@ -1111,7 +1111,7 @@ async function initPage() {
     return;
   }
 
-  const hostedUrl = pending.hostedUrl || `https://api.qraivy.com/lp/${pending.slug}`;
+  const hostedUrl = pending.hostedUrl || `https://qraivy.com/lp/\`;
   const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
 
   // ── Populate hero ─────────────────────────────────────────────────────
@@ -3212,7 +3212,7 @@ window.QRAIVY_EDITOR_STATE = {
   function populateOverview() {
     var slug = getSlug();
     if (!slug) return;
-    var lpUrl = 'https://api.qraivy.com/lp/' + slug;
+    var lpUrl = 'https://qraivy.com/lp/' + slug;
 
     // Set view button immediately
     var vb = document.getElementById('sqd-ov-view-btn');
@@ -3250,7 +3250,7 @@ window.QRAIVY_EDITOR_STATE = {
             var cvr   = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
 
             if (nameEl)  nameEl.textContent  = card.businessName || slug;
-            if (urlEl)   urlEl.textContent   = 'api.qraivy.com/lp/' + slug;
+            if (urlEl)   urlEl.textContent   = 'qraivy.com/lp/' + slug;
             if (scansEl) scansEl.textContent = scans;
             if (subsEl)  subsEl.textContent  = subs;
             if (cvrEl)   cvrEl.textContent   = cvr + '%';
@@ -3272,7 +3272,7 @@ window.QRAIVY_EDITOR_STATE = {
         var urlEl   = document.getElementById('sqd-ov-url');
         var scansEl = document.getElementById('sqd-ov-scans');
         if (nameEl) nameEl.textContent = data.businessName || slug;
-        if (urlEl)  urlEl.textContent  = 'api.qraivy.com/lp/' + slug;
+        if (urlEl)  urlEl.textContent  = 'qraivy.com/lp/' + slug;
         if (scansEl) scansEl.textContent = data.scanCount || 0;
       }).catch(function() {});
   }
@@ -3310,7 +3310,7 @@ window.QRAIVY_EDITOR_STATE = {
         var headers = { 'Content-Type': 'application/json' };
         var doIt = function(h) {
           var deleteUrl = window._sqd_source === 'lp'
-            ? 'https://api.qraivy.com/lp/' + getSlug()
+            ? 'https://qraivy.com/lp/' + getSlug()
             : 'https://api.qraivy.com/qr/' + qrId;
           fetch(deleteUrl, { method: 'DELETE', headers: h })
             .then(function(r) {
