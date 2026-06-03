@@ -1,6 +1,7 @@
 const { getUserFromToken } = require('./qrController');
 const prisma = require('../prismaClient');
 const https = require('https');
+const { sendWelcomeEmail } = require('../services/emailService');
 
 async function scrapeWithFirecrawl(url) {
   const apiKey = process.env.FIRECRAWL_API_KEY;
@@ -976,6 +977,7 @@ async function handleChatLP(req, res) {
     const msgs = (history||[]).slice(-6).concat([{role:'user',content:message}]);
     const body = JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:sys,messages:msgs});
     const https = require('https');
+const { sendWelcomeEmail } = require('../services/emailService');
     const reply = await new Promise((resolve) => {
       const r = https.request({hostname:'api.anthropic.com',path:'/v1/messages',method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Length':Buffer.byteLength(body)}},(res2)=>{
         let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{try{resolve(JSON.parse(d).content[0].text);}catch{resolve('Sorry, I could not process that.');}});
