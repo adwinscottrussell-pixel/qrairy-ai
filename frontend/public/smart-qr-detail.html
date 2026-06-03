@@ -3443,10 +3443,15 @@ window.QRAIVY_EDITOR_STATE = {
     var lpUrl = 'https://qraivy.com/lp/' + slug;
 
     // Set view button immediately
+    var lpUrl2 = 'https://qraivy.com/lp/' + slug;
     var vb = document.getElementById('sqd-ov-view-btn');
-    if (vb) vb.href = lpUrl;
+    if (vb) vb.href = lpUrl2;
     var tvb = document.getElementById('sqd-view-btn');
-    if (tvb) tvb.href = lpUrl;
+    if (tvb) tvb.href = lpUrl2;
+    var vb2 = document.getElementById('sqd-view-btn2');
+    if (vb2) vb2.href = lpUrl2;
+    var ovvl = document.getElementById('ov-qr-view-live');
+    if (ovvl) ovvl.href = lpUrl2;
 
     // Wait for Clerk then fetch dashboard to get correct QR id + stats
     var attempts = 0;
