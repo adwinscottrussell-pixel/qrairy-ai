@@ -1072,6 +1072,9 @@ async function handleSubscribe(req, res) {
     const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
     if (existing) return res.json({ ok: true, message: 'Already subscribed' });
     await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
+    // Send welcome email async (don't block response)
+    const lp = await prisma.lp.findFirst({ where: { slug } });
+    if (lp) sendWelcomeEmail(email, { bizName: lp.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
     return res.json({ ok: true, message: 'Subscribed successfully' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
@@ -1105,6 +1108,9 @@ async function handleSubscribe(req, res) {
     const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
     if (existing) return res.json({ ok: true, message: 'Already subscribed' });
     await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
+    // Send welcome email async (don't block response)
+    const lp = await prisma.lp.findFirst({ where: { slug } });
+    if (lp) sendWelcomeEmail(email, { bizName: lp.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
     return res.json({ ok: true, message: 'Subscribed successfully' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
@@ -1156,7 +1162,7 @@ async function handleSendPush(req, res) {
     const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
     let emailResults = { success: 0, failed: 0 };
     if (emailSubs.length > 0) {
-      const { sendCampaignEmail } = require('../services/emailService');
+      const { sendCampaignEmail, sendWelcomeEmail } = require('../services/emailService');
       const page = await prisma.landingPage.findUnique({ where: { slug } });
       emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });
     }

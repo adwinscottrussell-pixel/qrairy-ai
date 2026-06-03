@@ -1,12 +1,43 @@
 const { Resend } = require('resend');
-
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM || 'onboarding@resend.dev';
+const FROM = process.env.RESEND_FROM_EMAIL || 'mail@qraivy.com';
+
+async function sendWelcomeEmail(email, { bizName, slug }) {
+  const lpUrl = 'https://api.qraivy.com/lp/' + slug;
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: `Welcome to ${bizName}!`,
+      html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:20px;">
+    <div style="background:#ff5a1f;padding:24px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:22px;">${bizName}</h1>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="color:#1a1a1a;margin:0 0 16px;">You're in! 🎉</h2>
+      <p style="color:#444;font-size:16px;line-height:1.6;margin:0 0 24px;">Thanks for subscribing to updates from ${bizName}. You'll be the first to hear about news, offers and updates.</p>
+      <a href="${lpUrl}" style="display:inline-block;background:#ff5a1f;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Visit Page →</a>
+    </div>
+    <div style="background:#f9f9f9;padding:16px;text-align:center;font-size:12px;color:#999;">
+      You received this because you subscribed to ${bizName} via Qraivy.
+    </div>
+  </div>
+</body>
+</html>`
+    });
+    return { ok: true };
+  } catch(e) {
+    console.error('[Email] Welcome email failed:', e.message);
+    return { ok: false, error: e.message };
+  }
+}
 
 async function sendCampaignEmail(subscribers, { title, message, linkUrl, bizName, slug }) {
   const results = { success: 0, failed: 0, errors: [] };
   const lpUrl = 'https://api.qraivy.com/lp/' + slug;
-
   for (const sub of subscribers) {
     if (!sub.email) continue;
     try {
@@ -47,4 +78,4 @@ async function sendCampaignEmail(subscribers, { title, message, linkUrl, bizName
   return results;
 }
 
-module.exports = { sendCampaignEmail };
+module.exports = { sendCampaignEmail, sendWelcomeEmail };
