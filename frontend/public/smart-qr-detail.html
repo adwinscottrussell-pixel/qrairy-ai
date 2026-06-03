@@ -280,12 +280,253 @@
     </div>
   </div>
 
-  <!-- Action buttons -->
-  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;">
-    <a id="sqd-ov-view-btn" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;text-decoration:none;">🌐 View Live Page</a>
-    <button id="sqd-ov-edit-btn" onclick="window.QRAIVY_MANAGE.openEditor()" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:#ff5a1f;border:none;border-radius:10px;color:#fff;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;">✏️ Edit Smart Landing Page</button>
-    <button id="sqd-ov-analytics-btn" onclick="window.location.href='analytics.html'" style="display:inline-flex;align-items:center;gap:7px;padding:11px 22px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;cursor:pointer;">↗ Analytics</button>
+  <!-- Manage Tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:24px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:4px;">
+    <button id="ov-tab-qr" onclick="window.QRAIVY_OV_TABS.show('qr')" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:#ff5a1f;color:#fff;font-family:'Inter',sans-serif;transition:all .18s;">◼ QR Code</button>
+    <button id="ov-tab-lp" onclick="window.QRAIVY_OV_TABS.show('lp')" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;">✏️ Landing Page</button>
+    <button id="ov-tab-analytics" onclick="window.QRAIVY_OV_TABS.show('analytics')" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;">↗ Analytics</button>
   </div>
+
+  <!-- QR Code Tab -->
+  <div id="ov-panel-qr" style="margin-bottom:32px;">
+    <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- QR Preview -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div id="ov-qr-canvas-wrap" style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;">
+          <canvas id="ov-qr-canvas" width="200" height="200" style="display:block;border-radius:8px;"></canvas>
+        </div>
+        <a id="ov-qr-download" download="smart-qr.png" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:#ff5a1f;border-radius:9px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;cursor:pointer;">⬇ Download PNG</a>
+        <a id="ov-qr-view-live" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:9px;color:#f0f4f8;font-size:.72rem;font-family:'Inter',sans-serif;text-decoration:none;">🌐 View Live Page</a>
+      </div>
+
+      <!-- QR Customizer -->
+      <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Foreground color -->
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">QR Color</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input id="ov-qr-fg" type="color" value="#000000" style="width:36px;height:36px;border:none;border-radius:7px;cursor:pointer;padding:2px;background:none;"/>
+            <input id="ov-qr-fg-hex" type="text" value="#000000" maxlength="7" style="width:80px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:.75rem;color:#f0f4f8;outline:none;font-family:'DM Mono',monospace;"/>
+          </div>
+        </div>
+
+        <!-- Background color -->
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Background Color</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input id="ov-qr-bg" type="color" value="#ffffff" style="width:36px;height:36px;border:none;border-radius:7px;cursor:pointer;padding:2px;background:none;"/>
+            <input id="ov-qr-bg-hex" type="text" value="#ffffff" maxlength="7" style="width:80px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:.75rem;color:#f0f4f8;outline:none;font-family:'DM Mono',monospace;"/>
+          </div>
+        </div>
+
+        <!-- Size -->
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Size</label>
+          <div style="display:flex;gap:6px;" id="ov-qr-size-btns">
+            <button data-sz="300" style="flex:1;padding:6px 4px;border-radius:6px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">S</button>
+            <button data-sz="500" style="flex:1;padding:6px 4px;border-radius:6px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">M</button>
+            <button data-sz="800" style="flex:1;padding:6px 4px;border-radius:6px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">L</button>
+            <button data-sz="1200" style="flex:1;padding:6px 4px;border-radius:6px;font-size:.65rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">XL</button>
+          </div>
+        </div>
+
+        <!-- Style presets -->
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Style Preset</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="ov-qr-preset-btns">
+            <button data-preset="classic" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Classic</button>
+            <button data-preset="brand" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Brand</button>
+            <button data-preset="dark" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Dark</button>
+            <button data-preset="orange" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Orange</button>
+            <button data-preset="mono" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Mono</button>
+            <button data-preset="invert" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Invert</button>
+          </div>
+        </div>
+
+        <!-- Margin -->
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Margin <span id="ov-qr-margin-val" style="color:#ff5a1f;">6</span></label>
+          <input id="ov-qr-margin" type="range" min="0" max="20" value="6" style="width:100%;accent-color:#ff5a1f;"/>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Landing Page Tab -->
+  <div id="ov-panel-lp" style="display:none;margin-bottom:32px;">
+    <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;text-align:center;">
+      <div style="font-size:1.2rem;margin-bottom:8px;">✏️</div>
+      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;">Edit Your Smart Landing Page</div>
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">Customise hero, buttons, AI assistant, subscriber loop and more.</div>
+      <button onclick="window.QRAIVY_MANAGE.openEditor()" style="padding:11px 28px;background:#ff5a1f;border:none;border-radius:10px;color:#fff;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;">Open Editor →</button>
+    </div>
+  </div>
+
+  <!-- Analytics Tab -->
+  <div id="ov-panel-analytics" style="display:none;margin-bottom:32px;">
+    <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;text-align:center;">
+      <div style="font-size:1.2rem;margin-bottom:8px;">↗</div>
+      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;">Scan Analytics</div>
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">View scan counts, subscriber growth and conversion rates.</div>
+      <button onclick="window.location.href='analytics.html'" style="padding:11px 28px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;cursor:pointer;">View Analytics →</button>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var QR_STATE = { fg: '#000000', bg: '#ffffff', margin: 6, size: 300 };
+    var PRESETS = {
+      classic: { fg: '#000000', bg: '#ffffff' },
+      brand:   { fg: '#ff5a1f', bg: '#ffffff' },
+      dark:    { fg: '#f0f4f8', bg: '#0a0a0a' },
+      orange:  { fg: '#ffffff', bg: '#ff5a1f' },
+      mono:    { fg: '#333333', bg: '#f5f5f5' },
+      invert:  { fg: '#ffffff', bg: '#000000' }
+    };
+
+    function getUrl() {
+      var s = window.QRAIVY_EDITOR_STATE;
+      return (s && s.hostedUrl) || window.location.href;
+    }
+
+    function renderQR() {
+      var url = getUrl();
+      var apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?'
+        + 'size=200x200'
+        + '&data=' + encodeURIComponent(url)
+        + '&color=' + QR_STATE.fg.replace('#',''')
+        + '&bgcolor=' + QR_STATE.bg.replace('#',''')
+        + '&margin=' + QR_STATE.margin;
+      var canvas = document.getElementById('ov-qr-canvas');
+      if (!canvas) return;
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 200, 200);
+        ctx.drawImage(img, 0, 0, 200, 200);
+        updateDownload();
+      };
+      img.src = apiUrl;
+    }
+
+    function updateDownload() {
+      var canvas = document.getElementById('ov-qr-canvas');
+      var dl = document.getElementById('ov-qr-download');
+      if (!canvas || !dl) return;
+      try {
+        var sz = QR_STATE.size;
+        var url = getUrl();
+        dl.href = 'https://api.qrserver.com/v1/create-qr-code/?'
+          + 'size=' + sz + 'x' + sz
+          + '&data=' + encodeURIComponent(url)
+          + '&color=' + QR_STATE.fg.replace('#',''')
+          + '&bgcolor=' + QR_STATE.bg.replace('#',''')
+          + '&margin=' + QR_STATE.margin;
+      } catch(e) {}
+    }
+
+    function setPreset(name) {
+      var p = PRESETS[name]; if (!p) return;
+      QR_STATE.fg = p.fg; QR_STATE.bg = p.bg;
+      var fgPicker = document.getElementById('ov-qr-fg');
+      var bgPicker = document.getElementById('ov-qr-bg');
+      var fgHex = document.getElementById('ov-qr-fg-hex');
+      var bgHex = document.getElementById('ov-qr-bg-hex');
+      if (fgPicker) fgPicker.value = p.fg;
+      if (bgPicker) bgPicker.value = p.bg;
+      if (fgHex) fgHex.value = p.fg;
+      if (bgHex) bgHex.value = p.bg;
+      document.querySelectorAll('#ov-qr-preset-btns button').forEach(function(b) {
+        var active = b.getAttribute('data-preset') === name;
+        b.style.borderColor = active ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.1)';
+        b.style.background  = active ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+        b.style.color       = active ? '#ff5a1f' : 'rgba(240,244,248,0.6)';
+      });
+      renderQR();
+    }
+
+    function setSize(sz) {
+      QR_STATE.size = sz;
+      document.querySelectorAll('#ov-qr-size-btns button').forEach(function(b) {
+        var active = parseInt(b.getAttribute('data-sz')) === sz;
+        b.style.borderColor = active ? 'rgba(255,90,31,0.4)' : 'rgba(255,255,255,0.1)';
+        b.style.background  = active ? 'rgba(255,90,31,0.12)' : 'rgba(255,255,255,0.04)';
+        b.style.color       = active ? '#ff5a1f' : 'rgba(240,244,248,0.6)';
+      });
+      updateDownload();
+    }
+
+    window.QRAIVY_OV_TABS = {
+      show: function(tab) {
+        ['qr','lp','analytics'].forEach(function(t) {
+          var panel = document.getElementById('ov-panel-'+t);
+          var btn   = document.getElementById('ov-tab-'+t);
+          if (panel) panel.style.display = t === tab ? '' : 'none';
+          if (btn) {
+            btn.style.background = t === tab ? '#ff5a1f' : 'transparent';
+            btn.style.color      = t === tab ? '#fff' : 'rgba(240,244,248,0.6)';
+          }
+        });
+        if (tab === 'qr') setTimeout(renderQR, 50);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Wire fg color
+      var fgPicker = document.getElementById('ov-qr-fg');
+      var fgHex    = document.getElementById('ov-qr-fg-hex');
+      if (fgPicker) fgPicker.addEventListener('input', function() {
+        QR_STATE.fg = this.value; if(fgHex) fgHex.value = this.value; renderQR();
+      });
+      if (fgHex) fgHex.addEventListener('change', function() {
+        if (/^#[0-9a-fA-F]{6}$/.test(this.value)) { QR_STATE.fg = this.value; if(fgPicker) fgPicker.value = this.value; renderQR(); }
+      });
+
+      // Wire bg color
+      var bgPicker = document.getElementById('ov-qr-bg');
+      var bgHex    = document.getElementById('ov-qr-bg-hex');
+      if (bgPicker) bgPicker.addEventListener('input', function() {
+        QR_STATE.bg = this.value; if(bgHex) bgHex.value = this.value; renderQR();
+      });
+      if (bgHex) bgHex.addEventListener('change', function() {
+        if (/^#[0-9a-fA-F]{6}$/.test(this.value)) { QR_STATE.bg = this.value; if(bgPicker) bgPicker.value = this.value; renderQR(); }
+      });
+
+      // Wire margin slider
+      var marginSlider = document.getElementById('ov-qr-margin');
+      if (marginSlider) marginSlider.addEventListener('input', function() {
+        QR_STATE.margin = parseInt(this.value);
+        var mv = document.getElementById('ov-qr-margin-val');
+        if (mv) mv.textContent = this.value;
+        renderQR();
+      });
+
+      // Wire size buttons
+      document.querySelectorAll('#ov-qr-size-btns button').forEach(function(b) {
+        b.addEventListener('click', function() { setSize(parseInt(this.getAttribute('data-sz'))); });
+      });
+
+      // Wire preset buttons
+      document.querySelectorAll('#ov-qr-preset-btns button').forEach(function(b) {
+        b.addEventListener('click', function() { setPreset(this.getAttribute('data-preset')); });
+      });
+
+      // Wire view live button
+      setTimeout(function() {
+        var vl = document.getElementById('ov-qr-view-live');
+        var s = window.QRAIVY_EDITOR_STATE;
+        if (vl && s && s.hostedUrl) vl.href = s.hostedUrl;
+      }, 800);
+
+      // Initial render
+      setTimeout(renderQR, 300);
+    });
+  })();
+  </script>
 
   <!-- Danger zone -->
   <div style="border:0.5px solid rgba(255,80,80,0.2);border-radius:14px;padding:20px 24px;background:rgba(255,80,80,0.03);">
