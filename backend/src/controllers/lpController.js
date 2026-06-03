@@ -1075,8 +1075,8 @@ async function handleSubscribe(req, res) {
     if (existing) return res.json({ ok: true, message: 'Already subscribed' });
     await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
     // Send welcome email async (don't block response)
-    const lp = await prisma.lp.findFirst({ where: { slug } });
-    if (lp) sendWelcomeEmail(email, { bizName: lp.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
+    const lpPage = await prisma.landingPage.findFirst({ where: { slug } });
+    if (lpPage) sendWelcomeEmail(email, { bizName: lpPage.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
     return res.json({ ok: true, message: 'Subscribed successfully' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
@@ -1111,8 +1111,8 @@ async function handleSubscribe(req, res) {
     if (existing) return res.json({ ok: true, message: 'Already subscribed' });
     await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
     // Send welcome email async (don't block response)
-    const lp = await prisma.lp.findFirst({ where: { slug } });
-    if (lp) sendWelcomeEmail(email, { bizName: lp.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
+    const lpPage = await prisma.landingPage.findFirst({ where: { slug } });
+    if (lpPage) sendWelcomeEmail(email, { bizName: lpPage.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
     return res.json({ ok: true, message: 'Subscribed successfully' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
