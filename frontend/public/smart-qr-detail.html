@@ -389,8 +389,9 @@
 
     function getUrl() {
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window.location.href;
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || new URLSearchParams(window.location.search).get('slug') && ('https://qraivy.com/lp/' + new URLSearchParams(window.location.search).get('slug')) || window.location.href;
     }
+    window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
     function renderQR() {
       var url = getUrl();
@@ -3474,6 +3475,9 @@ window.QRAIVY_EDITOR_STATE = {
             var cvr   = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
 
             if (nameEl)  nameEl.textContent  = card.businessName || slug;
+            // Trigger QR render now that data is ready
+            window._sqd_hostedUrl = 'https://qraivy.com/lp/' + slug;
+            if (window.QRAIVY_QR_READY) window.QRAIVY_QR_READY(window._sqd_hostedUrl);
             if (urlEl)   urlEl.textContent   = 'qraivy.com/lp/' + slug;
             if (scansEl) scansEl.textContent = scans;
             if (subsEl)  subsEl.textContent  = subs;
@@ -3513,7 +3517,8 @@ window.QRAIVY_EDITOR_STATE = {
     confirmDelete: function() {
       var name = (document.getElementById('sqd-ov-name') || {}).textContent || 'this QR';
       var qrId = window._sqd_qrId;
-      if (!qrId) { console.warn('No QR ID'); return; }
+      var slug = getSlug();
+      if (!qrId && !slug) { console.warn('No QR ID or slug'); return; }
       var panel = document.getElementById('sqd-manage-panel');
       var old = document.getElementById('sqd-del-box');
       if (old) { old.remove(); return; }
