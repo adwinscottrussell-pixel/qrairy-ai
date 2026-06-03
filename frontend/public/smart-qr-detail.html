@@ -980,6 +980,11 @@
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-size:.68rem;color:rgba(240,244,248,0.5);font-weight:600;display:block;margin-bottom:4px;">LINK URL (optional)</label>
+          <label style="font-size:.68rem;color:rgba(240,244,248,0.5);font-weight:600;display:block;margin-bottom:4px;">🎙 Voice Message (auto-plays when they arrive)</label>
+          <textarea id="push-voice" placeholder="Hey! New drop just landed — come check it out!" maxlength="200" rows="2"
+            oninput="document.getElementById('push-voice-count').textContent=this.value.length+'/200'"
+            style="width:100%;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;padding:9px 12px;font-size:.75rem;color:#f0f4f8;resize:none;outline:none;box-sizing:border-box;"></textarea>
+          <div id="push-voice-count" style="text-align:right;font-size:.6rem;color:rgba(240,244,248,0.3);margin-bottom:10px;">0/200</div>
           <input id="push-link" type="url" placeholder="https://yoursite.com/promo"
             style="width:100%;box-sizing:border-box;padding:9px 11px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.75rem;font-family:'Inter',sans-serif;outline:none;" />
         </div>
@@ -3650,6 +3655,11 @@ function sendWalletPush() {
   var title = (document.getElementById('push-title')||{}).value || '';
   var message = (document.getElementById('push-message')||{}).value || '';
   var linkUrl = (document.getElementById('push-link')||{}).value || '';
+  var voiceMsg = (document.getElementById('push-voice')||{}).value || '';
+  if (voiceMsg) {
+    var baseUrl = linkUrl || 'https://api.qraivy.com/lp/' + slug;
+    linkUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'push=1&voice=' + encodeURIComponent(voiceMsg);
+  }
   if (!title.trim()) { alert('Please enter a notification title'); return; }
   if (!message.trim()) { alert('Please enter a message'); return; }
   var btn = document.getElementById('push-send-btn');
