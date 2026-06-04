@@ -1020,7 +1020,7 @@ async function handlePublishLP(req, res) {
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null },
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent,
-                theme: Object.assign({}, existing.theme||{}, aiData.brandColor ? { accentColor: aiData.brandColor } : {})
+                aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent, crawlLocked: true
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
               console.log('[Firecrawl] Auto-generated LP for', slug);
