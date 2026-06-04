@@ -1046,7 +1046,6 @@ async function handlePublishLP(req, res) {
         const currentPage = await prisma.landingPage.findUnique({ where: { slug } });
         if (!currentPage) return;
         const cs = currentPage.sections ? JSON.parse(currentPage.sections) : {};
-        const cs = currentPage.sections ? JSON.parse(currentPage.sections) : {};
         // Always regenerate voice on publish to pick up language/voice changes
         const { generateAndUploadVoice } = require('../services/voiceService');
         const vs = (cs.voice && cs.voice.voiceKey) || 'sarah';
