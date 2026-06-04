@@ -991,8 +991,8 @@ async function handleChatLP(req, res) {
     return res.json({ reply });
   } catch(e) { return res.status(500).json({ reply: 'Sorry, something went wrong.' }); }
 }
-  try {
-    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType } = req.body;
+
+async function handlePublishLP(req, res) {
     let userId = req.body.userId || null;
     if (!userId && req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
