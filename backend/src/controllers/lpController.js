@@ -961,24 +961,7 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
   var slug = window.location.pathname.split('/').pop();
   if('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
-      if(Notification.permission === 'default') {
-        setTimeout(function() {
-          Notification.requestPermission().then(function(perm) {
-            if(perm === 'granted') {
-              fetch('https://api.qraivy.com/lp/webpush/vapid-key/' + slug)
-                .then(function(r){ return r.json(); })
-                .then(function(d) {
-                  var key = d.publicKey;
-                  var arr = new Uint8Array(atob(key.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
-                  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
-                })
-                .then(function(sub) {
-                  var j = sub.toJSON();
-                  return fetch('https://api.qraivy.com/lp/webpush/subscribe/' + slug, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
-                }).catch(function(e){ console.log('WebPush subscribe error', e); });
-            }
-          });
-        }, 3000);
+      window.__swReg = reg;
       }
     });
   }
