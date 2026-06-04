@@ -1167,7 +1167,7 @@ async function handleSendPush(req, res) {
       select: { pushToken: true }
     });
     // No Apple devices is fine — still send web push and email below
-    let results = { success: 0, failed: 0 };
+    // No Apple devices is fine - still send web push and email
     if (devices.length) {
       // Update pass updatedAt so Apple fetches latest
       await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
