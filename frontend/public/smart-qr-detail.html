@@ -2671,8 +2671,8 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('voice-input-title', v.title || '');
       hydrate('voice-input-desc',  v.description || '');
       hydrate('voice-input-btn',   v.buttonLabel || '');
-
-      var l = sec.loop || {};
+      if(document.getElementById('voice-input-key')) document.getElementById('voice-input-key').value = v.voiceKey || 'sarah';
+      if(document.getElementById('voice-input-language')) document.getElementById('voice-input-language').value = v.voiceLanguage || 'en';
       hydrate('loop-input-title',             l.title || '');
       hydrate('loop-input-desc',              l.description || '');
       hydrate('loop-input-email-placeholder', l.emailPlaceholder || '');
@@ -3242,9 +3242,9 @@ window.QRAIVY_EDITOR_STATE = {
     S.sections.voice.title       = val('voice-input-title');
     S.sections.voice.description = val('voice-input-desc');
     S.sections.voice.buttonLabel = val('voice-input-btn');
+    S.sections.voice.voiceKey      = val('voice-input-key') || 'sarah';
+    S.sections.voice.voiceLanguage = val('voice-input-language') || 'en';
     // AI
-    S.sections.ai.title       = val('ai-input-title');
-    S.sections.ai.description = val('ai-input-desc');
     S.sections.ai.placeholder = val('ai-input-placeholder');
     // Loop
     S.sections.loop.title            = val('loop-input-title');
