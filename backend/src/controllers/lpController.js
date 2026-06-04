@@ -993,8 +993,8 @@ async function handleChatLP(req, res) {
 }
 
 async function handlePublishLP(req, res) {
-    let userId = req.body.userId || null;
-    if (!userId && req.headers.authorization) {
+  try {
+    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType } = req.body;
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
     }
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
