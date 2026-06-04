@@ -1135,6 +1135,24 @@ async function handleGetSubscribers(req, res) {
 }
 
 // ── POST /lp/push/:slug — send push to all wallet pass holders ──
+async function handleWebPushSubscribe(req, res) {
+  try {
+    const { slug } = req.params;
+    const { endpoint, keys } = req.body || {};
+    if (!endpoint || !keys) return res.status(400).json({ error: 'missing subscription data' });
+    await prisma.webPushSubscription.upsert({
+      where: { endpoint },
+      update: { slug, p256dh: keys.p256dh, auth: keys.auth },
+      create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth }
+    });
+    return res.json({ ok: true });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+
+async function handleWebPushVapidKey(req, res) {
+  return res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+}
+
 async function handleSendPush(req, res) {
   try {
     const { slug } = req.params;
@@ -1314,7 +1332,7 @@ async function handleGenerateAppleWalletPass(req, res) {
 }
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers, handleSubscribe, handleGetSubscribers,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers, handleSubscribe, handleGetSubscribers,
 };
 
 
