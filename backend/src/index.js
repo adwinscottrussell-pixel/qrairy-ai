@@ -22,6 +22,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));
+app.get('/sw.js', (req, res) => { res.setHeader('Content-Type','application/javascript'); res.setHeader('Service-Worker-Allowed','/'); res.sendFile(require('path').join(__dirname,'../../public/sw.js')); });
 
 app.use('/',         qrRoutes);
 app.use('/pass',     passRoutes);
