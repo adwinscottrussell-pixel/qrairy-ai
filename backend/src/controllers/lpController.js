@@ -1059,11 +1059,11 @@ async function handlePublishLP(req, res) {
     });
     return res.json({ ok: true, url: 'https://api.qraivy.com/lp/' + slug, slug, id: page.id });
   } catch (err) {
+  } catch (err) {
+    console.error('[LP] publish error:', err);
+    return res.status(500).json({ error: err.message });
   }
 }
-
-
-
 // ── POST /lp/subscribe/:slug ──
 async function handleSubscribe(req, res) {
   try {
