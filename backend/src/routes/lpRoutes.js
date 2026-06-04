@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers } = require('../controllers/lpController');
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
@@ -16,6 +16,8 @@ router.post('/lp/chat', handleChatLP);
 router.post('/lp/push/:slug', handleSendPush);
 router.get('/lp/push/:slug/count', handlePushCount);
 router.get('/lp/push/:slug/history', handlePushHistory);
+router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
+router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
 router.get('/lp/subscribers/:slug', handleGetSubscribers);
 router.post('/lp/subscribe/:slug', handleSubscribe);
