@@ -38,7 +38,6 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
     voice_settings: { stability: 0.5, similarity_boost: 0.75 }
   });
 
-  // Generate audio from ElevenLabs
   const audioBuffer = await new Promise((resolve, reject) => {
     const options = {
       hostname: "api.elevenlabs.io",
@@ -64,7 +63,6 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
     req.end();
   });
 
-  // Upload to Cloudinary
   const uploadResult = await new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "video", folder: "qraivy-voices", public_id: `voice-${slug}`, overwrite: true, format: "mp3" },
