@@ -986,7 +986,6 @@ async function handleChatLP(req, res) {
         let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{try{resolve(JSON.parse(d).content[0].text);}catch{resolve('Sorry, I could not process that.');}});
       });
       r.on('error',()=>resolve('Sorry, something went wrong.')); r.write(body); r.end();
-      r.on('error',()=>resolve('Sorry, something went wrong.')); r.write(body); r.end();
     });
     return res.json({ reply });
   } catch(e) { return res.status(500).json({ reply: 'Sorry, something went wrong.' }); }
