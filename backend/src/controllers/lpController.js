@@ -994,10 +994,10 @@ async function handleChatLP(req, res) {
 async function handlePublishLP(req, res) {
   try {
     const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType } = req.body;
+    let userId = req.body.userId || null;
+    if (!userId && req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
     }
-    if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
-    const page = await prisma.landingPage.upsert({
       where: { slug },
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
