@@ -116,3 +116,12 @@ model PushCampaign {
   sent         Int      @default(0)
   createdAt    DateTime @default(now())
 }
+
+model WebPushSubscription {
+  id        String   @id @default(uuid())
+  slug      String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
