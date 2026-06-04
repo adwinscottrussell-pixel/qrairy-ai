@@ -1181,8 +1181,8 @@ async function handleSendPush(req, res) {
     // Also send email to all subscribers
     const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
     let emailResults = { success: 0, failed: 0 };
-    const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
-    let emailResults = { success: 0, failed: 0 };
+
+
     if (emailSubs.length > 0) {
       const { sendCampaignEmail, sendWelcomeEmail } = require('../services/emailService');
       const page = await prisma.landingPage.findUnique({ where: { slug } });
