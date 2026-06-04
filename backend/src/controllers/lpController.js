@@ -998,12 +998,12 @@ async function handlePublishLP(req, res) {
     if (!userId && req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
     }
+    if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
+    const page = await prisma.landingPage.upsert({
       where: { slug },
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
     });
-    if (websiteUrl && websiteUrl.startsWith('http')) {
-      setImmediate(async () => {
         try {
           console.log('[Firecrawl] Starting scrape for', websiteUrl);
           const siteContent = await scrapeWithFirecrawl(websiteUrl);
