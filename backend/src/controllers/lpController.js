@@ -1166,7 +1166,7 @@ async function handleSendPush(req, res) {
       where: { pass: { serialNumber: serial } },
       select: { pushToken: true }
     });
-    if (!devices.length) return res.json({ ok: true, sent: 0, message: 'No devices registered yet' });
+    // No Apple devices is fine — still send web push and email below
     // Update pass updatedAt so Apple fetches latest
     await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
     const { pushUpdateToDevices } = require('../services/apnsService');
