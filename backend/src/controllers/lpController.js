@@ -956,7 +956,34 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 <p>This smart landing page doesn't exist yet or may have been removed.</p>
 <div class="slug">api.qraivy.com/lp/${slug}</div>
 <a href="https://qraivy.com">Create your own AI page &rarr;</a>
-</div><script>(function(){var p=new URLSearchParams(window.location.search);var v=p.get('voice');if(v&&'speechSynthesis'in window){var s=function(){var u=new SpeechSynthesisUtterance(decodeURIComponent(v));u.rate=0.95;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u);};if(document.readyState==='complete'){setTimeout(s,800);}else{window.addEventListener('load',function(){setTimeout(s,800);});}}})();</script></body></html>`;
+</div><script>
+(function(){
+  var slug = window.location.pathname.split('/').pop();
+  if('serviceWorker' in navigator && 'PushManager' in window) {
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      if(Notification.permission === 'default') {
+        setTimeout(function() {
+          Notification.requestPermission().then(function(perm) {
+            if(perm === 'granted') {
+              fetch('https://api.qraivy.com/lp/webpush/vapid-key/' + slug)
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                  var key = d.publicKey;
+                  var arr = new Uint8Array(atob(key.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
+                  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
+                })
+                .then(function(sub) {
+                  var j = sub.toJSON();
+                  return fetch('https://api.qraivy.com/lp/webpush/subscribe/' + slug, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
+                }).catch(function(e){ console.log('WebPush subscribe error', e); });
+            }
+          });
+        }, 3000);
+      }
+    });
+  }
+})();
+(function(){var p=new URLSearchParams(window.location.search);var v=p.get('voice');if(v&&'speechSynthesis'in window){var s=function(){var u=new SpeechSynthesisUtterance(decodeURIComponent(v));u.rate=0.95;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u);};if(document.readyState==='complete'){setTimeout(s,800);}else{window.addEventListener('load',function(){setTimeout(s,800);});}}})();</script></body></html>`;
 }
 
 // ── Controllers ───────────────────────────────────────────────────────────
