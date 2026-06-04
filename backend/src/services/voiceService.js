@@ -8,11 +8,18 @@ cloudinary.config({
 });
 
 const VOICES = {
-  sarah:   { id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah - Warm & Professional" },
-  laura:   { id: "FGY2WhTYpPnrIDTdsKH5", label: "Laura - Enthusiastic & Friendly" },
-  charlie: { id: "IKne3meq5aSn9XLyUdCD", label: "Charlie - Deep & Confident" },
-  george:  { id: "JBFqnCBsd6RMkjVDRZzb", label: "George - Captivating Storyteller" },
-  river:   { id: "SAz9YHcvj6GT2YYXdXww", label: "River - Calm & Informative" },
+  sarah:   { id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah - Warm & Professional", lang: "en" },
+  laura:   { id: "FGY2WhTYpPnrIDTdsKH5", label: "Laura - Enthusiastic & Friendly", lang: "en" },
+  charlie: { id: "IKne3meq5aSn9XLyUdCD", label: "Charlie - Deep & Confident", lang: "en" },
+  george:  { id: "JBFqnCBsd6RMkjVDRZzb", label: "George - Captivating Storyteller", lang: "en" },
+  river:   { id: "SAz9YHcvj6GT2YYXdXww", label: "River - Calm & Informative", lang: "en" },
+  anna_de: { id: "EXAVITQu4vr4xnSDxMaL", label: "Anna - Warm & Professional (DE)", lang: "de" },
+  max_de:  { id: "IKne3meq5aSn9XLyUdCD", label: "Max - Deep & Confident (DE)", lang: "de" },
+};
+
+const DEFAULT_TEXT = {
+  en: (bizName) => "Welcome to " + bizName + "! Thanks for stopping by - we have got something special waiting for you. Explore our latest products and services, and chat with our AI assistant below for anything you need. And do not forget to allow notifications so you never miss our latest deals and drops. See you inside!",
+  de: (bizName) => "Willkommen bei " + bizName + "! Schoen, dass Sie da sind - wir haben etwas Besonderes fuer Sie. Entdecken Sie unsere neuesten Produkte und Dienstleistungen und chatten Sie mit unserem KI-Assistenten. Vergessen Sie nicht, Benachrichtigungen zu erlauben, damit Sie keine Angebote verpassen. Bis gleich!",
 };
 
 async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customText = null) {
@@ -20,7 +27,10 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
 
   const voice = VOICES[voiceKey] || VOICES.sarah;
-  const text = customText || `Welcome to ${bizName.replace(/^Welcome to /i,'').replace(/^Welcome /i,'')}! Thanks for stopping by — we have got something special waiting for you. Explore our latest products and services, and chat with our AI assistant below for anything you need. And do not forget to allow notifications so you never miss our latest deals and drops. See you inside!`;
+  const lang = voice.lang || "en";
+  const textFn = DEFAULT_TEXT[lang] || DEFAULT_TEXT.en;
+  const cleanName = bizName.replace(/^Welcome to /i,"").replace(/^Welcome /i,"");
+  const text = customText || textFn(cleanName);
 
   const body = JSON.stringify({
     text,
