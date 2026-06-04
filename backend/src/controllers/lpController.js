@@ -1168,7 +1168,17 @@ async function handleSendPush(req, res) {
       const page = await prisma.landingPage.findUnique({ where: { slug } });
       emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });
     }
-    console.log('[Push] Sent to', devices.length, 'devices for', slug, results);
+    // Also send web push to browser subscribers
+    const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
+    let webPushSent = 0;
+    if (webSubs.length > 0) {
+      const { sendWebPush } = require('../services/webPushService');
+      for (const sub of webSubs) {
+        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://api.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
+        if (r.ok) webPushSent++;
+      }
+    }
+    console.log('[Push] Sent to', devices.length, 'Apple devices +', webPushSent, 'web push for', slug, results);
     console.log('[Email] Sent to', emailSubs?.length || 0, 'subscribers', emailResults);
     return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length, emailSent: emailResults.success, emailFailed: emailResults.failed });
   } catch(e) {
