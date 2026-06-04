@@ -1056,8 +1056,8 @@ async function handlePublishLP(req, res) {
         cs.voice = Object.assign({}, cs.voice || {}, { audioUrl });
         await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(cs) } });
         console.log('[Voice] Generated on publish for', slug, audioUrl);
+      } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
     });
-    return res.json({ ok: true, url: `https://api.qraivy.com/lp/${slug}`, slug, id: page.id });
   } catch (err) {
     console.error('[LP] publish error:', err);
     return res.status(500).json({ error: err.message });
