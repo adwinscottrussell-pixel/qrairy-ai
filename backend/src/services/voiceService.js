@@ -20,7 +20,7 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
 
   const voice = VOICES[voiceKey] || VOICES.sarah;
-  const text = customText || `Welcome to ${bizName.replace(/^Welcome to /i,'').replace(/^Welcome /i,'')}! We are so glad you are here. For more information about our products and services, feel free to ask our AI assistant below. We look forward to serving you!`;
+  const text = customText || `Welcome to ${bizName.replace(/^Welcome to /i,'').replace(/^Welcome /i,'')}! Thanks for stopping by — we have got something special waiting for you. Explore our latest products and services, and chat with our AI assistant below for anything you need. And do not forget to allow notifications so you never miss our latest deals and drops. See you inside!`;
 
   const body = JSON.stringify({
     text,
