@@ -1004,12 +1004,12 @@ async function handlePublishLP(req, res) {
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
     });
+    if (websiteUrl && websiteUrl.startsWith('http')) {
+      setImmediate(async () => {
         try {
           console.log('[Firecrawl] Starting scrape for', websiteUrl);
           const siteContent = await scrapeWithFirecrawl(websiteUrl);
           console.log('[Firecrawl] scrape result:', siteContent ? 'got ' + siteContent.length + ' chars' : 'null/empty');
-          if (siteContent) {
-            const aiData = await generateLPFromSite(businessName, websiteUrl, siteContent);
             if (aiData) {
               const cur = await prisma.landingPage.findUnique({ where: { slug } });
               const existing = cur && cur.sections ? JSON.parse(cur.sections) : {};
