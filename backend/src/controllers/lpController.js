@@ -981,12 +981,12 @@ async function handleChatLP(req, res) {
     const msgs = (history||[]).slice(-6).concat([{role:'user',content:message}]);
     const body = JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:sys,messages:msgs});
     const https = require('https');
+    const reply = await new Promise((resolve) => {
       const r = https.request({hostname:'api.anthropic.com',path:'/v1/messages',method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Length':Buffer.byteLength(body)}},(res2)=>{
         let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{try{resolve(JSON.parse(d).content[0].text);}catch{resolve('Sorry, I could not process that.');}});
       });
       r.on('error',()=>resolve('Sorry, something went wrong.')); r.write(body); r.end();
     });
-    return res.json({ reply });
   } catch(e) { return res.status(500).json({ reply: 'Sorry, something went wrong.' }); }
 }
 
