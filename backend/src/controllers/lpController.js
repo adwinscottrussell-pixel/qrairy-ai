@@ -973,14 +973,15 @@ async function handleChatLP(req, res) {
     const siteContent = sections.siteContent || '';
     const bizName = page.businessName || slug;
     const businessInfo = sections.businessInfo || {};
-    const voiceLang = (sections.voice && sections.voice.voiceLanguage) || 'en';
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return res.json({ reply: 'AI not configured.' });
+    const voiceLang = (sections.voice && sections.voice.voiceLanguage) || 'en';
     const langInstruction = voiceLang === 'de' ? ' You must respond in German (Deutsch) only, regardless of what language the customer writes in.' : '';
-    const sys = 'You are a friendly AI assistant for ' + bizName + '. Answer customer questions based on the info below. Be very concise - max 3 sentences. No markdown, no bullet points, no headers. Plain conversational text only. If listing options, use commas not bullets.' + langInstruction + (siteContent ? ' Website content: ' + siteContent.slice(0,6000) : '') + (businessInfo.hours ? ' Hours: ' + businessInfo.hours : '') + (businessInfo.address ? ' Address: ' + businessInfo.address : '') + (businessInfo.phone ? ' Phone: ' + businessInfo.phone : '');
+    if (!apiKey) return res.json({ reply: 'AI not configured.' });
+        const sys = 'You are a friendly AI assistant for ' + bizName + '. Answer customer questions based on the info below. Be very concise - max 3 sentences. No markdown, no bullet points, no headers. Plain conversational text only. If listing options, use commas not bullets.' + langInstruction + (siteContent ? ' Website content: ' + siteContent.slice(0,6000) : '') + (businessInfo.hours ? ' Hours: ' + businessInfo.hours : '') + (businessInfo.address ? ' Address: ' + businessInfo.address : '') + (businessInfo.phone ? ' Phone: ' + businessInfo.phone : '');
     const msgs = (history||[]).slice(-6).concat([{role:'user',content:message}]);
     const body = JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,system:sys,messages:msgs});
     const https = require('https');
+const { sendWelcomeEmail } = require('../services/emailService');
     const reply = await new Promise((resolve) => {
       const r = https.request({hostname:'api.anthropic.com',path:'/v1/messages',method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Length':Buffer.byteLength(body)}},(res2)=>{
         let d=''; res2.on('data',c=>d+=c); res2.on('end',()=>{try{resolve(JSON.parse(d).content[0].text);}catch{resolve('Sorry, I could not process that.');}});
@@ -1010,6 +1011,8 @@ async function handlePublishLP(req, res) {
           console.log('[Firecrawl] Starting scrape for', websiteUrl);
           const siteContent = await scrapeWithFirecrawl(websiteUrl);
           console.log('[Firecrawl] scrape result:', siteContent ? 'got ' + siteContent.length + ' chars' : 'null/empty');
+          if (siteContent) {
+            const aiData = await generateLPFromSite(businessName, websiteUrl, siteContent);
             if (aiData) {
               const cur = await prisma.landingPage.findUnique({ where: { slug } });
               const existing = cur && cur.sections ? JSON.parse(cur.sections) : {};
