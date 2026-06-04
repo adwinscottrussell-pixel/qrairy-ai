@@ -49,11 +49,12 @@ async function generateSmartQRPass(slug, sections) {
     labelColor: 'rgb(255,255,255)',
     webServiceURL: wsUrl,
     authenticationToken: authTok,
+    appLaunchURL: sections._lastMsgLink || lpUrl,
     barcode:  { message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
     barcodes: [{ message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
     storeCard: {
       primaryFields:   [{ key:'title',    label:'',        value: walletTitle }],
-      secondaryFields: [{ key:'sub',      label:'',        value: walletSub   }],
+      secondaryFields: [{ key:'sub', label:'', value: walletSub }, { key:'tap', label:'', value: sections._lastMsg ? '👆 TAP CARD TO OPEN DEAL' : '👆 TAP CARD TO VISIT PAGE' }],
       auxiliaryFields: sections._lastMsg ? [{ key:'push', label: sections._lastMsgTitle || 'LATEST UPDATE', value: sections._lastMsg, changeMessage: '%@' }] : [],
       backFields:      (function(){
         var bf = [{ key:'url', label:'VISIT PAGE', value: lpUrl, attributedValue: '<a href="'+lpUrl+'">Open Smart QR Page</a>' }];
