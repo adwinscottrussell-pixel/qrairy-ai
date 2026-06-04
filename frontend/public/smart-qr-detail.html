@@ -2642,8 +2642,8 @@ window.QRAIVY_EDITOR_STATE = {
       wire('voice-input-title', function(v) { S.sections.voice.title = v; });
       wire('voice-input-desc',  function(v) { S.sections.voice.description = v; });
       wire('voice-input-btn',   function(v) { S.sections.voice.buttonLabel = v; });
-      wire('voice-input-language', function(v) { S.sections.voice.voiceLanguage = v; });
-      wire('voice-input-key',      function(v) { S.sections.voice.voiceKey = v; });
+      var langEl=document.getElementById('voice-input-language'); if(langEl){langEl.addEventListener('change',function(){S.sections.voice.voiceLanguage=this.value;if(window.markDirty)window.markDirty();});}
+      var keyEl=document.getElementById('voice-input-key'); if(keyEl){keyEl.addEventListener('change',function(){S.sections.voice.voiceKey=this.value;if(window.markDirty)window.markDirty();});}
       // ── Loop ──
       wire('loop-input-title',            function(v) { S.sections.loop.title = v; });
       wire('loop-input-desc',             function(v) { S.sections.loop.description = v; });
