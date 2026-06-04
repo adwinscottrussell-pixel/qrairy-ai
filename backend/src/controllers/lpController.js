@@ -1167,20 +1167,20 @@ async function handleSendPush(req, res) {
       select: { pushToken: true }
     });
     // No Apple devices is fine — still send web push and email below
-    // Update pass updatedAt so Apple fetches latest
-    await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
-    const { pushUpdateToDevices } = require('../services/apnsService');
-    const results = await pushUpdateToDevices(devices);
-    // Save message to Pass record so it appears on pass back
-    await prisma.pass.updateMany({
-      where: { serialNumber: serial },
-      data: { lastMsgTitle: title, lastMsg: message, lastMsgLink: linkUrl || null }
-    });
-    // Save campaign to history
-    await prisma.pushCampaign.create({
-      data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success }
-    });
+    let results = { success: 0, failed: 0 };
+    if (devices.length) {
+      // Update pass updatedAt so Apple fetches latest
+      await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { updatedAt: new Date() } });
+      const { pushUpdateToDevices } = require('../services/apnsService');
+      results = await pushUpdateToDevices(devices);
+      // Save message to Pass record so it appears on pass back
+      await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { lastMsgTitle: title, lastMsg: message, lastMsgLink: linkUrl || null } });
+      // Save campaign to history
+      await prisma.pushCampaign.create({ data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success } });
+    }
     // Also send email to all subscribers
+    const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
+    let emailResults = { success: 0, failed: 0 };
     const emailSubs = await prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { id: true, email: true } });
     let emailResults = { success: 0, failed: 0 };
     if (emailSubs.length > 0) {
