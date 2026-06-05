@@ -32,7 +32,16 @@ async function generateSmartQRPass(slug, sections) {
   const authTok      = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
   const bgRgb        = hexToRgb(accent) || 'rgb(255,90,31)';
 
-  const passTypeId = process.env.APPLE_PASS_TYPE_ID || WALLET_CONFIG.passTypeId;
+  const passRecord = await prisma.pass.findUnique({ where: { serialNumber: 'sqr-' + slug } });
+  const stampSettings = await prisma.stampSettings.findUnique({ where: { slug } });
+  const stampCount = passRecord ? (passRecord.stampCount || 0) : 0;
+  const stampGoal = stampSettings ? stampSettings.goal : 10;
+  const rewardName = stampSettings ? stampSettings.rewardName : 'Free item';
+  const rewardReady = passRecord ? passRecord.rewardReady : false;
+  const stampLabel = stampSettings && stampSettings.enabled ? 'LOYALTY' : null;
+  const stampValue = stampSettings && stampSettings.enabled ? (rewardReady ? 'REWARD READY!' : stampCount + '/' + stampGoal + ' stamps') : null;
+
+  // Fetch stamp data
   const teamId     = process.env.APPLE_TEAM_ID      || WALLET_CONFIG.teamId;
   const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet`;
 
@@ -54,7 +63,7 @@ async function generateSmartQRPass(slug, sections) {
     storeCard: {
       primaryFields:   [{ key:'title',    label:'',        value: walletTitle }],
       secondaryFields: [{ key:'sub', label:'', value: walletSub }],
-      auxiliaryFields: sections._lastMsg ? [{ key:'push', label: sections._lastMsgTitle || 'LATEST UPDATE', value: sections._lastMsg, changeMessage: '%@' }] : [],
+      auxiliaryFields: (function(){ var af = []; if (stampLabel) af.push({ key:'stamps', label: stampLabel, value: stampValue, changeMessage: '%@' }); if (sections._lastMsg) af.push({ key:'push', label: sections._lastMsgTitle || 'LATEST UPDATE', value: sections._lastMsg, changeMessage: '%@' }); return af; })(),
       backFields:      (function(){
         var bf = [{ key:'url', label:'VISIT PAGE', value: lpUrl, attributedValue: '<a href="'+lpUrl+'">Open Smart QR Page</a>' }];
         if (sections._lastMsg) {
