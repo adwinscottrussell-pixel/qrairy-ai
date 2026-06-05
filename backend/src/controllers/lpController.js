@@ -1331,10 +1331,129 @@ async function handleGenerateAppleWalletPass(req, res) {
   }
 }
 
-module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers, handleSubscribe, handleGetSubscribers,
-};
 
+// ── LOYALTY STAMP SYSTEM ─────────────────────────────────────────────────────
+
+function generateToken() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 8; i++) token += chars[Math.floor(Math.random() * chars.length)];
+  return token;
+}
+
+async function getOrCreateStampToken(slug) {
+  const now = new Date();
+  const existing = await prisma.stampToken.findFirst({
+    where: { slug, expiresAt: { gt: now } },
+    orderBy: { createdAt: 'desc' }
+  });
+  if (existing) return existing.token;
+  const token = generateToken();
+  const expiresAt = new Date(now);
+  expiresAt.setHours(23, 59, 59, 999);
+  await prisma.stampToken.create({ data: { slug, token, expiresAt } });
+  return token;
+}
+
+async function handleStamp(req, res) {
+  try {
+    const { slug, token } = req.params;
+    const now = new Date();
+    const validToken = await prisma.stampToken.findFirst({
+      where: { slug, token, expiresAt: { gt: now } }
+    });
+    if (!validToken) {
+      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invalid</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">❌</div><h2>Invalid stamp token</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">This QR code has expired. Ask staff for the latest code.</p></div></body></html>`);
+    }
+    const serial = 'sqr-' + slug;
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    if (!pass) {
+      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>No card</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">🎫</div><h2>Get your loyalty card first</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">Add the wallet pass to start collecting stamps.</p><a href="/lp/${slug}" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#ff5a1f;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">Get my card →</a></div></body></html>`);
+    }
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const recentStamp = await prisma.stampEntry.findFirst({
+      where: { slug, passId: pass.id, createdAt: { gt: oneHourAgo } }
+    });
+    if (recentStamp) {
+      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Already stamped</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">⏱️</div><h2>Already stamped</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">You already got a stamp in the last hour. Come back next time!</p></div></body></html>`);
+    }
+    const settings = await prisma.stampSettings.findUnique({ where: { slug } });
+    const goal = settings ? settings.goal : 10;
+    const newCount = Math.min((pass.stampCount || 0) + 1, goal);
+    const rewardReady = newCount >= goal;
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, updatedAt: now } });
+    await prisma.stampEntry.create({ data: { slug, passId: pass.id } });
+    const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
+    if (devices.length) {
+      try {
+        const { pushUpdateToDevices } = require('../services/apnsService');
+        await pushUpdateToDevices(devices);
+      } catch(e) { console.error('[Stamp] Push error:', e.message); }
+    }
+    const rewardName = settings ? settings.rewardName : 'Free item';
+    const dots = Array.from({length: goal}, (_, i) => `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${i < newCount ? (rewardReady ? '#22c55e' : '#ff5a1f') : 'rgba(255,255,255,0.15)';margin:3px"></span>`).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamped!</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}h1{font-size:1.8rem;margin:12px 0 8px}p{color:rgba(255,255,255,0.6);font-size:.9rem}.dots{margin:20px 0;line-height:2}</style></head><body><div><div style="font-size:3.5rem">${rewardReady ? '🎉' : '✅'}</div><h1>${rewardReady ? 'Reward ready!' : 'Stamp added!'}</h1><p>${rewardReady ? 'Show this to the staff to claim your ' + rewardName : newCount + ' of ' + goal + ' stamps'}</p><div class="dots">${dots}</div>${rewardReady ? '<p style="color:#22c55e;font-weight:700;font-size:1.1rem">Show your wallet pass to redeem</p>' : '<p style="color:rgba(255,255,255,0.4);font-size:.8rem">' + (goal - newCount) + ' more stamp' + (goal - newCount !== 1 ? 's' : '') + ' until your ' + rewardName + '</p>'}<a href="/lp/${slug}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a></div></body></html>`;
+    return res.status(200).send(html);
+  } catch(e) {
+    console.error('[Stamp] Error:', e.message);
+    return res.status(500).send('Error processing stamp');
+  }
+}
+
+async function handleGetStampToken(req, res) {
+  try {
+    const { slug } = req.params;
+    const token = await getOrCreateStampToken(slug);
+    const stampUrl = `https://api.qraivy.com/stamp/${slug}/${token}`;
+    return res.json({ token, stampUrl });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+
+async function handleStampSettings(req, res) {
+  try {
+    const { slug } = req.params;
+    const { goal, rewardName, enabled } = req.body;
+    const settings = await prisma.stampSettings.upsert({
+      where: { slug },
+      update: { goal: goal || 10, rewardName: rewardName || 'Free item', enabled: enabled !== false },
+      create: { slug, goal: goal || 10, rewardName: rewardName || 'Free item', enabled: enabled !== false }
+    });
+    return res.json({ ok: true, settings });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+
+async function handleGetStampSettings(req, res) {
+  try {
+    const { slug } = req.params;
+    const settings = await prisma.stampSettings.findUnique({ where: { slug } });
+    const serial = 'sqr-' + slug;
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    const totalStamps = await prisma.stampEntry.count({ where: { slug } });
+    const rewardReady = pass ? pass.rewardReady : false;
+    const stampCount = pass ? pass.stampCount : 0;
+    const token = await getOrCreateStampToken(slug);
+    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `https://api.qraivy.com/stamp/${slug}/${token}`, token });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+
+async function handleRedeemStamp(req, res) {
+  try {
+    const { slug } = req.params;
+    const serial = 'sqr-' + slug;
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    if (!pass) return res.status(404).json({ error: 'Pass not found' });
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: 0, rewardReady: false, updatedAt: new Date() } });
+    const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
+    if (devices.length) {
+      try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
+    }
+    return res.json({ ok: true, message: 'Reward redeemed, stamps reset to 0' });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
+  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
+  handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+};
 
 
 
