@@ -1313,10 +1313,10 @@
           if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
           if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
           if (target === 'loyalty') { document.dispatchEvent(new CustomEvent('sqd-tab-changed', {detail:{tab:'loyalty'}})); }
+        });
+      });
     })();
     </script>
-
-  </div>
 </div>
 
 <!-- Mobile responsive override -->
