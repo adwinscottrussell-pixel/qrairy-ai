@@ -744,7 +744,7 @@
       <button class="sqd-tab" data-tab="order"        style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">↕ Order</button>
       <button class="sqd-tab" data-tab="footer"       style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">Footer</button>
       <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⚙️ Settings</button>
-    </div>
+      <button class="sqd-tab" data-tab="loyalty"    style="padding:5px 10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff8c5a;font-size:.62rem;cursor:pointer;white-space:nowrap;">🎟 Loyalty</button>
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -1227,6 +1227,58 @@
         </div>
       </div>
 
+      <div class="sqd-tab-panel" data-panel="loyalty" style="display:none;padding:0 4px;">
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎟 Loyalty stamp card</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:10px;">Customers tap NFC or scan QR to collect stamps on their wallet pass.</div>
+        <div id="loyalty-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:3px;">Total stamps</div>
+            <div id="loyalty-total-stamps" style="font-size:1.1rem;font-weight:700;color:#ff5a1f;">—</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:3px;">Current</div>
+            <div id="loyalty-current-stamps" style="font-size:1.1rem;font-weight:700;color:#f0f4f8;">—</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:3px;">Reward</div>
+            <div id="loyalty-reward-status" style="font-size:.7rem;font-weight:700;color:#22c55e;">—</div>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:.72rem;font-weight:600;color:#f0f4f8;">Enable stamp card</div>
+            <button id="loyalty-enable-toggle" onclick="window.toggleLoyalty()" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:700;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;flex-shrink:0;">Off</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div>
+              <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:4px;">Stamps to reward</div>
+              <input id="loyalty-goal" type="number" min="1" max="50" value="10" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.75rem;color:#f0f4f8;outline:none;">
+            </div>
+            <div>
+              <div style="font-size:.55rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.45);margin-bottom:4px;">Reward name</div>
+              <input id="loyalty-reward-name" type="text" placeholder="Free coffee" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.75rem;color:#f0f4f8;outline:none;">
+            </div>
+          </div>
+          <button onclick="window.saveLoyaltySettings()" style="width:100%;padding:8px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;">Save settings</button>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;margin-bottom:8px;">
+          <div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:8px;">Today's stamp QR + NFC</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div id="loyalty-qr-container" style="width:80px;height:80px;background:rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <div style="font-size:2rem;">⬛</div>
+            </div>
+            <div style="flex:1;">
+              <div id="loyalty-stamp-url" style="font-size:.58rem;color:rgba(240,244,248,0.6);word-break:break-all;font-family:monospace;margin-bottom:6px;">Loading...</div>
+              <button onclick="window.copyStampUrl()" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;color:#f0f4f8;font-size:.65rem;cursor:pointer;">Copy NFC tag URL</button>
+            </div>
+          </div>
+        </div>
+        <div id="loyalty-redeem-section" style="background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.25);border-radius:9px;padding:12px;margin-bottom:8px;display:none;">
+          <div style="font-size:.72rem;font-weight:600;color:#22c55e;margin-bottom:4px;">🎉 Reward ready to redeem!</div>
+          <div style="font-size:.62rem;color:rgba(240,244,248,0.6);margin-bottom:8px;">Customer has reached their stamp goal.</div>
+          <button onclick="window.redeemLoyalty()" style="width:100%;padding:9px;background:#22c55e;border:none;border-radius:7px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">Mark as redeemed — reset stamps</button>
+        </div>
+      </div>
     </div><!-- end tab content -->
 
     <!-- Tab JS -->
@@ -1259,8 +1311,8 @@
           // Render buttons panel
           if (target === 'buttons') { setTimeout(function(){ if(window.renderButtonsFn) window.renderButtonsFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
           if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
-        });
-      });
+          if (target === 'featured') { setTimeout(function(){ if(window.renderFeaturedFn) window.renderFeaturedFn(); if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.render(); }, 100); }
+          if (target === 'loyalty') { document.dispatchEvent(new CustomEvent('sqd-tab-changed', {detail:{tab:'loyalty'}})); }
     })();
     </script>
 
@@ -3693,6 +3745,84 @@ function sendWalletPush() {
       result.textContent = 'Error: ' + e.message;
     });
 }
+
+// ── LOYALTY STAMP FUNCTIONS ──────────────────────────────────────────────────
+var _loyaltyEnabled = false;
+var _loyaltyStampUrl = '';
+
+function loadLoyaltyTab() {
+  var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
+  if (!slug) return;
+  var token = localStorage.getItem('sqd_token');
+  fetch('https://api.qraivy.com/lp/stamp/settings/' + slug, {
+    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.settings) {
+      _loyaltyEnabled = d.settings.enabled;
+      document.getElementById('loyalty-goal').value = d.settings.goal || 10;
+      document.getElementById('loyalty-reward-name').value = d.settings.rewardName || '';
+      var btn = document.getElementById('loyalty-enable-toggle');
+      if (btn) { btn.textContent = _loyaltyEnabled ? 'On' : 'Off'; btn.style.background = _loyaltyEnabled ? 'rgba(34,197,94,0.15)' : 'rgba(255,90,31,0.12)'; btn.style.borderColor = _loyaltyEnabled ? 'rgba(34,197,94,0.4)' : 'rgba(255,90,31,0.4)'; btn.style.color = _loyaltyEnabled ? '#22c55e' : '#ff5a1f'; }
+    }
+    var total = document.getElementById('loyalty-total-stamps');
+    var current = document.getElementById('loyalty-current-stamps');
+    var rewardStatus = document.getElementById('loyalty-reward-status');
+    var redeemSection = document.getElementById('loyalty-redeem-section');
+    if (total) total.textContent = d.totalStamps || 0;
+    if (current) current.textContent = (d.stampCount || 0) + '/' + ((d.settings && d.settings.goal) || 10);
+    if (rewardStatus) { rewardStatus.textContent = d.rewardReady ? 'Ready!' : 'Not yet'; rewardStatus.style.color = d.rewardReady ? '#22c55e' : 'rgba(240,244,248,0.4)'; }
+    if (redeemSection) redeemSection.style.display = d.rewardReady ? 'block' : 'none';
+    if (d.stampUrl) {
+      _loyaltyStampUrl = d.stampUrl;
+      var urlEl = document.getElementById('loyalty-stamp-url');
+      if (urlEl) urlEl.textContent = d.stampUrl;
+      var qrContainer = document.getElementById('loyalty-qr-container');
+      if (qrContainer) qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' + encodeURIComponent(d.stampUrl) + '" style="width:80px;height:80px;border-radius:6px;">';
+    }
+  }).catch(function(e){ console.error('[Loyalty] load error:', e); });
+}
+
+window.toggleLoyalty = function() {
+  _loyaltyEnabled = !_loyaltyEnabled;
+  var btn = document.getElementById('loyalty-enable-toggle');
+  if (btn) { btn.textContent = _loyaltyEnabled ? 'On' : 'Off'; btn.style.background = _loyaltyEnabled ? 'rgba(34,197,94,0.15)' : 'rgba(255,90,31,0.12)'; btn.style.borderColor = _loyaltyEnabled ? 'rgba(34,197,94,0.4)' : 'rgba(255,90,31,0.4)'; btn.style.color = _loyaltyEnabled ? '#22c55e' : '#ff5a1f'; }
+};
+
+window.saveLoyaltySettings = function() {
+  var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
+  if (!slug) return;
+  var goal = parseInt(document.getElementById('loyalty-goal').value) || 10;
+  var rewardName = document.getElementById('loyalty-reward-name').value || 'Free item';
+  var token = localStorage.getItem('sqd_token');
+  fetch('https://api.qraivy.com/lp/stamp/settings/' + slug, {
+    method: 'POST',
+    headers: Object.assign({'Content-Type':'application/json'}, token ? {'Authorization':'Bearer '+token} : {}),
+    body: JSON.stringify({ goal: goal, rewardName: rewardName, enabled: _loyaltyEnabled })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) { alert('Loyalty settings saved!'); loadLoyaltyTab(); }
+  }).catch(function(e){ alert('Error saving: ' + e.message); });
+};
+
+window.copyStampUrl = function() {
+  if (_loyaltyStampUrl) { navigator.clipboard.writeText(_loyaltyStampUrl).then(function(){ alert('NFC URL copied!'); }); }
+};
+
+window.redeemLoyalty = function() {
+  var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
+  if (!slug) return;
+  if (!confirm('Mark reward as redeemed and reset stamp count to 0?')) return;
+  var token = localStorage.getItem('sqd_token');
+  fetch('https://api.qraivy.com/lp/stamp/redeem/' + slug, {
+    method: 'POST',
+    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) { alert('Reward redeemed! Stamps reset to 0.'); loadLoyaltyTab(); }
+  }).catch(function(e){ alert('Error: ' + e.message); });
+};
+
+document.addEventListener('sqd-tab-changed', function(e) {
+  if (e.detail && e.detail.tab === 'loyalty') loadLoyaltyTab();
+});
 </script>
 
 </body>
