@@ -42,8 +42,8 @@ async function generateSmartQRPass(slug, sections) {
   const stampValue = stampSettings && stampSettings.enabled ? (rewardReady ? 'REWARD READY!' : stampCount + '/' + stampGoal + ' stamps') : null;
 
   // Fetch stamp data
+  const passTypeId = process.env.APPLE_PASS_TYPE_ID || WALLET_CONFIG.passTypeId;
   const teamId     = process.env.APPLE_TEAM_ID      || WALLET_CONFIG.teamId;
-  const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet`;
 
   const passJson = {
     formatVersion: 1,
