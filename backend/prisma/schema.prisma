@@ -82,6 +82,9 @@ model Pass {
   lastMsgTitle    String?
   lastMsg         String?
   lastMsgLink     String?
+  stampCount      Int                @default(0)
+  stampGoal       Int                @default(10)
+  rewardReady     Boolean            @default(false)
   updatedAt       DateTime           @default(now()) @updatedAt
   devices         PassDevice[]
   registrations   PassRegistration[]
@@ -123,5 +126,29 @@ model WebPushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
+  createdAt DateTime @default(now())
+}
+model StampSettings {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  goal        Int      @default(10)
+  rewardName  String   @default("Free item")
+  enabled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model StampToken {
+  id        String   @id @default(cuid())
+  slug      String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model StampEntry {
+  id        String   @id @default(cuid())
+  slug      String
+  passId    String
   createdAt DateTime @default(now())
 }
