@@ -672,7 +672,7 @@ ${(function() {
     <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
     <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" id="lp-email-${slug}" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn" onclick="lpSubscribe('${slug}')">${sl.buttonLabel || 'Subscribe →'}</button></div>
-    <div class="lp-sub-form"><input class="lp-sub-input" id="lp-email-${slug}" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn" onclick="lpSubscribe('${slug}')">${sl.buttonLabel || 'Subscribe →'}</button></div>
+
     <div style="margin-top:16px;display:flex;align-items:flex-start;gap:10px;">
       <input type="checkbox" id="lp-gdpr-${slug}" style="margin-top:3px;accent-color:${accent};width:16px;height:16px;flex-shrink:0;" />
       <label for="lp-gdpr-${slug}" style="font-size:.82rem;color:rgba(255,255,255,0.75);line-height:1.5;cursor:pointer;">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
