@@ -1011,6 +1011,11 @@ async function handlePublishLP(req, res) {
         preserve.forEach(function(k){ if (existingS[k] !== undefined && mergedSections[k] === undefined) mergedSections[k] = existingS[k]; });
         if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
           mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
+        if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
+          mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
+        }
+        if (existingS.voice && existingS.voice.audioUrl && mergedSections.voice) {
+          mergedSections.voice = Object.assign({ audioUrl: existingS.voice.audioUrl }, mergedSections.voice);
         }
       } catch(_) {}
     }
