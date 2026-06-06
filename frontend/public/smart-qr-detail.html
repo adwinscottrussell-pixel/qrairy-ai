@@ -2714,7 +2714,10 @@ window.QRAIVY_EDITOR_STATE = {
       // ── Hydrate all inputs from state ──
       var h = sec.hero || {};
       hydrate('hero-title-input',    (h.title || (S.hero && S.hero.title) || '').replace(/\s+[a-z0-9]{3,5}$/, '').trim());
-      hydrate('hero-subtitle-input', h.subtitle || S.hero && S.hero.subtitle || '');
+      hydrate('hero-title-input',    (h.title || (S.hero && S.hero.title) || '').replace(/\s+[a-z0-9]{3,5}$/, '').trim());
+      var _cleanTitle = document.getElementById('hero-title-input').value;
+      if (sec.hero) sec.hero.title = _cleanTitle;
+      if (S.sections && S.sections.hero) S.sections.hero.title = _cleanTitle;
       hydrate('hero-badge-input',    h.badge || S.hero && S.hero.badgeText || '');
       hydrate('hero-logo-input',     h.logoText || S.hero && S.hero.logoInitial || '');
       hydrate('hero-cta-text-input', h.ctaText!==undefined ? h.ctaText : (S.hero&&S.hero.ctaText!==undefined ? S.hero.ctaText : 'Start a Conversation →'));
