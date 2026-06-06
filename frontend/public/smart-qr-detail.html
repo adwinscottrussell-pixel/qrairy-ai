@@ -2713,7 +2713,7 @@ window.QRAIVY_EDITOR_STATE = {
 
       // ── Hydrate all inputs from state ──
       var h = sec.hero || {};
-      hydrate('hero-title-input',    h.title || S.hero && S.hero.title || '');
+      hydrate('hero-title-input',    (h.title || (S.hero && S.hero.title) || '').replace(/\s+[a-z0-9]{3,5}$/, '').trim());
       hydrate('hero-subtitle-input', h.subtitle || S.hero && S.hero.subtitle || '');
       hydrate('hero-badge-input',    h.badge || S.hero && S.hero.badgeText || '');
       hydrate('hero-logo-input',     h.logoText || S.hero && S.hero.logoInitial || '');
