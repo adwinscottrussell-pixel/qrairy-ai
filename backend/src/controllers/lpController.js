@@ -430,8 +430,8 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 /* Hero */
 .lp-hero{padding:36px 28px 28px;text-align:center;background:linear-gradient(160deg,${accentDim} 0%,transparent 55%)}
 .lp-hero-eyebrow{display:inline-flex;align-items:center;gap:6px;border:0.5px solid ${accentBorder};border-radius:99px;padding:5px 14px;font-size:0.6rem;color:${accent};letter-spacing:0.1em;margin-bottom:18px}
-.lp-hero-title{font-family:'Inter',sans-serif;font-size:clamp(1.1rem,4.5vw,2rem);font-weight:800;word-break:break-word;overflow-wrap:break-word;hyphens:auto;line-height:1.1;letter-spacing:-0.02em;margin-bottom:14px}
-.lp-hero-sub{font-size:0.82rem;color:rgba(240,236,224,0.7);max-width:420px;margin:0 auto 28px;line-height:1.75}
+.lp-hero-title{font-family:'Inter',sans-serif;font-size:clamp(0.95rem,4vw,1.9rem);font-weight:800;word-break:break-word;overflow-wrap:break-word;hyphens:none;line-height:1.15;letter-spacing:-0.02em;margin-bottom:14px}
+.lp-hero-sub{font-size:0.92rem;color:rgba(240,236,224,0.7);max-width:420px;margin:0 auto 28px;line-height:1.75;font-family:'Inter',sans-serif}
 .lp-hero-ctas{display:flex;flex-direction:column;gap:10px;align-items:center}
 /* Buttons */
 .lp-btn{display:block;width:100%;max-width:380px;padding:15px 24px;border-radius:${_btnRadius};font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;text-align:center;cursor:pointer;border:none;transition:transform 0.15s,opacity 0.15s;letter-spacing:0.02em}
