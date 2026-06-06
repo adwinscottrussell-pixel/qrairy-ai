@@ -1262,14 +1262,14 @@
           <button onclick="window.saveLoyaltySettings()" style="width:100%;padding:8px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;">Save settings</button>
         </div>
         <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;margin-bottom:8px;">
-          <div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:8px;">Today's stamp QR + NFC</div>
+          <div style="font-size:.72rem;font-weight:600;color:#f0f4f8;margin-bottom:8px;">📲 Staff NFC Stamp URL (permanent)</div>
           <div style="display:flex;gap:10px;align-items:center;">
             <div id="loyalty-qr-container" style="width:80px;height:80px;background:rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <div style="font-size:2rem;">⬛</div>
             </div>
             <div style="flex:1;">
               <div id="loyalty-stamp-url" style="font-size:.58rem;color:rgba(240,244,248,0.6);word-break:break-all;font-family:monospace;margin-bottom:6px;">Loading...</div>
-              <button onclick="window.copyStampUrl()" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;color:#f0f4f8;font-size:.65rem;cursor:pointer;">Copy NFC tag URL</button>
+              <button onclick="window.copyNFCUrl()" style="width:100%;padding:6px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;color:#f0f4f8;font-size:.65rem;cursor:pointer;">Copy NFC URL for staff tag</button>
             </div>
           </div>
         </div>
@@ -3778,14 +3778,15 @@ function loadLoyaltyTab() {
     if (current) current.textContent = (d.stampCount || 0) + '/' + ((d.settings && d.settings.goal) || 10);
     if (rewardStatus) { rewardStatus.textContent = d.rewardReady ? 'Ready!' : 'Not yet'; rewardStatus.style.color = d.rewardReady ? '#22c55e' : 'rgba(240,244,248,0.4)'; }
     if (redeemSection) redeemSection.style.display = d.rewardReady ? 'block' : 'none';
-    if (d.stampUrl) {
-      _loyaltyStampUrl = d.stampUrl;
-      var urlEl = document.getElementById('loyalty-stamp-url');
-      if (urlEl) urlEl.textContent = d.stampUrl;
-      var qrContainer = document.getElementById('loyalty-qr-container');
-      if (qrContainer) qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' + encodeURIComponent(d.stampUrl) + '" style="width:80px;height:80px;border-radius:6px;">';
-    }
-  }).catch(function(e){ console.error('[Loyalty] load error:', e); });
+    fetch('https://api.qraivy.com/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
+      if (nd.nfcUrl) {
+        _loyaltyStampUrl = nd.nfcUrl;
+        var urlEl = document.getElementById('loyalty-stamp-url');
+        if (urlEl) urlEl.textContent = nd.nfcUrl;
+        var qrContainer = document.getElementById('loyalty-qr-container');
+        if (qrContainer) qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' + encodeURIComponent(nd.nfcUrl) + '" style="width:80px;height:80px;border-radius:6px;">';
+      }
+    }).catch(function(){});).catch(function(e){ console.error('[Loyalty] load error:', e); });
 }
 
 window.toggleLoyalty = function() {
