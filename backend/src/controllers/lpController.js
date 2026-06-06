@@ -1400,6 +1400,29 @@ async function getOrCreateStampToken(slug) {
   return token;
 }
 
+async function getNFCStampToken(slug) {
+  const now = new Date();
+  const existing = await prisma.stampToken.findFirst({
+    where: { slug, expiresAt: { gt: now } },
+    orderBy: { expiresAt: 'desc' }
+  });
+  if (existing) return existing.token;
+  const token = generateToken();
+  const expiresAt = new Date(now);
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  await prisma.stampToken.create({ data: { slug, token, expiresAt } });
+  return token;
+}
+
+async function handleGetNFCToken(req, res) {
+  try {
+    const { slug } = req.params;
+    const token = await getNFCStampToken(slug);
+    const stampUrl = `https://api.qraivy.com/stamp/${slug}/${token}`;
+    return res.json({ token, stampUrl, nfcUrl: stampUrl });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+}
+
 async function handleStamp(req, res) {
   try {
     const { slug, token } = req.params;
@@ -1497,7 +1520,7 @@ async function handleRedeemStamp(req, res) {
 }
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleGetNFCToken, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
 };
 
 
