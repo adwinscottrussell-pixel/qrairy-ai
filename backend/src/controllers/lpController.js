@@ -498,8 +498,8 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-wallet-bottom{display:flex;justify-content:space-between;align-items:center}
 .lp-wallet-id{font-size:0.52rem;color:rgba(255,255,255,0.5);letter-spacing:0.2em}
 .lp-wallet-circles{font-size:1.2rem;opacity:0.6;letter-spacing:-4px}
-.lp-sub-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin-bottom:6px;position:relative}
-.lp-sub-text{font-size:0.72rem;color:rgba(240,236,224,0.65);margin-bottom:16px;line-height:1.65;position:relative}
+.lp-sub-title{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;margin-bottom:8px;position:relative;z-index:1}
+.lp-sub-text{font-size:0.88rem;color:rgba(240,236,224,0.65);margin-bottom:16px;line-height:1.65;position:relative;z-index:1}
 .lp-sub-form{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative}
 .lp-sub-input{padding:12px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none}
 .lp-sub-input::placeholder{color:rgba(240,236,224,0.65)}
@@ -573,9 +573,9 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-footer{padding:24px 24px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center}
 .lp-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
 .lp-footer-Q{width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem}
-.lp-footer-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700}
-.lp-footer-url{font-size:0.58rem;color:rgba(240,236,224,0.65);margin-bottom:8px;word-break:break-all}
-.lp-footer-powered{font-size:0.58rem;color:rgba(240,236,224,0.6)}
+.lp-footer-name{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700}
+.lp-footer-url{font-size:0.72rem;color:rgba(240,236,224,0.65);margin-bottom:8px;word-break:break-all}
+.lp-footer-powered{font-size:0.72rem;color:rgba(240,236,224,0.6)}
 .lp-footer-powered a{color:${accent};text-decoration:none}
 #qrGrowthModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(5,5,5,0.88);backdrop-filter:blur(16px) saturate(0.7);-webkit-backdrop-filter:blur(16px) saturate(0.7);align-items:center;justify-content:center;padding:16px;}
 #qrGrowthModal.show{display:flex;animation:qrModalFadeIn 0.3s ease both;}
