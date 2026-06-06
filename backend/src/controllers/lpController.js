@@ -1019,7 +1019,7 @@ async function handlePublishLP(req, res) {
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date() },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live' },
     });
-
+    if (websiteUrl && websiteUrl.startsWith('http')) {
 
 
 
