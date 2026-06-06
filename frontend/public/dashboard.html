@@ -389,6 +389,8 @@ async function initDashboard(){
   var sbLoyalty = document.getElementById('sb-loyalty');
   if (sbLoyalty) sbLoyalty.addEventListener('click', function(e) {
     e.preventDefault();
+    var mc = document.getElementById('main-content');
+    if (mc) mc.style.display = 'none';
     document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
     var lp = document.getElementById('section-loyalty');
     if (lp) { lp.style.display='block'; loadLoyaltyDashboard(); }
