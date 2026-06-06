@@ -579,7 +579,7 @@ async function initDashboard(){
 })();
 </script>
 
-<div id="section-loyalty" class="dash-section" style="display:none;padding:24px;">
+<div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;margin-bottom:4px;">🎟 Loyalty Program</div>
   <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;">Anonymous stamp tracking — GDPR compliant</div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
@@ -608,10 +608,10 @@ function loadLoyaltyDashboard() {
   var token = localStorage.getItem('sqd_token');
   var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
   // Load all QR pages then fetch loyalty data for each
-  fetch('https://api.qraivy.com/qr', { headers: headers })
+  fetch('https://api.qraivy.com/dashboard', { headers: headers })
     .then(function(r){ return r.json(); })
-    .then(function(pages) {
-      if (!pages || !pages.length) {
+    .then(function(data) {
+      var pages = data && data.qrPages ? data.qrPages : (Array.isArray(data) ? data : []); if (!pages || !pages.length) {
         document.getElementById('ly-pages-list').innerHTML = '<div style="color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;">No Smart QR pages found. Create one first.</div>';
         return;
       }
