@@ -483,9 +483,9 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-voice-name{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:2px}
 .lp-voice-sub{font-size:0.72rem;color:rgba(240,236,224,0.7)}
 .lp-waveform{display:flex;align-items:center;gap:2px;height:28px;overflow:hidden;flex-shrink:0}
-.lp-bar{width:3px;background:rgba(255,255,255,0.15);border-radius:2px;height:100%}
-@keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
-.lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.6);text-align:center}
+.lp-bar{width:3px;background:rgba(255,255,255,0.15);border-radius:2px;transition:height 0.2s}
+@keyframes lpBarBounce{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
+.lp-waveform-active .lp-bar{background:rgba(255,255,255,0.85);animation:lpBarBounce 0.8s ease-in-out infinite;transform-origin:bottom}
 /* Subscribe */
 .lp-subscribe-section{padding:32px 24px 36px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-subscribe-card{position:relative;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid ${accentBorder};border-radius:18px;padding:24px 20px}
