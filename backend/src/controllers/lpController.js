@@ -774,8 +774,8 @@ ${sectionsHTML}`;
 (function(){
   var playing = false;
   var aiActivated = false;
-  var bizName = '${bizName}';
-  var slug = '${slug}';
+  var bizName = ${JSON.stringify(bizName)};
+  var slug = ${JSON.stringify(slug)};
 
   var voiceBtn  = document.getElementById('voiceBtn');
   var waveform  = document.getElementById('waveform');
