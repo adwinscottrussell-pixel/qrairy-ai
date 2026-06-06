@@ -479,11 +479,11 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-voice-btn{width:40px;height:40px;border:none;border-radius:50%;background:${accent};color:#fff;cursor:pointer;font-size:0.9rem;flex-shrink:0;transition:transform 0.1s}
 .lp-voice-btn:active{transform:scale(0.92)}
 .lp-voice-info{flex:1}
-.lp-voice-name{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;margin-bottom:2px}
+.lp-voice-info{flex:1;min-width:0}
 .lp-voice-name{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;margin-bottom:2px}
 .lp-voice-sub{font-size:0.72rem;color:rgba(240,236,224,0.7)}
-.lp-bar{width:3px;background:rgba(255,255,255,0.15);border-radius:2px}
-.lp-waveform-active .lp-bar{background:${accent};animation:lpWave 0.8s ease-in-out infinite alternate}
+.lp-waveform{display:flex;align-items:center;gap:2px;height:28px;overflow:hidden;flex-shrink:0}
+.lp-bar{width:3px;background:rgba(255,255,255,0.15);border-radius:2px;height:100%}
 @keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
 .lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.6);text-align:center}
 /* Subscribe */
