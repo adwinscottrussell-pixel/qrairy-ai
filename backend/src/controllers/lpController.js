@@ -487,7 +487,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 @keyframes lpWave{0%{transform:scaleY(0.3)}100%{transform:scaleY(1)}}
 .lp-voice-note{font-size:0.58rem;color:rgba(240,236,224,0.6);text-align:center}
 /* Subscribe */
-.lp-subscribe-section{padding:28px 24px 32px;border-top:0.5px solid rgba(255,255,255,0.06)}
+.lp-subscribe-section{padding:32px 24px 36px;border-top:0.5px solid rgba(255,255,255,0.06)}
 .lp-subscribe-card{position:relative;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid ${accentBorder};border-radius:18px;padding:24px 20px}
 .lp-sub-glow{position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,${accentDim},transparent 70%);pointer-events:none;border-radius:50%}
 .lp-wallet-preview{display:flex;justify-content:center;margin-bottom:20px;position:relative}
@@ -500,13 +500,13 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-wallet-circles{font-size:1.2rem;opacity:0.6;letter-spacing:-4px}
 .lp-sub-title{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;margin-bottom:8px;position:relative;z-index:1}
 .lp-sub-text{font-size:0.88rem;color:rgba(240,236,224,0.65);margin-bottom:16px;line-height:1.65;position:relative;z-index:1}
-.lp-sub-form{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;position:relative}
+.lp-sub-form{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;position:relative}
 .lp-sub-input{padding:12px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none}
 .lp-sub-input::placeholder{color:rgba(240,236,224,0.65)}
 .lp-sub-btn{padding:12px;border:none;border-radius:10px;background:${accent};color:#fff;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer}
-.lp-wallet-btns{display:flex;flex-direction:column;gap:7px;position:relative}
-.lp-wallet-btn{padding:11px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(240,236,224,0.7);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;width:100%}
-.lp-wallet-btn--google{background:#1a47a0;border:1.5px solid #4285f4;color:#fff;font-size:0.82rem;font-weight:700;text-align:center;border-radius:12px;cursor:pointer;animation:walletPulse 2.5s ease-in-out infinite;animation-delay:0.5s}.lp-wallet-btn--apple{background:#1a6e3a;border:1.5px solid #22c55e;color:#fff;font-size:0.82rem;font-weight:700;border-radius:12px;padding:14px;letter-spacing:0.04em;box-shadow:0 0 0 0 rgba(34,197,94,0.7);animation:walletPulse 2s ease-in-out infinite}
+.lp-sub-btn{padding:14px;border:none;border-radius:10px;background:${accent};color:#fff;font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;transition:opacity 0.15s;width:100%}
+.lp-wallet-btns{display:flex;flex-direction:column;gap:12px;position:relative;margin-top:8px}
+.lp-wallet-btn{padding:14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;text-align:center;width:100%;transition:opacity 0.15s}
 .lp-wallet-cta-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
 .lp-wallet-cta-hint{font-family:'Syne',sans-serif;font-size:0.72rem;color:rgba(34,197,94,0.9);margin:0;animation:walletHintFade 2s ease-in-out infinite;text-align:center}
 @keyframes walletPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.7)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
@@ -672,11 +672,11 @@ ${(function() {
     <h3 class="lp-sub-title">${themeBg === 'light' && sl.title && sl.title.length > 40 ? 'Stay in the Loop' : (sl.title || 'Stay in the Loop')}</h3>
     <p class="lp-sub-text">${sl.description || (themeBg === 'light' ? 'Get exclusive updates, offers and early access.' : 'Subscribe for updates, exclusive offers and early access from ' + bizName + '.')}</p>
     <div class="lp-sub-form"><input class="lp-sub-input" id="lp-email-${slug}" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn" onclick="lpSubscribe('${slug}')">${sl.buttonLabel || 'Subscribe →'}</button></div>
-    <div style="margin-top:10px;display:flex;align-items:flex-start;gap:8px;">
-      <input type="checkbox" id="lp-gdpr-${slug}" style="margin-top:2px;accent-color:#ff5a1f;width:14px;height:14px;flex-shrink:0;" />
-      <label for="lp-gdpr-${slug}" style="font-size:.65rem;color:rgba(255,255,255,0.55);line-height:1.4;cursor:pointer;">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
+    <div class="lp-sub-form"><input class="lp-sub-input" id="lp-email-${slug}" type="email" placeholder="${sl.emailPlaceholder || 'your@email.com'}" /><button class="lp-sub-btn" onclick="lpSubscribe('${slug}')">${sl.buttonLabel || 'Subscribe →'}</button></div>
+    <div style="margin-top:16px;display:flex;align-items:flex-start;gap:10px;">
+      <input type="checkbox" id="lp-gdpr-${slug}" style="margin-top:3px;accent-color:${accent};width:16px;height:16px;flex-shrink:0;" />
+      <label for="lp-gdpr-${slug}" style="font-size:.82rem;color:rgba(255,255,255,0.75);line-height:1.5;cursor:pointer;">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
     </div>
-    <div id="lp-sub-result-${slug}" style="margin-top:8px;font-size:.7rem;display:none;padding:6px 10px;border-radius:6px;"></div>
     <script>function lpSubscribe(s){var e=document.getElementById('lp-email-'+s),g=document.getElementById('lp-gdpr-'+s),r=document.getElementById('lp-sub-result-'+s);if(!e||!e.value||!e.value.includes('@')){r.style.display='block';r.style.color='#f87171';r.textContent='Please enter a valid email.';return;}if(!g||!g.checked){r.style.display='block';r.style.color='#f87171';r.textContent='Please tick the consent box first.';return;}fetch('https://api.qraivy.com/lp/subscribe/'+s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e.value,gdprConsent:true})}).then(function(x){return x.json();}).then(function(d){r.style.display='block';r.style.color='#4ade80';r.textContent='✅ '+(d.message||'Subscribed!');e.value='';g.checked=false;}).catch(function(){r.style.display='block';r.style.color='#f87171';r.textContent='Something went wrong.';});}</script>
     ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?`<div class="lp-wallet-cta-wrap"><p class="lp-wallet-cta-hint">👇 Tap to save your pass</p><a href="/lp/wallet/apple/${slug}" class="lp-wallet-btn lp-wallet-btn--apple lp-btn-apple-only" style="text-decoration:none;display:block;">&#9679; Add to Apple Wallet</a></div>`:(''))+(sl.googleEnabled!==false?'<a href="/lp/wallet/google/' + slug + '" class="lp-wallet-btn lp-wallet-btn--google lp-btn-google-only" style="text-decoration:none;display:block;">&#9632; Add to Google Wallet</a>':'')+'</div>':''}
   </div>
