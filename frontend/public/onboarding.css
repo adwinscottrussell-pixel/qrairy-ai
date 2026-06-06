@@ -435,7 +435,7 @@
 .qr-field-opt{color:rgba(240,236,224,0.68);font-size:0.58rem;text-transform:none;letter-spacing:0;}
 .qr-field-input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0ece0;font-family:'JetBrains Mono',monospace;font-size:0.82rem;outline:none;transition:border-color 0.18s,background 0.18s;}
 .qr-field-input:focus{border-color:rgba(255,78,0,0.5);background:rgba(255,78,0,0.03);}
-.qr-field-input::placeholder{color:rgba(240,236,224,0.88);}
+.qr-field-input::placeholder{color:rgba(240,236,224,0.28);}
 .qr-input-prefix-wrap{position:relative;display:flex;align-items:center;}
 .qr-input-prefix{position:absolute;left:14px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:rgba(240,236,224,0.68);pointer-events:none;z-index:1;}
 .qr-field-input-prefixed{padding-left:72px;}
