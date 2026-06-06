@@ -198,7 +198,7 @@ const LP_CONTENT = {
 // ── HTML generator ────────────────────────────────────────────────────────
 function renderLP(page) {
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
-  const bizName = (page.businessName || 'My Business').replace(/\s+[a-z0-9]{3,5}$/, '').trim() || (page.businessName || 'My Business');
+  const bizName = (page.businessName || 'My Business').replace(/\s+[a-z0-9]{3}$/, '').trim() || (page.businessName || 'My Business');
   const slug    = page.slug;
   const website = page.websiteUrl || 'https://qraivy.com';
   const domain  = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
