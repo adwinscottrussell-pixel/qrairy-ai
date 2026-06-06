@@ -999,12 +999,31 @@ async function handlePublishLP(req, res) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
     }
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
+
+    // Merge incoming sections with existing DB sections to preserve AI-generated fields
+    let mergedSections = sections || {};
+    const existing = await prisma.landingPage.findUnique({ where: { slug } });
+    if (existing && existing.sections) {
+      try {
+        const existingS = JSON.parse(existing.sections);
+        const preserve = ['aiGenerated','aiGeneratedAt','siteContent','crawlLocked','businessInfo','featured'];
+        mergedSections = Object.assign({}, mergedSections);
+        preserve.forEach(function(k){ if (existingS[k] !== undefined && mergedSections[k] === undefined) mergedSections[k] = existingS[k]; });
+        if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
+          mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
+        }
+      } catch(_) {}
+    }
     const page = await prisma.landingPage.upsert({
       where: { slug },
-      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: sections ? JSON.stringify(sections) : null, status: 'live', updatedAt: new Date() },
-      create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: sections ? JSON.stringify(sections) : null, status: 'live' },
+      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date() },
+      create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live' },
     });
-    if (websiteUrl && websiteUrl.startsWith('http')) {
+
+
+
+
+
       setImmediate(async () => {
         try {
           console.log('[Firecrawl] Starting scrape for', websiteUrl);
