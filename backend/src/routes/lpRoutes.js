@@ -1,10 +1,11 @@
 const express = require('express');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
+router.get('/lp/card/:slug', handleLoyaltyCardPage);
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
 // Loyalty stamp (public — no auth — QR and NFC target)
 router.get('/stamp/:slug/:token', handleStamp);
