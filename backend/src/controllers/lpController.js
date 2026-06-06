@@ -1010,7 +1010,6 @@ async function handlePublishLP(req, res) {
         mergedSections = Object.assign({}, mergedSections);
         preserve.forEach(function(k){ if (existingS[k] !== undefined && mergedSections[k] === undefined) mergedSections[k] = existingS[k]; });
         if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
-          mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
         if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
           mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
         }
@@ -1019,6 +1018,7 @@ async function handlePublishLP(req, res) {
         }
       } catch(_) {}
     }
+
     const page = await prisma.landingPage.upsert({
       where: { slug },
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date() },
