@@ -85,9 +85,14 @@ model Pass {
   stampCount      Int                @default(0)
   stampGoal       Int                @default(10)
   rewardReady     Boolean            @default(false)
+  totalStamps     Int                @default(0)
+  rewardsEarned   Int                @default(0)
+  lastStampAt     DateTime?
+  createdAt       DateTime           @default(now())
   updatedAt       DateTime           @default(now()) @updatedAt
   devices         PassDevice[]
   registrations   PassRegistration[]
+  rewardEvents    RewardEvent[]
 }
 
 model PassDevice {
@@ -150,5 +155,17 @@ model StampEntry {
   id        String   @id @default(cuid())
   slug      String
   passId    String
+  source    String?
   createdAt DateTime @default(now())
+}
+
+model RewardEvent {
+  id          String    @id @default(cuid())
+  slug        String
+  passId      String
+  pass        Pass      @relation(fields: [passId], references: [id])
+  rewardText  String
+  status      String    @default("earned")
+  createdAt   DateTime  @default(now())
+  redeemedAt  DateTime?
 }
