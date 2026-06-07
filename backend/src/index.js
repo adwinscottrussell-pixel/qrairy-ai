@@ -12,6 +12,7 @@ const stripeRoutes    = require('./routes/stripeRoutes');
 const adminRoutes     = require('./routes/adminRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
+const loyaltyAdminRoutes = require('./routes/loyaltyAdminRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/admin',    adminRoutes);
 
 app.use('/', lpRoutes);
 app.use('/tier', tierRoutes);
+app.use('/loyalty', loyaltyAdminRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
