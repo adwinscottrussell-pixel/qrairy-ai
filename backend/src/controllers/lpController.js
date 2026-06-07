@@ -1449,8 +1449,14 @@ async function handleStamp(req, res) {
     const goal = settings ? settings.goal : 10;
     const newCount = Math.min((pass.stampCount || 0) + 1, goal);
     const rewardReady = newCount >= goal;
-    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, updatedAt: now } });
-    await prisma.stampEntry.create({ data: { slug, passId: pass.id } });
+    const previouslyReady = pass.rewardReady; // LOYALTY_B2_PATCH
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now } });
+    await prisma.stampEntry.create({ data: { slug, passId: pass.id, source: 'qr' } });
+    if (rewardReady && !previouslyReady) {
+      try {
+        await prisma.rewardEvent.create({ data: { slug, passId: pass.id, rewardText: settings ? settings.rewardName : 'Free item', status: 'earned' } });
+      } catch(e) { console.error('[Stamp] RewardEvent create error:', e.message); }
+    }
     const rewardName = settings ? settings.rewardName : 'Free item';
     const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
     if (devices.length) {
@@ -1529,7 +1535,11 @@ async function handleRedeemStamp(req, res) {
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     if (!pass) return res.status(404).json({ error: 'Pass not found' });
-    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: 0, rewardReady: false, updatedAt: new Date() } });
+    const redeemAt = new Date();
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: 0, rewardReady: false, rewardsEarned: { increment: 1 }, updatedAt: redeemAt } });
+    try {
+      await prisma.rewardEvent.updateMany({ where: { passId: pass.id, status: 'earned' }, data: { status: 'redeemed', redeemedAt: redeemAt } });
+    } catch(e) { console.error('[Redeem] RewardEvent update error:', e.message); }
     const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
     if (devices.length) {
       try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
