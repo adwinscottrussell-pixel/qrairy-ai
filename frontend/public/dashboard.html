@@ -587,8 +587,12 @@ async function initDashboard(){
 
 <script>
 function loadLoyaltyDashboard() {
-  var token = localStorage.getItem('sqd_token');
-  var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+  var headers = {};
+  var clerkToken = '';
+  try { if(window.Clerk && window.Clerk.session) { window.Clerk.session.getToken().then(function(t){ clerkToken = t || ''; _doLoadLoyalty(t ? { 'Authorization': 'Bearer ' + t } : {}); }); return; } } catch(_){}
+  _doLoadLoyalty({});
+}
+function _doLoadLoyalty(headers) {
   var list = document.getElementById('ly-pages-list');
   list.innerHTML = '<div style="color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;">Loading...</div>';
   fetch('https://api.qraivy.com/dashboard', { headers: headers })
