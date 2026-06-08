@@ -580,6 +580,8 @@ async function initDashboard(){
 </script>
 
 <!-- LOYALTY_DASH_V1: upgraded to GET /loyalty/programs -->
+
+<!-- LOYALTY_DASH_V2 -->
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;margin-bottom:4px;">🎟 Loyalty Programs</div>
   <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;">Anonymous stamp tracking — GDPR compliant</div>
@@ -587,12 +589,12 @@ async function initDashboard(){
 </div>
 
 <script>
-// ── Single call to GET /loyalty/programs ──────────────────────────────────────
+// GET /loyalty/programs - single call for all data
 function loadLoyaltyDashboard() {
   try {
     if (window.Clerk && window.Clerk.session) {
       window.Clerk.session.getToken().then(function(t) {
-        _doLoadLoyalty(t ? { 'Authorization': 'Bearer ' + t } : {});
+        _doLoadLoyalty(t ? { "Authorization": "Bearer " + t } : {});
       });
       return;
     }
@@ -601,157 +603,149 @@ function loadLoyaltyDashboard() {
 }
 
 function _doLoadLoyalty(headers) {
-  var list = document.getElementById('ly-pages-list');
+  var list = document.getElementById("ly-pages-list");
   if (!list) return;
-  list.innerHTML = '<div style="color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;">Loading…</div>';
-  fetch('https://api.qraivy.com/loyalty/programs', { headers: headers })
+  list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
+  fetch("https://api.qraivy.com/loyalty/programs", { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var programs = (data && data.programs) || [];
       if (!programs.length) {
-        list.innerHTML = '<div style="color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;">No loyalty programs yet. <a href="loyalty-setup.html" style="color:#ff5a1f;text-decoration:none;">Set one up →</a></div>';
+        list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;\">No loyalty programs yet. <a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;\">Set one up →</a></div>";
         return;
       }
-      list.innerHTML = '';
+      list.innerHTML = "";
       programs.forEach(function(p) { list.appendChild(_lyBuildCard(p)); });
     })
     .catch(function() {
-      list.innerHTML = '<div style="color:rgba(240,244,248,0.4);padding:20px;">Error loading loyalty data.</div>';
+      list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);padding:20px;\">Error loading loyalty data.</div>";
     });
 }
 
-// ── Card builder ───────────────────────────────────────────────────────────────
 function _lyBuildCard(p) {
-  var el = document.createElement('div');
-  el.id = 'ly-card-' + p.id;
+  var el = document.createElement("div");
+  el.id = "ly-card-" + p.id;
   var pct = p.stampGoal ? Math.min(100, Math.round(p.currentStamps / p.stampGoal * 100)) : 0;
-
   var badgeStyle, badgeTxt;
   if (!p.hasLoyaltyConfig) {
-    badgeStyle = 'background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);';
-    badgeTxt = 'not set up';
-  } else if (p.status === 'active') {
-    badgeStyle = 'background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25);';
-    badgeTxt = '● active';
+    badgeStyle = "background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);";
+    badgeTxt = "not set up";
+  } else if (p.status === "active") {
+    badgeStyle = "background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25);";
+    badgeTxt = "● active";
   } else {
-    badgeStyle = 'background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1);';
-    badgeTxt = '⏸ paused';
+    badgeStyle = "background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1);";
+    badgeTxt = "⏸ paused";
   }
-
-  el.style.cssText = 'background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;transition:border-color 0.18s;';
-
+  el.style.cssText = "background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;";
   var goalOpts = [5,8,10,12,15].map(function(n) {
-    return '<option value="' + n + '"' + (n === p.stampGoal ? ' selected' : '') + '>' + n + ' stamps</option>';
-  }).join('');
+    return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>";
+  }).join("");
 
-  var html =
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">' +
-      '<div>' +
-        '<div style="font-size:1rem;font-weight:700;color:#f0f4f8;">' + _lyEsc(p.businessName || p.slug) + '</div>' +
-        '<div style="font-size:.7rem;color:rgba(240,244,248,0.4);margin-top:2px;">' +
-          (p.hasLoyaltyConfig
-            ? _lyEsc(p.rewardText || 'Free item') + ' after ' + p.stampGoal + ' stamps'
-            : 'Loyalty not configured') +
-        '</div>' +
-      '</div>' +
-      '<span style="' + badgeStyle + 'border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:700;white-space:nowrap;">' + badgeTxt + '</span>' +
-    '</div>';
+  var h = "";
+  // Header
+  h += "<div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;\">";
+  h +=   "<div>";
+  h +=     "<div style=\"font-size:1rem;font-weight:700;color:#f0f4f8;\">" + _lyEsc(p.businessName || p.slug) + "</div>";
+  h +=     "<div style=\"font-size:.7rem;color:rgba(240,244,248,0.4);margin-top:2px;\">";
+  h +=       p.hasLoyaltyConfig ? (_lyEsc(p.rewardText || "Free item") + " after " + p.stampGoal + " stamps") : "Loyalty not configured";
+  h +=     "</div>";
+  h +=   "</div>";
+  h +=   "<span style=\"" + badgeStyle + "border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:700;\">" + badgeTxt + "</span>";
+  h += "</div>";
 
   if (p.hasLoyaltyConfig) {
-    html +=
-      // Stats
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">' +
-        _lyStat('Current', p.currentStamps, '#ff5a1f') +
-        _lyStat('All‑time', p.totalStampsIssued, '#f0f4f8') +
-        _lyStat('Redeemed', p.rewardsRedeemed, '#f0f4f8') +
-      '</div>' +
-      // Progress bar
-      '<div style="height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;">' +
-        '<div style="height:100%;background:#ff5a1f;border-radius:999px;width:' + pct + '%;transition:width 0.5s;"></div>' +
-      '</div>' +
-      // QR + URL + buttons
-      '<div style="display:flex;gap:10px;align-items:center;">' +
-        '<div style="width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;">' +
-          (p.nfcUrl ? '<img src="https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=' + encodeURIComponent(p.nfcUrl) + '" style="width:68px;height:68px;">' : '') +
-        '</div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div style="font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;">' + _lyEsc(p.nfcUrl || '—') + '</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-            '<button id="ly-copybtn-' + p.id + '" data-url="' + _lyEsc(p.nfcUrl || '') + '" onclick="window.copyLoyaltyUrl('' + p.id + '')" style="flex:1;padding:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.7rem;cursor:pointer;min-width:90px;">Copy NFC URL</button>' +
-            '<button id="ly-redeem-' + p.id + '" data-slug="' + _lyEsc(p.slug) + '" onclick="window.redeemLoyaltyDash('' + p.slug + '')" style="flex:1;padding:8px;background:rgba(34,197,94,0.12);border:0.5px solid rgba(34,197,94,0.25);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:700;cursor:pointer;min-width:90px;' + (p.rewardReady ? '' : 'display:none;') + '">🎁 Redeem</button>' +
-            '<button onclick="window.toggleLoyaltyEdit('' + p.id + '')" style="padding:8px 10px;background:transparent;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(240,244,248,0.35);font-size:.7rem;cursor:pointer;">&#9881;</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      // Inline edit panel
-      '<div id="ly-edit-' + p.id + '" style="display:none;margin-top:12px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;padding:13px;">' +
-        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
-          '<input id="ly-er-' + p.id + '" value="' + _lyEsc(p.rewardText || '') + '" placeholder="Reward name" style="flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;" />' +
-          '<select id="ly-eg-' + p.id + '" style="background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;">' + goalOpts + '</select>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;align-items:center;">' +
-          '<button onclick="window.saveLoyaltyEdit('' + p.id + '')" style="padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;">Save</button>' +
-          '<button onclick="window.toggleLoyaltyStatus('' + p.id + '','' + (p.status||'active') + '')" style="padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;">' + (p.status === 'active' ? 'Pause' : 'Activate') + '</button>' +
-          '<span id="ly-saved-' + p.id + '" style="font-size:.68rem;color:#22c55e;display:none;">✓ Saved</span>' +
-        '</div>' +
-      '</div>';
+    // Stats
+    h += "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;\">";
+    h += _lyStat("Current", p.currentStamps, "#ff5a1f");
+    h += _lyStat("All-time", p.totalStampsIssued, "#f0f4f8");
+    h += _lyStat("Redeemed", p.rewardsRedeemed, "#f0f4f8");
+    h += "</div>";
+    // Progress bar
+    h += "<div style=\"height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;\">";
+    h += "<div style=\"height:100%;background:#ff5a1f;border-radius:999px;width:" + pct + "%;transition:width 0.5s;\"></div></div>";
+    // QR + URL + buttons
+    h += "<div style=\"display:flex;gap:10px;align-items:center;\">";
+    h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
+    if (p.nfcUrl) {
+      h += "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.nfcUrl) + "\" style=\"width:68px;height:68px;\">";
+    }
+    h +=   "</div>";
+    h +=   "<div style=\"flex:1;min-width:0;\">";
+    h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.nfcUrl || "—") + "</div>";
+    h +=     "<div style=\"display:flex;gap:6px;flex-wrap:wrap;\">";
+    // Use data-* to avoid quote escaping in onclick
+    h +=       "<button id=\"ly-copybtn-" + p.id + "\" data-url=\"" + _lyEsc(p.nfcUrl || "") + "\" data-id=\"" + p.id + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"flex:1;padding:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.7rem;cursor:pointer;min-width:90px;\">Copy NFC URL</button>";
+    h +=       "<button id=\"ly-redeem-" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.redeemLoyaltyDash(this)\" style=\"flex:1;padding:8px;background:rgba(34,197,94,0.12);border:0.5px solid rgba(34,197,94,0.25);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:700;cursor:pointer;min-width:90px;" + (p.rewardReady ? "" : "display:none;") + "\">🎁 Redeem</button>";
+    h +=       "<button data-id=\"" + p.id + "\" onclick=\"window.toggleLoyaltyEdit(this)\" style=\"padding:8px 10px;background:transparent;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(240,244,248,0.35);font-size:.7rem;cursor:pointer;\">&#9881;</button>";
+    h +=     "</div>";
+    h +=   "</div>";
+    h += "</div>";
+    // Inline edit panel
+    h += "<div id=\"ly-edit-" + p.id + "\" style=\"display:none;margin-top:12px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;padding:13px;\">";
+    h +=   "<div style=\"display:flex;gap:8px;margin-bottom:10px;\">";
+    h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
+    h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
+    h +=   "</div>";
+    h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
+    h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
+    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "Pause" : "Activate") + "</button>";
+    h +=     "<span id=\"ly-saved-" + p.id + "\" style=\"font-size:.68rem;color:#22c55e;display:none;\">✓ Saved</span>";
+    h +=   "</div>";
+    h += "</div>";
   } else {
-    html += '<a href="loyalty-setup.html" style="display:block;text-align:center;padding:10px 0;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.18);border-radius:8px;color:#ff8c55;font-size:.75rem;text-decoration:none;">&plus; Enable loyalty for this page</a>';
+    h += "<a href=\"loyalty-setup.html\" style=\"display:block;text-align:center;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.18);border-radius:8px;color:#ff8c55;font-size:.75rem;text-decoration:none;\">+ Enable loyalty for this page</a>";
   }
 
-  el.innerHTML = html;
+  el.innerHTML = h;
   return el;
 }
 
 function _lyStat(label, val, color) {
-  return '<div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;text-align:center;">' +
-    '<div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.35);margin-bottom:3px;">' + label + '</div>' +
-    '<div style="font-size:1.3rem;font-weight:800;color:' + color + ';">' + val + '</div>' +
-    '</div>';
+  return "<div style=\"background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;text-align:center;\">" +
+    "<div style=\"font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.35);margin-bottom:3px;\">" + label + "</div>" +
+    "<div style=\"font-size:1.3rem;font-weight:800;color:" + color + ";\">" + val + "</div>" +
+  "</div>";
 }
 
 function _lyEsc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// ── Actions ────────────────────────────────────────────────────────────────────
-window.copyLoyaltyUrl = function(id) {
-  var btn = document.getElementById('ly-copybtn-' + id);
-  var url = btn ? btn.dataset.url : '';
+// Actions - receive the button element, read data-* attributes
+window.copyLoyaltyUrl = function(btn) {
+  var url = btn.dataset.url;
   if (!url) return;
   navigator.clipboard.writeText(url).then(function() {
-    if (!btn) return;
     var orig = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    btn.style.borderColor = 'rgba(34,197,94,0.3)';
-    btn.style.color = '#22c55e';
-    setTimeout(function() {
-      btn.textContent = orig;
-      btn.style.borderColor = '';
-      btn.style.color = '';
-    }, 2000);
+    btn.textContent = "✓ Copied!";
+    btn.style.color = "#22c55e";
+    btn.style.borderColor = "rgba(34,197,94,0.3)";
+    setTimeout(function() { btn.textContent = orig; btn.style.color = ""; btn.style.borderColor = ""; }, 2000);
   }).catch(function() {});
 };
 
-window.toggleLoyaltyEdit = function(id) {
-  var p = document.getElementById('ly-edit-' + id);
-  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+window.toggleLoyaltyEdit = function(btn) {
+  var id = btn.dataset.id;
+  var panel = document.getElementById("ly-edit-" + id);
+  if (panel) panel.style.display = panel.style.display === "none" ? "" : "none";
 };
 
-window.saveLoyaltyEdit = function(id) {
-  var reward = (document.getElementById('ly-er-' + id)||{}).value || '';
-  var goal = parseInt((document.getElementById('ly-eg-' + id)||{}).value || 10);
+window.saveLoyaltyEdit = function(btn) {
+  var id = btn.dataset.id;
+  var reward = (document.getElementById("ly-er-" + id) || {}).value || "";
+  var goal = parseInt((document.getElementById("ly-eg-" + id) || {}).value || 10);
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch('https://api.qraivy.com/loyalty/programs/' + id, {
-        method: 'PUT',
-        headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' },
+      fetch("https://api.qraivy.com/loyalty/programs/" + id, {
+        method: "PUT",
+        headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
         body: JSON.stringify({ rewardName: reward, goal: goal })
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.program) {
-          var saved = document.getElementById('ly-saved-' + id);
-          if (saved) { saved.style.display = 'inline'; setTimeout(function() { saved.style.display = 'none'; }, 2000); }
-          var card = document.getElementById('ly-card-' + id);
+          var saved = document.getElementById("ly-saved-" + id);
+          if (saved) { saved.style.display = "inline"; setTimeout(function() { saved.style.display = "none"; }, 2000); }
+          var card = document.getElementById("ly-card-" + id);
           if (card) card.replaceWith(_lyBuildCard(d.program));
         }
       }).catch(function() {});
@@ -759,17 +753,19 @@ window.saveLoyaltyEdit = function(id) {
   } catch(e) {}
 };
 
-window.toggleLoyaltyStatus = function(id, cur) {
-  var newStatus = cur === 'active' ? 'paused' : 'active';
+window.toggleLoyaltyStatus = function(btn) {
+  var id = btn.dataset.id;
+  var cur = btn.dataset.status;
+  var newStatus = cur === "active" ? "paused" : "active";
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch('https://api.qraivy.com/loyalty/programs/' + id + '/status', {
-        method: 'PATCH',
-        headers: { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' },
+      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/status", {
+        method: "PATCH",
+        headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.program) {
-          var card = document.getElementById('ly-card-' + id);
+          var card = document.getElementById("ly-card-" + id);
           if (card) card.replaceWith(_lyBuildCard(d.program));
         }
       }).catch(function() {});
@@ -777,13 +773,14 @@ window.toggleLoyaltyStatus = function(id, cur) {
   } catch(e) {}
 };
 
-window.redeemLoyaltyDash = function(slug) {
-  if (!confirm('Mark reward as redeemed and reset stamps to 0?')) return;
+window.redeemLoyaltyDash = function(btn) {
+  var slug = btn.dataset.slug;
+  if (!confirm("Mark reward as redeemed and reset stamps to 0?")) return;
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch('https://api.qraivy.com/lp/stamp/redeem/' + slug, {
-        method: 'POST',
-        headers: t ? { 'Authorization': 'Bearer ' + t } : {}
+      fetch("https://api.qraivy.com/lp/stamp/redeem/" + slug, {
+        method: "POST",
+        headers: t ? { "Authorization": "Bearer " + t } : {}
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.ok) loadLoyaltyDashboard();
       }).catch(function() {});
