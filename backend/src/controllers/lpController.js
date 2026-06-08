@@ -419,7 +419,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-btn-sub,.lp-btn-arr{display:none}
 .lp-btn-inner{display:block}
 /* Nav */
-.lp-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(10,10,10,0.95);backdrop-filter:blur(16px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
 .lp-nav-brand{display:flex;align-items:center;gap:10px}
 .lp-logo-img{width:32px;height:32px;border-radius:8px;object-fit:contain}
 .lp-logo-letter{width:32px;height:32px;border-radius:8px;border:0.5px solid;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800}
