@@ -1,658 +1,284 @@
 <!DOCTYPE html>
-<!-- LOYALTY_WIRED_V1 -->
+<!-- LOYALTY_WIZARD_V2: creation wizard only, management is in dashboard.html -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QRAIRY.AI — Loyalty Programs</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+  <title>QRAIRY.AI — New Loyalty Program</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="dashboard-shell.css" />
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;min-height:100vh}
-    #main-content{margin-left:240px;min-height:100vh;transition:margin-left 0.22s ease}
+    #main-content{margin-left:240px;min-height:100vh;transition:margin-left 0.22s ease;display:flex;align-items:center;justify-content:center;padding:40px 20px}
     body.sb-collapsed #main-content{margin-left:60px}
-    @media(max-width:768px){#main-content{margin-left:0!important;padding-top:56px}}
+    @media(max-width:768px){#main-content{margin-left:0!important;padding-top:72px;align-items:flex-start}}
 
-    /* Layout */
-    .dash-wrap{max-width:960px;margin:0 auto;padding:48px 40px}
-    @media(max-width:768px){.dash-wrap{padding:24px 16px}}
-    .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px}
-    .page-title-tag{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:6px}
-    .page-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:400;color:#f0ece0}
-
-    /* Buttons */
-    .btn-primary{background:#ff5a1f;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s;display:inline-flex;align-items:center;gap:7px}
-    .btn-primary:hover{background:#e04e18}
-    .btn-primary:disabled{background:#1e1e1e;color:#444;cursor:not-allowed}
-    .btn-secondary{background:transparent;color:#666;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 18px;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;transition:all 0.18s;display:inline-flex;align-items:center;gap:7px}
-    .btn-secondary:hover{border-color:#ff5a1f;color:#f0ece0}
-
-    /* Loading */
-    .scanning{text-align:center;padding:80px 0}
-    .dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff5a1f;margin:0 3px;animation:blink 1.2s ease infinite}
-    .dots span:nth-child(2){animation-delay:0.2s}
-    .dots span:nth-child(3){animation-delay:0.4s}
-    @keyframes blink{0%,80%,100%{opacity:0.15;transform:scale(0.7)}40%{opacity:1;transform:scale(1)}}
-    .scan-status{font-size:0.8rem;color:#555;margin-top:16px}
-
-    /* Program grid */
-    .lp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-    @media(max-width:768px){.lp-grid{grid-template-columns:1fr}}
-
-    /* Program card */
-    .lp-card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px;transition:border-color 0.18s}
-    .lp-card:hover{border-color:rgba(255,90,31,0.2)}
-    .lp-card-header{display:flex;align-items:center;gap:12px}
-    .lp-logo{width:42px;height:42px;border-radius:9px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.2rem;color:#fff;flex-shrink:0}
-    .lp-card-meta{flex:1;min-width:0}
-    .lp-card-name{font-size:0.92rem;font-weight:500;color:#f0ece0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .lp-card-slug{font-size:0.68rem;color:#555}
-    .lp-badge{font-size:0.52rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;flex-shrink:0;white-space:nowrap}
-    .lp-badge.active{background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.2)}
-    .lp-badge.paused{background:rgba(255,255,255,0.05);color:#555;border:1px solid rgba(255,255,255,0.07)}
-    .lp-badge.unconfigured{background:rgba(255,90,31,0.1);color:#ff8c55;border:1px solid rgba(255,90,31,0.18)}
+    .wizard-wrap{width:100%;max-width:500px}
 
     /* Progress */
-    .lp-progress-label{display:flex;justify-content:space-between;align-items:center;font-size:0.72rem}
-    .lp-progress-stamps{color:#f0ece0}
-    .lp-progress-reward{color:#ff5a1f;font-size:0.68rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
-    .lp-bar{height:3px;background:rgba(255,255,255,0.07);border-radius:999px;overflow:hidden;margin-top:7px}
-    .lp-bar-fill{height:100%;background:#ff5a1f;border-radius:999px;transition:width 0.6s ease}
-
-    /* Stats */
-    .lp-stats{display:flex;border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden}
-    .lp-stat{flex:1;padding:9px 10px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)}
-    .lp-stat:last-child{border-right:none}
-    .lp-stat-val{font-size:1.15rem;font-weight:700;color:#ff5a1f;line-height:1}
-    .lp-stat-key{font-size:0.52rem;letter-spacing:0.08em;text-transform:uppercase;color:#555;margin-top:3px}
-
-    /* Actions */
-    .lp-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .btn-copy{background:rgba(255,90,31,0.08);color:#ff8c55;border:1px solid rgba(255,90,31,0.18);border-radius:7px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;transition:all 0.18s;flex:1}
-    .btn-copy:hover{background:rgba(255,90,31,0.16);color:#ff5a1f}
-    .btn-copy.copied{background:rgba(34,197,94,0.1);color:#22c55e;border-color:rgba(34,197,94,0.2)}
-    .btn-card-link{background:transparent;color:#555;border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;transition:all 0.18s;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
-    .btn-card-link:hover{border-color:rgba(255,90,31,0.3);color:#f0ece0}
-    .btn-edit-toggle{background:transparent;color:#444;border:1px solid rgba(255,255,255,0.06);border-radius:7px;padding:8px 10px;font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;transition:all 0.18s}
-    .btn-edit-toggle:hover{border-color:rgba(255,255,255,0.15);color:#888}
-
-    /* Inline edit */
-    .lp-edit-panel{background:#0d0d0d;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px}
-    .lp-edit-row{display:flex;gap:8px}
-    .lp-edit-input{flex:1;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:9px 12px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;transition:border 0.2s}
-    .lp-edit-input:focus{border-color:#ff5a1f}
-    .lp-edit-select{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:9px 10px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.78rem;outline:none;cursor:pointer;flex-shrink:0}
-    .lp-edit-footer{display:flex;gap:8px;align-items:center}
-    .btn-save{background:#ff5a1f;color:#fff;border:none;border-radius:7px;padding:8px 16px;font-family:'DM Mono',monospace;font-size:0.72rem;cursor:pointer;transition:background 0.18s}
-    .btn-save:hover{background:#e04e18}
-    .btn-pause-toggle{background:transparent;color:#555;border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:8px 14px;font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;transition:all 0.18s}
-    .btn-pause-toggle:hover{border-color:rgba(239,68,68,0.3);color:#ef4444}
-    .lp-saved-msg{font-size:0.68rem;color:#22c55e;display:none}
-
-    /* Unconfigured */
-    .lp-card.unconfigured{opacity:0.75}
-    .btn-setup{width:100%;background:rgba(255,90,31,0.08);color:#ff8c55;border:1px solid rgba(255,90,31,0.18);border-radius:8px;padding:10px;font-family:'DM Mono',monospace;font-size:0.75rem;cursor:pointer;transition:all 0.18s}
-    .btn-setup:hover{background:rgba(255,90,31,0.18);color:#ff5a1f}
-
-    /* Empty state */
-    .empty-state{text-align:center;padding:60px 20px;border:1px dashed rgba(255,255,255,0.07);border-radius:14px}
-    .empty-icon{font-size:3rem;margin-bottom:16px}
-    .empty-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:400;margin-bottom:10px}
-    .empty-desc{font-size:0.78rem;color:#555;margin-bottom:28px;line-height:1.8;max-width:340px;margin-left:auto;margin-right:auto}
-
-    /* Toast */
-    #toast{position:fixed;bottom:24px;right:24px;background:#1c2128;border:1px solid rgba(255,90,31,0.3);color:#fff;padding:10px 18px;border-radius:7px;font-size:0.78rem;z-index:9999;display:none;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
-    #toast.show{display:flex}
-
-    /* ===== WIZARD ===== */
-    .wizard-inner{max-width:540px}
-    .wizard-back{margin-bottom:28px}
     .progress{display:flex;gap:8px;margin-bottom:40px}
     .pd{height:3px;flex:1;background:#1e1e1e;border-radius:2px;transition:background 0.4s}
     .pd.active{background:#ff5a1f}
     .pd.done{background:#3a2018}
-    .step{display:none;animation:fadeUp 0.35s ease}
+
+    /* Steps */
+    .step{display:none;animation:fadeUp 0.3s ease}
     .step.active{display:block}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-    .step-tag{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:12px}
-    .step-title{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:400;line-height:1.2;margin-bottom:8px;color:#f0ece0}
+    .step-tag{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:12px}
+    .step-title{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:400;line-height:1.2;margin-bottom:8px}
     .step-sub{font-size:0.78rem;color:#888;margin-bottom:28px;line-height:1.7}
-    .field-label{font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:#666;margin-bottom:8px;display:block}
+
+    /* Fields */
+    .field-label{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#666;margin-bottom:8px;display:block}
     .field-input{width:100%;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;color:#f0ece0;font-family:'DM Mono',monospace;font-size:0.88rem;outline:none;transition:border 0.2s;margin-bottom:14px}
     .field-input:focus{border-color:#ff5a1f}
     .field-input::placeholder{color:#333}
-    .wbtn{width:100%;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:0.83rem;font-weight:500;letter-spacing:0.07em;cursor:pointer;transition:all 0.18s;margin-top:8px}
+
+    /* Stamp goal picker */
+    .stamps-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+    .stamp-opt{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 18px;cursor:pointer;font-size:0.85rem;color:#666;transition:all 0.18s}
+    .stamp-opt:hover{border-color:#ff5a1f;color:#f0ece0}
+    .stamp-opt.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.08);color:#ff5a1f}
+
+    /* Page picker */
+    .page-list{display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
+    .page-opt{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:12px}
+    .page-opt:hover{border-color:#ff5a1f}
+    .page-opt.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
+    .page-opt-logo{width:36px;height:36px;border-radius:7px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1rem;color:#fff;flex-shrink:0}
+    .page-opt-name{font-size:0.85rem;color:#f0ece0;margin-bottom:2px}
+    .page-opt-slug{font-size:0.66rem;color:#555}
+
+    /* Preview card */
+    .card-preview{border-radius:12px;padding:20px;margin-bottom:18px;background:#111;border:1px solid #ff5a1f}
+    .card-biz{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:3px}
+    .card-reward-label{font-size:0.72rem;color:#888;margin-bottom:16px}
+    .stamps-display{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .stamp-circle{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.68rem}
+    .stamp-circle.filled{background:rgba(255,90,31,0.8);border-color:#ff5a1f;color:#fff}
+    .card-footer-row{display:flex;justify-content:space-between;align-items:flex-end}
+    .card-footer-label{font-size:0.66rem;color:#555}
+    .card-tag{font-size:0.58rem;letter-spacing:0.12em;color:#333}
+
+    /* Summary list */
+    .summary{background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;margin-bottom:20px}
+    .summary-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .summary-row:last-child{border-bottom:none}
+    .summary-key{font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:#555}
+    .summary-val{font-size:0.82rem;color:#f0ece0}
+    .summary-val.accent{color:#ff5a1f}
+
+    /* Buttons */
+    .btn-row{display:flex;gap:10px;margin-top:4px}
+    .wbtn{border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;letter-spacing:0.06em;cursor:pointer;transition:all 0.18s}
+    .wbtn.full{width:100%}
+    .wbtn.flex1{flex:1}
     .wbtn.primary{background:#ff5a1f;color:#fff;border:none}
     .wbtn.primary:hover{background:#e04e18}
     .wbtn.primary:disabled{background:#1e1e1e;color:#444;cursor:not-allowed}
     .wbtn.secondary{background:transparent;color:#666;border:1px solid rgba(255,255,255,0.08)}
     .wbtn.secondary:hover{border-color:#ff5a1f;color:#f0ece0}
-    .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
-    .type-card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px;cursor:pointer;transition:all 0.18s;text-align:left}
-    .type-card:hover{border-color:#ff5a1f}
-    .type-card.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.08)}
-    .type-icon{font-size:1.3rem;margin-bottom:8px}
-    .type-name{font-size:0.84rem;font-weight:500;color:#f0ece0;margin-bottom:3px}
-    .type-desc{font-size:0.68rem;color:#555}
-    .stamps-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
-    .stamp-opt{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 16px;cursor:pointer;font-size:0.83rem;color:#666;transition:all 0.18s}
-    .stamp-opt:hover{border-color:#ff5a1f;color:#f0ece0}
-    .stamp-opt.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.08);color:#ff5a1f}
-    .nav-row{display:flex;gap:10px;margin-top:4px}
-    .nav-row .wbtn{margin:0}
-    .nav-row .wbtn.primary{flex:1}
-    .brand-box{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px;margin-bottom:18px}
-    .brand-header{display:flex;align-items:center;gap:14px;margin-bottom:14px}
-    .brand-logo-el{width:48px;height:48px;border-radius:8px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.2rem;color:#fff;flex-shrink:0}
-    .brand-name-el{font-size:0.95rem;color:#f0ece0;margin-bottom:2px}
-    .brand-url-el{font-size:0.72rem;color:#555}
-    .card-preview{border-radius:12px;padding:20px;margin-bottom:18px;background:#111;border:1px solid #ff5a1f}
-    .card-biz{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:3px}
-    .card-reward-label{font-size:0.72rem;color:#888;margin-bottom:16px}
-    .stamps-display{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-    .stamp-circle{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem}
-    .stamp-circle.filled{background:rgba(255,90,31,0.8);border-color:#ff5a1f;color:#fff}
-    .card-footer-row{display:flex;justify-content:space-between;align-items:flex-end}
-    .card-stamp-label{font-size:0.68rem;color:#555}
-    .card-tag{font-size:0.58rem;letter-spacing:0.12em;color:#333}
-    .profile-list{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:18px}
-    .profile-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
-    .profile-row:last-child{border-bottom:none}
-    .profile-key{font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:#555}
-    .profile-val{font-size:0.83rem;color:#f0ece0}
-    .profile-val.accent{color:#ff5a1f}
 
-    /* Page picker (step 0) */
-    .page-picker{display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
-    .page-opt{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:12px}
-    .page-opt:hover{border-color:#ff5a1f}
-    .page-opt.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
-    .page-opt-logo{width:34px;height:34px;border-radius:7px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.95rem;color:#fff;flex-shrink:0}
-    .page-opt-name{font-size:0.85rem;color:#f0ece0;margin-bottom:1px}
-    .page-opt-slug{font-size:0.66rem;color:#555}
+    /* Loading / states */
+    .scanning{text-align:center;padding:60px 0}
+    .dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff5a1f;margin:0 3px;animation:blink 1.2s ease infinite}
+    .dots span:nth-child(2){animation-delay:0.2s}
+    .dots span:nth-child(3){animation-delay:0.4s}
+    @keyframes blink{0%,80%,100%{opacity:0.15;transform:scale(0.7)}40%{opacity:1;transform:scale(1)}}
+    .scan-status{font-size:0.78rem;color:#555;margin-top:14px}
+    .error-msg{color:#ef4444;font-size:0.72rem;margin-top:8px;display:none}
   </style>
 </head>
 <body>
   <div id="main-content">
+    <div class="wizard-wrap">
 
-    <!-- Loading -->
-    <div id="loading-view" class="dash-wrap">
-      <div class="scanning">
-        <div class="dots"><span></span><span></span><span></span></div>
-        <div class="scan-status">Loading your loyalty programs&hellip;</div>
-      </div>
-    </div>
-
-    <!-- Dashboard -->
-    <div id="dashboard-view" class="dash-wrap" style="display:none">
-      <div class="page-header">
-        <div>
-          <div class="page-title-tag">Loyalty</div>
-          <div class="page-title">Your Programs</div>
+      <!-- Loading -->
+      <div id="view-loading">
+        <div class="scanning">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="scan-status">Loading your pages…</div>
         </div>
-        <button class="btn-primary" onclick="showWizard(null)">&plus; Add program</button>
       </div>
-      <div id="programs-grid" class="lp-grid"></div>
-    </div>
 
-    <!-- Wizard -->
-    <div id="wizard-view" class="dash-wrap" style="display:none">
-      <div class="wizard-inner">
-        <button class="btn-secondary wizard-back" onclick="showDashboard()">&larr; Back to programs</button>
+      <!-- All pages already configured -->
+      <div id="view-done" style="display:none;text-align:center;padding:40px 0">
+        <div style="font-size:2.5rem;margin-bottom:16px;">✅</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-bottom:10px;">All set up!</div>
+        <div style="font-size:0.78rem;color:#666;margin-bottom:28px;line-height:1.7">All your landing pages already have loyalty configured.</div>
+        <a href="dashboard.html" style="display:inline-flex;align-items:center;gap:7px;background:#ff5a1f;color:#fff;border:none;border-radius:8px;padding:13px 24px;font-family:'DM Mono',monospace;font-size:0.82rem;text-decoration:none;">← Back to dashboard</a>
+      </div>
+
+      <!-- Wizard -->
+      <div id="view-wizard" style="display:none">
+
+        <button onclick="location.href='dashboard.html'" style="background:transparent;border:none;color:#555;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;padding:0;margin-bottom:28px;display:inline-flex;align-items:center;gap:6px;">← Back to dashboard</button>
+
         <div class="progress">
           <div class="pd active" id="pd1"></div>
           <div class="pd" id="pd2"></div>
           <div class="pd" id="pd3"></div>
-          <div class="pd" id="pd4"></div>
-          <div class="pd" id="pd5"></div>
         </div>
 
-        <!-- s0: Pick page -->
-        <div class="step active" id="s0">
-          <div class="step-tag">Before we start</div>
-          <div class="step-title">Which landing page?</div>
-          <div class="step-sub">Select the QR landing page to enable loyalty for.</div>
-          <div class="page-picker" id="page-picker"></div>
-          <button class="wbtn primary" id="s0Next" onclick="goTo('s1')" disabled>Next &rarr;</button>
+        <!-- Step 1: Pick page -->
+        <div class="step active" id="s1">
+          <div class="step-tag">Step 1 of 3</div>
+          <div class="step-title">Which page?</div>
+          <div class="step-sub">Select the landing page to add loyalty to.</div>
+          <div class="page-list" id="page-list"></div>
+          <button class="wbtn primary full" id="s1next" onclick="goTo(2)" disabled>Next →</button>
         </div>
 
-        <!-- s1: Website -->
-        <div class="step" id="s1">
-          <div class="step-tag">Step 1 of 5 &mdash; Brand</div>
-          <div class="step-title">Your business website</div>
-          <div class="step-sub">Enter your URL and we'll extract your brand colours and business name. Or skip to enter manually.</div>
-          <label class="field-label">Website URL</label>
-          <input class="field-input" id="urlInput" type="url" placeholder="https://yourbusiness.com" />
-          <button class="wbtn primary" onclick="startScan()">&#10022; Scan my website</button>
-          <button class="wbtn secondary" onclick="skipToS2()">Skip &rarr; enter name manually</button>
-        </div>
-
-        <!-- s1b: Scanning -->
-        <div class="step" id="s1b">
-          <div class="scanning" style="padding:40px 0">
-            <div class="dots"><span></span><span></span><span></span></div>
-            <div class="scan-status" id="scanStatus">Scanning your website&hellip;</div>
-          </div>
-        </div>
-
-        <!-- s2: Business type -->
+        <!-- Step 2: Configure reward -->
         <div class="step" id="s2">
-          <div class="step-tag">Step 2 of 5</div>
-          <div class="step-title">Type of business?</div>
-          <div class="step-sub">This helps us design the right loyalty experience.</div>
-          <div class="type-grid">
-            <div class="type-card" onclick="selectType(this,'restaurant')"><div class="type-icon">🍽</div><div class="type-name">Restaurant / Café</div><div class="type-desc">Coffee shops, restaurants, bakeries</div></div>
-            <div class="type-card" onclick="selectType(this,'salon')"><div class="type-icon">✂️</div><div class="type-name">Salon / Spa</div><div class="type-desc">Hair, beauty, wellness</div></div>
-            <div class="type-card" onclick="selectType(this,'retail')"><div class="type-icon">🛍</div><div class="type-name">Retail Shop</div><div class="type-desc">Boutiques, clothing, gifts</div></div>
-            <div class="type-card" onclick="selectType(this,'gym')"><div class="type-icon">🏋️</div><div class="type-name">Gym / Studio</div><div class="type-desc">Fitness, yoga, martial arts</div></div>
-          </div>
-          <div class="nav-row">
-            <button class="wbtn secondary" onclick="goTo('s1')">&larr; Back</button>
-            <button class="wbtn primary" id="typeNext" onclick="goTo('s3')" disabled>Next &rarr;</button>
-          </div>
-        </div>
-
-        <!-- s3: Reward -->
-        <div class="step" id="s3">
-          <div class="step-tag">Step 3 of 5</div>
+          <div class="step-tag">Step 2 of 3</div>
           <div class="step-title">Set up your reward</div>
-          <div class="step-sub">What do customers collect, and what do they earn?</div>
+          <div class="step-sub">What do customers earn when they complete the card?</div>
           <label class="field-label">Reward (what they earn)</label>
-          <input class="field-input" id="rewardInput" placeholder="Free coffee, 20% off, free dessert&hellip;" />
-          <label class="field-label">Stamps to complete the card?</label>
+          <input class="field-input" id="reward-input" placeholder="Free coffee, 20% off, free dessert…" />
+          <label class="field-label">Stamps to complete the card</label>
           <div class="stamps-row">
-            <div class="stamp-opt" onclick="selectStamps(this,5)">5</div>
-            <div class="stamp-opt selected" onclick="selectStamps(this,8)">8</div>
-            <div class="stamp-opt" onclick="selectStamps(this,10)">10</div>
-            <div class="stamp-opt" onclick="selectStamps(this,12)">12</div>
-            <div class="stamp-opt" onclick="selectStamps(this,15)">15</div>
+            <div class="stamp-opt" onclick="pickStamps(this,5)">5</div>
+            <div class="stamp-opt" onclick="pickStamps(this,8)">8</div>
+            <div class="stamp-opt selected" onclick="pickStamps(this,10)">10</div>
+            <div class="stamp-opt" onclick="pickStamps(this,12)">12</div>
+            <div class="stamp-opt" onclick="pickStamps(this,15)">15</div>
           </div>
-          <label class="field-label">Each stamp represents</label>
-          <input class="field-input" id="stampLabel" placeholder="1 visit, 1 purchase, £10 spent&hellip;" />
-          <div class="nav-row">
-            <button class="wbtn secondary" onclick="goTo('s2')">&larr; Back</button>
-            <button class="wbtn primary" onclick="goTo('s4')">Next &rarr;</button>
+          <div class="btn-row">
+            <button class="wbtn secondary" onclick="goTo(1)">← Back</button>
+            <button class="wbtn primary flex1" onclick="goTo(3)">Preview →</button>
           </div>
         </div>
 
-        <!-- s4: Brand confirm -->
-        <div class="step" id="s4">
-          <div class="step-tag">Step 4 of 5</div>
-          <div class="step-title">Confirm your brand</div>
-          <div class="step-sub">Adjust anything before we build your card.</div>
-          <div class="brand-box">
-            <div class="brand-header">
-              <div class="brand-logo-el" id="brandLogo">B</div>
-              <div>
-                <div class="brand-name-el" id="brandName">Your Business</div>
-                <div class="brand-url-el" id="brandUrl">yourbusiness.com</div>
-              </div>
-            </div>
-          </div>
-          <label class="field-label">Business name</label>
-          <input class="field-input" id="bizNameInput" />
-          <div class="nav-row">
-            <button class="wbtn secondary" onclick="goTo('s3')">&larr; Back</button>
-            <button class="wbtn primary" onclick="buildCard()">Preview my card &rarr;</button>
-          </div>
-        </div>
-
-        <!-- s5: Preview + save -->
-        <div class="step" id="s5">
-          <div class="step-tag">Step 5 of 5</div>
-          <div class="step-title">Your loyalty card</div>
-          <div class="step-sub">Looking good. Save to activate loyalty for this page.</div>
+        <!-- Step 3: Preview and save -->
+        <div class="step" id="s3">
+          <div class="step-tag">Step 3 of 3</div>
+          <div class="step-title">Ready to activate</div>
+          <div class="step-sub">Here’s your loyalty card. Save to make it live.</div>
           <div class="card-preview">
-            <div class="card-biz" id="cardBiz">Your Business</div>
-            <div class="card-reward-label" id="cardReward">Collect 8 stamps &mdash; get a free item</div>
-            <div class="stamps-display" id="stampsDisplay"></div>
+            <div class="card-biz" id="prev-biz">&nbsp;</div>
+            <div class="card-reward-label" id="prev-reward">&nbsp;</div>
+            <div class="stamps-display" id="prev-stamps"></div>
             <div class="card-footer-row">
-              <div class="card-stamp-label" id="cardStampLabel">1 visit per stamp</div>
+              <div class="card-footer-label">Tap NFC to collect stamps</div>
               <div class="card-tag">LOYALTY</div>
             </div>
           </div>
-          <div class="profile-list">
-            <div class="profile-row"><span class="profile-key">Page</span><span class="profile-val" id="pSlug">&mdash;</span></div>
-            <div class="profile-row"><span class="profile-key">Business</span><span class="profile-val" id="pBiz">&mdash;</span></div>
-            <div class="profile-row"><span class="profile-key">Reward</span><span class="profile-val accent" id="pReward">&mdash;</span></div>
-            <div class="profile-row"><span class="profile-key">Stamps needed</span><span class="profile-val" id="pStamps">&mdash;</span></div>
+          <div class="summary">
+            <div class="summary-row"><span class="summary-key">Page</span><span class="summary-val" id="sum-slug">&mdash;</span></div>
+            <div class="summary-row"><span class="summary-key">Reward</span><span class="summary-val accent" id="sum-reward">&mdash;</span></div>
+            <div class="summary-row"><span class="summary-key">Stamps needed</span><span class="summary-val" id="sum-stamps">&mdash;</span></div>
           </div>
-          <button class="wbtn primary" id="finishBtn" onclick="finish()">&#10022; Save &amp; activate loyalty</button>
-          <div id="finish-error" style="color:#ef4444;font-size:0.72rem;margin-top:8px;display:none"></div>
-          <button class="wbtn secondary" onclick="goTo('s4')">&larr; Edit</button>
+          <button class="wbtn primary full" id="save-btn" onclick="saveProgram()">&#10022; Activate loyalty</button>
+          <div class="error-msg" id="save-error"></div>
+          <button class="wbtn secondary full" onclick="goTo(2)" style="margin-top:8px">← Edit</button>
         </div>
 
       </div>
     </div>
   </div>
 
-  <div id="toast"></div>
-
   <script data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript" onload="window.Clerk.load()"></script>
   <script src="sidebar.js?v=3"></script>
   <script>
     const API = 'https://api.qraivy.com';
-    let programs = [];
-    let wiz = { slug:'', url:'', type:'', stamps:8, reward:'', stampLabel:'', bizName:'' };
+    let wiz = { slug: '', bizName: '', reward: '', stamps: 10 };
 
-    // ── Auth ───────────────────────────────────────────────────────────
-    async function tok() {
+    async function getToken() {
       return (window.Clerk && window.Clerk.session) ? window.Clerk.session.getToken() : null;
     }
 
-    // ── Toast ──────────────────────────────────────────────────────────
-    function toast(msg, ok) {
-      const el = document.getElementById('toast');
-      el.textContent = (ok === false ? '✗ ' : '✓ ') + msg;
-      el.className = 'show';
-      clearTimeout(el._t);
-      el._t = setTimeout(() => el.className = '', 2600);
-    }
-
-    // ── Views ──────────────────────────────────────────────────────────
     function showView(id) {
-      ['loading-view','dashboard-view','wizard-view'].forEach(v =>
+      ['view-loading','view-done','view-wizard'].forEach(v =>
         document.getElementById(v).style.display = v === id ? '' : 'none');
     }
-    function showDashboard() { showView('dashboard-view'); }
 
-    // ── Load programs ──────────────────────────────────────────────────
-    async function loadPrograms() {
-      showView('loading-view');
+    // ── Load unconfigured pages ──────────────────────────────────────────────
+    async function init() {
+      showView('view-loading');
       try {
-        const t = await tok();
-        if (!t) { programs = []; renderDashboard(); showDashboard(); return; }
+        const t = await getToken();
+        if (!t) { showView('view-wizard'); goTo(1); return; }
         const res = await fetch(API + '/loyalty/programs', { headers: { Authorization: 'Bearer ' + t } });
         const data = await res.json();
-        programs = data.programs || [];
-      } catch(e) { programs = []; }
-      renderDashboard();
-      showDashboard();
-    }
-
-    // ── Render dashboard ───────────────────────────────────────────────
-    function renderDashboard() {
-      const grid = document.getElementById('programs-grid');
-      if (!programs.length) {
-        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' +
-          '<div class="empty-icon">🎟️</div>' +
-          '<div class="empty-title">No programs yet</div>' +
-          '<div class="empty-desc">Add loyalty to one of your landing pages to start collecting stamps and rewarding customers.</div>' +
-          '<button class="btn-primary" onclick="showWizard(null)">&plus; Set up loyalty</button></div>';
-        return;
-      }
-      grid.innerHTML = programs.map(p => cardHtml(p)).join('');
-    }
-
-    function esc(s) {
-      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function cardHtml(p) {
-      const init = (p.businessName||p.slug||'?')[0].toUpperCase();
-      const badgeCls = !p.hasLoyaltyConfig ? 'unconfigured' : p.status === 'active' ? 'active' : 'paused';
-      const badgeTxt = !p.hasLoyaltyConfig ? 'not set up' : p.status;
-      const pct = p.stampGoal ? Math.min(100, Math.round(p.currentStamps / p.stampGoal * 100)) : 0;
-
-      if (!p.hasLoyaltyConfig) {
-        return '<div class="lp-card unconfigured" id="card-' + p.id + '">' +
-          '<div class="lp-card-header"><div class="lp-logo">' + init + '</div>' +
-          '<div class="lp-card-meta"><div class="lp-card-name">' + esc(p.businessName||p.slug) + '</div>' +
-          '<div class="lp-card-slug">/' + esc(p.slug) + '</div></div>' +
-          '<span class="lp-badge ' + badgeCls + '">' + badgeTxt + '</span></div>' +
-          '<div style="font-size:.73rem;color:#555;line-height:1.7">Loyalty not configured for this page yet.</div>' +
-          '<button class="btn-setup" onclick="showWizard('' + esc(p.slug) + '')">&plus; Enable loyalty</button></div>';
-      }
-
-      const goalOpts = [5,8,10,12,15].map(n =>
-        '<option value="' + n + '"' + (n === p.stampGoal ? ' selected' : '') + '>' + n + ' stamps</option>').join('');
-
-      return '<div class="lp-card" id="card-' + p.id + '">' +
-        '<div class="lp-card-header">' +
-          '<div class="lp-logo">' + init + '</div>' +
-          '<div class="lp-card-meta">' +
-            '<div class="lp-card-name">' + esc(p.businessName||p.slug) + '</div>' +
-            '<div class="lp-card-slug">/' + esc(p.slug) + '</div>' +
-          '</div>' +
-          '<span class="lp-badge ' + badgeCls + '">' + badgeTxt + '</span>' +
-        '</div>' +
-        '<div>' +
-          '<div class="lp-progress-label">' +
-            '<span class="lp-progress-stamps">' + p.currentStamps + ' / ' + p.stampGoal + ' stamps</span>' +
-            '<span class="lp-progress-reward">' + esc(p.rewardText||'Free item') + '</span>' +
-          '</div>' +
-          '<div class="lp-bar"><div class="lp-bar-fill" style="width:' + pct + '%"></div></div>' +
-        '</div>' +
-        '<div class="lp-stats">' +
-          '<div class="lp-stat"><div class="lp-stat-val">' + p.totalStampsIssued + '</div><div class="lp-stat-key">stamped</div></div>' +
-          '<div class="lp-stat"><div class="lp-stat-val">' + p.rewardsRedeemed + '</div><div class="lp-stat-key">redeemed</div></div>' +
-          '<div class="lp-stat"><div class="lp-stat-val">' + p.customerCount + '</div><div class="lp-stat-key">customers</div></div>' +
-        '</div>' +
-        '<div class="lp-actions">' +
-          '<button class="btn-copy" id="copy-' + p.id + '" onclick="copyNfc('' + esc(p.nfcUrl) + '','' + p.id + '')">📋 Copy NFC URL</button>' +
-          '<a class="btn-card-link" href="https://api.qraivy.com/lp/' + esc(p.slug) + '" target="_blank">View ↗</a>' +
-          '<button class="btn-edit-toggle" onclick="toggleEdit('' + p.id + '')">&#9881;</button>' +
-        '</div>' +
-        '<div class="lp-edit-panel" id="edit-' + p.id + '" style="display:none">' +
-          '<div class="lp-edit-row">' +
-            '<input class="lp-edit-input" id="er-' + p.id + '" value="' + esc(p.rewardText||'') + '" placeholder="Reward name" />' +
-            '<select class="lp-edit-select" id="eg-' + p.id + '">' + goalOpts + '</select>' +
-          '</div>' +
-          '<div class="lp-edit-footer">' +
-            '<button class="btn-save" onclick="saveEdit('' + p.id + '')">Save</button>' +
-            '<button class="btn-pause-toggle" onclick="togglePause('' + p.id + '','' + p.status + '')">' +
-              (p.status === 'active' ? 'Pause' : 'Activate') + '</button>' +
-            '<span class="lp-saved-msg" id="saved-' + p.id + '">✓ Saved</span>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }
-
-    // ── Card actions ───────────────────────────────────────────────────
-    function copyNfc(url, id) {
-      navigator.clipboard.writeText(url).then(() => {
-        const b = document.getElementById('copy-' + id);
-        if (b) { b.textContent = '✓ Copied!'; b.classList.add('copied'); }
-        setTimeout(() => {
-          if (b) { b.textContent = '📋 Copy NFC URL'; b.classList.remove('copied'); }
-        }, 2000);
-      }).catch(() => toast('Could not copy to clipboard', false));
-    }
-
-    function toggleEdit(id) {
-      const p = document.getElementById('edit-' + id);
-      if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
-    }
-
-    async function saveEdit(id) {
-      const reward = (document.getElementById('er-' + id)||{}).value || '';
-      const goal = parseInt((document.getElementById('eg-' + id)||{}).value || 10);
-      try {
-        const t = await tok();
-        const res = await fetch(API + '/loyalty/programs/' + id, {
-          method: 'PUT',
-          headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rewardName: reward, goal })
-        });
-        if (!res.ok) throw new Error('Save failed');
-        const data = await res.json();
-        const idx = programs.findIndex(x => x.id === id);
-        if (idx >= 0) programs[idx] = data.program;
-        const card = document.getElementById('card-' + id);
-        if (card) card.outerHTML = cardHtml(data.program);
-        toast('Changes saved');
-      } catch(e) { toast('Failed to save', false); }
-    }
-
-    async function togglePause(id, cur) {
-      const newStatus = cur === 'active' ? 'paused' : 'active';
-      try {
-        const t = await tok();
-        const res = await fetch(API + '/loyalty/programs/' + id + '/status', {
-          method: 'PATCH',
-          headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        });
-        if (!res.ok) throw new Error('Update failed');
-        const data = await res.json();
-        const idx = programs.findIndex(x => x.id === id);
-        if (idx >= 0) programs[idx] = data.program;
-        const card = document.getElementById('card-' + id);
-        if (card) card.outerHTML = cardHtml(data.program);
-        toast('Program ' + newStatus);
-      } catch(e) { toast('Status update failed', false); }
-    }
-
-    // ── Wizard ─────────────────────────────────────────────────────────
-    function showWizard(preSlug) {
-      wiz = { slug:'', url:'', type:'', stamps:8, reward:'', stampLabel:'', bizName:'' };
-      document.querySelectorAll('.stamp-opt').forEach(s => s.classList.remove('selected'));
-      const def = document.querySelector('.stamp-opt[onclick*="selectStamps(this,8)"]');
-      if (def) def.classList.add('selected');
-      const typeNext = document.getElementById('typeNext');
-      if (typeNext) typeNext.disabled = true;
-
-      if (preSlug) {
-        wiz.slug = preSlug;
-        const p = programs.find(x => x.slug === preSlug);
-        if (p) {
-          wiz.bizName = p.businessName || p.slug;
-          const bi = document.getElementById('bizNameInput');
-          if (bi) bi.value = wiz.bizName;
-          const bl = document.getElementById('brandLogo');
-          if (bl) bl.textContent = wiz.bizName[0].toUpperCase();
-          const bn = document.getElementById('brandName');
-          if (bn) bn.textContent = wiz.bizName;
-          const bu = document.getElementById('brandUrl');
-          if (bu) bu.textContent = p.slug;
+        const programs = data.programs || [];
+        const unconfigured = programs.filter(p => !p.hasLoyaltyConfig);
+        if (!unconfigured.length && programs.length) {
+          showView('view-done'); return;
         }
-        showView('wizard-view');
-        goTo('s2');
-        return;
-      }
-
-      const unconfigured = programs.filter(p => !p.hasLoyaltyConfig);
-      const picker = document.getElementById('page-picker');
-      const s0Next = document.getElementById('s0Next');
-      if (!unconfigured.length) {
-        picker.innerHTML = '<div style="font-size:.76rem;color:#555;padding:14px 0;text-align:center">All your pages already have loyalty configured ✓</div>';
-        if (s0Next) s0Next.disabled = true;
-      } else {
-        picker.innerHTML = unconfigured.map(p =>
-          '<div class="page-opt" onclick="selectPage(this,'' + esc(p.slug) + '','' + esc(p.businessName||p.slug) + '')" data-slug="' + esc(p.slug) + '">' +
-          '<div class="page-opt-logo">' + (p.businessName||p.slug)[0].toUpperCase() + '</div>' +
-          '<div><div class="page-opt-name">' + esc(p.businessName||p.slug) + '</div>' +
-          '<div class="page-opt-slug">/' + esc(p.slug) + '</div></div></div>'
+        const list = document.getElementById('page-list');
+        list.innerHTML = unconfigured.map(p =>
+          '<div class="page-opt" onclick="pickPage(this,'' + esc(p.slug) + '','' + esc(p.businessName||p.slug) + '')">' +
+            '<div class="page-opt-logo">' + (p.businessName||p.slug)[0].toUpperCase() + '</div>' +
+            '<div>' +
+              '<div class="page-opt-name">' + esc(p.businessName||p.slug) + '</div>' +
+              '<div class="page-opt-slug">/' + esc(p.slug) + '</div>' +
+            '</div>' +
+          '</div>'
         ).join('');
-        if (s0Next) s0Next.disabled = true;
+        showView('view-wizard');
+        goTo(1);
+      } catch(e) {
+        showView('view-wizard'); goTo(1);
       }
-
-      showView('wizard-view');
-      goTo('s0');
     }
 
-    function selectPage(el, slug, name) {
+    // ── Wizard navigation ────────────────────────────────────────────────────
+    function goTo(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      const s = document.getElementById('s' + n);
+      if (s) s.classList.add('active');
+      for (let i = 1; i <= 3; i++) {
+        const d = document.getElementById('pd' + i);
+        if (d) d.className = 'pd' + (i === n ? ' active' : i < n ? ' done' : '');
+      }
+      if (n === 3) buildPreview();
+    }
+
+    // ── Step 1: page selection ───────────────────────────────────────────────
+    function pickPage(el, slug, name) {
       document.querySelectorAll('.page-opt').forEach(o => o.classList.remove('selected'));
       el.classList.add('selected');
       wiz.slug = slug;
       wiz.bizName = name;
-      const bi = document.getElementById('bizNameInput');
-      if (bi) bi.value = name;
-      const bl = document.getElementById('brandLogo');
-      if (bl) bl.textContent = name[0].toUpperCase();
-      const bn = document.getElementById('brandName');
-      if (bn) bn.textContent = name;
-      const bu = document.getElementById('brandUrl');
-      if (bu) bu.textContent = slug;
-      const s0Next = document.getElementById('s0Next');
-      if (s0Next) s0Next.disabled = false;
+      document.getElementById('s1next').disabled = false;
     }
 
-    function goTo(id) {
-      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-      const el = document.getElementById(id);
-      if (el) el.classList.add('active');
-      const map = {s0:0,s1:1,s1b:1,s2:2,s3:3,s4:4,s5:5};
-      const n = (map[id] != null) ? map[id] : 1;
-      for (let i = 1; i <= 5; i++) {
-        const d = document.getElementById('pd' + i);
-        if (d) d.className = 'pd' + (i === n ? ' active' : i < n ? ' done' : '');
-      }
-    }
-
-    function startScan() {
-      const url = (document.getElementById('urlInput')||{}).value || '';
-      if (!url.trim()) return;
-      wiz.url = url.trim();
-      const domain = url.replace(/https?:\/\//, '').split('/')[0];
-      if (!wiz.bizName) wiz.bizName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
-      goTo('s1b');
-      const msgs = ['Scanning your website…','Extracting brand colours…','Finding your logo…','Analysing your brand…','Almost done…'];
-      let i = 0;
-      const iv = setInterval(() => { const s = document.getElementById('scanStatus'); if (s) s.textContent = msgs[i++ % msgs.length]; }, 800);
-      setTimeout(() => {
-        clearInterval(iv);
-        const bl = document.getElementById('brandLogo'); if (bl) bl.textContent = wiz.bizName[0].toUpperCase();
-        const bn = document.getElementById('brandName'); if (bn) bn.textContent = wiz.bizName;
-        const bu = document.getElementById('brandUrl'); if (bu) bu.textContent = domain;
-        const bi = document.getElementById('bizNameInput'); if (bi) bi.value = wiz.bizName;
-        goTo('s2');
-      }, 3000);
-    }
-
-    function skipToS2() {
-      if (!wiz.bizName) wiz.bizName = wiz.slug || 'My Business';
-      const bi = document.getElementById('bizNameInput'); if (bi) bi.value = wiz.bizName;
-      const bl = document.getElementById('brandLogo'); if (bl) bl.textContent = wiz.bizName[0].toUpperCase();
-      const bn = document.getElementById('brandName'); if (bn) bn.textContent = wiz.bizName;
-      goTo('s2');
-    }
-
-    function selectType(el, type) {
-      document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      wiz.type = type;
-      const tn = document.getElementById('typeNext'); if (tn) tn.disabled = false;
-    }
-
-    function selectStamps(el, n) {
+    // ── Step 2: stamp count ──────────────────────────────────────────────────
+    function pickStamps(el, n) {
       document.querySelectorAll('.stamp-opt').forEach(s => s.classList.remove('selected'));
       el.classList.add('selected');
       wiz.stamps = n;
     }
 
-    function buildCard() {
-      const bi = document.getElementById('bizNameInput'); wiz.bizName = (bi && bi.value) || wiz.bizName;
-      const ri = document.getElementById('rewardInput'); wiz.reward = (ri && ri.value) || 'Free item';
-      const sl = document.getElementById('stampLabel'); wiz.stampLabel = (sl && sl.value) || '1 visit';
-      const cb = document.getElementById('cardBiz'); if (cb) cb.textContent = wiz.bizName;
-      const cr = document.getElementById('cardReward'); if (cr) cr.textContent = 'Collect ' + wiz.stamps + ' stamps — get a ' + wiz.reward;
-      const cs = document.getElementById('cardStampLabel'); if (cs) cs.textContent = wiz.stampLabel + ' per stamp';
-      const sd = document.getElementById('stampsDisplay');
-      if (sd) {
-        sd.innerHTML = '';
-        for (let i = 0; i < wiz.stamps; i++) {
-          const c = document.createElement('div');
-          c.className = 'stamp-circle' + (i < 3 ? ' filled' : '');
-          c.textContent = i < 3 ? '✓' : '';
-          sd.appendChild(c);
-        }
+    // ── Step 3: preview ──────────────────────────────────────────────────────
+    function buildPreview() {
+      wiz.reward = (document.getElementById('reward-input').value || '').trim() || 'Free item';
+      document.getElementById('prev-biz').textContent = wiz.bizName;
+      document.getElementById('prev-reward').textContent = 'Collect ' + wiz.stamps + ' stamps — get a ' + wiz.reward;
+      const sd = document.getElementById('prev-stamps');
+      sd.innerHTML = '';
+      for (let i = 0; i < wiz.stamps; i++) {
+        const c = document.createElement('div');
+        c.className = 'stamp-circle' + (i < 3 ? ' filled' : '');
+        c.textContent = i < 3 ? '✓' : '';
+        sd.appendChild(c);
       }
-      const ps = document.getElementById('pSlug'); if (ps) ps.textContent = wiz.slug;
-      const pb = document.getElementById('pBiz'); if (pb) pb.textContent = wiz.bizName;
-      const pr = document.getElementById('pReward'); if (pr) pr.textContent = wiz.reward + ' after ' + wiz.stamps + ' stamps';
-      const pp = document.getElementById('pStamps'); if (pp) pp.textContent = wiz.stamps + ' (' + wiz.stampLabel + ')';
-      goTo('s5');
+      document.getElementById('sum-slug').textContent = wiz.slug;
+      document.getElementById('sum-reward').textContent = wiz.reward;
+      document.getElementById('sum-stamps').textContent = wiz.stamps;
     }
 
-    async function finish() {
-      const btn = document.getElementById('finishBtn');
-      const err = document.getElementById('finish-error');
-      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-      if (err) err.style.display = 'none';
+    // ── Save ─────────────────────────────────────────────────────────────────
+    async function saveProgram() {
+      const btn = document.getElementById('save-btn');
+      const err = document.getElementById('save-error');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      err.style.display = 'none';
       try {
-        const t = await tok();
+        const t = await getToken();
         if (!t) throw new Error('Not logged in');
         const res = await fetch(API + '/loyalty/programs', {
           method: 'POST',
@@ -661,19 +287,23 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Save failed');
-        toast('Loyalty activated for ' + wiz.slug + '!');
-        await loadPrograms();
+        window.location.href = 'dashboard.html';
       } catch(e) {
-        if (err) { err.textContent = e.message || 'Failed to save. Try again.'; err.style.display = 'block'; }
-        if (btn) { btn.disabled = false; btn.textContent = '✶ Save & activate loyalty'; }
+        err.textContent = e.message || 'Failed to save. Try again.';
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = '✶ Activate loyalty';
       }
     }
 
-    // ── Init ────────────────────────────────────────────────────────────
+    function esc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
     function waitForClerk(n) {
-      if (window.Clerk && window.Clerk.session) loadPrograms();
+      if (window.Clerk && window.Clerk.session) init();
       else if (n > 0) setTimeout(() => waitForClerk(n - 1), 200);
-      else { programs = []; renderDashboard(); showDashboard(); }
+      else { showView('view-wizard'); goTo(1); }
     }
     window.addEventListener('load', () => waitForClerk(25));
   </script>
