@@ -1,3 +1,24 @@
+// SW_LIFECYCLE_PATCH - install, activate, fetch handlers for iOS PWA reliability
+self.addEventListener('install', function(e) {
+  // New SW takes over immediately instead of waiting for all tabs to close
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(e) {
+  // Take control of any pages that loaded before the SW activated
+  e.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', function(e) {
+  // Network-first pass-through. The handler exists so iOS recognises the SW
+  // as a navigation controller; we don't actually cache anything.
+  e.respondWith(
+    fetch(e.request).catch(function() {
+      return new Response('', { status: 503, statusText: 'Offline' });
+    })
+  );
+});
+
 self.addEventListener('push', function(e) {
   var data = {};
   try { data = e.data.json(); } catch(err) { data = { title: 'New message', body: e.data ? e.data.text() : '' }; }
