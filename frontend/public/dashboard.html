@@ -580,11 +580,12 @@ async function initDashboard(){
 </script>
 
 
-<!-- LOYALTY_DASH_V3: added card preview -->
+
+<!-- LOYALTY_DASH_V4: color picker + fixed card link -->
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
     <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;">🎟 Loyalty Programs</div>
-    <a href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;transition:all .18s;">+ Add program</a>
+    <a href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;">+ Add program</a>
   </div>
   <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;">Anonymous stamp tracking — GDPR compliant</div>
   <div id="ly-pages-list" style="display:grid;gap:16px;max-width:720px;"></div>
@@ -623,33 +624,64 @@ function _doLoadLoyalty(headers) {
     });
 }
 
-// Visual card preview — shows the loyalty card as the customer sees it
-function _lyCardPreview(p) {
+// Convert hex color to rgba string
+function _lyRgba(hex, alpha) {
+  hex = (hex || "#ff5a1f").replace("#", "");
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r = parseInt(hex.substring(0,2), 16);
+  var g = parseInt(hex.substring(2,4), 16);
+  var b = parseInt(hex.substring(4,6), 16);
+  if (isNaN(r)||isNaN(g)||isNaN(b)) { r=255; g=90; b=31; }
+  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+}
+
+// Visual card preview — mirrors the customer loyalty card
+function _lyCardPreview(p, color) {
+  color = color || p.color || "#ff5a1f";
   var goal = p.stampGoal || 10;
   var circles = "";
   for (var i = 0; i < goal; i++) {
     if (i < p.currentStamps) {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;background:rgba(255,90,31,0.8);border:1.5px solid #ff5a1f;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;'>✓</div>";
+      circles += "<div style='width:26px;height:26px;border-radius:50%;background:" + _lyRgba(color,0.85) + ";border:1.5px solid " + color + ";display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;'>✓</div>";
     } else {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.12);'></div>";
+      circles += "<div style='width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);'></div>";
     }
   }
-  return "<div style='background:linear-gradient(135deg,#1c1c1c,#111);border:1px solid rgba(255,90,31,0.22);border-radius:14px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;'>" +
-    "<div style='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ff5a1f,transparent);'></div>" +
+  return "<div id='ly-preview-" + p.id + "' style='background:linear-gradient(135deg,#1c1c1c,#111);border:1px solid " + _lyRgba(color,0.3) + ";border-radius:14px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;'>" +
+    "<div style='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg," + color + ",transparent);'></div>" +
     "<div style='font-size:.95rem;font-weight:600;color:#f0ece0;margin-bottom:3px;'>" + _lyEsc(p.businessName || p.slug) + "</div>" +
     "<div style='font-size:.65rem;color:rgba(240,244,248,0.35);margin-bottom:14px;'>Collect " + goal + " stamps — get a " + _lyEsc(p.rewardText || "Free item") + "</div>" +
     "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
     "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
       "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
-      "<a href='https://api.qraivy.com/lp/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:#ff5a1f;text-decoration:none;letter-spacing:.03em;'>View card ↗</a>" +
+      "<a href='https://api.qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>View card ↗</a>" +
     "</div>" +
   "</div>";
 }
 
+// Re-render only the card preview with a new color (called from color picker)
+window.updateCardColor = function(input) {
+  var id = input.dataset.id;
+  var color = input.value;
+  var p = window._lyPrograms && window._lyPrograms[id];
+  if (!p) return;
+  var preview = document.getElementById("ly-preview-" + id);
+  if (preview) {
+    var tmp = document.createElement("div");
+    tmp.innerHTML = _lyCardPreview(p, color);
+    preview.replaceWith(tmp.firstChild);
+  }
+};
+
 function _lyBuildCard(p) {
+  // Store program data for live color preview
+  if (!window._lyPrograms) window._lyPrograms = {};
+  window._lyPrograms[p.id] = p;
+
   var el = document.createElement("div");
   el.id = "ly-card-" + p.id;
   var pct = p.stampGoal ? Math.min(100, Math.round(p.currentStamps / p.stampGoal * 100)) : 0;
+  var color = p.color || "#ff5a1f";
   var badgeStyle, badgeTxt;
   if (!p.hasLoyaltyConfig) {
     badgeStyle = "background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);";
@@ -667,7 +699,7 @@ function _lyBuildCard(p) {
   }).join("");
 
   var h = "";
-  // Header: business name + status badge
+  // Header
   h += "<div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;\">";
   h +=   "<div>";
   h +=     "<div style=\"font-size:1rem;font-weight:700;color:#f0f4f8;\">" + _lyEsc(p.businessName || p.slug) + "</div>";
@@ -679,17 +711,17 @@ function _lyBuildCard(p) {
   h += "</div>";
 
   if (p.hasLoyaltyConfig) {
-    // Visual card preview
-    h += _lyCardPreview(p);
+    // Visual card preview (uses program color)
+    h += _lyCardPreview(p, color);
     // Stats
     h += "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;\">";
-    h += _lyStat("Current", p.currentStamps, "#ff5a1f");
+    h += _lyStat("Current", p.currentStamps, color);
     h += _lyStat("All-time", p.totalStampsIssued, "#f0f4f8");
     h += _lyStat("Redeemed", p.rewardsRedeemed, "#f0f4f8");
     h += "</div>";
     // Progress bar
     h += "<div style=\"height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;\">";
-    h += "<div style=\"height:100%;background:#ff5a1f;border-radius:999px;width:" + pct + "%;transition:width 0.5s;\"></div></div>";
+    h += "<div style=\"height:100%;background:" + color + ";border-radius:999px;width:" + pct + "%;transition:width 0.5s;\"></div></div>";
     // QR + NFC URL + actions
     h += "<div style=\"display:flex;gap:10px;align-items:center;\">";
     h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
@@ -712,6 +744,12 @@ function _lyBuildCard(p) {
     h +=   "<div style=\"display:flex;gap:8px;margin-bottom:10px;\">";
     h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
     h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
+    h +=   "</div>";
+    // Color picker row
+    h +=   "<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:12px;\">";
+    h +=     "<label style=\"font-size:.68rem;color:rgba(240,244,248,0.4);white-space:nowrap;\">Card colour</label>";
+    h +=     "<input type=\"color\" id=\"ly-ec-" + p.id + "\" value=\"" + color + "\" data-id=\"" + p.id + "\" oninput=\"window.updateCardColor(this)\" style=\"width:36px;height:28px;border:0.5px solid rgba(255,255,255,0.1);border-radius:6px;background:rgba(255,255,255,0.05);cursor:pointer;padding:2px;\" />";
+    h +=     "<div style=\"font-size:.62rem;color:rgba(240,244,248,0.25);\">Changes the stamp colour on the card preview and customer page</div>";
     h +=   "</div>";
     h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
     h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
@@ -760,14 +798,19 @@ window.saveLoyaltyEdit = function(btn) {
   var id = btn.dataset.id;
   var reward = (document.getElementById("ly-er-" + id) || {}).value || "";
   var goal = parseInt((document.getElementById("ly-eg-" + id) || {}).value || 10);
+  var colorEl = document.getElementById("ly-ec-" + id);
+  var color = colorEl ? colorEl.value : null;
   try {
     window.Clerk.session.getToken().then(function(t) {
+      var body = { rewardName: reward, goal: goal };
+      if (color) body.color = color;
       fetch("https://api.qraivy.com/loyalty/programs/" + id, {
         method: "PUT",
         headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-        body: JSON.stringify({ rewardName: reward, goal: goal })
+        body: JSON.stringify(body)
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d.program) {
+          if (window._lyPrograms) window._lyPrograms[id] = d.program;
           var saved = document.getElementById("ly-saved-" + id);
           if (saved) { saved.style.display = "inline"; setTimeout(function() { saved.style.display = "none"; }, 2000); }
           var card = document.getElementById("ly-card-" + id);
