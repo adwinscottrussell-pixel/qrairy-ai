@@ -50,6 +50,7 @@ async function buildProgram(landingPage) {
     totalStampsIssued: stampCount,
     rewardsEarned,
     rewardsRedeemed,
+    color: settings ? (settings.color || '#ff5a1f') : '#ff5a1f', // LOYALTY_COLOR_PATCH
     stampUrl,
     nfcUrl: stampUrl,
     createdAt: landingPage.createdAt,
@@ -99,7 +100,7 @@ async function getProgram(req, res) {
 async function createProgram(req, res) {
   try {
     const userId = req.userId;
-    const { slug, goal, rewardName, enabled } = req.body || {};
+    const { slug, goal, rewardName, enabled, color } = req.body || {};
     if (!slug) return res.status(400).json({ error: 'slug is required' });
 
     const lp = await prisma.landingPage.findUnique({ where: { slug } });
@@ -112,12 +113,14 @@ async function createProgram(req, res) {
         slug,
         goal: typeof goal === 'number' ? goal : 10,
         rewardName: typeof rewardName === 'string' ? rewardName : 'Free item',
-        enabled: enabled !== false
+        enabled: enabled !== false,
+        ...(typeof color === 'string' && color && { color })
       },
       update: {
         ...(typeof goal === 'number' && { goal }),
         ...(typeof rewardName === 'string' && { rewardName }),
-        ...(typeof enabled === 'boolean' && { enabled })
+        ...(typeof enabled === 'boolean' && { enabled }),
+        ...(typeof color === 'string' && color && { color })
       }
     });
 
@@ -135,7 +138,7 @@ async function updateProgram(req, res) {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const { goal, rewardName, enabled, businessName } = req.body || {};
+    const { goal, rewardName, enabled, businessName, color } = req.body || {};
 
     const lp = await prisma.landingPage.findUnique({ where: { id } });
     if (!lp) return res.status(404).json({ error: 'Program not found' });
@@ -153,7 +156,8 @@ async function updateProgram(req, res) {
         update: {
           ...(typeof goal === 'number' && { goal }),
           ...(typeof rewardName === 'string' && { rewardName }),
-          ...(typeof enabled === 'boolean' && { enabled })
+          ...(typeof enabled === 'boolean' && { enabled }),
+          ...(typeof color === 'string' && color && { color })
         }
       });
     }

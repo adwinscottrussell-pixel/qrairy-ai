@@ -139,6 +139,7 @@ model StampSettings {
   goal        Int      @default(10)
   rewardName  String   @default("Free item")
   enabled     Boolean  @default(false)
+  color       String   @default("#ff5a1f")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 }
