@@ -744,7 +744,7 @@
       <button class="sqd-tab" data-tab="order"        style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">↕ Order</button>
       <button class="sqd-tab" data-tab="footer"       style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">Footer</button>
       <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⚙️ Settings</button>
-      <button class="sqd-tab" data-tab="loyalty"    style="padding:5px 10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff8c5a;font-size:.62rem;cursor:pointer;white-space:nowrap;">🎟 Loyalty</button>
+      <button class="sqd-tab" data-tab="loyalty" style="display:none" data-removed="LOYALTY_TAB_REMOVED"    style="padding:5px 10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff8c5a;font-size:.62rem;cursor:pointer;white-space:nowrap;">🎟 Loyalty</button>
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -1227,7 +1227,7 @@
         </div>
       </div>
 
-      <div class="sqd-tab-panel" data-panel="loyalty" style="display:none;padding:0 4px;">
+      <div class="sqd-tab-panel" data-panel="loyalty" style="display:none !important;padding:0 4px;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🎟 Loyalty stamp card</div>
         <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:10px;">Customers tap NFC or scan QR to collect stamps on their wallet pass.</div>
         <div id="loyalty-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
