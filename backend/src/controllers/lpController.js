@@ -1369,7 +1369,8 @@ async function handleGenerateAppleWalletPass(req, res) {
     const pkpassBuffer = await generateSmartQRPass(slug, sections);
 
     // Ensure Pass record exists in DB for device registration
-    const serialNumber = 'sqr-' + slug;
+    const _cid = req.query.cid || null; // STEP3_PERCUSTOMER
+    const serialNumber = _cid ? 'sqr-' + slug + '-' + _cid : 'sqr-' + slug;
     const crypto = require('crypto');
     const authToken = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
     await _prisma.pass.upsert({
@@ -1377,7 +1378,15 @@ async function handleGenerateAppleWalletPass(req, res) {
       update: { updatedAt: new Date() },
       create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken }
     });
-
+    if (_cid) { // STEP3_PERCUSTOMER: mark customer as wallet holder
+      try {
+        await _prisma.loyaltyCustomer.upsert({
+          where: { slug_customerId: { slug, customerId: _cid } },
+          create: { slug, customerId: _cid, hasWallet: true },
+          update: { hasWallet: true }
+        });
+      } catch(_we) { console.error('[Wallet] LoyaltyCustomer upsert error:', _we.message); }
+    }
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
       'Content-Disposition': `attachment; filename="qraivy-${slug}.pkpass"`,
@@ -1449,8 +1458,17 @@ async function handleStamp(req, res) {
     }
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
-    if (!pass) {
-      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>No card</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">🎫</div><h2>Get your loyalty card first</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">Add the wallet pass to start collecting stamps.</p><a href="/lp/${slug}" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#ff5a1f;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">Get my card →</a></div></body></html>`);
+        if (!pass) { // STEP3_AUTOCREATE: create shared pass so all customers can stamp
+      const _cr = require('crypto');
+      const _at = _cr.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0, 32);
+      try {
+        pass = await prisma.pass.create({
+          data: { serialNumber: serial, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken: _at, stampCount: 0 }
+        });
+      } catch(_ce) {
+        pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+        if (!pass) return res.status(500).send('Pass creation error');
+      }
     }
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const recentStamp = await prisma.stampEntry.findFirst({
@@ -1500,7 +1518,8 @@ async function handleStamp(req, res) {
     } catch(e) { console.error('[Stamp] WebPush error:', e.message); }
     const dots = Array.from({length: goal}, (_, i) => '<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:' + (i < newCount ? (rewardReady ? '#22c55e' : '#ff5a1f') : 'rgba(255,255,255,0.15)') + ';margin:3px"></span>').join('');
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamped!</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.dots{margin:20px 0;line-height:2}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap"><div class="emoji">' + (rewardReady ? "🎉" : "✅") + '</div><h1>' + (rewardReady ? "Reward ready!" : "Stamp added!") + '</h1><p>' + (rewardReady ? "Show your pass to claim your " + rewardName : newCount + " of " + goal + " stamps collected") + '</p><div class="dots">' + dots + '</div>' + (rewardReady ? '<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>' : '<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">' + (goal - newCount) + ' more stamp' + (goal - newCount !== 1 ? "s" : "") + " until your " + rewardName + "</p>") + '<a href="/lp/' + slug + '" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a></div><script>var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}' + (rewardReady ? 'var BC=["#fbbf24","#fcd34d","#fff","#22c55e","#ef4444","#3b82f6","#ec4899"];for(var b=0;b<160;b++){var p=document.createElement("div");p.className="burst-piece";var a=(b/160)*Math.PI*2;var d=120+Math.random()*320;var ex=Math.cos(a)*d;var ey=Math.sin(a)*d-80;var sz=4+Math.random()*8;p.style.cssText="position:fixed;left:50%;top:50%;width:"+sz+"px;height:"+sz+"px;background:"+BC[Math.floor(Math.random()*BC.length)]+";border-radius:"+(Math.random()>0.5?"50%":"2px")+";z-index:10;pointer-events:none;transform:translate(-50%,-50%);transition:transform 1.4s cubic-bezier(0.15,0.7,0.3,1),opacity 1.6s ease-out;opacity:1;box-shadow:0 0 8px rgba(255,200,50,0.4);";document.body.appendChild(p);(function(el,dx,dy){setTimeout(function(){el.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px)) rotate("+(Math.random()*720)+"deg)";el.style.opacity="0";},10);})(p,ex,ey);}setTimeout(function(){document.querySelectorAll(".burst-piece").forEach(function(el){el.remove();});},2500);' : '') + 'setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);</script></body></html>';
-    return res.status(200).send(html);
+    const _custHtml = '<script>(function(){try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}var s=location.pathname.split("/")[2];fetch("/stamp/"+s+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:c})}).catch(function(){});}catch(e){}})();</script>'; // STEP3_CUSTOMER_STAMP
+    return res.status(200).send(html.replace('</body>', _custHtml + '</body>'));
   } catch(e) {
     console.error('[Stamp] Error:', e.message);
     return res.status(500).send('Error processing stamp');
@@ -1576,7 +1595,7 @@ async function handleLoyaltyWelcome(req, res) {
     const initial = (bizName[0] || '?').toUpperCase();
     function lyE(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     const vars = { SLUG: slug, BIZ: lyE(bizName), GOAL: goal, REWARD: lyE(rewardName), COLOR: lyE(color), INITIAL: lyE(initial) };
-    const T = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - {BIZ}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:{COLOR};border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.68);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:transparent;color:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.25);border-radius:14px;font-size:.84rem;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card"><div class="logo">{INITIAL}</div><div class="biz">{BIZ}</div><div class="badge">&#127873; Loyalty Rewards</div><div class="reward">Collect {GOAL} stamps &#8212; get {REWARD}</div><div class="explain">No app required. Add your loyalty card to your wallet and collect rewards automatically.</div><button class="btn btn-apple" onclick="addAppleWallet()">&#127822; Add to Apple Wallet</button><button class="btn btn-google" onclick="addGoogleWallet()"><b>G</b>&nbsp;Add to Google Wallet</button><button class="btn-skip" onclick="continueWithout()">Continue without wallet</button></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div></div><script>(function(){var s="{SLUG}";try{if(!localStorage.getItem("cTok")){localStorage.setItem("cTok",Date.now()+""+Math.random().toString(36).slice(2));}}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function addAppleWallet(){mE();window.location.href="/lp/wallet/apple/"+s;}function addGoogleWallet(){mE();window.location.href="/lp/"+s;}function continueWithout(){mE();window.location.href="/lp/"+s;}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;})();</script></body></html>';
+    const T = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - {BIZ}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:{COLOR};border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.68);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:transparent;color:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.25);border-radius:14px;font-size:.84rem;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card"><div class="logo">{INITIAL}</div><div class="biz">{BIZ}</div><div class="badge">&#127873; Loyalty Rewards</div><div class="reward">Collect {GOAL} stamps &#8212; get {REWARD}</div><div class="explain">No app required. Add your loyalty card to your wallet and collect rewards automatically.</div><button class="btn btn-apple" onclick="addAppleWallet()">&#127822; Add to Apple Wallet</button><button class="btn btn-google" onclick="addGoogleWallet()"><b>G</b>&nbsp;Add to Google Wallet</button><button class="btn-skip" onclick="continueWithout()">Continue without wallet</button></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div></div><script>(function(){var s="{SLUG}";try{if(!localStorage.getItem("cTok")){localStorage.setItem("cTok",Date.now()+""+Math.random().toString(36).slice(2));}}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function addAppleWallet(){mE();var c=localStorage.getItem("cTok");window.location.href="/lp/wallet/apple/"+s+(c?"?cid="+encodeURIComponent(c):"");} // STEP3_WALLET_CTOKfunction addGoogleWallet(){mE();window.location.href="/lp/"+s;}function continueWithout(){mE();window.location.href="/lp/"+s;}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;})();</script></body></html>';
     const html = T.replace(/\{(\w+)\}/g, function(m, k) { return vars[k] != null ? String(vars[k]) : ''; });
     return res.send(html);
   } catch(e) {
@@ -1585,9 +1604,45 @@ async function handleLoyaltyWelcome(req, res) {
   }
 }
 
+// POST /stamp/:slug/customer — per-customer stamp recording // STEP3_CUSTOMER_STAMP_FN
+async function handleCustomerStamp(req, res) {
+  try {
+    const { slug } = req.params;
+    const cid = (req.body && req.body.cid) ? String(req.body.cid).slice(0, 64) : null;
+    if (!cid) return res.json({ ok: false, error: 'No customer ID' });
+    const settings = await prisma.stampSettings.findUnique({ where: { slug } });
+    if (!settings || !settings.enabled) return res.json({ ok: false, error: 'Loyalty not active' });
+    const goal = settings.goal || 10;
+    let lc = null;
+    try { lc = await prisma.loyaltyCustomer.findUnique({ where: { slug_customerId: { slug, customerId: cid } } }); } catch(_) {}
+    if (!lc) {
+      lc = await prisma.loyaltyCustomer.create({
+        data: { slug, customerId: cid, stampCount: 1, totalStamps: 1, rewardReady: goal <= 1, lastStampAt: new Date() }
+      });
+    } else if (lc.stampCount < goal) {
+      const nc = lc.stampCount + 1;
+      const rr = nc >= goal;
+      const re = (rr && !lc.rewardReady) ? lc.rewardsEarned + 1 : lc.rewardsEarned;
+      lc = await prisma.loyaltyCustomer.update({
+        where: { slug_customerId: { slug, customerId: cid } },
+        data: { stampCount: nc, totalStamps: { increment: 1 }, rewardReady: rr, rewardsEarned: re, lastStampAt: new Date() }
+      });
+    } else {
+      lc = await prisma.loyaltyCustomer.update({
+        where: { slug_customerId: { slug, customerId: cid } },
+        data: { totalStamps: { increment: 1 }, lastStampAt: new Date() }
+      });
+    }
+    return res.json({ ok: true, stampCount: lc.stampCount, goal, rewardReady: lc.rewardReady, hasWallet: lc.hasWallet });
+  } catch(e) {
+    console.error('[CustomerStamp]', e.message);
+    return res.json({ ok: false, error: e.message });
+  }
+}
+
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
 };
 
 

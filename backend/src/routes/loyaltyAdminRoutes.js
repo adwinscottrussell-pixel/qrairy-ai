@@ -11,7 +11,8 @@ const {
   updateProgram,
   toggleStatus,
   adminStamp,
-  getStats
+  getStats,
+  getCustomers
 } = require('../controllers/loyaltyAdminController');
 
 router.get('/programs',                requireAuth, listPrograms);
@@ -22,4 +23,5 @@ router.patch('/programs/:id/status',   requireAuth, toggleStatus);
 router.post('/programs/:id/stamp',     requireAuth, adminStamp);
 router.get('/programs/:id/stats',      requireAuth, getStats);
 
+router.get('/programs/:id/customers',    requireAuth, getCustomers);
 module.exports = router;

@@ -761,6 +761,16 @@ function _lyBuildCard(p) {
     h += "<a href=\"loyalty-setup.html\" style=\"display:block;text-align:center;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.18);border-radius:8px;color:#ff8c55;font-size:.75rem;text-decoration:none;\">+ Enable loyalty for this page</a>";
   }
 
+  // STEP3_CUST_LIST: customer list section
+  if (p.hasLoyaltyConfig) {
+    h += "<div style=\"margin-top:12px;\">";
+    h += "<button data-id=\"" + p.id + "\" onclick=\"window.loadCustList(this)\"" +
+         " style=\"width:100%;padding:8px;background:transparent;border:0.5px solid rgba(255,255,255,0.07);" +
+         "border-radius:8px;color:rgba(240,244,248,0.35);font-size:.68rem;cursor:pointer;\">" +
+         "&#128101; Customers</button>";
+    h += "<div id=\"cust-list-" + p.id + "\" style=\"display:none;margin-top:8px;\"></div>";
+    h += "</div>";
+  }
   el.innerHTML = h;
   return el;
 }
@@ -854,6 +864,54 @@ window.redeemLoyaltyDash = function(btn) {
       }).catch(function() {});
     });
   } catch(e) {}
+};
+
+window.loadCustList = function(btn) {
+  var id = btn.dataset.id;
+  var container = document.getElementById("cust-list-" + id);
+  if (!container) return;
+  // Toggle off
+  if (container.style.display !== "none") {
+    container.style.display = "none";
+    btn.innerHTML = "&#128101; Customers";
+    return;
+  }
+  btn.innerHTML = "&#128101; Loading&#8230;";
+  try {
+    window.Clerk.session.getToken().then(function(t) {
+      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/customers", {
+        headers: { "Authorization": "Bearer " + t }
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        var custs = d.customers || [];
+        btn.innerHTML = "&#128101; " + custs.length + " customer" + (custs.length !== 1 ? "s" : "");
+        if (!custs.length) {
+          container.innerHTML = "<div style=\"padding:12px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.3);\">No customers yet</div>";
+          container.style.display = "block";
+          return;
+        }
+        var rows = "";
+        custs.forEach(function(c) {
+          var icon = c.hasWallet ? "&#128179;" : "&#128100;";
+          var reward = c.rewardReady ? " <span style=\"color:#22c55e;\">&#10003; Ready</span>" : "";
+          var when = c.lastStampAt ? new Date(c.lastStampAt).toLocaleDateString() : "—";
+          var prog = c.stampCount + "/" + c.goal;
+          rows += "<div style=\"display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.05);font-size:.68rem;\">" +
+            "<span style=\"font-size:.85rem;\">" + icon + "</span>" +
+            "<span style=\"flex:1;color:rgba(240,244,248,0.5);font-family:monospace;\">" + _lyEsc(c.maskedId) + "</span>" +
+            "<span style=\"color:#ff5a1f;font-weight:700;\">" + prog + "</span>" +
+            reward +
+            "<span style=\"color:rgba(240,244,248,0.25);margin-left:auto;\">" + when + "</span>" +
+          "</div>";
+        });
+        container.innerHTML =
+          "<div style=\"background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;\">" +
+          "<div style=\"display:flex;justify-content:space-between;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.07);font-size:.6rem;color:rgba(240,244,248,0.25);letter-spacing:.06em;\">" +
+          "<span>CUSTOMER</span><span>STAMPS</span><span>DATE</span></div>" +
+          rows + "</div>";
+        container.style.display = "block";
+      }).catch(function() { btn.innerHTML = "&#128101; Customers"; });
+    });
+  } catch(e) { btn.innerHTML = "&#128101; Customers"; }
 };
 </script>
 </body>

@@ -309,6 +309,39 @@ async function getStats(req, res) {
   }
 }
 
+// GET /loyalty/programs/:id/customers // STEP3_CUSTOMER_LIST
+async function getCustomers(req, res) {
+  try {
+    const ownerId = req.auth && req.auth.userId;
+    if (!ownerId) return res.status(401).json({ error: 'Unauthorized' });
+    const lp = await prisma.landingPage.findFirst({ where: { id: req.params.id, clerkUserId: ownerId } });
+    if (!lp) return res.status(404).json({ error: 'Not found' });
+    const settings = await prisma.stampSettings.findUnique({ where: { slug: lp.slug } });
+    const goal = settings ? settings.goal : 10;
+    const rows = await prisma.loyaltyCustomer.findMany({
+      where: { slug: lp.slug }, orderBy: { lastStampAt: 'desc' }, take: 200
+    });
+    return res.json({
+      customers: rows.map(function(c) {
+        return {
+          maskedId: c.customerId.slice(0, 8) + '***',
+          hasWallet: c.hasWallet,
+          stampCount: c.stampCount,
+          goal,
+          rewardReady: c.rewardReady,
+          rewardsEarned: c.rewardsEarned,
+          lastStampAt: c.lastStampAt,
+          createdAt: c.createdAt
+        };
+      }),
+      total: rows.length
+    });
+  } catch(e) {
+    console.error('[CustomerList]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 module.exports = {
   listPrograms,
   getProgram,
@@ -316,5 +349,6 @@ module.exports = {
   updateProgram,
   toggleStatus,
   adminStamp,
-  getStats
+  getStats,
+  getCustomers
 };

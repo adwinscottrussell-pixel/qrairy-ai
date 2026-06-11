@@ -170,3 +170,19 @@ model RewardEvent {
   createdAt   DateTime  @default(now())
   redeemedAt  DateTime?
 }
+
+model LoyaltyCustomer {
+  id            String    @id @default(cuid())
+  slug          String
+  customerId    String
+  hasWallet     Boolean   @default(false)
+  stampCount    Int       @default(0)
+  totalStamps   Int       @default(0)
+  rewardsEarned Int       @default(0)
+  rewardReady   Boolean   @default(false)
+  lastStampAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([slug, customerId])
+}
