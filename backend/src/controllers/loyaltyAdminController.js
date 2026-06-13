@@ -309,7 +309,7 @@ async function getStats(req, res) {
   }
 }
 
-// GET /loyalty/programs/:id/customers // STEP3_CUSTOMER_LIST_V2
+// GET /loyalty/programs/:id/customers
 async function getCustomers(req, res) {
   try {
     // Defensive auth: req.auth may not be set if clerkMiddleware didn't run for this route
@@ -324,7 +324,6 @@ async function getCustomers(req, res) {
     const rows = await prisma.loyaltyCustomer.findMany({
       where: { slug: lp.slug }, orderBy: { lastStampAt: 'desc' }, take: 200
     });
-    console.log('[CustomerList] slug:', lp.slug, 'found:', rows.length);
     return res.json({
       customers: rows.map(function(c) {
         return {

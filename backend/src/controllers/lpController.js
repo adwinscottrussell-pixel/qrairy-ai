@@ -1274,7 +1274,7 @@ async function handleServeLP(req, res) {
       res.setHeader('Cache-Control', 'public, max-age=60');
     }
     const _lpHtml = renderLP(page);
-    if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) { // ENROLLMENT_GATE
+    if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
         const _lset = await prisma.stampSettings.findUnique({ where: { slug } });
         if (_lset && _lset.enabled) {
@@ -1343,7 +1343,7 @@ async function handleLoyaltyCardPage(req, res) {
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const rewardName = settings ? settings.rewardName : 'Free item';
-    const color = (settings && settings.color) || accent || '#ff5a1f'; // CARD_COLOR_PATCH
+    const color = (settings && settings.color) || accent || '#ff5a1f';
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     const stampCount = pass ? (pass.stampCount || 0) : 0;
@@ -1369,7 +1369,7 @@ async function handleGenerateAppleWalletPass(req, res) {
     const pkpassBuffer = await generateSmartQRPass(slug, sections);
 
     // Ensure Pass record exists in DB for device registration
-    const _cid = req.query.cid || null; // STEP3_PERCUSTOMER
+    const _cid = req.query.cid || null;
     const serialNumber = _cid ? 'sqr-' + slug + '-' + _cid : 'sqr-' + slug;
     const crypto = require('crypto');
     const authToken = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
@@ -1378,7 +1378,7 @@ async function handleGenerateAppleWalletPass(req, res) {
       update: { updatedAt: new Date() },
       create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken }
     });
-    if (_cid) { // STEP3_PERCUSTOMER: mark customer as wallet holder
+    if (_cid) { // mark customer as wallet holder in LoyaltyCustomer table
       try {
         await _prisma.loyaltyCustomer.upsert({
           where: { slug_customerId: { slug, customerId: _cid } },
@@ -1458,7 +1458,7 @@ async function handleStamp(req, res) {
     }
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
-        if (!pass) { // STEP3_AUTOCREATE: create shared pass so all customers can stamp
+        if (!pass) { // auto-create shared pass so all customers can stamp without a wallet
       const _cr = require('crypto');
       const _at = _cr.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0, 32);
       try {
@@ -1481,7 +1481,7 @@ async function handleStamp(req, res) {
     const goal = settings ? settings.goal : 10;
     const newCount = Math.min((pass.stampCount || 0) + 1, goal);
     const rewardReady = newCount >= goal;
-    const previouslyReady = pass.rewardReady; // LOYALTY_B2_PATCH
+    const previouslyReady = pass.rewardReady;
     await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now } });
     await prisma.stampEntry.create({ data: { slug, passId: pass.id, source: 'qr' } });
     if (rewardReady && !previouslyReady) {
@@ -1518,7 +1518,7 @@ async function handleStamp(req, res) {
     } catch(e) { console.error('[Stamp] WebPush error:', e.message); }
     const dots = Array.from({length: goal}, (_, i) => '<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:' + (i < newCount ? (rewardReady ? '#22c55e' : '#ff5a1f') : 'rgba(255,255,255,0.15)') + ';margin:3px"></span>').join('');
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamped!</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.dots{margin:20px 0;line-height:2}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap"><div class="emoji">' + (rewardReady ? "🎉" : "✅") + '</div><h1>' + (rewardReady ? "Reward ready!" : "Stamp added!") + '</h1><p>' + (rewardReady ? "Show your pass to claim your " + rewardName : newCount + " of " + goal + " stamps collected") + '</p><div class="dots">' + dots + '</div>' + (rewardReady ? '<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>' : '<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">' + (goal - newCount) + ' more stamp' + (goal - newCount !== 1 ? "s" : "") + " until your " + rewardName + "</p>") + '<a href="/lp/card/' + slug + '" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a></div><script>var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}' + (rewardReady ? 'var BC=["#fbbf24","#fcd34d","#fff","#22c55e","#ef4444","#3b82f6","#ec4899"];for(var b=0;b<160;b++){var p=document.createElement("div");p.className="burst-piece";var a=(b/160)*Math.PI*2;var d=120+Math.random()*320;var ex=Math.cos(a)*d;var ey=Math.sin(a)*d-80;var sz=4+Math.random()*8;p.style.cssText="position:fixed;left:50%;top:50%;width:"+sz+"px;height:"+sz+"px;background:"+BC[Math.floor(Math.random()*BC.length)]+";border-radius:"+(Math.random()>0.5?"50%":"2px")+";z-index:10;pointer-events:none;transform:translate(-50%,-50%);transition:transform 1.4s cubic-bezier(0.15,0.7,0.3,1),opacity 1.6s ease-out;opacity:1;box-shadow:0 0 8px rgba(255,200,50,0.4);";document.body.appendChild(p);(function(el,dx,dy){setTimeout(function(){el.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px)) rotate("+(Math.random()*720)+"deg)";el.style.opacity="0";},10);})(p,ex,ey);}setTimeout(function(){document.querySelectorAll(".burst-piece").forEach(function(el){el.remove();});},2500);' : '') + 'setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);</script></body></html>';
-    const _custHtml = '<script>(function(){try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}var s=location.pathname.split("/")[2];fetch("/stamp/"+s+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:c})}).catch(function(){});}catch(e){}})();</script>'; // STEP3_CUSTOMER_STAMP
+    const _custHtml = '<script>(function(){try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}var s=location.pathname.split("/")[2];fetch("/stamp/"+s+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:c})}).catch(function(){});}catch(e){}})();</script>';
     return res.status(200).send(html.replace('</body>', _custHtml + '</body>'));
   } catch(e) {
     console.error('[Stamp] Error:', e.message);
@@ -1580,7 +1580,7 @@ async function handleRedeemStamp(req, res) {
     return res.json({ ok: true, message: 'Reward redeemed, stamps reset to 0' });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
-// GET /lp/welcome/:slug — First-visit loyalty enrollment // ENROLLMENT_GATE_FN
+// GET /lp/welcome/:slug — First-visit loyalty enrollment 
 async function handleLoyaltyWelcome(req, res) {
   try {
     const { slug } = req.params;
@@ -1604,7 +1604,7 @@ async function handleLoyaltyWelcome(req, res) {
   }
 }
 
-// POST /stamp/:slug/customer — per-customer stamp recording // STEP3_CUSTOMER_STAMP_FN
+// POST /stamp/:slug/customer — per-customer stamp recording
 async function handleCustomerStamp(req, res) {
   try {
     const { slug } = req.params;
