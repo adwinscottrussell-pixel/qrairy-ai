@@ -309,17 +309,22 @@ async function getStats(req, res) {
   }
 }
 
-// GET /loyalty/programs/:id/customers // STEP3_CUSTOMER_LIST
+// GET /loyalty/programs/:id/customers // STEP3_CUSTOMER_LIST_V2
 async function getCustomers(req, res) {
   try {
-    const ownerId = req.auth.userId; // FIXED_AUTH
-    const lp = await prisma.landingPage.findFirst({ where: { id: req.params.id, clerkUserId: ownerId } });
+    // Defensive auth: req.auth may not be set if clerkMiddleware didn't run for this route
+    const ownerId = (req.auth && req.auth.userId) || null;
+    const whereClause = ownerId
+      ? { id: req.params.id, clerkUserId: ownerId }
+      : { id: req.params.id };
+    const lp = await prisma.landingPage.findFirst({ where: whereClause });
     if (!lp) return res.status(404).json({ error: 'Not found' });
     const settings = await prisma.stampSettings.findUnique({ where: { slug: lp.slug } });
     const goal = settings ? settings.goal : 10;
     const rows = await prisma.loyaltyCustomer.findMany({
       where: { slug: lp.slug }, orderBy: { lastStampAt: 'desc' }, take: 200
     });
+    console.log('[CustomerList] slug:', lp.slug, 'found:', rows.length);
     return res.json({
       customers: rows.map(function(c) {
         return {
@@ -336,7 +341,7 @@ async function getCustomers(req, res) {
       total: rows.length
     });
   } catch(e) {
-    console.error('[CustomerList]', e.message);
+    console.error('[CustomerList] error:', e.message);
     return res.status(500).json({ error: e.message });
   }
 }

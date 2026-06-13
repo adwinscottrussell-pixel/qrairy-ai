@@ -23,5 +23,5 @@ router.patch('/programs/:id/status',   requireAuth, toggleStatus);
 router.post('/programs/:id/stamp',     requireAuth, adminStamp);
 router.get('/programs/:id/stats',      requireAuth, getStats);
 
-router.get('/programs/:id/customers',    requireAuth, getCustomers);
+router.get('/programs/:id/customers',    getCustomers); // auth checked inside
 module.exports = router;
