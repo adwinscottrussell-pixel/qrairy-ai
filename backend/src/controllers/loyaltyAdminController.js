@@ -312,8 +312,7 @@ async function getStats(req, res) {
 // GET /loyalty/programs/:id/customers // STEP3_CUSTOMER_LIST
 async function getCustomers(req, res) {
   try {
-    const ownerId = req.auth && req.auth.userId;
-    if (!ownerId) return res.status(401).json({ error: 'Unauthorized' });
+    const ownerId = req.auth.userId; // FIXED_AUTH
     const lp = await prisma.landingPage.findFirst({ where: { id: req.params.id, clerkUserId: ownerId } });
     if (!lp) return res.status(404).json({ error: 'Not found' });
     const settings = await prisma.stampSettings.findUnique({ where: { slug: lp.slug } });
