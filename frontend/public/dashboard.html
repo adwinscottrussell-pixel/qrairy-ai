@@ -582,6 +582,386 @@ async function initDashboard(){
 
 
 <!-- LOYALTY_DASH_V4: color picker + fixed card link -->
+
+<div id="section-campaigns" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
+<style>
+#section-campaigns .sec-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;}
+#section-campaigns .sec-hdr h2{font-size:1.4rem;font-weight:700;color:#1a1a1a;margin:0 0 4px;}
+#section-campaigns .sec-hdr p{font-size:.85rem;color:#888;margin:0;}
+#section-campaigns .camp-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:16px;}
+.camp-prog-wrap label{font-size:.78rem;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:8px;}
+#campProgSel{width:100%;padding:10px 14px;border:1.5px solid #e4e4e4;border-radius:9px;font-size:.9rem;background:#fafafa;cursor:pointer;font-family:inherit;}
+#campProgSel:focus{outline:none;border-color:#ff5a1f;}
+.camp-triggers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:0;}
+@media(max-width:680px){.camp-triggers{grid-template-columns:1fr;}}
+.camp-trig{background:#fff;border-radius:14px;padding:20px 18px;box-shadow:0 1px 8px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:box-shadow .16s,transform .16s,border-color .16s;}
+.camp-trig:hover{box-shadow:0 4px 20px rgba(0,0,0,.11);transform:translateY(-2px);}
+.camp-trig.sel{border-color:#ff5a1f;box-shadow:0 4px 20px rgba(255,90,31,.15);}
+.camp-trig-icon{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#fff3ed,#ffe4d6);display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.camp-trig-icon svg{width:22px;height:22px;color:#ff5a1f;}
+.camp-trig h3{font-size:.93rem;font-weight:700;color:#1a1a1a;margin:0 0 6px;}
+.camp-trig p{font-size:.81rem;color:#999;margin:0;line-height:1.5;}
+.camp-back{background:none;border:1.5px solid #e4e4e4;color:#666;padding:7px 14px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin-bottom:16px;transition:border-color .14s;}
+.camp-back:hover{border-color:#aaa;color:#1a1a1a;}
+.camp-label{font-size:.92rem;font-weight:700;color:#ff5a1f;margin-bottom:18px;}
+.camp-field{margin-bottom:16px;}
+.camp-field label{font-size:.78rem;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.camp-field label em{font-weight:400;color:#c0c0c0;font-style:normal;text-transform:none;letter-spacing:0;}
+.camp-field input,.camp-field textarea{width:100%;padding:11px 13px;border:1.5px solid #e8e8e8;border-radius:9px;font-size:.88rem;font-family:inherit;resize:vertical;box-sizing:border-box;transition:border-color .14s;}
+.camp-field textarea{min-height:74px;}
+.camp-field input:focus,.camp-field textarea:focus{outline:none;border-color:#ff5a1f;}
+.camp-field .over{border-color:#e53e3e!important;}
+.tone-row{display:flex;gap:8px;flex-wrap:wrap;}
+.tone-pill{padding:6px 15px;border-radius:20px;border:1.5px solid #e4e4e4;background:#fafafa;font-size:.8rem;font-weight:600;color:#666;cursor:pointer;transition:all .13s;}
+.tone-pill.sel{background:#ff5a1f;border-color:#ff5a1f;color:#fff;}
+.camp-gen-btn{width:100%;padding:13px;background:#ff5a1f;color:#fff;border:none;border-radius:10px;font-size:.93rem;font-weight:700;cursor:pointer;margin-top:18px;transition:background .14s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.camp-gen-btn:hover:not(:disabled){background:#e0491a;}
+.camp-gen-btn:disabled{background:#ddd;cursor:not-allowed;color:#bbb;}
+.notif-bg{background:linear-gradient(135deg,#f0f2f5,#e8eaee);border-radius:14px;padding:20px;margin-bottom:20px;display:flex;justify-content:center;}
+.notif-card{background:#fff;border-radius:15px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.13);width:100%;max-width:360px;}
+.notif-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.notif-dot{width:18px;height:18px;border-radius:5px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:800;color:#fff;}
+.notif-appname{font-size:.7rem;font-weight:600;color:#999;flex:1;}
+.notif-ts{font-size:.7rem;color:#bbb;}
+.notif-t{font-size:.87rem;font-weight:700;color:#1a1a1a;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.notif-b{font-size:.81rem;color:#555;line-height:1.42;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.camp-send-btn{width:100%;padding:15px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:.93rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .14s;}
+.camp-send-btn:hover:not(:disabled){background:#333;}
+.camp-send-btn:disabled{background:#ccc;cursor:not-allowed;}
+.camp-send-btn svg{width:17px;height:17px;}
+.camp-msg{padding:11px 14px;border-radius:9px;font-size:.84rem;font-weight:600;margin-top:12px;}
+.camp-msg.ok{background:#f0fdf4;color:#16a34a;}
+.camp-msg.err{background:#fef2f2;color:#dc2626;}
+.camp-hist h3{font-size:.95rem;font-weight:700;color:#1a1a1a;margin:0 0 14px;}
+.camp-hist-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f4f4f4;align-items:flex-start;}
+.camp-hist-row:last-child{border-bottom:none;}
+.camp-hist-dot{width:7px;height:7px;border-radius:50%;background:#ff5a1f;margin-top:7px;flex-shrink:0;}
+.camp-hist-title{font-size:.87rem;font-weight:700;color:#1a1a1a;}
+.camp-hist-body{font-size:.8rem;color:#888;margin-top:2px;}
+.camp-hist-meta{font-size:.73rem;color:#bbb;margin-top:3px;}
+</style>
+
+<div class="sec-hdr">
+  <div>
+    <h2>AI Campaigns</h2>
+    <p>Generate and send push notifications to your loyalty subscribers</p>
+  </div>
+</div>
+
+<!-- Program selector -->
+<div class="camp-card camp-prog-wrap">
+  <label>Send to subscribers of</label>
+  <select id="campProgSel"><option value="">Select a loyalty program…</option></select>
+</div>
+
+<!-- Trigger cards -->
+<div class="camp-triggers" id="campTrigs">
+  <div class="camp-trig" id="ct-boost" onclick="campSelectTrig('boost',this)">
+    <div class="camp-trig-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 16.5c-1.5 1.5-1 6.5-1 6.5s5-.5 6.5-2l9-9a2.1 2.1 0 0 0-3-3l-9 9z"/>
+        <path d="m15 5 3 3"/><path d="M2 21s4-1 6-3l1-2"/>
+      </svg>
+    </div>
+    <h3>Boost Visits</h3>
+    <p>Drive traffic during slow periods with a timely offer or announcement.</p>
+  </div>
+  <div class="camp-trig" id="ct-engage" onclick="campSelectTrig('engage',this)">
+    <div class="camp-trig-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+      </svg>
+    </div>
+    <h3>Re-engagement</h3>
+    <p>Bring back customers who haven't visited in a while.</p>
+  </div>
+  <div class="camp-trig" id="ct-reward" onclick="campSelectTrig('reward',this)">
+    <div class="camp-trig-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
+        <line x1="12" y1="22" x2="12" y2="7"/>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+      </svg>
+    </div>
+    <h3>Reward Reminder</h3>
+    <p>Remind customers they're close to unlocking their next reward.</p>
+  </div>
+</div>
+
+<!-- Goal panel -->
+<div class="camp-card" id="campGoalPanel" style="display:none;margin-top:16px;">
+  <button class="camp-back" onclick="campResetTrig()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Change type
+  </button>
+  <div class="camp-label" id="campTrigLabel"></div>
+  <div class="camp-field">
+    <label>Campaign goal</label>
+    <textarea id="campGoalText" rows="3" placeholder="e.g. Boost visits this Friday with a coffee and cake offer"></textarea>
+  </div>
+  <div class="camp-field">
+    <label>Offer or detail <em>(optional)</em></label>
+    <input type="text" id="campOfferText" placeholder="e.g. Free cake slice with every coffee">
+  </div>
+  <div class="camp-field">
+    <label>Tone</label>
+    <div class="tone-row">
+      <div class="tone-pill sel" onclick="campSelectTone('friendly',this)">Friendly</div>
+      <div class="tone-pill" onclick="campSelectTone('premium',this)">Premium</div>
+      <div class="tone-pill" onclick="campSelectTone('urgent',this)">Urgent</div>
+      <div class="tone-pill" onclick="campSelectTone('playful',this)">Playful</div>
+    </div>
+  </div>
+  <button class="camp-gen-btn" id="campGenBtn" onclick="campGenerate()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+    Generate Push Message
+  </button>
+</div>
+
+<!-- Preview + edit + send -->
+<div id="campPreviewPanel" style="display:none;margin-top:16px;">
+  <button class="camp-back" onclick="campResetPreview()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Regenerate
+  </button>
+
+  <div class="notif-bg">
+    <div class="notif-card">
+      <div class="notif-top">
+        <div class="notif-dot">Q</div>
+        <span class="notif-appname">Qraivy Loyalty</span>
+        <span class="notif-ts">now</span>
+      </div>
+      <div class="notif-t" id="campPrevTitle">Your push title</div>
+      <div class="notif-b" id="campPrevBody">Your push message will appear here</div>
+    </div>
+  </div>
+
+  <div class="camp-card">
+    <div class="camp-field">
+      <label>Title <em id="campTitleCnt">0/45</em></label>
+      <input type="text" id="campTitleIn" maxlength="60" placeholder="Push title" oninput="campRefreshPreview()">
+    </div>
+    <div class="camp-field">
+      <label>Message <em id="campBodyCnt">0/120</em></label>
+      <textarea id="campBodyIn" placeholder="Push message body" oninput="campRefreshPreview()"></textarea>
+    </div>
+    <div id="campSendMsg"></div>
+    <button class="camp-send-btn" id="campSendBtn" disabled onclick="campSend()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Send to Subscribers
+    </button>
+  </div>
+</div>
+
+<!-- History -->
+<div class="camp-card camp-hist" id="campHistPanel" style="display:none;">
+  <h3>Recent Campaigns</h3>
+  <div id="campHistList"></div>
+</div>
+
+<script>
+(function(){
+  var _trig = null, _tone = 'friendly', _slug = null, _biz = '', _reward = '';
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function campTok(cb) {
+    if (window.Clerk && window.Clerk.session) {
+      window.Clerk.session.getToken().then(function(t){ cb(t||''); }).catch(function(){ cb(''); });
+    } else { cb(''); }
+  }
+
+  // ── Init program selector ─────────────────────────────────────────────────
+  function campInitProgs() {
+    var sel = document.getElementById('campProgSel');
+    if (!sel || sel.dataset.loaded) return;
+    sel.dataset.loaded = '1';
+    campTok(function(tok) {
+      fetch('https://api.qraivy.com/loyalty/programs', {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      }).then(function(x){ return x.json(); })
+        .then(function(d) {
+          var progs = d.programs || d || [];
+          progs.forEach(function(p) {
+            var o = document.createElement('option');
+            o.value = p.slug || '';
+            o.textContent = p.businessName || p.name || p.slug;
+            o.dataset.biz = p.businessName || p.name || p.slug;
+            o.dataset.reward = p.rewardName || '';
+            sel.appendChild(o);
+          });
+          if (progs.length === 1) { sel.selectedIndex = 1; campProgChanged(); }
+        }).catch(function(){});
+    });
+    sel.addEventListener('change', campProgChanged);
+  }
+
+  function campProgChanged() {
+    var sel = document.getElementById('campProgSel');
+    var opt = sel.options[sel.selectedIndex];
+    _slug = sel.value || null;
+    _biz = opt ? (opt.dataset.biz || '') : '';
+    _reward = opt ? (opt.dataset.reward || '') : '';
+    if (_slug) campLoadHistory(_slug);
+    else document.getElementById('campHistPanel').style.display = 'none';
+  }
+
+  // ── Trigger cards ─────────────────────────────────────────────────────────
+  window.campSelectTrig = function(type, el) {
+    _trig = type;
+    document.querySelectorAll('.camp-trig').forEach(function(c){ c.classList.remove('sel'); });
+    el.classList.add('sel');
+    var labels = { boost: '🚀 Boost Visits', engage: '🔄 Re-engagement', reward: '🎁 Reward Reminder' };
+    var ph = {
+      boost: 'e.g. Boost visits this Friday with a coffee and cake offer',
+      engage: 'e.g. We miss you! Come back and earn extra stamps this week',
+      reward: 'e.g. Remind customers they are just 2 stamps from a free coffee'
+    };
+    document.getElementById('campTrigLabel').textContent = labels[type] || type;
+    document.getElementById('campGoalText').placeholder = ph[type] || '';
+    document.getElementById('campGoalPanel').style.display = 'block';
+  };
+
+  window.campResetTrig = function() {
+    document.querySelectorAll('.camp-trig').forEach(function(c){ c.classList.remove('sel'); });
+    document.getElementById('campGoalPanel').style.display = 'none';
+    document.getElementById('campPreviewPanel').style.display = 'none';
+    _trig = null;
+  };
+
+  window.campResetPreview = function() {
+    document.getElementById('campPreviewPanel').style.display = 'none';
+    document.getElementById('campGoalPanel').style.display = 'block';
+    document.getElementById('campSendMsg').innerHTML = '';
+  };
+
+  // ── Tone ──────────────────────────────────────────────────────────────────
+  window.campSelectTone = function(tone, el) {
+    _tone = tone;
+    document.querySelectorAll('.tone-pill').forEach(function(p){ p.classList.remove('sel'); });
+    el.classList.add('sel');
+  };
+
+  // ── Live preview ──────────────────────────────────────────────────────────
+  window.campRefreshPreview = function() {
+    var tEl = document.getElementById('campTitleIn');
+    var bEl = document.getElementById('campBodyIn');
+    var tLen = tEl.value.length, bLen = bEl.value.length;
+    document.getElementById('campTitleCnt').textContent = tLen + '/45';
+    document.getElementById('campBodyCnt').textContent = bLen + '/120';
+    tEl.classList.toggle('over', tLen > 45);
+    bEl.classList.toggle('over', bLen > 120);
+    document.getElementById('campPrevTitle').textContent = tEl.value || 'Your push title';
+    document.getElementById('campPrevBody').textContent = bEl.value || 'Your push message will appear here';
+    document.getElementById('campSendBtn').disabled = !tEl.value.trim() || !bEl.value.trim() || tLen > 45 || bLen > 120;
+  };
+
+  // ── Generate ──────────────────────────────────────────────────────────────
+  window.campGenerate = function() {
+    if (!_slug) { alert('Please select a program first.'); return; }
+    if (!_trig) { alert('Please select a campaign type.'); return; }
+    var goal = (document.getElementById('campGoalText').value || '').trim();
+    if (!goal) { alert('Please describe your campaign goal.'); return; }
+    var offer = (document.getElementById('campOfferText').value || '').trim();
+    var btn = document.getElementById('campGenBtn');
+    btn.disabled = true; btn.childNodes[btn.childNodes.length-1].textContent = ' Generating…';
+    campTok(function(tok) {
+      fetch('https://api.qraivy.com/loyalty/campaign/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+        body: JSON.stringify({ type: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
+      }).then(function(x){ return x.json(); })
+        .then(function(d) {
+          if (!d.ok) throw new Error(d.error || 'Generation failed');
+          document.getElementById('campGoalPanel').style.display = 'none';
+          document.getElementById('campTitleIn').value = d.title;
+          document.getElementById('campBodyIn').value = d.body;
+          document.getElementById('campPreviewPanel').style.display = 'block';
+          campRefreshPreview();
+        })
+        .catch(function(e) { alert('Could not generate message: ' + e.message); })
+        .finally(function() {
+          btn.disabled = false;
+          btn.childNodes[btn.childNodes.length-1].textContent = ' Generate Push Message';
+        });
+    });
+  };
+
+  // ── Send ──────────────────────────────────────────────────────────────────
+  window.campSend = function() {
+    if (!_slug) { alert('No program selected.'); return; }
+    var title = (document.getElementById('campTitleIn').value || '').trim();
+    var body  = (document.getElementById('campBodyIn').value || '').trim();
+    if (!title || !body) { alert('Title and message are required.'); return; }
+    if (title.length > 45 || body.length > 120) { alert('Message is too long — please shorten and try again.'); return; }
+    var btn = document.getElementById('campSendBtn');
+    var msg = document.getElementById('campSendMsg');
+    btn.disabled = true; msg.innerHTML = '';
+    campTok(function(tok) {
+      fetch('https://api.qraivy.com/lp/push/' + _slug, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+        body: JSON.stringify({ title: title, message: body })
+      }).then(function(x){ return x.json(); })
+        .then(function(d) {
+          var n = d.webPushSent || d.sent || 0;
+          msg.innerHTML = '<div class="camp-msg ok">✓ Sent to ' + n + ' subscriber' + (n !== 1 ? 's' : '') + '</div>';
+          setTimeout(function() { campLoadHistory(_slug); }, 800);
+          setTimeout(function() {
+            document.getElementById('campPreviewPanel').style.display = 'none';
+            document.getElementById('campTitleIn').value = '';
+            document.getElementById('campBodyIn').value = '';
+            campResetTrig(); msg.innerHTML = '';
+          }, 3000);
+        })
+        .catch(function(e) { msg.innerHTML = '<div class="camp-msg err">Failed to send: ' + e.message + '</div>'; })
+        .finally(function() { btn.disabled = false; });
+    });
+  };
+
+  // ── History ───────────────────────────────────────────────────────────────
+  function campLoadHistory(slug) {
+    var panel = document.getElementById('campHistPanel');
+    var list  = document.getElementById('campHistList');
+    campTok(function(tok) {
+      fetch('https://api.qraivy.com/lp/push/' + slug + '/history', {
+        headers: { 'Authorization': 'Bearer ' + tok }
+      }).then(function(x){ return x.json(); })
+        .then(function(d) {
+          var rows = d.history || d || [];
+          if (!rows.length) { panel.style.display = 'none'; return; }
+          panel.style.display = 'block';
+          list.innerHTML = rows.slice(0,10).map(function(r) {
+            var dt = r.sentAt ? new Date(r.sentAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+            var cnt = r.webPushSent || r.sent || '';
+            return '<div class="camp-hist-row"><div class="camp-hist-dot"></div><div>'
+              + '<div class="camp-hist-title">' + (r.title||'—') + '</div>'
+              + '<div class="camp-hist-body">' + (r.body||r.message||'') + '</div>'
+              + '<div class="camp-hist-meta">' + dt + (cnt ? ' · ' + cnt + ' sent' : '') + '</div>'
+              + '</div></div>';
+          }).join('');
+        }).catch(function(){ panel.style.display = 'none'; });
+    });
+  }
+
+  // ── Sidebar wiring ────────────────────────────────────────────────────────
+  var sbCamp = document.getElementById('sb-campaigns');
+  if (sbCamp) {
+    sbCamp.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+      var sec = document.getElementById('section-campaigns');
+      if (sec) sec.style.display = 'block';
+      sbCamp.classList.add('active');
+      campInitProgs();
+    });
+  }
+})();
+</script>
+</div>
+
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
     <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;">🎟 Loyalty Programs</div>
