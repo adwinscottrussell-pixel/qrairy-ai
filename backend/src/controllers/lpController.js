@@ -1473,7 +1473,7 @@ async function handleGenerateAppleWalletPass(req, res) {
     const authToken = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
     await _prisma.pass.upsert({
       where: { serialNumber },
-      update: { updatedAt: new Date() },
+      update: { updatedAt: new Date(), authToken },
       create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken }
     });
     if (_cid) { // mark customer as wallet holder in LoyaltyCustomer table
