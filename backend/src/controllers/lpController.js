@@ -289,7 +289,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png">
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${lp.businessName||'Qraivy'}"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png"><link rel="manifest" href="/lp/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${bizName} — Smart Landing Page</title>
@@ -1738,9 +1738,39 @@ async function handleCustomerStamp(req, res) {
   }
 }
 
+// GET /lp/manifest/:slug — dynamic PWA manifest for each landing page
+async function handleLPManifest(req, res) {
+  try {
+    const { slug } = req.params;
+    const lp = await prisma.landingPage.findUnique({ where: { slug } });
+    const name = (lp && lp.businessName) || 'Qraivy';
+    const color = (lp && lp.color) || '#ff5a1f';
+    const manifest = {
+      name: name,
+      short_name: name.slice(0, 12),
+      start_url: '/lp/' + slug,
+      scope: '/lp/' + slug,
+      display: 'standalone',
+      background_color: '#0a0a0a',
+      theme_color: color,
+      orientation: 'portrait',
+      icons: [
+        { src: 'https://qraivy.com/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'https://qraivy.com/icon-512.png', sizes: '512x512', type: 'image/png' }
+      ]
+    };
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.json(manifest);
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,,
+  handleLPManifest,
 };
 
 

@@ -3,7 +3,9 @@ const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
-  handleLoyaltyWelcome } = require('../controllers/lpController');
+  handleLoyaltyWelcome,
+  handleLPManifest
+} = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
 router.get('/lp/nfc-token/:slug', handleGetNFCToken);
@@ -19,6 +21,7 @@ router.post('/lp/stamp/redeem/:slug', handleRedeemStamp);
 // Serve live landing page (public — no auth)
 router.post('/stamp/:slug/customer', handleCustomerStamp); // per-customer stamp
 router.get('/lp/welcome/:slug', handleLoyaltyWelcome); // First-visit enrollment
+router.get('/manifest/:slug', handleLPManifest);
 router.get('/lp/:slug', handleServeLP);
 // AI chat endpoint
 router.post('/lp/chat', handleChatLP);
