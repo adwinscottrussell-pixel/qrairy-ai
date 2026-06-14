@@ -467,7 +467,7 @@ async function initAnalytics() {
   if (_mobBtn) _mobBtn.addEventListener('click', function() { _sidebar.classList.add('mob-open'); _overlay.classList.add('on'); });
   if (_overlay) _overlay.addEventListener('click', function() { _sidebar.classList.remove('mob-open'); _overlay.classList.remove('on'); });
   // Toast items (unfinished features)
-  ['sb-campaigns','sb-subscribers','sb-wallet','sb-settings'].forEach(function(id) {
+  ['sb-wallet','sb-settings'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { e.preventDefault(); const t=document.getElementById('cs-toast'); if(t){document.getElementById('cs-toast-msg').textContent=' Coming soon!';t.style.display='flex';setTimeout(function(){t.style.display='none';},2000);} });
   });
