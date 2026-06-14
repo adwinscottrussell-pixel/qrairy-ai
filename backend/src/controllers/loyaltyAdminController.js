@@ -400,6 +400,104 @@ async function generateCampaignMessage(req, res) {
   }
 }
 
+// GET /loyalty/subscribers/summary
+async function getSubscriberSummary(req, res) {
+  try {
+    const [pages, webGroups, emailGroups] = await Promise.all([
+      prisma.landingPage.findMany({ select: { slug: true, businessName: true, name: true } }).catch(() => []),
+      prisma.webPushSubscription.groupBy({ by: ['slug'], _count: { id: true } }),
+      prisma.subscriber.groupBy({ by: ['slug'], _count: { id: true } }).catch(() => [])
+    ]);
+
+    const pageNameMap = {};
+    pages.forEach(function(p) { pageNameMap[p.slug] = p.businessName || p.name || p.slug; });
+
+    const webMap = {};
+    webGroups.forEach(function(g) { webMap[g.slug] = g._count.id; });
+
+    const emailMap = {};
+    emailGroups.forEach(function(g) { emailMap[g.slug] = g._count.id; });
+
+    const allSlugs = Array.from(new Set([
+      ...Object.keys(webMap),
+      ...Object.keys(emailMap),
+      ...pages.map(function(p) { return p.slug; })
+    ]));
+
+    const rows = await Promise.all(allSlugs.map(async function(slug) {
+      const passIds = await prisma.pass.findMany({
+        where: { serialNumber: { startsWith: 'sqr-' + slug } },
+        select: { id: true }
+      });
+      const walletCount = passIds.length > 0
+        ? await prisma.passDevice.count({ where: { passId: { in: passIds.map(function(p) { return p.id; }) } } })
+        : 0;
+
+      const [lastWeb, lastEmail] = await Promise.all([
+        prisma.webPushSubscription.findFirst({ where: { slug }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
+        prisma.subscriber.findFirst({ where: { slug }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null)
+      ]);
+      const dates = [lastWeb && lastWeb.createdAt, lastEmail && lastEmail.createdAt].filter(Boolean);
+      const lastSub = dates.length ? new Date(Math.max.apply(null, dates.map(function(d) { return new Date(d).getTime(); }))) : null;
+
+      const emailCount = emailMap[slug] || 0;
+      const webPushCount = webMap[slug] || 0;
+      const total = emailCount + webPushCount + walletCount;
+
+      return { slug, name: pageNameMap[slug] || slug, emailCount, webPushCount, walletCount, total, lastSub };
+    }));
+
+    const sorted = rows.filter(function(r) { return r.total > 0; }).sort(function(a, b) { return b.total - a.total; });
+
+    const totals = sorted.reduce(function(acc, r) {
+      return { email: acc.email + r.emailCount, webPush: acc.webPush + r.webPushCount, wallet: acc.wallet + r.walletCount, total: acc.total + r.total };
+    }, { email: 0, webPush: 0, wallet: 0, total: 0 });
+
+    return res.json({ ok: true, pages: sorted, totals });
+  } catch(e) {
+    console.error('[Subscribers] summary error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+// GET /loyalty/subscribers/:slug/detail
+async function getSubscriberDetail(req, res) {
+  try {
+    const { slug } = req.params;
+
+    const [webSubs, emailSubs, passIds] = await Promise.all([
+      prisma.webPushSubscription.findMany({ where: { slug }, select: { endpoint: true, createdAt: true }, orderBy: { createdAt: 'desc' } }),
+      prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).catch(() => []),
+      prisma.pass.findMany({ where: { serialNumber: { startsWith: 'sqr-' + slug } }, select: { id: true } })
+    ]);
+
+    const walletDevices = passIds.length > 0
+      ? await prisma.passDevice.findMany({ where: { passId: { in: passIds.map(function(p) { return p.id; }) } }, select: { deviceLibraryId: true, walletType: true, createdAt: true }, orderBy: { createdAt: 'desc' } })
+      : [];
+
+    function maskEmail(email) {
+      if (!email) return '—';
+      var parts = email.split('@');
+      return (parts[0] || '').slice(0, 2) + '***@' + (parts[1] || '');
+    }
+    function maskEndpoint(ep) {
+      if (!ep) return '—';
+      return '…' + ep.slice(-20);
+    }
+
+    var rows = [
+      ...emailSubs.map(function(s) { return { type: 'email', masked: maskEmail(s.email), date: s.createdAt }; }),
+      ...webSubs.map(function(s) { return { type: 'web_push', masked: maskEndpoint(s.endpoint), date: s.createdAt }; }),
+      ...walletDevices.map(function(d) { return { type: 'wallet', masked: (d.deviceLibraryId || '').slice(0, 8) + '…', date: d.createdAt }; })
+    ].sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+    return res.json({ ok: true, slug, rows });
+  } catch(e) {
+    console.error('[Subscribers] detail error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 module.exports = {
   listPrograms,
   getProgram,
@@ -409,5 +507,7 @@ module.exports = {
   adminStamp,
   getStats,
   getCustomers,
-  generateCampaignMessage,
+  generateCampaignMessage,,
+  getSubscriberSummary,
+  getSubscriberDetail,
 };

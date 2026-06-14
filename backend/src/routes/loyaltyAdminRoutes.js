@@ -13,7 +13,9 @@ const {
   adminStamp,
   getStats,
   getCustomers,
-  generateCampaignMessage
+  generateCampaignMessage,
+  getSubscriberSummary,
+  getSubscriberDetail
 } = require('../controllers/loyaltyAdminController');
 
 router.get('/programs',                requireAuth, listPrograms);
@@ -26,4 +28,7 @@ router.get('/programs/:id/stats',      requireAuth, getStats);
 
 router.get('/programs/:id/customers',    getCustomers); // auth checked inside
 router.post('/campaign/generate', requireAuth, generateCampaignMessage);
+router.get('/subscribers/summary', requireAuth, getSubscriberSummary);
+router.get('/subscribers/:slug/detail', requireAuth, getSubscriberDetail);
+
 module.exports = router;
