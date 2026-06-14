@@ -932,7 +932,105 @@ ${sectionsHTML}`;
     });
   }
 })();
-(function(){if(!("serviceWorker"in navigator&&"PushManager"in window))return;var _s=window.location.pathname.split("/").pop();if(localStorage.getItem("wp_sub_"+_s))return;navigator.serviceWorker.register("/sw.js").then(function(reg){window.__swReg=reg;});if(!("Notification"in window)||Notification.permission==="denied")return;if(Notification.permission==="granted"){(function tryAutoSub(){if(window.__swReg){fetch("https://api.qraivy.com/lp/webpush/vapid-key/"+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,"+").replace(/_/g,"/")).split("").map(function(c){return c.charCodeAt(0);}));return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch("https://api.qraivy.com/lp/webpush/subscribe/"+_s,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem("wp_sub_"+_s,"1");}).catch(function(){});}else{setTimeout(tryAutoSub,500);}})();return;}var nb=document.createElement("div");nb.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ff6b00;color:#fff;padding:12px 24px;border-radius:50px;font-size:.8rem;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);white-space:nowrap;";nb.textContent="Get notified of new deals";nb.onclick=function(){nb.textContent="...";Notification.requestPermission().then(function(p){if(p==="granted"){var sub=function(r){fetch("https://api.qraivy.com/lp/webpush/vapid-key/"+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,"+").replace(/_/g,"/")).split("").map(function(c){return c.charCodeAt(0);}));return r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch("https://api.qraivy.com/lp/webpush/subscribe/"+_s,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem("wp_sub_"+_s,"1");nb.textContent="Notifications on!";setTimeout(function(){nb.remove();},2000);}).catch(function(){nb.remove();});};if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register("/sw.js").then(sub);}}else{localStorage.setItem("wp_sub_"+_s,"denied");nb.remove();}});};document.body.appendChild(nb);})();
+(function(){
+  var _s=window.location.pathname.split('/').pop();
+  if(!('serviceWorker' in navigator&&'PushManager' in window)){return;}
+  navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});
+  if(localStorage.getItem('wp_sub_'+_s)){
+    if('Notification' in window&&Notification.permission==='granted'){
+      (function tryAS(){
+        if(window.__swReg){
+          fetch('https://api.qraivy.com/lp/webpush/vapid-key/'+_s)
+            .then(function(x){return x.json();})
+            .then(function(d){
+              var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
+              return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
+            })
+            .then(function(s){var j=s.toJSON();return fetch('https://api.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+            .then(function(){localStorage.setItem('wp_sub_'+_s,'1');})
+            .catch(function(){});
+        }else{setTimeout(tryAS,500);}
+      })();
+    }
+    return;
+  }
+  if(!('Notification' in window)||Notification.permission==='denied'){return;}
+  var AC='#ff6b00';
+  var ICONS={
+    bell:'<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\'/><path d=\'M13.73 21a2 2 0 0 1-3.46 0\'/></svg>',
+    check:'<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M22 11.08V12a10 10 0 1 1-5.93-9.14\'/><polyline points=\'22 4 12 14.01 9 11.01\'/></svg>',
+    spin:'<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z\'/></svg>',
+    alert:'<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><line x1=\'12\' y1=\'8\' x2=\'12\' y2=\'12\'/><line x1=\'12\' y1=\'16\' x2=\'12.01\' y2=\'16\'/></svg>',
+    muted:'<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5\'/><path d=\'M17 17H3s3-2 3-9\'/><path d=\'M13.73 21a2 2 0 0 1-3.46 0\'/><line x1=\'2\' y1=\'2\' x2=\'22\' y2=\'22\'/></svg>'
+  };
+  var STATES={
+    idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Stay updated instantly',desc:'Get special offers, loyalty rewards, and updates from this business.',btn:'Enable Updates',trust:'You can turn this off anytime in your browser settings.'},
+    asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Setting things up…',desc:'',btn:'',trust:''},
+    ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:"You’re subscribed!",desc:"We’ll notify you about special offers and rewards.",btn:'',trust:''},
+    blocked:{icon:'alert',bg:'linear-gradient(135deg,#fef2f2,#fee2e2)',ic:'#dc2626',title:'Notifications are blocked',desc:'Allow notifications in your browser settings to receive updates.',btn:'',trust:''},
+    na:{icon:'muted',bg:'linear-gradient(135deg,#f9fafb,#f3f4f6)',ic:'#9ca3af',title:'Notifications unavailable',desc:'Push notifications are not supported on this device or browser.',btn:'',trust:''}
+  };
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';
+  var card=document.createElement('div');
+  card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';
+  var xBtn=document.createElement('button');
+  xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#888;font-size:16px;line-height:1;padding:0;';
+  xBtn.innerHTML='&times;';
+  xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};
+  var iWrap=document.createElement('div');
+  iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';
+  var iEl=document.createElement('div');
+  iEl.style.cssText='width:26px;height:26px;';
+  var ttl=document.createElement('div');
+  ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';
+  var dsc=document.createElement('div');
+  dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';
+  var btn=document.createElement('button');
+  btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;transition:background .13s;';
+  btn.onmouseenter=function(){btn.style.background='#e0491a';};
+  btn.onmouseleave=function(){btn.style.background=AC;};
+  var tst=document.createElement('div');
+  tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';
+  function setState(s){
+    var c=STATES[s]||STATES.idle;
+    iWrap.style.background=c.bg;
+    iEl.style.color=c.ic; iEl.innerHTML=ICONS[c.icon]||'';
+    ttl.textContent=c.title;
+    dsc.textContent=c.desc; dsc.style.display=c.desc?'block':'none';
+    btn.textContent=c.btn; btn.style.display=c.btn?'block':'none';
+    tst.textContent=c.trust; tst.style.display=c.trust?'block':'none';
+    if(s==='ok'||s==='na'){setTimeout(function(){wrap.style.display='none';},2800);}
+  }
+  iWrap.appendChild(iEl);
+  card.appendChild(xBtn); card.appendChild(iWrap); card.appendChild(ttl);
+  card.appendChild(dsc); card.appendChild(btn); card.appendChild(tst);
+  wrap.appendChild(card); document.body.appendChild(wrap);
+  setTimeout(function(){card.style.transform='translateY(0)';},600);
+  setState('idle');
+  function doSub(){
+    setState('asking');
+    function sub(reg){
+      fetch('https://api.qraivy.com/lp/webpush/vapid-key/'+_s)
+        .then(function(x){return x.json();})
+        .then(function(d){
+          var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
+          return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
+        })
+        .then(function(s){var j=s.toJSON();return fetch('https://api.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+        .then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');})
+        .catch(function(){wrap.style.display='none';});
+    }
+    if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register('/sw.js').then(sub);}
+  }
+  btn.onclick=function(){
+    Notification.requestPermission().then(function(p){
+      if(p==='granted'){doSub();}
+      else if(p==='denied'){setState('blocked');localStorage.setItem('wp_sub_'+_s,'denied');}
+      else{wrap.style.display='none';}
+    });
+  };
+})()
 </script>
 `;
 };
