@@ -1769,7 +1769,7 @@ async function handleLPManifest(req, res) {
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
   handleLPManifest,
 };
 
