@@ -289,7 +289,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${lp.businessName||'Qraivy'}"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png"><link rel="manifest" href="/lp/manifest/${slug}">
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png"><link rel="manifest" href="/lp/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${bizName} — Smart Landing Page</title>
