@@ -507,7 +507,7 @@ module.exports = {
   adminStamp,
   getStats,
   getCustomers,
-  generateCampaignMessage,,
+  generateCampaignMessage,
   getSubscriberSummary,
   getSubscriberDetail,
 };
