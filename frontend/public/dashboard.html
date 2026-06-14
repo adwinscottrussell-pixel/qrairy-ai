@@ -1121,7 +1121,7 @@ async function initDashboard(){
   }
 
   // ── Init program selector ─────────────────────────────────────────────────
-  function campInitProgs() {
+  window.campInitProgs = function campInitProgs() {
     var sel = document.getElementById('campProgSel');
     if (!sel || sel.dataset.loaded) return;
     sel.dataset.loaded = '1';
