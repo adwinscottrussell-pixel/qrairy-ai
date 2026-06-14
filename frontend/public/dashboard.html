@@ -210,11 +210,11 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
     <div class="sb-group" style="margin-top:4px">Smart Pages</div>
     <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="#" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
     <div class="sb-group" style="margin-top:4px">Engage</div>
-    <a href="#" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
-    <a href="#" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
-    <a href="#" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label">Loyalty</span></a>
+    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
+    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
+    <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label">Loyalty</span></a>
     <div class="sb-group" style="margin-top:4px">Configure</div>
     <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
     <div class="sb-group" style="margin-top:4px">Account</div>
@@ -476,6 +476,34 @@ async function initDashboard(){
     if(window.qrairyOnboarding)window.qrairyOnboarding.init(window._userId);
   }
   loadDashboard();
+  // Handle ?section= param for cross-page navigation
+  var sectionP = new URLSearchParams(window.location.search).get('section');
+  if (sectionP) {
+    setTimeout(function() {
+      var mc = document.getElementById('main-content');
+      if (mc) mc.style.display = 'none';
+      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+      if (sectionP === 'campaigns') {
+        var sec = document.getElementById('section-campaigns');
+        if (sec) sec.style.display = 'block';
+        var el = document.getElementById('sb-campaigns'); if (el) el.classList.add('active');
+        if (typeof window.campInitProgs === 'function') window.campInitProgs();
+      } else if (sectionP === 'subscribers') {
+        var sec = document.getElementById('section-subscribers');
+        if (sec) sec.style.display = 'block';
+        var el = document.getElementById('sb-subscribers'); if (el) el.classList.add('active');
+        var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
+        var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
+        var sbSubEl = document.getElementById('sb-subscribers');
+        if (sbSubEl) sbSubEl.click();
+      } else if (sectionP === 'loyalty') {
+        var sec = document.getElementById('section-loyalty');
+        if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
+        var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
+      }
+    }, 300);
+  }
 }
 </script>
 <script
