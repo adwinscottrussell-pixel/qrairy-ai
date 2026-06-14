@@ -1123,6 +1123,7 @@ async function initDashboard(){
       <label>Message <em id="campBodyCnt">0/120</em></label>
       <textarea id="campBodyIn" placeholder="Push message body" oninput="campRefreshPreview()"></textarea>
     </div>
+    <div class="camp-field" style="margin-top:4px;"><label>Destination URL <em>optional</em></label><input type="url" id="campLinkUrl" placeholder="https://example.com/special-offer" class="camp-field input"><div style="font-size:.72rem;color:#aaa;margin-top:5px;">Leave empty to open the Smart Landing Page.</div></div>
     <div id="campSendMsg"></div>
     <button class="camp-send-btn" id="campSendBtn" disabled onclick="campSend()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1278,7 +1279,7 @@ async function initDashboard(){
       fetch('https://api.qraivy.com/lp/push/' + _slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-        body: JSON.stringify({ title: title, message: body })
+        body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
       }).then(function(x){ return x.json(); })
         .then(function(d) {
           var n = d.webPushSent || d.sent || 0;
