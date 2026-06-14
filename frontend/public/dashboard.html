@@ -381,7 +381,7 @@ async function initDashboard(){
   var overlay=document.getElementById('sb-overlay');
   if(mobBtn)mobBtn.addEventListener('click',function(){sidebar.classList.add('mob-open');overlay.classList.add('on');});
   if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
-  ['sb-campaigns','sb-subscribers','sb-wallet','sb-settings'].forEach(function(id){
+  ['sb-wallet','sb-settings'].forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.addEventListener('click',function(e){e.preventDefault();toast('Coming soon — stay tuned!');});
   });
