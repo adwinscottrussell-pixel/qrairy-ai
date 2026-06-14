@@ -950,6 +950,7 @@ async function initDashboard(){
   if (sbCamp) {
     sbCamp.addEventListener('click', function(e) {
       e.preventDefault();
+      var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
       document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
       document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
       var sec = document.getElementById('section-campaigns');
