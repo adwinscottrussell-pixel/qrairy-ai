@@ -697,9 +697,22 @@ async function initDashboard(){
   var _subDetailRows = [];
 
   function subTok(cb) {
-    if (window.Clerk && window.Clerk.session) {
-      window.Clerk.session.getToken().then(function(t){ cb(t||''); }).catch(function(){ cb(''); });
-    } else { cb(''); }
+    var done = false;
+    function finish(t) { if (!done) { done = true; cb(t||''); } }
+    try {
+      if (window.Clerk && window.Clerk.session) {
+        window.Clerk.session.getToken().then(function(t){ finish(t); }).catch(function(){ finish(''); });
+      } else {
+        // Clerk not ready yet — wait briefly then proceed without token
+        setTimeout(function() {
+          if (window.Clerk && window.Clerk.session) {
+            window.Clerk.session.getToken().then(function(t){ finish(t); }).catch(function(){ finish(''); });
+          } else { finish(''); }
+        }, 800);
+      }
+    } catch(e) { finish(''); }
+    // Hard timeout — never block the UI
+    setTimeout(function(){ finish(''); }, 3000);
   }
 
   function fmtDate(d) {
@@ -714,8 +727,10 @@ async function initDashboard(){
 
   // ── Load summary ──────────────────────────────────────────────────────────
   function subLoad() {
+    console.log('[Subscribers] subLoad called');
     document.getElementById('subTableBody').innerHTML = '<div class="sub-loading">Loading subscribers…</div>';
     subTok(function(tok) {
+      console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
       fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
@@ -753,6 +768,7 @@ async function initDashboard(){
           document.getElementById('subTableBody').innerHTML = html;
         })
         .catch(function(e) {
+          console.error('[Subscribers] load error:', e);
           document.getElementById('subTableBody').innerHTML = '<div class="sub-empty">Could not load subscribers: ' + e.message + '</div>';
         });
     });
