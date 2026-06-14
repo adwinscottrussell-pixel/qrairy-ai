@@ -1227,71 +1227,8 @@ async function initDashboard(){
   }
 
   // ── Sidebar wiring ────────────────────────────────────────────────────────
+  
   // Subscribers sidebar wiring
-  var sbSub = document.getElementById('sb-subscribers');
-  if (sbSub) {
-    sbSub.addEventListener('click', function(e) {
-      e.preventDefault();
-      var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
-      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
-      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
-      var sec = document.getElementById('section-subscribers');
-      if (sec) sec.style.display = 'block';
-      sbSub.classList.add('active');
-      var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
-      var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
-      // Inline load — no dependency on IIFE-scoped subLoad
-      var tbody = document.getElementById('subTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '<div class="sub-loading">Loading subscribers…</div>';
-      function getSubTok(cb) {
-        try {
-          if (window.Clerk && window.Clerk.session) {
-            window.Clerk.session.getToken().then(function(t){ cb(t||''); }).catch(function(){ cb(''); });
-          } else { setTimeout(function(){ cb(''); }, 100); }
-        } catch(e) { cb(''); }
-      }
-      getSubTok(function(tok) {
-        fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
-          headers: { 'Authorization': 'Bearer ' + tok }
-        }).then(function(x){ return x.json(); })
-          .then(function(d) {
-            var sc = document.getElementById('subTotalVal'); if(sc) sc.textContent = d.totals ? d.totals.total : 0;
-            var se = document.getElementById('subEmailVal'); if(se) se.textContent = d.totals ? d.totals.email : 0;
-            var sp = document.getElementById('subPushVal'); if(sp) sp.textContent = d.totals ? d.totals.webPush : 0;
-            var sw = document.getElementById('subWalletVal'); if(sw) sw.textContent = d.totals ? d.totals.wallet : 0;
-            if (!d.pages || !d.pages.length) {
-              tbody.innerHTML = '<div class="sub-empty">No subscribers yet. Share your Smart QR Pages to start growing your audience.</div>';
-              return;
-            }
-            function fmtD(dt) { if(!dt) return '—'; return new Date(dt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
-            function bdg(n,cls) { return n ? '<span class="sub-badge '+cls+'">'+n+'</span>' : '<span class="sub-badge zero">0</span>'; }
-            function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-            var rows = '<table class="sub-tbl"><thead><tr><th>Page</th><th>Email</th><th>Web Push</th><th>Wallet</th><th>Total</th><th>Last Subscribed</th><th></th></tr></thead><tbody>';
-            d.pages.forEach(function(p) {
-              rows += '<tr>'
-                + '<td><div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">'+esc(p.name)+'</div><div style="font-size:.72rem;color:#bbb;">'+esc(p.slug)+'</div></td>'
-                + '<td>'+bdg(p.emailCount,'email')+'</td>'
-                + '<td>'+bdg(p.webPushCount,'push')+'</td>'
-                + '<td>'+bdg(p.walletCount,'wallet')+'</td>'
-                + '<td><strong>'+p.total+'</strong></td>'
-                + '<td><span class="sub-date">'+fmtD(p.lastSub)+'</span></td>'
-                + '<td><button class="sub-view-btn" onclick="subViewDetail(''+esc(p.slug)+'',''+esc(p.name)+'')">View details →</button></td>'
-                + '</tr>';
-            });
-            rows += '</tbody></table>';
-            tbody.innerHTML = rows;
-            // Store for CSV export
-            window._subData = d;
-          })
-          .catch(function(err) {
-            tbody.innerHTML = '<div class="sub-empty">Could not load subscribers: ' + err.message + '</div>';
-          });
-      });
-    });
-  }
-
-    // Subscribers sidebar wiring
   document.getElementById('sb-subscribers') && document.getElementById('sb-subscribers').addEventListener('click', function(e) {
     e.preventDefault();
     var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
