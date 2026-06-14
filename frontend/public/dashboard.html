@@ -1267,7 +1267,7 @@ async function initDashboard(){
             r+='<tr><td><div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">'+es(p.name)+'</div><div style="font-size:.72rem;color:#bbb;">'+es(p.slug)+'</div></td>'
               +'<td>'+bdg(p.emailCount,'email')+'</td><td>'+bdg(p.webPushCount,'push')+'</td><td>'+bdg(p.walletCount,'wallet')+'</td>'
               +'<td><strong>'+p.total+'</strong></td><td><span class="sub-date">'+fd(p.lastSub)+'</span></td>'
-              +'<td><button class="sub-view-btn" onclick="subViewDetail(''+es(p.slug)+'',''+es(p.name)+'')">View details &rarr;</button></td></tr>';
+              +'<td><button class="sub-view-btn" data-slug="'+es(p.slug)+'" data-name="'+es(p.name)+'" onclick="subViewDetail(this.dataset.slug,this.dataset.name)">View details &rarr;</button></td></tr>';
           });
           r+='</tbody></table>';
           tbody.innerHTML=r;
