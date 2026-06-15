@@ -263,6 +263,7 @@ function renderLP(page) {
   const sa = storedSections.ai     || {};
   const sl = storedSections.loop   || {};
   const sf = storedSections.footer || {};
+  const sg = storedSections.gallery || {};
   const buttonsHTML = storedButtons.filter(b => b.active !== false).map(b => {
     const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
     const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
@@ -499,6 +500,18 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-wallet-bottom{display:flex;justify-content:space-between;align-items:center}
 .lp-wallet-id{font-size:0.52rem;color:rgba(255,255,255,0.5);letter-spacing:0.2em}
 .lp-wallet-circles{font-size:1.2rem;opacity:0.6;letter-spacing:-4px}
+/* Photo Gallery */
+.lp-gallery-section{padding:0 16px 28px}
+.lp-gallery-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;color:#f0ece0;margin-bottom:14px;letter-spacing:-.01em;text-align:center}
+.lp-gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lp-gallery-grid.g1{grid-template-columns:1fr}
+.lp-gallery-grid.g3 .lp-gallery-item:first-child,.lp-gallery-grid.g5 .lp-gallery-item:first-child{grid-column:1/-1}
+.lp-gallery-item{border-radius:12px;overflow:hidden;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.07)}
+.lp-gallery-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.lp-gallery-item.g1 .lp-gallery-img{aspect-ratio:16/9}
+.lp-gallery-cap{padding:8px 10px}
+.lp-gallery-cap-title{font-size:.75rem;font-weight:700;color:#f0ece0;margin-bottom:2px}
+.lp-gallery-cap-desc{font-size:.65rem;color:rgba(240,236,224,0.55);line-height:1.5}
 .lp-sub-title{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;margin-bottom:8px;position:relative;z-index:1}
 .lp-sub-text{font-size:0.88rem;color:rgba(240,236,224,0.65);margin-bottom:16px;line-height:1.65;position:relative;z-index:1}
 .lp-sub-form{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;position:relative}
@@ -723,11 +736,25 @@ ${(function() {
 </section>
 <!-- Business Info -->
 ${sectionsHTML}`;
-  const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, featured: featuredHTML, loop: loopHTML, info: infoHTML, footer: footerBlock };
+  // Photo Gallery
+  const galleryHTML = (sg.enabled === false || !sg.items || !sg.items.filter(function(i){return i.imageUrl&&i.imageUrl.match(/^https?:\/\//)}).length) ? '' : (function(){
+    var _valid = (sg.items||[]).filter(function(i){return i.imageUrl&&i.imageUrl.match(/^https?:\/\//)}).slice(0,8);
+    var _gc = 'g'+_valid.length;
+    var _gt = sg.title || 'Gallery';
+    var _cards = _valid.map(function(item){
+      var _cap = (item.title||item.description) ? '<div class="lp-gallery-cap">'+(item.title?'<div class="lp-gallery-cap-title">'+item.title+'</div>':'')+(item.description?'<div class="lp-gallery-cap-desc">'+item.description+'</div>':'')+'</div>' : '';
+      return '<div class="lp-gallery-item'+(_valid.length===1?' g1':'')+'">'
+        +'<img class="lp-gallery-img" src="'+item.imageUrl+'" alt="'+(item.title||_gt)+'" loading="lazy" onerror="this.parentElement.style.display='none'">'
+        +_cap+'</div>';
+    }).join('');
+    return '<section class="lp-gallery-section"><div class="lp-gallery-title">'+_gt+'</div><div class="lp-gallery-grid '+_gc+'">'+_cards+'</div></section>';
+  })();
+    const sectionMap = { hero: heroHTML, voice: voiceHTML, ai: aiHTML, buttons: buttonsBlock, featured: featuredHTML, loop: loopHTML, info: infoHTML, footer: footerBlock, gallery: galleryHTML };
   const orderedSections = sectionOrder.map(function(k){ return sectionMap[k] || ''; });
   const footerIdx = orderedSections.length - 1;
   var _fi3=-1;if(!sectionOrder.includes('featured')){const _bi=sectionOrder.indexOf('loop');_fi3=_bi!==-1?_bi+1:orderedSections.length-1;orderedSections.splice(_fi3,0,featuredHTML);}else{_fi3=sectionOrder.indexOf('featured');}
   if(!sectionOrder.includes('info')){orderedSections.splice(_fi3+1,0,infoHTML);}
+  if(!sectionOrder.includes('gallery')&&galleryHTML){orderedSections.splice(orderedSections.length-1,0,galleryHTML);}
   orderedSections.splice(footerIdx,0,ctaHTML);
   return orderedSections.join('\n');
 })()}
