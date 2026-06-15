@@ -1400,9 +1400,9 @@ async function handleGetLP(req, res) {
 
 async function handleListLPs(req, res) {
   try {
-    const userId = req.query.userId;
-    const where = userId ? { userId } : {};
-    const pages = await prisma.landingPage.findMany({ where, orderBy: { createdAt: 'desc' }, select: { id:true, slug:true, businessName:true, useCase:true, brandColor:true, status:true, scanCount:true, createdAt:true } });
+    const userId = await getUserFromToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const pages = await prisma.landingPage.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, select: { id:true, slug:true, businessName:true, useCase:true, brandColor:true, status:true, scanCount:true, createdAt:true } });
     return res.json(pages);
   } catch (err) {
     return res.status(500).json({ error: err.message });
