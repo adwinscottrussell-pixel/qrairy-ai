@@ -743,7 +743,6 @@
       <button class="sqd-tab" data-tab="appearance" style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🎨 Style</button>
       <button class="sqd-tab" data-tab="order"        style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">↕ Order</button>
       <button class="sqd-tab" data-tab="footer"       style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">Footer</button>
-      <button class="sqd-tab" data-tab="gallery"      style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">📸 Gallery</button>
       <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⚙️ Settings</button>
       <button class="sqd-tab" data-tab="loyalty" style="display:none" data-removed="LOYALTY_TAB_REMOVED"    style="padding:5px 10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff8c5a;font-size:.62rem;cursor:pointer;white-space:nowrap;">🎟 Loyalty</button>
 
@@ -1169,25 +1168,7 @@
         </div>
       </div>
 
-
-      <!-- GALLERY TAB -->
-      <div class="sqd-tab-panel" data-panel="gallery" style="display:none;">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">📸 Photo Gallery</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.76);margin-bottom:14px;">Add photos to your landing page. Paste direct image URLs.</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
-          <div style="font-size:.72rem;color:#f0f4f8;">Show Gallery</div>
-          <button id="gallery-enabled-toggle" style="padding:4px 10px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">On</button>
-        </div>
-        <div style="margin-bottom:12px;">
-          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.72);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Section Title</label>
-          <input id="gallery-title-input" type="text" placeholder="Our Photos" maxlength="40" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-size:.75rem;color:#f0f4f8;outline:none;"/>
-        </div>
-        <div id="gallery-items-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
-        <button id="gallery-add-btn" style="width:100%;padding:9px;background:rgba(255,90,31,0.1);border:0.5px dashed rgba(255,90,31,0.4);border-radius:8px;color:#ff5a1f;font-size:.72rem;font-weight:600;cursor:pointer;">+ Add Image</button>
-        <div style="font-size:.62rem;color:rgba(240,244,248,0.4);margin-top:8px;">Paste direct image URLs (https://). Works with Cloudinary, Imgur, Google Photos, etc.</div>
-      </div>
-
-            <div class="sqd-tab-panel" data-panel="settings" style="display:none;padding:0 4px;">
+      <div class="sqd-tab-panel" data-panel="settings" style="display:none;padding:0 4px;">
         <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">⚙️ Settings</div>
         <div style="font-size:.65rem;color:rgba(240,244,248,0.65);margin-bottom:10px;">Control how your page behaves.</div>
 
@@ -2158,7 +2139,6 @@ window.QRAIVY_EDITOR_STATE = {
     ai:    { enabled: true, title: 'AI Assistant', description: '', placeholder: 'Ask a question…' },
     loop:  { enabled: true, title: 'Stay in the loop', description: '', emailPlaceholder: 'your@email.com', buttonLabel: 'Subscribe →' },
     footer:{ enabled: true, businessName: '', footerText: '', footerLink: '' },
-    gallery: { enabled: true, title: 'Gallery', items: [] },
     buttons: [],
     order: ['hero','voice','ai','buttons','loop','footer'],
     theme: { background: 'dark', accentColor: '#ff5a1f', buttonStyle: 'rounded', fontStyle: 'modern', logoMode: 'initials' }
@@ -2169,123 +2149,6 @@ window.QRAIVY_EDITOR_STATE = {
   var DRAFT_KEY_PREFIX = 'qraivy_editor_draft_';
   function getDraftKey() { return DRAFT_KEY_PREFIX + (window.QRAIVY_EDITOR_STATE.slug || 'demo'); }
   function saveDraft() { try { localStorage.setItem(getDraftKey(), JSON.stringify(window.QRAIVY_EDITOR_STATE)); } catch(e) {} }
-
-  // ── Gallery section wiring ────────────────────────────────────────────────
-  (function() {
-    var S = window.QRAIVY_EDITOR_STATE.sections;
-    if (!S.gallery) S.gallery = { enabled: true, title: 'Gallery', items: [] };
-
-    var galTogBtn = document.getElementById('gallery-enabled-toggle');
-    var galTitleIn = document.getElementById('gallery-title-input');
-    var galList = document.getElementById('gallery-items-list');
-    var galAddBtn = document.getElementById('gallery-add-btn');
-
-    var INP_STYLE = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.72rem;color:#f0f4f8;outline:none;';
-    var LBL_STYLE = 'display:block;font-size:.55rem;color:rgba(240,244,248,0.55);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;margin-top:8px;';
-
-    function syncGallery() {
-      var g = S.gallery;
-      if (galTogBtn) galTogBtn.textContent = g.enabled !== false ? 'On' : 'Off';
-      if (galTitleIn) galTitleIn.value = g.title || '';
-      renderItems();
-    }
-
-    function renderItems() {
-      if (!galList) return;
-      var g = S.gallery;
-      if (!g.items || !g.items.length) {
-        galList.innerHTML = '<div style="font-size:.68rem;color:rgba(240,244,248,0.35);text-align:center;padding:12px 0;">No images yet — click Add Image below.</div>';
-        return;
-      }
-      galList.innerHTML = '';
-      g.items.forEach(function(item, idx) {
-        var card = document.createElement('div');
-        card.style.cssText = 'background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;';
-        card.innerHTML =
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-          + '<div style="font-size:.65rem;color:rgba(240,244,248,0.55);">Image ' + (idx+1) + '</div>'
-          + '<button data-idx="' + idx + '" class="gal-remove-btn" style="background:rgba(255,50,50,0.1);border:0.5px solid rgba(255,80,80,0.3);border-radius:5px;color:#ff5050;font-size:.6rem;padding:3px 8px;cursor:pointer;">Remove</button>'
-          + '</div>'
-          + (item.imageUrl ? '<img src="' + item.imageUrl + '" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:8px;" >' : '')
-          + '<label style="' + LBL_STYLE + '">Image URL *</label>'
-          + '<input data-idx="' + idx + '" data-field="imageUrl" class="gal-field" type="url" placeholder="https://example.com/photo.jpg" value="' + (item.imageUrl||'') + '" style="' + INP_STYLE + '">'
-          + '<label style="' + LBL_STYLE + '">Title <span style="opacity:.5">(optional)</span></label>'
-          + '<input data-idx="' + idx + '" data-field="title" class="gal-field" type="text" placeholder="Caption" maxlength="60" value="' + (item.title||'') + '" style="' + INP_STYLE + '">'
-          + '<label style="' + LBL_STYLE + '">Description <span style="opacity:.5">(optional)</span></label>'
-          + '<input data-idx="' + idx + '" data-field="description" class="gal-field" type="text" placeholder="Short description" maxlength="120" value="' + (item.description||'') + '" style="' + INP_STYLE + '">';
-        galList.appendChild(card);
-      });
-      // Wire field changes
-      galList.querySelectorAll('.gal-field').forEach(function(el) {
-        el.addEventListener('input', function() {
-          var i = parseInt(this.dataset.idx);
-          var f = this.dataset.field;
-          var val = this.value.trim();
-          // Validate URL
-          if (f === 'imageUrl' && val && !val.match(/^https?:///)) val = 'https://' + val;
-          S.gallery.items[i][f] = val;
-          window.QRAIVY_EDITOR_STATE.dirty = true;
-          // Refresh image preview
-          var img = this.closest('[data-idx]') || this.parentElement;
-          var preview = this.parentElement.querySelector('img');
-          if (f === 'imageUrl' && preview && val) { preview.src = val; preview.style.display = ''; }
-        });
-      });
-      // Wire remove buttons
-      galList.querySelectorAll('.gal-remove-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var i = parseInt(this.dataset.idx);
-          S.gallery.items.splice(i, 1);
-          window.QRAIVY_EDITOR_STATE.dirty = true;
-          renderItems();
-        });
-      });
-    }
-
-    if (galTogBtn) {
-      galTogBtn.addEventListener('click', function() {
-        S.gallery.enabled = !(S.gallery.enabled !== false);
-        galTogBtn.textContent = S.gallery.enabled ? 'On' : 'Off';
-        window.QRAIVY_EDITOR_STATE.dirty = true;
-      });
-    }
-
-    if (galTitleIn) {
-      galTitleIn.addEventListener('input', function() {
-        S.gallery.title = this.value;
-        window.QRAIVY_EDITOR_STATE.dirty = true;
-      });
-    }
-
-    if (galAddBtn) {
-      galAddBtn.addEventListener('click', function() {
-        if (!S.gallery.items) S.gallery.items = [];
-        if (S.gallery.items.length >= 8) { alert('Maximum 8 images per gallery.'); return; }
-        S.gallery.items.push({ imageUrl: '', title: '', description: '' });
-        window.QRAIVY_EDITOR_STATE.dirty = true;
-        renderItems();
-        // Scroll to new item
-        if (galList && galList.lastChild) galList.lastChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
-    }
-
-    // Sync on load — hook into existing LP data load
-    var _origLoad = window._sqd_onLPLoaded;
-    window._sqd_onLPLoaded = function(data) {
-      if (_origLoad) _origLoad(data);
-      if (data && data.sections && data.sections.gallery) {
-        S.gallery = data.sections.gallery;
-      }
-      syncGallery();
-    };
-
-    // Also sync immediately if data already loaded
-    if (window._sqd_lp_data && window._sqd_lp_data.sections && window._sqd_lp_data.sections.gallery) {
-      S.gallery = window._sqd_lp_data.sections.gallery;
-    }
-    syncGallery();
-  })();
-
   async function publishPage() {
     var state = window.QRAIVY_EDITOR_STATE;
     var slug = state.slug;
