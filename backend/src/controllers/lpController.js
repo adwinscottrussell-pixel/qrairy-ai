@@ -1,4 +1,5 @@
 const { getUserFromToken } = require('./qrController');
+const { pageCache } = require('../utils/pageCache');
 const prisma = require('../prismaClient');
 const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
@@ -1117,6 +1118,8 @@ async function handlePublishLP(req, res) {
     }
 
 
+    pageCache.delByPrefix('lp:' + slug);
+    pageCache.delByPrefix('stamp:' + slug);
     const page = await prisma.landingPage.upsert({
       where: { slug },
       update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date() },
@@ -1360,7 +1363,12 @@ async function handlePushCount(req, res) {
 async function handleServeLP(req, res) {
   try {
     const { slug } = req.params;
-    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    const _cacheKey = 'lp:' + slug;
+    let page = pageCache.get(_cacheKey);
+    if (!page) {
+      page = await prisma.landingPage.findUnique({ where: { slug } });
+      if (page && page.status !== 'draft') pageCache.set(_cacheKey, page);
+    }
     if (!page || page.status === 'draft') return res.status(404).send(render404(slug));
     if (!req.query.preview) prisma.landingPage.update({ where: { slug }, data: { scanCount: { increment: 1 } } }).catch(() => {});
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1374,7 +1382,13 @@ async function handleServeLP(req, res) {
     const _lpHtml = renderLP(page);
     if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
-        const _lset = await prisma.stampSettings.findUnique({ where: { slug } });
+        const _stampKey = 'stamp:' + slug;
+        let _lset = pageCache.get(_stampKey);
+        if (_lset === null) {
+          _lset = await prisma.stampSettings.findUnique({ where: { slug } });
+          pageCache.set(_stampKey, _lset || false); // cache null as false
+        }
+        if (_lset === false) _lset = null;
         if (_lset && _lset.enabled) {
           const _es = '<scr' + 'ipt>(function(){try{var s="' + slug + '";if(!localStorage.getItem("cTok")||!localStorage.getItem("wEnr_"+s)){window.location.replace("/lp/welcome/"+s);}}catch(_e){}})();<\/scr' + 'ipt>';
           return res.send(_lpHtml.replace('<head>', '<head>' + _es));
@@ -1419,6 +1433,8 @@ async function handleDeleteLP(req, res) {
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Not found' });
     if (page.userId && page.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    pageCache.delByPrefix('lp:' + slug);
+    pageCache.delByPrefix('stamp:' + slug);
     await prisma.landingPage.delete({ where: { slug } });
     return res.json({ ok: true, success: true });
   } catch (err) {
