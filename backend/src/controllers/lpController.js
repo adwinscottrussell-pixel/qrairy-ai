@@ -1470,7 +1470,7 @@ async function handleGenerateAppleWalletPass(req, res) {
     const _cid = req.query.cid || null;
     const serialNumber = _cid ? 'sqr-' + slug + '-' + _cid : 'sqr-' + slug;
     const crypto = require('crypto');
-    const authToken = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
+    const authToken = crypto.createHash('sha256').update(slug + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0,32);
     await _prisma.pass.upsert({
       where: { serialNumber },
       update: { updatedAt: new Date(), authToken },

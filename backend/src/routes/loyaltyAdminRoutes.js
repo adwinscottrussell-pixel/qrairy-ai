@@ -26,7 +26,7 @@ router.patch('/programs/:id/status',   requireAuth, toggleStatus);
 router.post('/programs/:id/stamp',     requireAuth, adminStamp);
 router.get('/programs/:id/stats',      requireAuth, getStats);
 
-router.get('/programs/:id/customers',    getCustomers); // auth checked inside
+router.get('/programs/:id/customers', requireAuth, getCustomers);
 router.post('/campaign/generate', requireAuth, generateCampaignMessage);
 router.get('/subscribers/summary', requireAuth, getSubscriberSummary);
 router.get('/subscribers/:slug/detail', requireAuth, getSubscriberDetail);
