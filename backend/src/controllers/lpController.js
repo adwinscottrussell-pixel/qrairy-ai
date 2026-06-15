@@ -744,7 +744,7 @@ ${sectionsHTML}`;
     var _cards = _valid.map(function(item){
       var _cap = (item.title||item.description) ? '<div class="lp-gallery-cap">'+(item.title?'<div class="lp-gallery-cap-title">'+item.title+'</div>':'')+(item.description?'<div class="lp-gallery-cap-desc">'+item.description+'</div>':'')+'</div>' : '';
       return '<div class="lp-gallery-item'+(_valid.length===1?' g1':'')+'">'
-        +'<img class="lp-gallery-img" src="'+item.imageUrl+'" alt="'+(item.title||_gt)+'" loading="lazy" onerror="this.parentElement.style.display='none'">'
+        +'<img class="lp-gallery-img" src="'+item.imageUrl+'" alt="'+(item.title||_gt)+'" loading="lazy" onerror="this.parentElement.style.display=\'none\'">'
         +_cap+'</div>';
     }).join('');
     return '<section class="lp-gallery-section"><div class="lp-gallery-title">'+_gt+'</div><div class="lp-gallery-grid '+_gc+'">'+_cards+'</div></section>';
