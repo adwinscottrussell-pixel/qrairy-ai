@@ -2244,7 +2244,7 @@ window.QRAIVY_DRAFT_VERSION = 2; // bump to invalidate old drafts
         _gS.items.push({ imageUrl: '', title: '', description: '' });
         window.QRAIVY_EDITOR_STATE.dirty = true;
         _gRender();
-        if (_gList && _gList.lastChild) _gList.lastChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        var tc = document.getElementById('sqd-tab-content'); if (tc) tc.scrollTop = tc.scrollHeight;
       });
     }
     _gRender();
