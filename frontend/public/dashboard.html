@@ -409,43 +409,7 @@ async function initDashboard(){
       sbSub.classList.add('active');
       var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
       var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
-      var tbody = document.getElementById('subTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '<div class="sub-loading">Loading subscribers…</div>';
-      var _done = false;
-      function _getTok(cb) {
-        if (window.Clerk && window.Clerk.session) {
-          window.Clerk.session.getToken().then(function(t){ if(!_done){_done=true;cb(t||'');} }).catch(function(){ if(!_done){_done=true;cb('');} });
-        } else { cb(''); }
-        setTimeout(function(){ if(!_done){_done=true;cb('');} }, 3000);
-      }
-      _getTok(function(tok) {
-        fetch('https://api.qraivy.com/loyalty/subscribers/summary', { headers: {'Authorization':'Bearer '+tok} })
-          .then(function(x){ return x.json(); })
-          .then(function(d) {
-            var t=d.totals||{};
-            var el;
-            el=document.getElementById('subTotalVal'); if(el) el.textContent=t.total||0;
-            el=document.getElementById('subEmailVal'); if(el) el.textContent=t.email||0;
-            el=document.getElementById('subPushVal');  if(el) el.textContent=t.webPush||0;
-            el=document.getElementById('subWalletVal');if(el) el.textContent=t.wallet||0;
-            if (!d.pages||!d.pages.length) { tbody.innerHTML='<div class="sub-empty">No subscribers yet.</div>'; return; }
-            function _fd(dt){ return dt?new Date(dt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'&mdash;'; }
-            function _bdg(n,c){ return n?'<span class="sub-badge '+c+'">'+n+'</span>':'<span class="sub-badge zero">0</span>'; }
-            function _es(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-            var r='<table class="sub-tbl"><thead><tr><th>Page</th><th>Email</th><th>Web Push</th><th>Wallet</th><th>Total</th><th>Last Subscribed</th><th></th></tr></thead><tbody>';
-            d.pages.forEach(function(p){
-              r+='<tr><td><div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">'+_es(p.name)+'</div><div style="font-size:.72rem;color:#bbb;">'+_es(p.slug)+'</div></td>'
-                +'<td>'+_bdg(p.emailCount,'email')+'</td><td>'+_bdg(p.webPushCount,'push')+'</td><td>'+_bdg(p.walletCount,'wallet')+'</td>'
-                +'<td><strong>'+p.total+'</strong></td><td><span class="sub-date">'+_fd(p.lastSub)+'</span></td>'
-                +'<td><button class="sub-view-btn" data-slug="'+_es(p.slug)+'" data-name="'+_es(p.name)+'" onclick="subViewDetail(this.dataset.slug,this.dataset.name)">View details &rarr;</button></td></tr>';
-            });
-            r+='</tbody></table>';
-            tbody.innerHTML=r;
-            window._subData=d;
-          })
-          .catch(function(err){ tbody.innerHTML='<div class="sub-empty">Error: '+err.message+'</div>'; });
-      });
+      if (window.subLoad) { setTimeout(window.subLoad, 100); }
     });
   }
 
