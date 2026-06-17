@@ -371,6 +371,14 @@ async function handleDashboard(req, res) {
       where: lpWhere,
       orderBy: { createdAt: 'desc' },
     });
+    // Get LP subscriber counts in one query
+    const lpSlugs = lpData.map(lp => lp.slug);
+    const lpSubCounts = await prisma.subscriber.groupBy({
+      by: ['slug'],
+      where: { slug: { in: lpSlugs }, status: 'subscribed' },
+      _count: { id: true },
+    });
+    const lpSubMap = Object.fromEntries(lpSubCounts.map(r => [r.slug, r._count.id]));
     const lpCards = lpData.map(lp => ({
       id: lp.id,
       originalUrl: lp.websiteUrl || '',
@@ -378,7 +386,7 @@ async function handleDashboard(req, res) {
       redirectUrl: `https://api.qraivy.com/lp/${lp.slug}`,
       slug: lp.slug,
       totalScans: lp.scanCount || 0,
-      totalSubscribers: 0,
+      totalSubscribers: lpSubMap[lp.slug] || 0,
       hasSiteContent: true,
       isDynamic: true,
       destinationUrl: lp.websiteUrl || null,
