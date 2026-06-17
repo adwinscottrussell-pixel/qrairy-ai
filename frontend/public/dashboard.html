@@ -756,22 +756,28 @@ async function initDashboard(){
   var _subDetailRows = [];
 
   function subTok(cb) {
+    // Use cached session token if already available
+    if (window._sessionToken) { cb(window._sessionToken); return; }
     var done = false;
     function finish(t) { if (!done) { done = true; cb(t||''); } }
-    try {
-      if (window.Clerk && window.Clerk.session) {
-        window.Clerk.session.getToken().then(function(t){ finish(t); }).catch(function(){ finish(''); });
-      } else {
-        // Clerk not ready yet — wait briefly then proceed without token
-        setTimeout(function() {
-          if (window.Clerk && window.Clerk.session) {
-            window.Clerk.session.getToken().then(function(t){ finish(t); }).catch(function(){ finish(''); });
-          } else { finish(''); }
-        }, 800);
-      }
-    } catch(e) { finish(''); }
-    // Hard timeout — never block the UI
-    setTimeout(function(){ finish(''); }, 3000);
+    function tryClerk() {
+      try {
+        if (window.Clerk && window.Clerk.session) {
+          window.Clerk.session.getToken().then(function(t){ finish(t||''); }).catch(function(){ finish(''); });
+          return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+    if (!tryClerk()) {
+      // Poll until Clerk is ready, max 5s
+      var attempts = 0;
+      var poll = setInterval(function() {
+        attempts++;
+        if (tryClerk() || attempts > 25) { clearInterval(poll); if (!done) finish(''); }
+      }, 200);
+    }
+    setTimeout(function(){ finish(''); }, 5000);
   }
 
   function fmtDate(d) {
