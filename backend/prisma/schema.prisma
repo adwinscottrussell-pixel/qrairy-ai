@@ -47,14 +47,25 @@ model Scan {
 }
 
 model Subscriber {
-  id           String   @id @default(uuid())
-  qrId         String?
-  slug         String?
-  oneSignalId  String?
-  email        String?
-  gdprConsent  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  qr           QR?      @relation(fields: [qrId], references: [id])
+  id              String    @id @default(uuid())
+  qrId            String?
+  slug            String?
+  oneSignalId     String?
+  email           String?
+  gdprConsent     Boolean   @default(false)
+  userId          String?
+  status          String    @default("subscribed")
+  source          String    @default("email")
+  subscribedAt    DateTime  @default(now())
+  unsubscribedAt  DateTime?
+  resendContactId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  qr              QR?       @relation(fields: [qrId], references: [id])
+
+  @@index([slug])
+  @@index([userId])
+  @@index([status])
 }
 
 model LandingPage {

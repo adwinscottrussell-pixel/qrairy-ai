@@ -1220,51 +1220,61 @@ async function handleSubscribe(req, res) {
   try {
     const { slug } = req.params;
     const { email, gdprConsent } = req.body || {};
-    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
-    if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
-    // Check for duplicate
-    const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
-    if (existing) return res.json({ ok: true, message: 'Already subscribed' });
-    await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
-    // Send welcome email async (don't block response)
-    const lpPage = await prisma.landingPage.findFirst({ where: { slug } });
-    if (lpPage) sendWelcomeEmail(email, { bizName: lpPage.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
-    return res.json({ ok: true, message: 'Subscribed successfully' });
-  } catch(e) {
-    console.error('[Subscribe] Error:', e.message);
-    return res.status(500).json({ error: e.message });
-  }
-}
 
-// ── GET /lp/subscribers/:slug ──
-async function handleGetSubscribers(req, res) {
-  try {
-    const { slug } = req.params;
-    const subscribers = await prisma.subscriber.findMany({
-      where: { slug },
-      orderBy: { createdAt: 'desc' }
+    // Validate email
+    if (!email || typeof email !== 'string') return res.status(400).json({ error: 'Valid email required' });
+    const emailNorm = email.toLowerCase().trim();
+    if (!emailNorm.includes('@') || emailNorm.length < 5) return res.status(400).json({ error: 'Valid email required' });
+    if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
+
+    // Get landing page for userId and bizName
+    const lpPage = await prisma.landingPage.findUnique({ where: { slug } });
+    const userId = lpPage ? lpPage.userId : null;
+    const bizName = lpPage ? (lpPage.businessName || slug) : slug;
+
+    // Check for existing subscriber
+    const existing = await prisma.subscriber.findFirst({
+      where: { email: emailNorm, slug, source: 'email' }
     });
-    return res.json({ ok: true, count: subscribers.length, subscribers });
-  } catch(e) {
-    return res.status(500).json({ error: e.message });
-  }
-}
 
+    let subscriber;
+    let sendWelcome = false;
 
-// ── POST /lp/subscribe/:slug ──
-async function handleSubscribe(req, res) {
-  try {
-    const { slug } = req.params;
-    const { email, gdprConsent } = req.body || {};
-    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
-    if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
-    // Check for duplicate
-    const existing = await prisma.subscriber.findFirst({ where: { slug, email } });
-    if (existing) return res.json({ ok: true, message: 'Already subscribed' });
-    await prisma.subscriber.create({ data: { slug, email, gdprConsent: true } });
-    // Send welcome email async (don't block response)
-    const lpPage = await prisma.landingPage.findFirst({ where: { slug } });
-    if (lpPage) sendWelcomeEmail(email, { bizName: lpPage.businessName || slug, slug }).catch(e => console.error('[Welcome Email]', e.message));
+    if (existing) {
+      if (existing.status === 'unsubscribed') {
+        subscriber = await prisma.subscriber.update({
+          where: { id: existing.id },
+          data: { status: 'subscribed', unsubscribedAt: null, subscribedAt: new Date(), updatedAt: new Date() }
+        });
+        sendWelcome = true;
+        console.log('[Subscribe] Reactivated:', emailNorm, slug);
+      } else {
+        return res.json({ ok: true, message: 'Already subscribed' });
+      }
+    } else {
+      subscriber = await prisma.subscriber.create({
+        data: { email: emailNorm, slug, gdprConsent: true, userId, source: 'email', status: 'subscribed', subscribedAt: new Date() }
+      });
+      sendWelcome = true;
+      console.log('[Subscribe] New subscriber:', emailNorm, slug);
+    }
+
+    if (sendWelcome) {
+      sendWelcomeEmail(emailNorm, { bizName, slug }).catch(e => console.error('[Welcome Email]', e.message));
+    }
+
+    // Resend contact sync — async, non-blocking, non-fatal
+    if (process.env.RESEND_API_KEY && process.env.RESEND_AUDIENCE_ID) {
+      syncResendContact(emailNorm, process.env.RESEND_AUDIENCE_ID)
+        .then(function(contactId) {
+          if (contactId && subscriber) {
+            prisma.subscriber.update({ where: { id: subscriber.id }, data: { resendContactId: contactId } })
+              .catch(e => console.error('[Resend] Store contactId failed:', e.message));
+          }
+        })
+        .catch(e => console.error('[Resend] Sync failed (non-fatal):', e.message));
+    }
+
     return res.json({ ok: true, message: 'Subscribed successfully' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
@@ -1272,6 +1282,17 @@ async function handleSubscribe(req, res) {
   }
 }
 
+async function syncResendContact(email, audienceId) {
+  try {
+    const { Resend } = require('resend');
+    const client = new Resend(process.env.RESEND_API_KEY);
+    const result = await client.contacts.create({ audienceId, email, unsubscribed: false });
+    return (result && result.data && result.data.id) || null;
+  } catch(e) {
+    console.error('[Resend] Contact sync error:', e.message);
+    return null;
+  }
+}
 // ── GET /lp/subscribers/:slug ──
 async function handleGetSubscribers(req, res) {
   try {
