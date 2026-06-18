@@ -1928,7 +1928,7 @@ function renderPremiumLP(page) {
       <div style="width:40px;height:40px;border-radius:10px;border:1px solid #e8e8e8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
-        <div style="font-size:12px;color:#999;">${s.sub}</div>
+        <div style="font-size:12px;color:#555;">${s.sub}</div>
       </div>
       <div style="font-size:16px;color:#bbb;">›</div>
     </a>`
@@ -1987,7 +1987,7 @@ input,textarea,button{font-family:inherit}
 <nav style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #e8e8e8;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;">
   <div style="display:flex;align-items:center;gap:10px;">
     ${logoHTML}
-    <span style="font-size:14px;font-weight:600;">${bizName}</span>
+    <span style="font-size:14px;font-weight:600;color:#0a0a0a;">${bizName}</span>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:5px;">
@@ -2034,7 +2034,7 @@ ${sv.active !== false ? `
     </div>
     <div style="flex:1;min-width:0;">
       <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || 'Personal welcome message'}</div>
-      <div style="font-size:12px;color:#999;">${sv.playerSubtitle || 'Tap to listen — unlocks AI assistant'}</div>
+      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || 'Tap to listen — unlocks AI assistant'}</div>
     </div>
     <div style="display:flex;align-items:center;gap:2px;height:28px;">${waveBars}</div>
   </div>
@@ -2048,10 +2048,10 @@ ${sa.active !== false ? `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #e8e8e8;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-        <span style="font-size:13px;font-weight:600;">AI Assistant</span>
-        <span style="font-size:12px;color:#999;">— Online</span>
+        <span style="font-size:13px;font-weight:600;color:#0a0a0a;">AI Assistant</span>
+        <span style="font-size:12px;color:#555;">— Online</span>
       </div>
-      <span style="font-size:10px;font-weight:600;color:#bbb;letter-spacing:.05em;text-transform:uppercase;">Tap welcome to activate</span>
+      <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.05em;text-transform:uppercase;">Tap welcome to activate</span>
     </div>
     <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
       <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">✦ Hi 👋 I'm the AI concierge for ${bizName}. Ask me about hours, menu, or anything else.</div>
@@ -2086,7 +2086,7 @@ ${sa.active !== false ? `
     <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">Subscribe for updates, exclusive offers and early access from ${bizName}.</p>
     <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='#0a0a0a'" onblur="this.style.borderColor='#e8e8e8'">
     <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Subscribe →</button>
-    <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#999;line-height:1.55;margin-bottom:18px;">
+    <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#555;line-height:1.55;margin-bottom:18px;">
       <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:#0a0a0a;">
       <label for="gdpr">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
     </div>
@@ -2110,7 +2110,7 @@ ${sa.active !== false ? `
 <footer style="padding:28px 20px 40px;text-align:center;">
   <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:6px;">
     ${logoHTML}
-    <span style="font-size:14px;font-weight:600;">${bizName}</span>
+    <span style="font-size:14px;font-weight:600;color:#0a0a0a;">${bizName}</span>
   </div>
   <p style="font-size:12px;color:#aaa;margin-bottom:6px;">${website.replace(/^https?:\/\//, '')}</p>
   <p style="font-size:11px;color:#bbb;margin-bottom:24px;">Built with <a href="https://qraivy.com" style="color:#888;font-weight:600;text-decoration:none;">Smart Page</a> · AI-powered customer engagement.</p>
@@ -2118,7 +2118,7 @@ ${sa.active !== false ? `
     <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;">✦</span>
     Create Your Own Smart QR
   </a>
-  <p style="font-size:10px;font-weight:600;color:#bbb;letter-spacing:.06em;text-transform:uppercase;">Launch an AI-powered landing page in under 60 seconds.</p>
+  <p style="font-size:10px;font-weight:600;color:#666;letter-spacing:.06em;text-transform:uppercase;">Launch an AI-powered landing page in under 60 seconds.</p>
 </footer>
 
 <!-- TOAST -->
