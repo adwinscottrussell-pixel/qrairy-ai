@@ -198,6 +198,12 @@ const LP_CONTENT = {
 
 // ── HTML generator ────────────────────────────────────────────────────────
 function renderLP(page) {
+  // ── Template switch ── added by patch-premium-lp ──
+  // Safe section parse for template check
+  let _tplSections = {};
+  try { _tplSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections || {}); } catch(_) {}
+  if (page.template === 'premium' || _tplSections.template === 'premium') return renderPremiumLP(page);
+  // ── End template switch ──
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
   const bizName = (page.businessName || 'My Business').replace(/\s+[a-z0-9]{3}$/, '').replace(/'/g, '').trim() || (page.businessName || 'My Business');
   const slug    = page.slug;
@@ -1830,6 +1836,380 @@ async function handleLPManifest(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+
+
+// ── PREMIUM TEMPLATE RENDERER ────────────────────────────────────────────
+// Added by patch-premium-lp — does not modify renderLP()
+// Activate by setting page.template = 'premium' in the LandingPage record.
+//
+// Business-section map by useCase:
+//   restaurant  → Menu, Reserve Table, Opening Hours, Directions, Gallery, Loyalty, Events
+//   gym         → Classes, Timetable, Membership, Directions, Gallery, Loyalty, Events
+//   ecommerce   → Products, Offers, Gallery, Directions, Reviews, Contact
+//   default     → Services, Offers, Gallery, Directions, Reviews, Contact, Loyalty, Events
+//
+function renderPremiumLP(page) {
+  const bizName = (page.businessName || 'My Business').trim();
+  const slug    = page.slug || '';
+  const website = page.websiteUrl || '#';
+  const accent  = page.brandColor || '#0a0a0a';
+  const useCase = page.useCase || 'restaurant';
+  const logoUrl = page.logoUrl || '';
+  const logoHTML = logoUrl
+    ? `<img src="${logoUrl}" style="width:30px;height:30px;border-radius:6px;object-fit:contain;" alt="${bizName}">`
+    : `<div style="width:30px;height:30px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">${bizName.charAt(0).toUpperCase()}</div>`;
+
+  let storedSections = {};
+  let storedButtons  = [];
+  if (page.sections) {
+    try {
+      storedSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections;
+      if (Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
+    } catch(_) {}
+  }
+  const sh = storedSections.hero  || {};
+  const sv = storedSections.voice || {};
+  const sa = storedSections.ai    || {};
+  const sl = storedSections.loop  || {};
+
+  const headline = sh.title    || ('Welcome to ' + bizName);
+  const sub      = sh.subtitle || 'Visit us, explore what we offer, and stay connected.';
+
+  // ── CTA buttons ──
+  const ctaBtns = storedButtons.filter(b => b.active !== false).map(b => {
+    const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
+    const isPrimary = b.style !== 'secondary';
+    return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;font-family:inherit;text-decoration:none;cursor:pointer;${isPrimary ? `background:${accent};color:#fff;border:none;` : 'background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;'}transition:opacity .15s;">${b.title || b.label || 'Button'}</a>`;
+  }).join('');
+
+  // ── Business sections by useCase ──
+  const SECTIONS = {
+    restaurant: [
+      { id:'menu',     icon:'🍽️', label:'Menu',           sub:'View our full menu' },
+      { id:'reserve',  icon:'📅', label:'Reserve a table', sub:'Book online instantly' },
+      { id:'hours',    icon:'🕐', label:'Opening hours',   sub:'When we are open' },
+      { id:'location', icon:'📍', label:'Find us',         sub:'Directions & parking' },
+      { id:'gallery',  icon:'📸', label:'Gallery',         sub:'See inside & our food' },
+      { id:'loyalty',  icon:'⭐', label:'Loyalty rewards', sub:'Earn stamps, get rewards' },
+      { id:'events',   icon:'🎉', label:'Events',          sub:'Upcoming events & offers' },
+    ],
+    gym: [
+      { id:'classes',    icon:'💪', label:'Classes',         sub:'All sessions & schedules' },
+      { id:'timetable',  icon:'📅', label:'Timetable',       sub:'Book your next class' },
+      { id:'membership', icon:'🏷️', label:'Membership',      sub:'Plans & pricing' },
+      { id:'location',   icon:'📍', label:'Find us',         sub:'Directions & parking' },
+      { id:'gallery',    icon:'📸', label:'Gallery',         sub:'See our facilities' },
+      { id:'loyalty',    icon:'⭐', label:'Loyalty rewards', sub:'Earn points, get perks' },
+      { id:'events',     icon:'🎉', label:'Events',          sub:'Challenges & competitions' },
+    ],
+    ecommerce: [
+      { id:'products', icon:'🛍️', label:'Products',   sub:'Browse our range' },
+      { id:'offers',   icon:'🏷️', label:'Offers',     sub:"Today's deals" },
+      { id:'gallery',  icon:'📸', label:'Gallery',    sub:'See it in action' },
+      { id:'location', icon:'📍', label:'Find us',    sub:'Visit our store' },
+      { id:'reviews',  icon:'⭐', label:'Reviews',    sub:'What customers say' },
+      { id:'contact',  icon:'📞', label:'Contact',    sub:'Get in touch' },
+    ],
+  };
+  const defaultSections = [
+    { id:'services',  icon:'✦',  label:'Services',        sub:'What we offer' },
+    { id:'offers',    icon:'🏷️', label:'Offers',          sub:"Today's deals" },
+    { id:'gallery',   icon:'📸', label:'Gallery',         sub:'See our work' },
+    { id:'location',  icon:'📍', label:'Find us',         sub:'Directions & parking' },
+    { id:'reviews',   icon:'⭐', label:'Reviews',         sub:'What customers say' },
+    { id:'contact',   icon:'📞', label:'Contact',         sub:'Get in touch' },
+    { id:'loyalty',   icon:'🎁', label:'Loyalty rewards', sub:'Earn stamps, get rewards' },
+    { id:'events',    icon:'🎉', label:'Events',          sub:'Upcoming events & offers' },
+  ];
+  const bizSections = SECTIONS[useCase] || defaultSections;
+
+  const actionCardsHTML = bizSections.map(s =>
+    `<a href="#" onclick="return false;" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1px solid #e8e8e8;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+      <div style="width:40px;height:40px;border-radius:10px;border:1px solid #e8e8e8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
+        <div style="font-size:12px;color:#999;">${s.sub}</div>
+      </div>
+      <div style="font-size:16px;color:#bbb;">›</div>
+    </a>`
+  ).join('');
+
+  // ── Audio waveform bars ──
+  const waveBars = Array.from({length:12}, (_,i) => {
+    const h = [6,14,20,10,18,24,12,20,8,16,22,10][i];
+    return `<span style="display:block;width:2px;height:${h}px;border-radius:2px;background:#d0d0d0;"></span>`;
+  }).join('');
+
+  // ── Smart pass card ──
+  const passCard = `
+    <div style="background:#0a0a0a;border-radius:16px;padding:20px 24px;margin-bottom:10px;">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Smart Pass</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:24px;">${bizName}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:.1em;text-transform:uppercase;">· Tap to save</span>
+        <div style="display:flex;gap:6px;">
+          <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></div>
+          <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></div>
+        </div>
+      </div>
+    </div>`;
+
+  const lpUrl = 'https://api.qraivy.com/lp/' + slug;
+  const apiBase = 'https://api.qraivy.com';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="${bizName}">
+<link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png">
+<link rel="manifest" href="/lp/manifest/${slug}">
+<title>${bizName} — Smart Landing Page</title>
+<meta name="description" content="${sub}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:#f8f8f8;color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+a{color:inherit;text-decoration:none}
+input,textarea,button{font-family:inherit}
+.section{padding:0 20px;margin-bottom:16px}
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:16px;overflow:hidden}
+.divider{height:1px;background:#e8e8e8;margin:0 20px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #e8e8e8;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    ${logoHTML}
+    <span style="font-size:14px;font-weight:600;">${bizName}</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:5px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+      AI Powered
+    </span>
+    <button onclick="toggleTheme()" style="display:flex;align-items:center;width:44px;height:24px;border-radius:999px;border:1.5px solid #d0d0d0;background:#f2f2f2;padding:2px;cursor:pointer;">
+      <div id="theme-knob" style="width:18px;height:18px;border-radius:50%;background:#0a0a0a;transition:transform .2s;"></div>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div style="background:#fff;text-align:center;padding:56px 24px 48px;">
+  <div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d0d0;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:600;color:#555;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px;">
+    <span style="width:6px;height:6px;border-radius:50%;background:#0a0a0a;display:inline-block;"></span>
+    Smart Landing Page
+  </div>
+  <h1 style="font-size:clamp(30px,7vw,48px);font-weight:800;color:#0a0a0a;letter-spacing:-1.2px;line-height:1.05;margin-bottom:16px;">${headline}</h1>
+  <p style="font-size:15px;color:#555;line-height:1.7;max-width:380px;margin:0 auto 28px;">${sub}</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    ${ctaBtns || `
+      <a href="${website}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-size:14px;font-weight:600;background:#0a0a0a;color:#fff;text-decoration:none;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M2.5 8h11M8 2.5a10 10 0 010 11"/></svg>
+        Visit Website
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 13L13 3M7 3h6v6"/></svg>
+      </a>
+      <a href="#subscribe" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;text-decoration:none;">Learn More</a>
+    `}
+  </div>
+  <p style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;" onclick="window.location.href='${website}'">Auto-fill from your URL →</p>
+</div>
+
+<!-- AUDIO -->
+${sv.active !== false ? `
+<div class="section">
+  <div style="font-size:10px;font-weight:600;color:#999;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5v6M6 3v10M9 6v4M12 4v8"/></svg>
+    Welcome from ${bizName}
+  </div>
+  <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;" onclick="playAudio(this)">
+    <div id="audio-play-btn" style="width:40px;height:40px;border-radius:50%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || 'Personal welcome message'}</div>
+      <div style="font-size:12px;color:#999;">${sv.playerSubtitle || 'Tap to listen — unlocks AI assistant'}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px;height:28px;">${waveBars}</div>
+  </div>
+</div>
+` : ''}
+
+<!-- AI CHAT -->
+${sa.active !== false ? `
+<div class="section">
+  <div class="card" style="overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #e8e8e8;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+        <span style="font-size:13px;font-weight:600;">AI Assistant</span>
+        <span style="font-size:12px;color:#999;">— Online</span>
+      </div>
+      <span style="font-size:10px;font-weight:600;color:#bbb;letter-spacing:.05em;text-transform:uppercase;">Tap welcome to activate</span>
+    </div>
+    <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
+      <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">✦ Hi 👋 I'm the AI concierge for ${bizName}. Ask me about hours, menu, or anything else.</div>
+    </div>
+    <div style="display:flex;align-items:center;border-top:1px solid #e8e8e8;">
+      <input id="chat-input" placeholder="Ask anything…" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()" style="width:36px;height:36px;border-radius:50%;background:#f2f2f2;border:none;cursor:pointer;margin-right:8px;display:flex;align-items:center;justify-content:center;transition:background .15s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f2f2f2'">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><path d="M14 2L2 8l5 2 2 5 5-13z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+` : ''}
+
+<!-- SMART PASS -->
+<div class="section">
+  ${passCard}
+</div>
+
+<!-- ACTION CARDS (business sections) -->
+<div class="section">
+  <div style="font-size:10px;font-weight:600;color:#999;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;">What can I do here?</div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    ${actionCardsHTML}
+  </div>
+</div>
+
+<!-- SUBSCRIBE -->
+<div class="section" id="subscribe">
+  <div class="card" style="padding:28px 24px;">
+    <h2 style="font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:-.3px;margin-bottom:8px;">Stay in the loop</h2>
+    <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">Subscribe for updates, exclusive offers and early access from ${bizName}.</p>
+    <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='#0a0a0a'" onblur="this.style.borderColor='#e8e8e8'">
+    <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Subscribe →</button>
+    <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#999;line-height:1.55;margin-bottom:18px;">
+      <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:#0a0a0a;">
+      <label for="gdpr">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="addAppleWallet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e8e8e8;border-radius:10px;padding:11px;background:#fff;font-size:13px;font-weight:500;color:#0a0a0a;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#aaa'" onmouseout="this.style.borderColor='#e8e8e8'">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 00-4 4v1H3a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1h-1V5a4 4 0 00-4-4zm2 5H6V5a2 2 0 114 0v1z"/></svg>
+        Add to Apple Wallet
+      </button>
+      <button onclick="addGoogleWallet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e8e8e8;border-radius:10px;padding:11px;background:#fff;font-size:13px;font-weight:500;color:#0a0a0a;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#aaa'" onmouseout="this.style.borderColor='#e8e8e8'">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 7h14"/></svg>
+        Add to Google Wallet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DIVIDER -->
+<div class="divider" style="margin-bottom:40px;"></div>
+
+<!-- FOOTER -->
+<footer style="padding:28px 20px 40px;text-align:center;">
+  <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:6px;">
+    ${logoHTML}
+    <span style="font-size:14px;font-weight:600;">${bizName}</span>
+  </div>
+  <p style="font-size:12px;color:#aaa;margin-bottom:6px;">${website.replace(/^https?:\/\//, '')}</p>
+  <p style="font-size:11px;color:#bbb;margin-bottom:24px;">Built with <a href="https://qraivy.com" style="color:#888;font-weight:600;text-decoration:none;">Smart Page</a> · AI-powered customer engagement.</p>
+  <a href="https://qraivy.com" style="display:inline-flex;align-items:center;gap:9px;background:#0a0a0a;color:#fff;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:10px;">
+    <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;">✦</span>
+    Create Your Own Smart QR
+  </a>
+  <p style="font-size:10px;font-weight:600;color:#bbb;letter-spacing:.06em;text-transform:uppercase;">Launch an AI-powered landing page in under 60 seconds.</p>
+</footer>
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0a0a0a;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:500;white-space:nowrap;z-index:100;transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;"></div>
+
+<script>
+(function(){
+  var SLUG = '${slug}';
+  var API  = '${apiBase}';
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(function(){ t.style.transform = 'translateX(-50%) translateY(80px)'; }, 2800);
+  }
+
+  var dark = false;
+  window.toggleTheme = function() {
+    dark = !dark;
+    document.getElementById('theme-knob').style.transform = dark ? 'translateX(20px)' : 'none';
+    document.getElementById('theme-knob').style.background = dark ? '#f0f0f0' : '#0a0a0a';
+    document.body.style.background = dark ? '#111' : '#f8f8f8';
+    document.body.style.color = dark ? '#f0f0f0' : '#0a0a0a';
+  };
+
+  window.playAudio = function(el) {
+    toast('▶ Playing welcome message…');
+  };
+
+  // ── AI Chat ──
+  window.sendChat = function() {
+    var inp = document.getElementById('chat-input');
+    var val = inp.value.trim();
+    if (!val) return;
+    var msgs = document.getElementById('chat-msgs');
+    var uBubble = document.createElement('div');
+    uBubble.style.cssText = 'background:#0a0a0a;color:#fff;border-radius:12px 0 12px 12px;padding:10px 14px;font-size:13px;line-height:1.55;align-self:flex-end;max-width:82%;margin-left:auto;';
+    uBubble.textContent = val;
+    msgs.appendChild(uBubble);
+    inp.value = '';
+    msgs.scrollTop = msgs.scrollHeight;
+
+    var typing = document.createElement('div');
+    typing.style.cssText = 'background:#f2f2f2;border-radius:0 12px 12px 12px;padding:10px 14px;font-size:13px;color:#999;display:inline-block;max-width:82%;';
+    typing.textContent = '…';
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    var body = JSON.stringify({message: val, slug: SLUG});
+    fetch(API + '/lp/chat/' + SLUG, {method:'POST',headers:{'Content-Type':'application/json'},body:body})
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        typing.textContent = d.reply || d.message || 'I can help with that!';
+        typing.style.color = '#0a0a0a';
+        msgs.scrollTop = msgs.scrollHeight;
+      })
+      .catch(function() {
+        typing.textContent = 'Ask me about our menu, hours, or anything else.';
+        typing.style.color = '#0a0a0a';
+      });
+  };
+
+  // ── Subscribe ──
+  window.handleSubscribe = function() {
+    var email = (document.getElementById('sub-email').value || '').trim();
+    var gdpr  = document.getElementById('gdpr').checked;
+    if (!email || !email.includes('@')) { toast('Please enter a valid email'); return; }
+    if (!gdpr) { toast('Please accept to continue'); return; }
+    fetch(API + '/lp/subscribe/' + SLUG, {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email: email, gdprConsent: true, source:'email'})
+    }).then(function(r){ return r.json(); })
+      .then(function(d) { toast(d.alreadySubscribed ? 'Already subscribed' : '✓ Subscribed successfully'); })
+      .catch(function() { toast('✓ Subscribed successfully'); });
+    document.getElementById('sub-email').value = '';
+  };
+
+  // ── Wallet ──
+  window.addAppleWallet = function() {
+    window.location.href = API + '/lp/wallet/apple/' + SLUG;
+  };
+  window.addGoogleWallet = function() {
+    toast('Google Wallet coming soon');
+  };
+})();
+<\/script>
+</body>
+</html>`;
+}
+// ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
