@@ -1434,6 +1434,7 @@ async function handleServeLP(req, res) {
     } else {
       res.setHeader('Cache-Control', 'public, max-age=60');
     }
+    console.log('[SERVE] slug=' + slug + ' sections.template=' + (function(){try{var s=typeof page.sections==='string'?JSON.parse(page.sections):page.sections;return s&&s.template;}catch(e){return 'parse-error';}}()));
     const _lpHtml = renderLP(page);
     if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
