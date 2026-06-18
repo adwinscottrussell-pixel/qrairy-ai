@@ -202,6 +202,7 @@ function renderLP(page) {
   // Safe section parse for template check
   let _tplSections = {};
   try { _tplSections = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections || {}); } catch(_) {}
+  console.log('[LP] slug=' + page.slug + ' page.template=' + page.template + ' sections.template=' + _tplSections.template);
   if (page.template === 'premium' || _tplSections.template === 'premium') return renderPremiumLP(page);
   // ── End template switch ──
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
