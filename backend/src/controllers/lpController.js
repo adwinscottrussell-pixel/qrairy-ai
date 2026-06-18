@@ -1926,8 +1926,8 @@ function renderPremiumLP(page) {
   const bizSections = SECTIONS[useCase] || defaultSections;
 
   const actionCardsHTML = bizSections.map(s =>
-    `<a href="#" onclick="return false;" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1px solid #e8e8e8;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-      <div style="width:40px;height:40px;border-radius:10px;border:1px solid #e8e8e8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
+    `<a href="#" onclick="return false;" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+      <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid #0a0a0a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
         <div style="font-size:12px;color:#555;">${s.sub}</div>
@@ -2030,7 +2030,7 @@ ${sv.active !== false ? `
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5v6M6 3v10M9 6v4M12 4v8"/></svg>
     Welcome from ${bizName}
   </div>
-  <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;" onclick="playAudio(this)">
+  <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;border:1.5px solid #0a0a0a;border-radius:16px;" onclick="playAudio(this)">
     <div id="audio-play-btn" style="width:40px;height:40px;border-radius:50%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
     </div>
