@@ -1979,7 +1979,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8f8f8;color:#0a0a0a;m
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
-.card{background:#fff;border:1px solid #e8e8e8;border-radius:16px;overflow:hidden}
+.card{background:#fff;border:1.5px solid #0a0a0a;border-radius:16px;overflow:hidden}
 .divider{height:1px;background:#e8e8e8;margin:0 20px}
 </style>
 </head>
