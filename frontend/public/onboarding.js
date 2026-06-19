@@ -70,6 +70,7 @@
             brandColor:S.brandColor||kit.accent,
             logoUrl:S.logo,
             qrType:S.qrType||'ai',
+            template:'premium',
             // Category config fields
             categorySlug:    S.selectedUseCase,
             categoryLabel:   catCfg?catCfg.label:S.selectedUseCase,
