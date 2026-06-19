@@ -22,7 +22,7 @@ async function generateLPFromSite(businessName, websiteUrl, siteContent) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || !siteContent) return null;
   try {
-    const prompt = 'Based on this scraped website content, generate a JSON object with these exact fields: headline (hero headline), sub (1-2 sentence description), cta (primary button text), cta2 (secondary button text), features (array of exactly 3 objects each with icon (emoji), title, description pulled from real content), hours (opening hours string or null), address (physical address or null), phone (phone number or null), email (contact email address found on the site or null - must contain @ symbol), brandColor (the primary hex brand color of the business e.g. #DA291C for McDonalds, #006241 for Starbucks - make your best guess from the brand), useCase (one of: restaurant, ecommerce, gym, realestate, event, leadgen, portfolio, ai-support). Return ONLY valid JSON, no markdown fences.\n\nBusiness: ' + businessName + '\nWebsite: ' + websiteUrl + '\nScraped content:\n' + siteContent;
+    const prompt = 'Based on this scraped website content, generate a JSON object with these exact fields: headline (hero headline), sub (1-2 sentence description), cta (primary button text), cta2 (secondary button text), features (array of exactly 3 objects each with icon (emoji), title, description pulled from real content), hours (opening hours string or null), address (physical address or null), phone (phone number or null), email (contact email address found on the site or null - must contain @ symbol), brandColor (the primary hex brand color of the business e.g. #DA291C for McDonalds, #006241 for Starbucks - make your best guess from the brand), useCase (one of: restaurant, ecommerce, gym, realestate, event, leadgen, portfolio, ai-support), actionLinks (array of action link objects found on the site - only include if a real URL exists - each object has: label (short button label e.g. 'Menu', 'Reserve a Table', 'Order Online', 'Book a Session', 'Shop Now', 'Directions', 'Contact', 'Events', 'Opening Hours'), type (one of: menu, booking, order, shop, directions, contact, events, hours, social, other), url (the full absolute URL), description (one short sentence describing what happens when tapped), icon (a single relevant emoji)). Extract actionLinks for: menu/food ordering pages, booking/reservation systems, online shop, directions/maps links, contact pages, events pages, social media profiles. Return ONLY valid JSON, no markdown fences.\n\nBusiness: ' + businessName + '\nWebsite: ' + websiteUrl + '\nScraped content:\n' + siteContent;
     const body = JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] });
     return await new Promise((resolve) => {
       const req = https.request({ hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
@@ -1177,7 +1177,7 @@ async function handlePublishLP(req, res) {
                 hero: Object.assign({}, existing.hero||{}, aiData.headline ? { aiTitle: aiData.headline, aiSubtitle: aiData.sub||'' } : {}),
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null, email: (aiData.email && aiData.email.includes('@')) ? aiData.email : null },
-                aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent,
+                actionLinks: (Array.isArray(aiData.actionLinks) && aiData.actionLinks.length > 0) ? aiData.actionLinks : (existing.actionLinks || null),
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent, crawlLocked: true
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
@@ -1990,8 +1990,14 @@ function renderPremiumLP(page) {
   const defaultSections = SECTIONS.other;
   const bizSections = SECTIONS[_ucKey] || defaultSections;
 
-  const actionCardsHTML = bizSections.map(s =>
-    `<a href="#" onclick="return false;" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+  // ── actionLinks: use real crawled links if available, else fall back to static cards ──
+  const _aiLinks = Array.isArray(storedSections.actionLinks) && storedSections.actionLinks.length > 0 ? storedSections.actionLinks : null;
+  const _cardSource = _aiLinks
+    ? _aiLinks.map(l => ({ icon: l.icon || '🔗', label: l.label, sub: l.description || '', url: l.url || '#' }))
+    : bizSections.map(s => ({ icon: s.icon, label: s.label, sub: s.sub, url: '#' }));
+
+  const actionCardsHTML = _cardSource.map(s =>
+    `<a href="${s.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
       <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid #0a0a0a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
