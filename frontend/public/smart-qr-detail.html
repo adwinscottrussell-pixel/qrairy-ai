@@ -2168,6 +2168,7 @@ window.QRAIVY_EDITOR_STATE = {
         useCase: state.useCase || 'restaurant',
         brandColor: state.brandColor || '#ff5a1f',
         logoUrl: state.logoUrl || '',
+        template: 'premium',
         sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'], theme: (state.sections && state.sections.theme) || { background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' } })
       };
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
@@ -3370,6 +3371,7 @@ window.QRAIVY_EDITOR_STATE = {
         useCase: S.useCase || 'restaurant',
         brandColor: S.brandColor || (S.sections.theme && S.sections.theme.accentColor) || '#ff5a1f',
         logoUrl: S.logoUrl || '',
+        template: 'premium',
         sections: Object.assign({}, S.sections || {}, {
           buttons: (S.buttons || []),
           order:   (S.sections && S.sections.order) || ['hero','voice','ai','buttons','loop','footer'],
