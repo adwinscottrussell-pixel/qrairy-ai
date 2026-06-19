@@ -1885,45 +1885,112 @@ function renderPremiumLP(page) {
   }).join('');
 
   // ── Business sections by useCase ──
+  // Future expansion: plug AI recommendations, custom ordering, or CMS overrides per useCase here.
   const SECTIONS = {
     restaurant: [
-      { id:'menu',     icon:'🍽️', label:'Menu',           sub:'View our full menu' },
-      { id:'reserve',  icon:'📅', label:'Reserve a table', sub:'Book online instantly' },
-      { id:'hours',    icon:'🕐', label:'Opening hours',   sub:'When we are open' },
-      { id:'location', icon:'📍', label:'Find us',         sub:'Directions & parking' },
-      { id:'gallery',  icon:'📸', label:'Gallery',         sub:'See inside & our food' },
-      { id:'loyalty',  icon:'⭐', label:'Loyalty rewards', sub:'Earn stamps, get rewards' },
-      { id:'events',   icon:'🎉', label:'Events',          sub:'Upcoming events & offers' },
+      { id:'menu',      icon:'🍽️', label:'Menu',            sub:'View our full menu' },
+      { id:'reserve',   icon:'📅', label:'Reserve a table',  sub:'Book online instantly' },
+      { id:'special',   icon:'⚡', label:"Today's special",  sub:"What's on today" },
+      { id:'location',  icon:'📍', label:'Directions',       sub:'Find us & parking' },
+      { id:'loyalty',   icon:'⭐', label:'Loyalty card',     sub:'Earn stamps, get rewards' },
+      { id:'happyhour', icon:'🍹', label:'Happy hour',       sub:'Deals & drink offers' },
+      { id:'events',    icon:'🎉', label:'Events',           sub:'Upcoming events & offers' },
+      { id:'hours',     icon:'🕐', label:'Opening hours',    sub:'When we are open' },
+    ],
+    fitness: [
+      { id:'membership', icon:'🏷️', label:'Membership',      sub:'Plans & pricing' },
+      { id:'classes',    icon:'💪', label:'Classes',          sub:'All sessions & schedules' },
+      { id:'timetable',  icon:'📅', label:'Timetable',        sub:'Weekly schedule' },
+      { id:'book',       icon:'📲', label:'Book a session',   sub:'Reserve your spot' },
+      { id:'location',   icon:'📍', label:'Directions',       sub:'Find us & parking' },
+      { id:'rewards',    icon:'⭐', label:'Rewards',           sub:'Earn points, get perks' },
+      { id:'trainers',   icon:'🧑', label:'Trainers',         sub:'Meet our team' },
+      { id:'contact',    icon:'📞', label:'Contact',          sub:'Get in touch' },
     ],
     gym: [
-      { id:'classes',    icon:'💪', label:'Classes',         sub:'All sessions & schedules' },
-      { id:'timetable',  icon:'📅', label:'Timetable',       sub:'Book your next class' },
       { id:'membership', icon:'🏷️', label:'Membership',      sub:'Plans & pricing' },
-      { id:'location',   icon:'📍', label:'Find us',         sub:'Directions & parking' },
-      { id:'gallery',    icon:'📸', label:'Gallery',         sub:'See our facilities' },
-      { id:'loyalty',    icon:'⭐', label:'Loyalty rewards', sub:'Earn points, get perks' },
-      { id:'events',     icon:'🎉', label:'Events',          sub:'Challenges & competitions' },
+      { id:'classes',    icon:'💪', label:'Classes',          sub:'All sessions & schedules' },
+      { id:'timetable',  icon:'📅', label:'Timetable',        sub:'Weekly schedule' },
+      { id:'book',       icon:'📲', label:'Book a session',   sub:'Reserve your spot' },
+      { id:'location',   icon:'📍', label:'Directions',       sub:'Find us & parking' },
+      { id:'rewards',    icon:'⭐', label:'Rewards',           sub:'Earn points, get perks' },
+      { id:'trainers',   icon:'🧑', label:'Trainers',         sub:'Meet our team' },
+      { id:'contact',    icon:'📞', label:'Contact',          sub:'Get in touch' },
     ],
     ecommerce: [
-      { id:'products', icon:'🛍️', label:'Products',   sub:'Browse our range' },
-      { id:'offers',   icon:'🏷️', label:'Offers',     sub:"Today's deals" },
-      { id:'gallery',  icon:'📸', label:'Gallery',    sub:'See it in action' },
-      { id:'location', icon:'📍', label:'Find us',    sub:'Visit our store' },
-      { id:'reviews',  icon:'⭐', label:'Reviews',    sub:'What customers say' },
-      { id:'contact',  icon:'📞', label:'Contact',    sub:'Get in touch' },
+      { id:'shop',        icon:'🛍️', label:'Shop products',   sub:'Browse our range' },
+      { id:'new',         icon:'✨', label:'New arrivals',     sub:'Just landed' },
+      { id:'offers',      icon:'🏷️', label:"Today's offers",  sub:'Limited time deals' },
+      { id:'loyalty',     icon:'⭐', label:'Loyalty rewards',  sub:'Earn points, get perks' },
+      { id:'track',       icon:'📦', label:'Track order',      sub:'Where is my order' },
+      { id:'contact',     icon:'📞', label:'Contact',          sub:'Get in touch' },
+      { id:'bestsellers', icon:'🔥', label:'Best sellers',     sub:'Most popular picks' },
+      { id:'subscribe',   icon:'📧', label:'Subscribe',        sub:'Get exclusive offers' },
+    ],
+    creator: [
+      { id:'content',    icon:'▶️', label:'Latest content',   sub:'Watch & read' },
+      { id:'youtube',    icon:'📺', label:'YouTube',          sub:'Subscribe to my channel' },
+      { id:'instagram',  icon:'📸', label:'Instagram',        sub:'Follow for daily updates' },
+      { id:'tiktok',     icon:'🎵', label:'TikTok',           sub:'Watch my videos' },
+      { id:'newsletter', icon:'📧', label:'Newsletter',       sub:'Join my email list' },
+      { id:'community',  icon:'💬', label:'Community',        sub:'Join the conversation' },
+      { id:'deals',      icon:'🤝', label:'Brand deals',      sub:'Work with me' },
+      { id:'contact',    icon:'📞', label:'Contact',          sub:'Get in touch' },
+    ],
+    artist: [
+      { id:'release',   icon:'🎵', label:'Latest release',   sub:'Stream now' },
+      { id:'streaming', icon:'🎧', label:'Streaming links',  sub:'Listen on all platforms' },
+      { id:'tour',      icon:'🗺️', label:'Tour dates',       sub:'Live shows near you' },
+      { id:'tickets',   icon:'🎟️', label:'Tickets',          sub:'Get your tickets' },
+      { id:'merch',     icon:'👕', label:'Merch',            sub:'Official store' },
+      { id:'fanclub',   icon:'⭐', label:'Fan club',         sub:'Join the community' },
+      { id:'videos',    icon:'▶️', label:'Videos',           sub:'Watch music videos' },
+      { id:'subscribe', icon:'📧', label:'Subscribe',        sub:'Stay updated' },
+    ],
+    event: [
+      { id:'tickets',  icon:'🎟️', label:'Buy tickets',      sub:'Secure your spot' },
+      { id:'rsvp',     icon:'✅', label:'RSVP',             sub:"Let us know you're coming" },
+      { id:'schedule', icon:'📅', label:'Schedule',         sub:'Full event programme' },
+      { id:'speakers', icon:'🎤', label:'Speakers',         sub:'Who is performing' },
+      { id:'location', icon:'📍', label:'Directions',       sub:'Venue & transport' },
+      { id:'updates',  icon:'🔔', label:'Updates',          sub:'Stay in the loop' },
+      { id:'vip',      icon:'💎', label:'VIP pass',         sub:'Exclusive access' },
+      { id:'contact',  icon:'📞', label:'Contact',          sub:'Get in touch' },
+    ],
+    local_business: [
+      { id:'services', icon:'✦',  label:'Services',         sub:'What we offer' },
+      { id:'book',     icon:'📅', label:'Book appointment', sub:'Reserve your slot' },
+      { id:'reviews',  icon:'⭐', label:'Reviews',          sub:'What customers say' },
+      { id:'location', icon:'📍', label:'Directions',       sub:'Find us & parking' },
+      { id:'call',     icon:'📞', label:'Call us',          sub:'Speak to the team' },
+      { id:'offers',   icon:'🏷️', label:'Offers',           sub:'Current deals' },
+      { id:'loyalty',  icon:'🎁', label:'Loyalty',          sub:'Earn stamps, get rewards' },
+      { id:'contact',  icon:'💬', label:'Contact',          sub:'Send us a message' },
+    ],
+    other: [
+      { id:'website',   icon:'🌐', label:'Website',         sub:'Visit our site' },
+      { id:'contact',   icon:'📞', label:'Contact',         sub:'Get in touch' },
+      { id:'gallery',   icon:'📸', label:'Gallery',         sub:'See our work' },
+      { id:'offers',    icon:'🏷️', label:'Offers',          sub:'Current deals' },
+      { id:'subscribe', icon:'📧', label:'Subscribe',       sub:'Stay updated' },
+      { id:'location',  icon:'📍', label:'Directions',      sub:'Find us' },
     ],
   };
-  const defaultSections = [
-    { id:'services',  icon:'✦',  label:'Services',        sub:'What we offer' },
-    { id:'offers',    icon:'🏷️', label:'Offers',          sub:"Today's deals" },
-    { id:'gallery',   icon:'📸', label:'Gallery',         sub:'See our work' },
-    { id:'location',  icon:'📍', label:'Find us',         sub:'Directions & parking' },
-    { id:'reviews',   icon:'⭐', label:'Reviews',         sub:'What customers say' },
-    { id:'contact',   icon:'📞', label:'Contact',         sub:'Get in touch' },
-    { id:'loyalty',   icon:'🎁', label:'Loyalty rewards', sub:'Earn stamps, get rewards' },
-    { id:'events',    icon:'🎉', label:'Events',          sub:'Upcoming events & offers' },
-  ];
-  const bizSections = SECTIONS[useCase] || defaultSections;
+  // useCase aliases — maps onboarding values to SECTIONS keys
+  // Future: add AI-driven overrides or user-customised ordering here
+  const _uc = (useCase || '').toLowerCase();
+  const _ucKey = {
+    'restaurant': 'restaurant',
+    'fitness': 'fitness', 'gym': 'fitness',
+    'ecommerce': 'ecommerce', 'shop': 'ecommerce',
+    'creator': 'creator', 'influencer': 'creator',
+    'artist': 'artist', 'music': 'artist',
+    'event': 'event', 'events': 'event',
+    'local_business': 'local_business', 'local': 'local_business', 'leadgen': 'local_business',
+    'other': 'other', 'portfolio': 'other', 'ai-support': 'other', 'realestate': 'other',
+  }[_uc] || null;
+  const defaultSections = SECTIONS.other;
+  const bizSections = SECTIONS[_ucKey] || defaultSections;
 
   const actionCardsHTML = bizSections.map(s =>
     `<a href="#" onclick="return false;" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
