@@ -1181,6 +1181,8 @@ async function handlePublishLP(req, res) {
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent, crawlLocked: true
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
+              pageCache.delByPrefix('lp:' + slug);
+              pageCache.delByPrefix('stamp:' + slug);
               console.log('[Firecrawl] Auto-generated LP for', slug);
 
               // Generate voice welcome message
