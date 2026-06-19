@@ -79,6 +79,7 @@ model LandingPage {
   userId       String?
   qrType       String?  @default("ai")
   sections     String?
+  template     String?
   status       String   @default("live")
   scanCount    Int      @default(0)
   createdAt    DateTime @default(now())

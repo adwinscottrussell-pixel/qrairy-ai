@@ -1126,7 +1126,7 @@ async function handleChatLP(req, res) {
 
 async function handlePublishLP(req, res) {
   try {
-    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType } = req.body;
+    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template } = req.body;
     let userId = req.body.userId || null;
     if (!userId && req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
@@ -1156,8 +1156,8 @@ async function handlePublishLP(req, res) {
     pageCache.delByPrefix('stamp:' + slug);
     const page = await prisma.landingPage.upsert({
       where: { slug },
-      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date() },
-      create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live' },
+      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
+      create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live', template: template || null },
     });
     if (websiteUrl && websiteUrl.startsWith('http')) {
 
