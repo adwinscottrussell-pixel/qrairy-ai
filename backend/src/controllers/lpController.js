@@ -2221,7 +2221,22 @@ ${sa.active !== false ? `
   };
 
   window.playAudio = function(el) {
-    toast('▶ Playing welcome message…');
+    var audioUrl = '${sv.audioUrl || ""}';
+    if (!audioUrl) { toast('No audio available yet'); return; }
+    if (window._premiumAudio) { window._premiumAudio.pause(); window._premiumAudio = null; }
+    var audio = new Audio(audioUrl);
+    window._premiumAudio = audio;
+    var subEl = el.querySelector('div > div:last-child');
+    if (subEl) subEl.textContent = 'Playing…';
+    audio.play().then(function() {
+      toast('▶ Playing welcome message…');
+    }).catch(function() {
+      toast('Tap again to play');
+    });
+    audio.onended = function() {
+      if (subEl) subEl.textContent = 'Tap to listen — unlocks AI assistant';
+      window._premiumAudio = null;
+    };
   };
 
   // ── AI Chat ──
