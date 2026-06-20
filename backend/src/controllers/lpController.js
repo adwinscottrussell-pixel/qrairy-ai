@@ -2060,7 +2060,7 @@ function renderPremiumLP(page) {
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
-    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.15)'" onmouseout="this.style.boxShadow='none'">
       <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
@@ -2115,24 +2115,24 @@ a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
 .card{background:#fff;border:1.5px solid ${accent};border-radius:16px;overflow:hidden}
-.dark-mode .card{background:#1e1e1e !important;border-color:#333 !important;}
-.dark-mode .card *{color:#f0f0f0 !important;}
+.dark-mode .card{background:#0a0a0a !important;border-color:#222 !important;}
+.dark-mode .card *{color:#f0f0f0 !important;} .dark-mode .card:hover{background:#0a0a0a !important;transform:none !important;}
 .dark-mode h1,.dark-mode h2,.dark-mode h3{color:#fff !important;}
 .dark-mode p,.dark-mode span,.dark-mode div{color:#ccc;}
 .dark-mode nav{background:rgba(17,17,17,0.95) !important;border-bottom-color:#333 !important;}
 .dark-mode nav span,.dark-mode nav a{color:#f0f0f0 !important;}
 .dark-mode .section{background:transparent !important;}
-.dark-mode input[type=email]{background:#1e1e1e !important;border-color:#333 !important;color:#f0f0f0 !important;}
+.dark-mode input[type=email]{background:#0a0a0a !important;border-color:#333 !important;color:#f0f0f0 !important;}
 .dark-mode input[type=email]::placeholder{color:#666 !important;}
 .dark-mode #chat-input{color:#f0f0f0 !important;}
 .dark-mode #chat-input::placeholder{color:#666 !important;}
-.dark-mode .card[style*="background:#f2f2f2"]{background:#2a2a2a !important;}
-.dark-mode [style*="background:#fff"]{background:#1e1e1e !important;}
+.dark-mode .card[style*="background:#f2f2f2"]{background:#111 !important;}
+.dark-mode [style*="background:#fff"]{background:#0a0a0a !important;}
 .dark-mode [style*="color:#0a0a0a"]{color:#f0f0f0 !important;}
-.dark-mode [style*="color:#555"]{color:#aaa !important;}
-.dark-mode [style*="color:#999"]{color:#666 !important;}
+.dark-mode [style*="color:#555"]{color:#ccc !important;}
+.dark-mode [style*="color:#999"]{color:#aaa !important;}
 .dark-mode [style*="border:1px solid #e8e8e8"]{border-color:#333 !important;}
-.dark-mode [style*="background:#f2f2f2"]{background:#2a2a2a !important;}
+.dark-mode [style*="background:#f2f2f2"]{background:#111 !important;}
 .divider{height:1px;background:#e8e8e8;margin:0 20px}
 </style>
 </head>
