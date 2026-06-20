@@ -2048,6 +2048,7 @@ function renderPremiumLP(page) {
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
+@keyframes waveBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
 body{font-family:'Inter',system-ui,sans-serif;background:#f8f8f8;color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
