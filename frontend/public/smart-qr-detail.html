@@ -2169,7 +2169,7 @@ window.QRAIVY_EDITOR_STATE = {
         brandColor: state.brandColor || '#ff5a1f',
         logoUrl: state.logoUrl || '',
         template: 'premium',
-        sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'], theme: (state.sections && state.sections.theme) || { background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' } })
+        sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'], theme: Object.assign({ background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }, (state.sections && state.sections.theme) || {}, state.brandColor ? { accentColor: state.brandColor } : {}) })
       };
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
@@ -3375,7 +3375,7 @@ window.QRAIVY_EDITOR_STATE = {
         sections: Object.assign({}, S.sections || {}, {
           buttons: (S.buttons || []),
           order:   (S.sections && S.sections.order) || ['hero','voice','ai','buttons','loop','footer'],
-          theme:   (S.sections && S.sections.theme) || { background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }
+          theme:   Object.assign({ background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }, (S.sections && S.sections.theme) || {}, S.brandColor ? { accentColor: S.brandColor } : {})
         })
       };
       var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
