@@ -2079,10 +2079,10 @@ function renderPremiumLP(page) {
   // ── Smart pass card ──
   const passCard = `
     <div style="background:#0a0a0a;border-radius:16px;padding:20px 24px;margin-bottom:10px;">
-      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Smart Pass</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Smart Pass</div>
       <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:24px;">${bizName}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;">
-        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:.1em;text-transform:uppercase;">· Tap to save</span>
+        <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:.1em;text-transform:uppercase;">· Tap to save</span>
         <div style="display:flex;gap:6px;">
           <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></div>
           <div style="width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></div>
