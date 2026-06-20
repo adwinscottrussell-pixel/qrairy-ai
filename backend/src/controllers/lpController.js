@@ -2246,16 +2246,15 @@ ${sa.active !== false ? `
       <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:${accent};">
       <label for="gdpr">${t.gdpr}${bizName}${t.gdprSuffix}</label>
     </div>
-    <div style="display:flex;gap:10px;">
-      <button onclick="addAppleWallet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e8e8e8;border-radius:10px;padding:11px;background:#fff;font-size:13px;font-weight:500;color:#0a0a0a;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#aaa'" onmouseout="this.style.borderColor='#e8e8e8'">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 00-4 4v1H3a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1h-1V5a4 4 0 00-4-4zm2 5H6V5a2 2 0 114 0v1z"/></svg>
-        Add to Apple Wallet
+    <div id="wallet-btns" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+      <button id="btn-apple" onclick="addAppleWallet()" style="display:none;width:100%;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;padding:16px;background:#000;font-size:15px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🍎 Add to Apple Wallet
       </button>
-      <button onclick="addGoogleWallet()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid #e8e8e8;border-radius:10px;padding:11px;background:#fff;font-size:13px;font-weight:500;color:#0a0a0a;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor='#aaa'" onmouseout="this.style.borderColor='#e8e8e8'">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 7h14"/></svg>
-        Add to Google Wallet
+      <button id="btn-google" onclick="addGoogleWallet()" style="display:none;width:100%;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;padding:16px;background:#4285F4;font-size:15px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        💳 Add to Google Wallet
       </button>
     </div>
+    <script>(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.getElementById('btn-apple');var gb=document.getElementById('btn-google');if(ab&&gb){if(isIOS){ab.style.display='flex';}else if(isAndroid){gb.style.display='flex';}else{ab.style.display='flex';gb.style.display='flex';}}})();</script>
   </div>
 </div>
 
