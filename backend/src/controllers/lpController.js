@@ -2056,7 +2056,7 @@ function renderPremiumLP(page) {
   // ── actionLinks: use real crawled links if available, else fall back to static cards ──
   const _aiLinks = Array.isArray(storedSections.actionLinks) && storedSections.actionLinks.length > 0 ? storedSections.actionLinks : null;
   const _cardSource = _aiLinks
-    ? _aiLinks.map(l => ({ icon: l.icon || '🔗', label: l.label, sub: l.description || '', url: l.url || '#' }))
+    ? _aiLinks.map(l => { const _lbl = l.label||''; const _de = {Menu:'Speisekarte','Reserve a Table':'Tisch reservieren','Order Online':'Online bestellen','Book a Session':'Session buchen','Shop Now':'Jetzt einkaufen',Directions:'Wegbeschreibung',Contact:'Kontakt',Events:'Veranstaltungen','Opening Hours':'Öffnungszeiten','Book a Table':'Tisch reservieren','Order Food':'Essen bestellen','View Menu':'Speisekarte','Find Us':'Uns finden'}; return { icon: l.icon||'🔗', label: (lang==='de' && _de[_lbl]) ? _de[_lbl] : _lbl, sub: l.description||'', url: l.url||'#' }; })
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
@@ -2170,8 +2170,8 @@ ${sv.active !== false ? `
       <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
     </div>
     <div style="flex:1;min-width:0;">
-      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || '${t.personalWelcome}'}</div>
-      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || '${t.tapToListen}'}</div>
+      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || t.personalWelcome}</div>
+      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || t.tapToListen}</div>
     </div>
     <div style="display:flex;align-items:center;gap:2px;height:28px;">${waveBars}</div>
   </div>
