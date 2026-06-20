@@ -2139,6 +2139,7 @@ input,textarea,button{font-family:inherit}
 
 <!-- HERO -->
 <div style="background:#fff;text-align:center;padding:56px 24px 48px;">
+  ${logoUrl ? `<div style="margin-bottom:20px;"><img src="${logoUrl}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;box-shadow:0 4px 16px rgba(0,0,0,0.08);" alt="${bizName}"></div>` : `<div style="margin-bottom:20px;"><div style="width:72px;height:72px;border-radius:16px;background:${accent};display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12);">${bizName.charAt(0).toUpperCase()}</div></div>`}
   <div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d0d0;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:600;color:#555;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px;">
     <span style="width:6px;height:6px;border-radius:50%;background:#0a0a0a;display:inline-block;"></span>
     ${t.tagline}
