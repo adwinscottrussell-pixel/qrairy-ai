@@ -2114,7 +2114,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:${storedSections.theme 
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
-.card{background:#fff;border:1.5px solid #0a0a0a;border-radius:16px;overflow:hidden}
+.card{background:#fff;border:1.5px solid ${accent};border-radius:16px;overflow:hidden}
 .divider{height:1px;background:#e8e8e8;margin:0 20px}
 </style>
 </head>
@@ -2222,10 +2222,10 @@ ${sa.active !== false ? `
   <div class="card" style="padding:28px 24px;">
     <h2 style="font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:-.3px;margin-bottom:8px;">${t.stayInLoop}</h2>
     <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">${t.subscribeDesc}${bizName}.</p>
-    <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='#0a0a0a'" onblur="this.style.borderColor='#e8e8e8'">
+    <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='${accent}'" onblur="this.style.borderColor='#e8e8e8'">
     <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:${accent};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">${t.subscribeBtn}</button>
     <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#555;line-height:1.55;margin-bottom:18px;">
-      <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:#0a0a0a;">
+      <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:${accent};">
       <label for="gdpr">${t.gdpr}${bizName}${t.gdprSuffix}</label>
     </div>
     <div style="display:flex;gap:10px;">
