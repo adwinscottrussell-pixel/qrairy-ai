@@ -2060,8 +2060,8 @@ function renderPremiumLP(page) {
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
-    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
-      <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid #0a0a0a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
+    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+      <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
         <div style="font-size:12px;color:#555;">${s.sub}</div>
@@ -2141,14 +2141,14 @@ input,textarea,button{font-family:inherit}
 <div style="background:#fff;text-align:center;padding:56px 24px 48px;">
   ${logoUrl ? `<div style="margin-bottom:20px;"><img src="${logoUrl}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;box-shadow:0 4px 16px rgba(0,0,0,0.08);" alt="${bizName}"></div>` : `<div style="margin-bottom:20px;"><div style="width:72px;height:72px;border-radius:16px;background:${accent};display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12);">${bizName.charAt(0).toUpperCase()}</div></div>`}
   <div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d0d0;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:600;color:#555;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px;">
-    <span style="width:6px;height:6px;border-radius:50%;background:#0a0a0a;display:inline-block;"></span>
+    <span style="width:6px;height:6px;border-radius:50%;background:${accent};display:inline-block;"></span>
     ${t.tagline}
   </div>
   <h1 style="font-size:clamp(30px,7vw,48px);font-weight:800;color:#0a0a0a;letter-spacing:-1.2px;line-height:1.05;margin-bottom:16px;">${headline}</h1>
   <p style="font-size:15px;color:#555;line-height:1.7;max-width:380px;margin:0 auto 28px;">${sub}</p>
   <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
     ${ctaBtns || `
-      <a href="${website}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-size:14px;font-weight:600;background:#0a0a0a;color:#fff;text-decoration:none;">
+      <a href="${website}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-size:14px;font-weight:600;background:${accent};color:#fff;text-decoration:none;">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M2.5 8h11M8 2.5a10 10 0 010 11"/></svg>
         ${t.visitWebsite}
         <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 13L13 3M7 3h6v6"/></svg>
@@ -2166,8 +2166,8 @@ ${sv.active !== false ? `
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5v6M6 3v10M9 6v4M12 4v8"/></svg>
     Welcome from ${bizName}
   </div>
-  <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;border:1.5px solid #0a0a0a;border-radius:16px;" onclick="playAudio(this)">
-    <div id="audio-play-btn" style="width:40px;height:40px;border-radius:50%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;">
+  <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;border:1.5px solid ${accent};border-radius:16px;" onclick="playAudio(this)">
+    <div id="audio-play-btn" style="width:40px;height:40px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
     </div>
     <div style="flex:1;min-width:0;">
@@ -2223,7 +2223,7 @@ ${sa.active !== false ? `
     <h2 style="font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:-.3px;margin-bottom:8px;">${t.stayInLoop}</h2>
     <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">${t.subscribeDesc}${bizName}.</p>
     <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='#0a0a0a'" onblur="this.style.borderColor='#e8e8e8'">
-    <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">${t.subscribeBtn}</button>
+    <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:${accent};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">${t.subscribeBtn}</button>
     <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#555;line-height:1.55;margin-bottom:18px;">
       <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:#0a0a0a;">
       <label for="gdpr">${t.gdpr}${bizName}${t.gdprSuffix}</label>
@@ -2364,7 +2364,7 @@ ${sa.active !== false ? `
     if (!val) return;
     var msgs = document.getElementById('chat-msgs');
     var uBubble = document.createElement('div');
-    uBubble.style.cssText = 'background:#0a0a0a;color:#fff;border-radius:12px 0 12px 12px;padding:10px 14px;font-size:13px;line-height:1.55;align-self:flex-end;max-width:82%;margin-left:auto;';
+    uBubble.style.cssText = 'background:${accent};color:#fff;border-radius:12px 0 12px 12px;padding:10px 14px;font-size:13px;line-height:1.55;align-self:flex-end;max-width:82%;margin-left:auto;';
     uBubble.textContent = val;
     msgs.appendChild(uBubble);
     inp.value = '';
