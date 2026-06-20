@@ -690,7 +690,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
     ${logoHTMLFinal}
     <span class="lp-nav-name">${bizName}</span>
   </div>
-  <div class="lp-nav-pill"><span class="lp-nav-dot"></span>AI Powered</div>
+  <div class="lp-nav-pill"><span class="lp-nav-dot"></span>${t.aiPowered}</div>
 </nav>
 ${(function() {
   const heroHTML = `<section class="lp-hero">
@@ -2140,7 +2140,7 @@ input,textarea,button{font-family:inherit}
 <div style="background:#fff;text-align:center;padding:56px 24px 48px;">
   <div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d0d0;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:600;color:#555;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px;">
     <span style="width:6px;height:6px;border-radius:50%;background:#0a0a0a;display:inline-block;"></span>
-    Smart Landing Page
+    ${t.tagline}
   </div>
   <h1 style="font-size:clamp(30px,7vw,48px);font-weight:800;color:#0a0a0a;letter-spacing:-1.2px;line-height:1.05;margin-bottom:16px;">${headline}</h1>
   <p style="font-size:15px;color:#555;line-height:1.7;max-width:380px;margin:0 auto 28px;">${sub}</p>
@@ -2148,7 +2148,7 @@ input,textarea,button{font-family:inherit}
     ${ctaBtns || `
       <a href="${website}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-size:14px;font-weight:600;background:#0a0a0a;color:#fff;text-decoration:none;">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M2.5 8h11M8 2.5a10 10 0 010 11"/></svg>
-        Visit Website
+        ${t.visitWebsite}
         <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 13L13 3M7 3h6v6"/></svg>
       </a>
       <a href="#subscribe" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;text-decoration:none;">${t.learnMore}</a>
