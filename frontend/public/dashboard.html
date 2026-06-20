@@ -274,102 +274,204 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 </div>
 
 <script>
-/* v2 */
-(function(){
-  var PUBLISH_PATH='dashboard.html?section=landing-pages';
-  var FREE_PATH='qr-free.html';
-  var EDITOR_PATH='editor.html';
-  function key(u){return 'qraivy_onboarded_'+u;}
-  function done(u){return !!localStorage.getItem(key(u));}
-  function mark(u){localStorage.setItem(key(u),'true');}
-  var S={qrType:null,selectedUseCase:null,businessName:'',websiteURL:'',logo:null,brandColor:'#ff5a1f',generatedQR:null,slug:null,publishedURL:null,progress:0};
-  var qrSVG='<svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="2" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="21" y="5" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="2" y="18" width="12" height="12" rx="2" stroke="rgba(240,236,224,0.6)" stroke-width="1.5" fill="none"/><rect x="5" y="21" width="6" height="6" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="18" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="18" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/><rect x="26" y="26" width="4" height="4" rx="1" fill="rgba(240,236,224,0.6)"/></svg>';
-  var aiSVG='<svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3 L17.5 13 L28 16 L17.5 19 L16 29 L14.5 19 L4 16 L14.5 13 Z" stroke="#FF7A35" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M26 5 L26.8 8 L30 9 L26.8 10 L26 13 L25.2 10 L22 9 L25.2 8 Z" fill="#FF7A35" opacity="0.6"/></svg>';
-  function chk(a){return '<span class="qr-check'+(a?' qr-check-accent':'')+'">&#10003;</span>';}
-  function fi(t,a){return '<li class="qr-feature-item'+(a?' qr-feature-item-accent':'')+'">'+chk(a)+t+'</li>';}
-  // USE_CASES — single source of truth via window.QRAIVY_SMART_QR_CATEGORIES
-  // Fallback used if shared config not loaded
-  var USE_CASES_FALLBACK=[
-  {id:'restaurant',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6h4M21 22H3"/></svg>',title:'Restaurant',sub:'Menus, reservations & offers'},
-  {id:'creator',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/></svg>',title:'Creator / Influencer',sub:'Links, videos & fan engagement'},
-  {id:'artist_music',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',title:'Artist / Music',sub:'Releases, tickets & fan links'},
-  {id:'event',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',title:'Event',sub:'Tickets, RSVP & live updates'},
-  {id:'ecommerce',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>',title:'Ecommerce',sub:'Products, offers & sales'},
-  {id:'local_business',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/><path d="M3 9h18"/></svg>',title:'Local Business',sub:'Reviews, bookings & customer actions'},
-  {id:'fitness',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4v16M18 4v16M3 8h3M18 8h3M3 16h3M18 16h3M6 12h12"/></svg>',title:'Fitness',sub:'Coaching, memberships & classes'},
-  {id:'other',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',title:'Other',sub:'Let AI build a custom Smart QR'}
-  ];
-  var USE_CASES=(function(){
-    var cats=window.QRAIVY_SMART_QR_CATEGORIES;
-    if(!cats||!cats.length) return USE_CASES_FALLBACK;
-    return cats.map(function(c){
-      var fb=USE_CASES_FALLBACK.find(function(x){return x.id===c.slug;})||{};
-      return {id:c.slug,icon:fb.icon||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg>',title:c.label,sub:c.description};
+window.QrTier={
+  loadPlan: async function(){ await QRairySession.loadPlan(); QRairySession.applyTrialUI(); return QRairySession.get(); },
+  startTrial: async function(){ return QRairySession.startTrial(); },
+  can: function(cap){ return QRairySession.can(cap); },
+  get: function(){ return QRairySession.get(); }
+};
+
+const API_BASE='https://api.qraivy.com';
+
+function toast(msg){
+  var t=document.getElementById('cs-toast');
+  document.getElementById('cs-toast-msg').textContent=' '+msg;
+  t.style.display='flex';setTimeout(function(){t.style.display='none';},2800);
+}
+
+async function deleteQR(id,cardEl){
+  if(!confirm('Delete this Smart QR Page and all its data? Cannot be undone.'))return;
+  try{
+    var token=await window.Clerk.session.getToken();
+    var res=await fetch(API_BASE+'/qr/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+    var d=await res.json();
+    if(d.success){cardEl.remove();loadDashboard();toast('Page deleted');}
+    else toast('Delete failed: '+(d.error||'unknown'));
+  }catch{toast('Could not reach server');}
+}
+
+function renderCards(dashboard){
+  var grid=document.getElementById('sqrGrid');
+  var loadEl=document.getElementById('sqr-loading');
+  if(loadEl)loadEl.style.display='none';
+  grid.innerHTML='';
+  var aiPages=dashboard.filter(function(q){return!!q.businessName;});
+  function setKPI(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+  setKPI('kpi-pages',aiPages.length);
+  setKPI('kpi-scans',dashboard.reduce(function(s,q){return s+q.totalScans;},0));
+  setKPI('kpi-subs',dashboard.reduce(function(s,q){return s+q.totalSubscribers;},0));
+  setKPI('kpi-wallet','—');
+  var badge=document.getElementById('sqr-count-badge');
+  if(badge)badge.textContent=aiPages.length;
+  var cnt=document.getElementById('sqr-section-count');
+  if(cnt)cnt.textContent=aiPages.length>0?'('+aiPages.length+')':'';
+  if(aiPages.length===0){
+    grid.innerHTML='<div class="sqr-empty"><div class="sqr-empty-icon">&#x2B21;</div><div class="sqr-empty-title">No Smart QR Pages yet</div><div class="sqr-empty-sub">Create your first AI-powered business page in under 60 seconds. Voice welcome, AI assistant, wallet subscriptions &mdash; all included.</div><button class="btn-create" onclick="launchOnboarding()">&#xFF0B; Create Smart QR</button></div>';
+    return;
+  }
+  aiPages.forEach(function(qr){
+    var slug=qr.slug||qr.lpSlug||'';
+    var lpUrl=slug?'https://api.qraivy.com/lp/'+slug:qr.originalUrl;
+    var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
+    var cvr=qr.totalScans>0?Math.round((qr.totalSubscribers/qr.totalScans)*100):0;
+    var card=document.createElement('div');
+    card.className='sqr-card';
+    card.innerHTML='<div class="sqr-card-top"><div class="sqr-thumb"><img src="'+qrImg+'" alt="QR" loading="lazy"/></div><div class="sqr-meta"><div style="margin-bottom:6px"><span class="sqr-status live">&#x25CF; Live</span><span class="sqr-status ai">&#x2728; AI</span></div><div class="sqr-name">'+qr.businessName+'</div><div class="sqr-url">'+(slug?'api.qraivy.com/lp/'+slug:qr.originalUrl)+'</div><div class="sqr-stats"><div><div class="sqr-stat-v">'+qr.totalScans+'</div><div class="sqr-stat-l">Scans</div></div><div><div class="sqr-stat-v">'+qr.totalSubscribers+'</div><div class="sqr-stat-l">Subs</div></div><div><div class="sqr-stat-v">'+cvr+'%</div><div class="sqr-stat-l">CVR</div></div></div></div></div><div class="sqr-divider"></div><div class="sqr-actions"><button class="sqr-act primary sqr-manage">&#x2699; Manage</button><button class="sqr-act sqr-open">&#x1F310; View</button><button class="sqr-act sqr-analytics">&#x2197; Analytics</button></div>';
+    card.querySelector('.sqr-manage').onclick=function(){window.location.href='smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&manage=true';};
+    card.querySelector('.sqr-open').onclick=function(){window.open(lpUrl,'_blank');};
+    card.querySelector('.sqr-analytics').onclick=function(){window.location.href='analytics.html';};
+    grid.appendChild(card);
+  });
+}
+
+async function loadDashboard(){
+  try{
+    var token=await window.Clerk.session.getToken();
+    var res=await fetch(API_BASE+'/dashboard',{headers:{Authorization:'Bearer '+token}});
+    var data=await res.json();
+    if(data.planInfo){
+      var pi=data.planInfo;
+      var badge=document.getElementById('plan-badge');
+      if(badge)badge.textContent=(pi.basePlan||pi.plan||'free').toUpperCase();
+    }
+    renderCards(data.dashboard||[]);
+  }catch(err){
+    var loadEl=document.getElementById('sqr-loading');
+    if(loadEl)loadEl.textContent='Failed to load — please refresh.';
+    console.error(err);
+  }
+}
+
+function launchOnboarding(){
+  if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId||'user');
+}
+
+async function initDashboard(){
+  await window.Clerk.load();
+  await new Promise(function(r){setTimeout(r,400);});
+  if(!window.Clerk.user){window.location.href='login.html';return;}
+  var name=window.Clerk.user.firstName||window.Clerk.user.emailAddresses[0].emailAddress;
+  window._userId=window.Clerk.user.id;
+  var avatarEl=document.getElementById('sb-avatar');
+  var nameEl=document.getElementById('sb-username');
+  if(avatarEl)avatarEl.textContent=name[0].toUpperCase();
+  if(nameEl)nameEl.textContent=name;
+  document.getElementById('sb-signout').addEventListener('click',async function(e){
+    e.preventDefault();await window.Clerk.signOut();window.location.href='login.html';
+  });
+  var sidebar=document.getElementById('sidebar');
+  var sbToggle=document.getElementById('sb-toggle');
+  if(localStorage.getItem('sb-collapsed')==='true'){sidebar.classList.add('collapsed');document.body.classList.add('sb-collapsed');}
+  sbToggle.addEventListener('click',function(){
+    var c=sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed',c);
+    localStorage.setItem('sb-collapsed',c);
+  });
+  var mobBtn=document.getElementById('mob-btn');
+  var overlay=document.getElementById('sb-overlay');
+  if(mobBtn)mobBtn.addEventListener('click',function(){sidebar.classList.add('mob-open');overlay.classList.add('on');});
+  if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
+  ['sb-wallet','sb-settings'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.addEventListener('click',function(e){e.preventDefault();toast('Coming soon — stay tuned!');});
+  });
+
+  var sbLoyalty = document.getElementById('sb-loyalty');
+  if (sbLoyalty) sbLoyalty.addEventListener('click', function(e) {
+    e.preventDefault();
+    var mc = document.getElementById('main-content');
+    if (mc) mc.style.display = 'none';
+    document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+    var lp = document.getElementById('section-loyalty');
+    if (lp) { lp.style.display='block'; loadLoyaltyDashboard(); }
+    document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+    sbLoyalty.classList.add('active');
+  });
+  // Subscribers sidebar
+  var sbSub = document.getElementById('sb-subscribers');
+  if (sbSub) {
+    sbSub.addEventListener('click', function(e) {
+      e.preventDefault();
+      var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
+      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+      var sec = document.getElementById('section-subscribers'); if (sec) sec.style.display = 'block';
+      sbSub.classList.add('active');
+      var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
+      var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
+      if (window.subLoad) { setTimeout(window.subLoad, 100); }
     });
-  })();
-  var LP_KITS={creator:{label:'Creator / Influencer',emoji:'\u2728',accent:'#ff5a1f',bg:'#0a0a0a',headline:'Welcome to {name}',tagline:'Links, videos and exclusive fan content',cta:'Follow Now',cta2:'Latest Content',sections:[{icon:'\uD83D\uDD17',name:'My Links',desc:'All your important links'},{icon:'\uD83C\uDFB5',name:'Latest Content',desc:'Videos, posts & drops'},{icon:'\uD83C\uDF81',name:'Exclusive Access',desc:'Fan perks & giveaways'},{icon:'\uD83E\uDD16',name:'AI Chat',desc:'Answer fan questions'},{icon:'\uD83D\uDCE7',name:'Subscribe',desc:'Newsletter & updates'},{icon:'\uD83D\uDCF1',name:'Social Links',desc:'All platforms'},{icon:'\uD83D\uDCBC',name:'Work With Me',desc:'Brand partnerships'},{icon:'\uD83C\uDF9F',name:'Events',desc:'Live appearances'}]},
-  music:{label:'Music / Artist',emoji:'\uD83C\uDFB5',accent:'#7c3aed',bg:'#05050f',headline:'{name}',tagline:'Music, merch and live events',cta:'Stream Now',cta2:'Get Tickets',sections:[{icon:'\uD83C\uDFB5',name:'Latest Release',desc:'New music & videos'},{icon:'\uD83C\uDF9F',name:'Tour Dates',desc:'Upcoming shows'},{icon:'\uD83D\uDECD',name:'Merch',desc:'Official merchandise'},{icon:'\uD83D\uDD17',name:'All Links',desc:'Streaming & socials'},{icon:'\uD83E\uDD16',name:'AI Chat',desc:'Connect with fans'},{icon:'\uD83D\uDCF8',name:'Gallery',desc:'Photos & videos'},{icon:'\uD83C\uDF81',name:'Fan Club',desc:'Exclusive access'},{icon:'\uD83D\uDCE7',name:'Mailing List',desc:'Stay in touch'}]},
-  beauty:{label:'Beauty / Salon',emoji:'\u2728',accent:'#f43f5e',bg:'#0a0508',headline:'Welcome to {name}',tagline:'Book your appointment today',cta:'Book Now',cta2:'View Services',sections:[{icon:'\uD83D\uDCC5',name:'Book Appointment',desc:'One-tap booking'},{icon:'\uD83D\uDCCB',name:'Services Menu',desc:'Full service list & pricing'},{icon:'\uD83D\uDCF8',name:'Gallery',desc:'Before & after results'},{icon:'\uD83C\uDF81',name:'Promotions',desc:'Current offers & deals'},{icon:'\uD83E\uDD16',name:'AI Assistant',desc:'Answer questions'},{icon:'\u2B50',name:'Reviews',desc:'Client testimonials'},{icon:'\uD83D\uDCAC',name:'WhatsApp',desc:'Direct message'},{icon:'\uD83D\uDCCD',name:'Location & Hours',desc:'Find us'}]},
-  localbiz:{label:'Local Business',emoji:'\uD83C\uDFEA',accent:'#0ea5e9',bg:'#050a0f',headline:'Welcome to {name}',tagline:'Your local favourite',cta:'Contact Us',cta2:'Learn More',sections:[{icon:'\u2B50',name:'Reviews',desc:'Google reviews'},{icon:'\uD83D\uDD17',name:'Quick Links',desc:'Most important pages'},{icon:'\uD83D\uDCC5',name:'Book / Reserve',desc:'Easy booking'},{icon:'\uD83D\uDCCD',name:'Find Us',desc:'Map & directions'},{icon:'\uD83E\uDD16',name:'AI Assistant',desc:'Answer questions 24/7'},{icon:'\uD83C\uDF81',name:'Offers',desc:'Current promotions'},{icon:'\uD83D\uDCDE',name:'Call Us',desc:'Direct contact'},{icon:'\uD83D\uDCF1',name:'Social Links',desc:'Follow us'}]},
-  restaurant:{label:'Restaurant',emoji:'\uD83C\uDF7D',accent:'#e8a020',bg:'#0f0a04',headline:'Welcome to Our Restaurant',tagline:'Authentic flavours, unforgettable experiences',cta:'Reserve Your Table',cta2:'View Full Menu',sections:[{icon:'\uD83D\uDDBC',name:'Hero Banner',desc:'Full-width photo with CTA'},{icon:'\uD83D\uDCCB',name:'Digital Menu',desc:'AI-generated menu sections'},{icon:'\uD83D\uDCC5',name:'Reserve a Table',desc:'One-tap booking CTA'},{icon:'\uD83D\uDCAC',name:'WhatsApp CTA',desc:'Instant message button'},{icon:'\uD83E\uDD16',name:'AI Food Assistant',desc:'Chat about dishes'},{icon:'\u2B50',name:'Reviews',desc:'Google reviews widget'},{icon:'\uD83D\uDCCD',name:'Map & Hours',desc:'Location & opening times'},{icon:'\uD83C\uDF81',name:'Promo Section',desc:'Current offers & loyalty'}]},ecommerce:{label:'Ecommerce',emoji:'\uD83D\uDED2',accent:'#ff5a1f',bg:'#0a0a0a',headline:'Shop the Collection',tagline:'Premium products, exclusive deals, fast delivery',cta:'Shop Now',cta2:'View Offers',sections:[{icon:'\uD83D\uDDBC',name:'Product Hero',desc:'Hero image with CTA'},{icon:'\uD83D\uDCB0',name:'Discount Banner',desc:'Active offer'},{icon:'\uD83D\uDECD',name:'Product Carousel',desc:'Top products'},{icon:'\u2B50',name:'Reviews',desc:'Social proof'},{icon:'\uD83E\uDD16',name:'AI Shopping Asst.',desc:'Find products'},{icon:'\uD83D\uDCE6',name:'Delivery Info',desc:'Shipping & returns'},{icon:'\uD83D\uDD25',name:'Flash Sale',desc:'Limited time'},{icon:'\uD83D\uDCF2',name:'App Download',desc:'Mobile app CTA'}]},realestate:{label:'Real Estate',emoji:'\uD83C\uDFE0',accent:'#ff5a1f',bg:'#060810',headline:'Your Dream Property Awaits',tagline:'Discover exceptional homes in prime locations',cta:'Schedule a Viewing',cta2:'View Gallery',sections:[{icon:'\uD83D\uDDBC',name:'Property Hero',desc:'Gallery with key facts'},{icon:'\uD83D\uDCC5',name:'Book a Viewing',desc:'Calendar booking'},{icon:'\uD83D\uDCCB',name:'Property Details',desc:'Beds, baths, size'},{icon:'\uD83D\uDDFA',name:'Neighbourhood Map',desc:'Local amenities'},{icon:'\uD83E\uDD16',name:'AI Property Asst.',desc:'Answer questions'},{icon:'\uD83D\uDCF8',name:'Photo Gallery',desc:'Full gallery'},{icon:'\uD83D\uDCB0',name:'Mortgage Guide',desc:'Affordability'},{icon:'\uD83D\uDCDE',name:'Agent Contact',desc:'Direct contact'}]},social:{label:'Social Media',emoji:'\uD83D\uDCF1',accent:'#ff5a1f',bg:'#0a0a0a',headline:'Follow for Exclusive Content',tagline:'Behind-the-scenes, giveaways & early access',cta:'Follow Now',cta2:'Latest Content',sections:[{icon:'\uD83D\uDDBC',name:'Profile Hero',desc:'Brand photo & bio'},{icon:'\uD83D\uDD17',name:'Link in Bio',desc:'All links'},{icon:'\uD83D\uDCF8',name:'Latest Posts',desc:'Instagram feed'},{icon:'\uD83C\uDF81',name:'Giveaway CTA',desc:'Active contest'},{icon:'\uD83E\uDD16',name:'AI Chat',desc:'Answer DMs'},{icon:'\uD83C\uDFB5',name:'TikTok Feed',desc:'Latest videos'},{icon:'\uD83D\uDCE7',name:'Newsletter CTA',desc:'Email growth'},{icon:'\uD83D\uDCBC',name:'Collab Enquiry',desc:'Partnerships'}]},leadgen:{label:'Lead Generation',emoji:'\uD83C\uDFAF',accent:'#ff5a1f',bg:'#0a0808',headline:'Get Your Free Consultation',tagline:'Limited slots available — book yours today',cta:'Book Free Session',cta2:'See How It Works',sections:[{icon:'\uD83C\uDFAF',name:'Offer Hero',desc:'Bold headline'},{icon:'\uD83D\uDCCB',name:'Lead Capture Form',desc:'Name, email, phone'},{icon:'\u2705',name:'Social Proof',desc:'Testimonials'},{icon:'\uD83D\uDCE6',name:'What You Get',desc:'Value proposition'},{icon:'\u23F0',name:'Urgency Block',desc:'Limited spots'},{icon:'\uD83E\uDD16',name:'AI Qualifier',desc:'Pre-qualify'},{icon:'\uD83D\uDCDE',name:'Call CTA',desc:'Direct phone'},{icon:'\uD83C\uDF81',name:'Bonus Offer',desc:'Extra incentive'}]},gym:{label:'Gym / Fitness',emoji:'\uD83D\uDCAA',accent:'#ff5a1f',bg:'#080808',headline:'Start Your Transformation',tagline:'Expert coaching, proven results, no excuses',cta:'Claim Free Trial',cta2:'View Classes',sections:[{icon:'\uD83C\uDFCB',name:'Hero Banner',desc:'Bold headline'},{icon:'\uD83C\uDDE6\uD83C\uDDE6',name:'Free Trial CTA',desc:'No-commitment'},{icon:'\uD83D\uDCC5',name:'Class Timetable',desc:'Weekly schedule'},{icon:'\uD83D\uDC64',name:'Trainer Profiles',desc:'Meet coaches'},{icon:'\uD83D\uDCF8',name:'Results Gallery',desc:'Transformations'},{icon:'\uD83E\uDD16',name:'AI Fitness Asst.',desc:'Workout advice'},{icon:'\uD83D\uDCB3',name:'Membership Plans',desc:'Pricing'},{icon:'\u2B50',name:'Member Reviews',desc:'Testimonials'}]},bizcard:{label:'Business Card',emoji:'\uD83D\uDCBC',accent:'#ff5a1f',bg:'#0a0a0a',headline:"Let's Connect",tagline:'Professional. Trusted. Ready to help.',cta:'Save My Contact',cta2:'Book a Call',sections:[{icon:'\uD83D\uDC64',name:'Profile Hero',desc:'Photo & title'},{icon:'\uD83D\uDCC7',name:'Digital vCard',desc:'One-tap save'},{icon:'\uD83D\uDD17',name:'Social Links',desc:'LinkedIn etc'},{icon:'\uD83D\uDDD3',name:'Book a Meeting',desc:'Calendar booking'},{icon:'\uD83E\uDD16',name:'AI Assistant',desc:'Intro questions'},{icon:'\uD83D\uDCBC',name:'Services',desc:'What you offer'},{icon:'\u2B50',name:'Testimonials',desc:'Client reviews'},{icon:'\uD83D\uDCE7',name:'Contact Form',desc:'Direct message'}]},event:{label:'Event',emoji:'\uD83C\uDFB5',accent:'#7c3aed',bg:'#05082e',headline:"Don't Miss Out",tagline:"An experience you'll never forget",cta:'Get Tickets',cta2:'View Lineup',sections:[{icon:'\uD83C\uDFB5',name:'Event Hero',desc:'Date & venue'},{icon:'\uD83C\uDF9F',name:'Buy Tickets',desc:'Ticket tiers'},{icon:'\uD83D\uDCCB',name:'Full Lineup',desc:'Schedule'},{icon:'\uD83D\uDCCD',name:'Venue & Directions',desc:'Map & travel'},{icon:'\uD83E\uDD16',name:'AI Event Asst.',desc:'Answer questions'},{icon:'\uD83D\uDCF8',name:'Gallery',desc:'Previous events'},{icon:'\uD83D\uDCE7',name:'RSVP / Waitlist',desc:'Email capture'},{icon:'\uD83C\uDF81',name:'VIP Packages',desc:'Premium upsell'}]},'ai-support':{label:'AI Support',emoji:'\uD83E\uDD16',accent:'#ff5a1f',bg:'#080b10',headline:'Instant Support, 24/7',tagline:'Scan to chat with our AI',cta:'Chat Now',cta2:'Browse FAQs',sections:[{icon:'\uD83E\uDD16',name:'AI Chat Widget',desc:'Full AI assistant'},{icon:'\u2753',name:'FAQ Section',desc:'Top questions'},{icon:'\uD83D\uDCCB',name:'Knowledge Base',desc:'Searchable help'},{icon:'\uD83D\uDD17',name:'Quick Links',desc:'Most visited'},{icon:'\uD83D\uDCDE',name:'Escalation CTA',desc:'Talk to human'},{icon:'\u2B50',name:'CSAT Widget',desc:'Satisfaction'},{icon:'\uD83D\uDCE7',name:'Ticket Form',desc:'Submit request'},{icon:'\uD83D\uDCCA',name:'Status Page',desc:'System status'}]},portfolio:{label:'Portfolio',emoji:'\uD83C\uDFA8',accent:'#ff5a1f',bg:'#0a0a0a',headline:'Creative Work That Converts',tagline:'Strategy + design + results',cta:'View My Work',cta2:'Get in Touch',sections:[{icon:'\uD83D\uDDBC',name:'Portfolio Hero',desc:'Best work'},{icon:'\uD83D\uDCBC',name:'Featured Projects',desc:'Case studies'},{icon:'\uD83D\uDEE0',name:'Skills & Services',desc:'What you offer'},{icon:'\u2B50',name:'Client Reviews',desc:'Testimonials'},{icon:'\uD83E\uDD16',name:'AI Intro Asst.',desc:'Answer questions'},{icon:'\uD83D\uDCE7',name:'Contact Form',desc:'Project enquiry'},{icon:'\uD83D\uDCB0',name:'Pricing Guide',desc:'Starting rates'},{icon:'\uD83D\uDCC5',name:'Book Discovery Call',desc:'Calendar'}]},packaging:{label:'Product / Packaging',emoji:'\uD83D\uDCE6',accent:'#ff5a1f',bg:'#111111',headline:'Scan to Discover More',tagline:'Your product, now with a digital soul',cta:'Explore Product',cta2:'Reorder Now',sections:[{icon:'\u2728',name:'Brand Hero',desc:'Product story'},{icon:'\uD83D\uDCD6',name:'Usage Guide',desc:'How-to'},{icon:'\uD83C\uDF3F',name:'Ingredients',desc:'Transparency'},{icon:'\u2B50',name:'Reviews',desc:'Customer ratings'},{icon:'\uD83E\uDD16',name:'AI Product Asst.',desc:'Answer questions'},{icon:'\uD83D\uDD04',name:'Reorder CTA',desc:'One-tap repurchase'},{icon:'\uD83C\uDF81',name:'Loyalty Reward',desc:'Scan-to-earn'},{icon:'\uD83D\uDCF2',name:'Social Share',desc:'UGC'}]}};
-  // LP_KITS aliases — map new shared-config slugs to existing kits
-  LP_KITS['artist_music']=LP_KITS['music']||LP_KITS['event'];
-  LP_KITS['local_business']=LP_KITS['localbiz']||LP_KITS['restaurant'];
-  LP_KITS['fitness']=LP_KITS['gym']||LP_KITS['restaurant'];
-  LP_KITS['other']=LP_KITS['bizcard']||LP_KITS['restaurant'];
-  var QR_STEPS=['Building your QR experience','Creating smart destination','Applying business branding','Preparing mobile experience','Connecting AI assistant','Finalising your setup'];
-  var PUBLISH_STEPS=['Generating smart sections\u2026','Optimising mobile experience\u2026','Building AI assistant\u2026','Applying your branding\u2026','Publishing smart page\u2026','Connecting QR code\u2026'];
-  function makeSlug(name){var base=(name||'qraivy').toLowerCase().replace(/[\u00e4\u00e0\u00e1\u00e2]/g,'a').replace(/[\u00f6\u00f2\u00f3\u00f4]/g,'o').replace(/[\u00fc\u00f9\u00fa\u00fb]/g,'u').replace(/\u00df/g,'ss').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');var rand=Math.random().toString(36).slice(2,5);return base+'-'+rand;}
-  function progressBar(step,total,label){var pct=Math.round((step/total)*100);var dots='';for(var i=1;i<=total;i++)dots+='<span class="qr-prog-dot'+(i<=step?' qr-prog-dot-active':'')+'"></span>';return '<div class="qr-progress-wrap"><div class="qr-progress-bar-track"><div class="qr-progress-bar-fill" style="width:'+pct+'%"></div></div><div class="qr-progress-meta"><span class="qr-progress-label">Step '+step+' of '+total+(label?' &mdash; '+label:'')+'</span><div class="qr-prog-dots">'+dots+'</div></div></div>';}
-  function step1HTML(){return '<div class="qr-modal"><button class="qr-close-btn" id="qr-close">&#215;</button>'+progressBar(1,5,'QR Type')+'<div class="qr-modal-header"><div class="qr-logo-mark">Q</div><h1 class="qr-modal-title">Welcome to Qraivy 👋</h1><p class="qr-modal-subtitle">What would you like to create today?</p></div><div class="qr-card-grid"><div class="qr-card"><span class="qr-badge-free">Free</span><div class="qr-card-icon qr-card-icon-free">'+qrSVG+'</div><div class="qr-card-title">Free Static QR</div><p class="qr-card-desc">Create a fast and simple QR code that links directly to websites, menus, PDFs, social pages, or contact info.</p><ul class="qr-feature-list">'+fi('Unlimited scans',false)+fi('Instant generation',false)+fi('Simple setup',false)+fi('Free forever',false)+'</ul><button class="qr-btn-free" id="qr-free">Create Free QR →</button></div><div class="qr-card qr-card-premium"><div class="qr-card-glow"></div><span class="qr-badge-pro">&#10022; Recommended</span><div class="qr-card-icon qr-card-icon-ai">'+aiSVG+'</div><div class="qr-card-title">AI Smart QR Experience</div><p class="qr-card-desc">Build AI-powered QR landing pages with voice welcome, AI chat, subscriber capture, wallet passes, and customer engagement tools.</p><ul class="qr-feature-list">'+fi('AI Assistant',true)+fi('Voice Welcome',true)+fi('Subscriber Capture',true)+fi('Wallet Passes',true)+fi('Push Notifications',true)+fi('AI Campaigns',true)+'</ul><button class="qr-btn-premium" id="qr-ai">&#10022; Build AI Smart QR</button></div></div><p class="qr-modal-footer">Upgrade anytime from <strong>Settings &rarr; Billing</strong></p></div>';}
-  function step2HTML(){var cards=USE_CASES.map(function(uc,i){var sel=S.selectedUseCase===uc.id;return '<button class="qr-uc-card'+(sel?' qr-uc-card-selected':'')+'" data-uc="'+uc.id+'" style="animation-delay:'+(i*30)+'ms"><div class="qr-uc-check"><svg viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#FF7A35" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="qr-uc-icon">'+uc.icon+'</div><div class="qr-uc-title">'+uc.title+'</div><div class="qr-uc-sub">'+uc.sub+'</div></button>';}).join('');return '<div class="qr-modal qr-modal-wide qr-step2-modal"><button class="qr-close-btn" id="qr-close">&#215;</button>'+progressBar(2,5,'Industry')+'<div class="qr-modal-header qr-modal-header-compact"><h1 class="qr-modal-title">What\'s your primary goal?</h1><p class="qr-modal-subtitle">AI will personalise your landing page for your industry</p></div><div class="qr-uc-grid">'+cards+'</div><div class="qr-step2-footer"><button class="qr-back-btn" id="qr-back">&larr; Back</button><button class="qr-btn-continue" id="qr-continue"'+(S.selectedUseCase?'':' disabled')+'>Continue &rarr;</button></div></div>';}
-  function step3HTML(){var kit=LP_KITS[S.selectedUseCase]||{label:'Business',emoji:'\u2736'};return '<div class="qr-modal qr-setup-modal"><button class="qr-close-btn" id="qr-close">&#215;</button>'+progressBar(3,5,'Business Setup')+'<div class="qr-modal-header qr-modal-header-compact"><h1 class="qr-modal-title">Tell us about your business</h1><p class="qr-modal-subtitle">Qraivy will generate a personalised AI smart landing page for your customers</p></div><div class="qr-setup-body"><div class="qr-field-group"><label class="qr-field-label" for="qr-biz-name">Business Name <span class="qr-field-required">*</span></label><input class="qr-field-input" id="qr-biz-name" type="text" placeholder="e.g. The Italian Kitchen" autocomplete="organization" value="'+(S.businessName||'')+'"></div><div class="qr-field-group"><label class="qr-field-label" for="qr-biz-url">Website URL <span class="qr-field-required">*</span></label><div class="qr-input-prefix-wrap"><span class="qr-input-prefix">https://</span><input class="qr-field-input qr-field-input-prefixed" id="qr-biz-url" type="text" placeholder="yourwebsite.com" autocomplete="url" value="'+(S.websiteURL||'')+'"></div></div><div class="qr-setup-row"><div class="qr-field-group" style="flex:1"><label class="qr-field-label">Logo <span class="qr-field-opt">Optional</span></label><label class="qr-logo-upload" for="qr-logo-input"><div class="qr-logo-preview" id="qr-logo-preview">'+(S.logo?'<img src="'+S.logo+'" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>')+'</div><div class="qr-logo-upload-text"><span class="qr-logo-upload-main">Upload logo</span><span class="qr-logo-upload-sub">PNG, SVG, JPG</span></div><input type="file" id="qr-logo-input" accept="image/*" style="display:none"></label></div><div class="qr-field-group" style="flex:1"><label class="qr-field-label">Brand Colour <span class="qr-field-opt">Optional</span></label><div class="qr-color-wrap"><div class="qr-color-swatch" id="qr-color-swatch" style="background:'+(S.brandColor||'#ff5a1f')+'" onclick="document.getElementById(\'qr-color-input\').click()"></div><input type="color" id="qr-color-input" value="'+(S.brandColor||'#ff5a1f')+'" style="display:none"><span class="qr-color-hex" id="qr-color-hex">'+(S.brandColor||'#ff5a1f')+'</span><div class="qr-color-presets">'+['#ff5a1f','#e8a020','#7c3aed','#0ea5e9','#22c55e','#f43f5e','#0a0a0a','#f0ece0'].map(function(c){return '<div class="qr-color-preset'+(S.brandColor===c?' active':'')+'" style="background:'+c+'" data-color="'+c+'"></div>';}).join('')+'</div></div></div></div><div class="qr-setup-summary"><span class="qr-setup-summary-icon">'+kit.emoji+'</span><span class="qr-setup-summary-text">Building a <strong>'+kit.label+'</strong> landing page</span></div></div><div class="qr-setup-footer"><button class="qr-back-btn" id="qr-back">&larr; Back</button><button class="qr-btn-continue" id="qr-continue"'+(S.businessName&&S.websiteURL?'':' disabled')+'>Generate My Page &rarr;</button></div></div>';}
-  function step4HTML(){var kit=LP_KITS[S.selectedUseCase]||{label:'Your Page',emoji:'\u2736',accent:'#ff5a1f'};var bizName=S.businessName||'Your Business';if(!S.slug)S.slug=makeSlug(bizName);var shortURL='api.qraivy.com/lp/'+S.slug;var steps=QR_STEPS.map(function(t,i){return '<div class="qr-ls-step" id="qr-ls-'+i+'"><span class="qr-ls-icon">&#10003;</span><span class="qr-ls-text">'+t+'</span></div>';}).join('');return '<div class="qr-modal qr-step4-modal"><div class="qr-s3-particles" id="qr-s3-particles"></div><button class="qr-close-btn" id="qr-close" style="z-index:2">&#215;</button>'+progressBar(4,5,'QR Generation')+'<div class="qr-s4-content"><div class="qr-s4-left"><div class="qr-s3-orb-wrap" style="margin-bottom:1rem"><div class="qr-s3-ring qr-s3-ring-outer"></div><div class="qr-s3-ring qr-s3-ring-inner"></div><div class="qr-s3-orb"><div class="qr-logo-mark" style="margin:0;width:44px;height:44px;font-size:1.3rem;">Q</div></div></div><div class="qr-s3-kit-label">'+kit.emoji+' '+bizName+'</div><h2 class="qr-s3-title" style="font-size:1.15rem">Generating your smart QR\u2026</h2><div class="qr-ls-steps">'+steps+'</div><div class="qr-s3-prog-wrap"><div class="qr-s3-prog-track"><div class="qr-s3-prog-fill" id="qr-s3-fill"></div></div><span class="qr-s3-pct" id="qr-s3-pct">0%</span></div></div><div class="qr-s4-right" id="qr-s4-preview" style="opacity:0;transition:opacity 0.5s ease"><div class="qr-s4-qr-card"><div class="qr-s4-ai-badge">&#10022; AI Smart QR</div><div class="qr-s4-qr-frame"><div class="qr-s4-qr-loading" id="qr-s4-loading"><div class="qr-s4-qr-shimmer"></div></div><img id="qr-s4-img" style="display:none;width:120px;height:120px;border-radius:8px;" /></div><div class="qr-s4-biz-name">'+bizName+'</div><div class="qr-s4-url">'+shortURL+'</div><div class="qr-s4-lp-badge">'+kit.emoji+' '+kit.label+'</div></div></div></div></div>';}
-  function step5HTML(){var kit=LP_KITS[S.selectedUseCase]||LP_KITS['restaurant'];var bizName=S.businessName||'Your Business';var accent=S.brandColor||kit.accent;var bg=kit.bg;var shortURL='qraivy.com/'+(S.slug||'your-page');var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent('https://'+shortURL)+'&color=ffffff&bgcolor=111111';var sectionsPreview=kit.sections.slice(0,5).map(function(sec,i){return '<div class="qr-phone-section" style="animation-delay:'+(i*70)+'ms"><div class="qr-phone-sec-icon">'+sec.icon+'</div><div class="qr-phone-sec-info"><div class="qr-phone-sec-name">'+sec.name+'</div><div class="qr-phone-sec-desc">'+sec.desc+'</div></div><div class="qr-phone-sec-live"></div></div>';}).join('');var allSections=kit.sections.map(function(sec,i){return '<div class="qr-pw-section-item" style="animation-delay:'+(i*40)+'ms"><span class="qr-pw-section-name">'+sec.icon+' '+sec.name+'</span><span class="qr-pw-section-desc">'+sec.desc+'</span></div>';}).join('');return '<div class="qr-modal qr-preview-modal"><button class="qr-close-btn" id="qr-close">&#215;</button>'+progressBar(5,5,'Preview')+'<div class="qr-pw-header"><div><div class="qr-pw-ai-badge">&#10022; AI Generated &mdash; '+bizName+'</div><h2 class="qr-pw-title">Your landing page is ready</h2><p class="qr-pw-subtitle">Review, then publish or customise</p></div><button class="qr-back-btn" id="qr-back" style="flex-shrink:0;margin-top:4px">&larr; Back</button></div><div class="qr-pw-body"><div class="qr-phone-wrap"><div class="qr-phone-frame"><div class="qr-phone-notch"></div><div class="qr-phone-screen" style="background:'+bg+'"><div class="qr-phone-hero" style="background:linear-gradient(160deg,'+accent+'22,'+bg+' 70%)"><div class="qr-phone-hero-badge" style="color:'+accent+'">'+kit.emoji+' '+bizName+'</div><div class="qr-phone-hero-title">'+kit.headline+'</div><div class="qr-phone-hero-sub">'+kit.tagline+'</div><button class="qr-phone-cta-btn" style="background:'+accent+'">'+kit.cta+' &rarr;</button></div><div class="qr-phone-sections">'+sectionsPreview+'</div><div class="qr-phone-footer"><img src="'+qrSrc+'" class="qr-phone-qr" /><div><div class="qr-phone-footer-label">Your Smart QR</div><div class="qr-phone-footer-sub">'+shortURL+'</div></div></div></div></div><div class="qr-phone-live-badge">&#9679; Ready to publish</div></div><div class="qr-pw-summary"><div class="qr-pw-meta-grid"><div class="qr-pw-meta-item"><span class="qr-pw-meta-label">BUSINESS</span><span class="qr-pw-meta-val">'+bizName+'</span></div><div class="qr-pw-meta-item"><span class="qr-pw-meta-label">USE CASE</span><span class="qr-pw-meta-val">'+kit.label+'</span></div><div class="qr-pw-meta-item"><span class="qr-pw-meta-label">PRIMARY CTA</span><span class="qr-pw-meta-val" style="color:'+accent+'">'+kit.cta+'</span></div><div class="qr-pw-meta-item"><span class="qr-pw-meta-label">SMART URL</span><span class="qr-pw-meta-val">'+shortURL+'</span></div></div><div class="qr-pw-sections-label">Generated Sections ('+kit.sections.length+')</div><div class="qr-pw-sections">'+allSections+'</div></div></div><div class="qr-pw-actions"><button class="qr-pw-btn-ghost" id="qr-regenerate">&#8635; Regenerate</button><button class="qr-pw-btn-secondary" id="qr-customize">&#ccc8; Customise Later</button><div style="flex:1"></div><button class="qr-pw-btn-assets" id="qr-assets">&#9881; Marketing Assets</button><button class="qr-pw-btn-primary" id="qr-publish">&#9654; Publish Landing Page</button></div></div>';}
-  function publishingHTML(){var bizName=S.businessName||'Your Business';var steps=PUBLISH_STEPS.map(function(t,i){return '<div class="qr-ls-step" id="qr-pub-'+i+'"><span class="qr-ls-icon">&#10003;</span><span class="qr-ls-text">'+t+'</span></div>';}).join('');return '<div class="qr-modal qr-step3-modal" style="max-width:440px"><div class="qr-s3-particles" id="qr-s3-particles"></div><div class="qr-s3-content"><div class="qr-s3-orb-wrap"><div class="qr-s3-ring qr-s3-ring-outer"></div><div class="qr-s3-ring qr-s3-ring-inner"></div><div class="qr-s3-orb"><div class="qr-logo-mark" style="margin:0;width:44px;height:44px;font-size:1.3rem;">Q</div></div></div><div class="qr-s3-kit-label">&#10022; Publishing</div><h2 class="qr-s3-title">Building your live page\u2026</h2><div class="qr-ls-steps">'+steps+'</div><div class="qr-s3-prog-wrap"><div class="qr-s3-prog-track"><div class="qr-s3-prog-fill" id="qr-pub-fill"></div></div><span class="qr-s3-pct" id="qr-pub-pct">0%</span></div></div></div>';}
-  function successHTML(){var bizName=S.businessName||'Your Business';var slug=S.slug||'your-page';var shortURL='api.qraivy.com/lp/'+slug;var accent=S.brandColor||'#ff5a1f';var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent('https://'+shortURL)+'&color=ffffff&bgcolor=111111&margin=2';return '<div class="qr-modal qr-success-modal"><div class="qr-success-confetti" id="qr-confetti"></div><div class="qr-success-content"><div class="qr-success-check" style="border-color:'+accent+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+accent+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="32" height="32"><polyline points="20 6 9 17 4 12"/></svg></div><h2 class="qr-success-title">Your page is live! &#127881;</h2><p class="qr-success-sub">Your AI smart landing page for <strong>'+bizName+'</strong> has been published and your QR code is active.</p><div class="qr-success-url-card"><div class="qr-success-url-label">Your Smart URL</div><div class="qr-success-url" id="qr-success-url">'+shortURL+'</div><button class="qr-success-copy" id="qr-copy-url" style="color:'+accent+'">Copy URL</button></div><div class="qr-success-qr-wrap"><img src="'+qrSrc+'" class="qr-success-qr" alt="QR Code" /><div class="qr-success-qr-info"><div class="qr-success-qr-title">Scan to view your page</div><div class="qr-success-qr-sub">Share this QR anywhere</div></div></div><div class="qr-success-actions"><button class="qr-pw-btn-secondary" id="qr-view-page">&#127760; View Live Page</button><button class="qr-pw-btn-primary" id="qr-go-dashboard" style="background:'+accent+'">Go to Dashboard &rarr;</button></div><button class="qr-success-customize" id="qr-customize-later">&#ccc8; Customise page later</button></div></div>';}
-  function getOrCreateOverlay(){var el=document.getElementById('qr-onboarding-overlay');if(!el){el=document.createElement('div');el.id='qr-onboarding-overlay';document.body.appendChild(el);}el.classList.remove('qr-hidden');el.style.opacity='1';el.style.transition='';return el;}
-  function closeModal(u){mark(u);var el=document.getElementById('qr-onboarding-overlay');if(!el)return;el.style.transition='opacity 0.25s';el.style.opacity='0';setTimeout(function(){el.classList.add('qr-hidden');},260);}
-  function slideOut(el,dir,cb){var modal=el.querySelector('.qr-modal');if(!modal){cb();return;}modal.style.transition='opacity 0.18s ease,transform 0.18s ease';modal.style.opacity='0';modal.style.transform='translateX('+(dir==='back'?'28px':'-28px')+') scale(0.98)';setTimeout(cb,190);}
-  function render(step,u,dir){var el=getOrCreateOverlay();var hasPrev=!!el.querySelector('.qr-modal');function setHTML(html){el.innerHTML=html;bindStep(step,u);}if(hasPrev){slideOut(el,dir||'fwd',function(){setHTML(getHTML(step));});}else{setHTML(getHTML(step));}}
-  function getHTML(step){if(step==='step1')return step1HTML();if(step==='step2')return step2HTML();if(step==='step3')return step3HTML();if(step==='step4')return step4HTML();if(step==='step5')return step5HTML();if(step==='publishing')return publishingHTML();if(step==='success')return successHTML();return step1HTML();}
-  function runLoadingAnimation(fillId,pctId,stepPrefix,count,duration,onDone){var start=Date.now();var idx=0;spawnParticles();var timer=setInterval(function(){var el=document.getElementById(stepPrefix+idx);if(el)el.classList.add('qr-ls-step-active');idx++;if(idx>=count)clearInterval(timer);},duration/(count+1));function tick(){var elapsed=Date.now()-start;var e=Math.min(99,Math.round(100*(1-Math.pow(1-Math.min(elapsed/duration,1),2.4))));var fill=document.getElementById(fillId);var pct=document.getElementById(pctId);if(fill)fill.style.width=e+'%';if(pct)pct.textContent=e+'%';if(elapsed<duration)requestAnimationFrame(tick);}requestAnimationFrame(tick);setTimeout(function(){clearInterval(timer);for(var i=0;i<count;i++){var el=document.getElementById(stepPrefix+i);if(el)el.classList.add('qr-ls-step-active');}var fill=document.getElementById(fillId);var pct=document.getElementById(pctId);if(fill)fill.style.width='100%';if(pct)pct.textContent='100%';if(onDone)onDone();},duration);}
-  function spawnParticles(){var c=document.getElementById('qr-s3-particles');if(!c)return;for(var i=0;i<16;i++){(function(n){setTimeout(function(){var p=document.createElement('div');p.style.cssText='position:absolute;bottom:0;left:'+(8+Math.random()*84)+'%;width:'+(2+Math.random()*3)+'px;height:'+(2+Math.random()*3)+'px;border-radius:50%;background:rgba(255,78,0,'+(0.3+Math.random()*0.5)+');animation:qrParticleRise '+(2.5+Math.random()*2)+'s ease-out '+(Math.random()*1)+'s both;pointer-events:none;';c.appendChild(p);},n*110);})(i);}}
-  function spawnConfetti(){var c=document.getElementById('qr-confetti');if(!c)return;var colors=['#ff5a1f','#ff8c00','#22c55e','#3b82f6','#a855f7','#f0ece0'];for(var i=0;i<30;i++){(function(n){setTimeout(function(){var p=document.createElement('div');var color=colors[Math.floor(Math.random()*colors.length)];p.style.cssText='position:absolute;top:0;left:'+(10+Math.random()*80)+'%;width:'+(4+Math.random()*6)+'px;height:'+(4+Math.random()*6)+'px;background:'+color+';border-radius:'+(Math.random()>0.5?'50%':'2px')+';animation:qrConfettiFall '+(2+Math.random()*2)+'s ease-out '+(Math.random()*0.8)+'s both;pointer-events:none;';c.appendChild(p);},n*60);})(i);}}
-  function doPublish(u){var el=getOrCreateOverlay();slideOut(el,'fwd',function(){el.innerHTML=publishingHTML();var cb=document.getElementById('qr-close');if(cb)cb.onclick=function(){closeModal(u);};runLoadingAnimation('qr-pub-fill','qr-pub-pct','qr-pub-',6,3200,function(){var kit=LP_KITS[S.selectedUseCase]||LP_KITS['restaurant'];var slug=S.slug||makeSlug(S.businessName||'qraivy');S.slug=slug;S.publishedURL='https://api.qraivy.com/lp/'+slug;var lpHTML='';if(window.QRAivyLPGen){lpHTML=window.QRAivyLPGen.generate({useCase:S.selectedUseCase,bizName:S.businessName||'My Business',accent:S.brandColor||kit.accent,logo:S.logo,slug:slug,websiteURL:S.websiteURL||''});}var entry={id:'lp_'+slug,slug:slug,url:S.publishedURL,bizName:S.businessName,useCase:S.selectedUseCase,brandColor:S.brandColor||kit.accent,logo:S.logo,websiteURL:S.websiteURL,sections:kit.sections,html:lpHTML,publishedAt:new Date().toISOString(),scanCount:0,status:'live'};try{var existing=JSON.parse(localStorage.getItem('qraivy_landing_pages')||'[]');existing.unshift(entry);localStorage.setItem('qraivy_landing_pages',JSON.stringify(existing));if(lpHTML)localStorage.setItem('qraivy_lp_'+slug,lpHTML);}catch(e){}(async function(){try{var tok=null;try{if(window.Clerk&&window.Clerk.session){tok=await window.Clerk.session.getToken();}else if(window.Clerk&&window.Clerk.user){var sessions=await window.Clerk.user.getSessions();if(sessions&&sessions[0])tok=await sessions[0].getToken();}}catch(_){}(function(){
-          // Enrich payload with category config from shared source of truth
-          var catCfg=(window.QRAIVY_SMART_QR_CATEGORIES_UTIL&&window.QRAIVY_SMART_QR_CATEGORIES_UTIL.get(S.selectedUseCase))||null;
-          return fetch('https://api.qraivy.com/lp',{method:'POST',headers:{'Content-Type':'application/json',...(tok?{'Authorization':'Bearer '+tok}:{})},body:JSON.stringify({
-            slug:slug,
-            businessName:S.businessName,
-            websiteUrl:S.websiteURL,
-            useCase:S.selectedUseCase,
-            brandColor:S.brandColor||kit.accent,
-            logoUrl:S.logo,
-            qrType:S.qrType||'ai',
-            template:'premium',
-            // Category config fields
-            categorySlug:    S.selectedUseCase,
-            categoryLabel:   catCfg?catCfg.label:S.selectedUseCase,
-            defaultCTA:      catCfg?catCfg.defaultCTA:'Learn More',
-            defaultTheme:    catCfg?catCfg.defaultTheme:'default-dark',
-            defaultSections: catCfg?catCfg.defaultSections:['hero','voice_welcome','ai_assistant','subscribe'],
-            aiPromptHint:    catCfg?catCfg.aiPromptHint:'Generate a Smart QR landing page.'
-          })}).then(function(r){return r.json();}).then(function(d){
-            if(d.error==='plan_limit'){
-              var el2=getOrCreateOverlay();
-              el2.innerHTML='<div class="qr-modal" style="text-align:center;padding:48px 32px;max-width:420px;margin:auto"><div style="font-size:2.5rem;margin-bottom:16px">🔒</div><h2 style="font-size:1.4rem;font-weight:700;margin-bottom:12px;color:#fff">Page Limit Reached</h2><p style="color:#888;font-size:.9rem;line-height:1.6;margin-bottom:28px">'+(d.message||'Upgrade your plan to create more Smart QR pages.')+'</p><a href="upgrade.html" style="display:inline-block;padding:14px 32px;background:#ff5a1f;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;font-size:.95rem">Upgrade Plan →</a><br><button onclick="this.closest('.qr-modal').parentElement.remove()" style="margin-top:16px;background:none;border:none;color:#555;cursor:pointer;font-size:.85rem">Cancel</button></div>';
-              return;
-            }
-          }).catch(function(){});
-        })();}catch(e){console.warn('[Onboarding] publish error:',e);}})();/* backend publish */S.progress=5;setTimeout(function(){var el2=getOrCreateOverlay();slideOut(el2,'fwd',function(){el2.innerHTML=successHTML();bindStep('success',u);setTimeout(function(){spawnConfetti();},100);});},400);});});}
-  function bindStep3(u){var nameInput=document.getElementById('qr-biz-name');var urlInput=document.getElementById('qr-biz-url');var cont=document.getElementById('qr-continue');var logoInput=document.getElementById('qr-logo-input');var colorInput=document.getElementById('qr-color-input');var colorSwatch=document.getElementById('qr-color-swatch');var colorHex=document.getElementById('qr-color-hex');var logoPreview=document.getElementById('qr-logo-preview');function validate(){cont.disabled=!((nameInput&&nameInput.value.trim())&&(urlInput&&urlInput.value.trim()));}if(nameInput)nameInput.addEventListener('input',function(){S.businessName=nameInput.value.trim();S.slug=null;validate();});if(urlInput)urlInput.addEventListener('input',function(){S.websiteURL=urlInput.value.trim();validate();});if(logoInput){logoInput.addEventListener('change',function(){var file=logoInput.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){S.logo=e.target.result;if(logoPreview)logoPreview.innerHTML='<img src="'+S.logo+'" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">';};reader.readAsDataURL(file);});}if(colorInput){colorInput.addEventListener('input',function(){S.brandColor=colorInput.value;if(colorSwatch)colorSwatch.style.background=colorInput.value;if(colorHex)colorHex.textContent=colorInput.value;document.querySelectorAll('.qr-color-preset').forEach(function(p){p.classList.remove('active');});});}document.querySelectorAll('.qr-color-preset').forEach(function(p){p.addEventListener('click',function(){var c=p.getAttribute('data-color');S.brandColor=c;if(colorInput)colorInput.value=c;if(colorSwatch)colorSwatch.style.background=c;if(colorHex)colorHex.textContent=c;document.querySelectorAll('.qr-color-preset').forEach(function(x){x.classList.remove('active');});p.classList.add('active');});});cont.onclick=function(){S.businessName=(nameInput&&nameInput.value.trim())||'';S.websiteURL=(urlInput&&urlInput.value.trim())||'';if(!S.businessName||!S.websiteURL)return;S.slug=makeSlug(S.businessName);render('step4',u);};document.getElementById('qr-back').onclick=function(){render('step2',u,'back');};}
-  function bindStep(step,u){var cb=document.getElementById('qr-close');if(cb)cb.onclick=function(){closeModal(u);};if(step==='step1'){document.getElementById('qr-free').onclick=function(){S.qrType='static';closeModal(u);window.location.href=FREE_PATH;};document.getElementById('qr-ai').onclick=function(){S.qrType='ai';render('step2',u);};}else if(step==='step2'){var cards=document.querySelectorAll('.qr-uc-card');var cont=document.getElementById('qr-continue');cards.forEach(function(card){card.addEventListener('click',function(){cards.forEach(function(c){c.classList.remove('qr-uc-card-selected');});card.classList.add('qr-uc-card-selected');S.selectedUseCase=card.getAttribute('data-uc');cont.disabled=false;});});cont.onclick=function(){if(!S.selectedUseCase)return;render('step3',u);};document.getElementById('qr-back').onclick=function(){render('step1',u,'back');};}else if(step==='step3'){bindStep3(u);}else if(step==='step4'){setTimeout(function(){runLoadingAnimation('qr-s3-fill','qr-s3-pct','qr-ls-',6,2600,function(){var preview=document.getElementById('qr-s4-preview');if(preview){preview.style.opacity='1';var qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent('https://api.qraivy.com/lp/'+(S.slug||'preview'))+'&color=ffffff&bgcolor=111111&margin=2';var img=document.getElementById('qr-s4-img');var loader=document.getElementById('qr-s4-loading');if(img){img.onload=function(){if(loader)loader.style.display='none';img.style.display='block';};img.src=qrSrc;S.generatedQR=qrSrc;}}setTimeout(function(){render('step5',u);},1800);});},80);}else if(step==='step5'){document.getElementById('qr-publish').onclick=function(){doPublish(u);};document.getElementById('qr-customize').onclick=function(){closeModal(u);var kit=LP_KITS[S.selectedUseCase];var isEditor=window.location.pathname.indexOf('editor')!==-1||!!document.getElementById('polotno-container');if(isEditor){if(typeof loadTemplate==='function')loadTemplate(kit?kit.templateId:'promo-flyer-dark');}else window.location.href=EDITOR_PATH+'?kit='+(kit?encodeURIComponent(kit.templateId||''):'')+'&usecase='+encodeURIComponent(S.selectedUseCase||'');};document.getElementById('qr-assets').onclick=function(){closeModal(u);window.location.href=EDITOR_PATH+'?mode=assets&usecase='+encodeURIComponent(S.selectedUseCase||'');};document.getElementById('qr-regenerate').onclick=function(){S.slug=makeSlug(S.businessName||'qraivy');render('step4',u);};document.getElementById('qr-back').onclick=function(){render('step3',u,'back');};}else if(step==='success'){var copyBtn=document.getElementById('qr-copy-url');var urlEl=document.getElementById('qr-success-url');if(copyBtn&&urlEl){copyBtn.onclick=function(){var text=urlEl.textContent;if(navigator.clipboard){navigator.clipboard.writeText('https://'+text).then(function(){copyBtn.textContent='Copied!';setTimeout(function(){copyBtn.textContent='Copy URL';},2000);});}else{copyBtn.textContent='Copied!';setTimeout(function(){copyBtn.textContent='Copy URL';},2000);}};} var viewBtn=document.getElementById('qr-view-page');if(viewBtn){viewBtn.onclick=function(){var slug=S.slug;var html=null;try{html=localStorage.getItem('qraivy_lp_'+slug);}catch(e){}if(html){var blob=new Blob([html],{type:'text/html'});var url=URL.createObjectURL(blob);window.open(url,'_blank');}else{window.open('https://api.qraivy.com/lp/'+slug,'_blank');}};} document.getElementById('qr-go-dashboard').onclick=function(){closeModal(u);window.location.href=PUBLISH_PATH;};var custBtn=document.getElementById('qr-customize-later');if(custBtn){custBtn.onclick=function(){closeModal(u);var kit=LP_KITS[S.selectedUseCase];window.location.href=EDITOR_PATH+'?kit='+(kit?encodeURIComponent(kit.templateId||''):'')+'&usecase='+encodeURIComponent(S.selectedUseCase||'');};}}  }
-  window.addEventListener('load',function(){var p=new URLSearchParams(window.location.search);var kit=p.get('kit');if(kit&&typeof loadTemplate==='function')setTimeout(function(){loadTemplate(kit);},500);});
-  window.qrairyOnboarding={init:function(u){if(!u||done(u))return;setTimeout(function(){render('step1',u);},450);},reopen:function(u){render('step1',u);}};
-})();
+  }
 
+  // Campaigns sidebar
+  var sbCampMain = document.getElementById('sb-campaigns');
+  if (sbCampMain) {
+    sbCampMain.addEventListener('click', function(e) {
+      e.preventDefault();
+      var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
+      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+      var sec = document.getElementById('section-campaigns');
+      if (sec) sec.style.display = 'block';
+      sbCampMain.classList.add('active');
+      if (typeof campInitProgs === 'function') campInitProgs();
+    });
+  }
 
+    var btnCreate=document.getElementById('btn-create-sqr');
+  if(btnCreate)btnCreate.addEventListener('click',launchOnboarding);
+  var sbCreate=document.getElementById('sb-create-sqr');
+  if(sbCreate)sbCreate.addEventListener('click',function(e){e.preventDefault();launchOnboarding();});
+  QrTier.loadPlan().catch(function(){});
+  var launchP=new URLSearchParams(window.location.search).get('launch');
+  if(launchP==='onboarding'){
+    setTimeout(function(){if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId);},600);
+  }else{
+    if(window.qrairyOnboarding)window.qrairyOnboarding.init(window._userId);
+  }
+  loadDashboard();
+  // Handle ?section= param for cross-page navigation
+  var sectionP = new URLSearchParams(window.location.search).get('section');
+  if (sectionP) {
+    setTimeout(function() {
+      var mc = document.getElementById('main-content');
+      if (mc) mc.style.display = 'none';
+      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
+      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
+      if (sectionP === 'campaigns') {
+        var sec = document.getElementById('section-campaigns');
+        if (sec) sec.style.display = 'block';
+        var el = document.getElementById('sb-campaigns'); if (el) el.classList.add('active');
+        if (typeof window.campInitProgs === 'function') window.campInitProgs();
+      } else if (sectionP === 'subscribers') {
+        var sec = document.getElementById('section-subscribers');
+        if (sec) sec.style.display = 'block';
+        var el = document.getElementById('sb-subscribers'); if (el) el.classList.add('active');
+        var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
+        var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
+        var sbSubEl = document.getElementById('sb-subscribers');
+        if (sbSubEl) sbSubEl.click();
+      } else if (sectionP === 'loyalty') {
+        var sec = document.getElementById('section-loyalty');
+        if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
+        var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
+      } else {
+        // Unknown section param - show main dashboard
+        if (mc) mc.style.display = 'block';
+      }
+    }, 300);
+  }
+}
 </script>
 <script
   data-clerk-publishable-key="pk_test_dG91Y2hpbmctdHJvbGwtMjUuY2xlcmsuYWNjb3VudHMuZGV2JA"
