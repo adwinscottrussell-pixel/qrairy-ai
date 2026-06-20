@@ -319,5 +319,40 @@
     }
     window.addEventListener("load", function() { waitForClerk(25); });
   </script>
+
+<div id="sb-overlay" class="sb-overlay"></div>
+<script>
+(function(){
+  var sidebar = document.getElementById('sidebar');
+  var sbToggle = document.getElementById('sb-toggle');
+  if(localStorage.getItem('sb-collapsed')==='true'){sidebar.classList.add('collapsed');document.body.classList.add('sb-collapsed');}
+  if(sbToggle) sbToggle.addEventListener('click',function(){
+    var col = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', col);
+    localStorage.setItem('sb-collapsed', col);
+  });
+  var overlay = document.getElementById('sb-overlay');
+  if(overlay) overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
+
+  // Populate user info from Clerk
+  if(window.Clerk) {
+    window.Clerk.load().then(function(){
+      var u = window.Clerk.user;
+      if(u){
+        var name = u.firstName || u.emailAddresses[0].emailAddress;
+        var el = document.getElementById('sb-username');
+        var av = document.getElementById('sb-avatar');
+        if(el) el.textContent = u.emailAddresses[0].emailAddress;
+        if(av) av.textContent = name[0].toUpperCase();
+      }
+    });
+  }
+
+  window.handleSignOut = function(){
+    if(window.Clerk) window.Clerk.signOut().then(function(){ window.location.href='index.html'; });
+    else window.location.href='index.html';
+  };
+})();
+</script>
 </body>
 </html>
