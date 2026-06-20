@@ -2060,7 +2060,7 @@ function renderPremiumLP(page) {
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
-    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.15)';if(!document.body.classList.contains('dark-mode')){this.style.transform='translateY(-1px)'}" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s,background .15s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" class="card" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.15)';if(!document.body.classList.contains('dark-mode')){this.style.transform='translateY(-1px)'}" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
       <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
