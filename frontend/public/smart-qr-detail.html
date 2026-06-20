@@ -1410,7 +1410,7 @@ async function initPage() {
     };
   }
   if (!pending) {
-    window.location.href = 'dashboard.html';
+    setTimeout(function(){ window.location.href='dashboard.html'; }, 2000);
     return;
   }
 
