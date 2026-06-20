@@ -216,56 +216,6 @@ function renderLP(page) {
 
   // Parse stored sections FIRST so theme vars are available
   let storedButtons = [];
-  // ── Translation dictionary ──
-  const lang = (function(){ try { const s = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections||{}); return s.language || 'en'; } catch(_){ return 'en'; }})();
-  const T = {
-    en: {
-      tagline: 'Smart Landing Page', visitWebsite: 'Visit Website', learnMore: 'Learn More',
-      whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop',
-      subscribeBtn: 'Subscribe →', appleWallet: 'Add to Apple Wallet', googleWallet: 'Add to Google Wallet',
-      personalWelcome: 'Personal welcome message', tapToListen: 'Tap to listen — unlocks AI assistant',
-      aiAssistant: 'AI Assistant', askAnything: 'Ask anything…', aiOnline: 'Online',
-      tapWelcome: 'Tap welcome to activate', subscribeDesc: 'Subscribe for updates, exclusive offers and early access from ',
-      gdpr: 'I agree to receive marketing messages from ', gdprSuffix: '. I can unsubscribe at any time.',
-      welcomeFrom: 'Welcome from', alreadySubscribed: '${t.alreadySubscribed}', subscribedOk: '${t.subscribedOk}',
-      aiPowered: 'AI Powered', smartLandingPage: 'Smart Landing Page', autoFill: 'Auto-fill from your URL →'
-    },
-    de: {
-      tagline: 'Smarte Landingpage', visitWebsite: 'Website besuchen', learnMore: 'Mehr erfahren',
-      whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert',
-      subscribeBtn: 'Abonnieren →', appleWallet: 'Zu Apple Wallet hinzufügen', googleWallet: 'Zu Google Wallet hinzufügen',
-      personalWelcome: 'Persönliche Willkommensnachricht', tapToListen: 'Tippen zum Anhören — aktiviert KI-Assistent',
-      aiAssistant: 'KI-Assistent', askAnything: 'Fragen Sie etwas…', aiOnline: 'Online',
-      tapWelcome: 'Willkommensnachricht antippen', subscribeDesc: 'Abonnieren Sie für Updates, exklusive Angebote und Frühzugang von ',
-      gdpr: 'Ich erkläre mich einverstanden, Marketingmitteilungen von ', gdprSuffix: ' zu erhalten. Ich kann mich jederzeit abmelden.',
-      welcomeFrom: 'Willkommen bei', alreadySubscribed: 'Bereits abonniert', subscribedOk: '✓ Erfolgreich abonniert',
-      aiPowered: 'KI-Powered', smartLandingPage: 'Smarte Landingpage', autoFill: 'Auto-Ausfüllen von Ihrer URL →'
-    }
-  };
-  const t = T[lang] || T.en;
-  // ── Action card translations ──
-  const CARD_LABELS = {
-    de: {
-      menu: { label: 'Speisekarte', sub: 'Unser vollständiges Menü' },
-      reserve: { label: 'Tisch reservieren', sub: 'Online buchen' },
-      special: { label: 'Tagesangebot', sub: 'Was gibt es heute?' },
-      location: { label: 'Wegbeschreibung', sub: 'Uns finden & Parken' },
-      loyalty: { label: 'Treuekarte', sub: 'Stempel sammeln, Prämien erhalten' },
-      happyhour: { label: 'Happy Hour', sub: 'Angebote & Getränke' },
-      events: { label: 'Veranstaltungen', sub: 'Kommende Events & Angebote' },
-      hours: { label: 'Öffnungszeiten', sub: 'Wann wir geöffnet haben' },
-      membership: { label: 'Mitgliedschaft', sub: 'Pläne & Preise' },
-      classes: { label: 'Kurse', sub: 'Alle Sessions & Zeitpläne' },
-      timetable: { label: 'Stundenplan', sub: 'Wöchentlicher Zeitplan' },
-      book: { label: 'Session buchen', sub: 'Platz reservieren' },
-      rewards: { label: 'Prämien', sub: 'Punkte sammeln, Vorteile erhalten' },
-      trainers: { label: 'Trainer', sub: 'Unser Team kennenlernen' },
-      contact: { label: 'Kontakt', sub: 'Kontakt aufnehmen' },
-      shop: { label: 'Produkte kaufen', sub: 'Unser Sortiment' },
-      new: { label: 'Neuheiten', sub: 'Gerade eingetroffen' },
-      offers: { label: 'Tagesangebote', sub: 'Zeitlich begrenzte Deals' },
-    }
-  };
 
   let storedSections = {};
   if (page.sections) {
