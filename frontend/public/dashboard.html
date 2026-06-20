@@ -465,6 +465,9 @@ async function initDashboard(){
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
         var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
+      } else {
+        // Unknown section param - show main dashboard
+        if (mc) mc.style.display = 'block';
       }
     }, 300);
   }
