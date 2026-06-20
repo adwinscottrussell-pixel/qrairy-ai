@@ -3367,7 +3367,7 @@ window.QRAIVY_EDITOR_STATE = {
       var payload = {
         slug: slug,
         businessName: S.pageName || S.sections.hero.title || slug,
-        websiteUrl: S.websiteUrl || (S.sections && S.sections.info && S.sections.info.website) || '',
+        websiteUrl: S.websiteUrl || (S.sections && S.sections.info && S.sections.info.website) || (window.QRAIVY_PENDING && window.QRAIVY_PENDING.websiteUrl) || '',
         useCase: S.useCase || 'restaurant',
         brandColor: S.brandColor || (S.sections.theme && S.sections.theme.accentColor) || '#ff5a1f',
         logoUrl: S.logoUrl || '',

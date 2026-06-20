@@ -1138,7 +1138,7 @@ async function handlePublishLP(req, res) {
     if (existing && existing.sections) {
       try {
         const existingS = JSON.parse(existing.sections);
-        const preserve = ['aiGenerated','aiGeneratedAt','siteContent','crawlLocked','businessInfo','featured'];
+        const preserve = ['aiGenerated','aiGeneratedAt','siteContent','crawlLocked','businessInfo','featured','actionLinks'];
         mergedSections = Object.assign({}, mergedSections);
         preserve.forEach(function(k){ if (existingS[k] !== undefined && mergedSections[k] === undefined) mergedSections[k] = existingS[k]; });
         if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
