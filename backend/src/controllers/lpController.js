@@ -1935,8 +1935,8 @@ function renderPremiumLP(page) {
   const sa = storedSections.ai    || {};
   const sl = storedSections.loop  || {};
 
-  const headline = sh.title    || ('Welcome to ' + bizName);
-  const sub      = sh.subtitle || 'Visit us, explore what we offer, and stay connected.';
+  const headline = sh.aiTitle  || sh.title    || ('Welcome to ' + bizName);
+  const sub      = sh.aiSubtitle || sh.subtitle || 'Visit us, explore what we offer, and stay connected.';
 
   // ── CTA buttons ──
   const ctaBtns = storedButtons.filter(b => b.active !== false).map(b => {
