@@ -2115,6 +2115,24 @@ a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
 .card{background:#fff;border:1.5px solid ${accent};border-radius:16px;overflow:hidden}
+.dark-mode .card{background:#1e1e1e !important;border-color:#333 !important;}
+.dark-mode .card *{color:#f0f0f0 !important;}
+.dark-mode h1,.dark-mode h2,.dark-mode h3{color:#fff !important;}
+.dark-mode p,.dark-mode span,.dark-mode div{color:#ccc;}
+.dark-mode nav{background:rgba(17,17,17,0.95) !important;border-bottom-color:#333 !important;}
+.dark-mode nav span,.dark-mode nav a{color:#f0f0f0 !important;}
+.dark-mode .section{background:transparent !important;}
+.dark-mode input[type=email]{background:#1e1e1e !important;border-color:#333 !important;color:#f0f0f0 !important;}
+.dark-mode input[type=email]::placeholder{color:#666 !important;}
+.dark-mode #chat-input{color:#f0f0f0 !important;}
+.dark-mode #chat-input::placeholder{color:#666 !important;}
+.dark-mode .card[style*="background:#f2f2f2"]{background:#2a2a2a !important;}
+.dark-mode [style*="background:#fff"]{background:#1e1e1e !important;}
+.dark-mode [style*="color:#0a0a0a"]{color:#f0f0f0 !important;}
+.dark-mode [style*="color:#555"]{color:#aaa !important;}
+.dark-mode [style*="color:#999"]{color:#666 !important;}
+.dark-mode [style*="border:1px solid #e8e8e8"]{border-color:#333 !important;}
+.dark-mode [style*="background:#f2f2f2"]{background:#2a2a2a !important;}
 .divider{height:1px;background:#e8e8e8;margin:0 20px}
 </style>
 </head>
