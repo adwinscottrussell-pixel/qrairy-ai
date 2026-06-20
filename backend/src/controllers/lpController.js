@@ -2105,12 +2105,12 @@ function renderPremiumLP(page) {
 <title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 @keyframes waveBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
-body{font-family:'Inter',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8'};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body{font-family:'Outfit',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8'};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
