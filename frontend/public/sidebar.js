@@ -24,7 +24,7 @@
     ]},
     { section: 'CONFIGURE', items: [
       { href: 'designer.html',      icon: '🎨', label: 'AI Designer' },
-      { href: 'loyalty-setup.html', icon: '🃏', label: 'Loyalty Cards', soon: true },
+      { href: 'loyalty-setup.html', icon: '🃏', label: 'Loyalty Cards' },
     ]},
     { section: 'ACCOUNT', items: [
       { href: 'pricing.html', icon: '💳', label: 'Billing & Plans', planBadge: true },

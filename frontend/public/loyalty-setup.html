@@ -5,11 +5,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIRY.AI — New Loyalty Program</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="dashboard-shell.css" />
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0a0a0a;color:#f0ece0;font-family:"DM Mono",monospace;min-height:100vh}
+    body{background:#0a0a0a;color:#f0ece0;font-family:"Outfit",system-ui,sans-serif;min-height:100vh}
     #main-content{margin-left:240px;min-height:100vh;transition:margin-left 0.22s ease;display:flex;align-items:center;justify-content:center;padding:40px 20px}
     body.sb-collapsed #main-content{margin-left:60px}
     @media(max-width:768px){#main-content{margin-left:0!important;padding-top:72px;align-items:flex-start}}
@@ -22,10 +22,10 @@
     .step.active{display:block}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     .step-tag{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:12px}
-    .step-title{font-family:"Playfair Display",serif;font-size:1.9rem;font-weight:400;line-height:1.2;margin-bottom:8px}
+    .step-title{font-family:"Outfit",system-ui,sans-serif;font-size:1.9rem;font-weight:700;line-height:1.2;margin-bottom:8px}
     .step-sub{font-size:0.78rem;color:#888;margin-bottom:28px;line-height:1.7}
     .field-label{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:#666;margin-bottom:8px;display:block}
-    .field-input{width:100%;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;color:#f0ece0;font-family:"DM Mono",monospace;font-size:0.88rem;outline:none;transition:border 0.2s;margin-bottom:14px}
+    .field-input{width:100%;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:13px 16px;color:#f0ece0;font-family:"Outfit",system-ui,sans-serif;font-size:0.88rem;outline:none;transition:border 0.2s;margin-bottom:14px}
     .field-input:focus{border-color:#ff5a1f}
     .field-input::placeholder{color:#333}
     .stamps-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
@@ -36,11 +36,11 @@
     .page-opt{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:12px}
     .page-opt:hover{border-color:#ff5a1f}
     .page-opt.selected{border-color:#ff5a1f;background:rgba(255,90,31,0.07)}
-    .page-opt-logo{width:36px;height:36px;border-radius:7px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:"Playfair Display",serif;font-size:1rem;color:#fff;flex-shrink:0}
+    .page-opt-logo{width:36px;height:36px;border-radius:7px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-family:"Outfit",system-ui,sans-serif;font-weight:700;font-size:1rem;color:#fff;flex-shrink:0}
     .page-opt-name{font-size:0.85rem;color:#f0ece0;margin-bottom:2px}
     .page-opt-slug{font-size:0.66rem;color:#555}
     .card-preview{border-radius:12px;padding:20px;margin-bottom:18px;background:#111;border:1px solid #ff5a1f}
-    .card-biz{font-family:"Playfair Display",serif;font-size:1.05rem;margin-bottom:3px}
+    .card-biz{font-family:"Outfit",system-ui,sans-serif;font-weight:600;font-size:1.05rem;margin-bottom:3px}
     .card-reward-label{font-size:0.72rem;color:#888;margin-bottom:16px}
     .stamps-display{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
     .stamp-circle{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.68rem}
