@@ -2116,7 +2116,7 @@ input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
 .card{background:#fff;border:1.5px solid ${accent};border-radius:16px;overflow:hidden}
 .dark-mode .card{background:#0a0a0a !important;border-color:#222 !important;}
-.dark-mode .card *{color:#f0f0f0 !important;} .dark-mode .card:hover{background:#0a0a0a !important;transform:none !important;} .dark-mode [style*="background:#fff"]:hover{background:#0a0a0a !important;}
+.dark-mode .card *{color:#f0f0f0 !important;} .dark-mode .card:hover{background:#0a0a0a !important;} .dark-mode [style*="background:#fff"]:hover{background:#0a0a0a !important;}
 .dark-mode h1,.dark-mode h2,.dark-mode h3{color:#fff !important;}
 .dark-mode p,.dark-mode span,.dark-mode div{color:#ccc;}
 .dark-mode nav{background:rgba(17,17,17,0.95) !important;border-bottom-color:#333 !important;}
