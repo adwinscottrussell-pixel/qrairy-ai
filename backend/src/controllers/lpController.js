@@ -2311,12 +2311,18 @@ ${sa.active !== false ? `
   }
 
   var dark = false;
+  var _lightBg = '${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : "#f8f8f8"}';
   window.toggleTheme = function() {
     dark = !dark;
     document.getElementById('theme-knob').style.transform = dark ? 'translateX(20px)' : 'none';
     document.getElementById('theme-knob').style.background = dark ? '#f0f0f0' : '#0a0a0a';
-    document.body.style.background = dark ? '#111' : '${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : "#f8f8f8"}';
-    document.body.style.color = dark ? '#f0f0f0' : '#0a0a0a';
+    if (dark) {
+      document.body.classList.add('dark-mode');
+      document.body.style.background = '#111';
+    } else {
+      document.body.classList.remove('dark-mode');
+      document.body.style.background = _lightBg;
+    }
   };
 
   var _currentCardUrl = '';
