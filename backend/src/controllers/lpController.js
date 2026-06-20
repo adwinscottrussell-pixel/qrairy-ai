@@ -2060,14 +2060,14 @@ function renderPremiumLP(page) {
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
-    `<a href="${s.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
       <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid #0a0a0a;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
         <div style="font-size:12px;color:#555;">${s.sub}</div>
       </div>
       <div style="font-size:16px;color:#bbb;">›</div>
-    </a>`
+    </div>`
   ).join('');
 
   // ── Audio waveform bars ──
@@ -2259,6 +2259,24 @@ ${sa.active !== false ? `
 </footer>
 
 <!-- TOAST -->
+<!-- BOTTOM SHEET MODAL -->
+<div id="card-sheet" style="position:fixed;inset:0;z-index:200;display:none;" onclick="if(event.target===this)closeCard()">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);"></div>
+  <div id="card-sheet-inner" style="position:absolute;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;background:#fff;border-radius:24px 24px 0 0;height:88vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(0.32,0.72,0,1);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #e8e8e8;flex-shrink:0;">
+      <div id="card-sheet-title" style="font-size:15px;font-weight:600;color:#0a0a0a;"></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="openExternal()" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1.5px solid #e8e8e8;background:#fff;font-size:12px;font-weight:600;color:#555;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 13L13 3M7 3h6v6"/></svg>
+          Open
+        </button>
+        <button onclick="closeCard()" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #e8e8e8;background:#fff;font-size:18px;line-height:1;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+    </div>
+    <iframe id="card-sheet-frame" src="" style="flex:1;border:none;width:100%;" loading="lazy"></iframe>
+  </div>
+</div>
+
 <div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0a0a0a;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:500;white-space:nowrap;z-index:100;transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;"></div>
 
 <script>
@@ -2282,6 +2300,34 @@ ${sa.active !== false ? `
     document.body.style.color = dark ? '#f0f0f0' : '#0a0a0a';
   };
 
+  var _currentCardUrl = '';
+  window.openCard = function(url, title) {
+    if (!url || url === '#') { toast('No link available'); return; }
+    _currentCardUrl = url;
+    var sheet = document.getElementById('card-sheet');
+    var inner = document.getElementById('card-sheet-inner');
+    var frame = document.getElementById('card-sheet-frame');
+    var titleEl = document.getElementById('card-sheet-title');
+    if (titleEl) titleEl.textContent = title || '';
+    if (frame) frame.src = url;
+    sheet.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { if (inner) inner.style.transform = 'translateY(0)'; }, 10);
+  };
+  window.closeCard = function() {
+    var sheet = document.getElementById('card-sheet');
+    var inner = document.getElementById('card-sheet-inner');
+    var frame = document.getElementById('card-sheet-frame');
+    if (inner) inner.style.transform = 'translateY(100%)';
+    document.body.style.overflow = '';
+    setTimeout(function() {
+      sheet.style.display = 'none';
+      if (frame) frame.src = '';
+    }, 350);
+  };
+  window.openExternal = function() {
+    if (_currentCardUrl) window.open(_currentCardUrl, '_blank');
+  };
   window.playAudio = function(el) {
     var audioUrl = '${sv.audioUrl || ""}';
     if (!audioUrl) { toast('No audio available yet'); return; }
