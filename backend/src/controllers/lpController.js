@@ -2131,7 +2131,7 @@ ${sa.active !== false ? `
     <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
       <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">✦ Hi 👋 I'm the AI concierge for ${bizName}. Ask me about hours, menu, or anything else.</div>
     </div>
-    <div style="display:flex;align-items:center;border-top:1px solid #e8e8e8;">
+    <div id="chat-input-area" style="display:flex;align-items:center;border-top:1px solid #e8e8e8;opacity:0.4;pointer-events:none;" title="Play welcome message to activate">
       <input id="chat-input" placeholder="Ask anything…" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
       <button onclick="sendChat()" style="width:36px;height:36px;border-radius:50%;background:#f2f2f2;border:none;cursor:pointer;margin-right:8px;display:flex;align-items:center;justify-content:center;transition:background .15s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f2f2f2'">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><path d="M14 2L2 8l5 2 2 5 5-13z"/></svg>
@@ -2230,11 +2230,20 @@ ${sa.active !== false ? `
     if (subEl) subEl.textContent = 'Playing…';
     audio.play().then(function() {
       toast('▶ Playing welcome message…');
+      // Unlock chat
+      var chatArea = document.getElementById('chat-input-area');
+      if (chatArea) { chatArea.style.opacity='1'; chatArea.style.pointerEvents='auto'; chatArea.removeAttribute('title'); }
+      // Animate wave bars
+      document.querySelectorAll('.wave-bar').forEach(function(b, i) {
+        b.style.background = '#0a0a0a';
+        b.style.animation = 'waveBar ' + (0.6 + (i%3)*0.15).toFixed(2) + 's ease-in-out ' + (i*0.05).toFixed(2) + 's infinite';
+      });
     }).catch(function() {
       toast('Tap again to play');
     });
     audio.onended = function() {
-      if (subEl) subEl.textContent = 'Tap to listen — unlocks AI assistant';
+      if (subEl) subEl.textContent = 'Welcome message played ✓';
+      document.querySelectorAll('.wave-bar').forEach(function(b) { b.style.animation='none'; b.style.background='#d0d0d0'; });
       window._premiumAudio = null;
     };
   };
