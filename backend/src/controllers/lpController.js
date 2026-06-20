@@ -1862,6 +1862,57 @@ async function handleLPManifest(req, res) {
 //
 function renderPremiumLP(page) {
   const bizName = (page.businessName || 'My Business').trim();
+  // ── Translation dictionary ──
+  const lang = (function(){ try { const s = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections||{}); return s.language || 'en'; } catch(_){ return 'en'; }})();
+  const T = {
+    en: {
+      tagline: 'Smart Landing Page', visitWebsite: 'Visit Website', learnMore: 'Learn More',
+      whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop',
+      subscribeBtn: 'Subscribe →',
+      personalWelcome: 'Personal welcome message', tapToListen: 'Tap to listen — unlocks AI assistant',
+      aiAssistant: 'AI Assistant', askAnything: 'Ask anything…',
+      tapWelcome: 'Tap welcome to activate', subscribeDesc: 'Subscribe for updates, exclusive offers and early access from ',
+      gdpr: 'I agree to receive marketing messages from ', gdprSuffix: '. I can unsubscribe at any time.',
+      alreadySubscribed: 'Already subscribed', subscribedOk: '✓ Subscribed successfully',
+      aiPowered: 'AI Powered', autoFill: 'Auto-fill from your URL →',
+      whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop'
+    },
+    de: {
+      tagline: 'Smarte Landingpage', visitWebsite: 'Website besuchen', learnMore: 'Mehr erfahren',
+      whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert',
+      subscribeBtn: 'Abonnieren →',
+      personalWelcome: 'Persönliche Willkommensnachricht', tapToListen: 'Tippen zum Anhören — aktiviert KI-Assistent',
+      aiAssistant: 'KI-Assistent', askAnything: 'Fragen Sie etwas…',
+      tapWelcome: 'Willkommensnachricht antippen', subscribeDesc: 'Abonnieren Sie für Updates, exklusive Angebote und Frühzugang von ',
+      gdpr: 'Ich erkläre mich einverstanden, Marketingmitteilungen von ', gdprSuffix: ' zu erhalten. Ich kann mich jederzeit abmelden.',
+      alreadySubscribed: 'Bereits abonniert', subscribedOk: '✓ Erfolgreich abonniert',
+      aiPowered: 'KI-Powered', autoFill: 'Auto-Ausfüllen von Ihrer URL →',
+      whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert'
+    }
+  };
+  const t = T[lang] || T.en;
+  const CARD_LABELS = {
+    de: {
+      menu: { label: 'Speisekarte', sub: 'Unser vollständiges Menü' },
+      reserve: { label: 'Tisch reservieren', sub: 'Online buchen' },
+      special: { label: 'Tagesangebot', sub: 'Was gibt es heute?' },
+      location: { label: 'Wegbeschreibung', sub: 'Uns finden & Parken' },
+      loyalty: { label: 'Treuekarte', sub: 'Stempel sammeln, Prämien erhalten' },
+      happyhour: { label: 'Happy Hour', sub: 'Angebote & Getränke' },
+      events: { label: 'Veranstaltungen', sub: 'Kommende Events & Angebote' },
+      hours: { label: 'Öffnungszeiten', sub: 'Wann wir geöffnet haben' },
+      membership: { label: 'Mitgliedschaft', sub: 'Pläne & Preise' },
+      classes: { label: 'Kurse', sub: 'Alle Sessions & Zeitpläne' },
+      timetable: { label: 'Stundenplan', sub: 'Wöchentlicher Zeitplan' },
+      book: { label: 'Session buchen', sub: 'Platz reservieren' },
+      rewards: { label: 'Prämien', sub: 'Punkte sammeln, Vorteile erhalten' },
+      trainers: { label: 'Trainer', sub: 'Unser Team kennenlernen' },
+      contact: { label: 'Kontakt', sub: 'Kontakt aufnehmen' },
+      shop: { label: 'Produkte kaufen', sub: 'Unser Sortiment' },
+      new: { label: 'Neuheiten', sub: 'Gerade eingetroffen' },
+      offers: { label: 'Tagesangebote', sub: 'Zeitlich begrenzte Deals' },
+    }
+  };
   const slug    = page.slug || '';
   const website = page.websiteUrl || '#';
   const accent  = page.brandColor || '#0a0a0a';
