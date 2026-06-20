@@ -2012,7 +2012,7 @@ function renderPremiumLP(page) {
   // ── Audio waveform bars ──
   const waveBars = Array.from({length:12}, (_,i) => {
     const h = [6,14,20,10,18,24,12,20,8,16,22,10][i];
-    return `<span style="display:block;width:2px;height:${h}px;border-radius:2px;background:#d0d0d0;"></span>`;
+    return '<span class="wave-bar" style="display:block;width:2px;height:' + h + 'px;border-radius:2px;background:#d0d0d0;transform-origin:bottom;transition:background .3s;"></span>';
   }).join('');
 
   // ── Smart pass card ──
