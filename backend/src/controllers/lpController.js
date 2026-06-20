@@ -1133,6 +1133,29 @@ async function handlePublishLP(req, res) {
     }
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
 
+    // ── Plan limit check ──────────────────────────────────────────
+    if (userId) {
+      const existingPage = await prisma.landingPage.findUnique({ where: { slug } });
+      if (!existingPage) {
+        // This is a NEW page — check plan limits
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const plan = user ? user.plan : 'free';
+        const LIMITS = { free: 1, trial: 1, pro: 10, business: 50, enterprise: 999 };
+        const limit = LIMITS[plan] ?? 1;
+        const pageCount = await prisma.landingPage.count({ where: { userId } });
+        if (pageCount >= limit) {
+          return res.status(402).json({
+            error: 'plan_limit',
+            message: `Your ${plan} plan allows ${limit} Smart QR page${limit === 1 ? '' : 's'}. Upgrade to create more.`,
+            limit,
+            current: pageCount,
+            upgrade: true
+          });
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────
+
     // Merge incoming sections with existing DB sections to preserve AI-generated fields
     let mergedSections = sections || {};
     const existing = await prisma.landingPage.findUnique({ where: { slug } });
