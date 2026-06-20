@@ -216,6 +216,57 @@ function renderLP(page) {
 
   // Parse stored sections FIRST so theme vars are available
   let storedButtons = [];
+  // ── Translation dictionary ──
+  const lang = (function(){ try { const s = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections||{}); return s.language || 'en'; } catch(_){ return 'en'; }})();
+  const T = {
+    en: {
+      tagline: 'Smart Landing Page', visitWebsite: 'Visit Website', learnMore: 'Learn More',
+      whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop',
+      subscribeBtn: 'Subscribe →', appleWallet: 'Add to Apple Wallet', googleWallet: 'Add to Google Wallet',
+      personalWelcome: 'Personal welcome message', tapToListen: 'Tap to listen — unlocks AI assistant',
+      aiAssistant: 'AI Assistant', askAnything: 'Ask anything…', aiOnline: 'Online',
+      tapWelcome: 'Tap welcome to activate', subscribeDesc: 'Subscribe for updates, exclusive offers and early access from ',
+      gdpr: 'I agree to receive marketing messages from ', gdprSuffix: '. I can unsubscribe at any time.',
+      welcomeFrom: 'Welcome from', alreadySubscribed: '${t.alreadySubscribed}', subscribedOk: '${t.subscribedOk}',
+      aiPowered: 'AI Powered', smartLandingPage: 'Smart Landing Page', autoFill: 'Auto-fill from your URL →'
+    },
+    de: {
+      tagline: 'Smarte Landingpage', visitWebsite: 'Website besuchen', learnMore: 'Mehr erfahren',
+      whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert',
+      subscribeBtn: 'Abonnieren →', appleWallet: 'Zu Apple Wallet hinzufügen', googleWallet: 'Zu Google Wallet hinzufügen',
+      personalWelcome: 'Persönliche Willkommensnachricht', tapToListen: 'Tippen zum Anhören — aktiviert KI-Assistent',
+      aiAssistant: 'KI-Assistent', askAnything: 'Fragen Sie etwas…', aiOnline: 'Online',
+      tapWelcome: 'Willkommensnachricht antippen', subscribeDesc: 'Abonnieren Sie für Updates, exklusive Angebote und Frühzugang von ',
+      gdpr: 'Ich erkläre mich einverstanden, Marketingmitteilungen von ', gdprSuffix: ' zu erhalten. Ich kann mich jederzeit abmelden.',
+      welcomeFrom: 'Willkommen bei', alreadySubscribed: 'Bereits abonniert', subscribedOk: '✓ Erfolgreich abonniert',
+      aiPowered: 'KI-Powered', smartLandingPage: 'Smarte Landingpage', autoFill: 'Auto-Ausfüllen von Ihrer URL →'
+    }
+  };
+  const t = T[lang] || T.en;
+  // ── Action card translations ──
+  const CARD_LABELS = {
+    de: {
+      menu: { label: 'Speisekarte', sub: 'Unser vollständiges Menü' },
+      reserve: { label: 'Tisch reservieren', sub: 'Online buchen' },
+      special: { label: 'Tagesangebot', sub: 'Was gibt es heute?' },
+      location: { label: 'Wegbeschreibung', sub: 'Uns finden & Parken' },
+      loyalty: { label: 'Treuekarte', sub: 'Stempel sammeln, Prämien erhalten' },
+      happyhour: { label: 'Happy Hour', sub: 'Angebote & Getränke' },
+      events: { label: 'Veranstaltungen', sub: 'Kommende Events & Angebote' },
+      hours: { label: 'Öffnungszeiten', sub: 'Wann wir geöffnet haben' },
+      membership: { label: 'Mitgliedschaft', sub: 'Pläne & Preise' },
+      classes: { label: 'Kurse', sub: 'Alle Sessions & Zeitpläne' },
+      timetable: { label: 'Stundenplan', sub: 'Wöchentlicher Zeitplan' },
+      book: { label: 'Session buchen', sub: 'Platz reservieren' },
+      rewards: { label: 'Prämien', sub: 'Punkte sammeln, Vorteile erhalten' },
+      trainers: { label: 'Trainer', sub: 'Unser Team kennenlernen' },
+      contact: { label: 'Kontakt', sub: 'Kontakt aufnehmen' },
+      shop: { label: 'Produkte kaufen', sub: 'Unser Sortiment' },
+      new: { label: 'Neuheiten', sub: 'Gerade eingetroffen' },
+      offers: { label: 'Tagesangebote', sub: 'Zeitlich begrenzte Deals' },
+    }
+  };
+
   let storedSections = {};
   if (page.sections) {
     try {
@@ -300,7 +351,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 <head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png"><link rel="manifest" href="/lp/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${bizName} — Smart Landing Page</title>
+<title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
@@ -1151,6 +1202,10 @@ async function handlePublishLP(req, res) {
     }
 
 
+    // Detect language from URL on publish
+    const _pubIsDeUrl = websiteUrl && (websiteUrl.endsWith('.de') || websiteUrl.includes('.de/'));
+    if (_pubIsDeUrl && !mergedSections.language) mergedSections.language = 'de';
+    if (!mergedSections.language) mergedSections.language = 'en';
     pageCache.delByPrefix('lp:' + slug);
     pageCache.delByPrefix('stamp:' + slug);
     const page = await prisma.landingPage.upsert({
@@ -1167,6 +1222,10 @@ async function handlePublishLP(req, res) {
         try {
           console.log('[Firecrawl] Starting scrape for', websiteUrl);
           const siteContent = await scrapeWithFirecrawl(websiteUrl);
+          // Detect language from URL and content
+          const _isDeUrl = websiteUrl && (websiteUrl.endsWith('.de') || websiteUrl.includes('.de/'));
+          const _isDeContent = siteContent && (siteContent.match(/\b(und|der|die|das|ist|mit|für|von|auf|ich|wir|sie|nicht|auch|bei|nach|werden|haben)\b/gi) || []).length > 20;
+          const _detectedLang = (_isDeUrl || _isDeContent) ? 'de' : 'en';
           console.log('[Firecrawl] scrape result:', siteContent ? 'got ' + siteContent.length + ' chars' : 'null/empty');
           if (siteContent) {
             const aiData = await generateLPFromSite(businessName, websiteUrl, siteContent);
@@ -1178,6 +1237,7 @@ async function handlePublishLP(req, res) {
                 featured: aiData.features ? aiData.features.map(feat=>({ enabled:true, icon:feat.icon, title:feat.title, description:feat.description })) : existing.featured,
                 businessInfo: { hours: aiData.hours||null, address: aiData.address||null, phone: aiData.phone||null, email: (aiData.email && aiData.email.includes('@')) ? aiData.email : null },
                 actionLinks: (Array.isArray(aiData.actionLinks) && aiData.actionLinks.length > 0) ? aiData.actionLinks : (existing.actionLinks || null),
+                language: existing.language || _detectedLang || 'en',
                 aiGenerated: true, aiGeneratedAt: new Date().toISOString(), siteContent, crawlLocked: true
               });
               await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
@@ -1257,7 +1317,7 @@ async function handleSubscribe(req, res) {
         sendWelcome = true;
         console.log('[Subscribe] Reactivated:', emailNorm, slug);
       } else {
-        return res.json({ ok: true, message: 'Already subscribed' });
+        return res.json({ ok: true, message: '${t.alreadySubscribed}' });
       }
     } else {
       subscriber = await prisma.subscriber.create({
@@ -1996,7 +2056,7 @@ function renderPremiumLP(page) {
   const _aiLinks = Array.isArray(storedSections.actionLinks) && storedSections.actionLinks.length > 0 ? storedSections.actionLinks : null;
   const _cardSource = _aiLinks
     ? _aiLinks.map(l => ({ icon: l.icon || '🔗', label: l.label, sub: l.description || '', url: l.url || '#' }))
-    : bizSections.map(s => ({ icon: s.icon, label: s.label, sub: s.sub, url: '#' }));
+    : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
     `<a href="${s.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;border:1.5px solid #0a0a0a;border-radius:14px;text-decoration:none;cursor:pointer;transition:box-shadow .15s,transform .12s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
@@ -2041,7 +2101,7 @@ function renderPremiumLP(page) {
 <meta name="apple-mobile-web-app-title" content="${bizName}">
 <link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png">
 <link rel="manifest" href="/lp/manifest/${slug}">
-<title>${bizName} — Smart Landing Page</title>
+<title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2091,10 +2151,10 @@ input,textarea,button{font-family:inherit}
         Visit Website
         <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 13L13 3M7 3h6v6"/></svg>
       </a>
-      <a href="#subscribe" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;text-decoration:none;">Learn More</a>
+      <a href="#subscribe" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;text-decoration:none;">${t.learnMore}</a>
     `}
   </div>
-  <p style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;" onclick="window.location.href='${website}'">Auto-fill from your URL →</p>
+  <p style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;" onclick="window.location.href='${website}'">${t.autoFill}</p>
 </div>
 
 <!-- AUDIO -->
@@ -2109,8 +2169,8 @@ ${sv.active !== false ? `
       <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
     </div>
     <div style="flex:1;min-width:0;">
-      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || 'Personal welcome message'}</div>
-      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || 'Tap to listen — unlocks AI assistant'}</div>
+      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || '${t.personalWelcome}'}</div>
+      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || '${t.tapToListen}'}</div>
     </div>
     <div style="display:flex;align-items:center;gap:2px;height:28px;">${waveBars}</div>
   </div>
@@ -2124,16 +2184,16 @@ ${sa.active !== false ? `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #e8e8e8;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-        <span style="font-size:13px;font-weight:600;color:#0a0a0a;">AI Assistant</span>
+        <span style="font-size:13px;font-weight:600;color:#0a0a0a;">${t.aiAssistant}</span>
         <span style="font-size:12px;color:#555;">— Online</span>
       </div>
-      <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.05em;text-transform:uppercase;">Tap welcome to activate</span>
+      <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.05em;text-transform:uppercase;">${t.tapWelcome}</span>
     </div>
     <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
       <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">✦ Hi 👋 I'm the AI concierge for ${bizName}. Ask me about hours, menu, or anything else.</div>
     </div>
     <div id="chat-input-area" style="display:flex;align-items:center;border-top:1px solid #e8e8e8;opacity:0.4;pointer-events:none;" title="Play welcome message to activate">
-      <input id="chat-input" placeholder="Ask anything…" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
+      <input id="chat-input" placeholder="${t.askAnything}" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
       <button onclick="sendChat()" style="width:36px;height:36px;border-radius:50%;background:#f2f2f2;border:none;cursor:pointer;margin-right:8px;display:flex;align-items:center;justify-content:center;transition:background .15s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f2f2f2'">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><path d="M14 2L2 8l5 2 2 5 5-13z"/></svg>
       </button>
@@ -2149,7 +2209,7 @@ ${sa.active !== false ? `
 
 <!-- ACTION CARDS (business sections) -->
 <div class="section">
-  <div style="font-size:10px;font-weight:600;color:#999;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;">What can I do here?</div>
+  <div style="font-size:10px;font-weight:600;color:#999;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;">${t.whatCanIDo}</div>
   <div style="display:flex;flex-direction:column;gap:8px;">
     ${actionCardsHTML}
   </div>
@@ -2158,10 +2218,10 @@ ${sa.active !== false ? `
 <!-- SUBSCRIBE -->
 <div class="section" id="subscribe">
   <div class="card" style="padding:28px 24px;">
-    <h2 style="font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:-.3px;margin-bottom:8px;">Stay in the loop</h2>
-    <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">Subscribe for updates, exclusive offers and early access from ${bizName}.</p>
+    <h2 style="font-size:22px;font-weight:700;color:#0a0a0a;letter-spacing:-.3px;margin-bottom:8px;">${t.stayInLoop}</h2>
+    <p style="font-size:14px;color:#555;line-height:1.65;margin-bottom:20px;">${t.subscribeDesc}${bizName}.</p>
     <input id="sub-email" type="email" placeholder="your@email.com" style="width:100%;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;font-size:14px;color:#0a0a0a;outline:none;margin-bottom:10px;background:#fff;transition:border-color .15s;" onfocus="this.style.borderColor='#0a0a0a'" onblur="this.style.borderColor='#e8e8e8'">
-    <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Subscribe →</button>
+    <button onclick="handleSubscribe()" style="width:100%;padding:14px;background:#0a0a0a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">${t.subscribeBtn}</button>
     <div style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#555;line-height:1.55;margin-bottom:18px;">
       <input type="checkbox" id="gdpr" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d0d0d0;margin-top:1px;cursor:pointer;flex-shrink:0;accent-color:#0a0a0a;">
       <label for="gdpr">I agree to receive marketing messages from ${bizName}. I can unsubscribe at any time.</label>
@@ -2292,8 +2352,8 @@ ${sa.active !== false ? `
       method:'POST',headers:{'Content-Type':'application/json'},
       body: JSON.stringify({email: email, gdprConsent: true, source:'email'})
     }).then(function(r){ return r.json(); })
-      .then(function(d) { toast(d.alreadySubscribed ? 'Already subscribed' : '✓ Subscribed successfully'); })
-      .catch(function() { toast('✓ Subscribed successfully'); });
+      .then(function(d) { toast(d.alreadySubscribed ? '${t.alreadySubscribed}' : '${t.subscribedOk}'); })
+      .catch(function() { toast('${t.subscribedOk}'); });
     document.getElementById('sub-email').value = '';
   };
 
