@@ -2110,7 +2110,7 @@ function renderPremiumLP(page) {
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 @keyframes waveBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
-body{font-family:'Inter',system-ui,sans-serif;background:#f8f8f8;color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body{font-family:'Inter',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8'};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
@@ -2297,7 +2297,7 @@ ${sa.active !== false ? `
     dark = !dark;
     document.getElementById('theme-knob').style.transform = dark ? 'translateX(20px)' : 'none';
     document.getElementById('theme-knob').style.background = dark ? '#f0f0f0' : '#0a0a0a';
-    document.body.style.background = dark ? '#111' : '#f8f8f8';
+    document.body.style.background = dark ? '#111' : '${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : "#f8f8f8"}';
     document.body.style.color = dark ? '#f0f0f0' : '#0a0a0a';
   };
 
