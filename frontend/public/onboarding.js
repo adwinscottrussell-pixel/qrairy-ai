@@ -1,3 +1,4 @@
+/* v2 */
 (function(){
   var PUBLISH_PATH='dashboard.html?section=landing-pages';
   var FREE_PATH='qr-free.html';
