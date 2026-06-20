@@ -1160,7 +1160,7 @@ async function handlePublishLP(req, res) {
     pageCache.delByPrefix('stamp:' + slug);
     const page = await prisma.landingPage.upsert({
       where: { slug },
-      update: { businessName, websiteUrl, useCase, brandColor, logoUrl, userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
+      update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ...(logoUrl ? { logoUrl } : {}), userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live', template: template || null },
     });
     if (websiteUrl && websiteUrl.startsWith('http')) {
