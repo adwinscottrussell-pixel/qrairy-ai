@@ -344,7 +344,8 @@ async function handleAnalytics(req, res) {
 async function handleDashboard(req, res) {
   try {
     const userId = await getUserFromToken(req.headers.authorization);
-    const where = userId ? { userId } : {};
+    const where = userId ? { userId } : null;
+    if (!where) return res.json({ dashboard: [] });
     const data = await prisma.qR.findMany({
       where,
       include: { scans: true, subscribers: true },
