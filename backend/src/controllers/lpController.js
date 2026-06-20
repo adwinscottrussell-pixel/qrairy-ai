@@ -2423,9 +2423,18 @@ ${sa.active !== false ? `
       method:'POST',headers:{'Content-Type':'application/json'},
       body: JSON.stringify({email: email, gdprConsent: true, source:'email'})
     }).then(function(r){ return r.json(); })
-      .then(function(d) { toast(d.alreadySubscribed ? '${t.alreadySubscribed}' : '${t.subscribedOk}'); })
-      .catch(function() { toast('${t.subscribedOk}'); });
-    document.getElementById('sub-email').value = '';
+      .then(function(d) {
+        var msg = d.message || '';
+        var isAlready = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('bereits');
+        if (isAlready) {
+          toast('${t.alreadySubscribed} 👍');
+        } else {
+          toast('${t.subscribedOk}');
+          document.getElementById('sub-email').value = '';
+          document.getElementById('gdpr').checked = false;
+        }
+      })
+      .catch(function() { toast('Something went wrong'); });
   };
 
   // ── Wallet ──
