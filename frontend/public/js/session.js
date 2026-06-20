@@ -105,7 +105,7 @@ const QRairySession = (function () {
         secs--;
       }
       tick(); _trialTimer = setInterval(tick, 1000);
-    } else if (_session.isTrialExpired) {
+    } else if (_session.isTrialExpired && (_session.aiQrCount > 0)) {
       pill.classList.add('show','expired');
       if (dot) dot.style.background='#ef4444';
       if (txt) txt.innerHTML='<strong>Trial expired</strong> &mdash; upgrade to reactivate your AI pages';
