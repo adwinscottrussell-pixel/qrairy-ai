@@ -2259,7 +2259,7 @@ ${sa.active !== false ? `
     msgs.scrollTop = msgs.scrollHeight;
 
     var body = JSON.stringify({message: val, slug: SLUG});
-    fetch(API + '/lp/chat/' + SLUG, {method:'POST',headers:{'Content-Type':'application/json'},body:body})
+    fetch(API + '/lp/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:body})
       .then(function(r){ return r.json(); })
       .then(function(d) {
         typing.textContent = d.reply || d.message || 'I can help with that!';
