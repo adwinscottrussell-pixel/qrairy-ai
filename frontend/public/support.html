@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Support — Qraivy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0b0d;
+      --bg2: #111318;
+      --border: #1e2230;
+      --accent: #ff5a1f;
+      --text: #f0f2f7;
+      --text2: #b8c0d0;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    header { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--text); text-decoration: none; }
+    .logo span { color: var(--accent); }
+    .hero { padding: 80px 40px 60px; max-width: 800px; margin: 0 auto; text-align: center; }
+    .hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.8rem; font-weight: 700; margin-bottom: 16px; }
+    .hero p { color: var(--text2); font-size: 1.1rem; line-height: 1.7; }
+    .content { max-width: 800px; margin: 0 auto; padding: 0 40px 80px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+    .card h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: var(--accent); }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .contact-item { display: flex; flex-direction: column; gap: 4px; }
+    .contact-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+    .contact-value { font-size: 0.95rem; color: var(--text); }
+    .contact-value a { color: var(--accent); text-decoration: none; }
+    .contact-value a:hover { text-decoration: underline; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 20px 0; }
+    .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .faq-item h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .faq-item p { color: var(--text2); font-size: 0.9rem; line-height: 1.7; }
+    .email-btn { display: inline-block; margin-top: 20px; padding: 14px 28px; background: var(--accent); color: #fff; border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+    footer { border-top: 1px solid var(--border); padding: 32px 40px; text-align: center; color: var(--text2); font-size: 0.8rem; }
+    footer a { color: var(--text2); text-decoration: none; margin: 0 12px; }
+    @media(max-width: 600px) {
+      .hero { padding: 50px 20px 40px; }
+      .hero h1 { font-size: 2rem; }
+      .content { padding: 0 20px 60px; }
+      .contact-grid { grid-template-columns: 1fr; }
+      header { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">QR<span>Aivy</span></a>
+  <a href="/dashboard.html" style="color:var(--text2);text-decoration:none;font-size:.9rem;">Dashboard →</a>
+</header>
+
+<div class="hero">
+  <h1>How can we help?</h1>
+  <p>Get in touch with the Qraivy team. We're here to help you get the most out of your AI-powered Smart QR pages.</p>
+</div>
+
+<div class="content">
+
+  <div class="card">
+    <h2>Contact Information</h2>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <span class="contact-label">Name</span>
+        <span class="contact-value">Adwin Scott Russell</span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Company</span>
+        <span class="contact-value">Qraivy</span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Address</span>
+        <span class="contact-value">Schiller Str 1<br>89340 Leipheim<br>Germany</span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Telephone</span>
+        <span class="contact-value"><a href="tel:+49017624254731">+49 0176 24254731</a></span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Email</span>
+        <span class="contact-value"><a href="mailto:support@qraivy.com">support@qraivy.com</a></span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-label">Website</span>
+        <span class="contact-value"><a href="https://www.qraivy.com">www.qraivy.com</a></span>
+      </div>
+    </div>
+    <a href="mailto:support@qraivy.com" class="email-btn">Email Support →</a>
+  </div>
+
+  <div class="card">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-item">
+      <h3>How do I create a Smart QR page?</h3>
+      <p>Log in to your dashboard and click "+ Create New Smart QR". Follow the 5-step wizard to set up your AI-powered landing page in under 60 seconds.</p>
+    </div>
+    <div class="faq-item">
+      <h3>How do I upgrade my plan?</h3>
+      <p>Go to your dashboard → Billing & Plans → choose the plan that fits your needs. Upgrades take effect immediately.</p>
+    </div>
+    <div class="faq-item">
+      <h3>Can I customise my landing page?</h3>
+      <p>Yes — after publishing, click "Manage" on any page from your dashboard to edit colours, sections, voice messages and more.</p>
+    </div>
+    <div class="faq-item">
+      <h3>How do wallet passes work?</h3>
+      <p>Your customers can add your Smart QR loyalty card to their Apple or Google Wallet directly from your landing page. They collect stamps automatically on each visit.</p>
+    </div>
+    <div class="faq-item">
+      <h3>What languages are supported?</h3>
+      <p>Qraivy automatically detects the language of your website and generates your landing page and voice welcome in that language. Currently English and German are fully supported.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p style="margin-bottom:12px;">© 2026 Qraivy · Schiller Str 1, 89340 Leipheim, Germany</p>
+  <a href="/">Home</a>
+  <a href="/support.html">Support</a>
+  <a href="/dashboard.html">Dashboard</a>
+</footer>
+
+</body>
+</html>
