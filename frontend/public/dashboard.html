@@ -828,7 +828,7 @@ async function initDashboard(){
               + '<td>' + badge(p.walletCount, 'wallet') + '</td>'
               + '<td><strong>' + p.total + '</strong></td>'
               + '<td><span class="sub-date">' + fmtDate(p.lastSub) + '</span></td>'
-              + '<td><button class="sub-view-btn" onclick="subViewDetail('' + esc(p.slug) + '','' + esc(p.name) + '')">View details →</button></td>'
+              + '<td><button class="sub-view-btn" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
               + '</tr>';
           });
 
