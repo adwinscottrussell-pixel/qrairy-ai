@@ -629,10 +629,10 @@ async function initDashboard(){
       }, 700);
     }
     // Hide banner while modal is visible
+    const banner = document.getElementById('claim-banner');
     if (banner) banner.classList.remove('show');
 
     // Show banner
-    const banner = document.getElementById('claim-banner');
     if (banner) banner.classList.add('show');
 
     // Show demo upgrade banner for free/demo plan users
