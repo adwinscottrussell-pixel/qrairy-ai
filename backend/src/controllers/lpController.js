@@ -470,6 +470,7 @@ body.theme-light .lp-info-link{color:#111111}` : ''}
 .lp-chat-status{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:rgba(240,236,224,0.6)}
 .lp-status-dot{width:5px;height:5px;border-radius:50%;background:#22c55e}
 .lp-chat-msgs{min-height:120px;max-height:320px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none}
+.lp-chat-msg{display:flex;}.lp-chat-msg-user{justify-content:flex-end;}.lp-chat-bubble{max-width:80%;padding:9px 12px;border-radius:12px;font-size:0.75rem;line-height:1.5;}.lp-chat-msg-ai .lp-chat-bubble{background:rgba(20,20,30,0.85);border:0.5px solid rgba(255,255,255,0.15);color:rgba(240,236,224,0.9);}
 .lp-chat-msgs::-webkit-scrollbar{display:none}
 .lp-msg{display:flex}
 .lp-msg-ai{justify-content:flex-start}
@@ -844,7 +845,9 @@ ${sectionsHTML}`;
         audio.onerror = onVoiceEnd;
         audio.play().catch(onVoiceEnd);
       } else {
-        setTimeout(onVoiceEnd, 3500);
+        if (voiceSub) voiceSub.textContent = 'Voice generating — refresh in a moment…';
+        playing = false;
+        voiceBtn.textContent = '▶';
       }
     });
   }
