@@ -1224,7 +1224,8 @@ async function handlePublishLP(req, res) {
               // Generate voice welcome message
               try {
                 const { generateAndUploadVoice } = require('../services/voiceService');
-                const vs = (merged.voice && merged.voice.voiceKey) || 'sarah';
+                const _lang = merged.language || 'en';
+                const vs = (merged.voice && merged.voice.voiceKey) || (_lang === 'de' ? 'anna_de' : 'sarah');
                 const ct = (merged.voice && merged.voice.customText) || null;
                 const audioUrl = await generateAndUploadVoice(businessName, slug, vs, ct);
                 merged.voice = Object.assign({}, merged.voice || {}, { audioUrl });
@@ -1244,7 +1245,8 @@ async function handlePublishLP(req, res) {
         const cs = currentPage.sections ? JSON.parse(currentPage.sections) : {};
         // Always regenerate voice on publish to pick up language/voice changes
         const { generateAndUploadVoice } = require('../services/voiceService');
-        const vs = (cs.voice && cs.voice.voiceKey) || 'sarah';
+        const _csLang = cs.language || 'en';
+        const vs = (cs.voice && cs.voice.voiceKey) || (_csLang === 'de' ? 'anna_de' : 'sarah');
         const ct = (cs.voice && cs.voice.customText) || null;
         const bizName = currentPage.businessName || slug;
         const audioUrl = await generateAndUploadVoice(bizName, slug, vs, ct);
