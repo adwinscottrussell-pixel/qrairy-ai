@@ -483,7 +483,7 @@ window.QRAivyLPGen = (function(){
       '.lp-chat-msg{display:flex;}',
       '.lp-chat-msg-user{justify-content:flex-end;}',
       '.lp-chat-bubble{max-width:80%;padding:9px 12px;border-radius:12px;font-size:0.75rem;line-height:1.5;}',
-      '.lp-chat-msg-ai .lp-chat-bubble{background:rgba(255,255,255,0.05);border:0.5px solid;color:rgba(240,236,224,0.7);}',
+      '.lp-chat-msg-ai .lp-chat-bubble{background:rgba(20,20,30,0.85);border:0.5px solid rgba(255,255,255,0.15);color:rgba(240,236,224,0.9);}',
       '.lp-chat-msg-user .lp-chat-bubble{background:'+accentDim+';border:0.5px solid '+accentBorder+';color:rgba(240,236,224,0.85);}',
       '.lp-typing::after{content:"...";animation:lpTyping 1.2s infinite;}',
       '@keyframes lpTyping{0%{content:"."}33%{content:".."}66%{content:"..."}}',
