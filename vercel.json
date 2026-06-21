@@ -2,6 +2,8 @@
   "outputDirectory": "frontend/public",
   "routes": [
     { "src": "/lp/(.*)", "dest": "https://api.qraivy.com/lp/$1" },
+    { "src": "/stamp/(.*)", "dest": "https://api.qraivy.com/stamp/$1" },
+    { "src": "/wallet/(.*)", "dest": "https://api.qraivy.com/wallet/$1" },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
