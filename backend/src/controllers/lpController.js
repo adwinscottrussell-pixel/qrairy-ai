@@ -259,7 +259,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://pages.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
 
   const sh = storedSections.hero   || {};
   // Use AI-generated hero text if available and hero title is generic
@@ -1255,7 +1255,7 @@ async function handlePublishLP(req, res) {
         console.log('[Voice] Generated on publish for', slug, audioUrl);
       } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
     });
-    return res.json({ ok: true, url: 'https://qraivy.com/lp/' + slug, slug, id: page.id });
+    return res.json({ ok: true, url: 'https://pages.qraivy.com/lp/' + slug, slug, id: page.id });
   } catch (err) {
     console.error('[LP] publish error:', err);
     return res.status(500).json({ error: err.message });
@@ -1411,7 +1411,7 @@ async function handleSendPush(req, res) {
     if (webSubs.length > 0) {
       const { sendWebPush } = require('../services/webPushService');
       for (const sub of webSubs) {
-        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
+        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://pages.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
         if (r.ok) webPushSent++;
       }
     }
@@ -2118,7 +2118,7 @@ function renderPremiumLP(page) {
       </div>
     </div>`;
 
-  const lpUrl = 'https://qraivy.com/lp/' + slug;
+  const lpUrl = 'https://pages.qraivy.com/lp/' + slug;
   const apiBase = 'https://api.qraivy.com';
 
   return `<!DOCTYPE html>
