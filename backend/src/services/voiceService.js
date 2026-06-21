@@ -13,8 +13,9 @@ const VOICES = {
   charlie: { id: "IKne3meq5aSn9XLyUdCD", label: "Charlie - Deep & Confident", lang: "en" },
   george:  { id: "JBFqnCBsd6RMkjVDRZzb", label: "George - Captivating Storyteller", lang: "en" },
   river:   { id: "SAz9YHcvj6GT2YYXdXww", label: "River - Calm & Informative", lang: "en" },
-  anna_de: { id: "EXAVITQu4vr4xnSDxMaL", label: "Anna - Warm & Professional (DE)", lang: "de" },
-  max_de:  { id: "IKne3meq5aSn9XLyUdCD", label: "Max - Deep & Confident (DE)", lang: "de" },
+  anna_de: { id: "XB0fDUnXU5powFXDhCwa", label: "Charlotte - Natural German Female", lang: "de" },
+  max_de:  { id: "iP95p4xoKVk53GoZ742B", label: "Chris - Natural German Male", lang: "de" },
+  lena_de: { id: "pFZP5JQG7iQjIQuC4Bku", label: "Lena - Warm German Female", lang: "de" },
 };
 
 const DEFAULT_TEXT = {
@@ -35,7 +36,7 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
   const body = JSON.stringify({
     text,
     model_id: lang === 'de' ? 'eleven_multilingual_v2' : 'eleven_turbo_v2',
-    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+    voice_settings: lang === 'de' ? { stability: 0.65, similarity_boost: 0.80, style: 0.3, use_speaker_boost: true } : { stability: 0.5, similarity_boost: 0.75 }
   });
 
   const audioBuffer = await new Promise((resolve, reject) => {
