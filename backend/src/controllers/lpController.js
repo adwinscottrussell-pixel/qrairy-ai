@@ -978,13 +978,13 @@ ${sectionsHTML}`;
     if('Notification' in window&&Notification.permission==='granted'){
       (function tryAS(){
         if(window.__swReg){
-          fetch('https://api.qraivy.com/lp/webpush/vapid-key/'+_s)
+          fetch('https://pages.qraivy.com/lp/webpush/vapid-key/'+_s)
             .then(function(x){return x.json();})
             .then(function(d){
               var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
               return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
             })
-            .then(function(s){var j=s.toJSON();return fetch('https://api.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+            .then(function(s){var j=s.toJSON();return fetch('https://pages.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
             .then(function(){localStorage.setItem('wp_sub_'+_s,'1');})
             .catch(function(){});
         }else{setTimeout(tryAS,500);}
@@ -1049,13 +1049,13 @@ ${sectionsHTML}`;
   function doSub(){
     setState('asking');
     function sub(reg){
-      fetch('https://api.qraivy.com/lp/webpush/vapid-key/'+_s)
+      fetch('https://pages.qraivy.com/lp/webpush/vapid-key/'+_s)
         .then(function(x){return x.json();})
         .then(function(d){
           var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
           return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
         })
-        .then(function(s){var j=s.toJSON();return fetch('https://api.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+        .then(function(s){var j=s.toJSON();return fetch('https://pages.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
         .then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');})
         .catch(function(){wrap.style.display='none';});
     }
