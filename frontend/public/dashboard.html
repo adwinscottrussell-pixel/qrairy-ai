@@ -894,8 +894,8 @@ async function initDashboard(){
     rows.forEach(function(r) {
       lines.push(r.map(function(v) { return '"' + String(v||'').replace(/"/g, '""') + '"'; }).join(','));
     });
-    return lines.join('
-');
+    return lines.join('\n');
+
   }
 
   function downloadCSV(csv, filename) {
