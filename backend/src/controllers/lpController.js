@@ -1653,7 +1653,7 @@ async function handleGetNFCToken(req, res) {
   try {
     const { slug } = req.params;
     const token = await getNFCStampToken(slug);
-    const stampUrl = `https://api.qraivy.com/stamp/${slug}/${token}`;
+    const stampUrl = `https://pages.qraivy.com/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl, nfcUrl: stampUrl });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -1742,7 +1742,7 @@ async function handleGetStampToken(req, res) {
   try {
     const { slug } = req.params;
     const token = await getOrCreateStampToken(slug);
-    const stampUrl = `https://api.qraivy.com/stamp/${slug}/${token}`;
+    const stampUrl = `https://pages.qraivy.com/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -1770,7 +1770,7 @@ async function handleGetStampSettings(req, res) {
     const rewardReady = pass ? pass.rewardReady : false;
     const stampCount = pass ? pass.stampCount : 0;
     const token = await getOrCreateStampToken(slug);
-    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `https://api.qraivy.com/stamp/${slug}/${token}`, token });
+    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `https://pages.qraivy.com/stamp/${slug}/${token}`, token });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
 
