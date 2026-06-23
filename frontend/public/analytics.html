@@ -22,31 +22,37 @@
   </div>
   <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
   <nav class="sb-nav">
-    <div class="sb-group">Main</div>
-    <a href="dashboard.html" class="sb-item "><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item active"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
-    <div class="sb-group" style="margin-top:4px">Configure</div>
-    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
+    <div class="sb-group" data-i18n="nav_main">Main</div>
+    <a href="dashboard.html" class="sb-item "><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item active"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
+    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
+    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
+    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar" id="sb-avatar">?</div>
       <div class="sb-user-info">
         <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role">Business Owner</div>
+        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
       </div>
     </div>
+<div style="padding:6px 12px 2px;">
+      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:.8rem;">🌐</span>
+        <span id="lang-toggle-label">Deutsch</span>
+      </button>
+    </div>
     <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
   </div>
 </div>
 
@@ -61,25 +67,25 @@
       <!-- Header -->
       <div class="page-header">
         <div>
-          <h1 class="dash-title">Business <em>Intelligence</em></h1>
-          <div class="dash-sub">Deep engagement reporting across all Smart QR Pages</div>
+          <h1 class="dash-title"><span data-i18n="an_title">Business</span> <em data-i18n="an_title_em">Intelligence</em></h1>
+          <div class="dash-sub" data-i18n="an_sub">Deep engagement reporting across all Smart QR Pages</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select class="filter-select" id="qr-filter">
-            <option value="all">All QR Pages</option>
+            <option value="all" data-i18n="filter_all_qr">All QR Pages</option>
           </select>
         </div>
       </div>
 
       <!-- Date filters -->
       <div class="filter-bar">
-        <button class="filter-btn active" data-range="7">Last 7 days</button>
-        <button class="filter-btn" data-range="30">Last 30 days</button>
-        <button class="filter-btn" data-range="90">Last 90 days</button>
-        <button class="filter-btn" data-range="1">Last 24h</button>
+        <button class="filter-btn active" data-range="7" data-i18n="range_7">Last 7 days</button>
+        <button class="filter-btn" data-range="30" data-i18n="range_30">Last 30 days</button>
+        <button class="filter-btn" data-range="90" data-i18n="range_90">Last 90 days</button>
+        <button class="filter-btn" data-range="1" data-i18n="range_24">Last 24h</button>
         <div class="filter-sep"></div>
         <select class="filter-select" id="usecase-filter">
-          <option value="all">All use cases</option>
+          <option value="all" data-i18n="filter_all_uc">All use cases</option>
           <option value="restaurant">Restaurant</option>
           <option value="ecommerce">Ecommerce</option>
           <option value="realestate">Real Estate</option>
@@ -93,12 +99,12 @@
 
       <!-- KPI strip -->
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl">Total Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
-        <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
-        <div class="kpi-card"><div class="kpi-val purple" id="an-wallet">—</div><div class="kpi-lbl">Wallet Members</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="an-ai">—</div><div class="kpi-lbl">AI Conversations</div></div>
-        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl">Conversion Rate</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="an-pages">—</div><div class="kpi-lbl">Active Pages</div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl" data-i18n="kpi_scans">Total Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
+        <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
+        <div class="kpi-card" style="display:none"><div class="kpi-val purple" id="an-wallet">—</div><div class="kpi-lbl">Wallet Members</div></div>
+        <div class="kpi-card" style="display:none"><div class="kpi-val" id="an-ai">—</div><div class="kpi-lbl">AI Conversations</div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl" data-i18n="kpi_cvr">Conversion Rate</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="an-pages">—</div><div class="kpi-lbl" data-i18n="kpi_pages">Active Pages</div></div>
       </div>
 
       <!-- Charts -->
@@ -106,8 +112,8 @@
         <div class="chart-card wide">
           <div class="cc-header">
             <div>
-              <div class="cc-title">Scan Activity</div>
-              <div class="cc-sub">Daily scans across all Smart QR Pages</div>
+              <div class="cc-title" data-i18n="chart_scans">Scan Activity</div>
+              <div class="cc-sub" data-i18n="chart_scans_sub">Daily scans across all Smart QR Pages</div>
             </div>
             <span class="cc-badge" id="scans-chart-badge">Loading…</span>
           </div>
@@ -116,8 +122,8 @@
         <div class="chart-card">
           <div class="cc-header">
             <div>
-              <div class="cc-title">Subscriber Growth</div>
-              <div class="cc-sub">Cumulative subscribers over time</div>
+              <div class="cc-title" data-i18n="chart_subs">Subscriber Growth</div>
+              <div class="cc-sub" data-i18n="chart_subs_sub">Cumulative subscribers over time</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="subsChart"></canvas></div>
@@ -125,8 +131,8 @@
         <div class="chart-card">
           <div class="cc-header">
             <div>
-              <div class="cc-title">Engagement by Use Case</div>
-              <div class="cc-sub">Scan distribution across categories</div>
+              <div class="cc-title" data-i18n="chart_uc">Engagement by Use Case</div>
+              <div class="cc-sub" data-i18n="chart_uc_sub">Scan distribution across categories</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="usecaseChart"></canvas></div>
@@ -136,20 +142,20 @@
       <!-- QR Performance Table -->
       <div class="perf-section">
         <div class="perf-hdr">
-          <div class="perf-title">Smart QR Performance</div>
-          <input class="perf-search" id="perf-search" type="text" placeholder="Search pages…" />
+          <div class="perf-title" data-i18n="perf_title">Smart QR Performance</div>
+          <input class="perf-search" id="perf-search" type="text" placeholder="Search pages…" data-i18n-placeholder="perf_search" />
         </div>
         <div class="perf-table-wrap">
           <table class="perf-table" id="perf-table">
             <thead>
               <tr>
-                <th data-col="name">Page <span class="sort-icon">↕</span></th>
-                <th data-col="scans" class="sorted">Scans <span class="sort-icon">↓</span></th>
-                <th data-col="subs">Subscribers <span class="sort-icon">↕</span></th>
-                <th data-col="ai">AI Chats <span class="sort-icon">↕</span></th>
-                <th data-col="wallet">Wallet <span class="sort-icon">↕</span></th>
-                <th data-col="cvr">CVR <span class="sort-icon">↕</span></th>
-                <th data-col="status">Status <span class="sort-icon">↕</span></th>
+                <th data-col="name"><span data-i18n="col_page">Page</span> <span class="sort-icon">↕</span></th>
+                <th data-col="scans" class="sorted"><span data-i18n="col_scans">Scans</span> <span class="sort-icon">↓</span></th>
+                <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="sort-icon">↕</span></th>
+                <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="sort-icon">↕</span></th>
+                <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="sort-icon">↕</span></th>
+                <th data-col="cvr"><span data-i18n="col_cvr">CVR</span> <span class="sort-icon">↕</span></th>
+                <th data-col="status"><span data-i18n="col_status">Status</span> <span class="sort-icon">↕</span></th>
               </tr>
             </thead>
             <tbody id="perf-tbody">
@@ -159,47 +165,23 @@
         </div>
       </div>
 
-      <!-- AI & Wallet metrics -->
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="mc-title"><span class="mc-icon">🤖</span> AI Assistant Engagement</div>
-          <div class="mc-rows" id="ai-metrics">
-            <div class="mc-row"><span class="mc-row-label">Conversations started</span><span class="mc-row-val" id="ai-convos">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Avg engagement time</span><span class="mc-row-val">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">AI conversion rate</span><span class="mc-row-val o" id="ai-cvr">—%</span></div>
-            <div class="mc-row"><span class="mc-row-label">Questions answered</span><span class="mc-row-val">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Voice welcomes played</span><span class="mc-row-val">—</span></div>
-            <div class="state-coming">⬡ Full AI analytics — coming soon</div>
-          </div>
-        </div>
-        <div class="metric-card">
-          <div class="mc-title"><span class="mc-icon">💳</span> Wallet & Subscription</div>
-          <div class="mc-rows" id="wallet-metrics">
-            <div class="mc-row"><span class="mc-row-label">Wallet installs</span><span class="mc-row-val p" id="wlt-installs">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Email subscribers</span><span class="mc-row-val g" id="wlt-email">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Push notification opens</span><span class="mc-row-val">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Repeat engagement</span><span class="mc-row-val">—</span></div>
-            <div class="mc-row"><span class="mc-row-label">Active members</span><span class="mc-row-val o">—</span></div>
-            <div class="state-coming">⬡ Full wallet analytics — coming soon</div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Top prompts / engagement breakdown -->
       <div class="metrics-grid" style="margin-bottom:0">
         <div class="metric-card">
-          <div class="mc-title"><span class="mc-icon">📊</span> Scan Breakdown by Page</div>
+          <div class="mc-title"><span class="mc-icon">📊</span> <span data-i18n="mc_breakdown">Scan Breakdown by Page</span></div>
           <div id="scan-breakdown" class="mc-rows"></div>
         </div>
         <div class="metric-card">
-          <div class="mc-title"><span class="mc-icon">⚡</span> Recent Activity</div>
+          <div class="mc-title"><span class="mc-icon">⚡</span> <span data-i18n="mc_activity">Recent Activity</span></div>
           <div id="recent-activity" style="display:flex;flex-direction:column;gap:0"></div>
         </div>
       </div>
 
     </div>
   </main>
-  <footer class="dash-footer">QRAIVY — Business Intelligence · Powered by AI</footer>
+  <footer class="dash-footer"><span data-i18n="footer_text">QRAIVY — Business Intelligence · Powered by AI</span></footer>
 </div>
 
 <script>
@@ -530,6 +512,79 @@ async function initAnalytics() {
   onload="initAnalytics()"
 ></script>
 
+
+<script>
+(function(){
+  var _lang = localStorage.getItem('qraivy_lang') || 'en';
+  var _t = {
+    en: {
+      an_title:'Business', an_title_em:'Intelligence',
+      an_sub:'Deep engagement reporting across all Smart QR Pages',
+      filter_all_qr:'All QR Pages', filter_all_uc:'All use cases',
+      range_7:'Last 7 days', range_30:'Last 30 days', range_90:'Last 90 days', range_24:'Last 24h',
+      kpi_scans:'Total Scans', kpi_subs:'Subscribers', kpi_cvr:'Conversion Rate', kpi_pages:'Active Pages',
+      chart_scans:'Scan Activity', chart_scans_sub:'Daily scans across all Smart QR Pages',
+      chart_subs:'Subscriber Growth', chart_subs_sub:'Cumulative subscribers over time',
+      chart_uc:'Engagement by Use Case', chart_uc_sub:'Scan distribution across categories',
+      perf_title:'Smart QR Performance', perf_search:'Search pages…',
+      col_page:'Page', col_scans:'Scans', col_subs:'Subscribers', col_ai:'AI Chats',
+      col_wallet:'Wallet', col_cvr:'CVR', col_status:'Status',
+      mc_breakdown:'Scan Breakdown by Page', mc_activity:'Recent Activity',
+      nav_main:'Main', nav_dashboard:'Dashboard', nav_analytics:'Analytics',
+      nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR Pages', nav_createnew:'Create New QR',
+      nav_engage:'Engage', nav_campaigns:'AI Campaigns', nav_subscribers:'Subscribers',
+      nav_configure:'Configure', nav_wallet:'Wallet Passes',
+      nav_account:'Account', nav_billing:'Billing & Plans', nav_settings:'Settings',
+      role_owner:'Business Owner', nav_signout:'Sign Out',
+      footer_text:'QRAIVY — Business Intelligence · Powered by AI',
+      lang_toggle:'Deutsch'
+    },
+    de: {
+      an_title:'Business', an_title_em:'Auswertung',
+      an_sub:'Detailliertes Engagement-Reporting über alle Smart QR-Seiten',
+      filter_all_qr:'Alle QR-Seiten', filter_all_uc:'Alle Kategorien',
+      range_7:'Letzte 7 Tage', range_30:'Letzte 30 Tage', range_90:'Letzte 90 Tage', range_24:'Letzte 24 Std.',
+      kpi_scans:'Scans gesamt', kpi_subs:'Abonnenten', kpi_cvr:'Konversionsrate', kpi_pages:'Aktive Seiten',
+      chart_scans:'Scan-Aktivität', chart_scans_sub:'Tägliche Scans über alle Smart QR-Seiten',
+      chart_subs:'Abonnentenwachstum', chart_subs_sub:'Kumulative Abonnenten im Zeitverlauf',
+      chart_uc:'Engagement nach Kategorie', chart_uc_sub:'Scan-Verteilung nach Kategorien',
+      perf_title:'Smart QR Performance', perf_search:'Seiten suchen…',
+      col_page:'Seite', col_scans:'Scans', col_subs:'Abonnenten', col_ai:'KI-Chats',
+      col_wallet:'Wallet', col_cvr:'KVR', col_status:'Status',
+      mc_breakdown:'Scans nach Seite', mc_activity:'Letzte Aktivitäten',
+      nav_main:'Hauptmenü', nav_dashboard:'Dashboard', nav_analytics:'Analytics',
+      nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR-Seiten', nav_createnew:'Neuen QR erstellen',
+      nav_engage:'Engagement', nav_campaigns:'KI-Kampagnen', nav_subscribers:'Abonnenten',
+      nav_configure:'Konfigurieren', nav_wallet:'Wallet-Pässe',
+      nav_account:'Konto', nav_billing:'Abrechnung & Pläne', nav_settings:'Einstellungen',
+      role_owner:'Unternehmensinhaber', nav_signout:'Abmelden',
+      footer_text:'QRAIVY — Business Intelligence · KI-gestützt',
+      lang_toggle:'English'
+    }
+  };
+
+  function applyLang(lang) {
+    _lang = lang;
+    localStorage.setItem('qraivy_lang', lang);
+    var t = _t[lang] || _t['en'];
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n-placeholder');
+      if (t[key] !== undefined) el.placeholder = t[key];
+    });
+    var toggleLabel = document.getElementById('lang-toggle-label');
+    if (toggleLabel) toggleLabel.textContent = t.lang_toggle;
+    window._qraivyLang = lang;
+  }
+
+  window.toggleLang = function() { applyLang(_lang === 'en' ? 'de' : 'en'); };
+
+  document.addEventListener('DOMContentLoaded', function() { applyLang(_lang); });
+})();
+</script>
 </body>
 </html>
 
