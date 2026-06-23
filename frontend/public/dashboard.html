@@ -998,15 +998,15 @@ async function initDashboard(){
 
 <div class="sec-hdr">
   <div>
-    <h2>AI Campaigns</h2>
-    <p>Generate and send push notifications to your loyalty subscribers</p>
+    <h2 data-i18n="camp_title">AI Campaigns</h2>
+    <p data-i18n="camp_sub">Generate and send push notifications to your loyalty subscribers</p>
   </div>
 </div>
 
 <!-- Program selector -->
 <div class="camp-card camp-prog-wrap">
-  <label>Send to subscribers of</label>
-  <select id="campProgSel"><option value="">Select a loyalty program…</option></select>
+  <label data-i18n="camp_send_to">Send to subscribers of</label>
+  <select id="campProgSel"><option value="" data-i18n="camp_select_prog">Select a loyalty program…</option></select>
 </div>
 
 <!-- Trigger cards -->
@@ -1018,8 +1018,8 @@ async function initDashboard(){
         <path d="m15 5 3 3"/><path d="M2 21s4-1 6-3l1-2"/>
       </svg>
     </div>
-    <h3>Boost Visits</h3>
-    <p>Drive traffic during slow periods with a timely offer or announcement.</p>
+    <h3 data-i18n="camp_boost_title">Boost Visits</h3>
+    <p data-i18n="camp_boost_desc">Drive traffic during slow periods with a timely offer or announcement.</p>
   </div>
   <div class="camp-trig" id="ct-engage" onclick="campSelectTrig('engage',this)">
     <div class="camp-trig-icon">
@@ -1027,8 +1027,8 @@ async function initDashboard(){
         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
       </svg>
     </div>
-    <h3>Re-engagement</h3>
-    <p>Bring back customers who haven't visited in a while.</p>
+    <h3 data-i18n="camp_engage_title">Re-engagement</h3>
+    <p data-i18n="camp_engage_desc">Bring back customers who haven't visited in a while.</p>
   </div>
   <div class="camp-trig" id="ct-reward" onclick="campSelectTrig('reward',this)">
     <div class="camp-trig-icon">
@@ -1039,8 +1039,8 @@ async function initDashboard(){
         <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
       </svg>
     </div>
-    <h3>Reward Reminder</h3>
-    <p>Remind customers they're close to unlocking their next reward.</p>
+    <h3 data-i18n="camp_reward_title">Reward Reminder</h3>
+    <p data-i18n="camp_reward_desc">Remind customers they're close to unlocking their next reward.</p>
   </div>
 </div>
 
@@ -1052,25 +1052,25 @@ async function initDashboard(){
   </button>
   <div class="camp-label" id="campTrigLabel"></div>
   <div class="camp-field">
-    <label>Campaign goal</label>
+    <label data-i18n="camp_goal_label">Campaign goal</label>
     <textarea id="campGoalText" rows="3" placeholder="e.g. Boost visits this Friday with a coffee and cake offer"></textarea>
   </div>
   <div class="camp-field">
-    <label>Offer or detail <em>(optional)</em></label>
+    <label data-i18n="camp_offer_label">Offer or detail <em>(optional)</em></label>
     <input type="text" id="campOfferText" placeholder="e.g. Free cake slice with every coffee">
   </div>
   <div class="camp-field">
-    <label>Tone</label>
+    <label data-i18n="camp_tone_label">Tone</label>
     <div class="tone-row">
-      <div class="tone-pill sel" onclick="campSelectTone('friendly',this)">Friendly</div>
-      <div class="tone-pill" onclick="campSelectTone('premium',this)">Premium</div>
-      <div class="tone-pill" onclick="campSelectTone('urgent',this)">Urgent</div>
-      <div class="tone-pill" onclick="campSelectTone('playful',this)">Playful</div>
+      <div class="tone-pill sel" onclick="campSelectTone('friendly',this)" data-i18n="tone_friendly">Friendly</div>
+      <div class="tone-pill" onclick="campSelectTone('premium',this)" data-i18n="tone_premium">Premium</div>
+      <div class="tone-pill" onclick="campSelectTone('urgent',this)" data-i18n="tone_urgent">Urgent</div>
+      <div class="tone-pill" onclick="campSelectTone('playful',this)" data-i18n="tone_playful">Playful</div>
     </div>
   </div>
   <button class="camp-gen-btn" id="campGenBtn" onclick="campGenerate()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-    Generate Push Message
+    <span data-i18n="camp_gen_btn">Generate Push Message</span>
   </button>
 </div>
 
@@ -1085,35 +1085,35 @@ async function initDashboard(){
     <div class="notif-card">
       <div class="notif-top">
         <div class="notif-dot">Q</div>
-        <span class="notif-appname">Qraivy Loyalty</span>
-        <span class="notif-ts">now</span>
+        <span class="notif-appname" data-i18n="camp_notif_app">Qraivy Loyalty</span>
+        <span class="notif-ts" data-i18n="camp_notif_now">now</span>
       </div>
-      <div class="notif-t" id="campPrevTitle">Your push title</div>
-      <div class="notif-b" id="campPrevBody">Your push message will appear here</div>
+      <div class="notif-t" id="campPrevTitle" data-i18n="camp_prev_title">Your push title</div>
+      <div class="notif-b" id="campPrevBody" data-i18n="camp_prev_body">Your push message will appear here</div>
     </div>
   </div>
 
   <div class="camp-card">
     <div class="camp-field">
-      <label>Title <em id="campTitleCnt">0/45</em></label>
+      <label><span data-i18n="camp_field_title">Title</span> <em id="campTitleCnt">0/45</em></label>
       <input type="text" id="campTitleIn" maxlength="60" placeholder="Push title" oninput="campRefreshPreview()">
     </div>
     <div class="camp-field">
-      <label>Message <em id="campBodyCnt">0/120</em></label>
+      <label><span data-i18n="camp_field_msg">Message</span> <em id="campBodyCnt">0/120</em></label>
       <textarea id="campBodyIn" placeholder="Push message body" oninput="campRefreshPreview()"></textarea>
     </div>
-    <div class="camp-field" style="margin-top:4px;"><label>Destination URL <em>optional</em></label><input type="url" id="campLinkUrl" placeholder="https://example.com/special-offer" class="camp-field input"><div style="font-size:.72rem;color:#aaa;margin-top:5px;">Leave empty to open the Smart Landing Page.</div></div>
+    <div class="camp-field" style="margin-top:4px;"><label><span data-i18n="camp_field_url">Destination URL</span> <em data-i18n="camp_optional">optional</em></label><input type="url" id="campLinkUrl" placeholder="https://example.com/special-offer" class="camp-field input"><div style="font-size:.72rem;color:#aaa;margin-top:5px;" data-i18n="camp_url_hint">Leave empty to open the Smart Landing Page.</div></div>
     <div id="campSendMsg"></div>
     <button class="camp-send-btn" id="campSendBtn" disabled onclick="campSend()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      Send to Subscribers
+      <span data-i18n="camp_send_btn">Send to Subscribers</span>
     </button>
   </div>
 </div>
 
 <!-- History -->
 <div class="camp-card camp-hist" id="campHistPanel" style="display:none;">
-  <h3>Recent Campaigns</h3>
+  <h3 data-i18n="camp_history">Recent Campaigns</h3>
   <div id="campHistList"></div>
 </div>
 
