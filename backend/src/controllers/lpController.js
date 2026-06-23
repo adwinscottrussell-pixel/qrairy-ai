@@ -259,7 +259,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://pages.qraivy.com/lp/' + slug)}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://pages.qraivy.com/lp/' + slug + '?src=qr')}&color=ffffff&bgcolor=111111&margin=2`;
 
   const sh = storedSections.hero   || {};
   // Use AI-generated hero text if available and hero title is generic
