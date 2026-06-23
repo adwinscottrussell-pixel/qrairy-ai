@@ -718,7 +718,7 @@
       <span style="font-size:.55rem;color:rgba(240,244,248,0.45);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Preview</span>
       <div style="flex:1;display:flex;gap:4px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;padding:2px;">
         <button id="sqd-preview-draft-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('draft')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:rgba(255,90,31,0.15);border:0.5px solid rgba(255,90,31,0.3);color:#ff5a1f;" data-i18n="ed_draft">✏️ Draft</button>
-        <button id="sqd-preview-live-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('live')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid transparent;color:rgba(240,244,248,0.45);" data-i18n="ed_live">🌐 Live</button>
+        <button id="sqd-preview-live-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('draft')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid transparent;color:rgba(240,244,248,0.45);" data-i18n="ed_live">🌐 Live</button>
       </div>
     </div>
 
@@ -1432,7 +1432,7 @@ async function initPage() {
   // Start in DRAFT preview mode - after state is populated
   setTimeout(function() {
     if (window.QRAIVY_PREVIEW) {
-      window.QRAIVY_PREVIEW.setMode('live');
+      window.QRAIVY_PREVIEW.setMode('draft');
     }
   }, 400);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
