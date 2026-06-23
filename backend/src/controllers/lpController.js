@@ -1174,6 +1174,7 @@ async function handlePublishLP(req, res) {
         preserve.forEach(function(k){ if (existingS[k] !== undefined && mergedSections[k] === undefined) mergedSections[k] = existingS[k]; });
         if (existingS.hero && existingS.hero.aiTitle && mergedSections.hero) {
           mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
+          if (mergedSections.hero.badge !== undefined) { /* badge from payload kept */ } else if (existingS.hero.badge) { mergedSections.hero.badge = existingS.hero.badge; }
         }
         if (existingS.voice && existingS.voice.audioUrl && mergedSections.voice) {
           mergedSections.voice = Object.assign({ audioUrl: existingS.voice.audioUrl }, mergedSections.voice);
