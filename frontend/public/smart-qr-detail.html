@@ -751,21 +751,21 @@
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="sqd-publish-btn-2" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
       <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;" data-i18n="btn_savedraft">💾 Save Draft</button>
-      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;" data-i18n="status_nochanges">No changes</div>
+      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;" data-i18n="status_nochanges" data-i18n="status_nochanges">No changes</div>
     </div>
     <!-- Tab content panels -->
     <div id="sqd-tab-content" style="flex:1;overflow-y:auto;padding:16px;padding-bottom:40px;">
 
       <!-- HERO -->
       <div class="sqd-tab-panel" data-panel="hero">
-        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;">🏠 Hero Section</div>
-        <div style="font-size:.65rem;color:rgba(240,244,248,0.72);margin-bottom:14px;">Position locked · Always first</div>
+        <div style="font-size:.82rem;font-weight:700;color:#f0f4f8;margin-bottom:4px;" data-i18n="hero_title">🏠 Hero Section</div>
+        <div style="font-size:.65rem;color:rgba(240,244,248,0.72);margin-bottom:14px;" data-i18n="hero_locked">Position locked · Always first</div>
 
         <div style="display:flex;flex-direction:column;gap:10px;">
 
           <!-- Page Title -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Page Title</label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_page_title">Page Title</label>
             <input id="hero-title-input" type="text" placeholder="e.g. Welcome to My Business"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.8rem;color:#f0f4f8;outline:none;"
               onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
@@ -774,7 +774,7 @@
 
           <!-- Subtitle -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Subtitle</label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_subtitle_lbl">Subtitle</label>
             <textarea id="hero-subtitle-input" rows="2" placeholder="e.g. Authentic flavours, unforgettable experiences."
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;resize:vertical;line-height:1.5;"
               onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
@@ -783,7 +783,7 @@
 
           <!-- Badge Text -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Badge Text</label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_badge_lbl">Badge Text</label>
             <input id="hero-badge-input" type="text" placeholder="e.g. Qraivy Smart Page"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;font-family:'Inter',sans-serif;outline:none;"
               onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
@@ -792,7 +792,7 @@
 
           <!-- CTA Button Text -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">CTA Button Text</label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_cta_lbl">CTA Button Text</label>
             <input id="hero-cta-text-input" type="text" placeholder="Start a Conversation →"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;outline:none;"
               onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
@@ -801,7 +801,7 @@
 
           <!-- CTA Link -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">CTA Link <span style="font-size:.55rem;color:rgba(240,244,248,0.4);text-transform:none;">(optional)</span></label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_ctalink_lbl">CTA Link <span style="font-size:.55rem;color:rgba(240,244,248,0.4);text-transform:none;" data-i18n="hero_optional">(optional)</span></label>
             <input id="hero-cta-url-input" type="text" placeholder="https://... or blank for AI chat"
               style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:9px 11px;font-size:.75rem;color:#f0f4f8;outline:none;"
               onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
@@ -810,14 +810,14 @@
 
                     <!-- Logo Initial -->
           <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:9px;padding:12px;">
-            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Logo Initial</label>
+            <label style="display:block;font-size:.6rem;color:rgba(240,244,248,0.72);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;" data-i18n="hero_logo_lbl">Logo Initial</label>
             <div style="display:flex;align-items:center;gap:10px;">
               <div id="hero-logo-preview" style="width:36px;height:36px;border-radius:8px;background:#ff5a1f;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;flex-shrink:0;">A</div>
               <input id="hero-logo-input" type="text" maxlength="2" placeholder="A"
                 style="width:56px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:7px 10px;font-size:.9rem;color:#f0f4f8;outline:none;text-align:center;font-weight:700;"
                 onfocus="this.style.borderColor='rgba(255,90,31,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'"
               />
-              <span style="font-size:.62rem;color:rgba(240,244,248,0.65);">Full upload coming soon</span>
+              <span style="font-size:.62rem;color:rgba(240,244,248,0.65);" data-i18n="hero_upload_soon">Full upload coming soon</span>
             </div>
           </div>
 
@@ -825,7 +825,7 @@
 
         <!-- Draft preview summary -->
         <div id="hero-draft-summary" style="display:none;margin-top:14px;background:rgba(255,90,31,0.05);border:0.5px solid rgba(255,90,31,0.18);border-radius:9px;padding:12px;">
-          <div style="font-size:.6rem;color:rgba(255,90,31,0.8);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;">Draft Preview</div>
+          <div style="font-size:.6rem;color:rgba(255,90,31,0.8);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;" data-i18n="hero_draft_preview">Draft Preview</div>
           <div style="font-size:.88rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;" id="draft-preview-title">—</div>
           <div style="font-size:.68rem;color:rgba(240,244,248,0.72);font-family:'Inter',sans-serif;line-height:1.5;" id="draft-preview-subtitle">—</div>
         </div>
@@ -833,7 +833,7 @@
         <!-- Save status + helper -->
         <div style="margin-top:12px;">
           <div id="hero-save-status" style="font-size:.62rem;color:rgba(240,244,248,0.50);text-align:center;margin-bottom:8px;">No changes</div>
-          <div style="font-size:.6rem;color:rgba(240,244,248,0.40);line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);">Draft changes saved locally.<br>Live preview update coming in next step.</div>
+          <div style="font-size:.6rem;color:rgba(240,244,248,0.40);line-height:1.6;text-align:center;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:7px;border:0.5px solid rgba(255,255,255,0.06);" data-i18n="hero_draft_hint">Changes saved as draft. Click Publish to go live.</div>
         </div>
 
       </div>
@@ -3837,58 +3837,55 @@ document.addEventListener('sqd-tab-changed', function(e) {
 </script>
 
 
+
 <script>
 (function(){
   var _lang = localStorage.getItem('qraivy_lang') || 'en';
   var _t = {
     en: {
-      sqd_back:'← Dashboard', sqd_preview:'🌐 Preview', sqd_upgrade:'Upgrade →',
-      sqd_mode_manage:'Smart QR',
-      tab_qr:'◼ QR Code', tab_edit:'✏️ Edit Landing Page', tab_analytics:'↗ Analytics',
-      stat_scans:'Total Scans', stat_subs:'Subscribers',
-      qr_color:'QR Color', qr_bg:'Background Color', qr_size:'Size',
-      qr_style:'Style Preset', qr_margin:'Margin', qr_download:'⬇ Download PNG', qr_viewlive:'🌐 View Live Page',
-      lp_edit_title:'Edit Your Smart Landing Page',
-      lp_edit_sub:'Customise hero, buttons, AI assistant, subscriber loop and more.',
-      lp_open_editor:'Open Editor →',
-      an_title_short:'Scan Analytics', an_sub_short:'View scan counts, subscriber growth and conversion rates.',
-      an_view:'View Analytics →',
-      ed_preview:'Live Mobile Preview', ed_open_full:'Open Full Page →',
-      ed_draft:'✏️ Draft', ed_live:'🌐 Live',
-      etab_hero:'🏠 Hero', etab_voice:'🎙 Voice', etab_ai:'🤖 AI', etab_loop:'📬 Loop',
-      etab_push:'🔔 Push', etab_buttons:'🔗 Buttons', etab_featured:'⭐ Featured',
-      etab_info:'ℹ️ Info', etab_style:'🎨 Style', etab_order:'↕ Order',
-      etab_footer:'Footer', etab_settings:'⚙️ Settings',
-      btn_publish:'Publish', btn_savedraft:'💾 Save Draft', status_nochanges:'No changes',
-      danger_title:'DANGER ZONE',
-      danger_text:'Permanently delete this Smart QR and all its data. This cannot be undone.',
-      danger_btn:'🗑 Delete QR',
-      demo_strong2:'Demo active.', demo_text2:'Upgrade to keep live.',
+      hero_title:'🏠 Hero Section', hero_locked:'Position locked · Always first',
+      hero_page_title:'Page Title', hero_subtitle_lbl:'Subtitle', hero_badge_lbl:'Badge Text',
+      hero_cta_lbl:'CTA Button Text', hero_ctalink_lbl:'CTA Link', hero_optional:'(optional)',
+      hero_logo_lbl:'Logo Initial', hero_upload_soon:'Full upload coming soon',
+      hero_draft_hint:'Changes saved as draft. Click Publish to go live.',
+      hero_draft_preview:'Draft Preview', status_nochanges:'No changes',
+      // Voice tab
+      voice_title:'🎙 Voice Welcome', voice_sub:'Edit the voice section shown on your live page.',
+      voice_sec_title:'Section Title', voice_desc_lbl:'Description', voice_btn_lbl:'Button Label',
+      voice_lang_lbl:'Voice Language', voice_char_lbl:'Voice Character', voice_show:'Show Voice Section',
+      // AI tab
+      ai_title:'🤖 AI Assistant', ai_sub:'Edit the AI chat section shown on your live page.',
+      ai_sec_title:'Section Title', ai_desc_lbl:'Description', ai_placeholder_lbl:'Chat Placeholder', ai_show:'Show AI Section',
+      // Loop tab
+      loop_title:'📬 Stay in the Loop', loop_sub:'Collect subscribers and keep visitors connected.',
+      loop_sec_title:'Section Title', loop_desc_lbl:'Description', loop_email_lbl:'Email Field Placeholder',
+      loop_btn_lbl:'Subscribe Button Label', loop_wallet_title:'Wallet Card Title', loop_wallet_sub:'Wallet Card Subtitle',
+      loop_apple:'Apple Wallet Button', loop_apple_sub:'Show Add to Apple Wallet',
+      loop_google:'Google Wallet Button', loop_google_sub:'Show Add to Google Wallet',
+      loop_show:'Show Subscribe Section',
       lang_toggle:'Deutsch'
     },
     de: {
-      sqd_back:'← Dashboard', sqd_preview:'🌐 Vorschau', sqd_upgrade:'Upgraden →',
-      sqd_mode_manage:'Smart QR',
-      tab_qr:'◼ QR-Code', tab_edit:'✏️ Landingpage bearbeiten', tab_analytics:'↗ Analytics',
-      stat_scans:'Scans gesamt', stat_subs:'Abonnenten',
-      qr_color:'QR-Farbe', qr_bg:'Hintergrundfarbe', qr_size:'Größe',
-      qr_style:'Stil-Preset', qr_margin:'Rand', qr_download:'⬇ PNG herunterladen', qr_viewlive:'🌐 Live-Seite anzeigen',
-      lp_edit_title:'Ihre Smart Landingpage bearbeiten',
-      lp_edit_sub:'Hero, Buttons, KI-Assistent, Abonnenten-Loop und mehr anpassen.',
-      lp_open_editor:'Editor öffnen →',
-      an_title_short:'Scan-Analytics', an_sub_short:'Scans, Abonnentenwachstum und Konversionsraten anzeigen.',
-      an_view:'Analytics anzeigen →',
-      ed_preview:'Live-Mobilvorschau', ed_open_full:'Seite öffnen →',
-      ed_draft:'✏️ Entwurf', ed_live:'🌐 Live',
-      etab_hero:'🏠 Hero', etab_voice:'🎙 Stimme', etab_ai:'🤖 KI', etab_loop:'📬 Loop',
-      etab_push:'🔔 Push', etab_buttons:'🔗 Buttons', etab_featured:'⭐ Features',
-      etab_info:'ℹ️ Info', etab_style:'🎨 Stil', etab_order:'↕ Reihenfolge',
-      etab_footer:'Footer', etab_settings:'⚙️ Einstellungen',
-      btn_publish:'Veröffentlichen', btn_savedraft:'💾 Entwurf speichern', status_nochanges:'Keine Änderungen',
-      danger_title:'GEFAHRENZONE',
-      danger_text:'Diesen Smart QR und alle Daten dauerhaft löschen. Kann nicht rückgängig gemacht werden.',
-      danger_btn:'🗑 QR löschen',
-      demo_strong2:'Demo aktiv.', demo_text2:'Jetzt upgraden, um dauerhaft live zu bleiben.',
+      hero_title:'🏠 Hero-Bereich', hero_locked:'Position gesperrt · Immer zuerst',
+      hero_page_title:'Seitentitel', hero_subtitle_lbl:'Untertitel', hero_badge_lbl:'Badge-Text',
+      hero_cta_lbl:'CTA-Button-Text', hero_ctalink_lbl:'CTA-Link', hero_optional:'(optional)',
+      hero_logo_lbl:'Logo-Initial', hero_upload_soon:'Vollständiger Upload demnächst verfügbar',
+      hero_draft_hint:'Änderungen als Entwurf gespeichert. Klicken Sie auf Veröffentlichen.',
+      hero_draft_preview:'Entwurfsvorschau', status_nochanges:'Keine Änderungen',
+      // Voice tab
+      voice_title:'🎙 Willkommensnachricht', voice_sub:'Bearbeiten Sie den Sprachbereich auf Ihrer Seite.',
+      voice_sec_title:'Abschnittstitel', voice_desc_lbl:'Beschreibung', voice_btn_lbl:'Button-Beschriftung',
+      voice_lang_lbl:'Sprache', voice_char_lbl:'Stimme', voice_show:'Sprachbereich anzeigen',
+      // AI tab
+      ai_title:'🤖 KI-Assistent', ai_sub:'Bearbeiten Sie den KI-Chat-Bereich auf Ihrer Seite.',
+      ai_sec_title:'Abschnittstitel', ai_desc_lbl:'Beschreibung', ai_placeholder_lbl:'Chat-Platzhalter', ai_show:'KI-Bereich anzeigen',
+      // Loop tab
+      loop_title:'📬 Bleiben Sie informiert', loop_sub:'Sammeln Sie Abonnenten und halten Sie Besucher verbunden.',
+      loop_sec_title:'Abschnittstitel', loop_desc_lbl:'Beschreibung', loop_email_lbl:'E-Mail-Platzhalter',
+      loop_btn_lbl:'Abonnieren-Button', loop_wallet_title:'Wallet-Kartentitel', loop_wallet_sub:'Wallet-Kartenuntertitel',
+      loop_apple:'Apple Wallet Button', loop_apple_sub:'Zu Apple Wallet hinzufügen anzeigen',
+      loop_google:'Google Wallet Button', loop_google_sub:'Zu Google Wallet hinzufügen anzeigen',
+      loop_show:'Abonnieren-Bereich anzeigen',
       lang_toggle:'English'
     }
   };
