@@ -2683,7 +2683,8 @@ window.QRAIVY_EDITOR_STATE = {
       });
       wire('hero-badge-input', function(v) {
         S.sections.hero.badge = v; S.hero.badgeText = v;
-      });
+      }
+          if(window.QRAIVY_PREVIEW && window.QRAIVY_PREVIEW.getMode()==='draft') window.QRAIVY_PREVIEW.render(););
       wire('hero-logo-input', function(v) {
         S.sections.hero.logoText = v; S.hero.logoInitial = v;
         var lp = document.getElementById('hero-logo-preview');
