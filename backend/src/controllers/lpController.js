@@ -1468,7 +1468,7 @@ async function handleServeLP(req, res) {
       if (page && page.status !== 'draft') pageCache.set(_cacheKey, page);
     }
     if (!page || page.status === 'draft') return res.status(404).send(render404(slug));
-    if (!req.query.preview && req.query.src === 'qr') prisma.landingPage.update({ where: { slug }, data: { scanCount: { increment: 1 } } }).catch(() => {});
+    // Scan counting moved to dedicated /lp/scan/:slug endpoint
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     res.setHeader('Content-Security-Policy', "frame-ancestors *");
