@@ -2735,6 +2735,7 @@ window.QRAIVY_EDITOR_STATE = {
       hydrate('voice-input-btn',   v.buttonLabel || '');
       if(document.getElementById('voice-input-key')) document.getElementById('voice-input-key').value = v.voiceKey || 'sarah';
       if(document.getElementById('voice-input-language')) document.getElementById('voice-input-language').value = v.voiceLanguage || 'en';
+      var l = sec.loop || {};
       hydrate('loop-input-title',             l.title || '');
       hydrate('loop-input-desc',              l.description || '');
       hydrate('loop-input-email-placeholder', l.emailPlaceholder || '');
@@ -3909,3 +3910,4 @@ document.addEventListener('sqd-tab-changed', function(e) {
 })();
 </script>
 </body>
+
