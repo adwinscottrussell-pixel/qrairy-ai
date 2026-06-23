@@ -222,7 +222,7 @@
   <!-- Left -->
   <div style="display:flex;align-items:center;gap:12px;min-width:180px;">
     <a href="dashboard.html" style="display:flex;align-items:center;gap:6px;color:rgba(240,244,248,0.82);font-size:.75rem;text-decoration:none;white-space:nowrap;font-family:'Inter',sans-serif;">
-      ← Dashboard
+      <span data-i18n="sqd_back">← Dashboard</span>
     </a>
     <div style="width:0.5px;height:18px;background:rgba(255,255,255,0.1);"></div>
     <div style="display:flex;align-items:center;gap:7px;">
@@ -237,14 +237,14 @@
   <!-- Center -->
   <div style="flex:1;text-align:center;">
     <div id="sqd-topbar-name" style="font-size:.88rem;font-weight:600;color:#f0f4f8;">Loading…</div>
-    <div id="sqd-topbar-mode" style="font-size:.6rem;color:rgba(240,244,248,0.72);margin-top:1px;">Smart QR</div>
+    <div id="sqd-topbar-mode" style="font-size:.6rem;color:rgba(240,244,248,0.72);margin-top:1px;" data-i18n="sqd_mode_manage">Smart QR</div>
   </div>
 
   <!-- Right -->
   <div style="display:flex;align-items:center;gap:8px;min-width:180px;justify-content:flex-end;">
-    <a id="sqd-view-btn" href="#" target="_blank" style="padding:7px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.72rem;font-family:'Inter',sans-serif;text-decoration:none;white-space:nowrap;">🌐 Preview</a>
+    <a id="sqd-view-btn" href="#" target="_blank" style="padding:7px 14px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.72rem;font-family:'Inter',sans-serif;text-decoration:none;white-space:nowrap;" data-i18n="sqd_preview">🌐 Preview</a>
     <div id="sqd-upgrade-strip" style="display:none;">
-      <a href="upgrade.html" style="padding:7px 14px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;white-space:nowrap;">Upgrade →</a>
+      <a href="upgrade.html" style="padding:7px 14px;background:#ff5a1f;border-radius:8px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;white-space:nowrap;" data-i18n="sqd_upgrade">Upgrade →</a>
     </div>
   </div>
 </div>
@@ -268,11 +268,11 @@
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
     <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
       <div id="sqd-ov-scans" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
-      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;">Total Scans</div>
+      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;" data-i18n="stat_scans">Total Scans</div>
     </div>
     <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
       <div id="sqd-ov-subs" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
-      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;">Subscribers</div>
+      <div style="font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(240,244,248,0.45);margin-top:4px;" data-i18n="stat_subs">Subscribers</div>
     </div>
     <div style="background:#0d1117;border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;text-align:center;">
       <div id="sqd-ov-cvr" style="font-size:2rem;font-weight:700;color:#f0f4f8;font-family:'Space Grotesk',sans-serif;">—</div>
@@ -282,9 +282,9 @@
 
   <!-- Manage Tabs -->
   <div style="display:flex;gap:6px;margin-bottom:24px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:4px;">
-    <button id="ov-tab-qr" onclick="window.QRAIVY_OV_TABS.show('qr')" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:#ff5a1f;color:#fff;font-family:'Inter',sans-serif;transition:all .18s;">◼ QR Code</button>
-    <button id="ov-tab-lp" onclick="window.QRAIVY_MANAGE.openEditor()" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;">✏️ Edit Landing Page</button>
-    <button id="ov-tab-analytics" onclick="window.location.href='analytics.html'" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;">↗ Analytics</button>
+    <button id="ov-tab-qr" onclick="window.QRAIVY_OV_TABS.show('qr')" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:#ff5a1f;color:#fff;font-family:'Inter',sans-serif;transition:all .18s;" data-i18n="tab_qr">◼ QR Code</button>
+    <button id="ov-tab-lp" onclick="window.QRAIVY_MANAGE.openEditor()" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;" data-i18n="tab_edit">✏️ Edit Landing Page</button>
+    <button id="ov-tab-analytics" onclick="window.location.href='analytics.html'" style="flex:1;padding:9px 12px;border-radius:9px;font-size:.75rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(240,244,248,0.6);font-family:'Inter',sans-serif;transition:all .18s;"><span data-i18n="tab_analytics">↗ Analytics</span></button>
   </div>
 
   <!-- QR Code Tab -->
@@ -296,8 +296,8 @@
         <div id="ov-qr-canvas-wrap" style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);position:relative;">
           <canvas id="ov-qr-canvas" width="200" height="200" style="display:block;border-radius:8px;"></canvas>
         </div>
-        <a id="ov-qr-download" download="smart-qr.png" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:#ff5a1f;border-radius:9px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;cursor:pointer;">⬇ Download PNG</a>
-        <a id="ov-qr-view-live" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:9px;color:#f0f4f8;font-size:.72rem;font-family:'Inter',sans-serif;text-decoration:none;">🌐 View Live Page</a>
+        <a id="ov-qr-download" download="smart-qr.png" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:#ff5a1f;border-radius:9px;color:#fff;font-size:.75rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;cursor:pointer;" data-i18n="qr_download">⬇ Download PNG</a>
+        <a id="ov-qr-view-live" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:9px;color:#f0f4f8;font-size:.72rem;font-family:'Inter',sans-serif;text-decoration:none;" data-i18n="qr_viewlive">🌐 View Live Page</a>
       </div>
 
       <!-- QR Customizer -->
@@ -305,7 +305,7 @@
 
         <!-- Foreground color -->
         <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">QR Color</label>
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;" data-i18n="qr_color">QR Color</label>
           <div style="display:flex;align-items:center;gap:10px;">
             <input id="ov-qr-fg" type="color" value="#000000" style="width:36px;height:36px;border:none;border-radius:7px;cursor:pointer;padding:2px;background:none;"/>
             <input id="ov-qr-fg-hex" type="text" value="#000000" maxlength="7" style="width:80px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:.75rem;color:#f0f4f8;outline:none;font-family:'DM Mono',monospace;"/>
@@ -314,7 +314,7 @@
 
         <!-- Background color -->
         <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Background Color</label>
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;" data-i18n="qr_bg">Background Color</label>
           <div style="display:flex;align-items:center;gap:10px;">
             <input id="ov-qr-bg" type="color" value="#ffffff" style="width:36px;height:36px;border:none;border-radius:7px;cursor:pointer;padding:2px;background:none;"/>
             <input id="ov-qr-bg-hex" type="text" value="#ffffff" maxlength="7" style="width:80px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:.75rem;color:#f0f4f8;outline:none;font-family:'DM Mono',monospace;"/>
@@ -334,7 +334,7 @@
 
         <!-- Style presets -->
         <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Style Preset</label>
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;" data-i18n="qr_style">Style Preset</label>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="ov-qr-preset-btns">
             <button data-preset="classic" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,90,31,0.4);background:rgba(255,90,31,0.12);color:#ff5a1f;">Classic</button>
             <button data-preset="brand" style="padding:8px 4px;border-radius:7px;font-size:.62rem;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(240,244,248,0.6);">Brand</button>
@@ -347,7 +347,7 @@
 
         <!-- Margin -->
         <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;">
-          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Margin <span id="ov-qr-margin-val" style="color:#ff5a1f;">6</span></label>
+          <label style="display:block;font-size:.58rem;color:rgba(240,244,248,0.6);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;" data-i18n="qr_margin">Margin</span> <span id="ov-qr-margin-val" style="color:#ff5a1f;">6</span></label>
           <input id="ov-qr-margin" type="range" min="0" max="20" value="6" style="width:100%;accent-color:#ff5a1f;"/>
         </div>
 
@@ -359,9 +359,9 @@
   <div id="ov-panel-lp" style="display:none;margin-bottom:32px;">
     <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;text-align:center;">
       <div style="font-size:1.2rem;margin-bottom:8px;">✏️</div>
-      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;">Edit Your Smart Landing Page</div>
-      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">Customise hero, buttons, AI assistant, subscriber loop and more.</div>
-      <button onclick="window.QRAIVY_MANAGE.openEditor()" style="padding:11px 28px;background:#ff5a1f;border:none;border-radius:10px;color:#fff;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;">Open Editor →</button>
+      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;" data-i18n="lp_edit_title">Edit Your Smart Landing Page</div>
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;" data-i18n="lp_edit_sub">Customise hero, buttons, AI assistant, subscriber loop and more.</div>
+      <button onclick="window.QRAIVY_MANAGE.openEditor()" style="padding:11px 28px;background:#ff5a1f;border:none;border-radius:10px;color:#fff;font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;" data-i18n="lp_open_editor">Open Editor →</button>
     </div>
   </div>
 
@@ -369,9 +369,9 @@
   <div id="ov-panel-analytics" style="display:none;margin-bottom:32px;">
     <div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;text-align:center;">
       <div style="font-size:1.2rem;margin-bottom:8px;">↗</div>
-      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;">Scan Analytics</div>
-      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;">View scan counts, subscriber growth and conversion rates.</div>
-      <button onclick="window.location.href='analytics.html'" style="padding:11px 28px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;cursor:pointer;">View Analytics →</button>
+      <div style="font-size:.88rem;font-weight:600;color:#f0f4f8;margin-bottom:6px;" data-i18n="an_title_short">Scan Analytics</div>
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);margin-bottom:16px;" data-i18n="an_sub_short">View scan counts, subscriber growth and conversion rates.</div>
+      <button onclick="window.location.href='analytics.html'" style="padding:11px 28px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:#f0f4f8;font-size:.78rem;font-family:'Inter',sans-serif;cursor:pointer;" data-i18n="an_view">View Analytics →</button>
     </div>
   </div>
 
@@ -532,10 +532,10 @@
 
   <!-- Danger zone -->
   <div style="border:0.5px solid rgba(255,80,80,0.2);border-radius:14px;padding:20px 24px;background:rgba(255,80,80,0.03);">
-    <div style="font-size:.75rem;font-weight:600;color:rgba(240,244,248,0.7);margin-bottom:8px;letter-spacing:.04em;">DANGER ZONE</div>
+    <div style="font-size:.75rem;font-weight:600;color:rgba(240,244,248,0.7);margin-bottom:8px;letter-spacing:.04em;" data-i18n="danger_title">DANGER ZONE</div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);">Permanently delete this Smart QR and all its data. This cannot be undone.</div>
-      <button id="sqd-ov-delete-btn" onclick="window.QRAIVY_MANAGE.confirmDelete()" style="padding:8px 18px;background:transparent;border:0.5px solid rgba(255,80,80,0.5);border-radius:8px;color:#ff5050;font-size:.72rem;font-family:'Inter',sans-serif;cursor:pointer;">🗑 Delete QR</button>
+      <div style="font-size:.72rem;color:rgba(240,244,248,0.5);" data-i18n="danger_text">Permanently delete this Smart QR and all its data. This cannot be undone.</div>
+      <button id="sqd-ov-delete-btn" onclick="window.QRAIVY_MANAGE.confirmDelete()" style="padding:8px 18px;background:transparent;border:0.5px solid rgba(255,80,80,0.5);border-radius:8px;color:#ff5050;font-size:.72rem;font-family:'Inter',sans-serif;cursor:pointer;" data-i18n="danger_btn">🗑 Delete QR</button>
     </div>
   </div>
 </div>
@@ -664,7 +664,7 @@
       font-family:'Inter',sans-serif;
       text-decoration:none;
       margin-top:4px;
-    ">Open Full Page →</a>
+    " data-i18n="ed_open_full">Open Full Page →</a>
 
     <!-- Smart Block Editor section (hidden by default) -->
     <div id="sqd-edit-section" style="display:none;width:100%;max-width:560px;margin-top:24px;border:1px solid rgba(255,90,31,0.2);border-radius:16px;background:rgba(255,90,31,0.03);padding:20px;">
@@ -709,7 +709,7 @@
 
     <!-- Upgrade strip -->
     <div id="sqd-upgrade-strip-panel" style="display:none;margin:10px 12px 0;background:rgba(255,90,31,0.06);border:0.5px solid rgba(255,90,31,0.2);border-radius:9px;padding:9px 12px;">
-      <div style="font-size:.68rem;color:rgba(240,244,248,0.8);margin-bottom:6px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;">Demo active.</strong> Upgrade to keep live.</div>
+      <div style="font-size:.68rem;color:rgba(240,244,248,0.8);margin-bottom:6px;font-family:'Inter',sans-serif;"><strong style="color:#f0f4f8;" data-i18n="demo_strong2">Demo active.</strong> <span data-i18n="demo_text2">Upgrade to keep live.</span></div>
       <a href="upgrade.html" style="display:block;text-align:center;padding:7px;background:#ff5a1f;border-radius:7px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade →</a>
     </div>
 
@@ -717,8 +717,8 @@
     <div style="padding:8px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <span style="font-size:.55rem;color:rgba(240,244,248,0.45);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Preview</span>
       <div style="flex:1;display:flex;gap:4px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;padding:2px;">
-        <button id="sqd-preview-draft-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('draft')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:rgba(255,90,31,0.15);border:0.5px solid rgba(255,90,31,0.3);color:#ff5a1f;">✏️ Draft</button>
-        <button id="sqd-preview-live-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('live')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid transparent;color:rgba(240,244,248,0.45);">🌐 Live</button>
+        <button id="sqd-preview-draft-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('draft')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:rgba(255,90,31,0.15);border:0.5px solid rgba(255,90,31,0.3);color:#ff5a1f;" data-i18n="ed_draft">✏️ Draft</button>
+        <button id="sqd-preview-live-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('live')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid transparent;color:rgba(240,244,248,0.45);" data-i18n="ed_live">🌐 Live</button>
       </div>
     </div>
 
@@ -732,26 +732,26 @@
       border-bottom:0.5px solid rgba(255,255,255,0.06);
       flex-shrink:0;
     ">
-      <button class="sqd-tab" data-tab="hero"       style="padding:5px 10px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;color:#ff5a1f;font-size:.62rem;font-weight:600;cursor:pointer;" data-active="true">🏠 Hero</button>
-      <button class="sqd-tab" data-tab="voice"      style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🎙 Voice</button>
-      <button class="sqd-tab" data-tab="ai"         style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🤖 AI</button>
-      <button class="sqd-tab" data-tab="loop"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">📬 Loop</button>
-      <button class="sqd-tab" data-tab="push"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🔔 Push</button>
-      <button class="sqd-tab" data-tab="buttons"    style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🔗 Buttons</button>
-      <button class="sqd-tab" data-tab="featured"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⭐ Featured</button>
-      <button class="sqd-tab" data-tab="info"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">ℹ️ Info</button>
-      <button class="sqd-tab" data-tab="appearance" style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">🎨 Style</button>
-      <button class="sqd-tab" data-tab="order"        style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">↕ Order</button>
+      <button class="sqd-tab" data-tab="hero"       style="padding:5px 10px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;color:#ff5a1f;font-size:.62rem;font-weight:600;cursor:pointer;" data-active="true" data-i18n="etab_hero">🏠 Hero</button>
+      <button class="sqd-tab" data-tab="voice"      style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_voice">🎙 Voice</button>
+      <button class="sqd-tab" data-tab="ai"         style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_ai">🤖 AI</button>
+      <button class="sqd-tab" data-tab="loop"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_loop">📬 Loop</button>
+      <button class="sqd-tab" data-tab="push"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_push">🔔 Push</button>
+      <button class="sqd-tab" data-tab="buttons"    style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_buttons">🔗 Buttons</button>
+      <button class="sqd-tab" data-tab="featured"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_featured">⭐ Featured</button>
+      <button class="sqd-tab" data-tab="info"       style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_info">ℹ️ Info</button>
+      <button class="sqd-tab" data-tab="appearance" style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_style">🎨 Style</button>
+      <button class="sqd-tab" data-tab="order"        style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;" data-i18n="etab_order">↕ Order</button>
       <button class="sqd-tab" data-tab="footer"       style="padding:5px 10px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.7);font-size:.65rem;cursor:pointer;white-space:nowrap;">Footer</button>
-      <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;">⚙️ Settings</button>
+      <button class="sqd-tab" data-tab="settings"   style="padding:5px 10px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(240,244,248,0.86);font-size:.62rem;cursor:pointer;" data-i18n="etab_settings">⚙️ Settings</button>
       <button class="sqd-tab" data-tab="loyalty" style="display:none" data-removed="LOYALTY_TAB_REMOVED"    style="padding:5px 10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:6px;color:#ff8c5a;font-size:.62rem;cursor:pointer;white-space:nowrap;">🎟 Loyalty</button>
     </div>
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="sqd-publish-btn-2" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
-      <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">💾 Save Draft</button>
-      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;">No changes</div>
+      <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;" data-i18n="btn_savedraft">💾 Save Draft</button>
+      <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;" data-i18n="status_nochanges">No changes</div>
     </div>
     <!-- Tab content panels -->
     <div id="sqd-tab-content" style="flex:1;overflow-y:auto;padding:16px;padding-bottom:40px;">
@@ -3836,4 +3836,78 @@ document.addEventListener('sqd-tab-changed', function(e) {
 });
 </script>
 
+
+<script>
+(function(){
+  var _lang = localStorage.getItem('qraivy_lang') || 'en';
+  var _t = {
+    en: {
+      sqd_back:'← Dashboard', sqd_preview:'🌐 Preview', sqd_upgrade:'Upgrade →',
+      sqd_mode_manage:'Smart QR',
+      tab_qr:'◼ QR Code', tab_edit:'✏️ Edit Landing Page', tab_analytics:'↗ Analytics',
+      stat_scans:'Total Scans', stat_subs:'Subscribers',
+      qr_color:'QR Color', qr_bg:'Background Color', qr_size:'Size',
+      qr_style:'Style Preset', qr_margin:'Margin', qr_download:'⬇ Download PNG', qr_viewlive:'🌐 View Live Page',
+      lp_edit_title:'Edit Your Smart Landing Page',
+      lp_edit_sub:'Customise hero, buttons, AI assistant, subscriber loop and more.',
+      lp_open_editor:'Open Editor →',
+      an_title_short:'Scan Analytics', an_sub_short:'View scan counts, subscriber growth and conversion rates.',
+      an_view:'View Analytics →',
+      ed_preview:'Live Mobile Preview', ed_open_full:'Open Full Page →',
+      ed_draft:'✏️ Draft', ed_live:'🌐 Live',
+      etab_hero:'🏠 Hero', etab_voice:'🎙 Voice', etab_ai:'🤖 AI', etab_loop:'📬 Loop',
+      etab_push:'🔔 Push', etab_buttons:'🔗 Buttons', etab_featured:'⭐ Featured',
+      etab_info:'ℹ️ Info', etab_style:'🎨 Style', etab_order:'↕ Order',
+      etab_footer:'Footer', etab_settings:'⚙️ Settings',
+      btn_publish:'Publish', btn_savedraft:'💾 Save Draft', status_nochanges:'No changes',
+      danger_title:'DANGER ZONE',
+      danger_text:'Permanently delete this Smart QR and all its data. This cannot be undone.',
+      danger_btn:'🗑 Delete QR',
+      demo_strong2:'Demo active.', demo_text2:'Upgrade to keep live.',
+      lang_toggle:'Deutsch'
+    },
+    de: {
+      sqd_back:'← Dashboard', sqd_preview:'🌐 Vorschau', sqd_upgrade:'Upgraden →',
+      sqd_mode_manage:'Smart QR',
+      tab_qr:'◼ QR-Code', tab_edit:'✏️ Landingpage bearbeiten', tab_analytics:'↗ Analytics',
+      stat_scans:'Scans gesamt', stat_subs:'Abonnenten',
+      qr_color:'QR-Farbe', qr_bg:'Hintergrundfarbe', qr_size:'Größe',
+      qr_style:'Stil-Preset', qr_margin:'Rand', qr_download:'⬇ PNG herunterladen', qr_viewlive:'🌐 Live-Seite anzeigen',
+      lp_edit_title:'Ihre Smart Landingpage bearbeiten',
+      lp_edit_sub:'Hero, Buttons, KI-Assistent, Abonnenten-Loop und mehr anpassen.',
+      lp_open_editor:'Editor öffnen →',
+      an_title_short:'Scan-Analytics', an_sub_short:'Scans, Abonnentenwachstum und Konversionsraten anzeigen.',
+      an_view:'Analytics anzeigen →',
+      ed_preview:'Live-Mobilvorschau', ed_open_full:'Seite öffnen →',
+      ed_draft:'✏️ Entwurf', ed_live:'🌐 Live',
+      etab_hero:'🏠 Hero', etab_voice:'🎙 Stimme', etab_ai:'🤖 KI', etab_loop:'📬 Loop',
+      etab_push:'🔔 Push', etab_buttons:'🔗 Buttons', etab_featured:'⭐ Features',
+      etab_info:'ℹ️ Info', etab_style:'🎨 Stil', etab_order:'↕ Reihenfolge',
+      etab_footer:'Footer', etab_settings:'⚙️ Einstellungen',
+      btn_publish:'Veröffentlichen', btn_savedraft:'💾 Entwurf speichern', status_nochanges:'Keine Änderungen',
+      danger_title:'GEFAHRENZONE',
+      danger_text:'Diesen Smart QR und alle Daten dauerhaft löschen. Kann nicht rückgängig gemacht werden.',
+      danger_btn:'🗑 QR löschen',
+      demo_strong2:'Demo aktiv.', demo_text2:'Jetzt upgraden, um dauerhaft live zu bleiben.',
+      lang_toggle:'English'
+    }
+  };
+
+  function applyLang(lang) {
+    _lang = lang;
+    localStorage.setItem('qraivy_lang', lang);
+    var t = _t[lang] || _t['en'];
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+    var lbl = document.getElementById('lang-toggle-label');
+    if (lbl) lbl.textContent = t.lang_toggle;
+    window._qraivyLang = lang;
+  }
+
+  window.toggleLang = function() { applyLang(_lang === 'en' ? 'de' : 'en'); };
+  document.addEventListener('DOMContentLoaded', function() { applyLang(_lang); });
+})();
+</script>
 </body>
