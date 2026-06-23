@@ -698,30 +698,30 @@ async function initDashboard(){
 </style>
 
 <div class="sub-hdr">
-  <h2>Subscribers</h2>
-  <p>Total reach across all your Smart QR Pages</p>
+  <h2 data-i18n="sub_title">Subscribers</h2>
+  <p data-i18n="sub_sub">Total reach across all your Smart QR Pages</p>
 </div>
 
 <!-- Summary cards -->
 <div class="sub-cards" id="subSummaryCards">
   <div class="sub-card total">
     <div class="sub-card-icon">📡</div>
-    <div class="sub-card-label">Total Reach</div>
+    <div class="sub-card-label" data-i18n="sub_total_reach">Total Reach</div>
     <div class="sub-card-val" id="subTotalVal">—</div>
   </div>
   <div class="sub-card">
     <div class="sub-card-icon">✉️</div>
-    <div class="sub-card-label">Email</div>
+    <div class="sub-card-label" data-i18n="sub_email">Email</div>
     <div class="sub-card-val" id="subEmailVal">—</div>
   </div>
   <div class="sub-card">
     <div class="sub-card-icon">🔔</div>
-    <div class="sub-card-label">Web Push</div>
+    <div class="sub-card-label" data-i18n="sub_webpush">Web Push</div>
     <div class="sub-card-val" id="subPushVal">—</div>
   </div>
   <div class="sub-card">
     <div class="sub-card-icon">💳</div>
-    <div class="sub-card-label">Wallet</div>
+    <div class="sub-card-label" data-i18n="sub_wallet">Wallet</div>
     <div class="sub-card-val" id="subWalletVal">—</div>
   </div>
 </div>
@@ -730,8 +730,8 @@ async function initDashboard(){
 <div id="subTablePanel">
   <div class="sub-tbl-wrap">
     <div class="sub-tbl-head">
-      <h3>Pages</h3>
-      <button class="sub-export-btn" onclick="subExportAll()">↓ Export All CSV</button>
+      <h3 data-i18n="sub_pages">Pages</h3>
+      <button class="sub-export-btn" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button>
     </div>
     <div id="subTableBody"><div class="sub-loading">Loading subscribers…</div></div>
   </div>
@@ -742,7 +742,7 @@ async function initDashboard(){
   <div class="sub-detail-hdr">
     <button class="sub-back-btn" onclick="subShowTable()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      All pages
+      <span data-i18n="sub_all_pages">All pages</span>
     </button>
     <div>
       <span class="sub-detail-title" id="subDetailName"></span>
@@ -752,7 +752,7 @@ async function initDashboard(){
   <div class="sub-tbl-wrap">
     <div class="sub-tbl-head">
       <h3 id="subDetailCount">Subscribers</h3>
-      <button class="sub-export-btn" onclick="subExportPage()">↓ Export Page CSV</button>
+      <button class="sub-export-btn" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button>
     </div>
     <div id="subDetailBody"><div class="sub-loading">Loading…</div></div>
   </div>
@@ -802,7 +802,7 @@ async function initDashboard(){
   // ── Load summary ──────────────────────────────────────────────────────────
   window.subLoad = function subLoad() {
     console.log('[Subscribers] subLoad called');
-    document.getElementById('subTableBody').innerHTML = '<div class="sub-loading">Loading subscribers…</div>';
+    document.getElementById('subTableBody').innerHTML = '<div class="sub-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
       fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
@@ -823,7 +823,7 @@ async function initDashboard(){
           }
 
           var html = '<table class="sub-tbl"><thead><tr>'
-            + '<th>Page</th><th>Email</th><th>Web Push</th><th>Wallet</th><th>Total</th><th>Last Subscribed</th><th></th>'
+            + '<th data-i18n="sub_col_page">Page</th><th data-i18n="sub_col_email">Email</th><th data-i18n="sub_col_push">Web Push</th><th data-i18n="sub_col_wallet">Wallet</th><th data-i18n="sub_col_total">Total</th><th data-i18n="sub_col_last">Last Subscribed</th><th></th>'
             + '</tr></thead><tbody>';
 
           d.pages.forEach(function(p) {
@@ -871,7 +871,7 @@ async function initDashboard(){
           }
 
           var typeLabel = { email: 'Email', web_push: 'Web Push', wallet: 'Wallet' };
-          var html = '<table class="sub-tbl"><thead><tr><th>Identifier</th><th>Type</th><th>Date</th></tr></thead><tbody>';
+          var html = '<table class="sub-tbl"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
           _subDetailRows.forEach(function(r) {
             html += '<tr>'
               + '<td><span class="sub-masked">' + esc(r.masked) + '</span></td>'
@@ -1709,6 +1709,14 @@ window.loadCustList = function(btn) {
       camp_prev_title: 'Your push title', camp_prev_body: 'Your push message will appear here',
       camp_field_title: 'Title', camp_field_msg: 'Message', camp_field_url: 'Destination URL', camp_optional: 'optional',
       camp_url_hint: 'Leave empty to open the Smart Landing Page.',
+      sub_title: 'Subscribers', sub_sub: 'Total reach across all your Smart QR Pages',
+      sub_total_reach: 'Total Reach', sub_email: 'Email', sub_webpush: 'Web Push', sub_wallet: 'Wallet',
+      sub_pages: 'Pages', sub_export_all: '↓ Export All CSV', sub_export_page: '↓ Export Page CSV',
+      sub_all_pages: 'All pages', sub_loading: 'Loading subscribers…',
+      sub_empty_msg: 'No subscribers yet. Share your Smart QR Pages to start growing your audience.',
+      sub_col_page: 'Page', sub_col_email: 'Email', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
+      sub_col_total: 'Total', sub_col_last: 'Last Subscribed', sub_view_details: 'View details →',
+      sub_col_id: 'Identifier', sub_col_type: 'Type', sub_col_date: 'Date',
       lang_toggle: 'Deutsch'
     },
     de: {
@@ -1772,6 +1780,14 @@ window.loadCustList = function(btn) {
       camp_prev_title: 'Ihr Push-Titel', camp_prev_body: 'Ihre Push-Nachricht erscheint hier',
       camp_field_title: 'Titel', camp_field_msg: 'Nachricht', camp_field_url: 'Ziel-URL', camp_optional: 'optional',
       camp_url_hint: 'Leer lassen, um die Smart Landingpage zu öffnen.',
+      sub_title: 'Abonnenten', sub_sub: 'Gesamtreichweite über alle Smart QR-Seiten',
+      sub_total_reach: 'Gesamtreichweite', sub_email: 'E-Mail', sub_webpush: 'Web Push', sub_wallet: 'Wallet',
+      sub_pages: 'Seiten', sub_export_all: '↓ Alle als CSV exportieren', sub_export_page: '↓ Seite als CSV exportieren',
+      sub_all_pages: 'Alle Seiten', sub_loading: 'Abonnenten werden geladen…',
+      sub_empty_msg: 'Noch keine Abonnenten. Teilen Sie Ihre Smart QR-Seiten, um Ihr Publikum zu vergrößern.',
+      sub_col_page: 'Seite', sub_col_email: 'E-Mail', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
+      sub_col_total: 'Gesamt', sub_col_last: 'Zuletzt abonniert', sub_view_details: 'Details anzeigen →',
+      sub_col_id: 'Kennung', sub_col_type: 'Typ', sub_col_date: 'Datum',
       lang_toggle: 'English'
     }
   };
