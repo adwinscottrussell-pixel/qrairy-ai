@@ -321,7 +321,7 @@ function renderCards(dashboard){
   }
   aiPages.forEach(function(qr){
     var slug=qr.slug||qr.lpSlug||'';
-    var lpUrl=slug?'https://api.qraivy.com/lp/'+slug:qr.originalUrl;
+    var lpUrl=slug?'https://pages.qraivy.com/lp/'+slug:qr.originalUrl;
     var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
     var cvr=qr.totalScans>0?Math.round((qr.totalSubscribers/qr.totalScans)*100):0;
     var card=document.createElement('div');
@@ -499,7 +499,7 @@ async function initDashboard(){
     if (!pending) pending = {
       slug: claimSlug,
       businessName: claimSlug.replace(/^demo-/,'').replace(/-[a-z0-9]{3,6}$/,'').replace(/-/g,' '),
-      hostedUrl: 'https://api.qraivy.com/lp/' + claimSlug
+      hostedUrl: 'https://pages.qraivy.com/lp/' + claimSlug
     };
 
     const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data='
@@ -1249,7 +1249,7 @@ async function initDashboard(){
     var msg = document.getElementById('campSendMsg');
     btn.disabled = true; msg.innerHTML = '';
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/lp/push/' + _slug, {
+      fetch('https://pages.qraivy.com/lp/push/' + _slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
@@ -1275,7 +1275,7 @@ async function initDashboard(){
     var panel = document.getElementById('campHistPanel');
     var list  = document.getElementById('campHistList');
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/lp/push/' + slug + '/history', {
+      fetch('https://pages.qraivy.com/lp/push/' + slug + '/history', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1376,7 +1376,7 @@ function _lyCardPreview(p, color) {
     "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
     "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
       "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
-      "<a href='https://api.qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>View card ↗</a>" +
+      "<a href='https://pages.qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>View card ↗</a>" +
     "</div>" +
   "</div>";
 }
@@ -1578,7 +1578,7 @@ window.redeemLoyaltyDash = function(btn) {
   if (!confirm("Mark reward as redeemed and reset stamps to 0?")) return;
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch("https://api.qraivy.com/lp/stamp/redeem/" + slug, {
+      fetch("https://pages.qraivy.com/lp/stamp/redeem/" + slug, {
         method: "POST",
         headers: t ? { "Authorization": "Bearer " + t } : {}
       }).then(function(r) { return r.json(); }).then(function(d) {
