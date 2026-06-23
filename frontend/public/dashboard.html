@@ -160,9 +160,9 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 <div id="demo-upgrade-banner">
   <div class="dub-left">
     <div class="dub-badge">DEMO ACTIVE</div>
-    <div class="dub-text"><strong>Your Smart QR demo is active.</strong> Upgrade to keep it live permanently and unlock the full platform.</div>
+    <div class="dub-text"><strong data-i18n="demo_strong">Your Smart QR demo is active.</strong> <span data-i18n="demo_text">Upgrade to keep it live permanently and unlock the full platform.</span></div>
   </div>
-  <a href="upgrade.html" class="dub-btn">Upgrade to Keep Live →</a>
+  <a href="upgrade.html" class="dub-btn" data-i18n="demo_btn">Upgrade to Keep Live →</a>
   <button class="dub-close" onclick="document.getElementById('demo-upgrade-banner').classList.remove('show')">✕</button>
 </div>
 <!-- CLAIM SUCCESS MODAL -->
@@ -170,19 +170,19 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   <div class="claim-success-modal">
     <div class="csm-glow"></div>
     <div class="csm-icon">🎉</div>
-    <div class="csm-title">Your Smart QR is now live</div>
-    <div class="csm-sub">You successfully claimed your Smart QR. Manage analytics, subscribers, AI tools, wallet passes, and campaigns from your dashboard.</div>
+    <div class="csm-title" data-i18n="csm_title">Your Smart QR is now live</div>
+    <div class="csm-sub" data-i18n="csm_sub">You successfully claimed your Smart QR. Manage analytics, subscribers, AI tools, wallet passes, and campaigns from your dashboard.</div>
     <div class="csm-qr-row">
       <img class="csm-qr-img" id="csmQrImg" src="" alt="QR"/>
       <div style="flex:1">
         <div class="csm-qr-name" id="csmQrName">Your Smart QR</div>
         <div class="csm-qr-url" id="csmQrUrl"></div>
       </div>
-      <div class="csm-live"><div class="csm-live-dot"></div>LIVE</div>
+      <div class="csm-live"><div class="csm-live-dot"></div><span data-i18n="live">LIVE</span></div>
     </div>
     <div class="csm-actions">
-      <button class="csm-btn-primary" id="csmManageBtn">Manage Smart QR →</button>
-      <a class="csm-btn-secondary" id="csmViewBtn" href="#" target="_blank">🌐 View Live Landing Page</a>
+      <button class="csm-btn-primary" id="csmManageBtn" data-i18n="csm_manage">Manage Smart QR →</button>
+      <a class="csm-btn-secondary" id="csmViewBtn" href="#" target="_blank" data-i18n="csm_view">🌐 View Live Landing Page</a>
     </div>
   </div>
 </div>
@@ -191,11 +191,11 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   <div class="claim-banner-left">
     <div class="claim-banner-dot"></div>
     <div>
-      <div class="claim-banner-title">✓ Your Smart QR has been claimed</div>
-      <div class="claim-banner-sub">You can now manage your landing page, analytics, subscribers, and Smart QR tools from this dashboard.</div>
+      <div class="claim-banner-title" data-i18n="banner_title">✓ Your Smart QR has been claimed</div>
+      <div class="claim-banner-sub" data-i18n="banner_sub">You can now manage your landing page, analytics, subscribers, and Smart QR tools from this dashboard.</div>
     </div>
   </div>
-  <button class="claim-banner-btn" id="claim-manage-btn">Manage Smart QR</button>
+  <button class="claim-banner-btn" id="claim-manage-btn" data-i18n="banner_btn">Manage Smart QR</button>
   <button class="claim-banner-close" onclick="document.getElementById('claim-banner').classList.remove('show')">✕</button>
 </div>
 <div id="sidebar">
@@ -205,32 +205,38 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   </div>
   <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
   <nav class="sb-nav">
-    <div class="sb-group">Main</div>
-    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
-    <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label">Loyalty</span></a>
-    <div class="sb-group" style="margin-top:4px">Configure</div>
-    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
+    <div class="sb-group" data-i18n="nav_main">Main</div>
+    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
+    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
+    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
+    <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
+    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar" id="sb-avatar">?</div>
       <div class="sb-user-info">
         <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role">Business Owner</div>
+        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
       </div>
     </div>
+    <div style="padding:6px 12px 2px;">
+      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:.8rem;">🌐</span>
+        <span id="lang-toggle-label">Deutsch</span>
+      </button>
+    </div>
     <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label">Sign Out</span></a>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
   </div>
 </div>
 <button id="mob-btn">&#x2630;</button>
@@ -251,22 +257,22 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
       </div>
       <div class="dash-header">
         <div>
-          <h1 class="dash-title">Smart QR <em>Dashboard</em></h1>
-          <div class="dash-sub">Your AI-powered business engagement system</div>
+          <h1 class="dash-title"><span data-i18n="dash_title">Smart QR</span> <em data-i18n="dash_title_em">Dashboard</em></h1>
+          <div class="dash-sub" data-i18n="dash_sub">Your AI-powered business engagement system</div>
         </div>
-        <button class="btn-create" id="btn-create-sqr">&#xFF0B; Create New Smart QR</button>
+        <button class="btn-create" id="btn-create-sqr" data-i18n="btn_create">&#xFF0B; Create New Smart QR</button>
       </div>
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val orange" id="kpi-pages">&#x2014;</div><div class="kpi-lbl">Smart QR Pages</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="kpi-scans">&#x2014;</div><div class="kpi-lbl">Total Scans</div></div>
-        <div class="kpi-card"><div class="kpi-val green" id="kpi-subs">&#x2014;</div><div class="kpi-lbl">Subscribers</div></div>
-        <div class="kpi-card"><div class="kpi-val purple" id="kpi-wallet">&#x2014;</div><div class="kpi-lbl">Wallet Members</div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="kpi-pages">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_pages">Smart QR Pages</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-scans">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_scans">Total Scans</div></div>
+        <div class="kpi-card"><div class="kpi-val green" id="kpi-subs">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div></div>
+        <div class="kpi-card"><div class="kpi-val purple" id="kpi-wallet">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_wallet">Wallet Members</div></div>
       </div>
       <div class="sec-hdr">
-        <div><span class="sec-title">Smart QR Pages</span><span class="sec-count" id="sqr-section-count"></span></div>
-        <a href="analytics.html" style="font-family:\'DM Mono\',monospace;font-size:.62rem;color:#ff5a1f;text-decoration:none">Analytics &#x2192;</a>
+        <div><span class="sec-title" data-i18n="sec_sqrpages">Smart QR Pages</span><span class="sec-count" id="sqr-section-count"></span></div>
+        <a href="analytics.html" style="font-family:\'DM Mono\',monospace;font-size:.62rem;color:#ff5a1f;text-decoration:none" data-i18n="sec_analytics">Analytics &#x2192;</a>
       </div>
-      <div id="sqr-loading" style="font-family:\'DM Mono\',monospace;color:#7a8fa8;font-size:.78rem;padding:16px 0">Loading your smart pages&#x2026;</div>
+      <div id="sqr-loading" style="font-family:\'DM Mono\',monospace;color:#7a8fa8;font-size:.78rem;padding:16px 0" data-i18n="loading_pages">Loading your smart pages&#x2026;</div>
       <div class="sqr-grid" id="sqrGrid"></div>
     </div>
   </main>
@@ -1635,6 +1641,177 @@ window.loadCustList = function(btn) {
     });
   } catch(e) { btn.innerHTML = "&#128101; Customers"; }
 };
+</script>
+
+<script>
+(function(){
+  var _lang = localStorage.getItem('qraivy_lang') || 'en';
+
+  var _t = {
+    en: {
+      demo_strong: 'Your Smart QR demo is active.',
+      demo_text: 'Upgrade to keep it live permanently and unlock the full platform.',
+      demo_btn: 'Upgrade to Keep Live →',
+      csm_title: 'Your Smart QR is now live',
+      csm_sub: 'You successfully claimed your Smart QR. Manage analytics, subscribers, AI tools, wallet passes, and campaigns from your dashboard.',
+      live: 'LIVE',
+      csm_manage: 'Manage Smart QR →',
+      csm_view: '🌐 View Live Landing Page',
+      banner_title: '✓ Your Smart QR has been claimed',
+      banner_sub: 'You can now manage your landing page, analytics, subscribers, and Smart QR tools from this dashboard.',
+      banner_btn: 'Manage Smart QR',
+      nav_main: 'Main',
+      nav_dashboard: 'Dashboard',
+      nav_analytics: 'Analytics',
+      nav_smartpages: 'Smart Pages',
+      nav_sqrpages: 'Smart QR Pages',
+      nav_createnew: 'Create New QR',
+      nav_engage: 'Engage',
+      nav_campaigns: 'AI Campaigns',
+      nav_subscribers: 'Subscribers',
+      nav_loyalty: 'Loyalty',
+      nav_configure: 'Configure',
+      nav_wallet: 'Wallet Passes',
+      nav_account: 'Account',
+      nav_billing: 'Billing & Plans',
+      nav_settings: 'Settings',
+      role_owner: 'Business Owner',
+      nav_signout: 'Sign Out',
+      dash_title: 'Smart QR',
+      dash_title_em: 'Dashboard',
+      dash_sub: 'Your AI-powered business engagement system',
+      btn_create: '＋ Create New Smart QR',
+      kpi_pages: 'Smart QR Pages',
+      kpi_scans: 'Total Scans',
+      kpi_subs: 'Subscribers',
+      kpi_wallet: 'Wallet Members',
+      sec_sqrpages: 'Smart QR Pages',
+      sec_analytics: 'Analytics →',
+      loading_pages: 'Loading your smart pages…',
+      empty_title: 'No Smart QR Pages yet',
+      empty_sub: 'Create your first AI-powered business page in under 60 seconds. Voice welcome, AI assistant, wallet subscriptions — all included.',
+      empty_btn: '＋ Create Smart QR',
+      card_live: 'Live',
+      card_scans: 'Scans',
+      card_subs: 'Subs',
+      card_manage: '⚙ Manage',
+      card_view: '🌐 View',
+      card_analytics: '↗ Analytics',
+      lang_toggle: 'Deutsch'
+    },
+    de: {
+      demo_strong: 'Ihre Smart QR-Demo ist aktiv.',
+      demo_text: 'Upgraden Sie jetzt, um sie dauerhaft live zu halten und die volle Plattform freizuschalten.',
+      demo_btn: 'Jetzt upgraden →',
+      csm_title: 'Ihr Smart QR ist jetzt live',
+      csm_sub: 'Sie haben Ihren Smart QR erfolgreich beansprucht. Verwalten Sie Analytics, Abonnenten, KI-Tools, Wallet-Pässe und Kampagnen in Ihrem Dashboard.',
+      live: 'LIVE',
+      csm_manage: 'Smart QR verwalten →',
+      csm_view: '🌐 Live-Landingpage anzeigen',
+      banner_title: '✓ Ihr Smart QR wurde beansprucht',
+      banner_sub: 'Sie können jetzt Ihre Landingpage, Analytics, Abonnenten und Smart QR-Tools in diesem Dashboard verwalten.',
+      banner_btn: 'Smart QR verwalten',
+      nav_main: 'Hauptmenü',
+      nav_dashboard: 'Dashboard',
+      nav_analytics: 'Analytics',
+      nav_smartpages: 'Smart Pages',
+      nav_sqrpages: 'Smart QR-Seiten',
+      nav_createnew: 'Neuen QR erstellen',
+      nav_engage: 'Engagement',
+      nav_campaigns: 'KI-Kampagnen',
+      nav_subscribers: 'Abonnenten',
+      nav_loyalty: 'Treue',
+      nav_configure: 'Konfigurieren',
+      nav_wallet: 'Wallet-Pässe',
+      nav_account: 'Konto',
+      nav_billing: 'Abrechnung & Pläne',
+      nav_settings: 'Einstellungen',
+      role_owner: 'Unternehmensinhaber',
+      nav_signout: 'Abmelden',
+      dash_title: 'Smart QR',
+      dash_title_em: 'Dashboard',
+      dash_sub: 'Ihr KI-gestütztes Business-Engagement-System',
+      btn_create: '＋ Neuen Smart QR erstellen',
+      kpi_pages: 'Smart QR-Seiten',
+      kpi_scans: 'Scans gesamt',
+      kpi_subs: 'Abonnenten',
+      kpi_wallet: 'Wallet-Mitglieder',
+      sec_sqrpages: 'Smart QR-Seiten',
+      sec_analytics: 'Analytics →',
+      loading_pages: 'Smart-Seiten werden geladen…',
+      empty_title: 'Noch keine Smart QR-Seiten',
+      empty_sub: 'Erstellen Sie Ihre erste KI-gestützte Unternehmensseite in unter 60 Sekunden. Willkommensnachricht, KI-Assistent, Wallet-Abos — alles inklusive.',
+      empty_btn: '＋ Smart QR erstellen',
+      card_live: 'Live',
+      card_scans: 'Scans',
+      card_subs: 'Abos',
+      card_manage: '⚙ Verwalten',
+      card_view: '🌐 Anzeigen',
+      card_analytics: '↗ Analytics',
+      lang_toggle: 'English'
+    }
+  };
+
+  function applyLang(lang) {
+    _lang = lang;
+    localStorage.setItem('qraivy_lang', lang);
+    var t = _t[lang] || _t['en'];
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+    var toggleLabel = document.getElementById('lang-toggle-label');
+    if (toggleLabel) toggleLabel.textContent = t.lang_toggle;
+    // Update dynamic card content language for future renders
+    window._qraivyLang = lang;
+    // Re-render empty state if visible
+    var emptyTitle = document.querySelector('.sqr-empty-title');
+    if (emptyTitle) emptyTitle.textContent = t.empty_title;
+    var emptySub = document.querySelector('.sqr-empty-sub');
+    if (emptySub) emptySub.textContent = t.empty_sub;
+    var emptyBtn = document.querySelector('.sqr-empty .btn-create');
+    if (emptyBtn) emptyBtn.textContent = t.empty_btn;
+  }
+
+  window.toggleLang = function() {
+    applyLang(_lang === 'en' ? 'de' : 'en');
+  };
+
+  // Apply on load
+  document.addEventListener('DOMContentLoaded', function() {
+    applyLang(_lang);
+  });
+
+  // Patch renderCards to use translations for card buttons/labels
+  var _origRenderCards = null;
+  Object.defineProperty(window, 'renderCards', {
+    get: function() { return _origRenderCards; },
+    set: function(fn) {
+      _origRenderCards = function(dashboard) {
+        fn(dashboard);
+        // After render, translate card action buttons
+        var lang = window._qraivyLang || 'en';
+        var t = _t[lang] || _t['en'];
+        document.querySelectorAll('.sqr-manage').forEach(function(b){ b.innerHTML = t.card_manage; });
+        document.querySelectorAll('.sqr-open').forEach(function(b){ b.innerHTML = t.card_view; });
+        document.querySelectorAll('.sqr-analytics').forEach(function(b){ b.innerHTML = t.card_analytics; });
+        document.querySelectorAll('.sqr-stat-l').forEach(function(el, i){
+          var mod = i % 3;
+          if (mod === 0) el.textContent = t.card_scans;
+          else if (mod === 1) el.textContent = t.card_subs;
+          // CVR stays as CVR
+        });
+        var emptyTitle = document.querySelector('.sqr-empty-title');
+        if (emptyTitle) emptyTitle.textContent = t.empty_title;
+        var emptySub = document.querySelector('.sqr-empty-sub');
+        if (emptySub) emptySub.textContent = t.empty_sub;
+        var emptyBtn = document.querySelector('.sqr-empty .btn-create');
+        if (emptyBtn) emptyBtn.textContent = t.empty_btn;
+      };
+    },
+    configurable: true
+  });
+})();
 </script>
 </body>
 </html>
