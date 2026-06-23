@@ -1434,6 +1434,8 @@ async function initPage() {
     if (window.QRAIVY_PREVIEW) {
       window.QRAIVY_PREVIEW.setMode('draft');
     }
+  }, 1000);
+    }
   }, 400);
   var cp=document.getElementById('sqd-color-preview'); if(cp && pending.brandColor) cp.style.background = pending.brandColor;
   var ch=document.getElementById('sqd-color-hex'); if(ch && pending.brandColor) ch.textContent = pending.brandColor;
