@@ -327,7 +327,7 @@ function renderCards(dashboard){
   }
   aiPages.forEach(function(qr){
     var slug=qr.slug||qr.lpSlug||'';
-    var lpUrl=slug?'https://pages.qraivy.com/lp/'+slug:qr.originalUrl;
+    var lpUrl=slug?'https://pages.qraivy.com/lp/'+slug+'?src=qr':qr.originalUrl;
     var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
     var cvr=qr.totalScans>0?Math.round((qr.totalSubscribers/qr.totalScans)*100):0;
     var card=document.createElement('div');
