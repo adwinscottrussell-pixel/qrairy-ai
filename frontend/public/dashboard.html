@@ -1312,10 +1312,10 @@ async function initDashboard(){
 
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;">🎟 Loyalty Programs</div>
-    <a href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;">+ Add program</a>
+    <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;"><span data-i18n="loy_title">🎟 Loyalty Programs</span></div>
+    <a href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;" data-i18n="loy_add_prog">+ Add program</a>
   </div>
-  <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;">Anonymous stamp tracking — GDPR compliant</div>
+  <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;" data-i18n="loy_gdpr">Anonymous stamp tracking — GDPR compliant</div>
   <div id="ly-pages-list" style="display:grid;gap:16px;max-width:720px;"></div>
 </div>
 
@@ -1413,13 +1413,13 @@ function _lyBuildCard(p) {
   var badgeStyle, badgeTxt;
   if (!p.hasLoyaltyConfig) {
     badgeStyle = "background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);";
-    badgeTxt = "not set up";
+    badgeTxt = "<span data-i18n='loy_not_setup'>not set up</span>";
   } else if (p.status === "active") {
     badgeStyle = "background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25);";
-    badgeTxt = "● active";
+    badgeTxt = "<span data-i18n='loy_active'>● active</span>";
   } else {
     badgeStyle = "background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1);";
-    badgeTxt = "⏸ paused";
+    badgeTxt = "<span data-i18n='loy_paused'>⏸ paused</span>";
   }
   el.style.cssText = "background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;";
   var goalOpts = [5,8,10,12,15].map(function(n) {
@@ -1481,7 +1481,7 @@ function _lyBuildCard(p) {
     h +=   "</div>";
     h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
     h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
-    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "Pause" : "Activate") + "</button>";
+    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
     h +=     "<span id=\"ly-saved-" + p.id + "\" style=\"font-size:.68rem;color:#22c55e;display:none;\">✓ Saved</span>";
     h +=   "</div>";
     h += "</div>";
@@ -1601,7 +1601,7 @@ window.loadCustList = function(btn) {
   // Toggle off
   if (container.style.display !== "none") {
     container.style.display = "none";
-    btn.innerHTML = "&#128101; Customers";
+    btn.innerHTML = "<span data-i18n='loy_customers'>👥 Customers</span>";
     return;
   }
   btn.innerHTML = "&#128101; Loading&#8230;";
@@ -1717,6 +1717,16 @@ window.loadCustList = function(btn) {
       sub_col_page: 'Page', sub_col_email: 'Email', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
       sub_col_total: 'Total', sub_col_last: 'Last Subscribed', sub_view_details: 'View details →',
       sub_col_id: 'Identifier', sub_col_type: 'Type', sub_col_date: 'Date',
+      loy_title: '🎟 Loyalty Programs', loy_add_prog: '+ Add program',
+      loy_gdpr: 'Anonymous stamp tracking — GDPR compliant',
+      loy_not_setup: 'not set up', loy_active: '● active', loy_paused: '⏸ paused',
+      loy_edit_prog: 'Edit program', loy_card_colour: 'Card colour',
+      loy_colour_hint: 'Changes the stamp colour on the card preview and customer page',
+      loy_save: 'Save', loy_pause: 'Pause', loy_activate: 'Activate',
+      loy_copy_nfc: 'Copy NFC URL', loy_redeem: '🎁 Redeem', loy_customers: '👥 Customers',
+      loy_enable: '+ Enable loyalty for this page', loy_loading: 'Loading…',
+      loy_empty: 'No loyalty programs yet.',
+      loy_col_customer: 'CUSTOMER', loy_col_stamps: 'STAMPS', loy_col_date: 'DATE',
       lang_toggle: 'Deutsch'
     },
     de: {
@@ -1788,6 +1798,16 @@ window.loadCustList = function(btn) {
       sub_col_page: 'Seite', sub_col_email: 'E-Mail', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
       sub_col_total: 'Gesamt', sub_col_last: 'Zuletzt abonniert', sub_view_details: 'Details anzeigen →',
       sub_col_id: 'Kennung', sub_col_type: 'Typ', sub_col_date: 'Datum',
+      loy_title: '🎟 Treueprogramme', loy_add_prog: '+ Programm hinzufügen',
+      loy_gdpr: 'Anonymes Stempel-Tracking — DSGVO-konform',
+      loy_not_setup: 'nicht eingerichtet', loy_active: '● aktiv', loy_paused: '⏸ pausiert',
+      loy_edit_prog: 'Programm bearbeiten', loy_card_colour: 'Kartenfarbe',
+      loy_colour_hint: 'Ändert die Stempelfarbe in der Kartenvorschau und auf der Kundenseite',
+      loy_save: 'Speichern', loy_pause: 'Pausieren', loy_activate: 'Aktivieren',
+      loy_copy_nfc: 'NFC-URL kopieren', loy_redeem: '🎁 Einlösen', loy_customers: '👥 Kunden',
+      loy_enable: '+ Treue für diese Seite aktivieren', loy_loading: 'Wird geladen…',
+      loy_empty: 'Noch keine Treueprogramme.',
+      loy_col_customer: 'KUNDE', loy_col_stamps: 'STEMPEL', loy_col_date: 'DATUM',
       lang_toggle: 'English'
     }
   };
