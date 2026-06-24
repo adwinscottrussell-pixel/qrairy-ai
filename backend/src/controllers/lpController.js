@@ -2428,7 +2428,7 @@ ${sa.active !== false ? `
     msgs.scrollTop = msgs.scrollHeight;
 
     var typing = document.createElement('div');
-    typing.style.cssText = 'background:#f2f2f2;border-radius:0 12px 12px 12px;padding:10px 14px;font-size:13px;color:#999;display:inline-block;max-width:82%;';
+    typing.style.cssText = 'background:#2a2a2a;border-radius:0 12px 12px 12px;padding:10px 14px;font-size:13px;color:#f0ece0;display:inline-block;max-width:82%;';
     typing.textContent = '…';
     msgs.appendChild(typing);
     msgs.scrollTop = msgs.scrollHeight;
@@ -2438,7 +2438,7 @@ ${sa.active !== false ? `
       .then(function(r){ return r.json(); })
       .then(function(d) {
         typing.textContent = d.reply || d.message || 'I can help with that!';
-        typing.style.color = '#0a0a0a';
+        typing.style.color = '#f0ece0'; typing.style.background = '#2a2a2a';
         msgs.scrollTop = msgs.scrollHeight;
       })
       .catch(function() {
