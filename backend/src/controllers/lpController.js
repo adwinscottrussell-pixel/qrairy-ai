@@ -2166,7 +2166,7 @@ input,textarea,button{font-family:inherit}
 .dark-mode [style*="color:#555"]{color:#ccc !important;}
 .dark-mode [style*="color:#999"]{color:#aaa !important;}
 .dark-mode [style*="border:1px solid #e8e8e8"]{border-color:#333 !important;}
-.dark-mode [style*="background:#f2f2f2"]{background:#111 !important;}
+.dark-mode [style*="background:#f2f2f2"]{background:#222 !important;color:#f0ece0 !important;}
 .divider{height:1px;background:#e8e8e8;margin:0 20px}
 </style>
 </head>
