@@ -458,3 +458,7 @@
 .qr-setup-summary-text{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:rgba(240,236,224,0.82);}
 .qr-setup-summary-text strong{color:rgba(240,236,224,0.75);font-weight:500;}
 .qr-setup-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;}
+
+.qr-modal { overflow-y: auto !important; max-height: 90vh !important; }
+.qr-onboarding-overlay { overflow-y: auto !important; }
+
