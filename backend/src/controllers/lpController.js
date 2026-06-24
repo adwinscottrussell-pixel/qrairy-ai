@@ -2244,7 +2244,7 @@ ${sa.active !== false ? `
       <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.05em;text-transform:uppercase;">${t.tapWelcome}</span>
     </div>
     <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
-      <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">✦ Hi 👋 I'm the AI concierge for ${bizName}. Ask me about hours, menu, or anything else.</div>
+      <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">${lang === 'de' ? '✦ Hallo 👋 Ich bin der KI-Assistent für ' + bizName + '. Fragen Sie mich nach Öffnungszeiten, Angeboten oder anderen Infos.' : '✦ Hi 👋 I\'m the AI concierge for ' + bizName + '. Ask me about hours, menu, or anything else.'}</div>
     </div>
     <div id="chat-input-area" style="display:flex;align-items:center;border-top:1px solid #e8e8e8;opacity:0.4;pointer-events:none;" title="Play welcome message to activate">
       <input id="chat-input" placeholder="${t.askAnything}" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
@@ -2442,7 +2442,7 @@ ${sa.active !== false ? `
         msgs.scrollTop = msgs.scrollHeight;
       })
       .catch(function() {
-        typing.textContent = 'Ask me about our menu, hours, or anything else.';
+        typing.textContent = lang === 'de' ? 'Fragen Sie mich nach Öffnungszeiten, Angeboten oder anderen Infos.' : 'Ask me about our menu, hours, or anything else.';
         typing.style.color = '#0a0a0a';
       });
   };
