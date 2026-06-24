@@ -1133,7 +1133,8 @@ async function handleChatLP(req, res) {
 
 async function handlePublishLP(req, res) {
   try {
-    const { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template } = req.body;
+    const { slug, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template } = req.body;
+    const businessName = ((req.body.businessName||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/\.(de|com|net|org|io)$/i,'').trim())||req.body.businessName||'';
     let userId = req.body.userId || null;
     if (!userId && req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
