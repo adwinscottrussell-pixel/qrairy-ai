@@ -20,7 +20,7 @@ const VOICES = {
 
 const DEFAULT_TEXT = {
   en: (bizName) => "Welcome to " + bizName + "! Thanks for stopping by - we have got something special waiting for you. Explore our latest products and services, and chat with our AI assistant below for anything you need. And do not forget to allow notifications so you never miss our latest deals and drops. See you inside!",
-  de: (bizName) => "Willkommen bei " + bizName + "! Sch\u00F6n, dass Sie da sind \u2013 wir haben etwas Besonderes f\u00FCr Sie. Entdecken Sie unsere neuesten Produkte und Dienstleistungen und chatten Sie mit unserem KI-Assistenten. Vergessen Sie nicht, Benachrichtigungen zu erlauben, damit Sie keine Angebote verpassen. Bis gleich!",
+  de: (bizName) => "Willkommen bei " + bizName + "! Schön, dass Sie da sind – wir haben etwas Besonderes für Sie. Entdecken Sie unsere neuesten Produkte und Dienstleistungen und chatten Sie mit unserem KI-Assistenten. Vergessen Sie nicht, Benachrichtigungen zu erlauben, damit Sie keine Angebote verpassen. Bis gleich!",
 };
 
 async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customText = null) {
