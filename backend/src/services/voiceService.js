@@ -30,7 +30,7 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
   const voice = VOICES[voiceKey] || VOICES.sarah;
   const lang = voice.lang || "en";
   const textFn = DEFAULT_TEXT[lang] || DEFAULT_TEXT.en;
-  const cleanName = bizName.replace(/^Welcome to /i,"").replace(/^Welcome /i,"");
+  const cleanName = bizName.replace(/^Welcome to /i,"").replace(/^Welcome /i,"").replace(/^https?:\/\//i,"").replace(/\/.*$/,"").replace(/\.(de|com|net|org|io)$/i,"").trim();
   const text = customText || textFn(cleanName);
 
   const body = JSON.stringify({
@@ -76,3 +76,4 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
 }
 
 module.exports = { generateAndUploadVoice, VOICES };
+
