@@ -1,4 +1,4 @@
-﻿// QRaivy Smart Editor v2 - clean rebuild
+// QRaivy Smart Editor v2 - clean rebuild
 // Backend DB is source of truth. Publishes ONLY hero/voice/buttons/style.
 // Never overwrites: template, generated sections, Firecrawl content.
 (function () {
