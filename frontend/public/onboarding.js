@@ -8,7 +8,7 @@
   function mark(u){localStorage.setItem(key(u),'true');}
   var S={qrType:null,selectedUseCase:null,businessName:'',websiteURL:'',logo:null,brandColor:'#ff5a1f',generatedQR:null,slug:null,publishedURL:null,progress:0};
   // ── Wizard language (UI) ─────────────────────────────────────────────────
-  var LANG=(function(){var s=localStorage.getItem('qraivy_lang')||localStorage.getItem('qraivy_wizard_lang');if(s==='de'||s==='en')return s;var b=(navigator.language||'en').toLowerCase();return b.startsWith('de')?'de':'en';})();
+  var LANG=(function(){var s=localStorage.getItem('qraivy_lang')||localStorage.getItem('qraivy_wizard_lang');if(s==='de'||s==='en')return s;return 'en';})();
   function setLang(l){LANG=l;localStorage.setItem('qraivy_lang',l);localStorage.setItem('qraivy_wizard_lang',l);if(window.setQraivyLang)window.setQraivyLang(l);}
   // S.language = landing page content language (set by Firecrawl detection)
   // Initialise to UI language; overridden after website scrape
