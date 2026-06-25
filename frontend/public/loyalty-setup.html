@@ -360,6 +360,21 @@
 </script>
 <script>
 (function(){
+  var lang = localStorage.getItem('qraivy_lang') || 'en';
+  var T = {
+    de: {
+      which_page:'Welche Seite?', which_page_sub:'Waehle die Landing Page aus, zu der du ein Treueprogramm hinzufuegen moechtest.', next:'Weiter →', set_reward:'Belohnung einrichten', set_reward_sub:'Was verdienen Kunden, wenn sie die Karte abgeschlossen haben?', reward_label:'BELOHNUNG (WAS SIE VERDIENEN)', stamps_label:'STEMPEL ZUM ABSCHLIESSEN DER KARTE', back:'← Zurueck', preview:'Vorschau →', ready:'Bereit zur Aktivierung', ready_sub:'Hier ist deine Treuekarte. Speichern, um sie zu aktivieren.', activate:'❖ Treueprogramm aktivieren', edit:'← Bearbeiten', back_dash:'← Zurueck zum Dashboard', reward_info:'BELOHNUNG', stamps_info:'BENOETIGTE STEMPEL', step:'SCHRITT', of:'VON'
+    },
+    en: {
+      which_page:'Which page?', which_page_sub:'Select the landing page to add loyalty to.', next:'Next →', set_reward:'Set up your reward', set_reward_sub:'What do customers earn when they complete the card?', reward_label:'REWARD (WHAT THEY EARN)', stamps_label:'STAMPS TO COMPLETE THE CARD', back:'← Back', preview:'Preview →', ready:'Ready to activate', ready_sub:"Here's your loyalty card. Save to make it live.", activate:'❖ Activate loyalty', edit:'← Edit', back_dash:'← Back to dashboard', reward_info:'REWARD', stamps_info:'STAMPS NEEDED', step:'STEP', of:'OF'
+    }
+  };
+  window._LSLT = T[lang] || T.en;
+  window._LSLANG = lang;
+})();
+</script>
+<script>
+(function(){
   if(!window._LSLT) return;
   document.querySelectorAll('[data-lslt]').forEach(function(el){
     var k = el.getAttribute('data-lslt');
