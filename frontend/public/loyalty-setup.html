@@ -73,6 +73,7 @@
     .scan-status{font-size:0.78rem;color:#555;margin-top:14px}
     .error-msg{color:#ef4444;font-size:0.72rem;margin-top:8px;display:none}
   </style>
+  <script src="js/qraivy-lang.js"></script>
 </head>
 <body>
 <div id="sidebar">
@@ -82,28 +83,28 @@
   </div>
   <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
   <nav class="sb-nav">
-    <div class="sb-group">Main</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label">Smart QR Pages</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item"><span class="sb-icon">&#xFF0B;</span><span class="sb-label">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item"><span class="sb-icon">&#x1F465;</span><span class="sb-label">Subscribers</span></a>
-    <a href="loyalty-setup.html" class="sb-item active"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label">Loyalty</span></a>
-    <div class="sb-group" style="margin-top:4px">Configure</div>
-    <a href="#" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label">Settings</span></a>
+    <div class="sb-group" data-i18n="sb_main">Main</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="sb_dashboard">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="sb_analytics">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_smartpages">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="sb_pages">Smart QR Pages</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="sb_create">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_engage">Engage</div>
+    <a href="dashboard.html?section=campaigns" class="sb-item"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="sb_campaigns">AI Campaigns</span></a>
+    <a href="dashboard.html?section=subscribers" class="sb-item"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="sb_subscribers">Subscribers</span></a>
+    <a href="loyalty-setup.html" class="sb-item active"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="sb_loyalty">Loyalty</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_configure">Configure</div>
+    <a href="#" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="sb_wallet">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_account">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="sb_billing">Billing &amp; Plans</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="sb_settings">Settings</span></a>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar" id="sb-avatar">?</div>
       <div class="sb-user-info">
         <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role">Business Owner</div>
+        <div class="sb-user-role" data-i18n="sb_role">Business Owner</div>
       </div>
     </div>
     <button onclick="handleSignOut()" class="sb-signout">&#x2192; Sign Out</button>
