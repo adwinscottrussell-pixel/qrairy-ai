@@ -1369,6 +1369,7 @@ function _lyRgba(hex, alpha) {
 
 // Visual card preview — mirrors the customer loyalty card
 function _lyCardPreview(p, color) {
+  var _lang = localStorage.getItem("qraivy_lang") || "en";
   color = color || p.color || "#ff5a1f";
   var goal = p.stampGoal || 10;
   var circles = "";
@@ -1406,6 +1407,7 @@ window.updateCardColor = function(input) {
 };
 
 function _lyBuildCard(p) {
+  var _lang = localStorage.getItem("qraivy_lang") || "en";
   // Store program data for live color preview
   if (!window._lyPrograms) window._lyPrograms = {};
   window._lyPrograms[p.id] = p;
