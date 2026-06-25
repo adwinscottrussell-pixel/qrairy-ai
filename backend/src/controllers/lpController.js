@@ -1116,7 +1116,7 @@ async function handleChatLP(req, res) {
     if (!page) return res.status(404).json({ reply: 'Business not found.' });
     const sections = page.sections ? JSON.parse(page.sections) : {};
     const siteContent = sections.siteContent || '';
-    const bizName = page.businessName || slug;
+    const bizName = (page.businessName || slug).replace(/-[a-z0-9]{3}$/, '').replace(/-/g, ' ').replace(/w/g, c => c.toUpperCase());
     const businessInfo = sections.businessInfo || {};
     const apiKey = process.env.ANTHROPIC_API_KEY;
     const voiceLang = (sections.voice && sections.voice.voiceLanguage) || 'en';
