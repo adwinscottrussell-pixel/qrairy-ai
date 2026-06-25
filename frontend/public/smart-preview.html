@@ -793,8 +793,8 @@
     const lpUrl  = p.get('lpUrl') || '';
     const slug   = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     // Use real hosted LP URL if available, else show demo URL
-    const demoUrl = lpSlug ? `api.qraivy.com/lp/${lpSlug}` : `qraivy.com/demo/${slug}`;
-    const realLpUrl = lpUrl || (lpSlug ? `https://api.qraivy.com/lp/${lpSlug}` : '');
+    const demoUrl = lpSlug ? `qraivy.com/lp/${lpSlug}` : `qraivy.com/demo/${slug}`;
+    const realLpUrl = lpUrl || (lpSlug ? `https://qraivy.com/lp/${lpSlug}` : '');
 
     // ── Demo limit (localStorage) ──────────────────────────────────────
     const LIMIT_KEY = 'qraivy_demo_ts';

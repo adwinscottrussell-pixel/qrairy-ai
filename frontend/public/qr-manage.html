@@ -399,7 +399,7 @@ let fgColor = '111111', bgColor = 'ffffff';
 // ── QR image URL ─────────────────────────────────────────────────────────────
 function qrImgURL(size, fg, bg) {
   const url = LP_SLUG
-    ? `https://api.qraivy.com/lp/${LP_SLUG}`
+    ? `https://qraivy.com/lp/${LP_SLUG}`
     : (qrData?.originalUrl || 'https://qraivy.com');
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=${fg||fgColor}&bgcolor=${bg||bgColor}&margin=2`;
 }
@@ -426,7 +426,7 @@ function renderHeader(qr) {
   const isAI = !!qr.businessName;
   const name = qr.businessName || 'Basic QR Code';
   const slug = LP_SLUG || '';
-  const lpUrl = slug ? `https://api.qraivy.com/lp/${slug}` : qr.originalUrl;
+  const lpUrl = slug ? `https://qraivy.com/lp/${slug}` : qr.originalUrl;
   const created = new Date(qr.createdAt || Date.now()).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 
   document.getElementById('bc-name').textContent = name;
@@ -440,7 +440,7 @@ function renderHeader(qr) {
             ${isAI ? '<span class="mgr-badge b-live">● Live</span>' : ''}
             ${isAI ? '<span class="mgr-badge b-ai">✨ AI Page</span>' : '<span class="mgr-badge b-draft">Basic QR</span>'}
           </div>
-          ${slug ? `<div class="mgr-url">api.qraivy.com/lp/${slug} &mdash; <a href="${lpUrl}" target="_blank">Open →</a></div>` : `<div class="mgr-url">${qr.originalUrl}</div>`}
+          ${slug ? `<div class="mgr-url">qraivy.com/lp/${slug} &mdash; <a href="${lpUrl}" target="_blank">Open →</a></div>` : `<div class="mgr-url">${qr.originalUrl}</div>`}
         </div>
       </div>
       <div class="mgr-actions">
@@ -468,11 +468,11 @@ function renderPanels(qr) {
   const subs  = qr.totalSubscribers || 0;
   const cvr   = scans > 0 ? Math.round((subs/scans)*100) : 0;
   const slug  = LP_SLUG || '';
-  const lpUrl = slug ? `https://api.qraivy.com/lp/${slug}` : qr.originalUrl;
+  const lpUrl = slug ? `https://qraivy.com/lp/${slug}` : qr.originalUrl;
 
   function set(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
   set('kpi-scans', scans); set('kpi-subs', subs); set('kpi-cvr', cvr+'%');
-  set('qr-main-url', slug ? `api.qraivy.com/lp/${slug}` : qr.originalUrl);
+  set('qr-main-url', slug ? `qraivy.com/lp/${slug}` : qr.originalUrl);
   set('qr-scan-pill', `⬡ ${scans} scan${scans!==1?'s':''}`);
   set('sub-total', subs); set('sub-email', subs); set('sub-wallet', '—');
   set('ai-cvr-val', cvr+'%');
@@ -483,7 +483,7 @@ function renderPanels(qr) {
     const events = [];
     if (scans > 0) events.push({ c:'#ff5a1f', t:`Page scanned <strong>${scans}</strong> time${scans!==1?'s':''}` });
     if (subs > 0)  events.push({ c:'#22c55e', t:`<strong>${subs}</strong> subscriber${subs!==1?'s':''} captured` });
-    if (qr.businessName) events.push({ c:'#a78bfa', t:`AI landing page <strong>live</strong> at api.qraivy.com/lp/${slug}` });
+    if (qr.businessName) events.push({ c:'#a78bfa', t:`AI landing page <strong>live</strong> at qraivy.com/lp/${slug}` });
     events.push({ c:'#7a8899', t:`Smart QR created for <strong>${qr.businessName||'Basic QR'}</strong>` });
     if (events.length === 0) return;
     actEl.innerHTML = events.map(e =>

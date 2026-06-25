@@ -327,7 +327,7 @@ function renderCards(dashboard){
   }
   aiPages.forEach(function(qr){
     var slug=qr.slug||qr.lpSlug||'';
-    var lpUrl=slug?'https://pages.qraivy.com/lp/'+slug+'?src=qr':qr.originalUrl;
+    var lpUrl=slug?'https://qraivy.com/lp/'+slug+'?src=qr':qr.originalUrl;
     var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
     var cvr=qr.totalScans>0?Math.round((qr.totalSubscribers/qr.totalScans)*100):0;
     var card=document.createElement('div');
@@ -505,7 +505,7 @@ async function initDashboard(){
     if (!pending) pending = {
       slug: claimSlug,
       businessName: claimSlug.replace(/^demo-/,'').replace(/-[a-z0-9]{3,6}$/,'').replace(/-/g,' '),
-      hostedUrl: 'https://pages.qraivy.com/lp/' + claimSlug
+      hostedUrl: 'https://qraivy.com/lp/' + claimSlug
     };
 
     const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data='
@@ -1384,7 +1384,7 @@ function _lyCardPreview(p, color) {
     "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
     "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
       "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
-      "<a href='https://pages.qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>"+ (_lang==="de"?"Karte ansehen":"View card") +" ↗</a>" +
+      "<a href='https://qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>"+ (_lang==="de"?"Karte ansehen":"View card") +" ↗</a>" +
     "</div>" +
   "</div>";
 }

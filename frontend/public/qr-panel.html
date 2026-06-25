@@ -80,7 +80,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
         <div class="qr-preview-glow"></div>
         <img id="qrPreviewImg" src="" alt="QR Code" />
       </div>
-      <div class="qr-url" id="qrUrlDisplay">api.qraivy.com/lp/your-slug</div>
+      <div class="qr-url" id="qrUrlDisplay">qraivy.com/lp/your-slug</div>
       <div class="qr-scan-badge"><span class="qr-scan-dot"></span><span id="scanCount">0 scans</span></div>
     </div>
 
@@ -186,13 +186,13 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
   // ── QR URL builder ────────────────────────────────────
   function qrURL(size) {
     return 'https://api.qrserver.com/v1/create-qr-code/?size=' + (size||state.size) + 'x' + (size||state.size) +
-      '&data=' + encodeURIComponent('https://api.qraivy.com/lp/' + state.slug) +
+      '&data=' + encodeURIComponent('https://qraivy.com/lp/' + state.slug) +
       '&color=' + state.fg + '&bgcolor=' + state.bg + '&margin=2&format=' + (state.format === 'svg' ? 'svg' : 'png');
   }
 
   function updatePreview() {
     if (previewImg) previewImg.src = qrURL(300);
-    if (urlDisplay) urlDisplay.textContent = 'api.qraivy.com/lp/' + state.slug;
+    if (urlDisplay) urlDisplay.textContent = 'qraivy.com/lp/' + state.slug;
   }
 
   // ── Load page data ────────────────────────────────────

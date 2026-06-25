@@ -434,7 +434,7 @@
     function getUrl() {
       var slug = new URLSearchParams(window.location.search).get('slug');
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://pages.qraivy.com/lp/' + slug : window.location.href);
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://qraivy.com/lp/' + slug : window.location.href);
     }
     window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
@@ -1452,7 +1452,7 @@ async function initPage() {
     pending = {
       slug:         slug,
       businessName: slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
-      hostedUrl:    'https://pages.qraivy.com/lp/' + slug
+      hostedUrl:    'https://qraivy.com/lp/' + slug
     };
   }
   if (!pending) {
@@ -3559,10 +3559,10 @@ window.QRAIVY_EDITOR_STATE = {
   function populateOverview() {
     var slug = getSlug();
     if (!slug) return;
-    var lpUrl = 'https://pages.qraivy.com/lp/' + slug + '?src=qr';
+    var lpUrl = 'https://qraivy.com/lp/' + slug + '?src=qr';
 
     // Set view button immediately
-    var lpUrl2 = 'https://pages.qraivy.com/lp/' + slug;
+    var lpUrl2 = 'https://qraivy.com/lp/' + slug;
     var vb = document.getElementById('sqd-ov-view-btn');
     if (vb) vb.href = lpUrl2;
     var tvb = document.getElementById('sqd-view-btn');
@@ -3603,7 +3603,7 @@ window.QRAIVY_EDITOR_STATE = {
 
             if (nameEl)  nameEl.textContent  = card.businessName || slug;
             // Trigger QR render now that data is ready
-            window._sqd_hostedUrl = 'https://pages.qraivy.com/lp/' + slug;
+            window._sqd_hostedUrl = 'https://qraivy.com/lp/' + slug;
             if (window.QRAIVY_QR_READY) window.QRAIVY_QR_READY(window._sqd_hostedUrl);
             if (urlEl)   urlEl.textContent   = 'qraivy.com/lp/' + slug;
             if (scansEl) scansEl.textContent = scans;
@@ -3666,7 +3666,7 @@ window.QRAIVY_EDITOR_STATE = {
         var headers = { 'Content-Type': 'application/json' };
         var doIt = function(h) {
           var deleteUrl = window._sqd_source === 'lp'
-            ? 'https://pages.qraivy.com/lp/' + getSlug()
+            ? 'https://qraivy.com/lp/' + getSlug()
             : 'https://api.qraivy.com/qr/' + qrId;
           fetch(deleteUrl, { method: 'DELETE', headers: h })
             .then(function(r) {
@@ -3771,7 +3771,7 @@ function sendWalletPush() {
   var linkUrl = (document.getElementById('push-link')||{}).value || '';
   var voiceMsg = (document.getElementById('push-voice')||{}).value || '';
   if (voiceMsg) {
-    var baseUrl = linkUrl || 'https://pages.qraivy.com/lp/' + slug;
+    var baseUrl = linkUrl || 'https://qraivy.com/lp/' + slug;
     linkUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'push=1&voice=' + encodeURIComponent(voiceMsg);
   }
   if (!title.trim()) { alert('Please enter a notification title'); return; }
