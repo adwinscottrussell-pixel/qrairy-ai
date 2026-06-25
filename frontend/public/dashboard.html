@@ -1334,12 +1334,14 @@ function loadLoyaltyDashboard() {
 }
 
 function _doLoadLoyalty(headers) {
+  console.log("[Loyalty] fetching with headers:", JSON.stringify(Object.keys(headers)));
   var list = document.getElementById("ly-pages-list");
   if (!list) return;
   list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
   fetch("https://api.qraivy.com/loyalty/programs?_=" + Date.now(), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      console.log("[Loyalty] response:", JSON.stringify(data));
       var programs = (data && data.programs) || [];
       if (!programs.length) {
         list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;\">No loyalty programs yet. <a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;\">Set one up →</a></div>";
@@ -1348,7 +1350,8 @@ function _doLoadLoyalty(headers) {
       list.innerHTML = "";
       programs.forEach(function(p) { list.appendChild(_lyBuildCard(p)); });
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error("[Loyalty] error:", err);
       list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);padding:20px;\">Error loading loyalty data.</div>";
     });
 }
