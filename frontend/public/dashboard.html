@@ -1313,18 +1313,19 @@ async function initDashboard(){
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
     <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;"><span data-i18n="loy_title">🎟 Loyalty Programs</span></div>
-    <a href="loyalty-setup.html?lang=" + (_lang||localStorage.getItem('qraivy_lang')||'en') style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;" data-i18n="loy_add_prog">+ Add program</a>
+    <a id="ly-add-prog-btn" href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;" data-i18n="loy_add_prog">+ Add program</a>
   </div>
   <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;" data-i18n="loy_gdpr">Anonymous stamp tracking — GDPR compliant</div>
   <div id="ly-pages-list" style="display:grid;gap:16px;max-width:720px;"></div>
 </div>
 
 <script>
+function _lyFixAddBtn() { var b=document.getElementById("ly-add-prog-btn"); if(b) b.href="loyalty-setup.html?lang="+(localStorage.getItem("qraivy_lang")||"en"); }
 function loadLoyaltyDashboard() {
   try {
     if (window.Clerk && window.Clerk.session) {
       window.Clerk.session.getToken().then(function(t) {
-        _doLoadLoyalty(t ? { "Authorization": "Bearer " + t } : {});
+        _lyFixAddBtn(); _doLoadLoyalty(t ? { "Authorization": "Bearer " + t } : {});
       });
       return;
     }
