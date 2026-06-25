@@ -795,7 +795,7 @@
 
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button id="sqd-publish-btn-2" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
+      <button id="sqd-publish-btn-2" onclick="if(window.SmartEditor)window.SmartEditor.publish();else if(window.publishPage)window.publishPage();" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
       <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;" data-i18n="btn_savedraft">💾 Save Draft</button>
       <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;" data-i18n="status_nochanges" data-i18n="status_nochanges">No changes</div>
     </div>
