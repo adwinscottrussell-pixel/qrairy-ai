@@ -14,12 +14,17 @@ const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
 const loyaltyAdminRoutes = require('./routes/loyaltyAdminRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
-app.use(cors());
+app.use(cors({
+  origin: ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com'],
+  credentials: true
+}));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));
