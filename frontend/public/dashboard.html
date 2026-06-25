@@ -1446,9 +1446,9 @@ function _lyBuildCard(p) {
     h += _lyCardPreview(p, color);
     // Stats
     h += "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;\">";
-    h += _lyStat("Current", p.currentStamps, color);
-    h += _lyStat("All-time", p.totalStampsIssued, "#f0f4f8");
-    h += _lyStat("Redeemed", p.rewardsRedeemed, "#f0f4f8");
+    h += _lyStat(_lang==="de"?"Aktuell":"Current", p.currentStamps, color);
+    h += _lyStat(_lang==="de"?"Gesamt":"All-time", p.totalStampsIssued, "#f0f4f8");
+    h += _lyStat(_lang==="de"?"Eingeloest":"Redeemed", p.rewardsRedeemed, "#f0f4f8");
     h += "</div>";
     // Progress bar
     h += "<div style=\"height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;\">";
@@ -1498,7 +1498,7 @@ function _lyBuildCard(p) {
     h += "<button data-id=\"" + p.id + "\" onclick=\"window.loadCustList(this)\"" +
          " style=\"width:100%;padding:8px;background:transparent;border:0.5px solid rgba(255,255,255,0.07);" +
          "border-radius:8px;color:rgba(240,244,248,0.35);font-size:.68rem;cursor:pointer;\">" +
-         "&#128101; Customers</button>";
+         "&#128101; " + (_lang==="de"?"Kunden":"Customers") + "</button>";
     h += "<div id=\"cust-list-" + p.id + "\" style=\"display:none;margin-top:8px;\"></div>";
     h += "</div>";
   }
