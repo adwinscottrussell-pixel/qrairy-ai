@@ -271,7 +271,7 @@ function renderLP(page) {
   const sl = storedSections.loop   || {};
   const sf = storedSections.footer || {};
   const sg = storedSections.gallery || {};
-  const buttonsHTML = storedButtons.filter(b => b.active !== false).map(b => {
+  const _SK=['instagram','facebook','tiktok','whatsapp','youtube','twitter','linkedin','website','maps','phone','email'];const buttonsHTML = storedButtons.filter(b => b.active !== false && !_SK.includes(b.type)).map(b => {
     const cls = b.style === 'secondary' ? 'lp-btn lp-btn-secondary' : 'lp-btn lp-btn-primary';
     const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
     const bDom = b.url ? b.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] : '';
