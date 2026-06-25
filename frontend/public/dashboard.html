@@ -1337,7 +1337,7 @@ function _doLoadLoyalty(headers) {
   var list = document.getElementById("ly-pages-list");
   if (!list) return;
   list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
-  fetch("https://api.qraivy.com/loyalty/programs", { headers: headers })
+  fetch("https://api.qraivy.com/loyalty/programs?_=" + Date.now(), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var programs = (data && data.programs) || [];
