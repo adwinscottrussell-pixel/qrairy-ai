@@ -1842,35 +1842,6 @@ window.loadCustList = function(btn) {
     applyLang(_lang);
   });
 
-  // Patch renderCards to use translations for card buttons/labels
-  var _origRenderCards = null;
-  if (!window._renderCardsPatchApplied) { window._renderCardsPatchApplied = true; Object.defineProperty(window, 'renderCards', {
-    get: function() { return _origRenderCards; },
-    set: function(fn) {
-      _origRenderCards = function(dashboard) {
-        fn(dashboard);
-        // After render, translate card action buttons
-        var lang = window._qraivyLang || 'en';
-        var t = _t[lang] || _t['en'];
-        document.querySelectorAll('.sqr-manage').forEach(function(b){ b.innerHTML = t.card_manage; });
-        document.querySelectorAll('.sqr-open').forEach(function(b){ b.innerHTML = t.card_view; });
-        document.querySelectorAll('.sqr-analytics').forEach(function(b){ b.innerHTML = t.card_analytics; });
-        document.querySelectorAll('.sqr-stat-l').forEach(function(el, i){
-          var mod = i % 3;
-          if (mod === 0) el.textContent = t.card_scans;
-          else if (mod === 1) el.textContent = t.card_subs;
-          // CVR stays as CVR
-        });
-        var emptyTitle = document.querySelector('.sqr-empty-title');
-        if (emptyTitle) emptyTitle.textContent = t.empty_title;
-        var emptySub = document.querySelector('.sqr-empty-sub');
-        if (emptySub) emptySub.textContent = t.empty_sub;
-        var emptyBtn = document.querySelector('.sqr-empty .btn-create');
-        if (emptyBtn) emptyBtn.textContent = t.empty_btn;
-      };
-    },
-    configurable: true
-  }); }
 })();
 </script>
 </body>
