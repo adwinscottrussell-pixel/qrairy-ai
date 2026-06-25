@@ -1535,7 +1535,7 @@ async function initPage() {
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
   var _iframeSlug = (window.QRAIVY_EDITOR_STATE.slug || '');
-  iframeEl.src = _iframeSlug ? ('lp-preview.html?slug=' + encodeURIComponent(_iframeSlug) + '&preview=1') : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
+  iframeEl.src = _iframeSlug ? ('https://pages.qraivy.com/lp/' + encodeURIComponent(_iframeSlug) + '?preview=1&t=' + Date.now()) : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
   var phoneFrame = document.querySelector('.sqd-phone-frame');
   if (phoneFrame) {
     phoneFrame.addEventListener('wheel', function(e) {
