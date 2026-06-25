@@ -1844,7 +1844,7 @@ window.loadCustList = function(btn) {
 
   // Patch renderCards to use translations for card buttons/labels
   var _origRenderCards = null;
-  Object.defineProperty(window, 'renderCards', {
+  if (!window._renderCardsPatchApplied) { window._renderCardsPatchApplied = true; Object.defineProperty(window, 'renderCards', {
     get: function() { return _origRenderCards; },
     set: function(fn) {
       _origRenderCards = function(dashboard) {
@@ -1870,7 +1870,7 @@ window.loadCustList = function(btn) {
       };
     },
     configurable: true
-  });
+  }); }
 })();
 </script>
 </body>
