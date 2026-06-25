@@ -125,7 +125,7 @@
         <div style="font-size:2.5rem;margin-bottom:16px;">✅</div>
         <div style="font-family:'Outfit',serif;font-size:1.5rem;margin-bottom:10px;">All set up!</div>
         <div style="font-size:0.78rem;color:#666;margin-bottom:28px;line-height:1.7">All your landing pages already have loyalty configured.</div>
-        <a href="dashboard.html" style="display:inline-flex;align-items:center;gap:7px;background:#ff5a1f;color:#fff;border-radius:8px;padding:13px 24px;font-family:'Outfit',monospace;font-size:0.82rem;text-decoration:none;">" + window._LSLT.back_dash + "</a>
+        <a href="dashboard.html" style="display:inline-flex;align-items:center;gap:7px;background:#ff5a1f;color:#fff;border-radius:8px;padding:13px 24px;font-family:'Outfit',monospace;font-size:0.82rem;text-decoration:none;">← Back to dashboard</a>
       </div>
 
       <!-- Wizard -->
@@ -140,17 +140,17 @@
         <!-- Step 1: Pick page -->
         <div class="step active" id="s1">
           <div class="step-tag">Step 1 of 3</div>
-          <div class="step-title">" + window._LSLT.which_page + "</div>
-          <div class="step-sub">" + window._LSLT.which_page_sub + "</div>
+          <div class="step-title" data-lslt="which_page">Which page?</div>
+          <div class="step-sub" data-lslt="which_page_sub">Select the landing page to add loyalty to.</div>
           <div class="page-list" id="page-list"></div>
-          <button class="wbtn primary full" id="s1next" onclick="goTo(2)" disabled>" + window._LSLT.next + "</button>
+          <button class="wbtn primary full" id="s1next" onclick="goTo(2)" disabled data-lslt="next">Next →</button>
         </div>
 
         <!-- Step 2: Reward -->
         <div class="step" id="s2">
           <div class="step-tag">Step 2 of 3</div>
-          <div class="step-title">" + window._LSLT.set_reward + "</div>
-          <div class="step-sub">" + window._LSLT.set_reward_sub + "</div>
+          <div class="step-title" data-lslt="set_reward">Set up your reward</div>
+          <div class="step-sub" data-lslt="set_reward_sub">What do customers earn when they complete the card?</div>
           <label class="field-label">Reward (what they earn)</label>
           <input class="field-input" id="reward-input" placeholder="Free coffee, 20% off, free dessert…" />
           <label class="field-label">Stamps to complete the card</label>
@@ -163,14 +163,14 @@
           </div>
           <div class="btn-row">
             <button class="wbtn secondary" onclick="goTo(1)">← Back</button>
-            <button class="wbtn primary flex1" onclick="goTo(3)">" + window._LSLT.preview + "</button>
+            <button class="wbtn primary flex1" onclick="goTo(3)" data-lslt="preview">Preview →</button>
           </div>
         </div>
 
         <!-- Step 3: Preview + Save -->
         <div class="step" id="s3">
           <div class="step-tag">Step 3 of 3</div>
-          <div class="step-title">" + window._LSLT.ready + "</div>
+          <div class="step-title" data-lslt="ready">Ready to activate</div>
           <div class="step-sub">Here’s your loyalty card. Save to make it live.</div>
           <div class="card-preview">
             <div class="card-biz" id="prev-biz">&nbsp;</div>
@@ -352,6 +352,30 @@
     if(window.Clerk) window.Clerk.signOut().then(function(){ window.location.href='index.html'; });
     else window.location.href='index.html';
   };
+})();
+</script>
+<script>
+(function(){
+  if(!window._LSLT) return;
+  document.querySelectorAll('[data-lslt]').forEach(function(el){
+    var k = el.getAttribute('data-lslt');
+    if(window._LSLT[k]) el.textContent = window._LSLT[k];
+  });
+  // Back to dashboard link
+  document.querySelectorAll('a[href="dashboard.html"]').forEach(function(el){
+    if(el.textContent.trim().indexOf('Back') !== -1 || el.textContent.trim().indexOf('Zurück') !== -1){
+      el.textContent = window._LSLT.back_dash;
+    }
+  });
+  // Step tags
+  var tags = document.querySelectorAll('.step-tag');
+  if(tags[0]) tags[0].textContent = window._LSLT.step + ' 1 ' + window._LSLT.of + ' 3';
+  if(tags[1]) tags[1].textContent = window._LSLT.step + ' 2 ' + window._LSLT.of + ' 3';
+  if(tags[2]) tags[2].textContent = window._LSLT.step + ' 3 ' + window._LSLT.of + ' 3';
+  // Field labels
+  var labels = document.querySelectorAll('.field-label');
+  if(labels[0]) labels[0].textContent = window._LSLT.reward_label;
+  if(labels[1]) labels[1].textContent = window._LSLT.stamps_label;
 })();
 </script>
 </body>
