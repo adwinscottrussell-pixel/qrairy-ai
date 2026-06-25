@@ -206,6 +206,50 @@
   type="text/javascript">
 </script>
 <script src="js/session.js"></script>
+
+<script>
+(function(){
+  var lang = localStorage.getItem('qraivy_lang') || 'en';
+  var T = {
+    en: {
+      tab_qr: '◼ QR Code', tab_edit: '✏️ Edit Landing Page', tab_analytics: '↗ Analytics',
+      qr_download: '⬇ Download PNG', qr_viewlive: '🌐 View Live Page',
+      qr_color: 'QR Color', qr_bg: 'Background Color', qr_size: 'Size',
+      qr_style: 'Style Preset', qr_margin: 'Margin',
+      stat_scans: 'Total Scans', stat_subs: 'Subscribers', stat_cvr: 'CVR',
+      danger_title: 'DANGER ZONE', danger_text: 'Permanently delete this Smart QR and all its data. This cannot be undone.',
+      delete_btn: '🗑 Delete QR', smart_qr: 'Smart QR Editor',
+      lp_edit_title: 'Edit Your Landing Page', lp_edit_sub: 'Customise your AI smart page content, voice, buttons and style.',
+      lp_edit_btn: 'Open Page Editor', an_title_short: 'Analytics', an_sub_short: 'View detailed scan analytics and subscriber data.',
+      an_btn: 'View Analytics'
+    },
+    de: {
+      tab_qr: '◼ QR-Code', tab_edit: '✏️ Seite bearbeiten', tab_analytics: '↗ Analytik',
+      qr_download: '⬇ PNG herunterladen', qr_viewlive: '🌐 Live-Seite anzeigen',
+      qr_color: 'QR-Farbe', qr_bg: 'Hintergrundfarbe', qr_size: 'Größe',
+      qr_style: 'Stil-Vorlage', qr_margin: 'Rand',
+      stat_scans: 'Gesamtscans', stat_subs: 'Abonnenten', stat_cvr: 'CVR',
+      danger_title: 'GEFAHRENZONE', danger_text: 'Diesen Smart QR und alle zugehörigen Daten dauerhaft löschen. Dies kann nicht rückgängig gemacht werden.',
+      delete_btn: '🗑 QR löschen', smart_qr: 'Smart QR Editor',
+      lp_edit_title: 'Landingpage bearbeiten', lp_edit_sub: 'Passen Sie Inhalt, Stimme, Buttons und Stil Ihrer KI-Seite an.',
+      lp_edit_btn: 'Seiten-Editor öffnen', an_title_short: 'Analytik', an_sub_short: 'Detaillierte Scan-Analytik und Abonnentendaten anzeigen.',
+      an_btn: 'Analytik anzeigen'
+    }
+  };
+  var t = T[lang] || T.en;
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var key = el.getAttribute('data-i18n');
+      if(t[key]) el.textContent = t[key];
+    });
+    // Stat labels
+    var labels = document.querySelectorAll('.sqd-stat-lbl, [style*="letter-spacing:.1em"]');
+    // Topbar subtitle
+    var mode = document.querySelector('[data-i18n="smart_qr"]');
+    if(mode) mode.textContent = t.smart_qr;
+  });
+})();
+</script>
 </head>
 <body data-shell="customer" data-active-nav="nav-pages" style="margin:0;padding:0;overflow-y:auto;overflow-x:hidden;">
 
