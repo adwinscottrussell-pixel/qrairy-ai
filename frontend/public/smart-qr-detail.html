@@ -684,7 +684,7 @@
         </div>
         <!-- Screen -->
         <div class="sqd-phone-frame" style="width:355px;height:700px;overflow-y:auto;overflow-x:hidden;border-radius:32px;-webkit-overflow-scrolling:touch;background:#000;">
-          <iframe id="sqd-iframe" src="" loading="lazy" style="width:355px;height:2600px;border:none;display:block;" scrolling="no"></iframe>
+          <iframe id="sqd-iframe" src="" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" style="width:355px;height:2600px;border:none;display:block;" scrolling="no"></iframe>
           <div id="sqd-draft-stage" style="display:none;width:355px;min-height:2600px;background:#0a0c10;font-family:'Inter',sans-serif;overflow:hidden;"></div>
           <!-- Step 25: Click-to-edit hotspot overlay -->
           <div id="sqd-hotspot-overlay"></div>
@@ -1535,7 +1535,7 @@ async function initPage() {
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
   var _iframeSlug = (window.QRAIVY_EDITOR_STATE.slug || '');
-  iframeEl.src = _iframeSlug ? ('lp-preview.html?slug=' + encodeURIComponent(_iframeSlug) + '&preview=1&t=' + Date.now()) : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
+  iframeEl.src = _iframeSlug ? ('https://api.qraivy.com/lp/' + _iframeSlug + '?preview=1&t=' + Date.now()) : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
   var phoneFrame = document.querySelector('.sqd-phone-frame');
   if (phoneFrame) {
     phoneFrame.addEventListener('wheel', function(e) {
