@@ -1420,7 +1420,7 @@ async function initPage() {
     try {
       let _apiToken = '';
       try { if(window.Clerk && window.Clerk.session) _apiToken = await window.Clerk.session.getToken() || ''; } catch(_){}
-      const res  = await fetch(`https://pages.qraivy.com/lp/${slug}`, {
+      const res  = await fetch(`https://www.qraivy.com/lp/${slug}`, {
         headers: _apiToken ? { Authorization: 'Bearer ' + _apiToken } : {}
       });
       const data = await res.json();
@@ -1569,7 +1569,7 @@ async function initPage() {
   if (pending.slug) {
     try {
       const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;
-      const res = await fetch(`https://pages.qraivy.com/lp/${pending.slug}`, {
+      const res = await fetch(`https://www.qraivy.com/lp/${pending.slug}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
@@ -3610,7 +3610,7 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   function fallbackFromLP(slug, lpUrl) {
-    fetch('https://pages.qraivy.com/lp/' + slug)
+    fetch('https://www.qraivy.com/lp/' + slug)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var nameEl  = document.getElementById('sqd-ov-name');
@@ -3721,7 +3721,7 @@ function loadPushDeviceCount() {
   if (!slug) return;
   var el = document.getElementById('push-device-count');
   if (el) el.textContent = 'Loading devices...';
-  fetch('https://pages.qraivy.com/lp/push/' + slug + '/count')
+  fetch('https://www.qraivy.com/lp/push/' + slug + '/count')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (el) el.textContent = d.count > 0
@@ -3735,7 +3735,7 @@ function loadPushHistory() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) return;
   var el = document.getElementById('push-history');
-  fetch('https://pages.qraivy.com/lp/push/' + slug + '/history')
+  fetch('https://www.qraivy.com/lp/push/' + slug + '/history')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!el) return;
@@ -3771,7 +3771,7 @@ function sendWalletPush() {
   btn.disabled = true;
   btn.textContent = 'Sending...';
   result.style.display = 'none';
-  fetch('https://pages.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
+  fetch('https://www.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       btn.disabled = false;
@@ -3803,7 +3803,7 @@ function loadLoyaltyTab() {
   var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
   if (!slug) return;
   var token = localStorage.getItem('sqd_token');
-  fetch('https://pages.qraivy.com/lp/stamp/settings/' + slug, {
+  fetch('https://www.qraivy.com/lp/stamp/settings/' + slug, {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   }).then(function(r){ return r.json(); }).then(function(d) {
     if (d.settings) {
@@ -3821,7 +3821,7 @@ function loadLoyaltyTab() {
     if (current) current.textContent = (d.stampCount || 0) + '/' + ((d.settings && d.settings.goal) || 10);
     if (rewardStatus) { rewardStatus.textContent = d.rewardReady ? 'Ready!' : 'Not yet'; rewardStatus.style.color = d.rewardReady ? '#22c55e' : 'rgba(240,244,248,0.4)'; }
     if (redeemSection) redeemSection.style.display = d.rewardReady ? 'block' : 'none';
-    fetch('https://pages.qraivy.com/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
+    fetch('https://www.qraivy.com/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
       if (nd.nfcUrl) {
         _loyaltyStampUrl = nd.nfcUrl;
         var urlEl = document.getElementById('loyalty-stamp-url');
@@ -3845,7 +3845,7 @@ window.saveLoyaltySettings = function() {
   var goal = parseInt(document.getElementById('loyalty-goal').value) || 10;
   var rewardName = document.getElementById('loyalty-reward-name').value || 'Free item';
   var token = localStorage.getItem('sqd_token');
-  fetch('https://pages.qraivy.com/lp/stamp/settings/' + slug, {
+  fetch('https://www.qraivy.com/lp/stamp/settings/' + slug, {
     method: 'POST',
     headers: Object.assign({'Content-Type':'application/json'}, token ? {'Authorization':'Bearer '+token} : {}),
     body: JSON.stringify({ goal: goal, rewardName: rewardName, enabled: _loyaltyEnabled })
@@ -3863,7 +3863,7 @@ window.redeemLoyalty = function() {
   if (!slug) return;
   if (!confirm('Mark reward as redeemed and reset stamp count to 0?')) return;
   var token = localStorage.getItem('sqd_token');
-  fetch('https://pages.qraivy.com/lp/stamp/redeem/' + slug, {
+  fetch('https://www.qraivy.com/lp/stamp/redeem/' + slug, {
     method: 'POST',
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   }).then(function(r){ return r.json(); }).then(function(d) {

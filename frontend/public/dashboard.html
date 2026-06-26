@@ -1255,7 +1255,7 @@ async function initDashboard(){
     var msg = document.getElementById('campSendMsg');
     btn.disabled = true; msg.innerHTML = '';
     campTok(function(tok) {
-      fetch('https://pages.qraivy.com/lp/push/' + _slug, {
+      fetch('https://www.qraivy.com/lp/push/' + _slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
@@ -1281,7 +1281,7 @@ async function initDashboard(){
     var panel = document.getElementById('campHistPanel');
     var list  = document.getElementById('campHistList');
     campTok(function(tok) {
-      fetch('https://pages.qraivy.com/lp/push/' + slug + '/history', {
+      fetch('https://www.qraivy.com/lp/push/' + slug + '/history', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1587,7 +1587,7 @@ window.redeemLoyaltyDash = function(btn) {
   if (!confirm("Mark reward as redeemed and reset stamps to 0?")) return;
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch("https://pages.qraivy.com/lp/stamp/redeem/" + slug, {
+      fetch("https://www.qraivy.com/lp/stamp/redeem/" + slug, {
         method: "POST",
         headers: t ? { "Authorization": "Bearer " + t } : {}
       }).then(function(r) { return r.json(); }).then(function(d) {
