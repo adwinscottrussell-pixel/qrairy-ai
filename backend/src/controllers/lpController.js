@@ -311,10 +311,10 @@ html{scroll-behavior:smooth}
 body{background:${_bgColor};color:${_textColor};font-family:${_fontFamily};max-width:560px;width:100%;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 ${themeBg === 'light' ? `/* ── QRAIVY PREMIUM LIGHT THEME (scoped) ──────────────────────── */
-body.theme-light{background:#F7F5F2;color:#111111}
+body.theme-light{background:${_bgColor};color:#111111}
 body.theme-light .lp-nav{background:rgba(255,255,255,0.98);border-bottom:1px solid #E8E3DC;box-shadow:none}
 body.theme-light .lp-nav-name{color:#111111}
-body.theme-light .lp-hero{background:linear-gradient(180deg,#FFFFFF 0%,#F7F5F2 100%);padding:52px 24px 44px}
+body.theme-light .lp-hero{background:linear-gradient(180deg,#FFFFFF 0%,${_bgColor} 100%);padding:52px 24px 44px}
 body.theme-light .lp-hero-title{color:#111111;letter-spacing:-0.03em}
 body.theme-light .lp-hero-sub{color:#5F5F5F;font-weight:400;line-height:1.75}
 body.theme-light .lp-hero-eyebrow{color:#5F5F5F;border-color:#E8E3DC;background:rgba(255,255,255,0.9)}
