@@ -1,7 +1,7 @@
 const { GoogleAuth } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 
-const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || 'BCR2DN7TTDNOFDQ4';
+const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023161108';
 const CLASS_SUFFIX = 'qraivy_loyalty';
 
 function getCredentials() {
