@@ -12,6 +12,23 @@ const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListL
 router.get('/lp/nfc-token/:slug', handleGetNFCToken);
 router.get('/lp/card/:slug', handleLoyaltyCardPage);
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
+
+// Google Wallet save URL
+router.get('/lp/wallet/google/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const prisma = require('../utils/prismaClient');
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+    const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
+    const { createGoogleWalletSaveUrl } = require('../services/googleWalletService');
+    const saveUrl = await createGoogleWalletSaveUrl(slug, sections);
+    return res.redirect(302, saveUrl);
+  } catch (err) {
+    console.error('[Google Wallet]', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
 // Loyalty stamp (public — no auth — QR and NFC target)
 router.get('/stamp/:slug/:token', handleStamp);
 // Stamp dashboard API (auth required via frontend)
