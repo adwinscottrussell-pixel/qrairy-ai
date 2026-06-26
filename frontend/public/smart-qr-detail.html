@@ -759,17 +759,7 @@
       <a href="upgrade.html" style="display:block;text-align:center;padding:7px;background:#ff5a1f;border-radius:7px;color:#fff;font-size:.72rem;font-weight:600;font-family:'Inter',sans-serif;text-decoration:none;">Upgrade →</a>
     </div>
 
-    <!-- Preview Mode toggle -->
-    <div style="padding:8px 12px;border-bottom:0.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <span style="font-size:.55rem;color:rgba(240,244,248,0.45);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Preview</span>
-      <div style="flex:1;display:flex;gap:4px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.07);border-radius:7px;padding:2px;">
-        <button id="sqd-preview-draft-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('draft')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:rgba(255,90,31,0.15);border:0.5px solid rgba(255,90,31,0.3);color:#ff5a1f;" data-i18n="ed_draft">✏️ Draft</button>
-        <button id="sqd-preview-live-btn" onclick="if(window.QRAIVY_PREVIEW) window.QRAIVY_PREVIEW.setMode('live')" style="flex:1;padding:4px 8px;border-radius:5px;font-size:.6rem;font-weight:600;cursor:pointer;background:transparent;border:0.5px solid transparent;color:rgba(240,244,248,0.45);" data-i18n="ed_live">🌐 Live</button>
-      </div>
-    </div>
-
-    
-    <!-- Section tabs -->
+        <!-- Section tabs -->
     <div id="sqd-tabs" style="
       display:flex;
       flex-wrap:wrap;
@@ -796,7 +786,7 @@
     <!-- Sticky save bar -->
     <div style="padding:10px 12px;border-bottom:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="sqd-publish-btn-2" onclick="if(window.SmartEditor)window.SmartEditor.publish();else if(window.publishPage)window.publishPage();" style="flex:1;padding:9px 12px;background:#ff5a1f;border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Publish</button>
-      <button id="sqd-save-draft-btn" onclick="if(window.saveDraftToBackend)window.saveDraftToBackend();" style="flex:1;padding:9px 12px;background:rgba(255,90,31,0.12);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff5a1f;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;" data-i18n="btn_savedraft">💾 Save Draft</button>
+      
       <div id="sqd-save-global-status" style="font-size:.6rem;color:rgba(240,244,248,0.50);min-width:60px;text-align:right;white-space:nowrap;" data-i18n="status_nochanges" data-i18n="status_nochanges">No changes</div>
     </div>
     <!-- Tab content panels -->
