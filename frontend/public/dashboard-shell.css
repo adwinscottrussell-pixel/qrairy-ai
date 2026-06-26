@@ -536,3 +536,60 @@ p, span, label, input, textarea, select, button,
 .sqr-empty-sub { font-family: 'Inter', sans-serif; font-size: .85rem; color: var(--dashboard-muted); line-height: 1.5; margin-bottom: 24px; max-width: 360px; margin-left: auto; margin-right: auto; }
 .btn-create { background: var(--dashboard-accent); color: #fff; border: none; border-radius: 10px; padding: 12px 24px; font-family: 'Space Grotesk', sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .15s; }
 .btn-create:hover { opacity: .85; }
+
+/* ── Bottom Nav (Mobile only) ───────────────────────────────────────────────── */
+#bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 62px;
+  background: #0d0d0d;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(12px);
+}
+.bn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  padding: 8px 4px;
+  text-decoration: none;
+  color: rgba(240,244,248,0.4);
+  font-family: var(--font-body);
+  font-size: .55rem;
+  font-weight: 500;
+  letter-spacing: .03em;
+  border-radius: 10px;
+  transition: color .15s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.bn-item.active { color: var(--dashboard-accent); }
+.bn-item:hover  { color: rgba(240,244,248,0.7); }
+.bn-icon { font-size: 1.1rem; line-height: 1; }
+.bn-label { line-height: 1; }
+.bn-item.bn-create {
+  background: var(--dashboard-accent);
+  color: #fff !important;
+  border-radius: 12px;
+  padding: 10px 6px;
+  flex: 0 0 52px;
+  box-shadow: 0 0 16px rgba(255,90,31,0.35);
+}
+.bn-item.bn-create:hover { background: #ff7a45; }
+
+@media (max-width: 768px) {
+  #bottom-nav { display: flex; }
+  #mob-btn { display: none !important; }
+  #main-content { padding-top: 0 !important; padding-bottom: 80px; }
+  .page-wrap { padding: 16px 14px; }
+}

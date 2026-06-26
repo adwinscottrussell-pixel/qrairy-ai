@@ -1847,6 +1847,54 @@ window.loadCustList = function(btn) {
 
 })();
 </script>
+<!-- Bottom Nav (mobile only) -->
+<nav id="bottom-nav">
+  <a href="dashboard.html" class="bn-item" id="bn-home">
+    <span class="bn-icon">&#x229E;</span>
+    <span class="bn-label">Home</span>
+  </a>
+  <a href="javascript:void(0)" class="bn-item" id="bn-pages" onclick="if(window.showSection)showSection('sqr');bnSetActive('bn-pages')">
+    <span class="bn-icon">&#x2B21;</span>
+    <span class="bn-label">Pages</span>
+  </a>
+  <a href="javascript:void(0)" class="bn-item" id="bn-loyalty" onclick="if(window.showSection)showSection('loyalty');bnSetActive('bn-loyalty')">
+    <span class="bn-icon">&#x1F3AB;</span>
+    <span class="bn-label">Loyalty</span>
+  </a>
+  <a href="javascript:void(0)" class="bn-item" id="bn-subs" onclick="if(window.showSection)showSection('subscribers');bnSetActive('bn-subs')">
+    <span class="bn-icon">&#x1F465;</span>
+    <span class="bn-label">Subs</span>
+  </a>
+  <a href="javascript:void(0)" class="bn-item" id="bn-campaigns" onclick="if(window.showSection)showSection('campaigns');bnSetActive('bn-campaigns')">
+    <span class="bn-icon">&#x1F4E3;</span>
+    <span class="bn-label">Campaigns</span>
+  </a>
+  <a href="javascript:void(0)" class="bn-item" id="bn-settings" onclick="if(window.showSection)showSection('settings');bnSetActive('bn-settings')">
+    <span class="bn-icon">&#x2699;</span>
+    <span class="bn-label">Settings</span>
+  </a>
+</nav>
+<script>
+function bnSetActive(id) {
+  document.querySelectorAll('#bottom-nav .bn-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+// Sync bottom nav active state with sidebar section changes
+(function() {
+  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
+  var orig = window.showSection;
+  window.showSection = function(sec) {
+    if (orig) orig(sec);
+    var bnId = sectionMap[sec];
+    if (bnId) bnSetActive(bnId); else bnSetActive('bn-home');
+  };
+  // Set initial active based on URL
+  var urlSec = new URLSearchParams(window.location.search).get('section');
+  if (urlSec && sectionMap[urlSec]) bnSetActive(sectionMap[urlSec]);
+  else bnSetActive('bn-home');
+})();
+</script>
 </body>
 </html>
 
