@@ -2490,6 +2490,42 @@ ${sa.active !== false ? `
 </body>
 </html>`;
 }
+
+// ── GET /lp/welcome/:slug — First-visit wallet enrollment page ──
+async function handleLoyaltyWelcome(req, res) {
+  try {
+    const { slug } = req.params;
+    const lang = req.query.lang || 'de';
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).send('Not found');
+    const sections = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+    const bizName = page.businessName || slug;
+    const color = (sections.theme && sections.theme.accentColor) || '#e8a020';
+    const logoUrl = sections.logo && sections.logo.url;
+    const stampCfg = sections.stamp || {};
+    const goal = stampCfg.goal || 10;
+    const rewardName = stampCfg.rewardName || (lang === 'de' ? 'Gratisprodukt' : 'Free Item');
+    const logoHtml = logoUrl
+      ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>'
+      : '<div class="logo">' + bizName.charAt(0) + '</div>';
+    const isDE = lang === 'de';
+    const t = {
+      badge: isDE ? '&#127873; Treueprämien' : '&#127873; Loyalty Rewards',
+      reward: isDE ? ('Sammle ' + goal + ' Stempel \u2014 erhalte ' + rewardName) : ('Collect ' + goal + ' stamps \u2014 get ' + rewardName),
+      explain: isDE ? 'Keine App erforderlich. Füge deine Treuekarte zu deinem Wallet hinzu und sammle Prämien automatisch.' : 'No app required. Add your loyalty card to your wallet and collect rewards automatically.',
+      apple: isDE ? '&#127822; Zu Apple Wallet hinzufügen' : '&#127822; Add to Apple Wallet',
+      google: isDE ? '<b>G</b>&nbsp;Zu Google Wallet hinzufügen' : '<b>G</b>&nbsp;Add to Google Wallet',
+      skip: isDE ? 'Ohne Wallet fortfahren' : 'Continue without wallet',
+      powered: isDE ? 'Unterstützt von' : 'Powered by',
+    };
+    const html = '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - ' + bizName + '</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:' + color + ';border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.92);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:rgba(0,0,0,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:14px;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card">' + logoHtml + '<div class="biz">' + bizName + '</div><div class="badge">' + t.badge + '</div><div class="reward">' + t.reward + '</div><div class="explain">' + t.explain + '</div><button class="btn btn-apple" onclick="addAppleWallet()">' + t.apple + '</button><button class="btn btn-google" onclick="addGoogleWallet()">' + t.google + '</button><button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button></div><div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div><script>(function(){var s="' + slug + '";try{if(!localStorage.getItem("cTok")){localStorage.setItem("cTok",Date.now()+""+Math.random().toString(36).slice(2));}}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function addAppleWallet(){mE();var c=localStorage.getItem("cTok");window.location.href="/lp/wallet/apple/"+s+(c?"?cid="+encodeURIComponent(c):"");setTimeout(function(){window.location.href="/lp/"+s;},4000);}function addGoogleWallet(){mE();window.location.href="/lp/wallet/google/"+s;}function continueWithout(){mE();window.location.href="/lp/"+s;}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;})();<\/script></body></html>';
+    return res.send(html);
+  } catch(e) {
+    console.error('[LoyaltyWelcome] Error:', e.message);
+    return res.status(500).send('Error');
+  }
+}
+
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
