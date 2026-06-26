@@ -2149,7 +2149,7 @@ function renderPremiumLP(page) {
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 @keyframes waveBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
-body{font-family:'Outfit',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8'};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body{font-family:'Outfit',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.lightBackgroundColor ? storedSections.theme.lightBackgroundColor : (storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8')};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
@@ -2349,7 +2349,7 @@ ${sa.active !== false ? `
   }
 
   var dark = false;
-  var _lightBg = '${storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : "#f8f8f8"}';
+  var _lightBg = '${storedSections.theme && storedSections.theme.lightBackgroundColor ? storedSections.theme.lightBackgroundColor : (storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8')}';
   window.toggleTheme = function() {
     dark = !dark;
     document.getElementById('theme-knob').style.transform = dark ? 'translateX(20px)' : 'none';
