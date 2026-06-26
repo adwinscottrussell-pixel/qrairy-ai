@@ -26,7 +26,7 @@
 
   var REDIRECT = {
     login     : '/login.html',
-    dashboard : '/app/dashboard.html',
+    dashboard : '/dashboard.html',
   };
 
   function reveal() {
