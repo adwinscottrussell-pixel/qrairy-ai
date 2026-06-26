@@ -312,11 +312,9 @@ async function getStats(req, res) {
 // GET /loyalty/programs/:id/customers
 async function getCustomers(req, res) {
   try {
-    // Defensive auth: req.auth may not be set if clerkMiddleware didn't run for this route
-    const ownerId = (req.auth && req.auth.userId) || null;
-    const whereClause = ownerId
-      ? { id: req.params.id, clerkUserId: ownerId }
-      : { id: req.params.id };
+    const ownerId = req.auth.userId;
+    if (!ownerId) return res.status(401).json({ error: 'Unauthorized' });
+    const whereClause = { id: req.params.id, clerkUserId: ownerId };
     const lp = await prisma.landingPage.findFirst({ where: whereClause });
     if (!lp) return res.status(404).json({ error: 'Not found' });
     const settings = await prisma.stampSettings.findUnique({ where: { slug: lp.slug } });
