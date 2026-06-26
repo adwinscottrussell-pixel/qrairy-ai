@@ -247,7 +247,7 @@ function renderLP(page) {
   const accentGlow   = `rgba(${rgb},0.4)`;
 
   // Pre-computed theme CSS vars
-  const _bgColor    = themeBg === 'light' ? '#f5f0e8' : themeBg === 'gradient' ? '#0d0d14' : '#0a0a0a';
+  const _bgColor    = themeBg === 'light' ? (st.lightBackgroundColor || '#ffffff') : themeBg === 'gradient' ? '#0d0d14' : '#0a0a0a';
   const _textColor  = themeBg === 'light' ? '#1a1209' : '#f0ece0';
   const _fontFamily = themeFontStyle === 'elegant' ? 'Georgia,serif' : themeFontStyle === 'bold' ? 'Syne,sans-serif' : 'DM Mono,monospace';
   const _btnRadius  = themeButtonStyle === 'pill' ? '999px' : themeButtonStyle === 'square' ? '4px' : '12px';
