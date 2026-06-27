@@ -1800,6 +1800,80 @@ async function handleStampConfirm(req, res) {
   }
 }
 
+// GET /redeem/:slug/:token — a second physical NFC tag staff use to redeem a
+// customer's earned reward. Uses the SAME long-lived token as the stamp tag
+// (no separate token system needed) on a different route. Mirrors handleStamp's
+// prefetch-safe split: this GET has no side effects, the actual redeem only
+// happens via the JS-triggered confirm POST below.
+async function handleRedeemTap(req, res) {
+  try {
+    const { slug, token } = req.params;
+    const now = new Date();
+    const validToken = await prisma.stampToken.findFirst({
+      where: { slug, token, expiresAt: { gt: now } }
+    });
+    if (!validToken) {
+      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invalid</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">❌</div><h2>Invalid redeem code</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">This code has expired. Ask staff for a new one.</p></div></body></html>`);
+    }
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redeeming…</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap" id="wrap"><div class="emoji">⏳</div><h1>Redeeming…</h1></div><script>(function(){\n'
+      + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
+      + 'function spawnConfetti(){var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);}\n'
+      + 'function render(d){var wrap=document.getElementById("wrap");\n'
+      + 'if(d.status==="invalid"){wrap.innerHTML=\'<div class="emoji">❌</div><h1>Invalid redeem code</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">This code has expired. Ask staff for a new one.</p>\';return;}\n'
+      + 'if(d.status==="not_ready"){wrap.innerHTML=\'<div class="emoji">🙈</div><h1>Not ready yet</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">Keep collecting stamps — you don\\\'t have a reward to redeem yet.</p>\';return;}\n'
+      + 'if(d.status==="error"){wrap.innerHTML=\'<div class="emoji">⚠️</div><h1>Something went wrong</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">Please try again.</p>\';return;}\n'
+      + 'wrap.innerHTML=\'<div class="emoji">🎁</div><h1>Reward redeemed!</h1><p>Enjoy your \'+esc(d.rewardName)+\'</p><p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">Start collecting stamps again on your next visit</p>\';\n'
+      + 'spawnConfetti();}\n'
+      + 'var cid=null;try{cid=localStorage.getItem("cTok");}catch(e){}\n'
+      + 'fetch(window.location.pathname+"/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:cid})}).then(function(r){return r.json();}).then(render).catch(function(){render({status:"error"});});\n'
+      + '})();</script></body></html>';
+    return res.status(200).send(html);
+  } catch(e) {
+    console.error('[RedeemTap] Error:', e.message);
+    return res.status(500).send('Error processing redeem');
+  }
+}
+
+// POST /redeem/:slug/:token/confirm — performs the actual redeem. A customer
+// can only ever redeem THEIR OWN reward, because cid comes from their own
+// browser's localStorage — there is no way for this to target another
+// customer's pass, and it's a safe no-op unless that pass is rewardReady.
+async function handleRedeemTapConfirm(req, res) {
+  try {
+    const { slug, token } = req.params;
+    const cid = (req.body && req.body.cid) ? String(req.body.cid).slice(0, 64) : null;
+    const now = new Date();
+    const validToken = await prisma.stampToken.findFirst({
+      where: { slug, token, expiresAt: { gt: now } }
+    });
+    if (!validToken) return res.json({ status: 'invalid' });
+
+    const serial = cid ? `sqr-${slug}-${cid}` : 'sqr-' + slug;
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    if (!pass || !pass.rewardReady) return res.json({ status: 'not_ready' });
+
+    const settings = await prisma.stampSettings.findUnique({ where: { slug } });
+    const rewardName = settings ? settings.rewardName : 'Free item';
+    const redeemAt = now;
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: 0, rewardReady: false, rewardsEarned: { increment: 1 }, updatedAt: redeemAt } });
+    try {
+      await prisma.rewardEvent.updateMany({ where: { passId: pass.id, status: 'earned' }, data: { status: 'redeemed', redeemedAt: redeemAt } });
+    } catch(e) { console.error('[RedeemTap] RewardEvent update error:', e.message); }
+    const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
+    if (devices.length) {
+      try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
+    }
+    try {
+      const { updateGoogleWalletStamps } = require('../services/googleWalletService');
+      await updateGoogleWalletStamps(slug, 0, cid);
+    } catch(e) { console.error('[RedeemTap] Google Wallet update error:', e.message); }
+    return res.json({ status: 'ok', rewardName, slug });
+  } catch(e) {
+    console.error('[RedeemTap] Confirm error:', e.message);
+    return res.json({ status: 'error' });
+  }
+}
+
 async function handleGetStampToken(req, res) {
   try {
     const { slug } = req.params;
@@ -2614,7 +2688,7 @@ async function handleLoyaltyWelcome(req, res) {
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
   handleLPManifest,
 };
 
