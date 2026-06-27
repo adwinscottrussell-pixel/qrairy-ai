@@ -1380,7 +1380,7 @@ function _lyCardPreview(p, color) {
   return "<div id='ly-preview-" + p.id + "' style='background:linear-gradient(135deg,#1c1c1c,#111);border:1px solid " + _lyRgba(color,0.3) + ";border-radius:14px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;'>" +
     "<div style='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg," + color + ",transparent);'></div>" +
     "<div style='font-size:.95rem;font-weight:600;color:#f0ece0;margin-bottom:3px;'>" + _lyEsc(p.businessName || p.slug) + "</div>" +
-    "<div style='font-size:.65rem;color:rgba(240,244,248,0.35);margin-bottom:14px;'>(_lang==="de" ? "Sammle " + goal + " Stempel — erhalte " : "Collect " + goal + " stamps — get a ") + _lyEsc(p.rewardText || "Free item") + "</div>" +
+    "<div style='font-size:.65rem;color:rgba(240,244,248,0.35);margin-bottom:14px;'>" + (_lang==="de" ? "Sammle " + goal + " Stempel — erhalte " : "Collect " + goal + " stamps — get a ") + _lyEsc(p.rewardText || "Free item") + "</div>" +
     "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
     "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
       "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
