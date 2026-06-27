@@ -22,7 +22,17 @@ router.get('/lp/wallet/google/:slug', async (req, res) => {
     if (!page) return res.status(404).json({ error: 'Page not found' });
     const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
     const { createGoogleWalletSaveUrl } = require('../services/googleWalletService');
-    const saveUrl = await createGoogleWalletSaveUrl(slug, sections);
+    const cid = req.query.cid || null;
+    if (cid) {
+      try {
+        await prisma.loyaltyCustomer.upsert({
+          where: { slug_customerId: { slug, customerId: cid } },
+          create: { slug, customerId: cid, hasWallet: true },
+          update: { hasWallet: true }
+        });
+      } catch (_we) { console.error('[Google Wallet] LoyaltyCustomer upsert error:', _we.message); }
+    }
+    const saveUrl = await createGoogleWalletSaveUrl(slug, sections, cid);
     return res.redirect(302, saveUrl);
   } catch (err) {
     console.error('[Google Wallet]', err.message);

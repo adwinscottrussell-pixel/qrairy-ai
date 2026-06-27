@@ -15,8 +15,12 @@ function getClassId() {
   return `${ISSUER_ID}.${CLASS_SUFFIX}`;
 }
 
-function getObjectId(slug) {
-  return `${ISSUER_ID}.qraivy_${slug.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+function getObjectId(slug, cid) {
+  const base = slug.replace(/[^a-zA-Z0-9_-]/g, '_');
+  // Per-customer object when cid is known, so each customer's Google Wallet
+  // card tracks their own progress instead of one shared card for the business.
+  const suffix = cid ? '_' + cid.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
+  return `${ISSUER_ID}.qraivy_${base}${suffix}`;
 }
 
 async function ensureClass(credentials, businessName) {
@@ -57,19 +61,19 @@ async function ensureClass(credentials, businessName) {
   return classId;
 }
 
-async function createGoogleWalletSaveUrl(slug, sections) {
+async function createGoogleWalletSaveUrl(slug, sections, cid) {
   const credentials = getCredentials();
   const businessName = sections.businessName || slug;
   const accent = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
   const classId = await ensureClass(credentials, businessName);
-  const objectId = getObjectId(slug);
+  const objectId = getObjectId(slug, cid);
 
   const loyaltyObject = {
     id: objectId,
     classId,
     state: 'ACTIVE',
     accountName: businessName,
-    accountId: slug,
+    accountId: cid ? `${slug}-${cid}` : slug,
     loyaltyPoints: {
       label: 'Stamps',
       balance: { int: 0 },
@@ -96,7 +100,7 @@ async function createGoogleWalletSaveUrl(slug, sections) {
   return `https://pay.google.com/gp/v/save/${token}`;
 }
 
-async function updateGoogleWalletStamps(slug, stampCount) {
+async function updateGoogleWalletStamps(slug, stampCount, cid) {
   const credentials = getCredentials();
   const auth = new GoogleAuth({
     credentials,
@@ -104,7 +108,7 @@ async function updateGoogleWalletStamps(slug, stampCount) {
   });
   const client = await auth.getClient();
   const token = await client.getAccessToken();
-  const objectId = getObjectId(slug);
+  const objectId = getObjectId(slug, cid);
 
   const res = await fetch(
     `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${objectId}`,
