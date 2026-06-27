@@ -1690,13 +1690,16 @@ async function handleStamp(req, res) {
         if (!pass) return res.status(500).send('Pass creation error');
       }
     }
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const recentStamp = await prisma.stampEntry.findFirst({
-      where: { slug, passId: pass.id, createdAt: { gt: oneHourAgo } }
-    });
-    if (recentStamp) {
+    // Anti-abuse cooldown is scoped PER DEVICE (cookie), not per-business — the
+    // physical NFC tag has no customer identity, so a shared-pass cooldown would
+    // block different people tapping the same card within the same hour.
+    const cookieName = 'stamp_' + slug;
+    const cookies = (req.headers.cookie || '').split(';').map(c => c.trim());
+    const hasRecentDeviceStamp = cookies.some(c => c.startsWith(cookieName + '='));
+    if (hasRecentDeviceStamp) {
       return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Already stamped</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">⏱️</div><h2>Already stamped</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">You already got a stamp in the last hour. Come back next time!</p></div></body></html>`);
     }
+    res.setHeader('Set-Cookie', `${cookieName}=1; Max-Age=3600; Path=/; HttpOnly; SameSite=Lax; Secure`);
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const newCount = Math.min((pass.stampCount || 0) + 1, goal);
