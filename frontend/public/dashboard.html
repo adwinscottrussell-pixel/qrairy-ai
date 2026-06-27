@@ -85,6 +85,7 @@
 .claim-success-overlay.show{display:flex;}
 body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 @media(max-width:768px){.claim-success-overlay{margin-left:0 !important;}}
+@media(max-width:768px){.dash-section{margin-left:0 !important;padding:16px 14px !important;}}
 .claim-success-modal {
   background:#111110;border:0.5px solid rgba(255,78,0,0.25);
   border-radius:20px;padding:44px 36px;text-align:center;
@@ -1884,16 +1885,50 @@ function bnSetActive(id) {
   var el = document.getElementById(id);
   if (el) el.classList.add('active');
 }
-// Sync bottom nav active state with sidebar section changes
+// Real section switcher — shared by sidebar items and bottom nav
+window.showSection = function(sec) {
+  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
+  var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns' };
+
+  if (sec === 'settings') {
+    if (window.toast) toast('Coming soon — stay tuned!');
+    return;
+  }
+
+  var mc = document.getElementById('main-content');
+  document.querySelectorAll('.dash-section').forEach(function(s) { s.style.display = 'none'; });
+  document.querySelectorAll('.sb-item').forEach(function(i) { i.classList.remove('active'); });
+
+  if (sec === 'sqr' || !sec) {
+    if (mc) mc.style.display = 'block';
+  } else {
+    if (mc) mc.style.display = 'none';
+    var target = document.getElementById('section-' + sec);
+    if (target) target.style.display = 'block';
+    var sbId = sbIdMap[sec];
+    if (sbId) { var sbEl = document.getElementById(sbId); if (sbEl) sbEl.classList.add('active'); }
+    if (sec === 'loyalty' && typeof loadLoyaltyDashboard === 'function') loadLoyaltyDashboard();
+    if (sec === 'subscribers' && window.subLoad) {
+      setTimeout(window.subLoad, 100);
+      var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
+      var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
+    }
+    if (sec === 'campaigns' && typeof window.campInitProgs === 'function') window.campInitProgs();
+  }
+
+  // Close mobile sidebar drawer if open
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sb-overlay');
+  if (sidebar) sidebar.classList.remove('mob-open');
+  if (overlay) overlay.classList.remove('on');
+
+  var bnId = sectionMap[sec];
+  bnSetActive(bnId || 'bn-home');
+};
+
+// Set initial active state based on URL
 (function() {
   var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var orig = window.showSection;
-  window.showSection = function(sec) {
-    if (orig) orig(sec);
-    var bnId = sectionMap[sec];
-    if (bnId) bnSetActive(bnId); else bnSetActive('bn-home');
-  };
-  // Set initial active based on URL
   var urlSec = new URLSearchParams(window.location.search).get('section');
   if (urlSec && sectionMap[urlSec]) bnSetActive(sectionMap[urlSec]);
   else bnSetActive('bn-home');
