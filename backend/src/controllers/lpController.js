@@ -1759,6 +1759,10 @@ async function handleStampConfirm(req, res) {
         await pushUpdateToDevices(devices);
       } catch(e) { console.error('[Stamp] Push error:', e.message); }
     }
+    try {
+      const { updateGoogleWalletStamps } = require('../services/googleWalletService');
+      await updateGoogleWalletStamps(slug, newCount);
+    } catch(e) { console.error('[Stamp] Google Wallet update error:', e.message); }
     // Web Push: deep link customer to their loyalty card
     try {
       const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
@@ -1836,6 +1840,10 @@ async function handleRedeemStamp(req, res) {
     if (devices.length) {
       try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
     }
+    try {
+      const { updateGoogleWalletStamps } = require('../services/googleWalletService');
+      await updateGoogleWalletStamps(slug, 0);
+    } catch(e) { console.error('[Redeem] Google Wallet update error:', e.message); }
     return res.json({ ok: true, message: 'Reward redeemed, stamps reset to 0' });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }

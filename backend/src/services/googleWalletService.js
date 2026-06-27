@@ -96,4 +96,30 @@ async function createGoogleWalletSaveUrl(slug, sections) {
   return `https://pay.google.com/gp/v/save/${token}`;
 }
 
-module.exports = { createGoogleWalletSaveUrl };
+async function updateGoogleWalletStamps(slug, stampCount) {
+  const credentials = getCredentials();
+  const auth = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
+  });
+  const client = await auth.getClient();
+  const token = await client.getAccessToken();
+  const objectId = getObjectId(slug);
+
+  const res = await fetch(
+    `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${objectId}`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loyaltyPoints: { label: 'Stamps', balance: { int: stampCount } } }),
+    }
+  );
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    // 404 just means no customer has saved this wallet object yet — not an error
+    if (res.status !== 404) throw new Error(`Google Wallet update failed: ${res.status} ${errText}`);
+  }
+  return res.ok;
+}
+
+module.exports = { createGoogleWalletSaveUrl, updateGoogleWalletStamps };
