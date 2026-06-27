@@ -444,3 +444,9 @@
 body.tab-settings #mgr-header { display: none; }
 body.tab-settings .mgr-tabs { width: 100%; }
 #tab-settings { max-width: 920px; margin: 0 auto; }
+
+/* ── FAB clearance (mobile only) — keep content clear of the floating button ── */
+@media (max-width: 768px) {
+  .mgr-wrap { padding-bottom: 170px !important; }
+  .mgr-tab-panel.active { display: block; padding-bottom: 170px; }
+}

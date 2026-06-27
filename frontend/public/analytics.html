@@ -186,6 +186,24 @@
   </main>
   <footer class="dash-footer"><span data-i18n="footer_text">QRAIVY — Business Intelligence · Powered by AI</span></footer>
 </div>
+<a class="fab ripple" id="fab-main" aria-label="Create Smart QR" href="dashboard.html?launch=onboarding" style="text-decoration:none;">+</a>
+<script>
+(function(){
+  var fab = document.getElementById('fab-main');
+  if (!fab) return;
+  fab.addEventListener('pointerdown', function(e){
+    var r = fab.getBoundingClientRect();
+    var span = document.createElement('span');
+    var size = Math.max(r.width, r.height);
+    span.className = 'ripple-effect';
+    span.style.width = span.style.height = size + 'px';
+    span.style.left = (e.clientX - r.left - size/2) + 'px';
+    span.style.top = (e.clientY - r.top - size/2) + 'px';
+    fab.appendChild(span);
+    setTimeout(function(){ span.remove(); }, 500);
+  });
+})();
+</script>
 
 <script>
 const API_BASE = 'https://api.qraivy.com';

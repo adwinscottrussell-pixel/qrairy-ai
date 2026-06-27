@@ -714,6 +714,33 @@ async function init() {
 
 <script src="js/session.js"></script>
 <script src="js/shell-customer.js"></script>
+<a class="fab ripple" id="fab-main" aria-label="Edit Smart Page" href="#" onclick="window.fabMgrAction(event)" style="text-decoration:none;">&#x270E;</a>
+<script>
+window.fabMgrAction = function(e) {
+  e.preventDefault();
+  var hasSlug = new URLSearchParams(window.location.search).get('slug');
+  if (hasSlug) {
+    var designTab = document.querySelector('.mgr-tab[data-tab="design"]');
+    if (designTab) { designTab.click(); designTab.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  }
+  window.location.href = 'dashboard.html?launch=onboarding';
+};
+(function(){
+  var fab = document.getElementById('fab-main');
+  if (!fab) return;
+  fab.addEventListener('pointerdown', function(e){
+    var r = fab.getBoundingClientRect();
+    var span = document.createElement('span');
+    var size = Math.max(r.width, r.height);
+    span.className = 'ripple-effect';
+    span.style.width = span.style.height = size + 'px';
+    span.style.left = (e.clientX - r.left - size/2) + 'px';
+    span.style.top = (e.clientY - r.top - size/2) + 'px';
+    fab.appendChild(span);
+    setTimeout(function(){ span.remove(); }, 500);
+  });
+})();
+</script>
 </body>
 </html>
 

@@ -658,3 +658,100 @@ p, span, label, input, textarea, select, button,
   .toggle-slider:before { width: 21px; height: 21px; }
   .toggle-switch input:checked + .toggle-slider:before { transform: translateX(19px); }
 }
+
+/* ── Design system: motion & micro-interactions ───────────────────────────────
+   Reusable utilities: .pressable, .interactive-card, .fab, .ripple, .animate-in
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Pressable — tap/press feedback for buttons */
+.pressable,
+.btn-primary, .btn-outline, .btn-ghost, .btn-create, .btn-primary-app, .btn-save-field,
+.empty-cta, .filter-btn, .panel-action, .preset-chip, .dl-fmt, .dl-size,
+.mgr-tab, .bn-item, .sqr-act {
+  transition: transform .13s ease, filter .13s ease, box-shadow .13s ease, color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.pressable:active,
+.btn-primary:active, .btn-outline:active, .btn-ghost:active, .btn-create:active, .btn-primary-app:active, .btn-save-field:active,
+.empty-cta:active, .filter-btn:active, .panel-action:active, .preset-chip:active, .dl-fmt:active, .dl-size:active,
+.mgr-tab:active, .bn-item:active, .sqr-act:active {
+  transform: scale(0.97);
+  filter: brightness(0.93);
+}
+
+/* Interactive cards — lift on hover (desktop), gentle press on mobile */
+.interactive-card,
+.kpi-card, .panel, .chart-card, .sqr-card, .camp-trig, .skel-card {
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+@media (hover: hover) {
+  .interactive-card:hover, .kpi-card:hover, .panel:hover, .chart-card:hover, .sqr-card:hover, .camp-trig:hover {
+    transform: translateY(-2px);
+  }
+}
+.interactive-card:active, .kpi-card:active, .panel:active, .chart-card:active, .sqr-card:active, .camp-trig:active {
+  transform: scale(0.985);
+}
+
+/* Bottom-nav active-state micro-interaction */
+.bn-icon { transition: transform .18s cubic-bezier(.34,1.2,.64,1); display: inline-block; }
+.bn-item.active .bn-icon { transform: scale(1.14); }
+
+/* Toggle switches — smoother thumb easing */
+.toggle-slider, .toggle-slider:before { transition: all .18s cubic-bezier(.4,0,.2,1); }
+
+/* Links — smooth, non-abrupt transitions */
+a { transition: color .15s ease, opacity .15s ease; }
+
+/* Entrance animation utility */
+@keyframes animate-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.animate-in { animation: animate-in .24s ease both; }
+
+/* Ripple utility — add a .ripple-effect span via JS on pointerdown */
+.ripple { position: relative; overflow: hidden; }
+.ripple-effect {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  transform: scale(0);
+  animation: ripple-anim .5s ease-out;
+  pointer-events: none;
+}
+@keyframes ripple-anim { to { transform: scale(2.8); opacity: 0; } }
+
+/* ── Floating Action Button (mobile only) ─────────────────────────────────── */
+.fab {
+  display: none;
+  position: fixed;
+  right: 18px;
+  bottom: calc(62px + env(safe-area-inset-bottom, 0px) + 16px);
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: var(--dashboard-accent);
+  color: #fff;
+  border: none;
+  align-items: center; justify-content: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(255,90,31,0.4), 0 2px 10px rgba(0,0,0,0.35);
+  z-index: 210;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: fab-in .26s ease both, fab-pulse 1.8s ease 1;
+}
+@media (max-width: 768px) { .fab { display: flex; } }
+.fab:active { transform: scale(0.93); filter: brightness(0.95); }
+@keyframes fab-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+@keyframes fab-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,90,31,0.55), 0 8px 24px rgba(255,90,31,0.4), 0 2px 10px rgba(0,0,0,0.35); }
+  70%  { box-shadow: 0 0 0 14px rgba(255,90,31,0), 0 8px 24px rgba(255,90,31,0.4), 0 2px 10px rgba(0,0,0,0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(255,90,31,0), 0 8px 24px rgba(255,90,31,0.4), 0 2px 10px rgba(0,0,0,0.35); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
