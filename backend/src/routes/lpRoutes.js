@@ -3,7 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
-  handleStamp, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleStamp, handleStampConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
   handleLoyaltyWelcome,
   handleLPManifest
 } = require('../controllers/lpController');
@@ -31,6 +31,7 @@ router.get('/lp/wallet/google/:slug', async (req, res) => {
 });
 // Loyalty stamp (public — no auth — QR and NFC target)
 router.get('/stamp/:slug/:token', handleStamp);
+router.post('/stamp/:slug/:token/confirm', handleStampConfirm);
 // Stamp dashboard API (auth required via frontend)
 router.get('/lp/stamp/token/:slug', handleGetStampToken);
 router.post('/lp/stamp/settings/:slug', handleStampSettings);

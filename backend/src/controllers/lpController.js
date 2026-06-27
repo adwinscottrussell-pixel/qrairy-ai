@@ -1666,6 +1666,13 @@ async function handleGetNFCToken(req, res) {
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
 
+// GET /stamp/:slug/:token — renders a page only. Performs NO database writes
+// and sets NO cookie, because Android's NFC "tap to open" flow silently
+// prefetches this URL in the background (to build the notification preview)
+// before the user ever sees a page. If this handler had side effects, that
+// background prefetch alone would consume the stamp and lock out the real
+// visit. The actual stamp only happens via the JS-triggered POST below,
+// which a background prefetch (HTML-only, no script execution) never runs.
 async function handleStamp(req, res) {
   try {
     const { slug, token } = req.params;
@@ -1676,9 +1683,42 @@ async function handleStamp(req, res) {
     if (!validToken) {
       return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invalid</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">❌</div><h2>Invalid stamp token</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">This QR code has expired. Ask staff for the latest code.</p></div></body></html>`);
     }
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamping…</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.dots{margin:20px 0;line-height:2}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap" id="wrap"><div class="emoji">⏳</div><h1>Stamping…</h1></div><script>(function(){\n'
+      + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
+      + 'function spawnConfetti(burst){var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}if(burst){var BC=["#fbbf24","#fcd34d","#fff","#22c55e","#ef4444","#3b82f6","#ec4899"];for(var b=0;b<160;b++){var p=document.createElement("div");p.className="burst-piece";var a=(b/160)*Math.PI*2;var d=120+Math.random()*320;var ex=Math.cos(a)*d;var ey=Math.sin(a)*d-80;var sz=4+Math.random()*8;p.style.cssText="position:fixed;left:50%;top:50%;width:"+sz+"px;height:"+sz+"px;background:"+BC[Math.floor(Math.random()*BC.length)]+";border-radius:"+(Math.random()>0.5?"50%":"2px")+";z-index:10;pointer-events:none;transform:translate(-50%,-50%);transition:transform 1.4s cubic-bezier(0.15,0.7,0.3,1),opacity 1.6s ease-out;opacity:1;box-shadow:0 0 8px rgba(255,200,50,0.4);";document.body.appendChild(p);(function(el,dx,dy){setTimeout(function(){el.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px)) rotate("+(Math.random()*720)+"deg)";el.style.opacity="0";},10);})(p,ex,ey);}setTimeout(function(){document.querySelectorAll(".burst-piece").forEach(function(el){el.remove();});},2500);}setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);}\n'
+      + 'function render(d){var wrap=document.getElementById("wrap");\n'
+      + 'if(d.status==="invalid"){wrap.innerHTML=\'<div class="emoji">❌</div><h1>Invalid stamp token</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">This QR code has expired. Ask staff for the latest code.</p>\';return;}\n'
+      + 'if(d.status==="already"){wrap.innerHTML=\'<div class="emoji">⏱️</div><h1>Already stamped</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">You already got a stamp in the last hour. Come back next time!</p>\';return;}\n'
+      + 'if(d.status==="error"){wrap.innerHTML=\'<div class="emoji">⚠️</div><h1>Something went wrong</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">Please try tapping again.</p>\';return;}\n'
+      + 'var goal=d.goal,newCount=d.newCount,rewardReady=d.rewardReady,rewardName=esc(d.rewardName),slug=d.slug;\n'
+      + 'var dots="";for(var i=0;i<goal;i++){dots+=\'<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:\'+(i<newCount?(rewardReady?"#22c55e":"#ff5a1f"):"rgba(255,255,255,0.15)")+\';margin:3px"></span>\';}\n'
+      + 'wrap.innerHTML=\'<div class="emoji">\'+(rewardReady?"🎉":"✅")+\'</div><h1>\'+(rewardReady?"Belohnung bereit!":"Stempel hinzugefügt!")+\'</h1><p>\'+(rewardReady?"Zeige deinen Pass für: "+rewardName:newCount+" von "+goal+" Stempeln gesammelt")+\'</p><div class="dots">\'+dots+\'</div>\'+(rewardReady?\'<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>\':\'<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">\'+(goal-newCount)+\' Stempel noch bis zu deinem \'+rewardName+\'</p>\')+\'<a href="/lp/\'+slug+\'" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a>\';\n'
+      + 'spawnConfetti(rewardReady);\n'
+      + 'try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}fetch("/stamp/"+slug+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:c})}).catch(function(){});}catch(e){}}\n'
+      + 'fetch(window.location.pathname+"/confirm",{method:"POST"}).then(function(r){return r.json();}).then(render).catch(function(){render({status:"error"});});\n'
+      + '})();</script></body></html>';
+    return res.status(200).send(html);
+  } catch(e) {
+    console.error('[Stamp] Error:', e.message);
+    return res.status(500).send('Error processing stamp');
+  }
+}
+
+// POST /stamp/:slug/:token/confirm — performs the actual stamp. Only ever
+// invoked by real JS execution in handleStamp's rendered page, never by a
+// background prefetch (which only fetches HTML and never runs scripts).
+async function handleStampConfirm(req, res) {
+  try {
+    const { slug, token } = req.params;
+    const now = new Date();
+    const validToken = await prisma.stampToken.findFirst({
+      where: { slug, token, expiresAt: { gt: now } }
+    });
+    if (!validToken) return res.json({ status: 'invalid' });
+
     const serial = 'sqr-' + slug;
-    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
-        if (!pass) { // auto-create shared pass so all customers can stamp without a wallet
+    let pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    if (!pass) { // auto-create shared pass so all customers can stamp without a wallet
       const _cr = require('crypto');
       const _at = _cr.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0, 32);
       try {
@@ -1687,7 +1727,7 @@ async function handleStamp(req, res) {
         });
       } catch(_ce) {
         pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
-        if (!pass) return res.status(500).send('Pass creation error');
+        if (!pass) return res.json({ status: 'error' });
       }
     }
     // Anti-abuse cooldown is scoped PER DEVICE (cookie), not per-business — the
@@ -1696,10 +1736,9 @@ async function handleStamp(req, res) {
     const cookieName = 'stamp_' + slug;
     const cookies = (req.headers.cookie || '').split(';').map(c => c.trim());
     const hasRecentDeviceStamp = cookies.some(c => c.startsWith(cookieName + '='));
-    if (hasRecentDeviceStamp) {
-      return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Already stamped</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">⏱️</div><h2>Already stamped</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">You already got a stamp in the last hour. Come back next time!</p></div></body></html>`);
-    }
+    if (hasRecentDeviceStamp) return res.json({ status: 'already' });
     res.setHeader('Set-Cookie', `${cookieName}=1; Max-Age=3600; Path=/; HttpOnly; SameSite=Lax; Secure`);
+
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const newCount = Math.min((pass.stampCount || 0) + 1, goal);
@@ -1739,13 +1778,10 @@ async function handleStamp(req, res) {
         console.log('[Stamp] Web push sent to', webSubs.length, 'subscribers for', slug);
       }
     } catch(e) { console.error('[Stamp] WebPush error:', e.message); }
-    const dots = Array.from({length: goal}, (_, i) => '<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:' + (i < newCount ? (rewardReady ? '#22c55e' : '#ff5a1f') : 'rgba(255,255,255,0.15)') + ';margin:3px"></span>').join('');
-    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamped!</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.dots{margin:20px 0;line-height:2}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap"><div class="emoji">' + (rewardReady ? "🎉" : "✅") + '</div><h1>' + (rewardReady ? "Belohnung bereit!" : "Stempel hinzugefügt!") + '</h1><p>' + (rewardReady ? "Zeige deinen Pass für: " + rewardName : newCount + " von " + goal + " Stempeln gesammelt") + '</p><div class="dots">' + dots + '</div>' + (rewardReady ? '<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>' : '<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">' + (goal - newCount) + ' Stempel nochmp' + (goal - newCount !== 1 ? "s" : "") + " until your " + rewardName + "</p>") + '<a href="/lp/card/' + slug + '" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a></div><script>var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}' + (rewardReady ? 'var BC=["#fbbf24","#fcd34d","#fff","#22c55e","#ef4444","#3b82f6","#ec4899"];for(var b=0;b<160;b++){var p=document.createElement("div");p.className="burst-piece";var a=(b/160)*Math.PI*2;var d=120+Math.random()*320;var ex=Math.cos(a)*d;var ey=Math.sin(a)*d-80;var sz=4+Math.random()*8;p.style.cssText="position:fixed;left:50%;top:50%;width:"+sz+"px;height:"+sz+"px;background:"+BC[Math.floor(Math.random()*BC.length)]+";border-radius:"+(Math.random()>0.5?"50%":"2px")+";z-index:10;pointer-events:none;transform:translate(-50%,-50%);transition:transform 1.4s cubic-bezier(0.15,0.7,0.3,1),opacity 1.6s ease-out;opacity:1;box-shadow:0 0 8px rgba(255,200,50,0.4);";document.body.appendChild(p);(function(el,dx,dy){setTimeout(function(){el.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px)) rotate("+(Math.random()*720)+"deg)";el.style.opacity="0";},10);})(p,ex,ey);}setTimeout(function(){document.querySelectorAll(".burst-piece").forEach(function(el){el.remove();});},2500);' : '') + 'setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);</script></body></html>';
-    const _custHtml = '<script>(function(){try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}var s=location.pathname.split("/")[2];fetch("/stamp/"+s+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:c})}).catch(function(){});}catch(e){}})();</script>';
-    return res.status(200).send(html.replace('</body>', _custHtml + '</body>'));
+    return res.json({ status: 'ok', goal, newCount, rewardReady, rewardName, slug });
   } catch(e) {
-    console.error('[Stamp] Error:', e.message);
-    return res.status(500).send('Error processing stamp');
+    console.error('[Stamp] Confirm error:', e.message);
+    return res.json({ status: 'error' });
   }
 }
 
@@ -2556,7 +2592,7 @@ async function handleLoyaltyWelcome(req, res) {
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
   handleLPManifest,
 };
 
