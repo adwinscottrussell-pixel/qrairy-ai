@@ -1310,11 +1310,6 @@
             </div>
           </div>
         </div>
-        <div id="loyalty-redeem-section" style="background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.25);border-radius:9px;padding:12px;margin-bottom:8px;display:none;">
-          <div style="font-size:.72rem;font-weight:600;color:#22c55e;margin-bottom:4px;">🎉 Reward ready to redeem!</div>
-          <div style="font-size:.62rem;color:rgba(240,244,248,0.6);margin-bottom:8px;">Customer has reached their stamp goal.</div>
-          <button onclick="window.redeemLoyalty()" style="width:100%;padding:9px;background:#22c55e;border:none;border-radius:7px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">Mark as redeemed — reset stamps</button>
-        </div>
       </div>
     </div><!-- end tab content -->
 
@@ -3816,11 +3811,9 @@ function loadLoyaltyTab() {
     var total = document.getElementById('loyalty-total-stamps');
     var current = document.getElementById('loyalty-current-stamps');
     var rewardStatus = document.getElementById('loyalty-reward-status');
-    var redeemSection = document.getElementById('loyalty-redeem-section');
     if (total) total.textContent = d.totalStamps || 0;
     if (current) current.textContent = (d.stampCount || 0) + '/' + ((d.settings && d.settings.goal) || 10);
     if (rewardStatus) { rewardStatus.textContent = d.rewardReady ? 'Ready!' : 'Not yet'; rewardStatus.style.color = d.rewardReady ? '#22c55e' : 'rgba(240,244,248,0.4)'; }
-    if (redeemSection) redeemSection.style.display = d.rewardReady ? 'block' : 'none';
     fetch('https://www.qraivy.com/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
       if (nd.nfcUrl) {
         _loyaltyStampUrl = nd.nfcUrl;
@@ -3856,19 +3849,6 @@ window.saveLoyaltySettings = function() {
 
 window.copyStampUrl = function() {
   if (_loyaltyStampUrl) { navigator.clipboard.writeText(_loyaltyStampUrl).then(function(){ alert('NFC URL copied!'); }); }
-};
-
-window.redeemLoyalty = function() {
-  var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
-  if (!slug) return;
-  if (!confirm('Mark reward as redeemed and reset stamp count to 0?')) return;
-  var token = localStorage.getItem('sqd_token');
-  fetch('https://www.qraivy.com/lp/stamp/redeem/' + slug, {
-    method: 'POST',
-    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-  }).then(function(r){ return r.json(); }).then(function(d) {
-    if (d.ok) { alert('Reward redeemed! Stamps reset to 0.'); loadLoyaltyTab(); }
-  }).catch(function(e){ alert('Error: ' + e.message); });
 };
 
 document.addEventListener('sqd-tab-changed', function(e) {

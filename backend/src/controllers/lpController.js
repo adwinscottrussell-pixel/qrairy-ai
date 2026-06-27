@@ -1910,28 +1910,6 @@ async function handleGetStampSettings(req, res) {
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
 
-async function handleRedeemStamp(req, res) {
-  try {
-    const { slug } = req.params;
-    const serial = 'sqr-' + slug;
-    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
-    if (!pass) return res.status(404).json({ error: 'Pass not found' });
-    const redeemAt = new Date();
-    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: 0, rewardReady: false, rewardsEarned: { increment: 1 }, updatedAt: redeemAt } });
-    try {
-      await prisma.rewardEvent.updateMany({ where: { passId: pass.id, status: 'earned' }, data: { status: 'redeemed', redeemedAt: redeemAt } });
-    } catch(e) { console.error('[Redeem] RewardEvent update error:', e.message); }
-    const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
-    if (devices.length) {
-      try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
-    }
-    try {
-      const { updateGoogleWalletStamps } = require('../services/googleWalletService');
-      await updateGoogleWalletStamps(slug, 0);
-    } catch(e) { console.error('[Redeem] Google Wallet update error:', e.message); }
-    return res.json({ ok: true, message: 'Reward redeemed, stamps reset to 0' });
-  } catch(e) { return res.status(500).json({ error: e.message }); }
-}
 // POST /stamp/:slug/customer — per-customer stamp recording
 async function handleCustomerStamp(req, res) {
   try {
@@ -2688,7 +2666,7 @@ async function handleLoyaltyWelcome(req, res) {
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
 };
 

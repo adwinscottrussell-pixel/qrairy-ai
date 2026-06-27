@@ -1469,7 +1469,6 @@ function _lyBuildCard(p) {
     h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.nfcUrl || "—") + "</div>";
     h +=     "<div style=\"display:flex;gap:6px;flex-wrap:wrap;\">";
     h +=       "<button id=\"ly-copybtn-" + p.id + "\" data-url=\"" + _lyEsc(p.nfcUrl || "") + "\" data-id=\"" + p.id + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"flex:1;padding:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.7rem;cursor:pointer;min-width:90px;\">" + (_lang==="de"?"NFC-URL kopieren":"Copy NFC URL") + "</button>";
-    h +=       "<button id=\"ly-redeem-" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.redeemLoyaltyDash(this)\" style=\"flex:1;padding:8px;background:rgba(34,197,94,0.12);border:0.5px solid rgba(34,197,94,0.25);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:700;cursor:pointer;min-width:90px;" + (p.rewardReady ? "" : "display:none;") + "\">🎁 Redeem</button>";
     h +=       "<button data-id=\"" + p.id + "\" onclick=\"window.toggleLoyaltyEdit(this)\" style=\"padding:8px 10px;background:transparent;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(240,244,248,0.35);font-size:.7rem;cursor:pointer;\" title=\"Edit program\">" + (_lang==="de"?"&#9881; Bearbeiten":"&#9881; Edit") + "</button>";
     h +=     "</div>";
     h +=   "</div>";
@@ -1594,21 +1593,6 @@ window.toggleLoyaltyStatus = function(btn) {
           var card = document.getElementById("ly-card-" + id);
           if (card) card.replaceWith(_lyBuildCard(d.program));
         }
-      }).catch(function() {});
-    });
-  } catch(e) {}
-};
-
-window.redeemLoyaltyDash = function(btn) {
-  var slug = btn.dataset.slug;
-  if (!confirm("Mark reward as redeemed and reset stamps to 0?")) return;
-  try {
-    window.Clerk.session.getToken().then(function(t) {
-      fetch("https://www.qraivy.com/lp/stamp/redeem/" + slug, {
-        method: "POST",
-        headers: t ? { "Authorization": "Bearer " + t } : {}
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.ok) loadLoyaltyDashboard();
       }).catch(function() {});
     });
   } catch(e) {}

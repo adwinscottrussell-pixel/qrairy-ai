@@ -3,7 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
-  handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings, handleRedeemStamp,
+  handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest
 } = require('../controllers/lpController');
@@ -49,7 +49,6 @@ router.post('/redeem/:slug/:token/confirm', handleRedeemTapConfirm);
 router.get('/lp/stamp/token/:slug', handleGetStampToken);
 router.post('/lp/stamp/settings/:slug', handleStampSettings);
 router.get('/lp/stamp/settings/:slug', handleGetStampSettings);
-router.post('/lp/stamp/redeem/:slug', handleRedeemStamp);
 // Serve live landing page (public — no auth)
 router.post('/stamp/:slug/customer', handleCustomerStamp); // per-customer stamp
 router.get('/lp/welcome/:slug', handleLoyaltyWelcome); // First-visit enrollment
