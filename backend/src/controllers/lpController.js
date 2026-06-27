@@ -1645,8 +1645,14 @@ async function getOrCreateStampToken(slug) {
 
 async function getNFCStampToken(slug) {
   const now = new Date();
+  // NFC tags are physically static, so their token must stay valid for a long
+  // time. getOrCreateStampToken (the dashboard's daily-rotating QR code) writes
+  // into this same table with a same-day expiry — only reuse an existing token
+  // here if it has substantial remaining lifetime, so we never inherit one of
+  // those short-lived QR tokens and silently break a physical NFC tag the next day.
+  const minLifetime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const existing = await prisma.stampToken.findFirst({
-    where: { slug, expiresAt: { gt: now } },
+    where: { slug, expiresAt: { gt: minLifetime } },
     orderBy: { expiresAt: 'desc' }
   });
   if (existing) return existing.token;
