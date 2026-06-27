@@ -1474,6 +1474,18 @@ function _lyBuildCard(p) {
     h +=     "</div>";
     h +=   "</div>";
     h += "</div>";
+    // Second physical NFC tag — staff tap a customer's phone on this to redeem their reward
+    if (p.redeemUrl) {
+      h += "<div style=\"display:flex;gap:10px;align-items:center;margin-top:10px;\">";
+      h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
+      h +=     "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.redeemUrl) + "\" style=\"width:68px;height:68px;\">";
+      h +=   "</div>";
+      h +=   "<div style=\"flex:1;min-width:0;\">";
+      h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.redeemUrl) + "</div>";
+      h +=     "<button data-url=\"" + _lyEsc(p.redeemUrl) + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"width:100%;padding:8px;background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.2);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:600;cursor:pointer;\">" + (_lang==="de"?"🎁 Einlöse-URL kopieren":"🎁 Copy Redeem URL") + "</button>";
+      h +=   "</div>";
+      h += "</div>";
+    }
     // Inline edit panel
     h += "<div id=\"ly-edit-" + p.id + "\" style=\"display:none;margin-top:12px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;padding:13px;\">";
     h +=   "<div style=\"font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:10px;\">Edit program</div>";

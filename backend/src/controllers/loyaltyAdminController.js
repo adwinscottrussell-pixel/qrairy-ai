@@ -10,16 +10,23 @@ const crypto = require('crypto');
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
-// Get the current valid stamp token for a slug, creating one if needed.
+// Get the long-lived NFC/redeem token for a slug, creating one if needed.
+// Physical NFC tags are static, so this must never return a short-lived
+// token from the dashboard's separate daily-rotating QR code system — only
+// reuse an existing token if it still has substantial remaining lifetime,
+// otherwise create a fresh one with a genuine 1-year expiry. (Mirrors the
+// fix applied to getNFCStampToken in lpController.js.)
 async function getOrCreateStampToken(slug) {
   const now = new Date();
+  const minLifetime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const existing = await prisma.stampToken.findFirst({
-    where: { slug, expiresAt: { gt: now } },
-    orderBy: { createdAt: 'desc' }
+    where: { slug, expiresAt: { gt: minLifetime } },
+    orderBy: { expiresAt: 'desc' }
   });
   if (existing) return existing.token;
   const token = crypto.randomBytes(16).toString('hex');
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24h
+  const expiresAt = new Date(now);
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
   await prisma.stampToken.create({ data: { slug, token, expiresAt } });
   return token;
 }
@@ -36,6 +43,7 @@ async function buildProgram(landingPage) {
 
   const token = await getOrCreateStampToken(landingPage.slug);
   const stampUrl = 'https://api.qraivy.com/stamp/' + landingPage.slug + '/' + token;
+  const redeemUrl = 'https://api.qraivy.com/redeem/' + landingPage.slug + '/' + token;
 
   return {
     id: landingPage.id,
@@ -53,6 +61,7 @@ async function buildProgram(landingPage) {
     color: settings ? (settings.color || '#ff5a1f') : '#ff5a1f', // LOYALTY_COLOR_PATCH
     stampUrl,
     nfcUrl: stampUrl,
+    redeemUrl,
     createdAt: landingPage.createdAt,
     updatedAt: (settings && settings.updatedAt) || landingPage.updatedAt
   };
