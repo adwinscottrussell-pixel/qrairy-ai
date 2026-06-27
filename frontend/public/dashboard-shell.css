@@ -132,7 +132,7 @@ body { display: flex; min-height: 100vh; background: #0a0a0a; color: #f0f4f8; fo
 .sb-signout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
 
 /* ── Main content area ─────────────────────────────────────────────────────── */
-#main-content { margin-left: var(--sidebar-width); flex: 1; min-height: 100vh; transition: margin-left .22s; }
+#main-content { margin-left: var(--sidebar-width); flex: 1; min-width: 0; min-height: 100vh; transition: margin-left .22s; }
 body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────────── */

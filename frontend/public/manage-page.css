@@ -52,7 +52,11 @@
   margin-bottom: 20px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   padding-bottom: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.mgr-tabs::-webkit-scrollbar { display: none; }
 .mgr-tab {
   font-family: 'DM Mono', monospace;
   font-size: .72rem;
@@ -67,6 +71,11 @@
   cursor: pointer;
   transition: color .15s, border-color .15s;
   margin-bottom: -1px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .mgr-tab { padding: 10px 12px; font-size: .68rem; min-height: 44px; display: flex; align-items: center; }
 }
 .mgr-tab:hover { color: #f0f4f8; }
 .mgr-tab.active { color: #ff5a1f; border-bottom-color: #ff5a1f; }
