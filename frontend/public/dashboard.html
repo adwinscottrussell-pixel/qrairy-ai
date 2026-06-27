@@ -272,7 +272,11 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
         <div><span class="sec-title" data-i18n="sec_sqrpages">Smart QR Pages</span><span class="sec-count" id="sqr-section-count"></span></div>
         <a href="analytics.html" style="font-family:\'DM Mono\',monospace;font-size:.62rem;color:#ff5a1f;text-decoration:none" data-i18n="sec_analytics">Analytics &#x2192;</a>
       </div>
-      <div id="sqr-loading" style="font-family:\'DM Mono\',monospace;color:#7a8fa8;font-size:.78rem;padding:16px 0" data-i18n="loading_pages">Loading your smart pages&#x2026;</div>
+      <div id="sqr-loading" class="sqr-grid">
+        <div class="skel-card"><div class="skel skel-line w-60" style="height:18px;margin-bottom:14px"></div><div class="skel skel-line w-80"></div><div class="skel skel-line w-40"></div></div>
+        <div class="skel-card"><div class="skel skel-line w-60" style="height:18px;margin-bottom:14px"></div><div class="skel skel-line w-80"></div><div class="skel skel-line w-40"></div></div>
+        <div class="skel-card"><div class="skel skel-line w-60" style="height:18px;margin-bottom:14px"></div><div class="skel skel-line w-80"></div><div class="skel skel-line w-40"></div></div>
+      </div>
       <div class="sqr-grid" id="sqrGrid"></div>
     </div>
   </main>
@@ -818,7 +822,7 @@ async function initDashboard(){
 
           // Render table
           if (!d.pages || !d.pages.length) {
-            document.getElementById('subTableBody').innerHTML = '<div class="sub-empty">No subscribers yet. Share your Smart QR Pages to start growing your audience.</div>';
+            document.getElementById('subTableBody').innerHTML = '<div class="empty-state compact"><div class="empty-icon">&#x1F465;</div><div class="empty-title">No subscribers yet</div><div class="empty-sub">Share your Smart QR Pages to start collecting subscribers.</div><button class="empty-cta" onclick="document.getElementById(\'sqrGrid\').scrollIntoView({behavior:\'smooth\'})">View Smart QR Pages</button></div>';
             return;
           }
 

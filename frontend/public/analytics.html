@@ -159,7 +159,9 @@
               </tr>
             </thead>
             <tbody id="perf-tbody">
-              <tr><td colspan="7" class="state-loading">Loading data…</td></tr>
+              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="skel skel-line w-60" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -308,7 +310,7 @@ function renderTable(dashboard) {
     return 0;
   });
 
-  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="state-empty">No pages found</td></tr>'; return; }
+  if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state compact"><div class="empty-icon">&#x1F4CA;</div><div class="empty-title">No Smart QR Pages yet</div><div class="empty-sub">Create your first Smart QR Page to start seeing performance data here.</div><a class="empty-cta" href="dashboard.html?launch=onboarding">Create Smart QR</a></div></td></tr>'; return; }
 
   const maxScans = Math.max(...rows.map(q => q.totalScans), 1);
   tbody.innerHTML = rows.map(qr => {
