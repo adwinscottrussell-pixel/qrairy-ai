@@ -2484,6 +2484,26 @@ ${sa.active !== false ? `
   window.addGoogleWallet = function() {
     window.location.href = 'https://api.qraivy.com/lp/wallet/google/' + SLUG;
   };
+  // OS detection — show only relevant wallet button
+  (function() {
+    var ua = navigator.userAgent;
+    var isIOS = /iPhone|iPad|iPod/i.test(ua);
+    var isAndroid = /Android/i.test(ua);
+    var appleBtn = document.querySelector('.lp-btn-apple-only');
+    var googleBtn = document.querySelector('.lp-btn-google-only');
+    var appleWrap = document.querySelector('.lp-wallet-cta-wrap');
+    if (isIOS) {
+      if (googleBtn) googleBtn.style.display = 'none';
+    } else if (isAndroid) {
+      if (appleWrap) appleWrap.style.display = 'none';
+      else if (appleBtn) appleBtn.style.display = 'none';
+    } else {
+      // Desktop — hide both wallet buttons
+      if (appleWrap) appleWrap.style.display = 'none';
+      else if (appleBtn) appleBtn.style.display = 'none';
+      if (googleBtn) googleBtn.style.display = 'none';
+    }
+  })();
   window.lpEnableNotifications = function() {
     var btn = document.getElementById('lp-notif-btn');
     if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
