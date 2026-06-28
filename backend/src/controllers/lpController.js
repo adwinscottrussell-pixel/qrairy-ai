@@ -304,7 +304,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 <head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="${brandLogoUrl || 'https://qraivy.com/icon-192.png'}"><link rel="manifest" href="/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${bizName} — ${t.tagline}</title>
+<title>${bizName} — Smart Landing Page</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
@@ -2641,7 +2641,19 @@ ${sa.active !== false ? `
   };
 
   // ── Wallet ──
-  function _walletCid() { try { return localStorage.getItem('cTok') || ''; } catch(e) { return ''; } }
+  // Must CREATE (not just read) cTok, same as the welcome page and loyalty
+  // card page do — otherwise a customer who adds their wallet pass here
+  // first (before ever visiting those flows) gets registered to the
+  // generic no-cid pass, while their first stamp tap later mints a NEW
+  // cTok and stamps a different, unrelated Pass record. The wallet pass
+  // never reflects the stamp because they were never the same identity.
+  function _walletCid() {
+    try {
+      var c = localStorage.getItem('cTok');
+      if (!c) { c = Date.now() + 'm' + Math.random().toString(36).slice(2); localStorage.setItem('cTok', c); }
+      return c;
+    } catch(e) { return ''; }
+  }
   window.addAppleWallet = function() {
     var c = _walletCid();
     window.location.href = API + '/lp/wallet/apple/' + SLUG + (c ? '?cid=' + encodeURIComponent(c) : '');
