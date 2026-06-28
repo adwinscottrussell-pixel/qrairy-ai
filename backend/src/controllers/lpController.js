@@ -1586,14 +1586,23 @@ async function handleGenerateAppleWalletPass(req, res) {
     const page = await _prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
 
-    const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
-    const pkpassBuffer = await generateSmartQRPass(slug, sections);
+    const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName, websiteUrl: page.websiteUrl });
 
-    // Ensure Pass record exists in DB for device registration
+    // Compute the per-customer serial/auth token ONCE and use the SAME values
+    // both inside the embedded pass.json and in the DB upsert below. Apple's
+    // device-registration callback looks up the Pass row by exactly the
+    // serialNumber + authToken that were embedded in the file the device
+    // installed — if either value were computed differently in two places
+    // (as they previously were), every registration would silently fail to
+    // match, and that customer would never receive push updates again.
     const _cid = req.query.cid || null;
     const serialNumber = _cid ? 'sqr-' + slug + '-' + _cid : 'sqr-' + slug;
     const crypto = require('crypto');
-    const authToken = crypto.createHash('sha256').update(slug + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0,32);
+    const authToken = crypto.createHash('sha256').update(serialNumber + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0,32);
+
+    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid: _cid, serialNumber, authToken });
+
+    // Ensure Pass record exists in DB for device registration
     await _prisma.pass.upsert({
       where: { serialNumber },
       update: { updatedAt: new Date(), authToken },

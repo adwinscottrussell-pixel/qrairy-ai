@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const prisma = require('../utils/prismaClient');
 const { WALLET_CONFIG } = require('../config/constants');
 const { PKPass } = require('passkit-generator');
+const { getTheme, renderHeroBanner } = require('./walletThemes');
 
 // Cache WWDR cert so we only fetch once per process
 let _wwdrCache = null;
@@ -18,33 +19,52 @@ async function getWWDRCert() {
 }
 
 // ── Generate .pkpass for a Smart QR landing page ──────────────
-async function generateSmartQRPass(slug, sections) {
+// opts: { cid, serialNumber, authToken } — serialNumber/authToken MUST be
+// the exact same values the caller is about to upsert into the Pass table,
+// since Apple's device-registration callback matches on whatever was
+// embedded in the file the device installed. Computing these independently
+// in two places previously caused every registration to silently mismatch.
+async function generateSmartQRPass(slug, sections, opts = {}) {
   const hero    = sections.hero    || {};
   const loop    = sections.loop    || {};
   const theme   = sections.theme   || {};
+  const business = sections.businessInfo || {};
+  const cid = opts.cid || null;
 
   const accent       = theme.accentColor || '#ff5a1f';
-  const brandName    = hero.title || hero.aiTitle || sections.businessName || 'Smart Pass';
-  const walletTitle  = loop.walletTitle  || brandName;
+  const rawName      = hero.title || hero.aiTitle || sections.businessName || 'Smart Pass';
+  const brandName    = rawName.replace(/^Welcome to /i, '').replace(/\s+[a-z0-9]{3}$/, '').trim();
   const walletSub    = loop.walletSubtitle || 'Scan to visit';
   const lpUrl        = `https://api.qraivy.com/lp/${slug}`;
-  const serial       = `sqr-${slug}`;
-  const authTok      = crypto.createHash('sha256').update(slug + 'qraivy').digest('hex').slice(0,32);
+  const serial       = opts.serialNumber || `sqr-${slug}`;
+  const authTok      = opts.authToken || crypto.createHash('sha256').update(serial + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0, 32);
   const bgRgb        = hexToRgb(accent) || 'rgb(255,90,31)';
+  const walletTheme  = getTheme(theme.walletTheme || 'premium');
+  const L            = walletTheme.labels;
 
-  const passRecord = await prisma.pass.findUnique({ where: { serialNumber: 'sqr-' + slug } });
+  // Per-CUSTOMER pass data — `serial` already encodes cid when known, so this
+  // reads that specific customer's own progress, never the shared business pass.
+  const passRecord = await prisma.pass.findUnique({ where: { serialNumber: serial } });
   const stampSettings = await prisma.stampSettings.findUnique({ where: { slug } });
   const stampCount = passRecord ? (passRecord.stampCount || 0) : 0;
   const stampGoal = stampSettings ? stampSettings.goal : 10;
   const rewardName = stampSettings ? stampSettings.rewardName : 'Free item';
   const rewardReady = passRecord ? passRecord.rewardReady : false;
-  const stampLabel = stampSettings && stampSettings.enabled ? 'LOYALTY' : null;
-  const stampValue = stampSettings && stampSettings.enabled ? (rewardReady ? 'REWARD READY!' : stampCount + '/' + stampGoal + ' stamps') : null;
 
-  // Fetch stamp data
   const passTypeId = process.env.APPLE_PASS_TYPE_ID || WALLET_CONFIG.passTypeId;
   const teamId     = process.env.APPLE_TEAM_ID      || WALLET_CONFIG.teamId;
   const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet`;
+
+  const backFields = [
+    { key: 'reward', label: L.backRewardLabel, value: rewardName + ' after ' + stampGoal + ' stamps' },
+    { key: 'url', label: L.backWebsiteLabel, value: sections.websiteUrl || lpUrl, attributedValue: '<a href="' + (sections.websiteUrl || lpUrl) + '">Open page</a>' },
+  ];
+  if (business.address) backFields.push({ key: 'address', label: L.backAddressLabel, value: business.address });
+  if (business.phone)   backFields.push({ key: 'phone', label: L.backPhoneLabel, value: business.phone, attributedValue: '<a href="tel:' + business.phone + '">' + business.phone + '</a>' });
+  if (business.hours)   backFields.push({ key: 'hours', label: L.backHoursLabel, value: business.hours });
+  backFields.push({ key: 'howto', label: L.backHowToLabel, value: 'Tap the staff NFC tag or scan the QR code to collect your stamps.' });
+  backFields.push({ key: 'terms', label: L.backTermsLabel, value: L.termsText });
+
   const passJson = {
     formatVersion: 1,
     passTypeIdentifier: passTypeId,
@@ -61,14 +81,11 @@ async function generateSmartQRPass(slug, sections) {
     barcode:  { message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
     barcodes: [{ message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
     storeCard: {
-      primaryFields: [{ key: 'brand', label: 'LOYALTY CARD', value: brandName.replace(/^Welcome to /i, '').replace(/\s+[a-z0-9]{3}$/, '').trim() }],
-      secondaryFields: [{ key: 'stamps', label: rewardReady ? '🎁 REWARD READY' : 'STAMPS', value: Array.from({length: stampGoal}, (_, i) => i < stampCount ? (rewardReady ? '🟢' : '●') : '○').join(' '), changeMessage: 'New stamp added! %@' }],
-      auxiliaryFields: [{ key: 'progress', label: rewardReady ? 'CLAIM YOUR REWARD' : 'PROGRESS', value: rewardReady ? 'Show this to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps', changeMessage: '%@' }],
-      backFields: [
-        { key: 'reward', label: 'YOUR REWARD', value: rewardName + ' after ' + stampGoal + ' stamps' },
-        { key: 'url', label: 'VISIT PAGE', value: lpUrl, attributedValue: '<a href="' + lpUrl + '">Open loyalty page</a>' },
-        { key: 'howto', label: 'HOW TO STAMP', value: 'Tap the staff NFC tag or scan the QR code to collect your stamps.' }
-      ]
+      headerFields: [{ key: 'kicker', label: '', value: rewardReady ? L.rewardReadyHeader : L.cardKicker }],
+      primaryFields: [{ key: 'brand', label: '', value: brandName }],
+      secondaryFields: [{ key: 'stamps', label: L.stampsLabel, value: Array.from({length: stampGoal}, (_, i) => i < stampCount ? (rewardReady ? '🟢' : '●') : '○').join(' '), changeMessage: 'New stamp added! %@' }],
+      auxiliaryFields: [{ key: 'progress', label: rewardReady ? L.rewardReadyLabel : L.progressLabel, value: rewardReady ? 'Show this to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps', changeMessage: '%@' }],
+      backFields,
     }
   };
 
@@ -76,12 +93,31 @@ async function generateSmartQRPass(slug, sections) {
   const keyPem  = Buffer.from(process.env.APPLE_PASS_KEY_PEM  || '', 'base64');
   const wwdr    = await getWWDRCert();
 
+  // Business branding: real logo if uploaded, otherwise the QRaivy default.
+  const logoUrl = sections.logo && sections.logo.url;
+  const logoBuffer = logoUrl ? await getAssetBuffer(logoUrl, 'logo') : null;
+  const iconBuffer = logoBuffer || getDefaultIcon();
+
+  // Premium hero strip — diagonal gradient + subtle texture in the brand color.
+  const stripBuffer   = renderHeroBanner(accent, { width: 375, height: 123 });
+  const strip2xBuffer = renderHeroBanner(accent, { width: 750, height: 246 });
+  const strip3xBuffer = renderHeroBanner(accent, { width: 1125, height: 369 });
+
+  const files = {
+    'pass.json':   Buffer.from(JSON.stringify(passJson)),
+    'icon.png':    iconBuffer,
+    'icon@2x.png': iconBuffer,
+    'strip.png':    stripBuffer,
+    'strip@2x.png': strip2xBuffer,
+    'strip@3x.png': strip3xBuffer,
+  };
+  if (logoBuffer) {
+    files['logo.png'] = logoBuffer;
+    files['logo@2x.png'] = logoBuffer;
+  }
+
   const pass = new PKPass(
-    {
-      'pass.json':  Buffer.from(JSON.stringify(passJson)),
-      'icon.png':   getDefaultIcon(),
-      'icon@2x.png':getDefaultIcon(),
-    },
+    files,
     {
       wwdr,
       signerCert: certPem,

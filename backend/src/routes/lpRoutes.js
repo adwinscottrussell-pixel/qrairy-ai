@@ -39,6 +39,23 @@ router.get('/lp/wallet/google/:slug', async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+// Premium hero banner for Google Wallet's heroImage (Google fetches images by
+// URL, it can't accept inline bytes the way Apple's pkpass bundle can).
+router.get('/lp/wallet-hero/:slug', (req, res) => {
+  try {
+    const { renderHeroBanner } = require('../services/walletThemes');
+    const accent = (req.query.c && /^#?[0-9a-fA-F]{6}$/.test(req.query.c)) ? req.query.c : '#ff5a1f';
+    const png = renderHeroBanner(accent, { width: 1032, height: 336 });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400, immutable');
+    return res.send(png);
+  } catch (err) {
+    console.error('[Wallet Hero]', err.message);
+    return res.status(500).send();
+  }
+});
+
 // Loyalty stamp (public — no auth — QR and NFC target)
 router.get('/stamp/:slug/:token', handleStamp);
 router.post('/stamp/:slug/:token/confirm', handleStampConfirm);
