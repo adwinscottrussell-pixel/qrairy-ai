@@ -289,11 +289,14 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
     return `<section class="lp-section"><h2 class="lp-section-title">${sec.title}</h2><div class="lp-items">${items}</div></section>`;
   }).join('');
 
-  const logoHTML = page.logoUrl
-    ? `<img src="${page.logoUrl}" class="lp-logo-img" alt="${bizName}" />`
+  // Business logo — sections.logo.url (Brand Center) is the single source of
+  // truth, with the legacy page.logoUrl column as a fallback for older pages.
+  const brandLogoUrl = (storedSections.logo && storedSections.logo.url) || page.logoUrl || '';
+  const logoHTML = brandLogoUrl
+    ? `<img src="${brandLogoUrl}" class="lp-logo-img" alt="${bizName}" />`
     : `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName.charAt(0).toUpperCase()}</div>`;
   const logoHTMLFinal = themeLogoMode === 'hidden' ? ''
-    : (themeLogoMode === 'image' && page.logoUrl) ? logoHTML
+    : (themeLogoMode === 'image' && brandLogoUrl) ? logoHTML
     : `<div class="lp-logo-letter" style="background:${accentDim};border-color:${accentBorder};color:${accent}">${bizName.charAt(0).toUpperCase()}</div>`;
 
   return `<!DOCTYPE html>
@@ -1562,7 +1565,9 @@ async function handleLoyaltyCardPage(req, res) {
     // truth shared with the actual Apple/Google Wallet pass.
     const color = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
     const bizName = (page.businessName || slug).replace(/s+[a-z0-9]{3}$/, '').trim();
-    const logoUrl = page.logoUrl || '';
+    // Business logo — sections.logo.url (Brand Center) is the single source
+    // of truth, with the legacy page.logoUrl column as a fallback.
+    const logoUrl = (sections.logo && sections.logo.url) || page.logoUrl || '';
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const rewardName = settings ? settings.rewardName : 'Free item';
@@ -1627,6 +1632,30 @@ async function handleGenerateAppleWalletPass(req, res) {
   } catch (err) {
     console.error('handleGenerateAppleWalletPass error:', err);
     return res.status(500).json({ error: 'Could not generate wallet pass: ' + err.message });
+  }
+}
+
+// ── POST /lp/upload-logo/:slug — business logo upload (Brand Center) ──
+// Returns a Cloudinary URL. The editor stores it as sections.logo.url and
+// includes it in the next Publish, same as every other branding field —
+// this endpoint does not write to the live page itself.
+async function handleUploadLogo(req, res) {
+  try {
+    const { slug } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No image file received.' });
+
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    if (page.userId && req.userId && page.userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { uploadLogo } = require('../services/logoUploadService');
+    const result = await uploadLogo(req.file.buffer, slug);
+    return res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('[UploadLogo] Error:', err.message);
+    return res.status(500).json({ error: 'Logo upload failed: ' + err.message });
   }
 }
 
@@ -2053,10 +2082,6 @@ function renderPremiumLP(page) {
   const website = page.websiteUrl || '#';
   const accent  = page.brandColor || '#0a0a0a';
   const useCase = page.useCase || 'restaurant';
-  const logoUrl = page.logoUrl || '';
-  const logoHTML = logoUrl
-    ? `<img src="${logoUrl}" style="width:30px;height:30px;border-radius:6px;object-fit:contain;" alt="${bizName}">`
-    : `<div style="width:30px;height:30px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">${bizName.charAt(0).toUpperCase()}</div>`;
 
   let storedSections = {};
   let storedButtons  = [];
@@ -2066,6 +2091,12 @@ function renderPremiumLP(page) {
       if (Array.isArray(storedSections.buttons)) storedButtons = storedSections.buttons;
     } catch(_) {}
   }
+  // Business logo — sections.logo.url (Brand Center) is the single source of
+  // truth, with the legacy page.logoUrl column as a fallback for older pages.
+  const logoUrl = (storedSections.logo && storedSections.logo.url) || page.logoUrl || '';
+  const logoHTML = logoUrl
+    ? `<img src="${logoUrl}" style="width:30px;height:30px;border-radius:6px;object-fit:contain;" alt="${bizName}">`
+    : `<div style="width:30px;height:30px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">${bizName.charAt(0).toUpperCase()}</div>`;
   const sh = storedSections.hero  || {};
   const sv = storedSections.voice || {};
   const sa = storedSections.ai    || {};
@@ -2675,7 +2706,7 @@ async function handleLoyaltyWelcome(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
 };

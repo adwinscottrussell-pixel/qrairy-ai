@@ -1,8 +1,9 @@
 const express = require('express');
+const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest
@@ -12,6 +13,24 @@ const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListL
 router.get('/lp/nfc-token/:slug', handleGetNFCToken);
 router.get('/lp/card/:slug', handleLoyaltyCardPage);
 router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
+
+// Business logo upload (Brand Center) — image only, 5MB cap, memory storage
+// (no temp files on disk — buffer goes straight to Cloudinary).
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only PNG, JPG, JPEG, and WebP images are allowed.'));
+  }
+});
+router.post('/lp/upload-logo/:slug', requireAuth, (req, res, next) => {
+  logoUpload.single('logo')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, handleUploadLogo);
 
 // Google Wallet save URL
 router.get('/lp/wallet/google/:slug', async (req, res) => {
