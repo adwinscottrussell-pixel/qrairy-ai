@@ -58,12 +58,15 @@ const THEMES = {
   premium: {
     name: 'premium',
     labels: {
-      cardKicker: 'LOYALTY CARD',
+      // Apple's headerField sits on the same row as the primary field (the
+      // business name) — long text here collides with longer business names,
+      // so this must stay very short.
+      cardKicker: 'CARD',
       progressLabel: 'Loyalty Progress',
       stampsLabel: 'Current Stamps',
       rewardLabel: 'Reward',
       rewardReadyLabel: 'Available Reward',
-      rewardReadyHeader: 'REWARD READY',
+      rewardReadyHeader: 'READY',
       backRewardLabel: 'YOUR REWARD',
       backWebsiteLabel: 'VISIT PAGE',
       backHowToLabel: 'HOW TO COLLECT STAMPS',

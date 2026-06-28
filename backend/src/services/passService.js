@@ -72,7 +72,12 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
     teamIdentifier: teamId,
     organizationName: brandName,
     description: walletSub,
-    logoText: brandName,
+    // logoText duplicates the primaryField (brandName) on the same header
+    // row — with a real logo image already showing the brand, the extra
+    // text only crowds the row and collides with the header field on
+    // longer business names. Only show it as a fallback when there's no
+    // logo image to carry the branding instead.
+    logoText: (sections.logo && sections.logo.url) ? '' : brandName,
     backgroundColor: bgRgb,
     foregroundColor: 'rgb(255,255,255)',
     labelColor: 'rgb(255,255,255)',
