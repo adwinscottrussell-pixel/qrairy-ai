@@ -1489,7 +1489,11 @@ async function handleServeLP(req, res) {
     } else {
       res.setHeader('Cache-Control', 'public, max-age=60');
     }
-    const _lpHtml = renderLP(page);
+    // Premium is the only template actually in use — go straight there
+    // instead of through renderLP's legacy template switch, which has its
+    // own undefined-variable bugs (t.tagline, t.aiPowered, ...) left over
+    // from being a separate, no-longer-maintained code path.
+    const _lpHtml = renderPremiumLP(page);
     if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
         const _stampKey = 'stamp:' + slug;
