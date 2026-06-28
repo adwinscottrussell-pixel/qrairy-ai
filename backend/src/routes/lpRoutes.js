@@ -3,7 +3,7 @@ const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest
@@ -31,6 +31,25 @@ router.post('/lp/upload-logo/:slug', requireAuth, (req, res, next) => {
     next();
   });
 }, handleUploadLogo);
+
+// Wallet hero/strip photo upload — optional, shown as the banner inside the
+// Apple Wallet pass in place of the generated gradient. Same constraints
+// as the logo upload.
+const stripUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only PNG, JPG, JPEG, and WebP images are allowed.'));
+  }
+});
+router.post('/lp/upload-strip/:slug', requireAuth, (req, res, next) => {
+  stripUpload.single('strip')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, handleUploadStrip);
 
 // Google Wallet save URL
 router.get('/lp/wallet/google/:slug', async (req, res) => {

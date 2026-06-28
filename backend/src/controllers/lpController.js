@@ -1659,6 +1659,30 @@ async function handleUploadLogo(req, res) {
   }
 }
 
+// ── POST /lp/upload-strip/:slug — wallet hero/strip photo upload ──────
+// Optional photo shown as the banner inside the Apple Wallet pass, in
+// place of the generated gradient. Returns a Cloudinary URL; the editor
+// stores it as sections.walletHero.url and includes it in the next Publish.
+async function handleUploadStrip(req, res) {
+  try {
+    const { slug } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No image file received.' });
+
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    if (page.userId && req.userId && page.userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { uploadStrip } = require('../services/stripUploadService');
+    const result = await uploadStrip(req.file.buffer, slug);
+    return res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('[UploadStrip] Error:', err.message);
+    return res.status(500).json({ error: 'Wallet banner upload failed: ' + err.message });
+  }
+}
+
 
 // ── LOYALTY STAMP SYSTEM ─────────────────────────────────────────────────────
 
@@ -2706,7 +2730,7 @@ async function handleLoyaltyWelcome(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleUploadLogo, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
 };

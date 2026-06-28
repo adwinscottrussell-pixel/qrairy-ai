@@ -73,11 +73,13 @@ async function ensureClass(credentials, businessName, logoUrl) {
   return classId;
 }
 
-function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady }) {
+function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl }) {
   const classId = getClassId();
   const objectId = getObjectId(slug, cid);
   const L = theme.labels;
-  const heroUrl = `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
+  // Real uploaded photo if the business set one (Google fetches it directly
+  // from Cloudinary), otherwise the generated gradient banner.
+  const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
 
   return {
     id: objectId,
@@ -116,6 +118,7 @@ async function createGoogleWalletSaveUrl(slug, sections, cid) {
   const businessName = sections.businessName || slug;
   const accent = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
   const logoUrl = sections.logo && sections.logo.url;
+  const walletHeroUrl = sections.walletHero && sections.walletHero.url;
   const theme = getTheme(sections.theme && sections.theme.walletTheme);
   const classId = await ensureClass(credentials, businessName, logoUrl);
 
@@ -134,7 +137,7 @@ async function createGoogleWalletSaveUrl(slug, sections, cid) {
 
   const loyaltyObject = Object.assign(
     { classId },
-    buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady })
+    buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl })
   );
 
   const claims = {

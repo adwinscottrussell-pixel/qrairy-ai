@@ -103,10 +103,16 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   const logoBuffer = logoUrl ? await getAssetBuffer(logoUrl, 'logo') : null;
   const iconBuffer = logoBuffer || getDefaultIcon();
 
-  // Premium hero strip — diagonal gradient + subtle texture in the brand color.
-  const stripBuffer   = renderHeroBanner(accent, { width: 375, height: 123 });
-  const strip2xBuffer = renderHeroBanner(accent, { width: 750, height: 246 });
-  const strip3xBuffer = renderHeroBanner(accent, { width: 1125, height: 369 });
+  // Hero strip — a real uploaded photo if the business set one, otherwise
+  // the generated diagonal gradient. We have no image-resize dependency, so
+  // an uploaded photo is reused as-is for all three scales (same pragmatic
+  // approach already used for the logo) rather than precisely resized —
+  // Wallet still renders it correctly, just without per-scale sharpening.
+  const stripUrl = sections.walletHero && sections.walletHero.url;
+  const uploadedStripBuffer = stripUrl ? await getAssetBuffer(stripUrl, 'strip') : null;
+  const stripBuffer   = uploadedStripBuffer || renderHeroBanner(accent, { width: 375, height: 123 });
+  const strip2xBuffer = uploadedStripBuffer || renderHeroBanner(accent, { width: 750, height: 246 });
+  const strip3xBuffer = uploadedStripBuffer || renderHeroBanner(accent, { width: 1125, height: 369 });
 
   const files = {
     'pass.json':   Buffer.from(JSON.stringify(passJson)),
