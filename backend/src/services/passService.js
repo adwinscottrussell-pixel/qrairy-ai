@@ -65,6 +65,14 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   backFields.push({ key: 'howto', label: L.backHowToLabel, value: 'Tap the staff NFC tag or scan the QR code to collect your stamps.' });
   backFields.push({ key: 'terms', label: L.backTermsLabel, value: L.termsText });
 
+  // logoText duplicates the primaryField (brandName) on the same header row
+  // — with a real logo image already showing the brand, the extra text only
+  // crowds the row and collides with the header field on longer business
+  // names. Only set it as a fallback when there's no logo image to carry
+  // the branding instead — passkit-generator's schema rejects an empty
+  // string here, so the key must be omitted entirely, not blanked.
+  const hasLogo = !!(sections.logo && sections.logo.url);
+
   const passJson = {
     formatVersion: 1,
     passTypeIdentifier: passTypeId,
@@ -72,12 +80,7 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
     teamIdentifier: teamId,
     organizationName: brandName,
     description: walletSub,
-    // logoText duplicates the primaryField (brandName) on the same header
-    // row — with a real logo image already showing the brand, the extra
-    // text only crowds the row and collides with the header field on
-    // longer business names. Only show it as a fallback when there's no
-    // logo image to carry the branding instead.
-    logoText: (sections.logo && sections.logo.url) ? '' : brandName,
+    ...(hasLogo ? {} : { logoText: brandName }),
     backgroundColor: bgRgb,
     foregroundColor: 'rgb(255,255,255)',
     labelColor: 'rgb(255,255,255)',
