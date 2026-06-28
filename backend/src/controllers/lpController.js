@@ -301,7 +301,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png"><link rel="manifest" href="/lp/manifest/${slug}">
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="${brandLogoUrl || 'https://qraivy.com/icon-192.png'}"><link rel="manifest" href="/lp/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${bizName} — ${t.tagline}</title>
@@ -2015,7 +2015,13 @@ async function handleLPManifest(req, res) {
     const { slug } = req.params;
     const lp = await prisma.landingPage.findUnique({ where: { slug } });
     const name = (lp && lp.businessName) || 'Qraivy';
-    const color = (lp && lp.color) || '#ff5a1f';
+    let sec = lp && lp.sections;
+    if (typeof sec === 'string') { try { sec = JSON.parse(sec); } catch(_) { sec = {}; } }
+    sec = sec || {};
+    const color = (lp && lp.brandColor) || (sec.theme && sec.theme.accentColor) || '#ff5a1f';
+    // Business logo (Brand Center) as the home-screen icon — falls back to
+    // the generic Qraivy icon for pages with no logo uploaded.
+    const manifestLogoUrl = (sec.logo && sec.logo.url) || (lp && lp.logoUrl) || '';
     const manifest = {
       name: name,
       short_name: name.slice(0, 12),
@@ -2024,8 +2030,14 @@ async function handleLPManifest(req, res) {
       display: 'standalone',
       background_color: '#0a0a0a',
       theme_color: color,
-      orientation: 'portrait',
-      icons: [
+      // 'any' instead of 'portrait' — a hard portrait lock fights the OS's
+      // own rotation handling on some devices, clipping the rendered page
+      // when the phone is turned sideways.
+      orientation: 'any',
+      icons: manifestLogoUrl ? [
+        { src: manifestLogoUrl, sizes: '192x192', type: 'image/png' },
+        { src: manifestLogoUrl, sizes: '512x512', type: 'image/png' }
+      ] : [
         { src: 'https://qraivy.com/icon-192.png', sizes: '192x192', type: 'image/png' },
         { src: 'https://qraivy.com/icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
@@ -2291,7 +2303,7 @@ function renderPremiumLP(page) {
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${bizName}">
-<link rel="apple-touch-icon" href="https://qraivy.com/icon-192.png">
+<link rel="apple-touch-icon" href="${logoUrl || 'https://qraivy.com/icon-192.png'}">
 <link rel="manifest" href="/lp/manifest/${slug}">
 <title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
