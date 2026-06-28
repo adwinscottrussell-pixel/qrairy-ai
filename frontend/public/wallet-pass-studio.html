@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIVY — Wallet Pass Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="dashboard-shell.css" />
+  <script src="js/qraivy-lang.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0a0a;color:#f0ece0;font-family:"DM Mono",monospace;min-height:100vh}
+    #main-content{margin-left:240px;min-height:100vh;padding:40px;transition:margin-left .22s ease}
+    body.sb-collapsed #main-content{margin-left:60px}
+    @media(max-width:768px){#main-content{margin-left:0!important;padding:72px 16px 40px}}
+    .wps-wrap{max-width:980px;margin:0 auto}
+    .wps-head{margin-bottom:24px}
+    .wps-tag{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:8px}
+    .wps-title{font-family:"Space Grotesk",system-ui,sans-serif;font-size:1.8rem;font-weight:700;margin-bottom:6px}
+    .wps-sub{font-size:.78rem;color:#888;line-height:1.6}
+
+    .wps-picker{display:flex;align-items:center;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+    .wps-picker select{background:#111;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f0ece0;font-family:inherit;font-size:.8rem;outline:none;min-width:220px}
+    .wps-picker select:focus{border-color:#ff5a1f}
+
+    .wps-notice{display:flex;gap:10px;align-items:flex-start;background:rgba(255,90,31,0.06);border:1px solid rgba(255,90,31,0.2);border-radius:10px;padding:12px 14px;margin-bottom:24px;font-size:.74rem;color:rgba(240,244,248,0.7);line-height:1.6}
+    .wps-notice b{color:#ff8c55}
+
+    .wps-cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px}
+    @media(max-width:820px){.wps-cards{grid-template-columns:1fr}}
+    .wps-card-col{background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px}
+    .wps-col-label{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#666;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+    /* Apple Wallet style */
+    .apw-card{border-radius:16px;padding:18px 20px;color:#fff;position:relative;overflow:hidden;min-height:170px;display:flex;flex-direction:column;justify-content:space-between}
+    .apw-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .apw-logo{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;overflow:hidden;flex-shrink:0}
+    .apw-logo img{width:100%;height:100%;object-fit:contain}
+    .apw-biz{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;font-size:.92rem}
+    .apw-kind{font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;opacity:.7;text-align:right}
+    .apw-mid{margin-top:14px}
+    .apw-reward-label{font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-bottom:3px}
+    .apw-reward{font-size:1rem;font-weight:600}
+    .apw-stamps{display:flex;gap:5px;margin-top:14px;flex-wrap:wrap}
+    .apw-dot{width:18px;height:18px;border-radius:50%;border:1.4px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:.5rem}
+    .apw-dot.filled{background:rgba(255,255,255,0.92);color:#000}
+    .apw-progress-text{font-size:.6rem;opacity:.6;margin-top:8px}
+
+    /* Google Wallet style */
+    .gow-card{border-radius:16px;overflow:hidden;background:#fff;color:#111;min-height:170px;display:flex;flex-direction:column}
+    .gow-header{padding:14px 18px;display:flex;align-items:center;gap:10px;color:#fff}
+    .gow-logo{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;overflow:hidden;flex-shrink:0}
+    .gow-logo img{width:100%;height:100%;object-fit:contain}
+    .gow-biz{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;font-size:.88rem}
+    .gow-body{padding:14px 18px;flex:1;display:flex;flex-direction:column;justify-content:center}
+    .gow-reward-label{font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:3px}
+    .gow-reward{font-size:.95rem;font-weight:600;color:#111;margin-bottom:12px}
+    .gow-bar-track{height:7px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:6px}
+    .gow-bar-fill{height:100%;border-radius:4px}
+    .gow-progress-text{font-size:.65rem;color:#888}
+
+    .wps-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px}
+    @media(max-width:600px){.wps-actions{grid-template-columns:1fr}}
+    .wps-action-card{background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px}
+    .wps-action-title{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#666;margin-bottom:10px}
+    .wps-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px 14px;border-radius:8px;font-family:"Space Grotesk",system-ui,sans-serif;font-size:.78rem;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#f0ece0;text-decoration:none;margin-bottom:8px;transition:all .15s}
+    .wps-btn:hover{border-color:#ff5a1f;color:#fff}
+    .wps-btn:last-child{margin-bottom:0}
+    .wps-btn.primary{background:#ff5a1f;border-color:#ff5a1f;color:#fff}
+    .wps-btn.primary:hover{background:#e04e18}
+    .wps-copy-status{font-size:.65rem;color:#22d47e;margin-top:4px;min-height:14px}
+
+    .wps-links{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px}
+    .wps-link{font-size:.74rem;color:#888;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;transition:all .15s}
+    .wps-link:hover{border-color:#ff5a1f;color:#f0ece0}
+
+    .wps-themes{background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px}
+    .wps-theme-row{display:flex;gap:10px;flex-wrap:wrap}
+    .wps-theme-chip{padding:9px 16px;border-radius:20px;font-size:.72rem;border:1px solid rgba(255,255,255,0.08);color:#555;display:flex;align-items:center;gap:6px}
+    .wps-theme-chip.active{border-color:#ff5a1f;background:rgba(255,90,31,0.08);color:#ff8c55;font-weight:600}
+    .wps-theme-soon{font-size:.55rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(255,255,255,0.06);border-radius:10px;padding:2px 7px;color:#555}
+
+    #wps-empty,#wps-loading{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
+  </style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">Q</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
+  </div>
+  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
+  <nav class="sb-nav">
+    <div class="sb-group" data-i18n="sb_main">Main</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="sb_dashboard">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="sb_analytics">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_smartpages">Smart Pages</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="sb_pages">Smart QR Pages</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="sb_create">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_engage">Engage</div>
+    <a href="dashboard.html?section=campaigns" class="sb-item"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="sb_campaigns">AI Campaigns</span></a>
+    <a href="dashboard.html?section=subscribers" class="sb-item"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="sb_subscribers">Subscribers</span></a>
+    <a href="dashboard.html?section=loyalty" class="sb-item"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="sb_loyalty">Loyalty</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_configure">Configure</div>
+    <a href="wallet-pass-studio.html" class="sb-item active"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="sb_wallet">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="sb_account">Account</div>
+    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="sb_billing">Billing &amp; Plans</span></a>
+    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="sb_settings">Settings</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
+        <div class="sb-user-role" data-i18n="sb_role">Business Owner</div>
+      </div>
+    </div>
+    <button onclick="handleSignOut()" class="sb-signout">&#x2192; Sign Out</button>
+  </div>
+  <div style="padding:8px 12px 12px;">
+    <button id="lang-toggle" onclick="(function(){var l=localStorage.getItem('qraivy_lang')=='de'?'en':'de';localStorage.setItem('qraivy_lang',l);location.reload();})()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:7px;"><span style="font-size:.8rem;">🌐</span><span id="lang-toggle-label">Deutsch</span></button>
+  </div>
+</div>
+<div id="sb-overlay" class="sb-overlay"></div>
+
+<div id="main-content">
+  <div class="wps-wrap">
+    <div class="wps-head">
+      <div class="wps-tag">Wallet Pass Studio</div>
+      <div class="wps-title">Preview &amp; test your wallet pass</div>
+      <div class="wps-sub">See exactly what customers see when they add your loyalty card to Apple or Google Wallet — no install required.</div>
+    </div>
+
+    <div id="wps-loading">Loading your pages&#x2026;</div>
+
+    <div id="wps-empty" style="display:none">
+      No loyalty programs yet. <a href="loyalty-setup.html" style="color:#ff5a1f;text-decoration:none;">Set one up &rarr;</a>
+    </div>
+
+    <div id="wps-body" style="display:none">
+      <div class="wps-picker">
+        <select id="wps-select"></select>
+      </div>
+
+      <div class="wps-notice">
+        <span>&#x1F512;</span>
+        <span><b>Wallet branding is controlled from Brand Settings.</b> Loyalty rewards are controlled from Loyalty Settings. This studio is a preview only — it doesn't add new branding controls.</span>
+      </div>
+
+      <div class="wps-cards">
+        <div class="wps-card-col">
+          <div class="wps-col-label">&#xF8FF; Apple Wallet</div>
+          <div class="apw-card" id="apw-card">
+            <div class="apw-top">
+              <div class="apw-logo" id="apw-logo">Q</div>
+              <div class="apw-kind">LOYALTY<br/>CARD</div>
+            </div>
+            <div class="apw-mid">
+              <div class="apw-biz" id="apw-biz">Business Name</div>
+              <div class="apw-reward-label">Reward</div>
+              <div class="apw-reward" id="apw-reward">Free item</div>
+              <div class="apw-stamps" id="apw-stamps"></div>
+              <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wps-card-col">
+          <div class="wps-col-label">&#x1F451; Google Wallet</div>
+          <div class="gow-card">
+            <div class="gow-header" id="gow-header">
+              <div class="gow-logo" id="gow-logo">Q</div>
+              <div class="gow-biz" id="gow-biz">Business Name</div>
+            </div>
+            <div class="gow-body">
+              <div class="gow-reward-label">Reward</div>
+              <div class="gow-reward" id="gow-reward">Free item</div>
+              <div class="gow-bar-track"><div class="gow-bar-fill" id="gow-bar"></div></div>
+              <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wps-actions">
+        <div class="wps-action-card">
+          <div class="wps-action-title">Test actions</div>
+          <a id="wps-apple-dl" class="wps-btn primary" href="#" target="_blank" rel="noopener">&#x2B07; Download Apple Wallet pass</a>
+          <a id="wps-google-save" class="wps-btn" href="#" target="_blank" rel="noopener">&#x1F4B3; Open Google Wallet save link</a>
+          <a id="wps-welcome" class="wps-btn" href="#" target="_blank" rel="noopener">&#x1F441; View public welcome page</a>
+        </div>
+        <div class="wps-action-card">
+          <div class="wps-action-title">Install link</div>
+          <button id="wps-copy" class="wps-btn">&#x1F517; Copy wallet install URL</button>
+          <div class="wps-copy-status" id="wps-copy-status"></div>
+        </div>
+      </div>
+
+      <div class="wps-links">
+        <a class="wps-link" id="wps-edit-brand" href="#">&#x1F3A8; Edit Brand Settings</a>
+        <a class="wps-link" id="wps-edit-loyalty" href="dashboard.html?section=loyalty">&#x1F3AB; Edit Loyalty Settings</a>
+      </div>
+
+      <div class="wps-themes">
+        <div class="wps-action-title">Wallet theme</div>
+        <div class="wps-theme-row">
+          <span class="wps-theme-chip active">&#x2728; Premium</span>
+          <span class="wps-theme-chip">Classic <span class="wps-theme-soon">Soon</span></span>
+          <span class="wps-theme-chip">Minimal <span class="wps-theme-soon">Soon</span></span>
+          <span class="wps-theme-chip">Luxury <span class="wps-theme-soon">Soon</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var API = 'https://api.qraivy.com';
+  var PROGRAMS = [];
+  var PAGES = {}; // slug -> { brandColor, logoUrl }
+
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  async function getToken(){try{if(window.Clerk&&window.Clerk.session)return await window.Clerk.session.getToken();}catch(_){}return null;}
+
+  function rgba(hex, a){
+    hex=(hex||'#ff5a1f').replace('#','');
+    if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);
+    if(isNaN(r)||isNaN(g)||isNaN(b)){r=255;g=90;b=31;}
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+
+  async function fetchPrograms(){
+    var tok = await getToken();
+    var h = tok ? {'Authorization':'Bearer '+tok} : {};
+    var res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
+    var data = await res.json();
+    return (data && data.programs) || [];
+  }
+
+  async function fetchPage(slug){
+    var tok = await getToken();
+    var h = tok ? {'Authorization':'Bearer '+tok} : {};
+    var res = await fetch(API+'/api/lp/'+encodeURIComponent(slug), {headers:h});
+    if(!res.ok) return {};
+    var page = await res.json();
+    var sec = page.sections;
+    if(typeof sec === 'string'){ try{ sec = JSON.parse(sec); }catch(_){ sec = {}; } }
+    sec = sec || {};
+    var logoUrl = (sec.logo && sec.logo.url) || page.logoUrl || '';
+    var brandColor = page.brandColor || (sec.theme && sec.theme.accentColor) || '#ff5a1f';
+    return { logoUrl: logoUrl, brandColor: brandColor };
+  }
+
+  function populateSelect(){
+    var sel = document.getElementById('wps-select');
+    sel.innerHTML = '';
+    PROGRAMS.forEach(function(p){
+      var o = document.createElement('option');
+      o.value = p.slug;
+      o.textContent = p.businessName || p.slug;
+      sel.appendChild(o);
+    });
+  }
+
+  async function render(slug){
+    var p = PROGRAMS.find(function(x){return x.slug===slug;});
+    if(!p) return;
+    var brand = PAGES[slug] || (PAGES[slug] = await fetchPage(slug));
+    var color = brand.brandColor || p.color || '#ff5a1f';
+    var logo = brand.logoUrl || '';
+    var bizName = p.businessName || p.slug;
+    var rewardName = p.rewardText || 'Free item';
+    var goal = p.stampGoal || 10;
+    var sample = Math.min(4, goal);
+
+    var logoHtml = logo
+      ? '<img src="'+esc(logo)+'" alt="logo">'
+      : esc(bizName.charAt(0).toUpperCase());
+
+    // Apple card
+    var apwCard = document.getElementById('apw-card');
+    apwCard.style.background = 'linear-gradient(135deg,'+color+','+color+'cc)';
+    document.getElementById('apw-logo').innerHTML = logoHtml;
+    document.getElementById('apw-biz').textContent = bizName;
+    document.getElementById('apw-reward').textContent = rewardName;
+    document.getElementById('apw-progress').textContent = sample+' of '+goal+' stamps';
+    var dots = '';
+    for(var i=0;i<goal;i++){
+      dots += '<div class="apw-dot'+(i<sample?' filled':'')+'">'+(i<sample?'&#10003;':'')+'</div>';
+    }
+    document.getElementById('apw-stamps').innerHTML = dots;
+
+    // Google card
+    document.getElementById('gow-header').style.background = color;
+    document.getElementById('gow-logo').innerHTML = logoHtml;
+    document.getElementById('gow-biz').textContent = bizName;
+    document.getElementById('gow-reward').textContent = rewardName;
+    document.getElementById('gow-bar').style.width = Math.round(sample/goal*100)+'%';
+    document.getElementById('gow-bar').style.background = color;
+    document.getElementById('gow-progress').textContent = sample+' of '+goal+' stamps';
+
+    // Actions
+    document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
+    document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
+    var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
+    document.getElementById('wps-welcome').href = welcomeUrl;
+    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug);
+
+    var copyBtn = document.getElementById('wps-copy');
+    var copyStatus = document.getElementById('wps-copy-status');
+    copyBtn.onclick = function(){
+      navigator.clipboard.writeText(welcomeUrl).then(function(){
+        copyStatus.textContent = 'Copied!';
+        setTimeout(function(){ copyStatus.textContent=''; }, 2000);
+      }).catch(function(){
+        copyStatus.textContent = welcomeUrl;
+      });
+    };
+  }
+
+  async function init(){
+    try{
+      PROGRAMS = await fetchPrograms();
+    }catch(e){
+      PROGRAMS = [];
+    }
+    document.getElementById('wps-loading').style.display = 'none';
+    if(!PROGRAMS.length){
+      document.getElementById('wps-empty').style.display = 'block';
+      return;
+    }
+    document.getElementById('wps-body').style.display = 'block';
+    populateSelect();
+    var params = new URLSearchParams(window.location.search);
+    var initialSlug = params.get('slug') && PROGRAMS.some(function(p){return p.slug===params.get('slug');})
+      ? params.get('slug') : PROGRAMS[0].slug;
+    document.getElementById('wps-select').value = initialSlug;
+    render(initialSlug);
+    document.getElementById('wps-select').addEventListener('change', function(){
+      render(this.value);
+    });
+  }
+
+  function waitForClerk(n){
+    if(window.Clerk && window.Clerk.session){ init(); }
+    else if(n>0){ setTimeout(function(){ waitForClerk(n-1); }, 200); }
+    else { init(); }
+  }
+  window.addEventListener('load', function(){ waitForClerk(25); });
+})();
+</script>
+
+<script>
+(function(){
+  var sidebar = document.getElementById('sidebar');
+  var sbToggle = document.getElementById('sb-toggle');
+  if(localStorage.getItem('sb-collapsed')==='true'){sidebar.classList.add('collapsed');document.body.classList.add('sb-collapsed');}
+  if(sbToggle) sbToggle.addEventListener('click',function(){
+    var col = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', col);
+    localStorage.setItem('sb-collapsed', col);
+  });
+  var overlay = document.getElementById('sb-overlay');
+  if(overlay) overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
+
+  if(window.Clerk){
+    window.Clerk.load().then(function(){
+      var u = window.Clerk.user;
+      if(u){
+        var name = u.firstName || u.emailAddresses[0].emailAddress;
+        var el = document.getElementById('sb-username');
+        var av = document.getElementById('sb-avatar');
+        if(el) el.textContent = u.emailAddresses[0].emailAddress;
+        if(av) av.textContent = name[0].toUpperCase();
+      }
+    });
+  }
+
+  window.handleSignOut = function(){
+    if(window.Clerk) window.Clerk.signOut().then(function(){ window.location.href='index.html'; });
+    else window.location.href='index.html';
+  };
+
+  var sbSettings = document.getElementById('sb-settings');
+  if(sbSettings) sbSettings.addEventListener('click', function(e){ e.preventDefault(); });
+})();
+</script>
+</body>
+</html>

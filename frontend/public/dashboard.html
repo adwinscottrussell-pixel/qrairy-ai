@@ -217,7 +217,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
     <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
+    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
     <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
     <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
@@ -392,7 +392,7 @@ async function initDashboard(){
   var overlay=document.getElementById('sb-overlay');
   if(mobBtn)mobBtn.addEventListener('click',function(){sidebar.classList.add('mob-open');overlay.classList.add('on');});
   if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
-  ['sb-wallet','sb-settings'].forEach(function(id){
+  ['sb-settings'].forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.addEventListener('click',function(e){e.preventDefault();toast('Coming soon — stay tuned!');});
   });

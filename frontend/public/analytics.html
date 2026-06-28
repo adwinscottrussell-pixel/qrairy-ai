@@ -32,7 +32,7 @@
     <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
     <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="#" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
+    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
     <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
     <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
@@ -478,7 +478,7 @@ async function initAnalytics() {
   if (_mobBtn) _mobBtn.addEventListener('click', function() { _sidebar.classList.add('mob-open'); _overlay.classList.add('on'); });
   if (_overlay) _overlay.addEventListener('click', function() { _sidebar.classList.remove('mob-open'); _overlay.classList.remove('on'); });
   // Toast items (unfinished features)
-  ['sb-wallet','sb-settings'].forEach(function(id) {
+  ['sb-settings'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { e.preventDefault(); const t=document.getElementById('cs-toast'); if(t){document.getElementById('cs-toast-msg').textContent=' Coming soon!';t.style.display='flex';setTimeout(function(){t.style.display='none';},2000);} });
   });
