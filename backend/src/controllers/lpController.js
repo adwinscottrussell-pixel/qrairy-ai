@@ -1558,13 +1558,14 @@ async function handleLoyaltyCardPage(req, res) {
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).send('Not found');
     const sections = page.sections ? JSON.parse(page.sections) : {};
-    const accent = (sections.theme && sections.theme.accent) || '#FF4E00';
+    // Brand color comes from the Smart Landing Page only — single source of
+    // truth shared with the actual Apple/Google Wallet pass.
+    const color = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
     const bizName = (page.businessName || slug).replace(/s+[a-z0-9]{3}$/, '').trim();
     const logoUrl = page.logoUrl || '';
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const rewardName = settings ? settings.rewardName : 'Free item';
-    const color = (settings && settings.color) || accent || '#ff5a1f';
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     const stampCount = pass ? (pass.stampCount || 0) : 0;

@@ -45,6 +45,14 @@ async function buildProgram(landingPage) {
   const stampUrl = 'https://api.qraivy.com/stamp/' + landingPage.slug + '/' + token;
   const redeemUrl = 'https://api.qraivy.com/redeem/' + landingPage.slug + '/' + token;
 
+  // Brand color comes from the Smart Landing Page only — single source of
+  // truth shared with the actual Apple/Google Wallet pass. There is no
+  // separate loyalty-specific color anymore.
+  const sections = landingPage.sections
+    ? JSON.parse(typeof landingPage.sections === 'string' ? landingPage.sections : JSON.stringify(landingPage.sections))
+    : {};
+  const brandColor = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
+
   return {
     id: landingPage.id,
     slug: landingPage.slug,
@@ -58,7 +66,7 @@ async function buildProgram(landingPage) {
     totalStampsIssued: stampCount,
     rewardsEarned,
     rewardsRedeemed,
-    color: settings ? (settings.color || '#ff5a1f') : '#ff5a1f', // LOYALTY_COLOR_PATCH
+    color: brandColor,
     stampUrl,
     nfcUrl: stampUrl,
     redeemUrl,
@@ -147,7 +155,7 @@ async function updateProgram(req, res) {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const { goal, rewardName, enabled, businessName, color } = req.body || {};
+    const { goal, rewardName, enabled, businessName } = req.body || {};
 
     const lp = await prisma.landingPage.findUnique({ where: { id } });
     if (!lp) return res.status(404).json({ error: 'Program not found' });
@@ -165,8 +173,7 @@ async function updateProgram(req, res) {
         update: {
           ...(typeof goal === 'number' && { goal }),
           ...(typeof rewardName === 'string' && { rewardName }),
-          ...(typeof enabled === 'boolean' && { enabled }),
-          ...(typeof color === 'string' && color && { color })
+          ...(typeof enabled === 'boolean' && { enabled })
         }
       });
     }

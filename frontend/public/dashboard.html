@@ -1394,20 +1394,6 @@ function _lyCardPreview(p, color) {
   "</div>";
 }
 
-// Re-render only the card preview with a new color (called from color picker)
-window.updateCardColor = function(input) {
-  var id = input.dataset.id;
-  var color = input.value;
-  var p = window._lyPrograms && window._lyPrograms[id];
-  if (!p) return;
-  var preview = document.getElementById("ly-preview-" + id);
-  if (preview) {
-    var tmp = document.createElement("div");
-    tmp.innerHTML = _lyCardPreview(p, color);
-    preview.replaceWith(tmp.firstChild);
-  }
-};
-
 function _lyBuildCard(p) {
   var _lang = localStorage.getItem("qraivy_lang") || "en";
   // Store program data for live color preview
@@ -1492,12 +1478,6 @@ function _lyBuildCard(p) {
     h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
     h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
     h +=   "</div>";
-    // Color picker row
-    h +=   "<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:12px;\">";
-    h +=     "<label style=\"font-size:.68rem;color:rgba(240,244,248,0.4);white-space:nowrap;\">Card colour</label>";
-    h +=     "<input type=\"color\" id=\"ly-ec-" + p.id + "\" value=\"" + color + "\" data-id=\"" + p.id + "\" oninput=\"window.updateCardColor(this)\" style=\"width:36px;height:28px;border:0.5px solid rgba(255,255,255,0.1);border-radius:6px;background:rgba(255,255,255,0.05);cursor:pointer;padding:2px;\" />";
-    h +=     "<div style=\"font-size:.62rem;color:rgba(240,244,248,0.25);\">Changes the stamp colour on the card preview and customer page</div>";
-    h +=   "</div>";
     h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
     h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
     h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
@@ -1555,12 +1535,9 @@ window.saveLoyaltyEdit = function(btn) {
   var id = btn.dataset.id;
   var reward = (document.getElementById("ly-er-" + id) || {}).value || "";
   var goal = parseInt((document.getElementById("ly-eg-" + id) || {}).value || 10);
-  var colorEl = document.getElementById("ly-ec-" + id);
-  var color = colorEl ? colorEl.value : null;
   try {
     window.Clerk.session.getToken().then(function(t) {
       var body = { rewardName: reward, goal: goal };
-      if (color) body.color = color;
       fetch("https://api.qraivy.com/loyalty/programs/" + id, {
         method: "PUT",
         headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
@@ -1724,8 +1701,7 @@ window.loadCustList = function(btn) {
       loy_title: '🎟 Loyalty Programs', loy_add_prog: '+ Add program',
       loy_gdpr: 'Anonymous stamp tracking — GDPR compliant',
       loy_not_setup: 'not set up', loy_active: '● active', loy_paused: '⏸ paused',
-      loy_edit_prog: 'Edit program', loy_card_colour: 'Card colour',
-      loy_colour_hint: 'Changes the stamp colour on the card preview and customer page',
+      loy_edit_prog: 'Edit program',
       loy_save: 'Save', loy_pause: 'Pause', loy_activate: 'Activate',
       loy_copy_nfc: 'Copy NFC URL', loy_redeem: '🎁 Redeem', loy_customers: '👥 Customers',
       loy_enable: '+ Enable loyalty for this page', loy_loading: 'Loading…',
@@ -1805,8 +1781,7 @@ window.loadCustList = function(btn) {
       loy_title: '🎟 Treueprogramme', loy_add_prog: '+ Programm hinzufügen',
       loy_gdpr: 'Anonymes Stempel-Tracking — DSGVO-konform',
       loy_not_setup: 'nicht eingerichtet', loy_active: '● aktiv', loy_paused: '⏸ pausiert',
-      loy_edit_prog: 'Programm bearbeiten', loy_card_colour: 'Kartenfarbe',
-      loy_colour_hint: 'Ändert die Stempelfarbe in der Kartenvorschau und auf der Kundenseite',
+      loy_edit_prog: 'Programm bearbeiten',
       loy_save: 'Speichern', loy_pause: 'Pausieren', loy_activate: 'Aktivieren',
       loy_copy_nfc: 'NFC-URL kopieren', loy_redeem: '🎁 Einlösen', loy_customers: '👥 Kunden',
       loy_enable: '+ Treue für diese Seite aktivieren', loy_loading: 'Wird geladen…',
