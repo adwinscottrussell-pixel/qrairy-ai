@@ -54,6 +54,33 @@ app.get('/debug/pass/:serialNumber', async (req, res) => {
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// TEMP — list recent Pass rows for a slug, newest first. Same purpose/gate
+// as /debug/pass above — avoids needing the exact serialNumber.
+app.get('/debug/passes-for/:slug', async (req, res) => {
+  if (req.query.key !== (process.env.DEBUG_KEY || 'qraivy-temp-debug-2026')) return res.status(403).send();
+  try {
+    const prisma = require('./utils/prismaClient');
+    const passes = await prisma.pass.findMany({
+      where: { slug: req.params.slug },
+      orderBy: { updatedAt: 'desc' },
+      take: 10,
+    });
+    const results = await Promise.all(passes.map(async p => {
+      const devices = await prisma.passDevice.findMany({ where: { passId: p.id } });
+      return {
+        serialNumber: p.serialNumber,
+        stampCount: p.stampCount,
+        rewardReady: p.rewardReady,
+        lastStampAt: p.lastStampAt,
+        updatedAt: p.updatedAt,
+        createdAt: p.createdAt,
+        deviceCount: devices.length,
+      };
+    }));
+    res.json(results);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.get('/sw.js', (req, res) => { res.setHeader('Content-Type','application/javascript'); res.setHeader('Service-Worker-Allowed','/'); res.sendFile(require('path').join(__dirname,'../public/sw.js')); });
 
 app.use('/',         qrRoutes);
