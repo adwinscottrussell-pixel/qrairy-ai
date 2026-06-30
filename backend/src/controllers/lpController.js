@@ -1834,8 +1834,11 @@ async function handleStampConfirm(req, res) {
     if (devices.length) {
       try {
         const { pushUpdateToDevices } = require('../services/apnsService');
-        await pushUpdateToDevices(devices);
+        const _pushResult = await pushUpdateToDevices(devices);
+        console.log('[Stamp] APNs push for', pass.serialNumber, '—', _pushResult.success, 'sent,', _pushResult.failed, 'failed', _pushResult.errors.length ? JSON.stringify(_pushResult.errors) : '');
       } catch(e) { console.error('[Stamp] Push error:', e.message); }
+    } else {
+      console.log('[Stamp] No devices registered for', pass.serialNumber, '— push skipped');
     }
     try {
       const { updateGoogleWalletStamps } = require('../services/googleWalletService');
