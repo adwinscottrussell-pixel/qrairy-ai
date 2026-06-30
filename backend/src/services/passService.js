@@ -36,6 +36,10 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   const brandName    = rawName.replace(/^Welcome to /i, '').replace(/\s+[a-z0-9]{3}$/, '').trim();
   const walletSub    = loop.walletSubtitle || 'Scan to visit';
   const lpUrl        = `https://api.qraivy.com/lp/${slug}`;
+  // Embed the customer's cid in the barcode URL so staff can scan the
+  // customer's pass and recover the exact identity to stamp against —
+  // no dependency on the customer's browser localStorage at stamp time.
+  const barcodeUrl   = cid ? `${lpUrl}?cid=${encodeURIComponent(cid)}` : lpUrl;
   const serial       = opts.serialNumber || `sqr-${slug}`;
   const authTok      = opts.authToken || crypto.createHash('sha256').update(serial + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0, 32);
   const bgRgb        = hexToRgb(accent) || 'rgb(255,90,31)';
@@ -86,8 +90,8 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
     labelColor: 'rgb(255,255,255)',
     webServiceURL: wsUrl,
     authenticationToken: authTok,
-    barcode:  { message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
-    barcodes: [{ message: lpUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
+    barcode:  { message: barcodeUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
+    barcodes: [{ message: barcodeUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
     storeCard: {
       headerFields: [{ key: 'kicker', label: '', value: rewardReady ? L.rewardReadyHeader : L.cardKicker }],
       primaryFields: [{ key: 'brand', label: '', value: brandName }],

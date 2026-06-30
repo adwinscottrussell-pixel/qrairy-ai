@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>QRAIVY — Stamp Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=DM+Mono:wght@400&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" type="text/javascript" onload="window.Clerk.load()"></script>
+  <!-- jsQR — pure JS QR decoder, no native deps -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0a0a;color:#f0ece0;font-family:'DM Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px}
+    .wrap{width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px}
+    .header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .header-back{background:none;border:none;color:#ff5a1f;font-size:.8rem;cursor:pointer;font-family:inherit;padding:0}
+    .title{font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.5rem;font-weight:800}
+    .sub{font-size:.74rem;color:rgba(240,244,248,0.5);line-height:1.6;margin-bottom:4px}
+    .select-wrap{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden}
+    .select-wrap select{width:100%;background:transparent;border:none;padding:12px 14px;color:#f0ece0;font-family:inherit;font-size:.85rem;outline:none;cursor:pointer}
+    .camera-box{position:relative;width:100%;aspect-ratio:1;background:#111;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,0.08)}
+    .camera-box video{width:100%;height:100%;object-fit:cover;display:block}
+    .camera-box canvas{display:none}
+    .scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+    .scan-frame{width:65%;aspect-ratio:1;border:2.5px solid #ff5a1f;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45)}
+    .scan-corner{position:absolute;width:20px;height:20px;border-color:#ff5a1f;border-style:solid}
+    .tl{top:17%;left:17%;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+    .tr{top:17%;right:17%;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+    .bl{bottom:17%;left:17%;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+    .br{bottom:17%;right:17%;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+    .camera-hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:.66rem;color:rgba(240,244,248,0.5)}
+    .btn{width:100%;padding:14px;border-radius:10px;font-family:'Space Grotesk',system-ui,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:none;transition:all .15s}
+    .btn-primary{background:#ff5a1f;color:#fff}
+    .btn-primary:hover{background:#e04e18}
+    .btn-secondary{background:rgba(255,255,255,0.06);color:rgba(240,244,248,0.7);border:1px solid rgba(255,255,255,0.08)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .result{border-radius:12px;padding:16px;font-size:.82rem;line-height:1.6;text-align:center}
+    .result.ok{background:rgba(34,212,126,0.1);border:1px solid rgba(34,212,126,0.3);color:#22d47e}
+    .result.err{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171}
+    .result.info{background:rgba(255,90,31,0.08);border:1px solid rgba(255,90,31,0.2);color:#ff8c55}
+    .stamp-big{font-size:2.5rem;margin-bottom:6px}
+    .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5a1f;animation:pulse 1.2s ease infinite;margin-right:6px}
+    @keyframes pulse{0%,100%{opacity:.4;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+    #start-btn{margin-top:4px}
+    #manual-section{display:none;margin-top:4px}
+    .manual-input{width:100%;background:#111;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:11px 13px;color:#f0ece0;font-family:inherit;font-size:.8rem;outline:none;margin-bottom:8px}
+    .manual-input:focus{border-color:#ff5a1f}
+    .divider{display:flex;align-items:center;gap:10px;color:rgba(240,244,248,0.25);font-size:.7rem}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.07)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div style="margin-bottom:4px">
+    <button class="header-back" onclick="history.back()">← Back</button>
+  </div>
+  <div>
+    <div class="title">Stamp Scanner</div>
+    <p class="sub" style="margin-top:6px">Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.</p>
+  </div>
+
+  <div class="select-wrap">
+    <select id="slug-select"><option value="">Loading your programs…</option></select>
+  </div>
+
+  <div class="camera-box" id="camera-box" style="display:none">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="scan-overlay">
+      <div class="scan-frame"></div>
+      <div class="scan-corner tl"></div>
+      <div class="scan-corner tr"></div>
+      <div class="scan-corner bl"></div>
+      <div class="scan-corner br"></div>
+    </div>
+    <div class="camera-hint"><span class="status-dot"></span>Scanning…</div>
+  </div>
+
+  <div id="result-box"></div>
+
+  <button id="start-btn" class="btn btn-primary" onclick="startScanner()">Start Camera Scanner</button>
+
+  <div class="divider">or enter manually</div>
+
+  <div id="manual-section">
+    <input id="manual-url" class="manual-input" type="text" placeholder="Paste barcode URL (https://api.qraivy.com/lp/…?cid=…)" />
+    <button class="btn btn-secondary" onclick="stampFromUrl(document.getElementById('manual-url').value)">Stamp from URL</button>
+  </div>
+  <button class="btn btn-secondary" style="font-size:.75rem" onclick="toggleManual()">Enter barcode URL manually instead</button>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var API = 'https://api.qraivy.com';
+  var scanning = false;
+  var animFrame = null;
+  var stream = null;
+  var currentToken = null;
+  var lastStampedCid = null;
+  var lastStampTime = 0;
+  var DEDUPE_MS = 3000; // ignore same cid re-scan within 3s
+
+  // ── Auth ──
+  async function getToken(){
+    try{ if(window.Clerk&&window.Clerk.session) return await window.Clerk.session.getToken(); }catch(_){}
+    return null;
+  }
+
+  // ── Load programs ──
+  async function loadPrograms(){
+    var sel = document.getElementById('slug-select');
+    try{
+      var tok = await getToken();
+      var h = tok ? {'Authorization':'Bearer '+tok} : {};
+      var res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
+      var data = await res.json();
+      var progs = (data && data.programs) || [];
+      sel.innerHTML = '';
+      if(!progs.length){
+        sel.innerHTML = '<option value="">No loyalty programs found</option>';
+        return;
+      }
+      progs.forEach(function(p){
+        var o = document.createElement('option');
+        o.value = p.slug;
+        o.textContent = p.businessName || p.slug;
+        sel.appendChild(o);
+      });
+    }catch(e){
+      sel.innerHTML = '<option value="">Error loading programs</option>';
+    }
+  }
+
+  // ── Fetch stamp token ──
+  async function fetchToken(slug){
+    var res = await fetch(API+'/lp/stamp/token/'+encodeURIComponent(slug));
+    var d = await res.json();
+    return d.token;
+  }
+
+  // ── Extract cid from scanned URL ──
+  function extractCid(url){
+    try{
+      var u = new URL(url);
+      return u.searchParams.get('cid') || null;
+    }catch(_){ return null; }
+  }
+
+  function extractSlug(url){
+    try{
+      var u = new URL(url);
+      var parts = u.pathname.split('/').filter(Boolean);
+      // path is /lp/{slug}
+      var idx = parts.indexOf('lp');
+      return idx >= 0 && parts[idx+1] ? parts[idx+1] : null;
+    }catch(_){ return null; }
+  }
+
+  // ── Stamp action ──
+  async function doStamp(slug, cid){
+    setResult('info', '⏳', 'Stamping…', '');
+    try{
+      if(!currentToken) currentToken = await fetchToken(slug);
+      var res = await fetch(API+'/stamp/'+encodeURIComponent(slug)+'/'+currentToken+'/confirm', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({cid: cid})
+      });
+      var d = await res.json();
+      currentToken = null; // token may be consumed/rotated — fetch fresh next time
+      if(d.status === 'ok'){
+        setResult('ok','✅','Stamp added!', d.newCount+' of '+d.goal+' stamps — '+d.rewardName);
+        lastStampedCid = cid;
+        lastStampTime = Date.now();
+      } else if(d.status === 'already'){
+        setResult('info','⏱️','Already stamped','This customer already got a stamp recently. Come back next visit!');
+        lastStampedCid = cid;
+        lastStampTime = Date.now();
+      } else if(d.status === 'invalid'){
+        currentToken = null;
+        setResult('err','❌','Invalid token','Please try again.');
+      } else {
+        setResult('err','⚠️','Something went wrong', JSON.stringify(d));
+      }
+    }catch(e){
+      setResult('err','❌','Error',e.message);
+    }
+  }
+
+  // ── Stamp from URL string (manual entry or scan result) ──
+  window.stampFromUrl = async function(url){
+    if(!url || !url.trim()){ setResult('err','❌','No URL','Please scan or paste a barcode URL.'); return; }
+    url = url.trim();
+    var cid = extractCid(url);
+    var slugFromUrl = extractSlug(url);
+    var sel = document.getElementById('slug-select');
+    var slug = sel.value || slugFromUrl;
+    if(!slug){ setResult('err','❌','No program selected','Select a loyalty program first.'); return; }
+    if(!cid){ setResult('err','❌','No customer ID','This barcode doesn\'t contain a customer ID. Make sure customers add the wallet pass fresh so the new barcode is generated.'); return; }
+    await doStamp(slug, cid);
+  };
+
+  // ── UI result display ──
+  function setResult(type, icon, title, sub){
+    var box = document.getElementById('result-box');
+    box.innerHTML = '<div class="result '+type+'"><div class="stamp-big">'+icon+'</div><strong>'+title+'</strong>'+(sub?'<br><span style="font-size:.75rem;opacity:.8">'+sub+'</span>':'')+'</div>';
+  }
+
+  // ── Camera scanner ──
+  window.startScanner = async function(){
+    var box = document.getElementById('camera-box');
+    var btn = document.getElementById('start-btn');
+    if(scanning){ stopScanner(); return; }
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+      var video = document.getElementById('video');
+      video.srcObject = stream;
+      await video.play();
+      box.style.display = 'block';
+      btn.textContent = 'Stop Scanner';
+      btn.className = 'btn btn-secondary';
+      scanning = true;
+      tickScan();
+    }catch(e){
+      setResult('err','❌','Camera error',e.message+' — use manual entry below instead.');
+      document.getElementById('manual-section').style.display='block';
+    }
+  };
+
+  function stopScanner(){
+    scanning = false;
+    if(animFrame) cancelAnimationFrame(animFrame);
+    if(stream) stream.getTracks().forEach(function(t){t.stop();});
+    stream = null;
+    document.getElementById('camera-box').style.display='none';
+    var btn = document.getElementById('start-btn');
+    btn.textContent = 'Start Camera Scanner';
+    btn.className = 'btn btn-primary';
+  }
+
+  function tickScan(){
+    if(!scanning) return;
+    var video = document.getElementById('video');
+    var canvas = document.getElementById('canvas');
+    if(video.readyState === video.HAVE_ENOUGH_DATA){
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'dontInvert'});
+      if(code && code.data){
+        var url = code.data;
+        var cid = extractCid(url);
+        // dedupe: ignore same cid for 3 seconds
+        if(cid && !(cid === lastStampedCid && Date.now() - lastStampTime < DEDUPE_MS)){
+          var sel = document.getElementById('slug-select');
+          var slug = sel.value || extractSlug(url);
+          if(slug){
+            stopScanner();
+            doStamp(slug, cid);
+            return;
+          }
+        }
+      }
+    }
+    animFrame = requestAnimationFrame(tickScan);
+  }
+
+  window.toggleManual = function(){
+    var s = document.getElementById('manual-section');
+    s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  };
+
+  // ── Boot ──
+  function boot(){
+    loadPrograms();
+    if(window.Clerk){
+      window.Clerk.load().then(function(){
+        var u = window.Clerk.user;
+        if(!u){ window.location.href = 'index.html'; }
+      });
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
