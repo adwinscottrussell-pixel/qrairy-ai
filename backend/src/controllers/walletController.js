@@ -154,8 +154,25 @@ async function handleGetLatestPass(req, res) {
       }
     }
 
-    // Derive slug from serialNumber (sqr-{slug})
-    const slug = pass.serialNumber.replace(/^sqr-/, '');
+    // slug must come from the Pass row directly, not be reverse-parsed out
+    // of serialNumber — slugs themselves contain hyphens, so "sqr-{slug}"
+    // vs "sqr-{slug}-{cid}" can't be split apart reliably by string parsing.
+    // This was the actual cause of stamps never showing up on the re-fetched
+    // wallet pass: the old parsing produced a bogus slug for any per-customer
+    // (cid-suffixed) pass, the landing page lookup 404'd, and Apple Wallet
+    // kept showing the stale cached pass since the refetch silently failed.
+    let slug = pass.slug;
+    let cid = null;
+    if (slug) {
+      const prefix = 'sqr-' + slug + '-';
+      if (pass.serialNumber.startsWith(prefix)) cid = pass.serialNumber.slice(prefix.length);
+    } else {
+      // Best-effort fallback for rows created before slug was tracked
+      // directly (pre-migration) — still ambiguous for cid-suffixed serials,
+      // but better than nothing until they're naturally backfilled on their
+      // next stamp/regenerate.
+      slug = pass.serialNumber.replace(/^sqr-/, '');
+    }
     const { PrismaClient } = require('@prisma/client');
     const _prisma = new PrismaClient();
     const page = await _prisma.landingPage.findUnique({ where: { slug } });
@@ -165,7 +182,11 @@ async function handleGetLatestPass(req, res) {
     // Inject latest push message into sections so it appears on pass back
     if (pass.lastMsg) { sections._lastMsgTitle = pass.lastMsgTitle; sections._lastMsg = pass.lastMsg; sections._lastMsgLink = pass.lastMsgLink; }
     const { generateSmartQRPass } = require('../services/passService');
-    const pkpassBuffer = await generateSmartQRPass(slug, sections);
+    // Must pass this pass's own serialNumber/cid — without it,
+    // generateSmartQRPass defaults to the generic per-slug serial and looks
+    // up a different (or nonexistent) Pass row, showing the wrong stamp
+    // count instead of this specific customer's.
+    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid, serialNumber: pass.serialNumber, authToken: pass.authToken });
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',

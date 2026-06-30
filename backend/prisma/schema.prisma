@@ -89,6 +89,12 @@ model LandingPage {
 model Pass {
   id              String             @id @default(cuid())
   serialNumber    String             @unique
+  // Set at creation time. serialNumber encodes slug + an optional customer
+  // cid as "sqr-{slug}-{cid}", but slugs themselves contain hyphens, so
+  // reverse-parsing the slug back out of serialNumber is ambiguous —
+  // storing it directly is the only reliable way to look up which
+  // landing page a given Pass belongs to.
+  slug            String?
   passTypeId      String
   authToken       String?
   lastMsgTitle    String?

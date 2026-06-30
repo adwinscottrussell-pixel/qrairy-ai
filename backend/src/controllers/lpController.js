@@ -1615,8 +1615,8 @@ async function handleGenerateAppleWalletPass(req, res) {
     // Ensure Pass record exists in DB for device registration
     await _prisma.pass.upsert({
       where: { serialNumber },
-      update: { updatedAt: new Date(), authToken },
-      create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken }
+      update: { updatedAt: new Date(), authToken, slug },
+      create: { serialNumber, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken, slug }
     });
     if (_cid) { // mark customer as wallet holder in LoyaltyCustomer table
       try {
@@ -1803,7 +1803,7 @@ async function handleStampConfirm(req, res) {
       const _at = _cr.createHash('sha256').update(serial + 'qraivy').digest('hex').slice(0, 32);
       try {
         pass = await prisma.pass.create({
-          data: { serialNumber: serial, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken: _at, stampCount: 0 }
+          data: { serialNumber: serial, passTypeId: process.env.APPLE_PASS_TYPE_ID || 'pass.com.qraivy.wallet', authToken: _at, stampCount: 0, slug }
         });
       } catch(_ce) {
         pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
@@ -1822,7 +1822,7 @@ async function handleStampConfirm(req, res) {
     const newCount = Math.min((pass.stampCount || 0) + 1, goal);
     const rewardReady = newCount >= goal;
     const previouslyReady = pass.rewardReady;
-    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now } });
+    await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now, slug } });
     await prisma.stampEntry.create({ data: { slug, passId: pass.id, source: 'qr' } });
     if (rewardReady && !previouslyReady) {
       try {
