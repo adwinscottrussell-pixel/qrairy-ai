@@ -101,7 +101,7 @@
     <p class="sub" style="margin-top:6px">Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.</p>
   </div>
 
-  <div class="select-wrap">
+  <div class="select-wrap" id="slug-wrap">
     <select id="slug-select"><option value="">Loading your programs…</option></select>
   </div>
 
@@ -217,6 +217,16 @@
   // ── Load programs ──
   async function loadPrograms(){
     var sel = document.getElementById('slug-select');
+    var slugWrap = document.getElementById('slug-wrap');
+    // If slug is in the URL, use it directly — staff don't have a logged-in
+    // session so the programs API won't work for them anyway.
+    if(pinSlug){
+      sel.innerHTML = '<option value="' + pinSlug + '">' + pinSlug + '</option>';
+      sel.value = pinSlug;
+      if(slugWrap) slugWrap.style.display = 'none'; // hide dropdown, slug is fixed
+      return;
+    }
+    // No slug in URL — must be the owner accessing directly, try to load list
     try{
       var tok = await getToken();
       var h = tok ? {'Authorization':'Bearer '+tok} : {};
@@ -225,7 +235,7 @@
       var progs = (data && data.programs) || [];
       sel.innerHTML = '';
       if(!progs.length){
-        sel.innerHTML = '<option value="">No loyalty programs found</option>';
+        sel.innerHTML = '<option value="">No loyalty programs found — add ?slug=YOUR-SLUG to the URL</option>';
         return;
       }
       progs.forEach(function(p){
@@ -235,7 +245,7 @@
         sel.appendChild(o);
       });
     }catch(e){
-      sel.innerHTML = '<option value="">Error loading programs</option>';
+      sel.innerHTML = '<option value="">Add ?slug=YOUR-SLUG to the URL</option>';
     }
   }
 
