@@ -1856,6 +1856,37 @@ window.loadCustList = function(btn) {
 
 })();
 </script>
+<!-- Mobile Settings Section -->
+<div id="section-settings" class="dash-section" style="display:none;padding:24px;margin-left:0;">
+  <h2 style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:24px;" data-i18n="nav_settings">Settings</h2>
+
+  <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#555;">Language</div>
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:.85rem;color:#f0f4f8;" id="mob-lang-label">English</span>
+      <button onclick="toggleLang()" style="padding:8px 18px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff8c55;font-size:.78rem;cursor:pointer;" id="mob-lang-btn">Switch to Deutsch</button>
+    </div>
+  </div>
+
+  <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#555;">Navigate</div>
+    <a href="wallet-pass-studio.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:1.1rem;">&#x1F4B3;</span>
+      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_wallet">Wallet Passes</span>
+    </a>
+    <a href="analytics.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:1.1rem;">&#x2197;</span>
+      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_analytics">Analytics</span>
+    </a>
+    <a href="upgrade.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;">
+      <span style="font-size:1.1rem;">&#x1F4B3;</span>
+      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_billing">Billing &amp; Plans</span>
+    </a>
+  </div>
+
+  <button onclick="handleSignOut()" style="width:100%;padding:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(240,244,248,0.5);font-size:.85rem;cursor:pointer;font-family:inherit;" data-i18n="nav_signout">Sign Out</button>
+</div>
+
 <!-- Bottom Nav (mobile only) -->
 <nav id="bottom-nav">
   <a href="dashboard.html" class="bn-item" id="bn-home">
@@ -1911,7 +1942,17 @@ window.showSection = function(sec) {
   var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns' };
 
   if (sec === 'settings') {
-    if (window.toast) toast('Coming soon — stay tuned!');
+    var mc2 = document.getElementById('main-content');
+    if (mc2) mc2.style.display = 'none';
+    document.querySelectorAll('.dash-section').forEach(function(s) { s.style.display = 'none'; });
+    var sset = document.getElementById('section-settings');
+    if (sset) sset.style.display = 'block';
+    // Sync language label
+    var curLang = localStorage.getItem('qraivy_lang') || 'en';
+    var mobLbl = document.getElementById('mob-lang-label');
+    var mobBtn = document.getElementById('mob-lang-btn');
+    if (mobLbl) mobLbl.textContent = curLang === 'de' ? 'Deutsch' : 'English';
+    if (mobBtn) mobBtn.textContent = curLang === 'de' ? 'Switch to English' : 'Switch to Deutsch';
     return;
   }
 
