@@ -6,7 +6,8 @@ const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListL
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
-  handleLPManifest
+  handleLPManifest,
+  handleSetStaffPin, handleVerifyStaffPin,
 } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
@@ -119,6 +120,10 @@ router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
 router.get('/lp/subscribers/:slug', handleGetSubscribers);
+// Staff PIN — set (owner auth) and verify (no auth, staff use)
+router.post('/lp/staff-pin/:slug', requireAuth, handleSetStaffPin);
+router.post('/lp/staff-pin/:slug/verify', handleVerifyStaffPin);
+
 // API: publish a new landing page
 router.post('/lp', handlePublishLP);
 router.delete('/lp/:slug', handleDeleteLP);

@@ -1480,6 +1480,11 @@ function _lyBuildCard(p) {
     h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
     h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
     h +=   "</div>";
+    h +=   "<div style=\"margin-bottom:10px;\"><label style=\"display:block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:6px;\">Staff PIN (4-6 digits)</label>";
+    h +=   "<div style=\"display:flex;gap:8px;\">";
+    h +=     "<input id=\"ly-pin-" + p.id + "\" type=\"number\" min=\"1000\" max=\"999999\" placeholder=\"e.g. 1234\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
+    h +=     "<button data-id=\"" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.saveStaffPin(this)\" style=\"padding:8px 14px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:7px;color:#ff8c55;font-size:.72rem;cursor:pointer;white-space:nowrap;\">Set PIN</button>";
+    h +=   "</div><span id=\"ly-pin-status-" + p.id + "\" style=\"font-size:.65rem;color:#22c55e;display:none;\">✓ PIN saved</span></div>";
     h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
     h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
     h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
@@ -1514,6 +1519,32 @@ function _lyStat(label, val, color) {
 function _lyEsc(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+window.saveStaffPin = async function(btn) {
+  var id = btn.dataset.id;
+  var slug = btn.dataset.slug;
+  var input = document.getElementById('ly-pin-' + id);
+  var status = document.getElementById('ly-pin-status-' + id);
+  var pin = (input && input.value || '').trim();
+  if(!pin || pin.length < 4) { alert('PIN must be at least 4 digits.'); return; }
+  btn.disabled = true;
+  try {
+    var tok = await window.Clerk.session.getToken();
+    var res = await fetch('https://api.qraivy.com/lp/staff-pin/' + encodeURIComponent(slug), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+      body: JSON.stringify({ pin: pin })
+    });
+    var d = await res.json();
+    if(res.ok && d.ok) {
+      if(status) { status.style.display='inline'; setTimeout(function(){ status.style.display='none'; }, 2500); }
+      if(input) input.value = '';
+    } else {
+      alert(d.error || 'Failed to save PIN');
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+  btn.disabled = false;
+};
 
 window.copyLoyaltyUrl = function(btn) {
   var url = btn.dataset.url;

@@ -2763,12 +2763,50 @@ async function handleLoyaltyWelcome(req, res) {
   }
 }
 
+// ── Staff PIN — set (auth required) and verify (no auth) ─────────────────
+// PIN is hashed with sha256 and stored in LandingPage.sections.staffPin.
+// Not high-security — this is a lightweight barrier so staff don't need
+// the business owner's Clerk account, not an access-control boundary.
+
+const _pinHash = (pin) => require('crypto').createHash('sha256').update(String(pin).trim() + 'qraivy-pin-salt').digest('hex');
+
+async function handleSetStaffPin(req, res) {
+  try {
+    const { slug } = req.params;
+    const { pin } = req.body || {};
+    if (!pin || String(pin).trim().length < 4) return res.status(400).json({ error: 'PIN must be at least 4 digits.' });
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    if (page.userId && req.userId && page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+    sec.staffPin = _pinHash(pin);
+    await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(sec) } });
+    pageCache.delByPrefix('lp:' + slug);
+    return res.json({ ok: true });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+}
+
+async function handleVerifyStaffPin(req, res) {
+  try {
+    const { slug } = req.params;
+    const { pin } = req.body || {};
+    if (!pin) return res.status(400).json({ error: 'PIN required.' });
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+    if (!sec.staffPin) return res.status(404).json({ error: 'No PIN set for this page.' });
+    if (sec.staffPin !== _pinHash(pin)) return res.status(401).json({ error: 'Incorrect PIN.' });
+    return res.json({ ok: true, slug });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+}
+
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
+  handleSetStaffPin, handleVerifyStaffPin,
 };
 
 
