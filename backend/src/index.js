@@ -28,6 +28,32 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, l
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));
+
+// TEMP — read-only Pass-row inspector for diagnosing the wallet/stamp sync
+// bug. Gated on a query secret, not on any session, since this is purely
+// for live debugging. Remove once the bug is confirmed fixed.
+app.get('/debug/pass/:serialNumber', async (req, res) => {
+  if (req.query.key !== (process.env.DEBUG_KEY || 'qraivy-temp-debug-2026')) return res.status(403).send();
+  try {
+    const prisma = require('./utils/prismaClient');
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: req.params.serialNumber } });
+    if (!pass) return res.status(404).json({ error: 'not found' });
+    const devices = await prisma.passDevice.findMany({ where: { passId: pass.id } });
+    const settings = pass.slug ? await prisma.stampSettings.findUnique({ where: { slug: pass.slug } }) : null;
+    res.json({
+      serialNumber: pass.serialNumber,
+      slug: pass.slug,
+      stampCount: pass.stampCount,
+      stampGoal: settings ? settings.goal : null,
+      rewardReady: pass.rewardReady,
+      lastStampAt: pass.lastStampAt,
+      updatedAt: pass.updatedAt,
+      createdAt: pass.createdAt,
+      deviceCount: devices.length,
+      devices: devices.map(d => ({ deviceLibraryId: d.deviceLibraryId, walletType: d.walletType, createdAt: d.createdAt })),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 app.get('/sw.js', (req, res) => { res.setHeader('Content-Type','application/javascript'); res.setHeader('Service-Worker-Allowed','/'); res.sendFile(require('path').join(__dirname,'../public/sw.js')); });
 
 app.use('/',         qrRoutes);
