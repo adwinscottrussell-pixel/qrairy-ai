@@ -68,8 +68,8 @@
 <!-- PIN gate — shown before scanner if no PIN verified yet -->
 <div id="pin-gate" style="display:none">
   <div class="pin-logo">Q</div>
-  <div class="pin-title">Staff Access</div>
-  <p class="pin-sub">Enter your staff PIN to open the stamp scanner.</p>
+  <div class="pin-title" data-i18n="ss_pin_title">Staff Access</div>
+  <p class="pin-sub" data-i18n="ss_pin_sub">Enter your staff PIN to open the stamp scanner.</p>
   <div class="pin-dots" id="pin-dots">
     <div class="pin-dot"></div>
     <div class="pin-dot"></div>
@@ -94,11 +94,11 @@
 
 <div class="wrap" id="scanner-wrap" style="display:none">
   <div style="margin-bottom:4px">
-    <button class="header-back" onclick="history.back()">← Back</button>
+    <button class="header-back" onclick="history.back()" data-i18n="ss_back">← Back</button>
   </div>
   <div>
-    <div class="title">Stamp Scanner</div>
-    <p class="sub" style="margin-top:6px">Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.</p>
+    <div class="title" data-i18n="ss_title">Stamp Scanner</div>
+    <p class="sub" style="margin-top:6px" data-i18n="ss_sub">Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.</p>
   </div>
 
   <div class="select-wrap" id="slug-wrap">
@@ -115,20 +115,20 @@
       <div class="scan-corner bl"></div>
       <div class="scan-corner br"></div>
     </div>
-    <div class="camera-hint"><span class="status-dot"></span>Scanning…</div>
+    <div class="camera-hint"><span class="status-dot"></span><span data-i18n="ss_scanning">Scanning…</span></div>
   </div>
 
   <div id="result-box"></div>
 
-  <button id="start-btn" class="btn btn-primary" onclick="startScanner()">Start Camera Scanner</button>
+  <button id="start-btn" class="btn btn-primary" onclick="startScanner()" data-i18n="ss_start">Start Camera Scanner</button>
 
-  <div class="divider">or enter manually</div>
+  <div class="divider"><span data-i18n="ss_or_manual">or enter manually</span></div>
 
   <div id="manual-section">
-    <input id="manual-url" class="manual-input" type="text" placeholder="Paste barcode URL (https://api.qraivy.com/lp/…?cid=…)" />
+    <input id="manual-url" class="manual-input" type="text" data-i18n-ph="ss_manual_ph" placeholder="Paste barcode URL (https://api.qraivy.com/lp/…?cid=…)" />
     <button class="btn btn-secondary" onclick="stampFromUrl(document.getElementById('manual-url').value)">Stamp from URL</button>
   </div>
-  <button class="btn btn-secondary" style="font-size:.75rem" onclick="toggleManual()">Enter barcode URL manually instead</button>
+  <button class="btn btn-secondary" style="font-size:.75rem" onclick="toggleManual()" data-i18n="ss_enter_manual">Enter barcode URL manually instead</button>
 </div>
 
 <script>
@@ -176,11 +176,11 @@
         sessionStorage.setItem('staff_pin_ok_'+slug, '1');
         showScanner();
       } else {
-        document.getElementById('pin-err').textContent = d.error === 'No PIN set for this page.' ? 'No PIN set yet — ask the business owner to set one in the dashboard.' : 'Incorrect PIN. Try again.';
+        document.getElementById('pin-err').textContent = d.error === 'No PIN set for this page.' ? (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet' : (window.SS_T&&window.SS_T.ss_pin_wrong)||'Incorrect PIN. Try again.';
         pinBuffer=''; updatePinDots();
       }
     }catch(e){
-      document.getElementById('pin-err').textContent = 'Network error. Check connection.';
+      document.getElementById('pin-err').textContent = (window.SS_T&&window.SS_T.ss_net_err)||'Network error. Check connection.';
       pinBuffer=''; updatePinDots();
     }
   }
@@ -313,7 +313,7 @@
     var slugFromUrl = extractSlug(url);
     var sel = document.getElementById('slug-select');
     var slug = sel.value || slugFromUrl;
-    if(!slug){ setResult('err','❌','No program selected','Select a loyalty program first.'); return; }
+    if(!slug){ setResult('err','❌',(window.SS_T&&window.SS_T.ss_no_slug)||'No program selected',''); return; }
     if(!cid){ setResult('err','❌','No customer ID','This barcode doesn\'t contain a customer ID. Make sure customers add the wallet pass fresh so the new barcode is generated.'); return; }
     await doStamp(slug, cid);
   };
@@ -335,12 +335,12 @@
       video.srcObject = stream;
       await video.play();
       box.style.display = 'block';
-      btn.textContent = 'Stop Scanner';
+      btn.textContent = (window.SS_T&&window.SS_T.ss_stop)||'Stop Scanner';
       btn.className = 'btn btn-secondary';
       scanning = true;
       tickScan();
     }catch(e){
-      setResult('err','❌','Camera error',e.message+' — use manual entry below instead.');
+      setResult('err','❌',(window.SS_T&&window.SS_T.ss_cam_err)||'Camera error',e.message);
       document.getElementById('manual-section').style.display='block';
     }
   };
@@ -352,7 +352,7 @@
     stream = null;
     document.getElementById('camera-box').style.display='none';
     var btn = document.getElementById('start-btn');
-    btn.textContent = 'Start Camera Scanner';
+    btn.textContent = (window.SS_T&&window.SS_T.ss_start)||'Start Camera Scanner';
     btn.className = 'btn btn-primary';
   }
 
@@ -407,6 +407,71 @@
   } else {
     boot();
   }
+})();
+</script>
+
+<script>
+(function(){
+  var lang = localStorage.getItem('qraivy_lang') === 'de' ? 'de' : 'en';
+  var T = {
+    en: {
+      ss_back: '← Back',
+      ss_pin_title: 'Staff Access',
+      ss_pin_sub: 'Enter your staff PIN to open the stamp scanner.',
+      ss_title: 'Stamp Scanner',
+      ss_sub: "Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.",
+      ss_scanning: 'Scanning…',
+      ss_start: 'Start Camera Scanner',
+      ss_stop: 'Stop Scanner',
+      ss_or_manual: 'or enter manually',
+      ss_manual_ph: 'Paste barcode URL (https://api.qraivy.com/lp/…?cid=…)',
+      ss_stamp_url: 'Stamp from URL',
+      ss_enter_manual: 'Enter barcode URL manually instead',
+      ss_stamp_ok: 'Stamp added!',
+      ss_already: 'Already stamped',
+      ss_already_sub: 'This customer already got a stamp recently. Come back next visit!',
+      ss_no_cid: "No customer ID — the customer needs to re-add their wallet pass so the new barcode is generated.",
+      ss_no_slug: 'No program selected. Select a loyalty program first.',
+      ss_pin_wrong: (window.SS_T&&window.SS_T.ss_pin_wrong)||'Incorrect PIN. Try again.',
+      ss_pin_none: (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet',
+      ss_net_err: (window.SS_T&&window.SS_T.ss_net_err)||'Network error. Check connection.',
+      ss_cam_err: 'Camera error',
+    },
+    de: {
+      ss_back: '← Zurück',
+      ss_pin_title: 'Mitarbeiterzugang',
+      ss_pin_sub: 'Gib deine Mitarbeiter-PIN ein, um den Stempelscanner zu öffnen.',
+      ss_title: 'Stempelscanner',
+      ss_sub: 'Richte die Kamera auf den Barcode der Treuekarte des Kunden, um einen Stempel direkt zu vergeben.',
+      ss_scanning: 'Scannt…',
+      ss_start: 'Kamerascanner starten',
+      ss_stop: 'Scanner stoppen',
+      ss_or_manual: 'oder manuell eingeben',
+      ss_manual_ph: 'Barcode-URL einfügen (https://api.qraivy.com/lp/…?cid=…)',
+      ss_stamp_url: 'Stempel aus URL',
+      ss_enter_manual: 'Barcode-URL stattdessen manuell eingeben',
+      ss_stamp_ok: 'Stempel hinzugefügt!',
+      ss_already: 'Bereits gestempelt',
+      ss_already_sub: 'Dieser Kunde hat kürzlich bereits einen Stempel erhalten. Beim nächsten Besuch wieder stempeln!',
+      ss_no_cid: 'Keine Kunden-ID — der Kunde muss den Wallet-Pass neu hinzufügen, damit der neue Barcode generiert wird.',
+      ss_no_slug: 'Kein Programm ausgewählt. Zuerst ein Treueprogramm auswählen.',
+      ss_pin_wrong: 'Falsche PIN. Erneut versuchen.',
+      ss_pin_none: 'Noch keine PIN gesetzt — bitte den Geschäftsinhaber, eine PIN im Dashboard einzurichten.',
+      ss_net_err: 'Netzwerkfehler. Verbindung prüfen.',
+      ss_cam_err: 'Kamerafehler',
+    }
+  };
+  var t = T[lang] || T.en;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var k = el.getAttribute('data-i18n');
+    if(t[k] !== undefined) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){
+    var k = el.getAttribute('data-i18n-ph');
+    if(t[k] !== undefined) el.placeholder = t[k];
+  });
+  // Expose translation lookup so the JS can use it for dynamic strings
+  window.SS_T = t;
 })();
 </script>
 </body>
