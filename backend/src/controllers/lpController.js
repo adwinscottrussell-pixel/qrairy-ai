@@ -2734,9 +2734,14 @@ async function handleLoyaltyWelcome(req, res) {
     const bizName = page.businessName || slug;
     const color = (sections.theme && sections.theme.accentColor) || '#e8a020';
     const logoUrl = sections.logo && sections.logo.url;
-    const stampCfg = sections.stamp || {};
-    const goal = stampCfg.goal || 10;
-    const rewardName = stampCfg.rewardName || (lang === 'de' ? 'Gratisprodukt' : 'Free Item');
+    // sections.stamp is never actually populated — StampSettings (the same
+    // table handleStampConfirm/generateSmartQRPass read from) is the real
+    // source of truth for goal/rewardName. Reading the wrong place here
+    // silently fell back to a hardcoded goal of 10 regardless of what the
+    // business actually configured.
+    const stampCfg = await prisma.stampSettings.findUnique({ where: { slug } });
+    const goal = stampCfg ? stampCfg.goal : 10;
+    const rewardName = (stampCfg && stampCfg.rewardName) || (lang === 'de' ? 'Gratisprodukt' : 'Free Item');
     const logoHtml = logoUrl
       ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>'
       : '<div class="logo">' + bizName.charAt(0) + '</div>';
