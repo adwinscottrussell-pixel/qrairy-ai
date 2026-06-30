@@ -37,7 +37,10 @@
       --font-mono: 'DM Mono', monospace;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    /* Prevent horizontal overflow at every level — body overflow-x:hidden
+       alone doesn't clip fixed/absolute children; html must be set too. */
+    html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
+    img, video, iframe, svg { max-width: 100%; height: auto; }
     body {
       background: var(--bg); color: var(--text);
       font-family: var(--font-body); font-size: 16px;
@@ -773,17 +776,32 @@
       .nav-links .nav-link:not(.nav-cta) { display: none; }
       .section-wrap { padding: 0 20px; }
       .hero { padding: 100px 20px 60px; }
-      .hero-stats { gap: 20px; }
+      .hero-stats { gap: 20px; flex-wrap: wrap; }
       .hero-stat-num { font-size: 1.4rem; }
       .features-grid { grid-template-columns: 1fr; }
       .how-steps { grid-template-columns: repeat(2, 1fr); }
       .testimonials-grid { grid-template-columns: 1fr; }
-      .pricing-grid { grid-template-columns: 1fr; max-width: 380px; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
       .qr-types-grid { grid-template-columns: repeat(2, 1fr); }
       .wizard-form { padding: 24px 20px; }
       .form-row { flex-direction: column; }
       footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
-      trusted-section { padding: 20px; }
+      .trusted-section { padding: 20px; }
+      /* Constrain any wide containers to viewport */
+      .hero-bg-glow { width: 100vw; right: 0; left: 0; }
+      .cta-inner { padding: 36px 20px; }
+      [style*="max-width:1200px"], [style*="max-width: 1200px"] { width: 100%; }
+    }
+    /* Extra-small phones: 360-480px */
+    @media(max-width: 480px) {
+      .how-steps { grid-template-columns: 1fr; }
+      .qr-types-grid { grid-template-columns: 1fr; }
+      .hero-btns { flex-direction: column; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+      .hero-stats { gap: 16px; }
+      .fq-banner { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 16px; }
+      .section-title { font-size: clamp(1.4rem, 6vw, 2rem); }
+      .nav-cta { padding: 8px 14px; font-size: 0.76rem; }
     }
   </style>
 </head>
