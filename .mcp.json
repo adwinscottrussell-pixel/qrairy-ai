@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./backend", "./frontend"]
+    }
+  },
+  "_notes": {
+    "status": "Minimal starting point — only includes a server with no external credentials required, since we don't yet know your DB provider or whether you want GitHub/Postgres MCP access wired up.",
+    "postgres": "Add a postgres MCP server here once backend/prisma/schema.prisma confirms the DB provider — e.g. { \"command\": \"npx\", \"args\": [\"-y\", \"@modelcontextprotocol/server-postgres\", \"${DATABASE_URL}\"] }. Use whatever your actual .env variable is named (commonly DATABASE_URL for Prisma, but confirm).",
+    "github": "Add a github MCP server here if you want Claude Code to read/write issues or PRs directly — needs a GITHUB_TOKEN env var, not yet added since it's optional.",
+    "secrets_warning": "Never hardcode real API keys/tokens in this file. Always use ${ENV_VAR} placeholders resolved from your shell or .env, matching backend/.gitignore's existing .env/.env.* rules."
+  }
+}
