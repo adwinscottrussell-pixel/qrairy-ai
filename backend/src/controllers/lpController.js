@@ -1,6 +1,6 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
-const prisma = require('../prismaClient');
+const prisma = require('../utils/prismaClient');
 const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
 
@@ -1590,7 +1590,7 @@ async function handleGenerateAppleWalletPass(req, res) {
   try {
     const { slug } = req.params;
     const { generateSmartQRPass } = require('../services/passService');
-    const _prisma = require('../prismaClient');
+    const _prisma = require('../utils/prismaClient');
 
     // Load the Smart QR page
     const page = await _prisma.landingPage.findUnique({ where: { slug } });

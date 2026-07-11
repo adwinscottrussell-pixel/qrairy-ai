@@ -173,7 +173,7 @@ function requireCap(cap) {
     const userId = req.auth?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const prisma = require('../prismaClient');
+    const prisma = require('./prismaClient');
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(401).json({ error: 'User not found' });
 
@@ -200,7 +200,7 @@ function requireCap(cap) {
 
 // ── Start trial for a user ────────────────────────────────────────────────────
 async function startTrial(userId) {
-  const prisma = require('../prismaClient');
+  const prisma = require('./prismaClient');
   const expiresAt = new Date(Date.now() + TRIAL_DURATION_MS);
   return prisma.user.update({
     where: { id: userId },

@@ -5,7 +5,7 @@
  * Increments: QR.totalScans (via Scan count), QR.lastScannedAt
  */
 
-const prisma = require('../prismaClient');
+const prisma = require('./prismaClient');
 
 // ── Track a scan event ────────────────────────────────────────────────────────
 async function trackScan(qrId, req) {

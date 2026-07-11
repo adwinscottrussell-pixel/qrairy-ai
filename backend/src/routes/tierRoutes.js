@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { requireAuth } = require('../middleware/auth');
-const prisma  = require('../prismaClient');
+const prisma  = require('../utils/prismaClient');
 const { buildPlanInfo, startTrial, resolveEffectivePlan, TRIAL_DURATION_MS } = require('../utils/tierSystem');
 
 router.get('/plan', requireAuth, async (req, res) => {
