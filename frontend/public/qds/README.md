@@ -69,23 +69,38 @@ qds/
 - File names are singular, lowercase, one word per concern
   (`colors.css`, not `color-tokens.css`).
 
+## Usage Decisions
+
+- Secondary button hover reuses `--qds-color-surface-2` — no dedicated
+  hover token was added, since the existing surface scale already covers it.
+
 ## Foundation Summary (v0.1, revised)
 
 - **Spacing** — 4px-based scale, `--qds-space-0` through `--qds-space-20`.
+  Also houses control sizing (`--qds-control-height-sm/md/lg`), the minimum
+  touch target (`--qds-touch-target-min`), and the icon size scale
+  (`--qds-icon-size-sm/md/lg`) — all dimensional tokens on the same 4px grid.
 - **Radius** — `none / sm / md / lg / xl / full`.
-- **Typography** — 11 semantic roles (display, page title, section title,
-  card title, body large, body, body small, label, caption, KPI/stat, code).
-  Inter is the primary UI font; DM Mono is used only for KPI/stat figures
-  and code, where exact technical values matter.
+- **Typography** — 13 semantic roles (display, page title, section title,
+  card title, body large, body, body small, label, caption, KPI/stat, code,
+  button label, large button label). Inter is the primary UI font; DM Mono
+  is used only for KPI/stat figures and code, where exact technical values
+  matter. Button label roles exist so component CSS never reuses body roles
+  directly for control text.
 - **Colors** — semantic roles for surfaces, borders, text, brand, status,
   and interaction states. Near-black foundation retained (no navy). Only
   one brand accent family (`brand-primary` / `brand-hover` / `brand-active`);
-  the unused second accent from the legacy palette was dropped.
+  the unused second accent from the legacy palette was dropped. Danger now
+  has the same interaction pattern (`danger-hover` / `danger-active`),
+  derived from `--qds-color-danger` using the same lighten/darken
+  relationship as the brand family.
 - **Elevation** — `none / sm / md / lg / floating / overlay / focus /
   brand-glow`. No component-named shadows (e.g. no "toast shadow").
 - **Motion** — instant/fast/standard/slow durations, standard/enter/exit
   easings, hover-lift, pressed-scale, and a full `prefers-reduced-motion`
-  override.
+  override. `--qds-duration-spinner` is excluded from that override — it
+  communicates progress rather than decorative motion, so it stays active
+  under reduced motion.
 - **Breakpoints** — small mobile (360px), mobile (480px), tablet (768px),
   desktop (1024px), wide desktop (1440px). Documented as reference
   constants only — CSS custom properties cannot be used directly inside

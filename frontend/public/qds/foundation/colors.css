@@ -30,6 +30,8 @@
   --qds-color-success: #22c55e;
   --qds-color-warning: #f59e0b;
   --qds-color-danger: #ef4444;
+  --qds-color-danger-hover: #f26a6a;
+  --qds-color-danger-active: #df2828;
   --qds-color-information: #3b82f6;
 
   /* Interaction */

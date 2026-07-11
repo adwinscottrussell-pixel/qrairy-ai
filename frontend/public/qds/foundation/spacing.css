@@ -15,4 +15,17 @@
   --qds-space-12: 48px;
   --qds-space-16: 64px;
   --qds-space-20: 80px;
+
+  /* Control sizing — interactive control heights, all multiples of the 4px scale */
+  --qds-control-height-sm: 32px;
+  --qds-control-height-md: 44px;
+  --qds-control-height-lg: 48px;
+
+  /* Touch target — minimum hit area for interactive elements (WCAG 2.5.5) */
+  --qds-touch-target-min: 44px;
+
+  /* Icon sizing */
+  --qds-icon-size-sm: 16px;
+  --qds-icon-size-md: 20px;
+  --qds-icon-size-lg: 24px;
 }

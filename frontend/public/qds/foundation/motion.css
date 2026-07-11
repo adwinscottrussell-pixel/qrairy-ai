@@ -12,6 +12,9 @@
 
   --qds-hover-lift: -1px;
   --qds-pressed-scale: 0.98;
+
+  /* Functional — communicates progress, stays active under reduced-motion */
+  --qds-duration-spinner: 800ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

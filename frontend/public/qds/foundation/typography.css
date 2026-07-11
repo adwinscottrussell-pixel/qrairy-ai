@@ -80,4 +80,18 @@
   --qds-text-code-size: 0.875rem;
   --qds-text-code-line-height: 1.5;
   --qds-text-code-weight: var(--qds-font-weight-regular);
+
+  /* Button label — default control label text */
+  --qds-text-button-label-family: var(--qds-font-family-primary);
+  --qds-text-button-label-size: 0.875rem;
+  --qds-text-button-label-line-height: 1.2;
+  --qds-text-button-label-weight: var(--qds-font-weight-semibold);
+  --qds-text-button-label-letter-spacing: 0.01em;
+
+  /* Button label large — large control label text */
+  --qds-text-button-label-lg-family: var(--qds-font-family-primary);
+  --qds-text-button-label-lg-size: 1rem;
+  --qds-text-button-label-lg-line-height: 1.2;
+  --qds-text-button-label-lg-weight: var(--qds-font-weight-semibold);
+  --qds-text-button-label-lg-letter-spacing: 0.01em;
 }
