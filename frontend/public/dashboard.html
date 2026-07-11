@@ -312,6 +312,121 @@ async function deleteQR(id,cardEl){
   }catch{toast('Could not reach server');}
 }
 
+// Phase 1 (Sprint 2C): canonical Smart QR Card renderer per
+// QDS_SMART_QR_CARD_ARCHITECTURE_v1.md. Not yet called from any production
+// path — renderCards() and the claimed-card builders below are unchanged.
+function qdsEscapeHtml(value){
+  return String(value==null?'':value).replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+function qdsIsSafeUrl(url){
+  if(typeof url!=='string'||!url)return false;
+  var s=url.trim();
+  if(/^https?:\/\//i.test(s))return true;
+  if(/^\/\//.test(s))return true;
+  if(/^\//.test(s))return true;
+  if(!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s))return true;
+  return false;
+}
+function qdsSafeUrlAttr(url){
+  return qdsIsSafeUrl(url)?qdsEscapeHtml(url):'#';
+}
+function normalizeSmartQRCardData(qr,options){
+  qr=qr||{};
+  options=options||{};
+  var claimed=!!options.claimed;
+  var slug=qr.slug||qr.lpSlug||'';
+  var businessName=qr.businessName||(claimed?'Your Smart QR':'');
+  var publicUrl=qr.publicUrl!=null?qr.publicUrl:(slug?'qraivy.com/lp/'+slug:(qr.originalUrl||''));
+  var targetUrl=qr.targetUrl||qr.hostedUrl||qr.originalUrl||'';
+  var scans=Number(qr.scans!=null?qr.scans:qr.totalScans)||0;
+  var subscribers=Number(qr.subscribers!=null?qr.subscribers:qr.totalSubscribers)||0;
+  var conversionRate=qr.conversionRate!=null?Number(qr.conversionRate)||0:(scans>0?Math.round((subscribers/scans)*100):0);
+  return{
+    id:qr.id!=null?String(qr.id):'',
+    slug:slug,
+    businessName:businessName,
+    publicUrl:publicUrl,
+    targetUrl:targetUrl,
+    qrImageUrl:qr.qrImageUrl||qr.qrSrc||'',
+    scans:scans,
+    subscribers:subscribers,
+    conversionRate:conversionRate,
+    claimed:claimed
+  };
+}
+function renderSmartQRCard(qr,options){
+  options=options||{};
+  var d=normalizeSmartQRCardData(qr,options);
+  var claimed=d.claimed;
+  var downloadUrl=options.downloadUrl||'';
+  var showManage=options.showManage!==false;
+  var showView=options.showView!==false;
+  var showAnalytics=options.showAnalytics!==false;
+  var showDownload=options.showDownload===true&&!!downloadUrl;
+
+  var rootClass=(claimed?'sqr-claimed-card':'sqr-card')+
+    ' qds-surface qds-surface--default qds-surface--padding-none qds-surface--elevation-raised';
+
+  var mediaHtml=claimed?
+    '<img class="sqr-claimed-qr qds-surface__media" src="'+qdsSafeUrlAttr(d.qrImageUrl)+'" alt="QR code for '+qdsEscapeHtml(d.businessName)+'" loading="lazy"/>':
+    '<div class="sqr-thumb qds-surface__media"><img src="'+qdsSafeUrlAttr(d.qrImageUrl)+'" alt="QR code for '+qdsEscapeHtml(d.businessName)+'" loading="lazy"/></div>';
+
+  var statusHtml=claimed?
+    '<div class="sqr-claimed-badge"><div class="sqr-claimed-badge-dot"></div>LIVE</div>':
+    '<div class="sqr-status-row"><span class="sqr-status live">&#x25CF; Live</span><span class="sqr-status ai">&#x2728; AI</span></div>';
+
+  var titleClass='qds-surface__title'+(claimed?' sqr-claimed-name':' sqr-name');
+  var descClass='qds-surface__description'+(claimed?' sqr-claimed-url':' sqr-url');
+
+  var headerHtml=
+    '<div class="qds-surface__header">'+
+      '<div class="qds-surface__header-main">'+
+        mediaHtml+
+        '<div class="qds-surface__header-text">'+
+          statusHtml+
+          '<h3 class="'+titleClass+'">'+qdsEscapeHtml(d.businessName)+'</h3>'+
+          '<div class="'+descClass+'">'+qdsEscapeHtml(d.publicUrl)+'</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  var bodyHtml='';
+  if(!claimed){
+    bodyHtml=
+      '<div class="qds-surface__body">'+
+        '<div class="sqr-stats">'+
+          '<div><div class="sqr-stat-v">'+d.scans+'</div><div class="sqr-stat-l">Scans</div></div>'+
+          '<div><div class="sqr-stat-v">'+d.subscribers+'</div><div class="sqr-stat-l">Subs</div></div>'+
+          '<div><div class="sqr-stat-v">'+d.conversionRate+'%</div><div class="sqr-stat-l">CVR</div></div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  var actionsHtml='';
+  if(claimed){
+    var viewHref=qdsSafeUrlAttr(d.targetUrl);
+    var analyticsHref=qdsSafeUrlAttr('analytics.html');
+    actionsHtml='<div class="sqr-claimed-actions qds-surface__footer">';
+    if(showView)actionsHtml+='<a href="'+viewHref+'" target="_blank" class="sqr-claimed-btn sqr-claimed-btn-primary qds-btn qds-btn--secondary qds-btn--sm">&#x1F310; View Live Page</a>';
+    if(showManage)actionsHtml+='<button class="sqr-claimed-btn sqr-claimed-btn-secondary qds-btn qds-btn--ghost qds-btn--sm" onclick="document.getElementById(\'claimSuccessOverlay\').classList.add(\'show\')">&#x270F;&#xFE0F; Manage</button>';
+    if(showAnalytics)actionsHtml+='<a href="'+analyticsHref+'" class="sqr-claimed-btn sqr-claimed-btn-secondary qds-btn qds-btn--ghost qds-btn--sm">&#x1F4CA; Analytics</a>';
+    if(showDownload)actionsHtml+='<a href="'+qdsSafeUrlAttr(downloadUrl)+'" download="smart-qr.png" class="sqr-claimed-btn sqr-claimed-btn-secondary qds-btn qds-btn--ghost qds-btn--sm">&#x2B07; QR</a>';
+    actionsHtml+='</div>';
+  }else{
+    actionsHtml='<div class="sqr-divider"></div><div class="sqr-actions qds-surface__footer">';
+    if(showManage)actionsHtml+='<button class="sqr-act primary sqr-manage qds-btn qds-btn--secondary qds-btn--sm">&#x2699; Manage</button>';
+    if(showView)actionsHtml+='<button class="sqr-act sqr-open qds-btn qds-btn--ghost qds-btn--sm">&#x1F310; View</button>';
+    if(showAnalytics)actionsHtml+='<button class="sqr-act sqr-analytics qds-btn qds-btn--ghost qds-btn--sm">&#x2197; Analytics</button>';
+    actionsHtml+='</div>';
+  }
+
+  return '<div class="'+rootClass+'" data-qr-id="'+qdsEscapeHtml(d.id)+'" data-qr-slug="'+qdsEscapeHtml(d.slug)+'">'+
+    headerHtml+bodyHtml+actionsHtml+
+    '</div>';
+}
+
 function renderCards(dashboard){
   var grid=document.getElementById('sqrGrid');
   var loadEl=document.getElementById('sqr-loading');
