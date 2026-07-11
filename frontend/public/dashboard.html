@@ -312,9 +312,9 @@ async function deleteQR(id,cardEl){
   }catch{toast('Could not reach server');}
 }
 
-// Phase 1 (Sprint 2C): canonical Smart QR Card renderer per
-// QDS_SMART_QR_CARD_ARCHITECTURE_v1.md. Not yet called from any production
-// path — renderCards() and the claimed-card builders below are unchanged.
+// Phase 1 (Sprint 2C/2D): canonical Smart QR Card renderer per
+// QDS_SMART_QR_CARD_ARCHITECTURE_v1.md. Used by renderCards() for the
+// standard (non-claimed) card path only; claimed-card builders unchanged.
 function qdsEscapeHtml(value){
   return String(value==null?'':value).replace(/[&<>"']/g,function(ch){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
@@ -450,10 +450,10 @@ function renderCards(dashboard){
     var slug=qr.slug||qr.lpSlug||'';
     var lpUrl=slug?'https://www.qraivy.com/lp/welcome/'+slug:qr.originalUrl;
     var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
-    var cvr=qr.totalScans>0?Math.round((qr.totalSubscribers/qr.totalScans)*100):0;
-    var card=document.createElement('div');
-    card.className='sqr-card';
-    card.innerHTML='<div class="sqr-card-top"><div class="sqr-thumb"><img src="'+qrImg+'" alt="QR" loading="lazy"/></div><div class="sqr-meta"><div style="margin-bottom:6px"><span class="sqr-status live">&#x25CF; Live</span><span class="sqr-status ai">&#x2728; AI</span></div><div class="sqr-name">'+qr.businessName+'</div><div class="sqr-url">'+(slug?'qraivy.com/lp/'+slug:qr.originalUrl)+'</div><div class="sqr-stats"><div><div class="sqr-stat-v">'+qr.totalScans+'</div><div class="sqr-stat-l">Scans</div></div><div><div class="sqr-stat-v">'+qr.totalSubscribers+'</div><div class="sqr-stat-l">Subs</div></div><div><div class="sqr-stat-v">'+cvr+'%</div><div class="sqr-stat-l">CVR</div></div></div></div></div><div class="sqr-divider"></div><div class="sqr-actions"><button class="sqr-act primary sqr-manage">&#x2699; Manage</button><button class="sqr-act sqr-open">&#x1F310; View</button><button class="sqr-act sqr-analytics">&#x2197; Analytics</button></div>';
+    var qrData=Object.assign({},qr,{qrImageUrl:qrImg,publicUrl:slug?'qraivy.com/lp/'+slug:qr.originalUrl});
+    var wrap=document.createElement('div');
+    wrap.innerHTML=renderSmartQRCard(qrData,{claimed:false});
+    var card=wrap.firstElementChild;
     card.querySelector('.sqr-manage').onclick=function(){window.location.href='smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&manage=true';};
     card.querySelector('.sqr-open').onclick=function(){window.open(lpUrl,'_blank');};
     card.querySelector('.sqr-analytics').onclick=function(){window.location.href='analytics.html';};
