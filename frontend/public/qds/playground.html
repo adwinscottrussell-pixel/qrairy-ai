@@ -229,6 +229,64 @@
           </div>
         </div>
 
+        <h3 class="qds-pg-demo-title">Elevation</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">flat</span>
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-flat">
+              <div class="qds-surface__body"><p>elevation: flat — border does the separation work (§11).</p></div>
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">raised</span>
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised">
+              <div class="qds-surface__body"><p>elevation: raised — slightly lifted, e.g. a dense kpi row.</p></div>
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">elevated</span>
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-elevated">
+              <div class="qds-surface__body"><p>elevation: elevated — stronger separation, feature blocks.</p></div>
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">floating</span>
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-floating">
+              <div class="qds-surface__body"><p>elevation: floating — Drawer/popover-adjacent contexts only (§11).</p></div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">KPI deltas</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Positive</span>
+            <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+              <div class="qds-surface__body">
+                <span class="qds-surface__kpi-label">Total scans</span>
+                <span class="qds-surface__kpi-value">12,482</span>
+                <span class="qds-surface__kpi-delta qds-surface__kpi-delta--up">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                  8.4% vs last month
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Negative</span>
+            <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+              <div class="qds-surface__body">
+                <span class="qds-surface__kpi-label">Conversion rate</span>
+                <span class="qds-surface__kpi-value">3.1%</span>
+                <span class="qds-surface__kpi-delta qds-surface__kpi-delta--down">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  2.1% vs last month
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <h3 class="qds-pg-demo-title">Header</h3>
         <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
           <div class="qds-surface__header">
@@ -342,10 +400,16 @@
             </button>
           </div>
           <div class="qds-pg-demo-cell">
-            <span class="qds-pg-demo-label">Disabled</span>
+            <span class="qds-pg-demo-label">Disabled — button</span>
             <button class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-surface--disabled" type="button" disabled>
               <div class="qds-surface__body"><p>Not actionable (§15). Requires interactive.</p></div>
             </button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Disabled — anchor</span>
+            <a class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-surface--disabled" href="#surface" aria-disabled="true" tabindex="-1">
+              <div class="qds-surface__body"><p>href-rendered disabled Surface: aria-disabled + tabindex="-1", href kept (§15, §32.1).</p></div>
+            </a>
           </div>
         </div>
 

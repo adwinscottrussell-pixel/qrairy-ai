@@ -270,11 +270,25 @@ not own `role="radio"`/`aria-checked` (see §16, §19).
 has no meaningful disabled state — it was never actionable). Applies
 `--qds-color-disabled` to border and any text directly owned by the
 Surface chrome (Title, Description); suppresses hover/press transforms;
-`pointer-events: none` on the root. If the root is a real `<button>`, the
-native `disabled` attribute applies (removes from tab order, matches
-Button's own disabled precedent) — this is correct here because, unlike
-Button's `loading` case, a disabled *selectable tile* has no in-flight
-state to preserve in the tab order.
+`pointer-events: none` on the root.
+
+Root-element contract (resolved, §32.1):
+- `<button>`-rendered Surface (`onAction`): native `disabled` attribute
+  applies (removes from tab order, matches Button's own disabled
+  precedent) — this is correct here because, unlike Button's `loading`
+  case, a disabled *selectable tile* has no in-flight state to preserve in
+  the tab order.
+- `<a href>`-rendered Surface (`href`): `disabled` is **supported**, using
+  `aria-disabled="true"` plus `tabindex="-1"` on the anchor — `href` stays
+  present (never removed) and the anchor is never converted to a `<div>` or
+  stripped of its link semantics. This is the identical pattern already
+  implemented for `.qds-btn--link` (`components/button.css`), reused
+  unchanged rather than inventing a second disabled-anchor convention — see
+  §32.1 for why this was chosen over the alternatives.
+- Both cases still apply the `qds-surface--disabled` modifier class for the
+  visual treatment described above; the class is what drives styling, the
+  native `disabled` attribute / `aria-disabled` + `tabindex="-1"` pair is
+  what drives assistive-tech and keyboard semantics for each element type.
 
 ## 16. Keyboard behavior
 
@@ -329,6 +343,10 @@ it away. Embedded action buttons inside Header/Footer follow Button's own
   `disabled` attribute (§15) — no `aria-disabled` duplication needed since
   the native attribute already communicates it correctly here (unlike
   Button's `loading` case, which deliberately avoids `disabled`).
+- `disabled` state on an `<a href>`-rendered Surface uses `aria-disabled="true"`
+  plus `tabindex="-1"` (§15, §32.1) — anchors have no native `disabled`
+  attribute, so this is the supported substitute, identical to
+  `.qds-btn--link`'s existing disabled contract.
 - `loading` state: container carries `aria-busy="true"`, consistent with
   Skeleton's own accessibility contract (§21) — Surface doesn't reinvent
   this, it inherits Skeleton's existing rule.
@@ -940,5 +958,128 @@ process, not by a token or API decision:
 
 ---
 
-*Awaiting founder approval. No implementation, CSS, HTML, JavaScript, or
-page migration proceeds from this document until explicitly approved.*
+## 32. Sprint 5C.1 Validation Resolution
+
+Sprint 5C.1. Resolves the issues raised during Sprint 5C validation of the
+implemented Surface component (`components/surface.css`,
+`playground.html`). Fixes only — no variant, prop, or foundation token
+added beyond what §31 already approved.
+
+### 32.1 Disabled interactive Surface — button / aria-disabled / anchor
+
+- **Problem**: §15 only specified `disabled` behavior for a `<button>`-
+  rendered Surface. `href`-rendered (`<a>`) Surfaces have no native
+  `disabled` attribute, so the contract was silent on whether a disabled
+  anchor Surface is supported at all.
+- **Recommendation**: Support it, using the exact pattern already shipped
+  for `.qds-btn--link` in `components/button.css` and demonstrated in
+  `playground.html`'s Button "Disabled" row — `aria-disabled="true"` +
+  `tabindex="-1"` on the anchor, `href` left in place. This is not a new
+  convention; it is Button's existing disabled-anchor precedent applied
+  unchanged to Surface's `href`-rendered case, keeping one disabled-anchor
+  pattern across QDS instead of two.
+- **Alternatives considered**: (a) Declare disabled anchors out of the
+  public API and require consumers to swap to `onAction`/`<button>` when a
+  disabled state is needed — rejected, `href`-rendered Surfaces are a real,
+  named case (§6 `href`/`onAction` mutually exclusive) and forcing a
+  root-element swap purely to express `disabled` would leak an
+  implementation detail into consumer code for no visual reason. (b) Remove
+  `href` when disabled, rendering effectively as a non-interactive `<div>`
+  — rejected, it silently changes the root element type based on a state
+  flag, which contradicts §19's existing rule that Surface's element type
+  is determined by `href`/`onAction`, not by transient state. (c) Invent a
+  Surface-specific disabled-anchor convention distinct from Button's —
+  rejected outright by the sprint brief ("do not invent hybrid behavior")
+  and by **Converge on one working mechanism** — Button already solved
+  this exact problem once.
+- **Final**: Disabled anchors are supported. `components/surface.css`
+  required no changes — `.qds-surface--disabled`'s styling is driven by the
+  modifier class, not by `:disabled`/`[aria-disabled]` attribute selectors,
+  so it already applies identically regardless of root element. Only the
+  markup contract needed stating explicitly; done in §15/§19 above.
+
+### 32.2 Selected requires interactive — contract validated
+
+- **Problem**: confirm whether `selected` requiring `interactive` (§14) is
+  enforced by CSS or by documentation alone, and state that clearly.
+- **Finding**: Documentation-only, confirmed. `.qds-surface--selected` in
+  `components/surface.css` applies its border/background styling
+  unconditionally on the class — it does not require
+  `.qds-surface--interactive` to be present to render, and cannot, since
+  CSS has no mechanism to require one class in the presence of another.
+  The constraint is a **usage contract**, stated in §14/§27 and restated in
+  `components/surface.css`'s own file header ("`selected`/`disabled`
+  require `interactive` — this is a usage contract, not something this
+  file enforces"). No implementation change follows from this — the
+  contract was already correctly documented pre-Sprint-5C; this entry
+  confirms it rather than resolving a gap.
+- **Final**: No change. Contract is documentation-enforced by design, per
+  the same reasoning already applied to `disabled` (§15) — Surface has no
+  component-level JavaScript to validate prop combinations against, so
+  every state-prop dependency in this spec is necessarily a documentation
+  contract, not a CSS one.
+
+### 32.3 Selected-surface contrast validation
+
+- **Problem**: §31.2/§31.10 left `--qds-color-selected-surface`'s WCAG AA
+  contrast unverified, flagged as required before this component could be
+  declared production-ready.
+- **Method**: `--qds-color-selected-surface` (`rgba(255, 90, 31, 0.12)`)
+  composited over `--qds-color-surface-1` (`#111111`, the resting
+  background of an interactive `default`/`kpi` Surface) resolves to an
+  effective background of approximately `#2e1a13`. WCAG 2.1 contrast
+  ratios computed against that effective background:
+  | Foreground | Token | Ratio | Result |
+  |---|---|---|---|
+  | Body text | `--qds-color-text-primary` (`#f0ece0`) | ~13.96:1 | Pass (exceeds AAA 7:1) |
+  | Secondary text | `--qds-color-text-secondary` (`#c8c8c0`) | ~9.8:1 | Pass (exceeds AAA 7:1) |
+  | Button boundary | `--qds-color-brand-primary` (`#ff5a1f`, e.g. a Footer `primary` Button's edge against a selected KPI tile) | ~5.29:1 | Pass (exceeds non-text 3:1, WCAG 1.4.11) |
+  | Focus ring vs. selected border | `--qds-color-focus-ring` (`rgba(255, 90, 31, 0.55)`) adjacent to the selected-state border (`--qds-color-brand-primary`, opaque) | ~2.45:1 | **Below** non-text 3:1 threshold |
+- **Finding**: `--qds-color-selected-surface`'s own value is sound — every
+  check that isolates *this* token passes with margin, several at AAA. The
+  one sub-3:1 result (focus ring against the selected border) is not
+  caused by `--qds-color-selected-surface` at all — both colors involved
+  are the pre-existing `--qds-color-focus-ring` and
+  `--qds-color-brand-primary` tokens, already shared by every interactive
+  QDS element (Button's `primary`/`ai` variants included), and already
+  low-boundary-contrast against each other wherever a brand-primary-bordered
+  element receives focus, with or without Surface's `selected` state
+  involved. Fixing it would mean changing a Foundation-wide interaction
+  token used well outside Surface's scope — out of bounds for this sprint
+  ("modify only `frontend/public/qds/`... do not modify unrelated QDS
+  components," "do not redesign colors").
+- **Recommendation**: No change to `--qds-color-selected-surface`. Value
+  confirmed production-ready as-is. The focus-ring/brand-border adjacency
+  finding is logged as a residual, cross-component risk (§32.4), not fixed
+  here, since no "smallest possible token change" scoped to Surface exists
+  that resolves it without touching shared Foundation tokens.
+- **Final**: `--qds-color-selected-surface` passes WCAG AA against body
+  text, secondary text, and button boundaries. **No token change made.**
+
+### 32.4 Sprint 5C.1 outcome
+
+- No undocumented API change: `href`/`onAction`/`disabled`/`selected`
+  props are unchanged from §6; only their documented behavior for the
+  `<a>` case was completed.
+- No new variant, no new modifier, no new component prop.
+- No new Foundation token (§32.3 concluded the existing value is correct).
+- Playground (`playground.html`) extended to cover: `floating` elevation,
+  KPI positive delta, KPI negative delta, disabled `<button>` Surface
+  (pre-existing), disabled `<a>` Surface (new, per §32.1).
+- **Residual, out-of-scope risk**: focus ring vs. brand-primary-bordered
+  elements (including but not limited to `selected` Surfaces) sit at
+  ~2.45:1 boundary contrast, below WCAG 1.4.11's 3:1 — pre-existing
+  Foundation-token characteristic (`--qds-color-focus-ring` vs.
+  `--qds-color-brand-primary`), not introduced by and not fixable within
+  Surface's scope. Flagged for a future, separately-approved Foundation
+  interaction-token review; does not block Surface's own production
+  readiness.
+
+**Surface production-ready.**
+
+---
+
+*Sprint 5C.1 approved fixes documented above. No further implementation,
+CSS, HTML, JavaScript, or page migration proceeds beyond what this
+document and the corresponding `components/surface.css` /
+`playground.html` changes cover, without separate approval.*

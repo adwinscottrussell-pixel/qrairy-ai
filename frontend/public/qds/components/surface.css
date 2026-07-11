@@ -168,7 +168,12 @@
   border-color: var(--qds-color-brand-primary);
 }
 
-/* ---------- Disabled (§15) — requires --interactive ---------- */
+/* ---------- Disabled (§15, §32.1) — requires --interactive ----------
+   Styling here is driven by this modifier class alone, not by
+   :disabled/[aria-disabled] attribute selectors, so it applies identically
+   to a <button disabled> root and an <a href aria-disabled="true"
+   tabindex="-1"> root (§32.1) — the consuming page is responsible for
+   pairing the class with the correct native attribute per root element. */
 
 .qds-surface--disabled {
   border-color: var(--qds-color-disabled);
