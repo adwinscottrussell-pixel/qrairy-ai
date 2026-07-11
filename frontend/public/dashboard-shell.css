@@ -357,21 +357,24 @@ body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
 .table-search:focus { border-color: var(--dashboard-accent-border); }
 
 /* ── Smart QR cards (dashboard) ─────────────────────────────────────────────── */
-.sqr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--dashboard-gap); }
-.sqr-card { background: var(--dashboard-card-bg); border: 1px solid var(--dashboard-border); border-radius: var(--card-radius-lg); overflow: hidden; transition: border-color .18s, box-shadow .18s; }
-.sqr-card:hover { border-color: var(--dashboard-border-hover); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.sqr-card-top { display: flex; gap: 14px; padding: 18px 18px 14px; align-items: flex-start; }
-.sqr-thumb { width: 64px; height: 64px; border-radius: 10px; background: #fff; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.sqr-thumb img { width: 60px; height: 60px; display: block; }
+.sqr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--dashboard-gap); }
+.sec-hdr { margin-bottom: 20px; }
+.sec-hdr > a { display: inline-block; margin-top: 10px; }
+.sqr-card { background: var(--dashboard-card-bg); border: 1px solid var(--dashboard-border); border-radius: 16px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.18); transition: border-color .18s, box-shadow .18s; display: flex; flex-direction: column; height: 100%; }
+.sqr-card:hover { border-color: var(--dashboard-border-hover); box-shadow: 0 12px 36px rgba(0,0,0,.28); }
+.sqr-card-top { display: flex; gap: 16px; padding: 16px 16px 20px; align-items: flex-start; flex: 1; }
+.sqr-thumb { width: 80px; height: 80px; border-radius: 12px; background: #fff; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; }
+.sqr-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .sqr-meta { flex: 1; min-width: 0; }
-.sqr-name { font-family: var(--font-display); font-size: .9rem; font-weight: 700; color: #f0f4f8; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sqr-url { font-family: var(--font-body); font-size: .6rem; color: var(--dashboard-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px; }
+.sqr-meta > div:first-child { margin-bottom: 8px !important; }
+.sqr-name { font-family: var(--font-display); font-size: .9rem; font-weight: 700; color: #f0f4f8; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sqr-url { font-family: var(--font-body); font-size: .6rem; color: var(--dashboard-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 20px; }
 .sqr-stats { display: flex; gap: 16px; }
 .sqr-stat-v { font-size: .95rem; font-weight: 800; color: var(--dashboard-accent); line-height: 1; }
-.sqr-stat-l { font-family: var(--font-body); font-size: .52rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 1px; }
+.sqr-stat-l { font-family: var(--font-body); font-size: .52rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
 .sqr-divider { height: 1px; background: rgba(255,255,255,0.05); }
 .sqr-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; }
-.sqr-act { padding: 10px 8px; background: var(--dashboard-card-bg); font-family: var(--font-mono); font-size: .62rem; color: var(--dashboard-muted); cursor: pointer; border: none; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; border-right: 1px solid rgba(255,255,255,0.04); }
+.sqr-act { padding: 16px 8px; background: var(--dashboard-card-bg); font-family: var(--font-mono); font-size: .62rem; color: var(--dashboard-muted); cursor: pointer; border: none; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; border-right: 1px solid rgba(255,255,255,0.04); }
 .sqr-act:last-child { border-right: none; }
 .sqr-act:hover { background: rgba(255,90,31,0.05); color: #ff8c55; }
 .sqr-act.primary { color: var(--dashboard-accent); font-weight: 600; }
