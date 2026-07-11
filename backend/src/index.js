@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(cors({
-  origin: ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com'],
+  origin: ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com', 'https://preview.qraivy.com'],
   credentials: true
 }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
