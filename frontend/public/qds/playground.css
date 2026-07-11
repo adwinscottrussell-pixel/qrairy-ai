@@ -1,0 +1,124 @@
+/* QDS Playground — internal dev tool only.
+   Layout chrome for playground.html. Not part of the QDS component layer,
+   not imported by any production page, and must not be referenced outside
+   this file. */
+
+body {
+  margin: 0;
+  background: var(--qds-color-background);
+  color: var(--qds-color-text-primary);
+  font-family: var(--qds-font-family-primary);
+}
+
+.qds-pg-banner {
+  background: var(--qds-color-warning);
+  color: var(--qds-color-text-inverse);
+  text-align: center;
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-caption-size);
+  font-weight: var(--qds-font-weight-semibold);
+  letter-spacing: 0.02em;
+  padding: var(--qds-space-2) var(--qds-space-4);
+}
+
+.qds-pg-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.qds-pg-nav {
+  flex: 0 0 220px;
+  border-right: 1px solid var(--qds-color-border-default);
+  background: var(--qds-color-surface-1);
+  padding: var(--qds-space-6) var(--qds-space-4);
+}
+
+.qds-pg-nav-title {
+  font-size: var(--qds-text-label-size);
+  font-weight: var(--qds-text-label-weight);
+  letter-spacing: var(--qds-text-label-letter-spacing);
+  text-transform: uppercase;
+  color: var(--qds-color-text-muted);
+  margin-bottom: var(--qds-space-4);
+}
+
+.qds-pg-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--qds-space-1);
+}
+
+.qds-pg-nav a {
+  display: block;
+  padding: var(--qds-space-2) var(--qds-space-3);
+  border-radius: var(--qds-radius-md);
+  color: var(--qds-color-text-secondary);
+  text-decoration: none;
+  font-size: var(--qds-text-body-sm-size);
+}
+
+.qds-pg-nav a:hover {
+  background: var(--qds-color-surface-2);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-pg-main {
+  flex: 1;
+  padding: var(--qds-space-8) var(--qds-space-10);
+  max-width: 960px;
+}
+
+.qds-pg-header h1 {
+  font-size: var(--qds-text-page-title-size);
+  line-height: var(--qds-text-page-title-line-height);
+  font-weight: var(--qds-text-page-title-weight);
+  letter-spacing: var(--qds-text-page-title-letter-spacing);
+  margin: 0 0 var(--qds-space-2);
+}
+
+.qds-pg-header p {
+  color: var(--qds-color-text-muted);
+  font-size: var(--qds-text-body-size);
+  margin: 0 0 var(--qds-space-10);
+}
+
+.qds-pg-section {
+  padding: var(--qds-space-8) 0;
+  border-top: 1px solid var(--qds-color-border-subtle);
+}
+
+.qds-pg-section:first-of-type {
+  border-top: none;
+}
+
+.qds-pg-section h2 {
+  font-size: var(--qds-text-section-title-size);
+  line-height: var(--qds-text-section-title-line-height);
+  font-weight: var(--qds-text-section-title-weight);
+  margin: 0 0 var(--qds-space-3);
+}
+
+.qds-pg-section-note {
+  color: var(--qds-color-brand-primary);
+  font-size: var(--qds-text-caption-size);
+  font-weight: var(--qds-font-weight-semibold);
+  margin: 0 0 var(--qds-space-4);
+}
+
+.qds-pg-placeholder {
+  border: 1px dashed var(--qds-color-border-default);
+  border-radius: var(--qds-radius-md);
+  padding: var(--qds-space-10);
+  color: var(--qds-color-text-muted);
+  font-size: var(--qds-text-body-sm-size);
+  text-align: center;
+  background: var(--qds-color-surface-1);
+}
+
+.qds-pg-section--ready .qds-pg-placeholder {
+  border-style: solid;
+  border-color: var(--qds-color-brand-primary);
+}
