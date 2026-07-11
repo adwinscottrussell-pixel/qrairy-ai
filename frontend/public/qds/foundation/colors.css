@@ -38,4 +38,8 @@
   --qds-color-focus-ring: rgba(255, 90, 31, 0.55);
   --qds-color-disabled: rgba(255, 255, 255, 0.28);
   --qds-color-overlay: rgba(0, 0, 0, 0.6);
+  /* Selected-surface tint (Surface §14/§31.2). Low-opacity brand-primary
+     tint; alpha pending a dedicated WCAG AA contrast pass — do not treat
+     as final without that check (doc §31.10). */
+  --qds-color-selected-surface: rgba(255, 90, 31, 0.12);
 }

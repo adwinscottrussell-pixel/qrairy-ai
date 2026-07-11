@@ -18,7 +18,7 @@
       <div class="qds-pg-nav-title">QDS Playground</div>
       <ul>
         <li><a href="#buttons">Buttons</a></li>
-        <li><a href="#cards">Cards</a></li>
+        <li><a href="#surface">Surface</a></li>
         <li><a href="#inputs">Inputs</a></li>
         <li><a href="#badges">Badges</a></li>
         <li><a href="#empty-states">Empty States</a></li>
@@ -168,9 +168,214 @@
         </div>
       </section>
 
-      <section id="cards" class="qds-pg-section">
-        <h2>Cards</h2>
-        <div class="qds-pg-placeholder">Card component placeholder</div>
+      <section id="surface" class="qds-pg-section">
+        <h2>Surface</h2>
+        <p class="qds-pg-section-note">QDS Surface — second production component, per qds/docs/QDS_SURFACE_SYSTEM_v1.md. Composes with Button. Rendered here only; not imported by any production page.</p>
+
+        <h3 class="qds-pg-demo-title">Variants</h3>
+        <div class="qds-pg-surface-grid">
+          <div class="qds-surface qds-surface--default qds-surface--padding-md">
+            <div class="qds-surface__header">
+              <div class="qds-surface__header-text">
+                <h4 class="qds-surface__title">Recent Scans</h4>
+                <p class="qds-surface__description">Last 30 days of activity</p>
+              </div>
+              <div class="qds-surface__actions">
+                <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button">View all</button>
+              </div>
+            </div>
+            <div class="qds-surface__body">
+              <p>default — border-only at surface-1, flat elevation. The baseline every other variant deltas from.</p>
+            </div>
+          </div>
+
+          <div class="qds-surface qds-surface--filled qds-surface--padding-md">
+            <div class="qds-surface__body">
+              <p>filled — background steps to surface-2, for nested/recessed groupings (§9).</p>
+            </div>
+          </div>
+
+          <div class="qds-surface qds-surface--feature qds-surface--padding-xl qds-surface--elevation-elevated">
+            <div class="qds-surface__header">
+              <div class="qds-surface__header-text">
+                <h4 class="qds-surface__title">Upgrade to Pro</h4>
+                <p class="qds-surface__description">Unlock unlimited dynamic QR codes and advanced analytics.</p>
+              </div>
+            </div>
+            <div class="qds-surface__footer">
+              <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Upgrade now</button>
+            </div>
+          </div>
+
+          <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+            <div class="qds-surface__body">
+              <span class="qds-surface__kpi-label">Total scans</span>
+              <span class="qds-surface__kpi-value">12,482</span>
+              <span class="qds-surface__kpi-delta qds-surface__kpi-delta--up">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                8.4% vs last month
+              </span>
+            </div>
+          </div>
+
+          <div class="qds-surface qds-surface--preview qds-surface--padding-none">
+            <div class="qds-surface__body">
+              <div class="qds-surface__media qds-surface__media--glow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Header</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-main">
+              <div class="qds-surface__media qds-pg-surface-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                </svg>
+              </div>
+              <div class="qds-surface__header-text">
+                <h4 class="qds-surface__title">Homepage QR</h4>
+                <p class="qds-surface__description">qrairy.ai/r/abc123</p>
+              </div>
+            </div>
+            <div class="qds-surface__actions">
+              <button class="qds-btn qds-btn--ghost qds-btn--icon qds-btn--sm" type="button" aria-label="Settings">
+                <span class="qds-btn__content">
+                  <span class="qds-btn__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="qds-surface__body">
+            <p>Media as a leading visual inside Header, distinct from Actions' icon-only buttons (§5).</p>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Toolbar</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-text">
+              <h4 class="qds-surface__title">Scan Volume</h4>
+            </div>
+            <div class="qds-surface__toolbar">
+              <select class="qds-pg-demo-select" aria-label="Date range">
+                <option>Last 7 days</option>
+                <option>Last 30 days</option>
+              </select>
+            </div>
+          </div>
+          <div class="qds-surface__body">
+            <p>Toolbar holds non-Button controls, mutually exclusive with Actions per Header (§5).</p>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Nested surfaces</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-text">
+              <h4 class="qds-surface__title">Business Details</h4>
+            </div>
+          </div>
+          <div class="qds-surface__body">
+            <div class="qds-surface qds-surface--filled qds-surface--padding-sm qds-surface--elevation-flat">
+              <div class="qds-surface__body">
+                <p>Nested surface steps up to surface-2, flat elevation regardless of parent (§9, §25). Max safe nesting depth is 2 levels.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Footer</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-text">
+              <h4 class="qds-surface__title">Delete QR code</h4>
+              <p class="qds-surface__description">This cannot be undone.</p>
+            </div>
+          </div>
+          <div class="qds-surface__body">
+            <p>Secondary actions or meta text below Body, separated by a border-subtle divider (§5).</p>
+          </div>
+          <div class="qds-surface__footer">
+            <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button">Cancel</button>
+            <button class="qds-btn qds-btn--danger qds-btn--sm" type="button">Delete</button>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Modifiers</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Interactive — default</span>
+            <a class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive" href="#surface">
+              <div class="qds-surface__body"><p>Whole surface is a link (href set).</p></div>
+            </a>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Interactive — hover</span>
+            <a class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-pg-force-hover" href="#surface">
+              <div class="qds-surface__body"><p>Whole surface is a link (href set).</p></div>
+            </a>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Interactive — pressed</span>
+            <button class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-pg-force-pressed" type="button">
+              <div class="qds-surface__body"><p>Whole surface is a button (onAction set).</p></div>
+            </button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Interactive — focus (Tab to this)</span>
+            <button class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive" type="button">
+              <div class="qds-surface__body"><p>Whole surface is a button (onAction set).</p></div>
+            </button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Selected</span>
+            <button class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-surface--selected" type="button" aria-pressed="true">
+              <div class="qds-surface__body"><p>Tile-style selectable option (§14). Requires interactive.</p></div>
+            </button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <button class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--interactive qds-surface--disabled" type="button" disabled>
+              <div class="qds-surface__body"><p>Not actionable (§15). Requires interactive.</p></div>
+            </button>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Loading</h3>
+        <div class="qds-pg-demo-row qds-pg-demo-row--stack">
+          <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--loading qds-pg-surface-narrow" aria-busy="true">
+            <div class="qds-surface__header">
+              <div class="qds-surface__header-text">
+                <span class="qds-surface__skeleton-line"></span>
+              </div>
+            </div>
+            <div class="qds-surface__body">
+              <span class="qds-surface__skeleton-block"></span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Empty state composition</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-lg qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-text">
+              <h4 class="qds-surface__title">Recent Scans</h4>
+            </div>
+          </div>
+          <div class="qds-surface__body qds-pg-empty-state">
+            <p class="qds-pg-empty-state-title">No scans yet</p>
+            <p class="qds-pg-empty-state-desc">Scans will appear here once your QR code goes live.</p>
+            <button class="qds-btn qds-btn--secondary qds-btn--sm" type="button">Share your QR code</button>
+          </div>
+        </div>
       </section>
 
       <section id="inputs" class="qds-pg-section">

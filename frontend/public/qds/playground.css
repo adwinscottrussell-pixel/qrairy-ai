@@ -170,3 +170,64 @@ body {
   font-size: var(--qds-text-caption-size);
   color: var(--qds-color-text-muted);
 }
+
+/* ---------- Surface demo layout ---------- */
+
+.qds-pg-surface-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--qds-space-6);
+  align-items: start;
+}
+
+.qds-pg-surface-narrow {
+  max-width: 420px;
+}
+
+.qds-pg-surface-icon {
+  width: var(--qds-space-10);
+  height: var(--qds-space-10);
+  background: var(--qds-color-surface-2);
+  color: var(--qds-color-text-muted);
+  border-radius: var(--qds-radius-md);
+  padding: var(--qds-space-2);
+}
+
+/* Minimal native <select> styling for the Toolbar demo only — the real
+   Select component (Specifications doc #3) does not exist yet. */
+.qds-pg-demo-select {
+  height: var(--qds-control-height-sm);
+  padding: 0 var(--qds-space-3);
+  border: 1px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-1);
+  color: var(--qds-color-text-primary);
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-body-sm-size);
+}
+
+/* Minimal Empty State composition for the demo only — the real Empty
+   State component (catalog #26) does not exist yet; this only proves
+   Surface's Body hosts it per doc §22. */
+.qds-pg-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--qds-space-2);
+  text-align: center;
+  padding: var(--qds-space-6) 0;
+}
+
+.qds-pg-empty-state-title {
+  margin: 0;
+  font-size: var(--qds-text-body-size);
+  font-weight: var(--qds-font-weight-semibold);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-pg-empty-state-desc {
+  margin: 0 0 var(--qds-space-2);
+  font-size: var(--qds-text-body-sm-size);
+  color: var(--qds-color-text-muted);
+  max-width: 32ch;
+}

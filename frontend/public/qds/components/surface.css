@@ -1,0 +1,371 @@
+/* QDS Component — Surface
+   Token-only. No hard-coded colors, spacing, typography, radius, or shadows
+   — every value below resolves to a foundation custom property. Implements
+   the API resolved in qds/docs/QDS_SURFACE_SYSTEM_v1.md (§6-§31).
+
+   Variant enum (per doc §7/§31, founder-confirmed for this sprint):
+   default, filled, feature, kpi, preview. `outlined` and `elevated` are
+   NOT variants — `outlined` was evaluated and dropped (identical to
+   `default` in this token set, §7), `elevated` is folded into the
+   `elevation` prop (§11), not a visual family of its own.
+
+   State/behavior modifiers (not variants, §6-§7): interactive, selected,
+   disabled, loading. `selected`/`disabled` require `interactive` — this is
+   a usage contract (§14, §15, §27), not something this file enforces.
+
+   Padding scale: none, sm, md, lg, xl (§8). Elevation scale: flat, raised,
+   elevated, floating (§11). Root has neither a default variant nor default
+   padding/elevation class applied — same "always explicit" convention as
+   components/button.css's size classes.
+
+   Root element is authored by the consuming page, exactly like Button: a
+   plain <div> for non-interactive Surfaces, a real <a href> or
+   <button type="button"> when `interactive` is set via `href`/`onAction`
+   (§13, §19) — never a <div onclick>. No JS component exists for Surface,
+   matching Button's CSS-only precedent in this codebase.
+
+   .qds-pg-force-* classes exist only so the playground can demonstrate a
+   state without real user input (same convention as button.css). Not a
+   public variant or state API — never use them outside qds/playground.html.
+
+   .qds-surface__skeleton-* are a minimal static placeholder for the
+   `loading` modifier's Body content, pending a real Skeleton component
+   (catalog #28). Surface does not own shimmer animation or aria-busy
+   timing — that is Skeleton's contract per doc §21; these classes only
+   hold layout-stable placeholder shape so nothing reflows once real
+   content replaces them. */
+
+.qds-surface {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--qds-space-4);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: var(--qds-radius-lg);
+  box-shadow: var(--qds-elevation-none);
+
+  transition:
+    border-color var(--qds-duration-fast) var(--qds-easing-standard),
+    background-color var(--qds-duration-fast) var(--qds-easing-standard),
+    box-shadow var(--qds-duration-fast) var(--qds-easing-standard),
+    transform var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+/* ---------- Variants (§7) ---------- */
+
+.qds-surface--default {
+  background: var(--qds-color-surface-1);
+}
+
+.qds-surface--filled {
+  background: var(--qds-color-surface-2);
+}
+
+.qds-surface--feature {
+  background: var(--qds-color-surface-1);
+}
+
+.qds-surface--kpi {
+  background: var(--qds-color-surface-1);
+}
+
+.qds-surface--preview {
+  background: var(--qds-color-surface-1);
+}
+
+/* Feature's larger title role (§7, §31.5) */
+.qds-surface--feature .qds-surface__title {
+  font-family: var(--qds-text-section-title-family);
+  font-size: var(--qds-text-section-title-size);
+  line-height: var(--qds-text-section-title-line-height);
+  font-weight: var(--qds-text-section-title-weight);
+}
+
+/* ---------- Padding (§8) ---------- */
+
+.qds-surface--padding-none {
+  padding: 0;
+}
+
+.qds-surface--padding-sm {
+  padding: var(--qds-space-4);
+}
+
+.qds-surface--padding-md {
+  padding: var(--qds-space-6);
+}
+
+.qds-surface--padding-lg {
+  padding: var(--qds-space-8);
+}
+
+.qds-surface--padding-xl {
+  padding: var(--qds-space-12);
+}
+
+/* ---------- Elevation (§11) ---------- */
+
+.qds-surface--elevation-flat {
+  box-shadow: var(--qds-elevation-none);
+}
+
+.qds-surface--elevation-raised {
+  box-shadow: var(--qds-elevation-sm);
+}
+
+.qds-surface--elevation-elevated {
+  box-shadow: var(--qds-elevation-md);
+}
+
+.qds-surface--elevation-floating {
+  box-shadow: var(--qds-elevation-floating);
+}
+
+/* ---------- Interactive (§12, §13, §17) ---------- */
+
+.qds-surface--interactive {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+}
+
+.qds-surface--interactive:hover,
+.qds-surface--interactive.qds-pg-force-hover {
+  border-color: var(--qds-color-border-default);
+  transform: translateY(var(--qds-hover-lift));
+}
+
+.qds-surface--interactive:active,
+.qds-surface--interactive.qds-pg-force-pressed {
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-surface--interactive:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+@media (forced-colors: active) {
+  .qds-surface--interactive:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/* ---------- Selected (§14) — requires --interactive ---------- */
+
+.qds-surface--selected {
+  border-color: var(--qds-color-brand-primary);
+  background: var(--qds-color-selected-surface);
+}
+
+.qds-surface--interactive.qds-surface--selected:hover,
+.qds-surface--interactive.qds-surface--selected.qds-pg-force-hover {
+  border-color: var(--qds-color-brand-primary);
+}
+
+/* ---------- Disabled (§15) — requires --interactive ---------- */
+
+.qds-surface--disabled {
+  border-color: var(--qds-color-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+  box-shadow: var(--qds-elevation-none);
+}
+
+.qds-surface--disabled .qds-surface__title,
+.qds-surface--disabled .qds-surface__description {
+  color: var(--qds-color-disabled);
+}
+
+/* ---------- Loading (§21) ---------- */
+
+.qds-surface--loading {
+  cursor: default;
+}
+
+.qds-surface__skeleton-line,
+.qds-surface__skeleton-block {
+  border-radius: var(--qds-radius-sm);
+  background: var(--qds-color-surface-3);
+}
+
+.qds-surface__skeleton-line {
+  height: var(--qds-space-4);
+  width: 60%;
+}
+
+.qds-surface__skeleton-line + .qds-surface__skeleton-line {
+  margin-top: var(--qds-space-2);
+  width: 85%;
+}
+
+.qds-surface__skeleton-block {
+  width: 100%;
+  height: var(--qds-space-20);
+}
+
+/* ---------- Header region (§5, §31.6) ---------- */
+
+.qds-surface__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--qds-space-2);
+}
+
+.qds-surface__header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--qds-space-3);
+  min-width: 0;
+}
+
+.qds-surface__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--qds-space-1);
+  min-width: 0;
+}
+
+.qds-surface__title {
+  margin: 0;
+  font-family: var(--qds-text-card-title-family);
+  font-size: var(--qds-text-card-title-size);
+  line-height: var(--qds-text-card-title-line-height);
+  font-weight: var(--qds-text-card-title-weight);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-surface__description {
+  margin: 0;
+  font-family: var(--qds-text-body-sm-family);
+  font-size: var(--qds-text-body-sm-size);
+  line-height: var(--qds-text-body-sm-line-height);
+  font-weight: var(--qds-text-body-sm-weight);
+  color: var(--qds-color-text-muted);
+}
+
+/* Actions and Toolbar are mutually exclusive per Header (§5) — both share
+   the same layout treatment, the distinction is which controls a page
+   places inside (Button-only vs. mixed controls), not a style difference. */
+.qds-surface__actions,
+.qds-surface__toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--qds-space-2);
+}
+
+/* ---------- Media region (§5) ---------- */
+
+.qds-surface__media {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--qds-radius-md);
+}
+
+.qds-surface__media img,
+.qds-surface__media svg,
+.qds-surface__media picture {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Body-content decoration for a preview's hero media — a class the
+   consuming page adds to its own media wrapper, not a Surface prop
+   (§10, §31.4). Reuses the existing brand-glow token; no new technique. */
+.qds-surface__media--glow {
+  box-shadow: var(--qds-elevation-brand-glow);
+  border-radius: var(--qds-radius-lg);
+}
+
+/* Body content dominated by Media, typical of the `preview` variant (§7) */
+.qds-surface--preview .qds-surface__body {
+  display: flex;
+}
+
+.qds-surface--preview .qds-surface__media {
+  flex: 1 1 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+/* ---------- Body region (§4) ---------- */
+
+.qds-surface__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--qds-text-body-family);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+  color: var(--qds-color-text-primary);
+}
+
+/* ---------- KPI variant internal anatomy (§7, §31.3) ---------- */
+
+.qds-surface__kpi-label {
+  display: block;
+  font-family: var(--qds-text-label-family);
+  font-size: var(--qds-text-label-size);
+  line-height: var(--qds-text-label-line-height);
+  font-weight: var(--qds-text-label-weight);
+  letter-spacing: var(--qds-text-label-letter-spacing);
+  text-transform: uppercase;
+  color: var(--qds-color-text-muted);
+}
+
+.qds-surface__kpi-value {
+  display: block;
+  margin-top: var(--qds-space-1);
+  font-family: var(--qds-text-kpi-family);
+  font-size: var(--qds-text-kpi-size);
+  line-height: var(--qds-text-kpi-line-height);
+  font-weight: var(--qds-text-kpi-weight);
+  letter-spacing: var(--qds-text-kpi-letter-spacing);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-surface__kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qds-space-1);
+  margin-top: var(--qds-space-2);
+  font-family: var(--qds-text-caption-family);
+  font-size: var(--qds-text-caption-size);
+  font-weight: var(--qds-font-weight-semibold);
+}
+
+.qds-surface__kpi-delta svg {
+  flex: none;
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+}
+
+.qds-surface__kpi-delta--up {
+  color: var(--qds-color-success);
+}
+
+.qds-surface__kpi-delta--down {
+  color: var(--qds-color-danger);
+}
+
+/* ---------- Footer region (§5) ---------- */
+
+.qds-surface__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--qds-space-2);
+  border-top: 1px solid var(--qds-color-border-subtle);
+}
