@@ -1,0 +1,821 @@
+/* QDS Component — Input family
+   Token-only. No hard-coded colors, spacing, typography, radius, or
+   transitions — every value below resolves to a foundation custom property
+   (border-width in px and the fixed autoResize max-height default are the
+   only literal numbers, both explicitly named as non-token decisions in
+   qds/docs/QDS_INPUT_SPECIFICATIONS_v1.md §3.8/§13). Implements the
+   contract resolved in QDS_INPUT_SYSTEM_v1.md and
+   QDS_INPUT_SPECIFICATIONS_v1.md for the seven approved v1 controls:
+   Field, TextInput, Textarea, Native Select, Checkbox, Radio, Search.
+
+   Root classes: .qds-field, .qds-input, .qds-textarea, .qds-select,
+   .qds-checkbox, .qds-radio-group, .qds-radio, .qds-search.
+   .qds-search composes .qds-input on the same element (Specifications
+   §11.1) rather than duplicating TextInput's rules. .qds-radio--tile
+   composes .qds-surface/.qds-surface--* on the same element (System §17,
+   Specifications §11.1/§9).
+
+   Where a control needs a "focused"/"selected" visual driven by a real
+   native input nested inside a styled wrapper, this file uses :has() to
+   react to the native element's own pseudo-classes (:focus-visible,
+   :checked, :disabled) instead of a JS-toggled class — no Input-family
+   control in this file requires JavaScript to render any of its states.
+
+   .qds-pg-force-* classes exist only so the playground can demonstrate a
+   state without real user input (same convention as button.css/
+   surface.css). Never use them outside qds/playground.html. */
+
+/* =========================================================================
+   Field
+   ========================================================================= */
+
+.qds-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.qds-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--qds-space-1);
+  margin: 0 0 var(--qds-space-2);
+
+  font-family: var(--qds-text-label-family);
+  font-size: var(--qds-text-label-size);
+  line-height: var(--qds-text-label-line-height);
+  font-weight: var(--qds-text-label-weight);
+  letter-spacing: var(--qds-text-label-letter-spacing);
+  color: var(--qds-color-text-primary);
+}
+
+/* Group-label mode (Checkbox list / Radio group, Specifications §1.7) — the
+   label is a group heading (aria-labelledby target), not a <label for>
+   pairing to one control. No visual delta beyond not implying a single
+   click target. */
+.qds-field--group .qds-field__label {
+  cursor: default;
+}
+
+.qds-field__required {
+  color: var(--qds-color-danger);
+}
+
+.qds-field__optional {
+  font-weight: var(--qds-font-weight-regular);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--qds-color-text-muted);
+}
+
+.qds-field__description {
+  margin: 0 0 var(--qds-space-2);
+
+  font-family: var(--qds-text-body-sm-family);
+  font-size: var(--qds-text-body-sm-size);
+  line-height: var(--qds-text-body-sm-line-height);
+  font-weight: var(--qds-text-body-sm-weight);
+  color: var(--qds-color-text-secondary);
+}
+
+.qds-field__message {
+  margin: var(--qds-space-1) 0 0;
+
+  font-family: var(--qds-text-caption-family);
+  font-size: var(--qds-text-caption-size);
+  line-height: var(--qds-text-caption-line-height);
+  font-weight: var(--qds-text-caption-weight);
+  color: var(--qds-color-text-secondary);
+}
+
+.qds-field--error .qds-field__message {
+  color: var(--qds-color-danger);
+}
+
+.qds-field--success .qds-field__message {
+  color: var(--qds-color-success);
+}
+
+.qds-field__counter {
+  margin: var(--qds-space-1) 0 0;
+  text-align: right;
+
+  font-family: var(--qds-text-caption-family);
+  font-size: var(--qds-text-caption-size);
+  line-height: var(--qds-text-caption-line-height);
+  color: var(--qds-color-text-muted);
+}
+
+.qds-field__counter--over {
+  color: var(--qds-color-danger);
+}
+
+/* =========================================================================
+   TextInput (and Search, which composes this block — §7.7)
+   ========================================================================= */
+
+.qds-input {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-2);
+
+  transition:
+    border-color var(--qds-duration-fast) var(--qds-easing-standard),
+    box-shadow var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-input--md {
+  height: var(--qds-control-height-md);
+  gap: var(--qds-space-2);
+  padding: var(--qds-space-2) var(--qds-space-3);
+}
+
+.qds-input--sm {
+  height: var(--qds-control-height-sm);
+  gap: var(--qds-space-2);
+  padding: var(--qds-space-1) var(--qds-space-2);
+}
+
+.qds-input__control {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--qds-color-text-primary);
+
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+}
+
+.qds-input--sm .qds-input__control {
+  font-size: var(--qds-text-body-sm-size);
+  line-height: var(--qds-text-body-sm-line-height);
+}
+
+.qds-input--monospace .qds-input__control {
+  font-family: var(--qds-font-family-mono);
+}
+
+.qds-input__control::placeholder {
+  color: var(--qds-color-text-muted);
+}
+
+/* Hover — a documented no-op in the common case (rest state already uses
+   full-opacity default border), kept explicit per Specifications §2.15
+   rather than omitted. */
+.qds-input:hover,
+.qds-input.qds-pg-force-hover {
+  border-color: var(--qds-color-border-default);
+}
+
+/* Focus — border-color shift is suppressed once error/success has already
+   set it (Specifications §2.11's focus-while-error precedence); the focus
+   ring itself always applies on top regardless of state. */
+.qds-input:has(.qds-input__control:focus-visible):not(.qds-input--error):not(.qds-input--success),
+.qds-input.qds-pg-force-focus:not(.qds-input--error):not(.qds-input--success) {
+  border-color: var(--qds-color-brand-primary);
+}
+
+.qds-input:has(.qds-input__control:focus-visible),
+.qds-input.qds-pg-force-focus {
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-input--error,
+.qds-input.qds-pg-force-error {
+  border-color: var(--qds-color-danger);
+}
+
+.qds-input--success,
+.qds-input.qds-pg-force-success {
+  border-color: var(--qds-color-success);
+}
+
+.qds-input--disabled,
+.qds-input.qds-pg-force-disabled {
+  pointer-events: none;
+  border-color: var(--qds-color-disabled);
+  background: var(--qds-color-surface-1);
+}
+
+.qds-input--disabled .qds-input__control,
+.qds-pg-force-disabled .qds-input__control {
+  color: var(--qds-color-disabled);
+  cursor: not-allowed;
+}
+
+.qds-input--disabled .qds-input__control::placeholder,
+.qds-pg-force-disabled .qds-input__control::placeholder {
+  color: var(--qds-color-disabled);
+}
+
+/* Read-only — same background/border as default; only cursor and the
+   absence of hover/focus-brand-shift change (Specifications §2.17, §13.1 —
+   no new Foundation token, a behavioral not chromatic distinction). */
+.qds-input--readonly .qds-input__control {
+  cursor: default;
+}
+
+.qds-input--readonly:hover {
+  border-color: var(--qds-color-border-default);
+}
+
+.qds-input--readonly:has(.qds-input__control:focus-visible) {
+  border-color: var(--qds-color-border-default);
+  box-shadow: none;
+}
+
+/* ---------- Prefix / suffix slots ---------- */
+
+.qds-input__prefix,
+.qds-input__suffix {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--qds-color-text-muted);
+
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-body-sm-size);
+}
+
+.qds-input__prefix svg,
+.qds-input__suffix svg {
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+}
+
+/* Internal icon-button occupants (clear, password reveal) — Button
+   composition §8: real <button type="button">, not a qds-btn instance, but
+   reusing Button's ghost icon-only hover treatment and 44x44 touch target
+   via a hit-area pseudo-element (same technique as .qds-btn--link, §19). */
+.qds-input__clear,
+.qds-input__reveal {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--qds-radius-sm);
+  background: transparent;
+  color: var(--qds-color-text-muted);
+  cursor: pointer;
+
+  transition: background-color var(--qds-duration-fast) var(--qds-easing-standard),
+    color var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-input__clear::before,
+.qds-input__reveal::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--qds-touch-target-min);
+  height: var(--qds-touch-target-min);
+  transform: translate(-50%, -50%);
+}
+
+.qds-input__clear svg,
+.qds-input__reveal svg {
+  width: 100%;
+  height: 100%;
+}
+
+.qds-input__clear:hover,
+.qds-input__reveal:hover {
+  background: var(--qds-color-surface-3);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-input__clear:focus-visible,
+.qds-input__reveal:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+/* Loading — suffix spinner reuses Button's spinner token set and keyframe
+   (components/button.css's @keyframes qds-btn-spin, loaded first in
+   qds.css) rather than a second animation, per Specifications §2.18/§8. */
+.qds-input__spinner {
+  flex: none;
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--qds-radius-full);
+  color: var(--qds-color-text-muted);
+  animation: qds-btn-spin var(--qds-duration-spinner) linear infinite;
+}
+
+/* Suffix-occupancy priority (Specifications §2.19): loading beats
+   clearable at the CSS layer too, in case both are ever present at once. */
+.qds-input--loading .qds-input__clear,
+.qds-search--loading .qds-input__clear {
+  display: none;
+}
+
+/* =========================================================================
+   Textarea
+   ========================================================================= */
+
+.qds-textarea {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-2);
+  padding: var(--qds-space-2) var(--qds-space-3);
+
+  transition:
+    border-color var(--qds-duration-fast) var(--qds-easing-standard),
+    box-shadow var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-textarea--sm {
+  padding: var(--qds-space-1) var(--qds-space-2);
+}
+
+.qds-textarea__control {
+  flex: 1 1 auto;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: vertical;
+  color: var(--qds-color-text-primary);
+
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+}
+
+.qds-textarea--sm .qds-textarea__control {
+  font-size: var(--qds-text-body-sm-size);
+  line-height: var(--qds-text-body-sm-line-height);
+}
+
+.qds-textarea--monospace .qds-textarea__control {
+  font-family: var(--qds-font-family-mono);
+}
+
+.qds-textarea__control::placeholder {
+  color: var(--qds-color-text-muted);
+}
+
+.qds-textarea:hover,
+.qds-textarea.qds-pg-force-hover {
+  border-color: var(--qds-color-border-default);
+}
+
+.qds-textarea:has(.qds-textarea__control:focus-visible):not(.qds-textarea--error):not(.qds-textarea--success),
+.qds-textarea.qds-pg-force-focus:not(.qds-textarea--error):not(.qds-textarea--success) {
+  border-color: var(--qds-color-brand-primary);
+}
+
+.qds-textarea:has(.qds-textarea__control:focus-visible),
+.qds-textarea.qds-pg-force-focus {
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-textarea--error {
+  border-color: var(--qds-color-danger);
+}
+
+.qds-textarea--success {
+  border-color: var(--qds-color-success);
+}
+
+.qds-textarea--disabled {
+  border-color: var(--qds-color-disabled);
+  background: var(--qds-color-surface-1);
+}
+
+.qds-textarea--disabled .qds-textarea__control {
+  color: var(--qds-color-disabled);
+  resize: none;
+  cursor: not-allowed;
+}
+
+.qds-textarea--readonly .qds-textarea__control {
+  cursor: default;
+}
+
+/* autoResize: grows with content up to maxHeight, then scrolls. 320px is
+   the named default per Specifications §3.8 (~10 lines of body text) — a
+   product decision, not a Foundation token, called out there explicitly. */
+.qds-textarea--autoresize .qds-textarea__control {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* =========================================================================
+   Native Select
+   ========================================================================= */
+
+.qds-select {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.qds-select__control {
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  border: 1px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-2);
+  color: var(--qds-color-text-primary);
+  cursor: pointer;
+
+  font-family: var(--qds-font-family-primary);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+
+  transition:
+    border-color var(--qds-duration-fast) var(--qds-easing-standard),
+    box-shadow var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-select--md .qds-select__control {
+  height: var(--qds-control-height-md);
+  padding: var(--qds-space-2) var(--qds-space-8) var(--qds-space-2) var(--qds-space-3);
+}
+
+.qds-select--sm .qds-select__control {
+  height: var(--qds-control-height-sm);
+  padding: var(--qds-space-1) var(--qds-space-8) var(--qds-space-1) var(--qds-space-2);
+  font-size: var(--qds-text-body-sm-size);
+}
+
+.qds-select--monospace .qds-select__control {
+  font-family: var(--qds-font-family-mono);
+}
+
+.qds-select__chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--qds-space-2);
+  transform: translateY(-50%);
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+  color: var(--qds-color-text-muted);
+  pointer-events: none;
+}
+
+.qds-select__control:hover,
+.qds-select.qds-pg-force-hover .qds-select__control {
+  border-color: var(--qds-color-border-default);
+}
+
+.qds-select__control:focus-visible,
+.qds-select.qds-pg-force-focus .qds-select__control {
+  outline: none;
+  border-color: var(--qds-color-brand-primary);
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-select--error .qds-select__control {
+  border-color: var(--qds-color-danger);
+}
+
+.qds-select--success .qds-select__control {
+  border-color: var(--qds-color-success);
+}
+
+.qds-select__control:disabled {
+  cursor: not-allowed;
+  border-color: var(--qds-color-disabled);
+  color: var(--qds-color-disabled);
+  background: var(--qds-color-surface-1);
+}
+
+/* =========================================================================
+   Checkbox
+   ========================================================================= */
+
+.qds-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qds-space-2);
+  cursor: pointer;
+}
+
+/* Visually-hidden-but-focusable native input — real <input type="checkbox">
+   per System §13, never a styled <div>. Sibling selectors below drive the
+   visible box off this element's own :checked/:indeterminate/:disabled/
+   :focus-visible pseudo-classes; no JS class-toggling. */
+.qds-checkbox__control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.qds-checkbox__box {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--qds-icon-size-md);
+  height: var(--qds-icon-size-md);
+  border: 1.5px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-sm);
+  background: var(--qds-color-surface-2);
+  color: var(--qds-color-text-inverse);
+
+  transition:
+    background-color var(--qds-duration-fast) var(--qds-easing-standard),
+    border-color var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+/* 44x44 touch target around the 20px box, independent of label text
+   (Specifications §5.21). */
+.qds-checkbox__box::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--qds-touch-target-min);
+  height: var(--qds-touch-target-min);
+  transform: translate(-50%, -50%);
+}
+
+.qds-checkbox__box svg {
+  width: 70%;
+  height: 70%;
+  opacity: 0;
+  transition: opacity var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-checkbox__control:checked ~ .qds-checkbox__box,
+.qds-checkbox__control:indeterminate ~ .qds-checkbox__box,
+.qds-checkbox.qds-pg-force-checked .qds-checkbox__box,
+.qds-checkbox.qds-pg-force-indeterminate .qds-checkbox__box {
+  border-color: var(--qds-color-brand-primary);
+  background: var(--qds-color-brand-primary);
+}
+
+.qds-checkbox__control:checked ~ .qds-checkbox__box .qds-checkbox__check,
+.qds-checkbox.qds-pg-force-checked .qds-checkbox__box .qds-checkbox__check {
+  opacity: 1;
+}
+
+.qds-checkbox__control:indeterminate ~ .qds-checkbox__box .qds-checkbox__dash,
+.qds-checkbox.qds-pg-force-indeterminate .qds-checkbox__box .qds-checkbox__dash {
+  opacity: 1;
+}
+
+.qds-checkbox__control:focus-visible ~ .qds-checkbox__box,
+.qds-checkbox.qds-pg-force-focus .qds-checkbox__box {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-checkbox__control:disabled ~ .qds-checkbox__box,
+.qds-checkbox.qds-pg-force-disabled .qds-checkbox__box {
+  border-color: var(--qds-color-disabled);
+  background: var(--qds-color-surface-1);
+}
+
+.qds-checkbox__control:disabled ~ .qds-checkbox__box svg,
+.qds-checkbox.qds-pg-force-disabled .qds-checkbox__box svg {
+  color: var(--qds-color-disabled);
+}
+
+.qds-checkbox:has(.qds-checkbox__control:disabled),
+.qds-checkbox.qds-pg-force-disabled {
+  cursor: not-allowed;
+}
+
+.qds-checkbox:has(.qds-checkbox__control:disabled) .qds-checkbox__label,
+.qds-checkbox.qds-pg-force-disabled .qds-checkbox__label {
+  color: var(--qds-color-disabled);
+}
+
+/* Group `error` boolean (Specifications §5.7) — driven by the parent Field,
+   not a per-checkbox message. */
+.qds-checkbox--error .qds-checkbox__box {
+  border-color: var(--qds-color-danger);
+}
+
+.qds-checkbox__label {
+  font-family: var(--qds-text-body-family);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+  color: var(--qds-color-text-primary);
+}
+
+/* =========================================================================
+   Radio — dot variant
+   ========================================================================= */
+
+.qds-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--qds-space-4);
+}
+
+.qds-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qds-space-2);
+  cursor: pointer;
+}
+
+.qds-radio__control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.qds-radio__dot {
+  position: relative;
+  flex: none;
+  width: var(--qds-icon-size-md);
+  height: var(--qds-icon-size-md);
+  border: 1.5px solid var(--qds-color-border-default);
+  border-radius: var(--qds-radius-full);
+  background: var(--qds-color-surface-2);
+
+  transition:
+    background-color var(--qds-duration-fast) var(--qds-easing-standard),
+    border-color var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-radio__dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--qds-touch-target-min);
+  height: var(--qds-touch-target-min);
+  transform: translate(-50%, -50%);
+}
+
+.qds-radio__dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--qds-icon-size-md) * 0.5);
+  height: calc(var(--qds-icon-size-md) * 0.5);
+  border-radius: var(--qds-radius-full);
+  background: var(--qds-color-text-inverse);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-radio__control:checked ~ .qds-radio__dot,
+.qds-radio.qds-pg-force-checked .qds-radio__dot {
+  border-color: var(--qds-color-brand-primary);
+  background: var(--qds-color-brand-primary);
+}
+
+.qds-radio__control:checked ~ .qds-radio__dot::after,
+.qds-radio.qds-pg-force-checked .qds-radio__dot::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.qds-radio__control:focus-visible ~ .qds-radio__dot,
+.qds-radio.qds-pg-force-focus .qds-radio__dot {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-radio__control:disabled ~ .qds-radio__dot,
+.qds-radio.qds-pg-force-disabled .qds-radio__dot {
+  border-color: var(--qds-color-disabled);
+  background: var(--qds-color-surface-1);
+}
+
+.qds-radio:has(.qds-radio__control:disabled),
+.qds-radio.qds-pg-force-disabled {
+  cursor: not-allowed;
+}
+
+.qds-radio:has(.qds-radio__control:disabled) .qds-radio__label,
+.qds-radio.qds-pg-force-disabled .qds-radio__label {
+  color: var(--qds-color-disabled);
+}
+
+.qds-radio__label {
+  font-family: var(--qds-text-body-family);
+  font-size: var(--qds-text-body-size);
+  line-height: var(--qds-text-body-line-height);
+  color: var(--qds-color-text-primary);
+}
+
+/* =========================================================================
+   Radio — tile variant (composes .qds-surface, System §17/§9)
+   ========================================================================= */
+
+.qds-radio--tile {
+  position: relative;
+  cursor: pointer;
+}
+
+.qds-radio--tile .qds-radio__control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.qds-radio__tile-content {
+  display: flex;
+  align-items: center;
+  gap: var(--qds-space-3);
+}
+
+.qds-radio__preview {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--qds-space-8);
+  height: var(--qds-space-8);
+  border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-3);
+  color: var(--qds-color-text-secondary);
+}
+
+.qds-radio__preview svg {
+  width: var(--qds-icon-size-md);
+  height: var(--qds-icon-size-md);
+}
+
+/* Selected/focus visuals reuse Surface's own selected token pair — Radio
+   sets no second color system for tile (System §17), reacting to the
+   hidden native input's own state via :has() instead of a JS-toggled
+   .qds-surface--selected class. */
+.qds-radio--tile:has(.qds-radio__control:checked),
+.qds-radio--tile.qds-pg-force-checked {
+  border-color: var(--qds-color-brand-primary);
+  background: var(--qds-color-selected-surface);
+}
+
+.qds-radio--tile:has(.qds-radio__control:focus-visible),
+.qds-radio--tile.qds-pg-force-focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+.qds-radio--tile:has(.qds-radio__control:disabled),
+.qds-radio--tile.qds-pg-force-disabled {
+  cursor: not-allowed;
+}
+
+/* =========================================================================
+   Search — composes .qds-input on the same root (System §16, Specs §11.1)
+   ========================================================================= */
+
+.qds-search__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+  color: var(--qds-color-text-muted);
+}
+
+.qds-search:has(.qds-input__control:focus-visible) .qds-search__icon {
+  color: var(--qds-color-text-secondary);
+}

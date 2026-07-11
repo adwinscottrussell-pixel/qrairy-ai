@@ -206,6 +206,33 @@ body {
   font-size: var(--qds-text-body-sm-size);
 }
 
+/* ---------- Input demo layout ---------- */
+
+.qds-pg-field-narrow {
+  width: 100%;
+  max-width: 280px;
+}
+
+.qds-pg-checkbox-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--qds-space-2);
+  margin-top: var(--qds-space-2);
+}
+
+.qds-pg-radio-tile {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+/* Field/FieldGroup inter-field gap (Input Specifications §1.12/§8) — a
+   page-level layout choice since no FieldGroup component exists yet. */
+.qds-pg-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--qds-space-4);
+}
+
 /* Minimal Empty State composition for the demo only — the real Empty
    State component (catalog #26) does not exist yet; this only proves
    Surface's Body hosts it per doc §22. */

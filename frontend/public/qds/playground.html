@@ -444,7 +444,439 @@
 
       <section id="inputs" class="qds-pg-section">
         <h2>Inputs</h2>
-        <div class="qds-pg-placeholder">Input component placeholder</div>
+        <p class="qds-pg-section-note">QDS Input family — Field, TextInput, Textarea, Native Select, Checkbox, Radio, Search, per qds/docs/QDS_INPUT_SYSTEM_v1.md and QDS_INPUT_SPECIFICATIONS_v1.md. Composes with Surface and Button. Rendered here only; not imported by any production page.</p>
+
+        <h3 class="qds-pg-demo-title">TextInput — sizes</h3>
+        <div class="qds-pg-demo-row qds-pg-demo-row--align-center">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-size-sm">Small</label>
+            <div class="qds-input qds-input--sm">
+              <input class="qds-input__control" id="ti-size-sm" type="text" placeholder="sm — 32px" />
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-size-md">Medium (default)</label>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" id="ti-size-md" type="text" placeholder="md — 44px" />
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">TextInput — states</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Default</span>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" type="text" placeholder="Business name" />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Hover</span>
+            <div class="qds-input qds-input--md qds-pg-force-hover">
+              <input class="qds-input__control" type="text" placeholder="Business name" />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Focus (Tab to this field)</span>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" type="text" placeholder="Business name" />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <div class="qds-input qds-input--md qds-input--disabled">
+              <input class="qds-input__control" type="text" placeholder="Business name" disabled />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Read-only</span>
+            <div class="qds-input qds-input--md qds-input--readonly">
+              <input class="qds-input__control" type="text" value="qrairy.ai" readonly />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Loading (async validation)</span>
+            <div class="qds-input qds-input--md qds-input--loading">
+              <input class="qds-input__control" type="text" value="checking-slug" aria-busy="true" />
+              <span class="qds-input__spinner" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Error</span>
+            <div class="qds-input qds-input--md qds-input--error">
+              <input class="qds-input__control" type="text" value="not a url" aria-invalid="true" />
+            </div>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Success</span>
+            <div class="qds-input qds-input--md qds-input--success">
+              <input class="qds-input__control" type="text" value="qrairy-slug" />
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">TextInput — prefix, suffix, leading icon, monospace</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-prefix">Destination URL <span class="qds-field__required" aria-hidden="true">*</span></label>
+            <div class="qds-input qds-input--md qds-input--monospace">
+              <span class="qds-input__prefix">https://</span>
+              <input class="qds-input__control" id="ti-prefix" type="url" required value="qrairy.ai/r/abc123" aria-describedby="ti-prefix-help" />
+            </div>
+            <p class="qds-field__message" id="ti-prefix-help">Must start with https://</p>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-suffix">Discount</label>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" id="ti-suffix" type="text" inputmode="numeric" value="10" />
+              <span class="qds-input__suffix">%</span>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-icon">Email</label>
+            <div class="qds-input qds-input--md">
+              <span class="qds-input__prefix" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+              </span>
+              <input class="qds-input__control" id="ti-icon" type="email" inputmode="email" placeholder="you@business.com" />
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">TextInput — password visibility</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-pw-hidden">Password (hidden)</label>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" id="ti-pw-hidden" type="password" value="hunter2hunter2" autocomplete="current-password" />
+              <button class="qds-input__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-pw-shown">Password (revealed)</label>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" id="ti-pw-shown" type="text" value="hunter2hunter2" autocomplete="current-password" />
+              <button class="qds-input__reveal" type="button" aria-label="Hide password" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.86 21.86 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.86 21.86 0 0 1-2.87 4.07M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ti-clear">Clearable</label>
+            <div class="qds-input qds-input--md">
+              <input class="qds-input__control" id="ti-clear" type="text" value="promo-2026" />
+              <button class="qds-input__clear" type="button" aria-label="Clear">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Textarea</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ta-fixed">Admin notes</label>
+            <div class="qds-textarea">
+              <textarea class="qds-textarea__control" id="ta-fixed" rows="5" placeholder="Internal notes, not shown to customers"></textarea>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="ta-auto">Welcome message <span class="qds-field__optional">(optional)</span></label>
+            <p class="qds-field__description" id="ta-auto-desc">Shown to customers after they complete their loyalty card.</p>
+            <div class="qds-textarea qds-textarea--autoresize">
+              <textarea class="qds-textarea__control" id="ta-auto" rows="3" aria-describedby="ta-auto-desc ta-auto-counter">Thanks for being a loyal customer! Enjoy your free reward on us.</textarea>
+            </div>
+            <span class="qds-field__counter" id="ta-auto-counter">67 / 160</span>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <div class="qds-textarea qds-textarea--disabled">
+              <textarea class="qds-textarea__control" rows="3" disabled>Locked field content.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Native Select</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="sel-plan">Plan tier <span class="qds-field__required" aria-hidden="true">*</span></label>
+            <div class="qds-select qds-select--md">
+              <select class="qds-select__control" id="sel-plan" required>
+                <option value="" disabled selected>Choose a plan</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+              <svg class="qds-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="sel-status">Status filter</label>
+            <div class="qds-select qds-select--sm qds-select--monospace">
+              <select class="qds-select__control" id="sel-status">
+                <option value="all">all</option>
+                <option value="active">active</option>
+                <option value="paused" disabled>paused (n/a)</option>
+              </select>
+              <svg class="qds-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <div class="qds-select qds-select--md">
+              <select class="qds-select__control" disabled>
+                <option>Enterprise</option>
+              </select>
+              <svg class="qds-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Checkbox — standalone</h3>
+        <div class="qds-field">
+          <label class="qds-checkbox">
+            <input class="qds-checkbox__control" type="checkbox" checked />
+            <span class="qds-checkbox__box" aria-hidden="true">
+              <svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="qds-checkbox__label">Notify me when a customer completes their card</span>
+          </label>
+          <p class="qds-field__message">You can change this later in notification settings.</p>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Checkbox — states</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Unchecked</span>
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" />
+              <span class="qds-checkbox__box" aria-hidden="true">
+                <svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="qds-checkbox__label">Email receipts</span>
+            </label>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Checked</span>
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" checked />
+              <span class="qds-checkbox__box" aria-hidden="true">
+                <svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="qds-checkbox__label">Email receipts</span>
+            </label>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Indeterminate</span>
+            <label class="qds-checkbox qds-pg-force-indeterminate">
+              <input class="qds-checkbox__control" type="checkbox" />
+              <span class="qds-checkbox__box" aria-hidden="true">
+                <svg class="qds-checkbox__dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+              <span class="qds-checkbox__label">Select all rewards</span>
+            </label>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" disabled />
+              <span class="qds-checkbox__box" aria-hidden="true">
+                <svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="qds-checkbox__label">Email receipts</span>
+            </label>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Checkbox — group (Field wrapper, required, error)</h3>
+        <div class="qds-field qds-field--group qds-field--error qds-pg-field-narrow">
+          <span class="qds-field__label" id="cb-group-label">Notification types <span class="qds-field__required" aria-hidden="true">*</span></span>
+          <div role="group" aria-labelledby="cb-group-label" aria-required="true" aria-describedby="cb-group-msg" class="qds-pg-checkbox-stack">
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" name="notify" value="email" />
+              <span class="qds-checkbox__box" aria-hidden="true"><svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="qds-checkbox__label">Email</span>
+            </label>
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" name="notify" value="sms" />
+              <span class="qds-checkbox__box" aria-hidden="true"><svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="qds-checkbox__label">SMS</span>
+            </label>
+            <label class="qds-checkbox">
+              <input class="qds-checkbox__control" type="checkbox" name="notify" value="push" />
+              <span class="qds-checkbox__box" aria-hidden="true"><svg class="qds-checkbox__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="qds-checkbox__label">Push</span>
+            </label>
+          </div>
+          <p class="qds-field__message" id="cb-group-msg">Select at least one notification type.</p>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Radio — dot</h3>
+        <div class="qds-field qds-pg-field-narrow">
+          <span class="qds-field__label" id="radio-sort-label">Sort by</span>
+          <div class="qds-radio-group" role="radiogroup" aria-labelledby="radio-sort-label">
+            <label class="qds-radio">
+              <input class="qds-radio__control" type="radio" name="sort" value="newest" checked />
+              <span class="qds-radio__dot" aria-hidden="true"></span>
+              <span class="qds-radio__label">Newest</span>
+            </label>
+            <label class="qds-radio">
+              <input class="qds-radio__control" type="radio" name="sort" value="popular" />
+              <span class="qds-radio__dot" aria-hidden="true"></span>
+              <span class="qds-radio__label">Most scanned</span>
+            </label>
+            <label class="qds-radio">
+              <input class="qds-radio__control" type="radio" name="sort" value="az" />
+              <span class="qds-radio__dot" aria-hidden="true"></span>
+              <span class="qds-radio__label">A–Z</span>
+            </label>
+            <label class="qds-radio">
+              <input class="qds-radio__control" type="radio" name="sort" value="unavailable" disabled />
+              <span class="qds-radio__dot" aria-hidden="true"></span>
+              <span class="qds-radio__label">Unavailable</span>
+            </label>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Radio — tile (composes Surface, required)</h3>
+        <div class="qds-field">
+          <span class="qds-field__label" id="radio-reward-label">Reward type <span class="qds-field__required" aria-hidden="true">*</span></span>
+          <div class="qds-radio-group" role="radiogroup" aria-labelledby="radio-reward-label" aria-required="true">
+            <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm qds-pg-radio-tile">
+              <input class="qds-radio__control" type="radio" name="reward" value="percent" required checked />
+              <span class="qds-radio__tile-content">
+                <span class="qds-radio__preview" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+                </span>
+                <span class="qds-radio__label">10% off</span>
+              </span>
+            </label>
+            <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm qds-pg-radio-tile">
+              <input class="qds-radio__control" type="radio" name="reward" value="freeitem" required />
+              <span class="qds-radio__tile-content">
+                <span class="qds-radio__preview" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z"/></svg>
+                </span>
+                <span class="qds-radio__label">Free item</span>
+              </span>
+            </label>
+            <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm qds-pg-radio-tile">
+              <input class="qds-radio__control" type="radio" name="reward" value="unavailable" required disabled />
+              <span class="qds-radio__tile-content">
+                <span class="qds-radio__preview" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>
+                </span>
+                <span class="qds-radio__label">Custom (unavailable)</span>
+              </span>
+            </label>
+          </div>
+          <p class="qds-field__message">Click a tile — real radio semantics, selection state is live (no JS).</p>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Search</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="search-table">Filter table <span class="qds-field__optional">(optional)</span></label>
+            <div class="qds-input qds-input--md qds-search">
+              <span class="qds-search__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+              <input class="qds-input__control" id="search-table" type="search" role="searchbox" placeholder="Search QR codes" value="homepage" />
+              <button class="qds-input__clear" type="button" aria-label="Clear">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <span class="qds-pg-demo-label">Loading (async filter)</span>
+            <div class="qds-input qds-input--md qds-search qds-search--loading">
+              <span class="qds-search__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+              <input class="qds-input__control" type="search" role="searchbox" value="loyalty" aria-busy="true" />
+              <span class="qds-input__spinner" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Composition with Button — submitted search</h3>
+        <div class="qds-pg-demo-row qds-pg-demo-row--align-center">
+          <div class="qds-input qds-input--md qds-search qds-pg-field-narrow">
+            <span class="qds-search__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input class="qds-input__control" type="search" role="searchbox" placeholder="Search analytics" aria-label="Search analytics" />
+          </div>
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Search</button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Field — validation &amp; composition</h3>
+        <div class="qds-pg-demo-row">
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="field-full">Redirect URL <span class="qds-field__required" aria-hidden="true">*</span></label>
+            <p class="qds-field__description" id="field-full-desc">Where scans of this QR code will land.</p>
+            <div class="qds-input qds-input--md qds-input--monospace">
+              <input class="qds-input__control" id="field-full" type="url" required value="https://qrairy.ai/r/abc123" aria-describedby="field-full-desc field-full-help field-full-counter" />
+            </div>
+            <p class="qds-field__message" id="field-full-help">Must start with https://</p>
+            <span class="qds-field__counter" id="field-full-counter">27 / 200</span>
+          </div>
+          <div class="qds-field qds-pg-field-narrow qds-field--error">
+            <label class="qds-field__label" for="field-err">Redirect URL <span class="qds-field__required" aria-hidden="true">*</span></label>
+            <div class="qds-input qds-input--md qds-input--error">
+              <input class="qds-input__control" id="field-err" type="url" required value="not-a-valid-url" aria-invalid="true" aria-describedby="field-err-msg" />
+            </div>
+            <p class="qds-field__message" id="field-err-msg">Must start with https://</p>
+          </div>
+          <div class="qds-field qds-pg-field-narrow qds-field--success">
+            <label class="qds-field__label" for="field-ok">Slug</label>
+            <div class="qds-input qds-input--md qds-input--success qds-input--monospace">
+              <input class="qds-input__control" id="field-ok" type="text" value="qrairy-slug" aria-describedby="field-ok-msg" />
+            </div>
+            <p class="qds-field__message" id="field-ok-msg">Slug is available.</p>
+          </div>
+          <div class="qds-field qds-pg-field-narrow">
+            <label class="qds-field__label" for="field-over">Welcome message <span class="qds-field__optional">(optional)</span></label>
+            <div class="qds-textarea">
+              <textarea class="qds-textarea__control" id="field-over" rows="2" aria-invalid="true" aria-describedby="field-over-counter">Thanks so much for being a loyal customer, we really appreciate your continued support and business!</textarea>
+            </div>
+            <span class="qds-field__counter qds-field__counter--over" id="field-over-counter">104 / 100</span>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Composition with Surface</h3>
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-pg-surface-narrow">
+          <div class="qds-surface__header">
+            <div class="qds-surface__header-text">
+              <h4 class="qds-surface__title">Business Details</h4>
+              <p class="qds-surface__description">Shown on your public profile.</p>
+            </div>
+          </div>
+          <div class="qds-surface__body qds-pg-form-stack">
+            <div class="qds-field">
+              <label class="qds-field__label" for="surf-name">Business name <span class="qds-field__required" aria-hidden="true">*</span></label>
+              <div class="qds-input qds-input--md">
+                <input class="qds-input__control" id="surf-name" type="text" required value="Qrairy Coffee Co." />
+              </div>
+            </div>
+            <div class="qds-field">
+              <label class="qds-field__label" for="surf-plan">Plan tier</label>
+              <div class="qds-select qds-select--md">
+                <select class="qds-select__control" id="surf-plan">
+                  <option value="growth" selected>Growth</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+                <svg class="qds-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="qds-surface__footer">
+            <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button">Cancel</button>
+            <button class="qds-btn qds-btn--primary qds-btn--sm" type="button">Save changes</button>
+          </div>
+        </div>
       </section>
 
       <section id="badges" class="qds-pg-section">
