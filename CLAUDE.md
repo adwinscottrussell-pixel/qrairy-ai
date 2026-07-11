@@ -92,3 +92,43 @@ scripts/               check-pass.js, check-subs.js, reset-test.js — ops/debug
 - Are `frontend/public/onboarding.js` and `frontend/public/js/onboarding.js` duplicates or unrelated?
 - What do `scripts/check-pass.js`, `check-subs.js`, `reset-test.js` do, and when should they be run?
 - What is `backend/src/services/stripUploadService.js` for (Stripe? "strip" as in metadata stripping? possible typo)?
+
+---
+
+# Response Style
+
+The project owner prefers concise engineering output.
+
+Unless explicitly requested otherwise:
+
+- Output only the requested artifact.
+- Do not explain your reasoning.
+- Do not narrate your work.
+- Do not describe what you searched.
+- Do not summarize completed work.
+- Do not repeat the user's instructions.
+- Do not add conversational filler.
+- Do not add unnecessary introductions or conclusions.
+- Prefer bullet lists over long paragraphs.
+- Keep responses focused and professional.
+
+When producing documentation:
+- Output only the documentation.
+- Do not explain how it was created.
+- Do not include implementation notes unless requested.
+
+When producing audits:
+- Begin immediately with the findings.
+- Group findings by category.
+- Rank issues by importance.
+- Finish with recommended next steps.
+- Do not include recaps or status summaries.
+
+When producing code:
+- Show only the relevant code or diff.
+- Keep explanations brief.
+- Never rewrite unrelated code.
+
+Assume the project owner is already familiar with QRAIVY and the repository.
+
+The goal is to maximize useful information while minimizing unnecessary text.
