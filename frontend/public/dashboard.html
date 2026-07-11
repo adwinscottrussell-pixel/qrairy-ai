@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="dashboard-shell.css"/>
+<link rel="stylesheet" href="qds/qds.css"/>
 
 <link rel="stylesheet" href="onboarding.css"/>
 
@@ -264,10 +265,10 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
         <button class="btn-create" id="btn-create-sqr" data-i18n="btn_create">&#xFF0B; Create New Smart QR</button>
       </div>
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val orange" id="kpi-pages">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_pages">Smart QR Pages</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="kpi-scans">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_scans">Total Scans</div></div>
-        <div class="kpi-card"><div class="kpi-val green" id="kpi-subs">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div></div>
-        <div class="kpi-card"><div class="kpi-val purple" id="kpi-wallet">&#x2014;</div><div class="kpi-lbl" data-i18n="kpi_wallet">Wallet Members</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="kpi-pages">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_pages">Smart QR Pages</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val qds-surface__kpi-value" id="kpi-scans">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_scans">Total Scans</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val green qds-surface__kpi-value" id="kpi-subs">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_subs">Subscribers</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val purple qds-surface__kpi-value" id="kpi-wallet">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_wallet">Wallet Members</div></div>
       </div>
       <div class="sec-hdr">
         <div><span class="sec-title" data-i18n="sec_sqrpages">Smart QR Pages</span><span class="sec-count" id="sqr-section-count"></span></div>
