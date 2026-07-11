@@ -1,0 +1,39 @@
+/* QDS Foundation — Colors
+   Semantic roles only. Navy-vs-black conflict resolved in favor of the
+   current business dashboard's near-black foundation. Duplicate accent
+   (--accent-2 / #ff8c00) dropped — no distinct semantic purpose from
+   brand-primary was found in the source CSS. */
+
+:root {
+  /* Surfaces */
+  --qds-color-background: #0a0a0a;
+  --qds-color-surface-1: #111111;
+  --qds-color-surface-2: #1a1a1a;
+  --qds-color-surface-3: #232323;
+
+  /* Borders */
+  --qds-color-border-subtle: rgba(255, 255, 255, 0.06);
+  --qds-color-border-default: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --qds-color-text-primary: #f0ece0;
+  --qds-color-text-secondary: #c8c8c0;
+  --qds-color-text-muted: #a0a09a;
+  --qds-color-text-inverse: #0a0a0a;
+
+  /* Brand */
+  --qds-color-brand-primary: #ff5a1f;
+  --qds-color-brand-hover: #ff7a45;
+  --qds-color-brand-active: #e6490f;
+
+  /* Status */
+  --qds-color-success: #22c55e;
+  --qds-color-warning: #f59e0b;
+  --qds-color-danger: #ef4444;
+  --qds-color-information: #3b82f6;
+
+  /* Interaction */
+  --qds-color-focus-ring: rgba(255, 90, 31, 0.55);
+  --qds-color-disabled: rgba(255, 255, 255, 0.28);
+  --qds-color-overlay: rgba(0, 0, 0, 0.6);
+}

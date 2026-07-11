@@ -1,0 +1,12 @@
+/* QDS Foundation — Border Radius
+   Canonical set only. Legacy 7px/9px values from existing page CSS are
+   NOT carried forward as tokens. */
+
+:root {
+  --qds-radius-none: 0;
+  --qds-radius-sm: 6px;
+  --qds-radius-md: 8px;
+  --qds-radius-lg: 12px;
+  --qds-radius-xl: 16px;
+  --qds-radius-full: 9999px;
+}

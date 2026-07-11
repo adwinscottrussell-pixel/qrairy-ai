@@ -1,0 +1,11 @@
+/* QDS — QRAIVY Design System
+   Single entry point. Not imported anywhere in the application yet (v0.1 foundation phase).
+   Import order matters: colors/typography/spacing define primitives other files may reference. */
+
+@import url('./foundation/colors.css');
+@import url('./foundation/typography.css');
+@import url('./foundation/spacing.css');
+@import url('./foundation/radius.css');
+@import url('./foundation/elevation.css');
+@import url('./foundation/motion.css');
+@import url('./foundation/breakpoints.css');

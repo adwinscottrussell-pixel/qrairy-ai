@@ -1,0 +1,15 @@
+/* QDS Foundation — Breakpoints
+   One official responsive system, documented as reference constants only.
+   CSS custom properties cannot be used directly inside @media conditions
+   (e.g. `@media (min-width: var(--qds-breakpoint-tablet))` is invalid CSS) —
+   consuming code must hard-code the pixel value in the media query and use
+   the token only as documentation/lookup, unless a preprocessing step
+   (e.g. postcss-preset-env) is introduced later. */
+
+:root {
+  --qds-breakpoint-small-mobile: 360px;
+  --qds-breakpoint-mobile: 480px;
+  --qds-breakpoint-tablet: 768px;
+  --qds-breakpoint-desktop: 1024px;
+  --qds-breakpoint-wide-desktop: 1440px;
+}

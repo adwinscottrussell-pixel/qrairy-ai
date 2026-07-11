@@ -1,0 +1,18 @@
+/* QDS Foundation — Spacing
+   Canonical 4px-based scale. Legacy values (2px, 6px, 10px, 14px, etc.)
+   from existing page CSS are NOT carried forward as tokens. */
+
+:root {
+  --qds-space-0: 0;
+  --qds-space-1: 4px;
+  --qds-space-2: 8px;
+  --qds-space-3: 12px;
+  --qds-space-4: 16px;
+  --qds-space-5: 20px;
+  --qds-space-6: 24px;
+  --qds-space-8: 32px;
+  --qds-space-10: 40px;
+  --qds-space-12: 48px;
+  --qds-space-16: 64px;
+  --qds-space-20: 80px;
+}

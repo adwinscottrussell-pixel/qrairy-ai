@@ -1,0 +1,26 @@
+/* QDS Foundation — Motion */
+
+:root {
+  --qds-duration-instant: 0ms;
+  --qds-duration-fast: 100ms;
+  --qds-duration-standard: 200ms;
+  --qds-duration-slow: 320ms;
+
+  --qds-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --qds-easing-enter: cubic-bezier(0, 0, 0.2, 1);
+  --qds-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --qds-hover-lift: -1px;
+  --qds-pressed-scale: 0.98;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --qds-duration-instant: 0ms;
+    --qds-duration-fast: 0ms;
+    --qds-duration-standard: 0ms;
+    --qds-duration-slow: 0ms;
+    --qds-hover-lift: 0px;
+    --qds-pressed-scale: 1;
+  }
+}

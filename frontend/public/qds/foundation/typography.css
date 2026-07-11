@@ -1,0 +1,83 @@
+/* QDS Foundation — Typography
+   Compact semantic scale (11 roles), not a preserved list of every size in
+   the repo. Inter is the primary UI font; DM Mono is reserved for exact
+   technical values (KPI/stat figures, code). */
+
+:root {
+  --qds-font-family-primary: 'Inter', sans-serif;
+  --qds-font-family-mono: 'DM Mono', monospace;
+
+  --qds-font-weight-regular: 400;
+  --qds-font-weight-semibold: 600;
+  --qds-font-weight-bold: 700;
+
+  /* Display — hero/marketing headline */
+  --qds-text-display-family: var(--qds-font-family-primary);
+  --qds-text-display-size: 2.5rem;
+  --qds-text-display-line-height: 1.1;
+  --qds-text-display-weight: var(--qds-font-weight-bold);
+  --qds-text-display-letter-spacing: -0.02em;
+
+  /* Page title — top of a dashboard/app page */
+  --qds-text-page-title-family: var(--qds-font-family-primary);
+  --qds-text-page-title-size: 2rem;
+  --qds-text-page-title-line-height: 1.2;
+  --qds-text-page-title-weight: var(--qds-font-weight-bold);
+  --qds-text-page-title-letter-spacing: -0.01em;
+
+  /* Section title — groups content within a page */
+  --qds-text-section-title-family: var(--qds-font-family-primary);
+  --qds-text-section-title-size: 1.5rem;
+  --qds-text-section-title-line-height: 1.3;
+  --qds-text-section-title-weight: var(--qds-font-weight-semibold);
+
+  /* Card title — header within a card/panel */
+  --qds-text-card-title-family: var(--qds-font-family-primary);
+  --qds-text-card-title-size: 1.125rem;
+  --qds-text-card-title-line-height: 1.4;
+  --qds-text-card-title-weight: var(--qds-font-weight-semibold);
+
+  /* Body large — intro/lead paragraphs */
+  --qds-text-body-lg-family: var(--qds-font-family-primary);
+  --qds-text-body-lg-size: 1.125rem;
+  --qds-text-body-lg-line-height: 1.5;
+  --qds-text-body-lg-weight: var(--qds-font-weight-regular);
+
+  /* Body — default running text */
+  --qds-text-body-family: var(--qds-font-family-primary);
+  --qds-text-body-size: 1rem;
+  --qds-text-body-line-height: 1.5;
+  --qds-text-body-weight: var(--qds-font-weight-regular);
+
+  /* Body small — secondary/support text */
+  --qds-text-body-sm-family: var(--qds-font-family-primary);
+  --qds-text-body-sm-size: 0.875rem;
+  --qds-text-body-sm-line-height: 1.5;
+  --qds-text-body-sm-weight: var(--qds-font-weight-regular);
+
+  /* Label — form labels, table headers */
+  --qds-text-label-family: var(--qds-font-family-primary);
+  --qds-text-label-size: 0.75rem;
+  --qds-text-label-line-height: 1.4;
+  --qds-text-label-weight: var(--qds-font-weight-semibold);
+  --qds-text-label-letter-spacing: 0.02em;
+
+  /* Caption — timestamps, helper/meta text */
+  --qds-text-caption-family: var(--qds-font-family-primary);
+  --qds-text-caption-size: 0.75rem;
+  --qds-text-caption-line-height: 1.4;
+  --qds-text-caption-weight: var(--qds-font-weight-regular);
+
+  /* KPI/stat — large numeric figures on dashboards */
+  --qds-text-kpi-family: var(--qds-font-family-mono);
+  --qds-text-kpi-size: 2rem;
+  --qds-text-kpi-line-height: 1.1;
+  --qds-text-kpi-weight: var(--qds-font-weight-bold);
+  --qds-text-kpi-letter-spacing: -0.01em;
+
+  /* Code — inline/blocks of technical text */
+  --qds-text-code-family: var(--qds-font-family-mono);
+  --qds-text-code-size: 0.875rem;
+  --qds-text-code-line-height: 1.5;
+  --qds-text-code-weight: var(--qds-font-weight-regular);
+}
