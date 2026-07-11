@@ -1,0 +1,385 @@
+/* QDS Component — Button
+   Token-only. No hard-coded colors, spacing, typography, radius, shadows,
+   or transitions — every value below resolves to a foundation custom
+   property. Built for a real <button>/<a> element only; never a <div>.
+
+   Variants: primary, secondary, ghost, danger, link, ai, icon (icon-only,
+   composes with a color variant for its fill/border/text treatment).
+   Sizes: sm, md, lg. States: default, hover, active/pressed,
+   focus-visible, disabled, loading.
+
+   .qds-pg-force-* classes below (e.g. .qds-pg-force-hover) exist only so
+   the playground can demonstrate a state without real user input. They
+   are not a public variant or state API — never use them outside
+   qds/playground.html. */
+
+.qds-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--qds-space-2);
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--qds-radius-md);
+  background: transparent;
+  box-shadow: var(--qds-elevation-none);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  vertical-align: middle;
+
+  font-family: var(--qds-text-label-family);
+  font-size: var(--qds-text-label-size);
+  font-weight: var(--qds-text-label-weight);
+  line-height: var(--qds-text-label-line-height);
+  letter-spacing: var(--qds-text-label-letter-spacing);
+
+  transition:
+    background-color var(--qds-duration-fast) var(--qds-easing-standard),
+    border-color var(--qds-duration-fast) var(--qds-easing-standard),
+    color var(--qds-duration-fast) var(--qds-easing-standard),
+    box-shadow var(--qds-duration-fast) var(--qds-easing-standard),
+    transform var(--qds-duration-fast) var(--qds-easing-standard);
+}
+
+.qds-btn:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--qds-elevation-focus);
+}
+
+@media (forced-colors: active) {
+  .qds-btn:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/* ---------- Sizes ---------- */
+
+.qds-btn--sm {
+  height: var(--qds-control-height-sm);
+  padding: 0 var(--qds-space-3);
+}
+
+.qds-btn--md {
+  height: var(--qds-control-height-md);
+  padding: 0 var(--qds-space-4);
+}
+
+.qds-btn--lg {
+  height: var(--qds-control-height-lg);
+  padding: 0 var(--qds-space-6);
+
+  font-family: var(--qds-text-button-label-lg-family);
+  font-size: var(--qds-text-button-label-lg-size);
+  font-weight: var(--qds-text-button-label-lg-weight);
+  line-height: var(--qds-text-button-label-lg-line-height);
+  letter-spacing: var(--qds-text-button-label-lg-letter-spacing);
+}
+
+/* Touch target: a visually 32px `sm` button still needs a 44px hit area
+   below the mobile breakpoint. --qds-breakpoint-mobile cannot be consumed
+   directly in @media (see foundation/breakpoints.css); its pixel value is
+   hard-coded here per that file's documented rule, not invented. */
+@media (max-width: 479px) {
+  .qds-btn--sm::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--qds-touch-target-min);
+    height: var(--qds-touch-target-min);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ---------- Icon-only ---------- */
+
+.qds-btn--icon {
+  padding: 0;
+  width: var(--qds-control-height-md);
+}
+
+.qds-btn--icon.qds-btn--sm {
+  width: var(--qds-control-height-sm);
+}
+
+.qds-btn--icon.qds-btn--lg {
+  width: var(--qds-control-height-lg);
+}
+
+/* Icon-only link buttons have no fixed box to derive a square from —
+   give them an explicit touch area at every viewport, not just mobile. */
+.qds-btn--link.qds-btn--icon {
+  width: var(--qds-touch-target-min);
+  height: var(--qds-touch-target-min);
+}
+
+/* ---------- Icon slot ---------- */
+
+.qds-btn__icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--qds-icon-size-md);
+  height: var(--qds-icon-size-md);
+}
+
+.qds-btn__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.qds-btn--sm .qds-btn__icon {
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+}
+
+.qds-btn--lg .qds-btn__icon {
+  width: var(--qds-icon-size-lg);
+  height: var(--qds-icon-size-lg);
+}
+
+/* ---------- Full width ---------- */
+
+.qds-btn--full {
+  display: flex;
+  width: 100%;
+}
+
+/* ---------- Variant: primary ---------- */
+
+.qds-btn--primary {
+  background: var(--qds-color-brand-primary);
+  border-color: transparent;
+  color: var(--qds-color-text-inverse);
+}
+
+.qds-btn--primary:hover,
+.qds-btn--primary.qds-pg-force-hover {
+  background: var(--qds-color-brand-hover);
+  transform: translateY(var(--qds-hover-lift));
+}
+
+.qds-btn--primary:active,
+.qds-btn--primary.qds-pg-force-pressed {
+  background: var(--qds-color-brand-active);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--primary:disabled,
+.qds-btn--primary[aria-disabled='true'] {
+  background: var(--qds-color-disabled);
+  color: var(--qds-color-text-inverse);
+}
+
+/* ---------- Variant: secondary ---------- */
+
+.qds-btn--secondary {
+  background: transparent;
+  border-color: var(--qds-color-border-default);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-btn--secondary:hover,
+.qds-btn--secondary.qds-pg-force-hover {
+  background: var(--qds-color-surface-2);
+  transform: translateY(var(--qds-hover-lift));
+}
+
+.qds-btn--secondary:active,
+.qds-btn--secondary.qds-pg-force-pressed {
+  background: var(--qds-color-surface-3);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--secondary:disabled,
+.qds-btn--secondary[aria-disabled='true'] {
+  border-color: var(--qds-color-disabled);
+  color: var(--qds-color-disabled);
+  background: transparent;
+}
+
+/* ---------- Variant: ghost ---------- */
+
+.qds-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--qds-color-text-primary);
+}
+
+.qds-btn--ghost:hover,
+.qds-btn--ghost.qds-pg-force-hover {
+  background: var(--qds-color-surface-2);
+}
+
+.qds-btn--ghost:active,
+.qds-btn--ghost.qds-pg-force-pressed {
+  background: var(--qds-color-surface-3);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--ghost:disabled,
+.qds-btn--ghost[aria-disabled='true'] {
+  color: var(--qds-color-disabled);
+  background: transparent;
+}
+
+/* ---------- Variant: danger ---------- */
+
+.qds-btn--danger {
+  background: var(--qds-color-danger);
+  border-color: transparent;
+  color: var(--qds-color-text-inverse);
+}
+
+.qds-btn--danger:hover,
+.qds-btn--danger.qds-pg-force-hover {
+  background: var(--qds-color-danger-hover);
+  transform: translateY(var(--qds-hover-lift));
+}
+
+.qds-btn--danger:active,
+.qds-btn--danger.qds-pg-force-pressed {
+  background: var(--qds-color-danger-active);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--danger:disabled,
+.qds-btn--danger[aria-disabled='true'] {
+  background: var(--qds-color-disabled);
+  color: var(--qds-color-text-inverse);
+}
+
+/* ---------- Variant: ai ---------- */
+
+.qds-btn--ai {
+  background: var(--qds-color-brand-primary);
+  border-color: transparent;
+  color: var(--qds-color-text-inverse);
+  box-shadow: var(--qds-elevation-brand-glow);
+}
+
+.qds-btn--ai:hover,
+.qds-btn--ai.qds-pg-force-hover {
+  background: var(--qds-color-brand-hover);
+  transform: translateY(var(--qds-hover-lift));
+}
+
+.qds-btn--ai:active,
+.qds-btn--ai.qds-pg-force-pressed {
+  background: var(--qds-color-brand-active);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--ai:disabled,
+.qds-btn--ai[aria-disabled='true'] {
+  background: var(--qds-color-disabled);
+  color: var(--qds-color-text-inverse);
+  box-shadow: var(--qds-elevation-none);
+}
+
+/* ---------- Variant: link ---------- */
+
+.qds-btn--link {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--qds-color-brand-primary);
+  text-decoration: underline;
+  text-underline-offset: var(--qds-space-1);
+}
+
+.qds-btn--link:hover,
+.qds-btn--link.qds-pg-force-hover {
+  color: var(--qds-color-brand-hover);
+}
+
+.qds-btn--link:active,
+.qds-btn--link.qds-pg-force-pressed {
+  color: var(--qds-color-brand-active);
+  transform: scale(var(--qds-pressed-scale));
+}
+
+.qds-btn--link:disabled,
+.qds-btn--link[aria-disabled='true'] {
+  color: var(--qds-color-disabled);
+  text-decoration: none;
+}
+
+/* Non icon-only link buttons still need a real hit area independent of
+   their text size. */
+.qds-btn--link:not(.qds-btn--icon) {
+  position: relative;
+}
+
+.qds-btn--link:not(.qds-btn--icon)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  min-width: var(--qds-touch-target-min);
+  height: var(--qds-touch-target-min);
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- Disabled (shared) ---------- */
+
+.qds-btn:disabled,
+.qds-btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: var(--qds-elevation-none);
+  transform: none;
+}
+
+/* ---------- Loading ---------- */
+
+.qds-btn--loading {
+  pointer-events: none;
+}
+
+.qds-btn--loading .qds-btn__content {
+  visibility: hidden;
+}
+
+.qds-btn__spinner {
+  position: absolute;
+  width: var(--qds-icon-size-md);
+  height: var(--qds-icon-size-md);
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--qds-radius-full);
+  animation: qds-btn-spin var(--qds-duration-spinner) linear infinite;
+}
+
+.qds-btn--sm .qds-btn__spinner {
+  width: var(--qds-icon-size-sm);
+  height: var(--qds-icon-size-sm);
+}
+
+.qds-btn--lg .qds-btn__spinner {
+  width: var(--qds-icon-size-lg);
+  height: var(--qds-icon-size-lg);
+}
+
+@keyframes qds-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Content slot ---------- */
+
+.qds-btn__content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--qds-space-2);
+}

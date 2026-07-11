@@ -122,3 +122,51 @@ body {
   border-style: solid;
   border-color: var(--qds-color-brand-primary);
 }
+
+/* ---------- Component demo layout ---------- */
+
+.qds-pg-demo-title {
+  font-size: var(--qds-text-body-sm-size);
+  font-weight: var(--qds-font-weight-semibold);
+  color: var(--qds-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: var(--qds-space-8) 0 var(--qds-space-4);
+}
+
+.qds-pg-demo-title:first-of-type {
+  margin-top: 0;
+}
+
+.qds-pg-demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--qds-space-4);
+}
+
+.qds-pg-demo-row--align-center {
+  align-items: center;
+}
+
+.qds-pg-demo-row--stack {
+  flex-direction: column;
+}
+
+.qds-pg-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--qds-space-6);
+}
+
+.qds-pg-demo-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--qds-space-2);
+}
+
+.qds-pg-demo-label {
+  font-size: var(--qds-text-caption-size);
+  color: var(--qds-color-text-muted);
+}

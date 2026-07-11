@@ -31,10 +31,141 @@
         <p>Internal component development surface. Renders against the QDS Foundation only.</p>
       </header>
 
-      <section id="buttons" class="qds-pg-section qds-pg-section--ready">
+      <section id="buttons" class="qds-pg-section">
         <h2>Buttons</h2>
-        <p class="qds-pg-section-note">Prepared for implementation. Component not yet built.</p>
-        <div class="qds-pg-placeholder">Button component placeholder</div>
+        <p class="qds-pg-section-note">QDS Button — first production component. Rendered here only; not imported by any production page.</p>
+
+        <h3 class="qds-pg-demo-title">Variants</h3>
+        <div class="qds-pg-demo-row">
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Primary</button>
+          <button class="qds-btn qds-btn--secondary qds-btn--md" type="button">Secondary</button>
+          <button class="qds-btn qds-btn--ghost qds-btn--md" type="button">Ghost</button>
+          <button class="qds-btn qds-btn--danger qds-btn--md" type="button">Danger</button>
+          <button class="qds-btn qds-btn--ai qds-btn--md" type="button">Generate</button>
+          <a class="qds-btn qds-btn--link qds-btn--md" href="#buttons">Link</a>
+          <button class="qds-btn qds-btn--primary qds-btn--icon qds-btn--md" type="button" aria-label="Add">
+            <span class="qds-btn__content">
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Sizes</h3>
+        <div class="qds-pg-demo-row qds-pg-demo-row--align-center">
+          <button class="qds-btn qds-btn--primary qds-btn--sm" type="button">Small</button>
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Medium</button>
+          <button class="qds-btn qds-btn--primary qds-btn--lg" type="button">Large</button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">States</h3>
+        <div class="qds-pg-demo-grid">
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Default</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Save changes</button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Hover</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md qds-pg-force-hover" type="button">Save changes</button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Pressed</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md qds-pg-force-pressed" type="button">Save changes</button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Focus (Tab to this button)</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md" type="button">Save changes</button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Disabled</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md" type="button" disabled>Save changes</button>
+          </div>
+          <div class="qds-pg-demo-cell">
+            <span class="qds-pg-demo-label">Loading</span>
+            <button class="qds-btn qds-btn--primary qds-btn--md qds-btn--loading" type="button" aria-busy="true" aria-disabled="true">
+              <span class="qds-btn__content">Save changes</span>
+              <span class="qds-btn__spinner" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Icons</h3>
+        <div class="qds-pg-demo-row">
+          <button class="qds-btn qds-btn--secondary qds-btn--md" type="button">
+            <span class="qds-btn__content">
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </span>
+              Download
+            </span>
+          </button>
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button">
+            <span class="qds-btn__content">
+              Continue
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </span>
+            </span>
+          </button>
+          <button class="qds-btn qds-btn--ghost qds-btn--icon qds-btn--md" type="button" aria-label="Settings">
+            <span class="qds-btn__content">
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </span>
+            </span>
+          </button>
+          <button class="qds-btn qds-btn--danger qds-btn--icon qds-btn--sm" type="button" aria-label="Delete">
+            <span class="qds-btn__content">
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Loading</h3>
+        <div class="qds-pg-demo-row">
+          <button class="qds-btn qds-btn--primary qds-btn--md qds-btn--loading" type="button" aria-busy="true" aria-disabled="true">
+            <span class="qds-btn__content">Save changes</span>
+            <span class="qds-btn__spinner" aria-hidden="true"></span>
+          </button>
+          <button class="qds-btn qds-btn--secondary qds-btn--md qds-btn--loading" type="button" aria-busy="true" aria-disabled="true">
+            <span class="qds-btn__content">Sync data</span>
+            <span class="qds-btn__spinner" aria-hidden="true"></span>
+          </button>
+          <button class="qds-btn qds-btn--danger qds-btn--icon qds-btn--md qds-btn--loading" type="button" aria-busy="true" aria-disabled="true" aria-label="Deleting">
+            <span class="qds-btn__content">
+              <span class="qds-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </span>
+            </span>
+            <span class="qds-btn__spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Disabled</h3>
+        <div class="qds-pg-demo-row">
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button" disabled>Primary</button>
+          <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" disabled>Secondary</button>
+          <button class="qds-btn qds-btn--ghost qds-btn--md" type="button" disabled>Ghost</button>
+          <button class="qds-btn qds-btn--danger qds-btn--md" type="button" disabled>Danger</button>
+          <button class="qds-btn qds-btn--ai qds-btn--md" type="button" disabled>Generate</button>
+          <a class="qds-btn qds-btn--link qds-btn--md" href="#buttons" aria-disabled="true" tabindex="-1">Link</a>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Full width</h3>
+        <div class="qds-pg-demo-row qds-pg-demo-row--stack">
+          <button class="qds-btn qds-btn--primary qds-btn--lg qds-btn--full" type="button">Create your first QR code</button>
+        </div>
+
+        <h3 class="qds-pg-demo-title">Keyboard focus (Tab through)</h3>
+        <div class="qds-pg-demo-row">
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button">First</button>
+          <button class="qds-btn qds-btn--secondary qds-btn--md" type="button">Second</button>
+          <button class="qds-btn qds-btn--ghost qds-btn--md" type="button">Third</button>
+          <a class="qds-btn qds-btn--link qds-btn--md" href="#buttons">Fourth (link)</a>
+        </div>
       </section>
 
       <section id="cards" class="qds-pg-section">

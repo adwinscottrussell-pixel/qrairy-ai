@@ -51,10 +51,22 @@ Leading icon, trailing icon, loading spinner (replaces label region only).
   hover only.
 - `danger` — filled, `--qds-color-danger` background, for destructive
   actions only (matches admin's `.action-btn.danger` precedent).
+- `link` — text-only; no fill or border at any state. Label uses
+  `--qds-color-brand-primary`, underlined, with the same rest/hover/active
+  color progression as `primary` (`--qds-color-brand-hover` /
+  `--qds-color-brand-active`) applied to text color instead of a
+  background fill. Height is intrinsic to the label, not a fixed control
+  height — a 44×44 hit area is still enforced via an invisible touch-target
+  overlay (see Touch behavior), including for the icon-only composition.
 - `ai` — deliberate variant for AI-triggered actions (generate, regenerate,
-  smart-suggest). Carries the glow/motion language of the editor's
-  `.tb-btn-ai` today, but as one documented variant rather than a
-  hand-built one-off to be copy-pasted differently next time.
+  smart-suggest). Filled with `--qds-color-brand-primary` (same rest/hover/
+  active color progression as `primary`) plus `--qds-elevation-brand-glow`
+  at rest as its signature treatment, cleared on disabled. This is a
+  restrained, token-only reading of the editor's `.tb-btn-ai` — the
+  gradient/shine/pulse animation there is a hand-built one-off and is
+  intentionally not reproduced; only the glow carries over as one
+  documented variant rather than something copy-pasted differently next
+  time.
 
 ### Sizes
 | Size | Height | Use |
@@ -75,10 +87,10 @@ on all sides).
 
 ### Typography usage
 Label uses `--qds-text-label-*` tokens (semibold, letter-spaced) at sm/md;
-lg may step up to `--qds-text-body-*` weight/size for CTA prominence —
-**foundation gap**: no dedicated "button label, large" role exists yet in
-`typography.css`; do not invent one ad hoc at implementation time without
-resolving this against the type scale first.
+`lg` steps up to the dedicated `--qds-text-button-label-lg-*` role in
+`typography.css` for CTA prominence. There is no separate default-size
+`--qds-text-button-label-*` role in use — `--qds-text-label-*` already
+covers sm/md, so implementation does not draw from it.
 
 ### Color token usage
 `--qds-color-brand-primary` / `--qds-color-brand-hover` /
@@ -87,10 +99,11 @@ states. `--qds-color-border-default` for secondary. `--qds-color-danger`
 for danger. `--qds-color-disabled` overrides all variants when disabled.
 
 ### Elevation usage
-Flat at rest (`--qds-elevation-none`). No shadow on hover — hover is
-communicated by color shift and `--qds-hover-lift`, not elevation, to keep
-buttons visually distinct from Cards. `ai` variant may use
-`--qds-elevation-brand-glow` as its signature treatment.
+Flat at rest (`--qds-elevation-none`) for every variant except `ai`, which
+uses `--qds-elevation-brand-glow` at rest as its signature treatment
+(cleared to `--qds-elevation-none` when disabled). No shadow on hover for
+any variant — hover is communicated by color shift and `--qds-hover-lift`,
+not elevation, to keep buttons visually distinct from Cards.
 
 ### Radius usage
 `--qds-radius-md` default across all variants and sizes. Not
