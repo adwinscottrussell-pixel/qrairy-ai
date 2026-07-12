@@ -244,7 +244,7 @@ body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
 .btn-ghost:hover { color: var(--dashboard-muted); border-color: var(--dashboard-border); }
 
 /* ── Chart card ─────────────────────────────────────────────────────────────── */
-.chart-card { background: var(--dashboard-card-bg); border: 1px solid var(--dashboard-border); border-radius: var(--card-radius-lg); padding: 20px; }
+.chart-card { background: var(--dashboard-card-bg); border: 1px solid var(--dashboard-border); border-radius: var(--card-radius-lg); padding: var(--qds-space-6); }
 .chart-card.wide { grid-column: 1 / -1; }
 .cc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .cc-title { font-family: var(--font-display); font-size: .88rem; font-weight: 700; color: #f0f4f8; }
@@ -363,6 +363,29 @@ body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
 .sqr-card { background: var(--dashboard-card-bg); border: 1px solid var(--dashboard-border); border-radius: 16px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.18); transition: border-color .18s, box-shadow .18s; display: flex; flex-direction: column; height: 100%; }
 .sqr-card:hover { border-color: var(--dashboard-border-hover); box-shadow: 0 12px 36px rgba(0,0,0,.28); }
 .sqr-card-top { display: flex; gap: 16px; padding: 16px 16px 20px; align-items: flex-start; flex: 1; }
+.sqr-card .qds-surface__header-main { display: flex; gap: 16px; align-items: flex-start; }
+.sqr-card .qds-surface__header-text { flex: 1; min-width: 0; }
+.sqr-card > .qds-surface__body { padding-bottom: 16px; }
+
+/* Temporary Smart QR compatibility for region-inset spacing. The
+   Smart QR root (renderSmartQRCard() in dashboard.html) does not yet
+   carry .qds-surface--region-inset, and dashboard.html cannot change
+   this sprint, so these scoped rules duplicate that spacing here
+   instead of falling back to a global, ungated Surface rule. Remove
+   once renderSmartQRCard() applies the public modifier class in a
+   later HTML/JavaScript sprint. Uses --qds-space-6 only. Footer omits
+   left/right/bottom padding — .sqr-actions and .sqr-act already set
+   that spacing themselves; only padding-top needs to be pinned to 0. */
+.sqr-card > .qds-surface__header {
+  padding: var(--qds-space-6) var(--qds-space-6) 0;
+}
+.sqr-card > .qds-surface__body {
+  padding-left: var(--qds-space-6);
+  padding-right: var(--qds-space-6);
+}
+.sqr-card > .qds-surface__footer {
+  padding-top: 0;
+}
 .sqr-thumb { width: 80px; height: 80px; border-radius: 12px; background: #fff; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; }
 .sqr-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .sqr-meta { flex: 1; min-width: 0; }
@@ -373,8 +396,8 @@ body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
 .sqr-stat-v { font-size: .95rem; font-weight: 800; color: var(--dashboard-accent); line-height: 1; }
 .sqr-stat-l { font-family: var(--font-body); font-size: .52rem; color: var(--dashboard-muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 4px; }
 .sqr-divider { height: 1px; background: rgba(255,255,255,0.05); }
-.sqr-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; }
-.sqr-act { padding: 16px 8px; background: var(--dashboard-card-bg); font-family: var(--font-mono); font-size: .62rem; color: var(--dashboard-muted); cursor: pointer; border: none; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; border-right: 1px solid rgba(255,255,255,0.04); }
+.sqr-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 0 var(--qds-space-6); }
+.sqr-act { padding: 16px 8px var(--qds-space-6); background: var(--dashboard-card-bg); font-family: var(--font-mono); font-size: .62rem; color: var(--dashboard-muted); cursor: pointer; border: none; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; border-right: 1px solid rgba(255,255,255,0.04); }
 .sqr-act:last-child { border-right: none; }
 .sqr-act:hover { background: rgba(255,90,31,0.05); color: #ff8c55; }
 .sqr-act.primary { color: var(--dashboard-accent); font-weight: 600; }
@@ -636,8 +659,8 @@ p, span, label, input, textarea, select, button,
 }
 .kpi-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.28); }
 .panel:hover, .chart-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.26); }
-.kpi-card { padding: 18px 20px; }
-.panel-body { padding: 18px 20px; }
+.kpi-card { padding: var(--qds-space-6); }
+.panel-body { padding: var(--qds-space-6); }
 .panel-hdr { padding: 15px 20px; }
 .page-title, .dash-title { letter-spacing: -.03em; }
 .panel-title { letter-spacing: -.01em; }
