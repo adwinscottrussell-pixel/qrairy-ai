@@ -424,85 +424,6 @@ async function handleDashboard(req, res) {
   }
 }
 
-// ─── POST /subscribe ─────────────────────────────────────────────────────────
-async function handleSubscribe(req, res) {
-  try {
-    const { qrId, oneSignalId } = req.body;
-    if (!qrId || !oneSignalId) return res.status(400).json({ error: 'qrId and oneSignalId are required.' });
-
-    const existing = await prisma.subscriber.findFirst({ where: { qrId, oneSignalId } });
-    if (existing) return res.status(200).json({ message: 'Already subscribed.' });
-
-    await prisma.subscriber.create({ data: { qrId, oneSignalId } });
-    return res.status(201).json({ message: 'Subscribed successfully.' });
-  } catch (err) {
-    console.error('handleSubscribe error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-}
-
-// ─── POST /send-special ──────────────────────────────────────────────────────
-async function handleSendSpecial(req, res) {
-  try {
-    const { qrId, message, title } = req.body;
-    if (!qrId || !message || !title) return res.status(400).json({ error: 'qrId, title and message are required.' });
-
-    const subscribers = await prisma.subscriber.findMany({ where: { qrId } });
-    if (subscribers.length === 0) return res.status(400).json({ error: 'No subscribers for this QR code.' });
-
-    const playerIds = subscribers.map(s => s.oneSignalId);
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ztq2jat32ejr5tqnuyksl5oz4`,
-      },
-      body: JSON.stringify({
-        app_id: 'afd98e11-f616-40fe-a1c6-251f15861b54',
-        include_player_ids: playerIds,
-        headings: { en: title },
-        contents: { en: message },
-      }),
-    });
-    const result = await response.json();
-    return res.status(200).json({ success: true, result });
-  } catch (err) {
-    console.error('handleSendSpecial error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-}
-
-// ─── POST /generate-special ──────────────────────────────────────────────────
-async function handleGenerateSpecial(req, res) {
-  try {
-    const { businessName, originalUrl } = req.body;
-    if (!businessName || !originalUrl) return res.status(400).json({ error: 'businessName and originalUrl are required.' });
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: `You are a marketing expert. Write a short punchy push notification special offer for a business.\nBusiness URL: ${originalUrl}\nBusiness Name: ${businessName}\n\nWrite ONLY the notification message (max 100 characters). Make it exciting with an emoji. No quotes, no explanation.`,
-        }],
-      }),
-    });
-    const data = await response.json();
-    const message = data.content[0].text.trim();
-    return res.status(200).json({ message });
-  } catch (err) {
-    console.error('handleGenerateSpecial error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-}
-
 async function handleDeleteQR(req, res) {
   try {
     const { id } = req.params;
@@ -534,9 +455,6 @@ module.exports = {
   handleChat,
   handleAnalytics,
   handleDashboard,
-  handleSubscribe,
-  handleSendSpecial,
-  handleGenerateSpecial,
 };
 
 

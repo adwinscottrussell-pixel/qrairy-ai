@@ -11,9 +11,6 @@ const {
   handleChat,
   handleAnalytics,
   handleDashboard,
-  handleSubscribe,
-  handleSendSpecial,
-  handleGenerateSpecial,
   handleDeleteQR,
 } = require('../controllers/qrController');
 
@@ -38,10 +35,5 @@ router.get('/analytics', handleAnalytics);
 // User account
 router.get('/user/plan', handleGetUserPlan);
 router.post('/user/phone', handleUpdateUserPhone);
-
-// Subscribers & notifications
-router.post('/subscribe', handleSubscribe);
-router.post('/send-special', handleSendSpecial);
-router.post('/generate-special', handleGenerateSpecial);
 
 module.exports = router;
