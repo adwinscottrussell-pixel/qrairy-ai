@@ -363,15 +363,35 @@
           <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
         </div>
       </div>
+      <div class="table-title" style="margin-bottom:12px">Platform Summary</div>
       <div class="stats-grid" id="overview-stats">
         <div class="loading">Loading...</div>
       </div>
 
       <div class="table-wrap">
         <div class="table-header">
-          <div class="table-title">Recent Signups</div>
+          <div class="table-title">Platform Status</div>
+        </div>
+        <div id="platform-status-rows">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Operational Insights</div>
+        </div>
+        <div id="operational-insights" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Recent Platform Activity</div>
           <span class="table-count" id="recent-count">—</span>
         </div>
+        <div style="padding:10px 20px 0;font-size:0.65rem;color:var(--text-dim)">Showing recent signup activity</div>
         <table>
           <thead>
             <tr>
@@ -614,66 +634,190 @@
     }
 
     // ── OVERVIEW ──────────────────────────────────────────────
-    async function loadOverview() {
-      document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
+
+    // Fetches an /admin/* endpoint and classifies the outcome so callers can
+    // show a specific message instead of one generic failure string.
+    async function safeFetchAdmin(path) {
+      let res;
       try {
-        const res = await fetch(`${API_BASE}/admin/overview`, {
+        res = await fetch(`${API_BASE}${path}`, {
           headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
-        const data = await res.json();
-
-        document.getElementById('overview-stats').innerHTML = `
-          <div class="stat-card green">
-            <div class="stat-label">Total Users</div>
-            <div class="stat-value">${data.totalUsers ?? '—'}</div>
-            <div class="stat-sub">all time</div>
-          </div>
-          <div class="stat-card orange">
-            <div class="stat-label">Paid Users</div>
-            <div class="stat-value">${data.paidUsers ?? '—'}</div>
-            <div class="stat-sub">starter + pro + business</div>
-          </div>
-          <div class="stat-card blue">
-            <div class="stat-label">Total QR Codes</div>
-            <div class="stat-value">${data.totalQRs ?? '—'}</div>
-            <div class="stat-sub">all users</div>
-          </div>
-          <div class="stat-card purple">
-            <div class="stat-label">Total Scans</div>
-            <div class="stat-value">${data.totalScans ?? '—'}</div>
-            <div class="stat-sub">all time</div>
-          </div>
-          <div class="stat-card yellow">
-            <div class="stat-label">Est. MRR</div>
-            <div class="stat-value">€${data.estimatedMRR ?? '0'}</div>
-            <div class="stat-sub">based on active plans</div>
-          </div>
-          <div class="stat-card green">
-            <div class="stat-label">Total Subscribers</div>
-            <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
-            <div class="stat-sub">push notification subs</div>
-          </div>
-        `;
-
-        const tbody = document.getElementById('recent-users-body');
-        if (data.recentUsers && data.recentUsers.length > 0) {
-          tbody.innerHTML = data.recentUsers.map(u => `
-            <tr>
-              <td class="td-email">${u.id.substring(0, 16)}...</td>
-              <td>${u.email || '—'}</td>
-              <td>${planBadge(u.plan)}</td>
-              <td>${u._count?.qrs ?? 0}</td>
-              <td>${fmtDate(u.createdAt)}</td>
-            </tr>
-          `).join('');
-          document.getElementById('recent-count').textContent = `${data.recentUsers.length} recent`;
-        } else {
-          tbody.innerHTML = '<tr><td colspan="5" class="loading">No users yet.</td></tr>';
-        }
-      } catch (err) {
-        document.getElementById('overview-stats').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load. Is the admin route deployed?</div>`;
-        console.error(err);
+      } catch (networkErr) {
+        return { ok: false, kind: 'network' };
       }
+      if (!res.ok) {
+        const kindMap = { 401: '401', 403: '403', 404: '404', 500: '500' };
+        return { ok: false, kind: kindMap[res.status] || 'other', status: res.status };
+      }
+      try {
+        return { ok: true, data: await res.json() };
+      } catch (parseErr) {
+        return { ok: false, kind: 'other', status: res.status };
+      }
+    }
+
+    function adminErrorMessage(result) {
+      switch (result.kind) {
+        case '401': return 'Session expired — please sign in again.';
+        case '403': return 'Your account does not have admin access to this resource.';
+        case '404': return 'Admin API route not found — check that the backend is deployed.';
+        case '500': return 'Server error — the backend encountered a problem processing this request.';
+        case 'network': return 'Could not reach the QRAIVY API — check your connection.';
+        default: return `Failed to load (HTTP ${result.status || 'unknown'}).`;
+      }
+    }
+
+    function renderPlatformSummary(result) {
+      if (!result.ok) {
+        document.getElementById('overview-stats').innerHTML =
+          `<div class="loading" style="color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+      const data = result.data;
+      document.getElementById('overview-stats').innerHTML = `
+        <div class="stat-card green">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value">${data.totalUsers ?? '—'}</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Paid Users</div>
+          <div class="stat-value">${data.paidUsers ?? '—'}</div>
+          <div class="stat-sub">starter + pro + business</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Total QR Codes</div>
+          <div class="stat-value">${data.totalQRs ?? '—'}</div>
+          <div class="stat-sub">all users</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value">${data.totalScans ?? '—'}</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Est. MRR</div>
+          <div class="stat-value">€${data.estimatedMRR ?? '0'}</div>
+          <div class="stat-sub">based on active plans</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Total Subscribers</div>
+          <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
+          <div class="stat-sub">push notification subs</div>
+        </div>
+      `;
+    }
+
+    function renderRecentActivity(result) {
+      const tbody = document.getElementById('recent-users-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('recent-count').textContent = '—';
+        return;
+      }
+      const data = result.data;
+      if (data.recentUsers && data.recentUsers.length > 0) {
+        tbody.innerHTML = data.recentUsers.map(u => `
+          <tr>
+            <td class="td-email">${u.id.substring(0, 16)}...</td>
+            <td>${u.email || '—'}</td>
+            <td>${planBadge(u.plan)}</td>
+            <td>${u._count?.qrs ?? 0}</td>
+            <td>${fmtDate(u.createdAt)}</td>
+          </tr>
+        `).join('');
+        document.getElementById('recent-count').textContent = `${data.recentUsers.length} recent`;
+      } else {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No users yet.</td></tr>';
+        document.getElementById('recent-count').textContent = '0 recent';
+      }
+    }
+
+    // Platform Status — real backend checks only. api/db are genuine
+    // reachability checks; anthropic/stripe/clerk are env-var presence
+    // checks, so they're labeled Configured/Not Configured, never Operational.
+    function renderPlatformStatus(result) {
+      const el = document.getElementById('platform-status-rows');
+      if (!result.ok) {
+        el.innerHTML = `<div class="health-row"><div class="health-name" style="color:var(--red)">${adminErrorMessage(result)}</div></div>`;
+        return;
+      }
+      const h = result.data;
+      const reachabilityRow = (name, up) => `
+        <div class="health-row">
+          <div class="health-name">${name}</div>
+          <div class="health-status">
+            <span class="status-dot ${up ? 'status-ok' : 'status-err'}"></span>
+            ${up ? 'Operational' : 'Unavailable'}
+          </div>
+        </div>`;
+      const configRow = (name, configured) => `
+        <div class="health-row">
+          <div class="health-name">${name}</div>
+          <div class="health-status">
+            <span class="status-dot ${configured ? 'status-ok' : 'status-warn'}"></span>
+            ${configured ? 'Configured' : 'Not Configured'}
+          </div>
+        </div>`;
+      el.innerHTML =
+        reachabilityRow('QRAIVY API', h.api === true) +
+        reachabilityRow('PostgreSQL', h.db === true) +
+        configRow('Anthropic', h.anthropic === true) +
+        configRow('Stripe', h.stripe === true) +
+        configRow('Clerk', h.clerk === true);
+    }
+
+    // Operational Insights — evidence-based only, derived from data already
+    // fetched for this page. No fabricated or predictive diagnostics.
+    function renderOperationalInsights(overviewResult, healthResult) {
+      const el = document.getElementById('operational-insights');
+      const observations = [];
+
+      if (!healthResult.ok) {
+        observations.push('Health endpoint failed to respond — service status could not be verified.');
+      } else {
+        const h = healthResult.data;
+        if (h.api !== true) observations.push('QRAIVY API is unavailable.');
+        if (h.db !== true) observations.push('PostgreSQL database is unavailable.');
+        if (h.anthropic !== true) observations.push('Anthropic is not configured.');
+        if (h.stripe !== true) observations.push('Stripe is not configured.');
+        if (h.clerk !== true) observations.push('Clerk is not configured.');
+      }
+
+      if (overviewResult.ok) {
+        const d = overviewResult.data;
+        if ((d.totalQRs || 0) > 0 && (d.totalScans || 0) === 0) {
+          observations.push('QR codes exist but zero scans have been recorded.');
+        }
+        if ((d.totalSubscribers || 0) === 0) {
+          observations.push('Zero subscribers recorded.');
+        }
+      }
+
+      if (observations.length === 0) {
+        el.innerHTML = `
+          <div style="font-size:0.78rem;color:var(--text-mid)">No operational insights at this time based on current diagnostics.</div>
+          <div style="font-size:0.62rem;color:var(--text-dim);margin-top:6px">Additional diagnostics will become available as the Operations Center expands.</div>
+        `;
+      } else {
+        el.innerHTML = `<ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px">` +
+          observations.map(o => `<li style="font-size:0.78rem;color:var(--text-mid)">${o}</li>`).join('') +
+          `</ul>`;
+      }
+    }
+
+    async function loadOverview() {
+      document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
+
+      const overviewResult = await safeFetchAdmin('/admin/overview');
+      renderPlatformSummary(overviewResult);
+      renderRecentActivity(overviewResult);
+
+      const healthResult = await safeFetchAdmin('/admin/health');
+      renderPlatformStatus(healthResult);
+
+      renderOperationalInsights(overviewResult, healthResult);
     }
 
     // ── USERS ─────────────────────────────────────────────────
@@ -996,8 +1140,35 @@
       await window.Clerk.load();
       return await window.Clerk.session.getToken();
     }
+
     // ── Init ──────────────────────────────────────────────────
-    loadOverview();
+    // The Clerk SDK script tag loads after this inline script block, so
+    // window.Clerk isn't guaranteed to exist yet when this file first runs.
+    // Wait for it before the initial fetch, with one bounded retry — no
+    // unbounded retry loop.
+    function waitForClerk(maxWaitMs) {
+      return new Promise(resolve => {
+        const start = Date.now();
+        (function poll() {
+          if (window.Clerk) return resolve(true);
+          if (Date.now() - start >= maxWaitMs) return resolve(false);
+          setTimeout(poll, 50);
+        })();
+      });
+    }
+
+    async function initOverview() {
+      let ready = await waitForClerk(5000);
+      if (!ready) ready = await waitForClerk(5000); // one bounded retry
+      if (!ready) {
+        document.getElementById('overview-stats').innerHTML =
+          '<div class="loading" style="color:var(--red)">Could not initialize admin session — Clerk did not become ready. Use Refresh to try again.</div>';
+        return;
+      }
+      loadOverview();
+    }
+
+    initOverview();
   </script>
   <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/admin-guard.js"></script>
