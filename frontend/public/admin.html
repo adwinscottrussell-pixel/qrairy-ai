@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Qraivy — Admin Panel</title>
+  <title>QRAIVY Operations Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -49,9 +49,14 @@
       font-weight: 900; letter-spacing: -0.02em;
     }
     .sb-logo span { color: var(--accent); font-style: italic; }
-    .sb-tag {
-      font-size: 0.55rem; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--text-dim);
+    .sb-product {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-mid);
+      display: block; margin-top: 4px;
+    }
+    .sb-subtitle {
+      font-size: 0.48rem; font-weight: 400; letter-spacing: 0.01em;
+      color: var(--text-dim); opacity: 0.75;
       display: block; margin-top: 2px;
     }
     .sb-nav { flex: 1; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
@@ -301,7 +306,8 @@
   <div id="sidebar">
     <div class="sb-logo">
       QR<span>Aivy</span>
-      <span class="sb-tag">Admin Panel</span>
+      <span class="sb-product">Operations Center</span>
+      <span class="sb-subtitle">Platform Operations • Support • Intelligence</span>
     </div>
     <nav class="sb-nav">
       <div class="sb-section">Overview</div>
@@ -350,7 +356,7 @@
     <div class="page active" id="page-overview">
       <div class="page-header">
         <div>
-          <div class="page-title">System <span>Overview</span></div>
+          <div class="page-title">Operations <span>Overview</span></div>
         </div>
         <div style="display:flex;align-items:center">
           <span class="last-updated" id="overview-updated"></span>
