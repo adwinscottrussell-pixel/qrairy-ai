@@ -19,6 +19,8 @@ model User {
   stripeSubscriptionId String?
   subscriptionStatus   String?
   qrs       QR[]
+
+  @@index([email])
 }
 
 model QR {
@@ -34,6 +36,8 @@ model QR {
   lastScannedAt  DateTime?
   scans          Scan[]
   subscribers    Subscriber[]
+
+  @@index([businessName])
 }
 
 model Scan {
@@ -84,6 +88,8 @@ model LandingPage {
   scanCount    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([businessName])
 }
 
 model Pass {
