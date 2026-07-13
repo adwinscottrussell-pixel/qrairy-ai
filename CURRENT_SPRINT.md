@@ -1,6 +1,6 @@
 # Current Sprint
 
-SP2.3 — Universal Operations Search UI
+SP3.1 — Operations Center Foundation: SupportAction Audit Trail
 
 # Repository
 
@@ -12,53 +12,88 @@ preview/sprint-2d-smart-qr-renderer (up to date with origin)
 
 # Latest Pushed Commit
 
-d150799 — feat: add Universal Operations Search backend
+f0067ad — feat: add universal operations search UI
 
-# Current Working State
+# Previous Sprint (Completed)
 
-- `frontend/public/admin.html` contains uncommitted SP2.3 work (265 lines
-  added: Universal Search CSS, sidebar nav entry, `#page-search` markup,
-  and the search JS: debounce, Enter/Escape handling, clear button,
-  loading/empty/error/partial-failure states, result-card renderers).
-- Universal Search UI implementation is complete and awaiting founder
-  review.
-- No commit or push has been approved yet.
-- Founder has approved the implementation in principle; a follow-up
-  architectural question (dedicated Search page vs. embedding in
-  Operations Overview) has been answered and is also awaiting approval.
+**SP2.3 — Universal Operations Search UI** — COMPLETE, committed, and pushed.
 
-# Approved Scope
+- Commit: `f0067ad`
+- Message: `feat: add universal operations search UI`
+- Branch: `preview/sprint-2d-smart-qr-renderer`
+- Push status: pushed to origin
 
-- Universal Search UI
-- Dedicated Operations Center Search page (sidebar entry, not embedded
-  in Operations Overview)
-- Renders: Businesses, Users, Subscribers, Wallet Passes, QR Codes
-- Duplicate Landing Pages group hidden (backend returns the same
-  LandingPage-backed data for both `businesses` and `landingPages`)
-- Existing `/ops/search` endpoint reused (no backend changes)
-- `frontend/public/admin.html` only
+# SP3.1 Objective
+
+Create the durable audit foundation for privileged Operations Center
+actions by adding the `SupportAction` Prisma model and an
+admin-protected `POST /ops/support-actions` endpoint.
+
+# In Scope
+
+- `SupportAction` Prisma model
+- Additive Prisma migration
+- `SupportAction` service/controller
+- `POST /ops/support-actions`
+- Route registration in `backend/src/routes/opsRoutes.js`
+- Existing `requireAdmin` middleware
+- Input validation
+- Safe error handling
+- Focused endpoint validation
 
 # Out of Scope
 
-- Backend changes
-- Prisma changes
-- Migrations
-- Business Explorer
+- Any frontend changes
+- Operations navigation or routing
+- `GET /ops/logs`
+- Support Workspace
 - Customer Journey
+- Diagnostics
 - API Inspector
-- AI Investigation
 - System Integrity
+- Incident management
+- AI Investigation Mode
+- Running any production database migration without separate founder
+  approval
+
+# Acceptance Criteria
+
+- Migration creates only the `SupportAction` table and required indexes
+- No existing tables or columns are modified
+- Unauthenticated and non-admin requests are rejected
+- Required request fields are validated
+- Successful records contain: `actorId`, `actorType`, `actionType`,
+  `targetType`, `targetId` (when applicable), `metadata` (when
+  applicable), `createdAt`
+- Metadata must not store passwords, tokens, secrets, or unnecessary
+  personal data
+- No frontend files change
+- No production migration is executed
+- Focused validation confirms endpoint behavior
+
+# Current Working State
+
+- Documentation-only phase: `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md`
+  amended and accepted; `CURRENT_SPRINT.md` and `PROJECT_STATE.md` updated
+  to reflect SP2.3 closeout and SP3.1 activation.
+- No application code has been written for SP3.1 yet.
+- Founder has approved the Support Playbook (with amendments) and the
+  SP3.1 scope above. Implementation has not started.
 
 # Next Action
 
-Review the current `admin.html` diff, validate the SP2.3 UI, then
-request founder approval before committing.
+Wait for founder review of these documentation updates before beginning
+SP3.1 implementation (Prisma model, migration, controller/service,
+route).
 
 # Important Safety Notes
 
-- Do not discard the current `admin.html` changes.
-- Do not apply the search-index migration (`20260712000000_add_search_indexes`).
+- Do not create the `SupportAction` Prisma model or migration until
+  founder gives an explicit go-ahead to begin implementation.
+- Do not modify `frontend/public/admin.html` as part of SP3.1.
+- Do not implement `GET /ops/logs` as part of SP3.1.
+- Do not apply the still-unapplied search-index migration
+  (`20260712000000_add_search_indexes`) as part of this sprint.
 - Do not modify `main`.
-- Do not stage unrelated files (`PROJECT_STATE.md`,
-  `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` are pre-existing
-  untracked files, not part of this sprint).
+- Do not run any production migration without separate, explicit
+  founder approval.
