@@ -245,6 +245,74 @@
     }
     .search-input:focus { border-color: var(--accent); }
 
+    /* ── Universal Search ── */
+    .ops-search-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+    }
+    .ops-search-bar .search-icon { color: var(--text-dim); font-size: 0.9rem; }
+    #ops-search-input {
+      flex: 1; width: auto; background: none; border: none;
+      color: var(--text); font-family: var(--font-mono); font-size: 0.85rem;
+      outline: none;
+    }
+    #ops-search-input::placeholder { color: var(--text-dim); }
+    .ops-search-clear {
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; font-size: 0.9rem; padding: 2px 6px;
+    }
+    .ops-search-clear:hover { color: var(--text); }
+    .ops-search-meta { font-size: 0.62rem; color: var(--text-dim); margin-bottom: 16px; min-height: 1em; }
+    .search-group { margin-bottom: 20px; }
+    .search-group-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 2px; font-family: var(--font-display);
+      font-size: 0.78rem; font-weight: 700; color: var(--text);
+    }
+    .search-group-count {
+      font-size: 0.62rem; font-weight: 400; color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .result-card {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    }
+    .result-card-main { min-width: 0; }
+    .result-card-title {
+      color: var(--text); font-size: 0.8rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .result-card-sub {
+      color: var(--text-dim); font-size: 0.65rem; margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .result-card-side {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .result-card-status { font-size: 0.62rem; color: var(--text-mid); white-space: nowrap; }
+    .result-card-actions { display: flex; gap: 6px; }
+    .search-group-empty, .search-group-error {
+      font-size: 0.68rem; color: var(--text-dim); padding: 10px 2px;
+    }
+    .search-group-error { color: var(--yellow); }
+    .search-idle { color: var(--text-dim); font-size: 0.78rem; padding: 40px 20px; text-align: center; }
+    .sb-shortcut-hint {
+      margin-left: auto; font-size: 0.58rem; color: var(--text-dim);
+      border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+      font-family: var(--font-mono);
+    }
+    .sb-item.active .sb-shortcut-hint { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.3); }
+
+    @media (max-width: 640px) {
+      .ops-search-bar { flex-wrap: wrap; }
+      .result-card { flex-wrap: wrap; }
+      .result-card-main { flex-basis: 100%; }
+      .result-card-title, .result-card-sub { white-space: normal; overflow: visible; text-overflow: clip; }
+      .result-card-side { flex-basis: 100%; justify-content: space-between; }
+    }
+
     /* ── Modal ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.7);
@@ -310,6 +378,12 @@
       <span class="sb-subtitle">Platform Operations • Support • Intelligence</span>
     </div>
     <nav class="sb-nav">
+      <div class="sb-section">Search</div>
+      <button class="sb-item" id="sb-search-nav-btn" onclick="showPage('search')">
+        <span class="sb-icon">🔍</span> Universal Search
+        <span class="sb-shortcut-hint">Ctrl K</span>
+      </button>
+
       <div class="sb-section">Overview</div>
       <button class="sb-item active" onclick="showPage('overview')">
         <span class="sb-icon">⊞</span> Overview
@@ -351,6 +425,22 @@
 
   <!-- Main Content -->
   <div id="main">
+
+    <!-- SEARCH -->
+    <div class="page" id="page-search">
+      <div class="page-header">
+        <div class="page-title">Universal <span>Search</span></div>
+      </div>
+      <div class="ops-search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="ops-search-input" placeholder="Search businesses, users, subscribers, wallet passes, QR codes…" oninput="onSearchInput()" onkeydown="onSearchKeydown(event)" autocomplete="off" />
+        <button class="ops-search-clear" id="ops-search-clear-btn" onclick="clearSearch()" style="display:none">✕</button>
+      </div>
+      <div class="ops-search-meta" id="ops-search-meta"></div>
+      <div id="ops-search-results">
+        <div class="search-idle">Start typing to search across the platform.</div>
+      </div>
+    </div>
 
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
@@ -606,6 +696,7 @@
       event.currentTarget.classList.add('active');
 
       const loaders = {
+        search: () => document.getElementById('ops-search-input').focus(),
         overview: loadOverview,
         users: loadUsers,
         'api-keys': loadApiKeys,
@@ -1134,6 +1225,213 @@
       a.href = URL.createObjectURL(blob);
       a.download = 'qraivy-users-' + new Date().toISOString().slice(0,10) + '.csv';
       a.click();
+    }
+
+    // ── UNIVERSAL SEARCH ──────────────────────────────────────
+    const SEARCH_GROUPS = [
+      { key: 'businesses',   label: 'Businesses',    icon: '🏢' },
+      { key: 'users',        label: 'Users',         icon: '👥' },
+      { key: 'subscribers',  label: 'Subscribers',   icon: '✉' },
+      { key: 'walletPasses', label: 'Wallet Passes', icon: '🎫' },
+      { key: 'qrCodes',      label: 'QR Codes',      icon: '⬡' },
+    ];
+    // "landingPages" is intentionally excluded from this list — Phase 1
+    // backend (searchService.js) returns the same LandingPage-backed object
+    // for both "businesses" and "landingPages", so rendering both groups
+    // would duplicate every result. Only "businesses" renders until a real
+    // Business → Locations → Landing Pages hierarchy exists (founder decision).
+
+    let searchDebounceTimer = null;
+    let searchRequestSeq = 0;
+
+    // Global command-palette-style shortcut: works from any page, not just
+    // while the search input is already focused.
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'k') {
+        e.preventDefault();
+        openSearchPage();
+      }
+    });
+
+    function openSearchPage() {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('page-search').classList.add('active');
+      document.getElementById('sb-search-nav-btn').classList.add('active');
+      document.getElementById('ops-search-input').focus();
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function onSearchInput() {
+      const input = document.getElementById('ops-search-input');
+      document.getElementById('ops-search-clear-btn').style.display = input.value ? '' : 'none';
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(runSearch, 300);
+    }
+
+    function onSearchKeydown(e) {
+      if (e.key === 'Enter') {
+        clearTimeout(searchDebounceTimer);
+        runSearch();
+      } else if (e.key === 'Escape') {
+        clearSearch();
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('ops-search-input');
+      input.value = '';
+      document.getElementById('ops-search-clear-btn').style.display = 'none';
+      document.getElementById('ops-search-meta').textContent = '';
+      document.getElementById('ops-search-results').innerHTML =
+        '<div class="search-idle">Start typing to search across the platform.</div>';
+      input.focus();
+    }
+
+    async function runSearch() {
+      const q = document.getElementById('ops-search-input').value.trim();
+      const resultsEl = document.getElementById('ops-search-results');
+      const metaEl = document.getElementById('ops-search-meta');
+
+      if (!q) {
+        resultsEl.innerHTML = '<div class="search-idle">Start typing to search across the platform.</div>';
+        metaEl.textContent = '';
+        return;
+      }
+
+      // Guards against an earlier, slower request overwriting a later one's
+      // results when responses resolve out of order.
+      const seq = ++searchRequestSeq;
+      resultsEl.innerHTML = '<div class="loading">Searching…</div>';
+      metaEl.textContent = '';
+
+      const result = await safeFetchAdmin(`/ops/search?q=${encodeURIComponent(q)}`);
+      if (seq !== searchRequestSeq) return;
+
+      if (!result.ok) {
+        resultsEl.innerHTML = `<div class="search-idle" style="color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+
+      const data = result.data;
+      metaEl.textContent = `${data.tookMs}ms`;
+      resultsEl.innerHTML = SEARCH_GROUPS.map(g => renderSearchGroup(g, data.results[g.key])).join('');
+    }
+
+    function renderSearchGroup(group, groupData) {
+      if (!groupData) return '';
+      const { items, total, hasMore, error } = groupData;
+
+      let body;
+      if (error) {
+        body = `<div class="search-group-error">This group is temporarily unavailable.</div>`;
+      } else if (!items.length) {
+        body = `<div class="search-group-empty">No matches.</div>`;
+      } else {
+        body = items.map(item => renderResultCard(group.key, item)).join('');
+      }
+
+      const countLabel = hasMore ? `${total} — showing ${items.length}` : `${total}`;
+
+      return `
+        <div class="search-group">
+          <div class="search-group-header">
+            <span>${group.icon}</span> ${group.label}
+            <span class="search-group-count">(${countLabel})</span>
+          </div>
+          ${body}
+        </div>
+      `;
+    }
+
+    function copyToClipboard(value, btn) {
+      navigator.clipboard.writeText(value).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      });
+    }
+
+    function copyBtn(label, value) {
+      const jsLiteral = escapeHtml(JSON.stringify(String(value || '')));
+      return `<button class="action-btn" onclick="copyToClipboard(${jsLiteral}, this)">${label}</button>`;
+    }
+
+    function resultCard(title, sub, status, actionsHtml) {
+      return `
+        <div class="result-card">
+          <div class="result-card-main">
+            <div class="result-card-title">${title}</div>
+            <div class="result-card-sub">${sub}</div>
+          </div>
+          <div class="result-card-side">
+            <div class="result-card-status">${status}</div>
+            <div class="result-card-actions">${actionsHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderResultCard(groupKey, item) {
+      const renderers = {
+        businesses: renderBusinessCard,
+        users: renderUserCard,
+        subscribers: renderSubscriberCard,
+        walletPasses: renderWalletPassCard,
+        qrCodes: renderQrCard,
+      };
+      return renderers[groupKey](item);
+    }
+
+    // "Open" only ships where a real destination already exists today
+    // (lp-preview.html for a business/landing page). No "Investigate"
+    // button anywhere — that entry point doesn't exist yet (Phase 3).
+    function renderBusinessCard(lp) {
+      const title = escapeHtml(lp.businessName || lp.slug);
+      const sub = `${escapeHtml(lp.slug)} · ${lp.scanCount ?? 0} scans`;
+      const status = escapeHtml(lp.status || '—');
+      const actions =
+        `<a class="action-btn" href="lp-preview.html?slug=${encodeURIComponent(lp.slug)}" target="_blank" rel="noopener">Open</a>` +
+        copyBtn('Copy Slug', lp.slug);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderUserCard(u) {
+      const title = escapeHtml(u.email || u.id);
+      const sub = `${escapeHtml(u.plan || '—')} plan · ${fmtDate(u.createdAt)} · ${u.qrCount ?? 0} QR codes`;
+      const status = planBadge(u.plan || 'free');
+      const actions = copyBtn('Copy ID', u.id);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderSubscriberCard(s) {
+      const title = escapeHtml(s.email || s.id);
+      const sub = `${escapeHtml(s.slug || '—')} · ${escapeHtml(s.source || 'unknown source')}`;
+      const status = escapeHtml(s.status || '—');
+      const actions = copyBtn('Copy Email', s.email);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderWalletPassCard(p) {
+      const title = escapeHtml(p.serialNumber || p.id);
+      const sub = `${escapeHtml(p.slug || '—')} · ${p.stampCount ?? 0}/${p.stampGoal ?? '—'} stamps`;
+      const status = p.rewardReady ? 'reward ready' : 'in progress';
+      const actions = copyBtn('Copy Serial', p.serialNumber);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderQrCard(qr) {
+      const title = escapeHtml(qr.businessName || qr.originalUrl || qr.id);
+      const sub = `${escapeHtml(qr.originalUrl || '—')} · ${qr.totalScans ?? 0} scans`;
+      const status = qr.isDynamic ? 'dynamic' : 'static';
+      const actions = copyBtn('Copy ID', qr.id);
+      return resultCard(title, sub, status, actions);
     }
 
     async function getAdminToken() {
