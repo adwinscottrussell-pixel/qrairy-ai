@@ -210,3 +210,22 @@ model LoyaltyCustomer {
 
   @@unique([slug, customerId])
 }
+
+// Durable audit log for privileged Operations Center actions (SP3.1).
+// metadata is sanitized at the service layer before it ever reaches this
+// table — never store passwords, tokens, secrets, cookies, session ids,
+// or unnecessary personal data here.
+model SupportAction {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorType  String
+  actionType String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
