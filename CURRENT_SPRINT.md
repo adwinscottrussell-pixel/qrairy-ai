@@ -1,6 +1,6 @@
 # Current Sprint
 
-SP3.1 — Operations Center Foundation: SupportAction Audit Trail
+None active — SP3.1 complete, next sprint not yet scoped/approved.
 
 # Repository
 
@@ -12,7 +12,7 @@ preview/sprint-2d-smart-qr-renderer (up to date with origin)
 
 # Latest Pushed Commit
 
-f0067ad — feat: add universal operations search UI
+261499039ee64a4bacedefbadc170ab7c02a2f8d — feat: add SupportAction audit foundation
 
 # Previous Sprint (Completed)
 
@@ -23,28 +23,43 @@ f0067ad — feat: add universal operations search UI
 - Branch: `preview/sprint-2d-smart-qr-renderer`
 - Push status: pushed to origin
 
-# SP3.1 Objective
+**SP3.1 — Operations Center Foundation: SupportAction Audit Trail** — COMPLETE, committed, and pushed.
 
-Create the durable audit foundation for privileged Operations Center
-actions by adding the `SupportAction` Prisma model and an
-admin-protected `POST /ops/support-actions` endpoint.
+- Commit: `261499039ee64a4bacedefbadc170ab7c02a2f8d`
+- Message: `feat: add SupportAction audit foundation`
+- Branch: `preview/sprint-2d-smart-qr-renderer`
+- Push status: pushed to origin
+- Delivered: `SupportAction` Prisma model (`metadata Json?`), additive migration
+  (`20260713000000_add_support_action`, **not applied** to any database),
+  `supportActionService.js` (reject-not-strip metadata validation:
+  precise dangerous-key matching, prototype-pollution guarding, circular-
+  reference detection, size limit), `opsSupportActionController.js`,
+  `POST /ops/support-actions` (reuses `requireAdmin`), and a permanent
+  test suite (`backend/tests/supportActionService.test.js`, 23/23 passing,
+  following the `searchService.test.js` convention).
 
-# In Scope
+# Next Sprint
 
-- `SupportAction` Prisma model
-- Additive Prisma migration
-- `SupportAction` service/controller
-- `POST /ops/support-actions`
-- Route registration in `backend/src/routes/opsRoutes.js`
-- Existing `requireAdmin` middleware
-- Input validation
-- Safe error handling
-- Focused endpoint validation
+**Not yet defined or approved.** Per `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md`
+§12 (Recommended Build Order) and its Founder Amendments 2–3, the two
+remaining Phase 1 items are both explicitly deferred pending their own
+separate founder-approved plan docs — neither is scoped as a startable
+sprint yet:
 
-# Out of Scope
+- **Operations navigation/routing foundation** — requires a decision on
+  whether it means real deep-linkable routing or a narrower nav-shell
+  restructuring, per Founder Amendment 2.
+- **`GET /ops/logs`** — requires a separate approved logging architecture
+  (storage, retention, access control, PII masking, secret redaction),
+  per Founder Amendment 3.
+
+No implementation should begin on either until one is scoped, written up
+as its own plan doc, and founder-approved — consistent with this
+project's established plan-then-implement pattern.
+
+# Out of Scope (carried over, still applies until a new sprint is defined)
 
 - Any frontend changes
-- Operations navigation or routing
 - `GET /ops/logs`
 - Support Workspace
 - Customer Journey
@@ -56,44 +71,13 @@ admin-protected `POST /ops/support-actions` endpoint.
 - Running any production database migration without separate founder
   approval
 
-# Acceptance Criteria
-
-- Migration creates only the `SupportAction` table and required indexes
-- No existing tables or columns are modified
-- Unauthenticated and non-admin requests are rejected
-- Required request fields are validated
-- Successful records contain: `actorId`, `actorType`, `actionType`,
-  `targetType`, `targetId` (when applicable), `metadata` (when
-  applicable), `createdAt`
-- Metadata must not store passwords, tokens, secrets, or unnecessary
-  personal data
-- No frontend files change
-- No production migration is executed
-- Focused validation confirms endpoint behavior
-
-# Current Working State
-
-- Documentation-only phase: `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md`
-  amended and accepted; `CURRENT_SPRINT.md` and `PROJECT_STATE.md` updated
-  to reflect SP2.3 closeout and SP3.1 activation.
-- No application code has been written for SP3.1 yet.
-- Founder has approved the Support Playbook (with amendments) and the
-  SP3.1 scope above. Implementation has not started.
-
-# Next Action
-
-Wait for founder review of these documentation updates before beginning
-SP3.1 implementation (Prisma model, migration, controller/service,
-route).
-
 # Important Safety Notes
 
-- Do not create the `SupportAction` Prisma model or migration until
-  founder gives an explicit go-ahead to begin implementation.
-- Do not modify `frontend/public/admin.html` as part of SP3.1.
-- Do not implement `GET /ops/logs` as part of SP3.1.
+- The SP3.1 migration (`20260713000000_add_support_action`) exists in the
+  repo but has **not** been applied to any database — do not run
+  `prisma migrate deploy` for it without explicit founder confirmation.
 - Do not apply the still-unapplied search-index migration
-  (`20260712000000_add_search_indexes`) as part of this sprint.
+  (`20260712000000_add_search_indexes`) either.
 - Do not modify `main`.
-- Do not run any production migration without separate, explicit
-  founder approval.
+- Do not begin implementation on the next sprint until it is scoped and
+  founder-approved.

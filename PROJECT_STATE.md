@@ -4,11 +4,10 @@
 > `CLAUDE.md` (rules/conventions) and `docs/` (durable architecture) —
 > does not duplicate them. Update this file at the end of each sprint.
 >
-> Last updated: 2026-07-13, from `git log`/`git diff` inspection at
-> commit `f0067ad`, plus founder approval of the Support Playbook
-> (with amendments) and SP3.1 scope. See `CURRENT_SPRINT.md` for the
-> short-lived, keystroke-level view of the active sprint; this file
-> tracks the broader project state.
+> Last updated: 2026-07-14, from `git log`/`git diff` inspection at
+> commit `2614990`, plus founder approval of the SP3.1 implementation.
+> See `CURRENT_SPRINT.md` for the short-lived, keystroke-level view of
+> the active sprint; this file tracks the broader project state.
 
 ## Project
 
@@ -46,18 +45,21 @@ committed history on this branch:
   — `/ops/search`, `searchService.js`, grouped resolvers, tests.
 - **SP2.3 — Universal Search UI**: **complete, committed (`f0067ad`),
   and pushed** to `origin/preview/sprint-2d-smart-qr-renderer`.
-- **SP3.1 — Operations Center Foundation: SupportAction Audit Trail**
-  (active sprint): `SupportAction` Prisma model + admin-protected
-  `POST /ops/support-actions` only. Documentation-approved, application
-  code not yet started. See `CURRENT_SPRINT.md` for full scope/exclusions.
+- **SP3.1 — Operations Center Foundation: SupportAction Audit Trail**:
+  **complete, committed (`2614990`), and pushed** to
+  `origin/preview/sprint-2d-smart-qr-renderer`. `SupportAction` Prisma
+  model (`metadata Json?`), additive migration (unapplied),
+  `POST /ops/support-actions`, and a permanent 23-test suite
+  (`backend/tests/supportActionService.test.js`).
+- **No active sprint** — see `CURRENT_SPRINT.md`. Next sprint not yet
+  scoped or approved; see Next Recommended Sprint below.
 
 `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` — **Accepted, Version
 1.0** (Approved 2026-07-13, by Founder, Related Sprint: SP3.1), with
 three amendments: repository grounding refreshed; Operations
 navigation/routing deferred to its own future sprint; `GET /ops/logs`
-deferred pending a separate logging-architecture approval. Still
-untracked in Git — this is expected documentation work in progress, not
-unrelated or stray application code.
+deferred pending a separate logging-architecture approval. Committed
+(`cacb998`), no longer untracked.
 
 **Sprint 2D — Canonical Smart QR Card Renderer** (prior focus, in
 progress on this branch, not yet merged to `main`, now paused rather
@@ -125,10 +127,10 @@ into a single `backend/src/utils/prismaClient.js`.
   of the QDS migration scope. Operations Overview foundation shipped
   (`aea39b7`). Universal Operations Search backend shipped (`d150799`,
   `/ops/search`). Universal Search UI (SP2.3) shipped and pushed
-  (`f0067ad`). SP3.1 (SupportAction audit trail) is the active sprint —
-  documentation-approved, implementation not started. Health-check
-  endpoint is already clean of OneSignal references (no stale flag to
-  fix).
+  (`f0067ad`). SupportAction audit foundation (SP3.1) shipped and pushed
+  (`2614990`) — `SupportAction` model, `POST /ops/support-actions`,
+  23-test suite. No active sprint currently. Health-check endpoint is
+  already clean of OneSignal references (no stale flag to fix).
 
 ## Recent Major Changes
 
@@ -150,8 +152,9 @@ into a single `backend/src/utils/prismaClient.js`.
 - SP2.3 Universal Search UI committed and pushed (`f0067ad`)
 - Support Playbook accepted with amendments (repository grounding
   refresh; navigation/routing deferred; `GET /ops/logs` deferred)
-- SP3.1 (SupportAction audit trail) approved as the active sprint,
-  documentation-only so far
+- SP3.1 — SupportAction audit foundation committed and pushed
+  (`2614990`): `SupportAction` Prisma model, additive migration
+  (unapplied), `POST /ops/support-actions`, permanent test suite
 
 ## Known Outstanding Work
 
@@ -176,19 +179,21 @@ into a single `backend/src/utils/prismaClient.js`.
   exists in the repo, committed as part of `d150799`, but has **not
   been applied** to the database — do not run `prisma migrate deploy`
   for it without explicit confirmation.
+- **Prisma SupportAction migration** (`20260713000000_add_support_action`):
+  exists in the repo, committed as part of `2614990`, but has **not
+  been applied** to the database — do not run `prisma migrate deploy`
+  for it without explicit confirmation. Two unapplied migrations are now
+  stacked on this branch; consider applying both together, in order,
+  when founder approves a migration run.
 - **Support Playbook** (`docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md`):
-  Accepted, Version 1.0; still untracked in Git (not yet committed) —
-  expected documentation work in progress, not unrelated application
-  code. Broader capabilities it defines beyond SP3.1 (API Inspector,
-  Customer/Business Journey, System Integrity, AI Investigation,
-  Operations navigation/routing, `GET /ops/logs`) are not yet started
-  and — for navigation/routing and logging specifically — require their
-  own separate founder-approved plan docs before implementation.
-- **SP3.1 — SupportAction Audit Trail**: documentation-approved (scope,
-  in/out-of-scope, acceptance criteria all defined in
-  `CURRENT_SPRINT.md`); no Prisma model, migration, controller, service,
-  or route has been created yet. Any production migration for this
-  sprint requires separate, explicit founder approval before it is run.
+  Accepted, Version 1.0, committed (`cacb998`). Broader capabilities it
+  defines beyond SP3.1 (API Inspector, Customer/Business Journey, System
+  Integrity, AI Investigation, Operations navigation/routing,
+  `GET /ops/logs`) are not yet started and — for navigation/routing and
+  logging specifically — require their own separate founder-approved
+  plan docs before implementation.
+- **Next sprint**: not yet scoped or approved. See Next Recommended
+  Sprint below.
 
 ## Production Status
 
@@ -197,10 +202,10 @@ into a single `backend/src/utils/prismaClient.js`.
   Operations Center work below. Represents the last founder-approved,
   mergeable state.
 - **`preview/sprint-2d-smart-qr-renderer`**: active work branch, ahead
-  of `main` by 9 commits (Smart QR card Wave 1 + Surface inset +
+  of `main` by 11 commits (Smart QR card Wave 1 + Surface inset +
   OneSignal removal + Operations Center identity/Overview/Search
-  architecture/Search backend/continuity docs/Search UI). Not yet
-  merged.
+  architecture/Search backend/continuity docs/Search UI/SP3.1 planning
+  docs/SupportAction audit foundation). Not yet merged.
 - **Deployment**: frontend on Vercel (static, `frontend/public/`),
   backend on Railway (single environment, single production DB/Clerk
   instance — no isolated staging stack exists). Per the preview
@@ -227,21 +232,24 @@ into a single `backend/src/utils/prismaClient.js`.
 
 ## Next Recommended Sprint
 
-**Implement SP3.1** — `SupportAction` Prisma model + admin-protected
-`POST /ops/support-actions`, per `CURRENT_SPRINT.md`'s scope/exclusions/
-acceptance criteria. Documentation and founder approval are complete;
-implementation has not started. Do not begin until explicit founder
-go-ahead, per `CURRENT_SPRINT.md`'s Safety Notes.
-
-Explicitly deferred behind SP3.1 (each requires its own future
-founder-approved plan doc before implementation, per Support Playbook
-§12 and Founder Amendments 2/3):
-- Operations navigation/routing foundation
+**Not yet defined or approved.** SP3.1 is complete; per
+`docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` §12 (Recommended
+Build Order) and Founder Amendments 2–3, the two remaining Phase 1
+items each require their own separate founder-approved plan doc before
+a sprint can be scoped:
+- Operations navigation/routing foundation (real deep-linkable routing
+  vs. a narrower nav-shell restructuring — undecided, per Amendment 2)
 - `GET /ops/logs` (needs a separate logging-architecture approval:
-  storage, retention, access control, PII masking, secret redaction)
+  storage, retention, access control, PII masking, secret redaction,
+  per Amendment 3)
+
+Do not begin implementation on either until one is scoped in its own
+plan doc and founder-approved, consistent with this project's
+established plan-then-implement pattern.
 
 Deferred, not dropped, behind the Operations Center pivot:
 - Sprint 2D Wave 2 (`.sqr-claimed-card` migration)
 - `Subscriber.oneSignalId` Prisma migration cleanup
 - Preview deployment open items (`vercel.json`, Clerk preview domains)
 - Applying the search-index migration (`20260712000000_add_search_indexes`)
+- Applying the SupportAction migration (`20260713000000_add_support_action`)
