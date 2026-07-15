@@ -4,10 +4,24 @@
 > `CLAUDE.md` (rules/conventions) and `docs/` (durable architecture) —
 > does not duplicate them. Update this file at the end of each sprint.
 >
-> Last updated: 2026-07-14, from `git log`/`git diff` inspection at
-> commit `2614990`, plus founder approval of the SP3.1 implementation.
+> Last updated: 2026-07-15, from `git log`/`git diff` inspection at
+> commit `0a23778`, plus founder approval of the MC-1 implementation.
 > See `CURRENT_SPRINT.md` for the short-lived, keystroke-level view of
 > the active sprint; this file tracks the broader project state.
+>
+> **Note on architecture-phase documents:** an extensive planning
+> effort (QRAIVY Operating Model, Operational Actors & Authority Model,
+> Attention Model, Mission Control Architecture v2 + Product
+> Specification, Business Command Center and Customer Workspace Product
+> Specifications, UX System, Product Portfolio, Implementation Roadmap,
+> Architecture Closeout) was produced across prior planning sessions and
+> directly informed MC-1's design. **None of these documents have been
+> committed to the repository as files** — they exist only as session
+> output. Only `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md`
+> (pre-existing) is real, on-disk, and referenceable by a fresh session.
+> Founder should decide whether/where to persist the rest; until then,
+> do not assume a fresh Claude Code session can "read" them — they are
+> not in the repo.
 
 ## Project
 
@@ -24,10 +38,14 @@ plan"); `main` has since taken one follow-up commit of its own
 
 ## Current Phase
 
-QDS (QRAIVY Design System) migration — replacing legacy hand-styled
-frontend components with canonical QDS primitives (Surface, Button,
-Input), one component family at a time, via founder-approved
-plan-then-implement docs under `frontend/public/qds/docs/`.
+**Implementation Mode** (per the accepted QRAIVY Architecture Closeout v1)
+— building the approved Mission Control → Business Command Center →
+Customer Workspace product chain. MC-1 (Mission Control foundation) is
+complete; MC-2 not yet scoped or approved. QDS (QRAIVY Design System)
+migration — replacing legacy hand-styled frontend components with
+canonical QDS primitives (Surface, Button, Input), one component family
+at a time, via founder-approved plan-then-implement docs under
+`frontend/public/qds/docs/` — remains paused behind this pivot.
 
 ## Current Sprint
 
@@ -51,8 +69,17 @@ committed history on this branch:
   model (`metadata Json?`), additive migration (unapplied),
   `POST /ops/support-actions`, and a permanent 23-test suite
   (`backend/tests/supportActionService.test.js`).
-- **No active sprint** — see `CURRENT_SPRINT.md`. Next sprint not yet
-  scoped or approved; see Next Recommended Sprint below.
+- **MC-1 — Mission Control Foundation**: **complete, committed
+  (`0a23778`), and pushed** to `origin/preview/sprint-2d-smart-qr-renderer`.
+  Executive Brief, Founder Attention (read-only), and Platform Health,
+  implemented inside the existing Overview page in `admin.html` — no
+  new page, no new nav item, no routing changes, no schema changes, no
+  migrations applied. New shared `attentionService.js` is the single
+  source of truth `GET /admin/health` and the new `GET /ops/attention`
+  both consume. 17-test permanent suite
+  (`backend/tests/attentionService.test.js`).
+- **No active sprint** — see `CURRENT_SPRINT.md`. MC-2 not yet scoped
+  or approved; do not begin. See Next Recommended Sprint below.
 
 `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` — **Accepted, Version
 1.0** (Approved 2026-07-13, by Founder, Related Sprint: SP3.1), with
@@ -192,8 +219,14 @@ into a single `backend/src/utils/prismaClient.js`.
   `GET /ops/logs`) are not yet started and — for navigation/routing and
   logging specifically — require their own separate founder-approved
   plan docs before implementation.
-- **Next sprint**: not yet scoped or approved. See Next Recommended
-  Sprint below.
+- **Next sprint (MC-2)**: not yet scoped or approved; do not begin.
+  Deferred out of MC-1: Founder Attention lifecycle actions
+  (acknowledge/defer/dismiss, blocked on a separate founder decision to
+  apply the SP3.1 `SupportAction` migration), the correlation/grouping
+  engine (deferred until a second real finding source exists), and the
+  remaining Mission Control modules (AI Operations Brief, Command Bar,
+  Investigation Queue, Operational Timeline, Recent Approved Actions,
+  Operational Wins). See Next Recommended Sprint below.
 
 ## Production Status
 
@@ -202,10 +235,11 @@ into a single `backend/src/utils/prismaClient.js`.
   Operations Center work below. Represents the last founder-approved,
   mergeable state.
 - **`preview/sprint-2d-smart-qr-renderer`**: active work branch, ahead
-  of `main` by 11 commits (Smart QR card Wave 1 + Surface inset +
+  of `main` by 15 commits (Smart QR card Wave 1 + Surface inset +
   OneSignal removal + Operations Center identity/Overview/Search
   architecture/Search backend/continuity docs/Search UI/SP3.1 planning
-  docs/SupportAction audit foundation). Not yet merged.
+  docs/SupportAction audit foundation/Mission Control MC-1 foundation).
+  Not yet merged.
 - **Deployment**: frontend on Vercel (static, `frontend/public/`),
   backend on Railway (single environment, single production DB/Clerk
   instance — no isolated staging stack exists). Per the preview
