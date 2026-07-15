@@ -11,18 +11,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.init({
-        appId: "afd98e11-f616-40fe-a1c6-251f15861b54",
-        notifyButton: { enable: false },
-        allowLocalhostAsSecureOrigin: true,
-        serviceWorkerParam: { scope: "/" },
-      });
-    });
-  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -218,75 +206,6 @@
     #sendBtn:hover { background: #ff7a45; }
     #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .subscribe-section {
-      max-width: 640px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 0 24px 48px;
-    }
-
-    .subscribe-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .subscribe-title { font-size: 1rem; font-weight: 700; }
-
-    .subscribe-desc {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      line-height: 1.6;
-    }
-
-    #subscribeBtn {
-      padding: 14px 24px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-family: var(--font-display);
-      font-size: 0.88rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s;
-      letter-spacing: 0.03em;
-    }
-
-    #subscribeBtn:hover { background: #ff7a45; }
-
-    .subscribe-confirm {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: #22c55e;
-      display: none;
-    }
-
-    .ios-notice {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-mid);
-      line-height: 1.7;
-      text-align: left;
-      display: none;
-    }
-
-    .ios-notice strong {
-      color: var(--accent);
-      display: block;
-      margin-bottom: 6px;
-      font-size: 0.8rem;
-    }
 
     .powered-by {
       text-align: center;
@@ -336,23 +255,6 @@
       </div>
     </div>
 
-    <div class="subscribe-section">
-      <div class="subscribe-card">
-        <div class="subscribe-title">🎁 Get Exclusive Offers</div>
-        <div class="subscribe-desc">Subscribe to receive special deals and updates from <span id="subBusinessName">us</span> directly to your device.</div>
-        <div class="ios-notice" id="iosNotice">
-          <strong>📱 iPhone Users</strong>
-          To receive push notifications on iPhone:
-          1. Tap the Share button (□↑) in Safari
-          2. Tap "Add to Home Screen"
-          3. Open the app from your home screen
-          4. Then tap Subscribe below
-        </div>
-        <button id="subscribeBtn">Subscribe for Special Offers</button>
-        <div class="subscribe-confirm" id="subscribeConfirm">✅ You're subscribed! Watch out for special offers.</div>
-      </div>
-    </div>
-
     <div class="powered-by">Powered by <a href="https://www.qraivy.com" target="_blank">QRAIRY.AI</a></div>
   </div>
 
@@ -362,10 +264,6 @@
     const qrId = params.get('id');
     let chatHistory = [];
     let businessData = null;
-
-    // Detect iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.navigator.standalone === true;
 
     async function init() {
       if (!qrId) {
@@ -380,15 +278,9 @@
         document.getElementById('businessName').textContent = data.businessName;
         document.getElementById('businessUrl').textContent = data.originalUrl;
         document.getElementById('businessUrl').href = data.originalUrl;
-        document.getElementById('subBusinessName').textContent = data.businessName;
         document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('pageContent').style.display = 'flex';
         addMessage('bot', `Hi! Welcome to ${data.businessName} 👋 How can I help you today?`);
-
-        // Show iOS notice if on iPhone and not in standalone mode
-        if (isIOS && !isStandalone) {
-          document.getElementById('iosNotice').style.display = 'block';
-        }
       } catch (err) {
         document.getElementById('loadingScreen').textContent = 'Failed to load. Please try again.';
         console.error(err);
@@ -461,44 +353,6 @@
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
     document.getElementById('chatInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') sendMessage();
-    });
-
-    document.getElementById('subscribeBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('subscribeBtn');
-      const confirm = document.getElementById('subscribeConfirm');
-      btn.disabled = true;
-      btn.textContent = 'Subscribing...';
-
-      try {
-        await window.OneSignal.Notifications.requestPermission();
-        await new Promise(r => setTimeout(r, 2000));
-
-        const oneSignalId = window.OneSignal.User.PushSubscription.id;
-        console.log('OneSignal ID:', oneSignalId);
-
-        if (!oneSignalId) {
-          btn.disabled = false;
-          btn.textContent = 'Subscribe for Special Offers';
-          alert('Please allow notifications in your browser to subscribe.');
-          return;
-        }
-
-        const res = await fetch(`${API_BASE}/subscribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ qrId, oneSignalId }),
-        });
-
-        const data = await res.json();
-        console.log('Subscribe response:', data);
-
-        btn.style.display = 'none';
-        confirm.style.display = 'block';
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = 'Subscribe for Special Offers';
-        console.error('Subscribe error:', err);
-      }
     });
 
     init();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Qraivy — Admin Panel</title>
+  <title>QRAIVY Operations Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -49,9 +49,14 @@
       font-weight: 900; letter-spacing: -0.02em;
     }
     .sb-logo span { color: var(--accent); font-style: italic; }
-    .sb-tag {
-      font-size: 0.55rem; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--text-dim);
+    .sb-product {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-mid);
+      display: block; margin-top: 4px;
+    }
+    .sb-subtitle {
+      font-size: 0.48rem; font-weight: 400; letter-spacing: 0.01em;
+      color: var(--text-dim); opacity: 0.75;
       display: block; margin-top: 2px;
     }
     .sb-nav { flex: 1; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
@@ -240,6 +245,74 @@
     }
     .search-input:focus { border-color: var(--accent); }
 
+    /* ── Universal Search ── */
+    .ops-search-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 10px;
+    }
+    .ops-search-bar .search-icon { color: var(--text-dim); font-size: 0.9rem; }
+    #ops-search-input {
+      flex: 1; width: auto; background: none; border: none;
+      color: var(--text); font-family: var(--font-mono); font-size: 0.85rem;
+      outline: none;
+    }
+    #ops-search-input::placeholder { color: var(--text-dim); }
+    .ops-search-clear {
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; font-size: 0.9rem; padding: 2px 6px;
+    }
+    .ops-search-clear:hover { color: var(--text); }
+    .ops-search-meta { font-size: 0.62rem; color: var(--text-dim); margin-bottom: 16px; min-height: 1em; }
+    .search-group { margin-bottom: 20px; }
+    .search-group-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 2px; font-family: var(--font-display);
+      font-size: 0.78rem; font-weight: 700; color: var(--text);
+    }
+    .search-group-count {
+      font-size: 0.62rem; font-weight: 400; color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .result-card {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    }
+    .result-card-main { min-width: 0; }
+    .result-card-title {
+      color: var(--text); font-size: 0.8rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .result-card-sub {
+      color: var(--text-dim); font-size: 0.65rem; margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .result-card-side {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .result-card-status { font-size: 0.62rem; color: var(--text-mid); white-space: nowrap; }
+    .result-card-actions { display: flex; gap: 6px; }
+    .search-group-empty, .search-group-error {
+      font-size: 0.68rem; color: var(--text-dim); padding: 10px 2px;
+    }
+    .search-group-error { color: var(--yellow); }
+    .search-idle { color: var(--text-dim); font-size: 0.78rem; padding: 40px 20px; text-align: center; }
+    .sb-shortcut-hint {
+      margin-left: auto; font-size: 0.58rem; color: var(--text-dim);
+      border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+      font-family: var(--font-mono);
+    }
+    .sb-item.active .sb-shortcut-hint { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.3); }
+
+    @media (max-width: 640px) {
+      .ops-search-bar { flex-wrap: wrap; }
+      .result-card { flex-wrap: wrap; }
+      .result-card-main { flex-basis: 100%; }
+      .result-card-title, .result-card-sub { white-space: normal; overflow: visible; text-overflow: clip; }
+      .result-card-side { flex-basis: 100%; justify-content: space-between; }
+    }
+
     /* ── Modal ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.7);
@@ -301,9 +374,16 @@
   <div id="sidebar">
     <div class="sb-logo">
       QR<span>Aivy</span>
-      <span class="sb-tag">Admin Panel</span>
+      <span class="sb-product">Operations Center</span>
+      <span class="sb-subtitle">Platform Operations • Support • Intelligence</span>
     </div>
     <nav class="sb-nav">
+      <div class="sb-section">Search</div>
+      <button class="sb-item" id="sb-search-nav-btn" onclick="showPage('search')">
+        <span class="sb-icon">🔍</span> Universal Search
+        <span class="sb-shortcut-hint">Ctrl K</span>
+      </button>
+
       <div class="sb-section">Overview</div>
       <button class="sb-item active" onclick="showPage('overview')">
         <span class="sb-icon">⊞</span> Overview
@@ -346,26 +426,81 @@
   <!-- Main Content -->
   <div id="main">
 
+    <!-- SEARCH -->
+    <div class="page" id="page-search">
+      <div class="page-header">
+        <div class="page-title">Universal <span>Search</span></div>
+      </div>
+      <div class="ops-search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="ops-search-input" placeholder="Search businesses, users, subscribers, wallet passes, QR codes…" oninput="onSearchInput()" onkeydown="onSearchKeydown(event)" autocomplete="off" />
+        <button class="ops-search-clear" id="ops-search-clear-btn" onclick="clearSearch()" style="display:none">✕</button>
+      </div>
+      <div class="ops-search-meta" id="ops-search-meta"></div>
+      <div id="ops-search-results">
+        <div class="search-idle">Start typing to search across the platform.</div>
+      </div>
+    </div>
+
     <!-- OVERVIEW -->
     <div class="page active" id="page-overview">
       <div class="page-header">
         <div>
-          <div class="page-title">System <span>Overview</span></div>
+          <div class="page-title">Operations <span>Overview</span></div>
         </div>
         <div style="display:flex;align-items:center">
           <span class="last-updated" id="overview-updated"></span>
           <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
         </div>
       </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Executive Brief</div>
+        </div>
+        <div id="executive-brief" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Founder Attention</div>
+          <span class="table-count" id="attention-count">—</span>
+        </div>
+        <div id="founder-attention" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-title" style="margin-bottom:12px">Platform Summary</div>
       <div class="stats-grid" id="overview-stats">
         <div class="loading">Loading...</div>
       </div>
 
       <div class="table-wrap">
         <div class="table-header">
-          <div class="table-title">Recent Signups</div>
+          <div class="table-title">Platform Health</div>
+        </div>
+        <div id="platform-status-rows">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Operational Insights</div>
+        </div>
+        <div id="operational-insights" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Recent Platform Activity</div>
           <span class="table-count" id="recent-count">—</span>
         </div>
+        <div style="padding:10px 20px 0;font-size:0.65rem;color:var(--text-dim)">Showing recent signup activity</div>
         <table>
           <thead>
             <tr>
@@ -580,6 +715,7 @@
       event.currentTarget.classList.add('active');
 
       const loaders = {
+        search: () => document.getElementById('ops-search-input').focus(),
         overview: loadOverview,
         users: loadUsers,
         'api-keys': loadApiKeys,
@@ -608,66 +744,247 @@
     }
 
     // ── OVERVIEW ──────────────────────────────────────────────
-    async function loadOverview() {
-      document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
+
+    // Fetches an /admin/* endpoint and classifies the outcome so callers can
+    // show a specific message instead of one generic failure string.
+    async function safeFetchAdmin(path) {
+      let res;
       try {
-        const res = await fetch(`${API_BASE}/admin/overview`, {
+        res = await fetch(`${API_BASE}${path}`, {
           headers: { 'Authorization': 'Bearer ' + await getAdminToken() }
         });
-        const data = await res.json();
-
-        document.getElementById('overview-stats').innerHTML = `
-          <div class="stat-card green">
-            <div class="stat-label">Total Users</div>
-            <div class="stat-value">${data.totalUsers ?? '—'}</div>
-            <div class="stat-sub">all time</div>
-          </div>
-          <div class="stat-card orange">
-            <div class="stat-label">Paid Users</div>
-            <div class="stat-value">${data.paidUsers ?? '—'}</div>
-            <div class="stat-sub">starter + pro + business</div>
-          </div>
-          <div class="stat-card blue">
-            <div class="stat-label">Total QR Codes</div>
-            <div class="stat-value">${data.totalQRs ?? '—'}</div>
-            <div class="stat-sub">all users</div>
-          </div>
-          <div class="stat-card purple">
-            <div class="stat-label">Total Scans</div>
-            <div class="stat-value">${data.totalScans ?? '—'}</div>
-            <div class="stat-sub">all time</div>
-          </div>
-          <div class="stat-card yellow">
-            <div class="stat-label">Est. MRR</div>
-            <div class="stat-value">€${data.estimatedMRR ?? '0'}</div>
-            <div class="stat-sub">based on active plans</div>
-          </div>
-          <div class="stat-card green">
-            <div class="stat-label">Total Subscribers</div>
-            <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
-            <div class="stat-sub">push notification subs</div>
-          </div>
-        `;
-
-        const tbody = document.getElementById('recent-users-body');
-        if (data.recentUsers && data.recentUsers.length > 0) {
-          tbody.innerHTML = data.recentUsers.map(u => `
-            <tr>
-              <td class="td-email">${u.id.substring(0, 16)}...</td>
-              <td>${u.email || '—'}</td>
-              <td>${planBadge(u.plan)}</td>
-              <td>${u._count?.qrs ?? 0}</td>
-              <td>${fmtDate(u.createdAt)}</td>
-            </tr>
-          `).join('');
-          document.getElementById('recent-count').textContent = `${data.recentUsers.length} recent`;
-        } else {
-          tbody.innerHTML = '<tr><td colspan="5" class="loading">No users yet.</td></tr>';
-        }
-      } catch (err) {
-        document.getElementById('overview-stats').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load. Is the admin route deployed?</div>`;
-        console.error(err);
+      } catch (networkErr) {
+        return { ok: false, kind: 'network' };
       }
+      if (!res.ok) {
+        const kindMap = { 401: '401', 403: '403', 404: '404', 500: '500' };
+        return { ok: false, kind: kindMap[res.status] || 'other', status: res.status };
+      }
+      try {
+        return { ok: true, data: await res.json() };
+      } catch (parseErr) {
+        return { ok: false, kind: 'other', status: res.status };
+      }
+    }
+
+    function adminErrorMessage(result) {
+      switch (result.kind) {
+        case '401': return 'Session expired — please sign in again.';
+        case '403': return 'Your account does not have admin access to this resource.';
+        case '404': return 'Admin API route not found — check that the backend is deployed.';
+        case '500': return 'Server error — the backend encountered a problem processing this request.';
+        case 'network': return 'Could not reach the QRAIVY API — check your connection.';
+        default: return `Failed to load (HTTP ${result.status || 'unknown'}).`;
+      }
+    }
+
+    function renderPlatformSummary(result) {
+      if (!result.ok) {
+        document.getElementById('overview-stats').innerHTML =
+          `<div class="loading" style="color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+      const data = result.data;
+      document.getElementById('overview-stats').innerHTML = `
+        <div class="stat-card green">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value">${data.totalUsers ?? '—'}</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Paid Users</div>
+          <div class="stat-value">${data.paidUsers ?? '—'}</div>
+          <div class="stat-sub">starter + pro + business</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Total QR Codes</div>
+          <div class="stat-value">${data.totalQRs ?? '—'}</div>
+          <div class="stat-sub">all users</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value">${data.totalScans ?? '—'}</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Est. MRR</div>
+          <div class="stat-value">€${data.estimatedMRR ?? '0'}</div>
+          <div class="stat-sub">based on active plans</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Total Subscribers</div>
+          <div class="stat-value">${data.totalSubscribers ?? '—'}</div>
+          <div class="stat-sub">push notification subs</div>
+        </div>
+      `;
+    }
+
+    function renderRecentActivity(result) {
+      const tbody = document.getElementById('recent-users-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('recent-count').textContent = '—';
+        return;
+      }
+      const data = result.data;
+      if (data.recentUsers && data.recentUsers.length > 0) {
+        tbody.innerHTML = data.recentUsers.map(u => `
+          <tr>
+            <td class="td-email">${u.id.substring(0, 16)}...</td>
+            <td>${u.email || '—'}</td>
+            <td>${planBadge(u.plan)}</td>
+            <td>${u._count?.qrs ?? 0}</td>
+            <td>${fmtDate(u.createdAt)}</td>
+          </tr>
+        `).join('');
+        document.getElementById('recent-count').textContent = `${data.recentUsers.length} recent`;
+      } else {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No users yet.</td></tr>';
+        document.getElementById('recent-count').textContent = '0 recent';
+      }
+    }
+
+    // Platform Status — real backend checks only. api/db are genuine
+    // reachability checks; anthropic/stripe/clerk are env-var presence
+    // checks, so they're labeled Configured/Not Configured, never Operational.
+    function renderPlatformStatus(result) {
+      const el = document.getElementById('platform-status-rows');
+      if (!result.ok) {
+        el.innerHTML = `<div class="health-row"><div class="health-name" style="color:var(--red)">${adminErrorMessage(result)}</div></div>`;
+        return;
+      }
+      const h = result.data;
+      const reachabilityRow = (name, up) => `
+        <div class="health-row">
+          <div class="health-name">${name}</div>
+          <div class="health-status">
+            <span class="status-dot ${up ? 'status-ok' : 'status-err'}"></span>
+            ${up ? 'Operational' : 'Unavailable'}
+          </div>
+        </div>`;
+      const configRow = (name, configured) => `
+        <div class="health-row">
+          <div class="health-name">${name}</div>
+          <div class="health-status">
+            <span class="status-dot ${configured ? 'status-ok' : 'status-warn'}"></span>
+            ${configured ? 'Configured' : 'Not Configured'}
+          </div>
+        </div>`;
+      el.innerHTML =
+        reachabilityRow('QRAIVY API', h.api === true) +
+        reachabilityRow('PostgreSQL', h.db === true) +
+        configRow('Anthropic', h.anthropic === true) +
+        configRow('Stripe', h.stripe === true) +
+        configRow('Clerk', h.clerk === true);
+    }
+
+    // Operational Insights — evidence-based only, derived from data already
+    // fetched for this page. No fabricated or predictive diagnostics.
+    function renderOperationalInsights(overviewResult, healthResult) {
+      const el = document.getElementById('operational-insights');
+      const observations = [];
+
+      if (!healthResult.ok) {
+        observations.push('Health endpoint failed to respond — service status could not be verified.');
+      } else {
+        const h = healthResult.data;
+        if (h.api !== true) observations.push('QRAIVY API is unavailable.');
+        if (h.db !== true) observations.push('PostgreSQL database is unavailable.');
+        if (h.anthropic !== true) observations.push('Anthropic is not configured.');
+        if (h.stripe !== true) observations.push('Stripe is not configured.');
+        if (h.clerk !== true) observations.push('Clerk is not configured.');
+      }
+
+      if (overviewResult.ok) {
+        const d = overviewResult.data;
+        if ((d.totalQRs || 0) > 0 && (d.totalScans || 0) === 0) {
+          observations.push('QR codes exist but zero scans have been recorded.');
+        }
+        if ((d.totalSubscribers || 0) === 0) {
+          observations.push('Zero subscribers recorded.');
+        }
+      }
+
+      if (observations.length === 0) {
+        el.innerHTML = `
+          <div style="font-size:0.78rem;color:var(--text-mid)">No operational insights at this time based on current diagnostics.</div>
+          <div style="font-size:0.62rem;color:var(--text-dim);margin-top:6px">Additional diagnostics will become available as the Operations Center expands.</div>
+        `;
+      } else {
+        el.innerHTML = `<ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px">` +
+          observations.map(o => `<li style="font-size:0.78rem;color:var(--text-mid)">${o}</li>`).join('') +
+          `</ul>`;
+      }
+    }
+
+    async function loadOverview() {
+      document.getElementById('overview-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}  `;
+
+      const overviewResult = await safeFetchAdmin('/admin/overview');
+      renderPlatformSummary(overviewResult);
+      renderRecentActivity(overviewResult);
+
+      const healthResult = await safeFetchAdmin('/admin/health');
+      renderPlatformStatus(healthResult);
+
+      renderOperationalInsights(overviewResult, healthResult);
+
+      const attentionResult = await safeFetchAdmin('/ops/attention');
+      renderExecutiveBrief(attentionResult);
+      renderFounderAttention(attentionResult);
+    }
+
+    // Executive Brief — one evidence-derived verdict sentence, sourced
+    // from the same health checks as Platform Health. No vanity metrics,
+    // no speculative interpretation (Mission Control MC-1 scope).
+    function renderExecutiveBrief(result) {
+      const el = document.getElementById('executive-brief');
+      if (!result.ok) {
+        el.innerHTML = `<div style="font-size:0.85rem;color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+      const brief = result.data.executiveBrief || {};
+      const colorByVerdict = {
+        healthy: 'var(--green)',
+        degraded: 'var(--yellow)',
+        critical: 'var(--red)',
+        unavailable: 'var(--text-mid)',
+      };
+      const color = colorByVerdict[brief.verdict] || 'var(--text-mid)';
+      el.innerHTML = `<div style="font-size:0.9rem;color:${color};font-weight:600">${brief.message || 'Status unavailable.'}</div>`;
+    }
+
+    // Founder Attention — read-only findings derived from deterministic
+    // health evidence. No persisted lifecycle state, no correlation
+    // engine (Mission Control MC-1 scope).
+    function renderFounderAttention(result) {
+      const el = document.getElementById('founder-attention');
+      const countEl = document.getElementById('attention-count');
+      if (!result.ok) {
+        el.innerHTML = `<div style="font-size:0.78rem;color:var(--red)">${adminErrorMessage(result)}</div>`;
+        countEl.textContent = '—';
+        return;
+      }
+      const findings = result.data.findings || [];
+      countEl.textContent = findings.length === 0 ? '0 findings' : `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
+
+      if (findings.length === 0) {
+        el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-mid)">All platform checks were performed. Nothing currently requires your attention.</div>`;
+        return;
+      }
+
+      const severityColor = { critical: 'var(--red)', warning: 'var(--yellow)' };
+      el.innerHTML = findings.map(f => `
+        <div class="health-row" style="align-items:flex-start;flex-direction:column;gap:4px;padding:10px 0">
+          <div style="display:flex;align-items:center;gap:8px;width:100%">
+            <span class="status-dot ${f.severity === 'critical' ? 'status-err' : 'status-warn'}"></span>
+            <span class="health-name" style="font-weight:600">${f.subsystem}</span>
+            <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:${severityColor[f.severity] || 'var(--text-mid)'}">${f.severity || ''}</span>
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-mid);padding-left:18px">${f.explanation}</div>
+          <div style="font-size:0.62rem;color:var(--text-dim);padding-left:18px">${f.evidence} · scope: ${f.scope}</div>
+        </div>
+      `).join('');
     }
 
     // ── USERS ─────────────────────────────────────────────────
@@ -852,7 +1169,6 @@
         { service: '🕷️ Firecrawl (Scraping)', monthly: '~€0–20', detail: 'Per scrape pricing — check Firecrawl dashboard', url: 'https://firecrawl.dev' },
         { service: '🚂 Railway (Backend)', monthly: '~€5–20', detail: 'Compute + database — check Railway dashboard', url: 'https://railway.app' },
         { service: '▲ Vercel (Frontend)', monthly: '€0', detail: 'Free tier — check Vercel dashboard', url: 'https://vercel.com' },
-        { service: '🔔 OneSignal (Push)', monthly: '€0', detail: 'Free tier up to 10k subscribers', url: 'https://onesignal.com' },
         { service: '🍎 Apple Developer', monthly: '~€8.25', detail: '€99/year ÷ 12 months', url: 'https://developer.apple.com' },
         { service: '💳 Stripe (Payments)', monthly: '1.4% + €0.25', detail: 'Per transaction — check Stripe dashboard', url: 'https://stripe.com' },
       ];
@@ -947,7 +1263,6 @@
         { name: 'Anthropic AI', key: 'anthropic' },
         { name: 'Database (PostgreSQL)', key: 'db' },
         { name: 'Stripe Webhooks', key: 'stripe' },
-        { name: 'OneSignal Push', key: 'onesignal' },
         { name: 'Vercel Frontend', key: 'frontend' },
       ];
       document.getElementById('health-rows').innerHTML = services.map((s, i) => {
@@ -988,12 +1303,246 @@
       a.click();
     }
 
+    // ── UNIVERSAL SEARCH ──────────────────────────────────────
+    const SEARCH_GROUPS = [
+      { key: 'businesses',   label: 'Businesses',    icon: '🏢' },
+      { key: 'users',        label: 'Users',         icon: '👥' },
+      { key: 'subscribers',  label: 'Subscribers',   icon: '✉' },
+      { key: 'walletPasses', label: 'Wallet Passes', icon: '🎫' },
+      { key: 'qrCodes',      label: 'QR Codes',      icon: '⬡' },
+    ];
+    // "landingPages" is intentionally excluded from this list — Phase 1
+    // backend (searchService.js) returns the same LandingPage-backed object
+    // for both "businesses" and "landingPages", so rendering both groups
+    // would duplicate every result. Only "businesses" renders until a real
+    // Business → Locations → Landing Pages hierarchy exists (founder decision).
+
+    let searchDebounceTimer = null;
+    let searchRequestSeq = 0;
+
+    // Global command-palette-style shortcut: works from any page, not just
+    // while the search input is already focused.
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'k') {
+        e.preventDefault();
+        openSearchPage();
+      }
+    });
+
+    function openSearchPage() {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+      document.getElementById('page-search').classList.add('active');
+      document.getElementById('sb-search-nav-btn').classList.add('active');
+      document.getElementById('ops-search-input').focus();
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function onSearchInput() {
+      const input = document.getElementById('ops-search-input');
+      document.getElementById('ops-search-clear-btn').style.display = input.value ? '' : 'none';
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(runSearch, 300);
+    }
+
+    function onSearchKeydown(e) {
+      if (e.key === 'Enter') {
+        clearTimeout(searchDebounceTimer);
+        runSearch();
+      } else if (e.key === 'Escape') {
+        clearSearch();
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('ops-search-input');
+      input.value = '';
+      document.getElementById('ops-search-clear-btn').style.display = 'none';
+      document.getElementById('ops-search-meta').textContent = '';
+      document.getElementById('ops-search-results').innerHTML =
+        '<div class="search-idle">Start typing to search across the platform.</div>';
+      input.focus();
+    }
+
+    async function runSearch() {
+      const q = document.getElementById('ops-search-input').value.trim();
+      const resultsEl = document.getElementById('ops-search-results');
+      const metaEl = document.getElementById('ops-search-meta');
+
+      if (!q) {
+        resultsEl.innerHTML = '<div class="search-idle">Start typing to search across the platform.</div>';
+        metaEl.textContent = '';
+        return;
+      }
+
+      // Guards against an earlier, slower request overwriting a later one's
+      // results when responses resolve out of order.
+      const seq = ++searchRequestSeq;
+      resultsEl.innerHTML = '<div class="loading">Searching…</div>';
+      metaEl.textContent = '';
+
+      const result = await safeFetchAdmin(`/ops/search?q=${encodeURIComponent(q)}`);
+      if (seq !== searchRequestSeq) return;
+
+      if (!result.ok) {
+        resultsEl.innerHTML = `<div class="search-idle" style="color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+
+      const data = result.data;
+      metaEl.textContent = `${data.tookMs}ms`;
+      resultsEl.innerHTML = SEARCH_GROUPS.map(g => renderSearchGroup(g, data.results[g.key])).join('');
+    }
+
+    function renderSearchGroup(group, groupData) {
+      if (!groupData) return '';
+      const { items, total, hasMore, error } = groupData;
+
+      let body;
+      if (error) {
+        body = `<div class="search-group-error">This group is temporarily unavailable.</div>`;
+      } else if (!items.length) {
+        body = `<div class="search-group-empty">No matches.</div>`;
+      } else {
+        body = items.map(item => renderResultCard(group.key, item)).join('');
+      }
+
+      const countLabel = hasMore ? `${total} — showing ${items.length}` : `${total}`;
+
+      return `
+        <div class="search-group">
+          <div class="search-group-header">
+            <span>${group.icon}</span> ${group.label}
+            <span class="search-group-count">(${countLabel})</span>
+          </div>
+          ${body}
+        </div>
+      `;
+    }
+
+    function copyToClipboard(value, btn) {
+      navigator.clipboard.writeText(value).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      });
+    }
+
+    function copyBtn(label, value) {
+      const jsLiteral = escapeHtml(JSON.stringify(String(value || '')));
+      return `<button class="action-btn" onclick="copyToClipboard(${jsLiteral}, this)">${label}</button>`;
+    }
+
+    function resultCard(title, sub, status, actionsHtml) {
+      return `
+        <div class="result-card">
+          <div class="result-card-main">
+            <div class="result-card-title">${title}</div>
+            <div class="result-card-sub">${sub}</div>
+          </div>
+          <div class="result-card-side">
+            <div class="result-card-status">${status}</div>
+            <div class="result-card-actions">${actionsHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderResultCard(groupKey, item) {
+      const renderers = {
+        businesses: renderBusinessCard,
+        users: renderUserCard,
+        subscribers: renderSubscriberCard,
+        walletPasses: renderWalletPassCard,
+        qrCodes: renderQrCard,
+      };
+      return renderers[groupKey](item);
+    }
+
+    // "Open" only ships where a real destination already exists today
+    // (lp-preview.html for a business/landing page). No "Investigate"
+    // button anywhere — that entry point doesn't exist yet (Phase 3).
+    function renderBusinessCard(lp) {
+      const title = escapeHtml(lp.businessName || lp.slug);
+      const sub = `${escapeHtml(lp.slug)} · ${lp.scanCount ?? 0} scans`;
+      const status = escapeHtml(lp.status || '—');
+      const actions =
+        `<a class="action-btn" href="lp-preview.html?slug=${encodeURIComponent(lp.slug)}" target="_blank" rel="noopener">Open</a>` +
+        copyBtn('Copy Slug', lp.slug);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderUserCard(u) {
+      const title = escapeHtml(u.email || u.id);
+      const sub = `${escapeHtml(u.plan || '—')} plan · ${fmtDate(u.createdAt)} · ${u.qrCount ?? 0} QR codes`;
+      const status = planBadge(u.plan || 'free');
+      const actions = copyBtn('Copy ID', u.id);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderSubscriberCard(s) {
+      const title = escapeHtml(s.email || s.id);
+      const sub = `${escapeHtml(s.slug || '—')} · ${escapeHtml(s.source || 'unknown source')}`;
+      const status = escapeHtml(s.status || '—');
+      const actions = copyBtn('Copy Email', s.email);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderWalletPassCard(p) {
+      const title = escapeHtml(p.serialNumber || p.id);
+      const sub = `${escapeHtml(p.slug || '—')} · ${p.stampCount ?? 0}/${p.stampGoal ?? '—'} stamps`;
+      const status = p.rewardReady ? 'reward ready' : 'in progress';
+      const actions = copyBtn('Copy Serial', p.serialNumber);
+      return resultCard(title, sub, status, actions);
+    }
+
+    function renderQrCard(qr) {
+      const title = escapeHtml(qr.businessName || qr.originalUrl || qr.id);
+      const sub = `${escapeHtml(qr.originalUrl || '—')} · ${qr.totalScans ?? 0} scans`;
+      const status = qr.isDynamic ? 'dynamic' : 'static';
+      const actions = copyBtn('Copy ID', qr.id);
+      return resultCard(title, sub, status, actions);
+    }
+
     async function getAdminToken() {
       await window.Clerk.load();
       return await window.Clerk.session.getToken();
     }
+
     // ── Init ──────────────────────────────────────────────────
-    loadOverview();
+    // The Clerk SDK script tag loads after this inline script block, so
+    // window.Clerk isn't guaranteed to exist yet when this file first runs.
+    // Wait for it before the initial fetch, with one bounded retry — no
+    // unbounded retry loop.
+    function waitForClerk(maxWaitMs) {
+      return new Promise(resolve => {
+        const start = Date.now();
+        (function poll() {
+          if (window.Clerk) return resolve(true);
+          if (Date.now() - start >= maxWaitMs) return resolve(false);
+          setTimeout(poll, 50);
+        })();
+      });
+    }
+
+    async function initOverview() {
+      let ready = await waitForClerk(5000);
+      if (!ready) ready = await waitForClerk(5000); // one bounded retry
+      if (!ready) {
+        document.getElementById('overview-stats').innerHTML =
+          '<div class="loading" style="color:var(--red)">Could not initialize admin session — Clerk did not become ready. Use Refresh to try again.</div>';
+        return;
+      }
+      loadOverview();
+    }
+
+    initOverview();
   </script>
   <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/admin-guard.js"></script>

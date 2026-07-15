@@ -19,6 +19,8 @@ model User {
   stripeSubscriptionId String?
   subscriptionStatus   String?
   qrs       QR[]
+
+  @@index([email])
 }
 
 model QR {
@@ -34,6 +36,8 @@ model QR {
   lastScannedAt  DateTime?
   scans          Scan[]
   subscribers    Subscriber[]
+
+  @@index([businessName])
 }
 
 model Scan {
@@ -84,6 +88,8 @@ model LandingPage {
   scanCount    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([businessName])
 }
 
 model Pass {
@@ -203,4 +209,23 @@ model LoyaltyCustomer {
   updatedAt     DateTime  @updatedAt
 
   @@unique([slug, customerId])
+}
+
+// Durable audit log for privileged Operations Center actions (SP3.1).
+// metadata is sanitized at the service layer before it ever reaches this
+// table — never store passwords, tokens, secrets, cookies, session ids,
+// or unnecessary personal data here.
+model SupportAction {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorType  String
+  actionType String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

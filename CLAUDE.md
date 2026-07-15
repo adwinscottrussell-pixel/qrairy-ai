@@ -13,6 +13,31 @@ are merged on top of this file.
 > Sections marked **TBD** need confirmation from someone who has read the
 > actual route/service/schema files — do not treat them as fact yet.
 
+## Canonical Repository
+
+Repository root:
+
+```
+C:\Users\adwin\OneDrive\Desktop\qrairy.ai
+```
+
+At the start of every implementation session:
+
+1. cd into the repository
+2. verify it is a Git repository
+3. verify the current branch
+4. inspect git status
+5. read `CURRENT_SPRINT.md`
+6. read `PROJECT_STATE.md`
+
+Rules:
+
+- Never assume the current working directory.
+- Never act on claims about staged work without inspecting Git.
+- After `/clear`, reconstruct context from repository files.
+- Do not restart completed architecture work when its commit is already present.
+- Do not stage unrelated or pre-existing untracked files.
+
 ## Tech Stack (confirmed from backend/package.json)
 
 - **Runtime**: Node.js, Express 4

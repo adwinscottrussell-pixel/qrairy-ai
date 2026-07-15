@@ -45,10 +45,10 @@ One row per QR scan. `qrId` (required) → `QR`. Fields: `userAgent`, `ip`,
 
 ### `Subscriber`
 Email/notification subscriber tied to a `QR` (via `qrId`, optional) and/or a
-`slug` (landing page). Notable fields: `oneSignalId` (String?, present but —
-see Open Questions, no OneSignal integration was found anywhere in the code
-read), `gdprConsent` (Boolean, default false — actively enforced in
-`handleSubscribe`), `resendContactId`, `status`, `source`. Indexed on `slug`,
+`slug` (landing page). Notable fields: `oneSignalId` (String?, retained for
+historical data — the OneSignal integration that populated it was removed;
+see Open Questions), `gdprConsent` (Boolean, default false — actively
+enforced), `resendContactId`, `status`, `source`. Indexed on `slug`,
 `userId`, `status`.
 
 ### `LandingPage`
@@ -186,14 +186,16 @@ Flagging only, per Phase 2 scope — no fix attempted.
    (`GET /loyalty/programs/:id/customers`) likely always returning 404, but
    this wasn't confirmed by running the code — only by reading it.
 
-4. **`Subscriber.oneSignalId` field exists but no OneSignal integration was
-   found.** The only push mechanisms found in the code are Apple APNs
+4. **`Subscriber.oneSignalId` field is retained after the OneSignal
+   integration was removed.** A legacy OneSignal integration did exist
+   (frontend SDK init, a `/subscribe` endpoint, and a `/send-special`
+   endpoint that called OneSignal's REST API directly) and was removed in a
+   security/cleanup sprint after a OneSignal REST credential was exposed.
+   The supported push mechanisms going forward are Apple APNs
    (`apnsService.js`), Web Push/VAPID (`webPushService.js`), and email
-   (`emailService.js` via Resend). `adminRoutes.js`'s `/admin/health` endpoint
-   does check `process.env.ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` and reports
-   an `onesignal` boolean, but no code was found that actually calls
-   OneSignal's API. This field/env-check pair may be legacy from an earlier
-   push implementation.
+   (`emailService.js` via Resend). The `oneSignalId` column is kept
+   temporarily for historical subscriber data; dropping it is a separate,
+   later database cleanup, not done in this sprint.
 
 ## Not Yet Reviewed
 

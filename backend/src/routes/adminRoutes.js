@@ -16,6 +16,7 @@ const express = require('express');
 const router  = express.Router();
 const prisma  = require('../utils/prismaClient');
 const { requireAdmin } = require('../middleware/adminMiddleware');
+const { getHealthChecks } = require('../services/attentionService');
 
 // ── GET /admin/overview ───────────────────────────────────────
 router.get('/overview', requireAdmin, async (req, res) => {
@@ -241,23 +242,8 @@ router.get('/qr-analytics', requireAdmin, async (req, res) => {
 // it reveals no sensitive data and is needed by Railway/uptime monitors.
 // If you want it private, add requireAdmin here too.
 router.get('/health', async (req, res) => {
-  try {
-    await prisma.user.count();
-    return res.json({
-      api        : true,
-      db         : true,
-      anthropic  : !!process.env.ANTHROPIC_API_KEY,
-      stripe     : !!process.env.STRIPE_SECRET_KEY,
-      onesignal  : !!(process.env.ONESIGNAL_APP_ID || process.env.ONESIGNAL_API_KEY),
-      clerk      : !!process.env.CLERK_SECRET_KEY,
-      frontend   : true,
-    });
-  } catch (err) {
-    return res.json({
-      api: true, db: false, anthropic: false,
-      stripe: false, onesignal: false, clerk: false, frontend: true,
-    });
-  }
+  const checks = await getHealthChecks();
+  return res.json(checks);
 });
 
 module.exports = router;

@@ -153,7 +153,6 @@ Database Schema Discrepancy #2.** Endpoints as routed:
 | GET | `/dashboard`, `/analytics` | public (no middleware in this file — inconsistent with `analyticsRoutes.js`'s Clerk-gated equivalents) | |
 | GET | `/user/plan` | public | |
 | POST | `/user/phone` | public | |
-| POST | `/subscribe`, `/send-special`, `/generate-special` | public | |
 
 ## Stripe — `stripeRoutes.js`
 

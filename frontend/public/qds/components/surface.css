@@ -374,3 +374,29 @@
   gap: var(--qds-space-2);
   border-top: 1px solid var(--qds-color-border-subtle);
 }
+
+/* ---------- Region inset (§8) — companion to padding-none, for a root
+   that stays padding: 0 but still needs its Header/Body/Footer content
+   inset. Opt-in requires the .qds-surface--region-inset modifier class
+   on the root — these selectors do not touch unqualified
+   .qds-surface__header/__body/__footer, so every other Surface is
+   unaffected. Uses --qds-space-6 only. */
+
+.qds-surface--region-inset > .qds-surface__header {
+  padding:
+    var(--qds-space-6)
+    var(--qds-space-6)
+    0;
+}
+
+.qds-surface--region-inset > .qds-surface__body {
+  padding-left: var(--qds-space-6);
+  padding-right: var(--qds-space-6);
+}
+
+.qds-surface--region-inset > .qds-surface__footer {
+  padding:
+    0
+    var(--qds-space-6)
+    var(--qds-space-6);
+}
