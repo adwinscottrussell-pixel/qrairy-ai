@@ -38,14 +38,25 @@ plan"); `main` has since taken one follow-up commit of its own
 
 ## Current Phase
 
-**Implementation Mode** (per the accepted QRAIVY Architecture Closeout v1)
-— building the approved Mission Control → Business Command Center →
-Customer Workspace product chain. MC-1 (Mission Control foundation) is
-complete; MC-2 not yet scoped or approved. QDS (QRAIVY Design System)
-migration — replacing legacy hand-styled frontend components with
-canonical QDS primitives (Surface, Button, Input), one component family
-at a time, via founder-approved plan-then-implement docs under
-`frontend/public/qds/docs/` — remains paused behind this pivot.
+**Architecture Phase: complete.** Per the accepted QRAIVY Architecture
+Closeout v1, the constitutional architecture, product architecture, and
+engineering roadmap are all approved and frozen as the planning
+baseline.
+
+**Implementation Mode: active.** The project is now building the
+approved product chain — Mission Control → Business Command Center →
+Customer Workspace → remaining Portfolio products → Continuous
+Improvement.
+
+- Mission Control MC-1 (Executive Brief, Founder Attention, Platform
+  Health): **complete**, committed (`0a23778`), documented, and pushed.
+- Mission Control MC-2: **not yet scoped or approved.**
+
+QDS (QRAIVY Design System) migration — replacing legacy hand-styled
+frontend components with canonical QDS primitives (Surface, Button,
+Input), one component family at a time, via founder-approved
+plan-then-implement docs under `frontend/public/qds/docs/` — remains
+paused behind this pivot.
 
 ## Current Sprint
 
@@ -156,8 +167,12 @@ into a single `backend/src/utils/prismaClient.js`.
   `/ops/search`). Universal Search UI (SP2.3) shipped and pushed
   (`f0067ad`). SupportAction audit foundation (SP3.1) shipped and pushed
   (`2614990`) — `SupportAction` model, `POST /ops/support-actions`,
-  23-test suite. No active sprint currently. Health-check endpoint is
-  already clean of OneSignal references (no stale flag to fix).
+  23-test suite. Mission Control MC-1 shipped and pushed (`0a23778`) —
+  Executive Brief, Founder Attention (read-only), Platform Health, and
+  the shared `attentionService.js` source of truth, inside the existing
+  Overview page. No active sprint currently; MC-2 not yet scoped or
+  approved. Health-check endpoint is already clean of OneSignal
+  references (no stale flag to fix).
 
 ## Recent Major Changes
 
@@ -266,19 +281,25 @@ into a single `backend/src/utils/prismaClient.js`.
 
 ## Next Recommended Sprint
 
-**Not yet defined or approved.** SP3.1 is complete; per
-`docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` §12 (Recommended
-Build Order) and Founder Amendments 2–3, the two remaining Phase 1
-items each require their own separate founder-approved plan doc before
-a sprint can be scoped:
+**MC-2 — not yet scoped or approved. Do not begin.** MC-1 (Mission
+Control foundation) is complete; MC-2 is the natural next increment per
+the approved Implementation Roadmap, but requires its own founder
+scoping and approval before work starts. See `CURRENT_SPRINT.md` for
+MC-2's deferred items (Founder Attention lifecycle actions, the
+correlation/grouping engine, and the remaining Mission Control modules).
+
+Separately, per `docs/architecture/QRAIVY_SUPPORT_PLAYBOOK_v1.md` §12
+(Recommended Build Order) and Founder Amendments 2–3, two older Phase 1
+items remain deferred and still require their own separate
+founder-approved plan docs before implementation:
 - Operations navigation/routing foundation (real deep-linkable routing
   vs. a narrower nav-shell restructuring — undecided, per Amendment 2)
 - `GET /ops/logs` (needs a separate logging-architecture approval:
   storage, retention, access control, PII masking, secret redaction,
   per Amendment 3)
 
-Do not begin implementation on either until one is scoped in its own
-plan doc and founder-approved, consistent with this project's
+Do not begin implementation on any of the above until each is scoped in
+its own plan doc and founder-approved, consistent with this project's
 established plan-then-implement pattern.
 
 Deferred, not dropped, behind the Operations Center pivot:
