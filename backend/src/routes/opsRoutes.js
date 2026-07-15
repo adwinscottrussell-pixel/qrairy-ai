@@ -7,8 +7,10 @@ const router = express.Router();
 const { requireAdmin } = require('../middleware/adminMiddleware');
 const { handleSearch } = require('../controllers/opsSearchController');
 const { handleCreateSupportAction } = require('../controllers/opsSupportActionController');
+const { handleGetAttention } = require('../controllers/opsAttentionController');
 
 router.get('/search', requireAdmin, handleSearch);
 router.post('/support-actions', requireAdmin, handleCreateSupportAction);
+router.get('/attention', requireAdmin, handleGetAttention);
 
 module.exports = router;

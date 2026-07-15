@@ -453,6 +453,25 @@
           <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
         </div>
       </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Executive Brief</div>
+        </div>
+        <div id="executive-brief" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Founder Attention</div>
+          <span class="table-count" id="attention-count">—</span>
+        </div>
+        <div id="founder-attention" style="padding:16px 20px">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
       <div class="table-title" style="margin-bottom:12px">Platform Summary</div>
       <div class="stats-grid" id="overview-stats">
         <div class="loading">Loading...</div>
@@ -460,7 +479,7 @@
 
       <div class="table-wrap">
         <div class="table-header">
-          <div class="table-title">Platform Status</div>
+          <div class="table-title">Platform Health</div>
         </div>
         <div id="platform-status-rows">
           <div class="loading">Loading...</div>
@@ -909,6 +928,63 @@
       renderPlatformStatus(healthResult);
 
       renderOperationalInsights(overviewResult, healthResult);
+
+      const attentionResult = await safeFetchAdmin('/ops/attention');
+      renderExecutiveBrief(attentionResult);
+      renderFounderAttention(attentionResult);
+    }
+
+    // Executive Brief — one evidence-derived verdict sentence, sourced
+    // from the same health checks as Platform Health. No vanity metrics,
+    // no speculative interpretation (Mission Control MC-1 scope).
+    function renderExecutiveBrief(result) {
+      const el = document.getElementById('executive-brief');
+      if (!result.ok) {
+        el.innerHTML = `<div style="font-size:0.85rem;color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+      const brief = result.data.executiveBrief || {};
+      const colorByVerdict = {
+        healthy: 'var(--green)',
+        degraded: 'var(--yellow)',
+        critical: 'var(--red)',
+        unavailable: 'var(--text-mid)',
+      };
+      const color = colorByVerdict[brief.verdict] || 'var(--text-mid)';
+      el.innerHTML = `<div style="font-size:0.9rem;color:${color};font-weight:600">${brief.message || 'Status unavailable.'}</div>`;
+    }
+
+    // Founder Attention — read-only findings derived from deterministic
+    // health evidence. No persisted lifecycle state, no correlation
+    // engine (Mission Control MC-1 scope).
+    function renderFounderAttention(result) {
+      const el = document.getElementById('founder-attention');
+      const countEl = document.getElementById('attention-count');
+      if (!result.ok) {
+        el.innerHTML = `<div style="font-size:0.78rem;color:var(--red)">${adminErrorMessage(result)}</div>`;
+        countEl.textContent = '—';
+        return;
+      }
+      const findings = result.data.findings || [];
+      countEl.textContent = findings.length === 0 ? '0 findings' : `${findings.length} finding${findings.length === 1 ? '' : 's'}`;
+
+      if (findings.length === 0) {
+        el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-mid)">All platform checks were performed. Nothing currently requires your attention.</div>`;
+        return;
+      }
+
+      const severityColor = { critical: 'var(--red)', warning: 'var(--yellow)' };
+      el.innerHTML = findings.map(f => `
+        <div class="health-row" style="align-items:flex-start;flex-direction:column;gap:4px;padding:10px 0">
+          <div style="display:flex;align-items:center;gap:8px;width:100%">
+            <span class="status-dot ${f.severity === 'critical' ? 'status-err' : 'status-warn'}"></span>
+            <span class="health-name" style="font-weight:600">${f.subsystem}</span>
+            <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:${severityColor[f.severity] || 'var(--text-mid)'}">${f.severity || ''}</span>
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-mid);padding-left:18px">${f.explanation}</div>
+          <div style="font-size:0.62rem;color:var(--text-dim);padding-left:18px">${f.evidence} · scope: ${f.scope}</div>
+        </div>
+      `).join('');
     }
 
     // ── USERS ─────────────────────────────────────────────────
