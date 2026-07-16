@@ -109,6 +109,26 @@ scripts/               check-pass.js, check-subs.js, reset-test.js — ops/debug
 6. **Protect env secrets.** Never print, log, or commit `.env`, `.env.*`, or anything matching Clerk/Stripe/Cloudinary/Resend/Anthropic/Google key patterns.
 7. **Respect backend/frontend boundaries** as described above.
 
+## Release Workflow Policy (Permanent)
+
+Founder-approved, effective 2026-07-17:
+
+1. All feature work, UI changes, analytics changes, architecture changes,
+   and non-emergency bug fixes begin on a dedicated preview branch.
+2. No feature work may be committed directly to `main`.
+3. Preview deployment must be tested and founder-approved before merge
+   to `main`.
+4. `main` is production-only.
+5. Direct commits to `main` are allowed only for an explicitly
+   founder-authorized emergency hotfix.
+6. If a change requires backend and frontend updates, preview readiness
+   requires compatible preview deployments for both. A Vercel preview
+   using an older production backend is not considered full preview
+   validation.
+7. Claude must state the current branch before editing any file.
+8. Claude must stop if currently on `main` and the task is not an
+   explicitly authorized production hotfix.
+
 ## Open Questions (to resolve in a later phase, not now)
 
 - Which deploy target (Railway vs Vercel) is authoritative for backend vs frontend?

@@ -58,6 +58,26 @@ Input), one component family at a time, via founder-approved
 plan-then-implement docs under `frontend/public/qds/docs/` — remains
 paused behind this pivot.
 
+## Release Workflow Policy (Permanent)
+
+Founder-approved, effective 2026-07-17. Supersedes any implicit
+prior practice of committing feature work directly to `main`.
+
+1. All feature/UI/analytics/architecture work and non-emergency bug
+   fixes begin on a dedicated preview branch.
+2. No feature work may be committed directly to `main`.
+3. Preview deployment must be tested and founder-approved before merge
+   to `main`.
+4. `main` is production-only.
+5. Direct commits to `main` are allowed only for an explicitly
+   founder-authorized emergency hotfix.
+6. Backend+frontend changes require compatible preview deployments for
+   both before being considered preview-validated — a frontend preview
+   against the old production backend is not sufficient.
+7. State the current branch before editing any file.
+8. Stop if currently on `main` and the task is not an explicitly
+   authorized production hotfix.
+
 ## Current Sprint
 
 **Current focus: QRAIVY Operations Center (Support Playbook pivot,
