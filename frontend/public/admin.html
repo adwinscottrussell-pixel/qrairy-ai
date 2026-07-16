@@ -1470,7 +1470,7 @@
     // button anywhere — that entry point doesn't exist yet (Phase 3).
     function renderBusinessCard(lp) {
       const title = escapeHtml(lp.businessName || lp.slug);
-      const sub = `${escapeHtml(lp.slug)} · ${lp.scanCount ?? 0} scans`;
+      const sub = `${escapeHtml(lp.slug)} · ${lp.visitCount ?? 0} visits`;
       const status = escapeHtml(lp.status || '—');
       const actions =
         `<a class="action-btn" href="lp-preview.html?slug=${encodeURIComponent(lp.slug)}" target="_blank" rel="noopener">Open</a>` +

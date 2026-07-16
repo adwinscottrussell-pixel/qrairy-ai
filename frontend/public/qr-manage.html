@@ -57,7 +57,7 @@
             <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x26A1;</span> Activity Feed</span></div><div class="panel-body" style="padding:12px 16px"><div class="activity-list" id="activity-list"><div class="act-empty">No activity yet</div></div></div></div>
           </div>
           <div class="mgr-col">
-            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2197;</span> Performance</span><a class="panel-action" href="analytics.html">Full report &#x2192;</a></div><div class="panel-body"><div class="kpi-mini"><div class="kpi-m"><div class="kpi-m-val o" id="kpi-scans">0</div><div class="kpi-m-lbl">Scans</div></div><div class="kpi-m"><div class="kpi-m-val g" id="kpi-subs">0</div><div class="kpi-m-lbl">Subscribers</div></div><div class="kpi-m"><div class="kpi-m-val p" id="kpi-cvr">0%</div><div class="kpi-m-lbl">CVR</div></div></div><div style="margin-top:10px"><div class="ai-metric-row"><span class="ai-m-lbl">Wallet installs</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">AI conversations</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Voice plays</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Last scan</span><span class="ai-m-val" id="last-scan">&#x2014;</span></div></div></div></div>
+            <div class="panel"><div class="panel-hdr"><span class="panel-title"><span class="panel-icon">&#x2197;</span> Performance</span><a class="panel-action" href="analytics.html">Full report &#x2192;</a></div><div class="panel-body"><div class="kpi-mini"><div class="kpi-m"><div class="kpi-m-val o" id="kpi-scans">0</div><div class="kpi-m-lbl" id="kpi-scans-lbl">Scans</div></div><div class="kpi-m"><div class="kpi-m-val g" id="kpi-subs">0</div><div class="kpi-m-lbl">Subscribers</div></div><div class="kpi-m"><div class="kpi-m-val p" id="kpi-cvr">0%</div><div class="kpi-m-lbl">CVR</div></div></div><div style="margin-top:10px"><div class="ai-metric-row"><span class="ai-m-lbl">Wallet installs</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">AI conversations</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Voice plays</span><span class="ai-m-val">&#x2014;</span></div><div class="ai-metric-row"><span class="ai-m-lbl">Last scan</span><span class="ai-m-val" id="last-scan">&#x2014;</span></div></div></div></div>
           </div>
         </div>
       </div>
@@ -411,7 +411,11 @@ function updateQRPreview() {
   const img2 = document.getElementById('qr-design-img');
   if (img2) img2.src = qrImgURL(240);
   const sc = document.getElementById('design-scan-count');
-  if (sc && window.qrData) sc.textContent = (window.qrData.totalScans||0) + ' scans';
+  if (sc && window.qrData) {
+    const isVisits = window.qrData.source === 'lp';
+    const val = isVisits ? (window.qrData.totalVisits||0) : (window.qrData.totalScans||0);
+    sc.textContent = val + (isVisits ? ' visits' : ' scans');
+  }
 }
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -451,7 +455,7 @@ function renderHeader(qr) {
       </div>
     </div>
     <div class="mgr-header-stats">
-      <div class="mgr-stat"><div class="mgr-stat-val o">${qr.totalScans || 0}</div><div class="mgr-stat-lbl">Total Scans</div></div>
+      <div class="mgr-stat"><div class="mgr-stat-val o">${qr.source==='lp' ? (qr.totalVisits||0) : (qr.totalScans||0)}</div><div class="mgr-stat-lbl">${qr.source==='lp' ? 'Total Visits' : 'Total Scans'}</div></div>
       <div class="mgr-stat"><div class="mgr-stat-val g">${qr.totalSubscribers || 0}</div><div class="mgr-stat-lbl">Subscribers</div></div>
       <div class="mgr-stat"><div class="mgr-stat-val p">—</div><div class="mgr-stat-lbl">Wallet</div></div>
       <div class="mgr-stat"><div class="mgr-stat-val">—</div><div class="mgr-stat-lbl">AI Chats</div></div>
@@ -465,16 +469,18 @@ function renderHeader(qr) {
 
 // ── Render panels ────────────────────────────────────────────────────────────
 function renderPanels(qr) {
-  const scans = qr.totalScans || 0;
+  const isVisits = qr.source === 'lp';
+  const scans = isVisits ? (qr.totalVisits || 0) : (qr.totalScans || 0);
+  const unit  = isVisits ? 'visit' : 'scan';
   const subs  = qr.totalSubscribers || 0;
   const cvr   = scans > 0 ? Math.round((subs/scans)*100) : 0;
   const slug  = LP_SLUG || '';
   const lpUrl = slug ? `https://qraivy.com/lp/${slug}` : qr.originalUrl;
 
   function set(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
-  set('kpi-scans', scans); set('kpi-subs', subs); set('kpi-cvr', cvr+'%');
+  set('kpi-scans', scans); set('kpi-scans-lbl', isVisits ? 'Visits' : 'Scans'); set('kpi-subs', subs); set('kpi-cvr', cvr+'%');
   set('qr-main-url', slug ? `qraivy.com/lp/${slug}` : qr.originalUrl);
-  set('qr-scan-pill', `⬡ ${scans} scan${scans!==1?'s':''}`);
+  set('qr-scan-pill', `⬡ ${scans} ${unit}${scans!==1?'s':''}`);
   set('sub-total', subs); set('sub-email', subs); set('sub-wallet', '—');
   set('ai-cvr-val', cvr+'%');
 
@@ -482,7 +488,7 @@ function renderPanels(qr) {
   const actEl = document.getElementById('activity-list');
   if (actEl) {
     const events = [];
-    if (scans > 0) events.push({ c:'#ff5a1f', t:`Page scanned <strong>${scans}</strong> time${scans!==1?'s':''}` });
+    if (scans > 0) events.push({ c:'#ff5a1f', t:`Page ${isVisits?'visited':'scanned'} <strong>${scans}</strong> time${scans!==1?'s':''}` });
     if (subs > 0)  events.push({ c:'#22c55e', t:`<strong>${subs}</strong> subscriber${subs!==1?'s':''} captured` });
     if (qr.businessName) events.push({ c:'#a78bfa', t:`AI landing page <strong>live</strong> at qraivy.com/lp/${slug}` });
     events.push({ c:'#7a8899', t:`Smart QR created for <strong>${qr.businessName||'Basic QR'}</strong>` });

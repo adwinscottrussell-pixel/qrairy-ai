@@ -164,7 +164,9 @@
       (data.dashboard || []).forEach(qr => {
         const opt = document.createElement('option');
         opt.value = qr.id;
-        opt.textContent = (qr.businessName || qr.originalUrl) + ' (' + qr.totalScans + ' scans)';
+        var _isVisits = qr.source === 'lp';
+        var _metric = _isVisits ? (qr.totalVisits||0) : (qr.totalScans||0);
+        opt.textContent = (qr.businessName || qr.originalUrl) + ' (' + _metric + (_isVisits ? ' visits)' : ' scans)');
         sel.appendChild(opt);
       });
     }

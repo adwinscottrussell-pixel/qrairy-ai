@@ -81,7 +81,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
         <img id="qrPreviewImg" src="" alt="QR Code" />
       </div>
       <div class="qr-url" id="qrUrlDisplay">qraivy.com/lp/your-slug</div>
-      <div class="qr-scan-badge"><span class="qr-scan-dot"></span><span id="scanCount">0 scans</span></div>
+      <div class="qr-scan-badge"><span class="qr-scan-dot"></span><span id="scanCount">0 visits</span></div>
     </div>
 
     <!-- Customise card -->
@@ -200,7 +200,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
     fetch('https://api.qraivy.com/api/lp/' + state.slug)
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.scanCount !== undefined && scanCount) scanCount.textContent = d.scanCount + ' scan' + (d.scanCount !== 1 ? 's' : '');
+        if (d.scanCount !== undefined && scanCount) scanCount.textContent = d.scanCount + ' visit' + (d.scanCount !== 1 ? 's' : '');
         if (d.brandColor) {
           var c = d.brandColor.replace('#','');
           state.fg = c;

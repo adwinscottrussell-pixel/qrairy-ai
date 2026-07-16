@@ -99,11 +99,12 @@
 
       <!-- KPI strip -->
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl" data-i18n="kpi_scans">Total Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl" data-i18n="kpi_scans">Total QR Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-visits">—</div><div class="kpi-lbl" data-i18n="kpi_visits">Total Page Visits</div></div>
         <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
         <div class="kpi-card" style="display:none"><div class="kpi-val purple" id="an-wallet">—</div><div class="kpi-lbl">Wallet Members</div></div>
         <div class="kpi-card" style="display:none"><div class="kpi-val" id="an-ai">—</div><div class="kpi-lbl">AI Conversations</div></div>
-        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl" data-i18n="kpi_cvr">Conversion Rate</div></div>
+        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl" data-i18n="kpi_cvr">QR Conversion Rate</div></div>
         <div class="kpi-card"><div class="kpi-val" id="an-pages">—</div><div class="kpi-lbl" data-i18n="kpi_pages">Active Pages</div></div>
       </div>
 
@@ -112,8 +113,8 @@
         <div class="chart-card wide">
           <div class="cc-header">
             <div>
-              <div class="cc-title" data-i18n="chart_scans">Scan Activity</div>
-              <div class="cc-sub" data-i18n="chart_scans_sub">Daily scans across all Smart QR Pages</div>
+              <div class="cc-title" data-i18n="chart_scans">QR Scan Activity</div>
+              <div class="cc-sub" data-i18n="chart_scans_sub">Daily QR scans (Landing Page visits tracked separately, above)</div>
             </div>
             <span class="cc-badge" id="scans-chart-badge">Loading…</span>
           </div>
@@ -132,7 +133,7 @@
           <div class="cc-header">
             <div>
               <div class="cc-title" data-i18n="chart_uc">Engagement by Use Case</div>
-              <div class="cc-sub" data-i18n="chart_uc_sub">Scan distribution across categories</div>
+              <div class="cc-sub" data-i18n="chart_uc_sub">Scan/visit distribution across categories</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="usecaseChart"></canvas></div>
@@ -151,7 +152,7 @@
             <thead>
               <tr>
                 <th data-col="name"><span data-i18n="col_page">Page</span> <span class="sort-icon">↕</span></th>
-                <th data-col="scans" class="sorted"><span data-i18n="col_scans">Scans</span> <span class="sort-icon">↓</span></th>
+                <th data-col="scans" class="sorted"><span data-i18n="col_scans">Scans / Visits</span> <span class="sort-icon">↓</span></th>
                 <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="sort-icon">↕</span></th>
                 <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="sort-icon">↕</span></th>
                 <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="sort-icon">↕</span></th>
@@ -173,7 +174,7 @@
       <!-- Top prompts / engagement breakdown -->
       <div class="metrics-grid" style="margin-bottom:0">
         <div class="metric-card">
-          <div class="mc-title"><span class="mc-icon">📊</span> <span data-i18n="mc_breakdown">Scan Breakdown by Page</span></div>
+          <div class="mc-title"><span class="mc-icon">📊</span> <span data-i18n="mc_breakdown">Engagement Breakdown by Page</span></div>
           <div id="scan-breakdown" class="mc-rows"></div>
         </div>
         <div class="metric-card">
@@ -256,9 +257,19 @@ function distributeDays(total, days) {
   return vals;
 }
 
+// ── Scans vs Visits: never combined ────────────────────────────────────────
+// QR-backed items (source:'qr') carry real QR-redirect scans in totalScans.
+// LandingPage-backed items (source:'lp') carry page-load visits in
+// totalVisits. metricValue()/metricUnit() read the field matching an item's
+// own source so per-item math (CVR, sorting, bars) never mixes the two;
+// aggregate totals below are computed with separate .filter() sums instead
+// of one combined reduce().
+function metricValue(q) { return q.source === 'lp' ? (q.totalVisits || 0) : (q.totalScans || 0); }
+function metricUnit(q)  { return q.source === 'lp' ? 'visits' : 'scans'; }
+
 // ── Render charts ────────────────────────────────────────────────────────────
 function renderCharts(dashboard) {
-  const totalScans = dashboard.reduce((s, q) => s + q.totalScans, 0);
+  const totalScans = dashboard.filter(q => q.source === 'qr').reduce((s, q) => s + (q.totalScans || 0), 0);
   const totalSubs  = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
   const labels     = buildDateLabels(activeRange);
   const scanData   = distributeDays(totalScans, activeRange);
@@ -274,7 +285,7 @@ function renderCharts(dashboard) {
       options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, beginAtZero: true } } }
     });
     const badge = document.getElementById('scans-chart-badge');
-    if (badge) badge.textContent = totalScans + ' total scans';
+    if (badge) badge.textContent = totalScans + ' total QR scans';
   }
 
   // Subscribers growth
@@ -294,7 +305,7 @@ function renderCharts(dashboard) {
     const usecaseMap = {};
     dashboard.forEach(q => {
       const uc = q.useCase || (q.businessName ? 'ai-page' : 'basic');
-      usecaseMap[uc] = (usecaseMap[uc] || 0) + q.totalScans;
+      usecaseMap[uc] = (usecaseMap[uc] || 0) + metricValue(q);
     });
     const ucLabels = Object.keys(usecaseMap);
     const ucData   = ucLabels.map(k => usecaseMap[k]);
@@ -321,7 +332,7 @@ function renderTable(dashboard) {
   rows.sort((a, b) => {
     let av, bv;
     if (sortCol === 'name') { av = (a.businessName||'').toLowerCase(); bv = (b.businessName||'').toLowerCase(); }
-    else if (sortCol === 'scans') { av = a.totalScans; bv = b.totalScans; }
+    else if (sortCol === 'scans') { av = metricValue(a); bv = metricValue(b); }
     else if (sortCol === 'subs') { av = a.totalSubscribers; bv = b.totalSubscribers; }
     else { av = 0; bv = 0; }
     if (av < bv) return sortAsc ? -1 : 1;
@@ -339,11 +350,13 @@ function renderTable(dashboard) {
   if (wrapEl) wrapEl.style.display = '';
   if (emptyEl) emptyEl.style.display = 'none';
 
-  const maxScans = Math.max(...rows.map(q => q.totalScans), 1);
+  const maxScans = Math.max(...rows.map(q => metricValue(q)), 1);
   tbody.innerHTML = rows.map(qr => {
     const name    = qr.businessName || 'Basic QR Code';
     const isAI    = !!qr.businessName;
-    const cvr     = qr.totalScans > 0 ? Math.round((qr.totalSubscribers / qr.totalScans) * 100) : 0;
+    const val     = metricValue(qr);
+    const unit    = metricUnit(qr);
+    const cvr     = val > 0 ? Math.round((qr.totalSubscribers / val) * 100) : 0;
     const qrImg   = `https://api.qrserver.com/v1/create-qr-code/?size=36x36&data=${encodeURIComponent(qr.originalUrl)}&color=111111&bgcolor=ffffff&margin=1`;
     const statusBadge = isAI
       ? '<span class="pt-badge-live">● Live</span>'
@@ -353,7 +366,7 @@ function renderTable(dashboard) {
         <div class="pt-qr-thumb"><img src="${qrImg}" loading="lazy" /></div>
         <div><div class="pt-name">${name}</div><div class="pt-url">${qr.originalUrl}</div></div>
       </div></td>
-      <td class="pt-val o">${qr.totalScans}</td>
+      <td class="pt-val o">${val} <span style="font-size:.62rem;color:#7a8899;text-transform:uppercase">${unit}</span></td>
       <td class="pt-val">${qr.totalSubscribers}</td>
       <td class="pt-val">—</td>
       <td class="pt-val">—</td>
@@ -365,31 +378,39 @@ function renderTable(dashboard) {
 
 // ── Render AI & wallet metrics ────────────────────────────────────────────────
 function renderMetrics(dashboard) {
-  const totalScans = dashboard.reduce((s, q) => s + q.totalScans, 0);
+  const qrItems = dashboard.filter(q => q.source === 'qr');
+  const lpItems = dashboard.filter(q => q.source === 'lp');
+  const totalScans  = qrItems.reduce((s, q) => s + (q.totalScans || 0), 0);
+  const totalVisits = lpItems.reduce((s, q) => s + (q.totalVisits || 0), 0);
   const totalSubs  = dashboard.reduce((s, q) => s + q.totalSubscribers, 0);
-  const cvr = totalScans > 0 ? Math.round((totalSubs/totalScans)*100) : 0;
+  // QR CVR is scoped to QR-sourced subscribers over QR scans only — kept
+  // as one clearly-defined denominator instead of blending scans+visits.
+  const qrSubs = qrItems.reduce((s, q) => s + q.totalSubscribers, 0);
+  const cvr = totalScans > 0 ? Math.round((qrSubs/totalScans)*100) : 0;
 
   function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
-  set('an-scans', totalScans); set('an-subs', totalSubs);
+  set('an-scans', totalScans); set('an-visits', totalVisits); set('an-subs', totalSubs);
   set('an-wallet', '—'); set('an-ai', '—'); set('an-cvr', cvr + '%');
   set('an-pages', dashboard.filter(q => !!q.businessName).length);
   set('ai-cvr', cvr + '%'); set('ai-convos', '—');
   set('wlt-installs', '—'); set('wlt-email', totalSubs);
 
-  // Scan breakdown bars
+  // Engagement breakdown bars (each row uses its own source's metric —
+  // scans for QR items, visits for LP items — never combined into one row)
   const bdEl = document.getElementById('scan-breakdown');
   if (bdEl) {
-    const sorted = [...dashboard].sort((a,b) => b.totalScans - a.totalScans);
-    const maxS = Math.max(sorted[0]?.totalScans || 1, 1);
+    const sorted = [...dashboard].sort((a,b) => metricValue(b) - metricValue(a));
+    const maxS = Math.max(metricValue(sorted[0]) || 1, 1);
     if (sorted.length === 0) { bdEl.innerHTML = '<div class="mc-empty">No data yet</div>'; }
     else {
       bdEl.innerHTML = sorted.slice(0,6).map(q => {
-        const pct = Math.round((q.totalScans/maxS)*100);
+        const val = metricValue(q);
+        const pct = Math.round((val/maxS)*100);
         const name = q.businessName || 'Basic QR';
         return `<div class="mc-bar-row">
           <span class="mc-bar-label" style="font-family:'Space Grotesk',sans-serif;font-size:.75rem;color:#e0e6f0;text-transform:capitalize;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">${name}</span>
           <div class="mc-bar-track"><div class="mc-bar-fill" style="width:${pct}%;background:#ff5a1f"></div></div>
-          <span class="mc-bar-count" style="font-family:'DM Mono',monospace;font-size:.65rem;color:#8b93a8">${q.totalScans}</span>
+          <span class="mc-bar-count" style="font-family:'DM Mono',monospace;font-size:.65rem;color:#8b93a8">${val}</span>
         </div>`;
       }).join('');
     }
@@ -400,7 +421,8 @@ function renderMetrics(dashboard) {
   if (raEl) {
     const events = [];
     dashboard.forEach(q => {
-      if (q.totalScans > 0) events.push({ c:'#ff5a1f', t:`<strong>${q.businessName||'QR'}</strong> — ${q.totalScans} scans` });
+      const val = metricValue(q);
+      if (val > 0) events.push({ c:'#ff5a1f', t:`<strong>${q.businessName||'QR'}</strong> — ${val} ${metricUnit(q)}` });
       if (q.totalSubscribers > 0) events.push({ c:'#22c55e', t:`<strong>${q.totalSubscribers}</strong> subscriber${q.totalSubscribers!==1?'s':''} on ${q.businessName||'QR'}` });
     });
     if (events.length === 0) { raEl.innerHTML = '<div class="mc-empty">No activity yet</div>'; }
@@ -551,14 +573,14 @@ async function initAnalytics() {
       an_sub:'Deep engagement reporting across all Smart QR Pages',
       filter_all_qr:'All QR Pages', filter_all_uc:'All use cases',
       range_7:'Last 7 days', range_30:'Last 30 days', range_90:'Last 90 days', range_24:'Last 24h',
-      kpi_scans:'Total Scans', kpi_subs:'Subscribers', kpi_cvr:'Conversion Rate', kpi_pages:'Active Pages',
-      chart_scans:'Scan Activity', chart_scans_sub:'Daily scans across all Smart QR Pages',
+      kpi_scans:'Total QR Scans', kpi_visits:'Total Page Visits', kpi_subs:'Subscribers', kpi_cvr:'QR Conversion Rate', kpi_pages:'Active Pages',
+      chart_scans:'QR Scan Activity', chart_scans_sub:'Daily QR scans (Landing Page visits tracked separately, above)',
       chart_subs:'Subscriber Growth', chart_subs_sub:'Cumulative subscribers over time',
-      chart_uc:'Engagement by Use Case', chart_uc_sub:'Scan distribution across categories',
+      chart_uc:'Engagement by Use Case', chart_uc_sub:'Scan/visit distribution across categories',
       perf_title:'Smart QR Performance', perf_search:'Search pages…',
-      col_page:'Page', col_scans:'Scans', col_subs:'Subscribers', col_ai:'AI Chats',
+      col_page:'Page', col_scans:'Scans / Visits', col_subs:'Subscribers', col_ai:'AI Chats',
       col_wallet:'Wallet', col_cvr:'CVR', col_status:'Status',
-      mc_breakdown:'Scan Breakdown by Page', mc_activity:'Recent Activity',
+      mc_breakdown:'Engagement Breakdown by Page', mc_activity:'Recent Activity',
       nav_main:'Main', nav_dashboard:'Dashboard', nav_analytics:'Analytics',
       nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR Pages', nav_createnew:'Create New QR',
       nav_engage:'Engage', nav_campaigns:'AI Campaigns', nav_subscribers:'Subscribers',
@@ -573,14 +595,14 @@ async function initAnalytics() {
       an_sub:'Detailliertes Engagement-Reporting über alle Smart QR-Seiten',
       filter_all_qr:'Alle QR-Seiten', filter_all_uc:'Alle Kategorien',
       range_7:'Letzte 7 Tage', range_30:'Letzte 30 Tage', range_90:'Letzte 90 Tage', range_24:'Letzte 24 Std.',
-      kpi_scans:'Scans gesamt', kpi_subs:'Abonnenten', kpi_cvr:'Konversionsrate', kpi_pages:'Aktive Seiten',
-      chart_scans:'Scan-Aktivität', chart_scans_sub:'Tägliche Scans über alle Smart QR-Seiten',
+      kpi_scans:'QR-Scans gesamt', kpi_visits:'Seitenbesuche gesamt', kpi_subs:'Abonnenten', kpi_cvr:'QR-Konversionsrate', kpi_pages:'Aktive Seiten',
+      chart_scans:'QR-Scan-Aktivität', chart_scans_sub:'Tägliche QR-Scans (Landingpage-Besuche werden oben separat erfasst)',
       chart_subs:'Abonnentenwachstum', chart_subs_sub:'Kumulative Abonnenten im Zeitverlauf',
-      chart_uc:'Engagement nach Kategorie', chart_uc_sub:'Scan-Verteilung nach Kategorien',
+      chart_uc:'Engagement nach Kategorie', chart_uc_sub:'Scan-/Besuchsverteilung nach Kategorien',
       perf_title:'Smart QR Performance', perf_search:'Seiten suchen…',
-      col_page:'Seite', col_scans:'Scans', col_subs:'Abonnenten', col_ai:'KI-Chats',
+      col_page:'Seite', col_scans:'Scans / Besuche', col_subs:'Abonnenten', col_ai:'KI-Chats',
       col_wallet:'Wallet', col_cvr:'KVR', col_status:'Status',
-      mc_breakdown:'Scans nach Seite', mc_activity:'Letzte Aktivitäten',
+      mc_breakdown:'Engagement nach Seite', mc_activity:'Letzte Aktivitäten',
       nav_main:'Hauptmenü', nav_dashboard:'Dashboard', nav_analytics:'Analytics',
       nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR-Seiten', nav_createnew:'Neuen QR erstellen',
       nav_engage:'Engagement', nav_campaigns:'KI-Kampagnen', nav_subscribers:'Abonnenten',

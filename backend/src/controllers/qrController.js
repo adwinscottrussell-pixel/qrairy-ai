@@ -386,7 +386,9 @@ async function handleDashboard(req, res) {
       businessName: lp.businessName || null,
       redirectUrl: `https://api.qraivy.com/lp/${lp.slug}`,
       slug: lp.slug,
-      totalScans: lp.scanCount || 0,
+      // Landing Page visits (GET /lp/:slug page loads), not QR redirect
+      // scans — never exposed as totalScans. See docs on Scans vs Visits.
+      totalVisits: lp.scanCount || 0,
       totalSubscribers: lpSubMap[lp.slug] || 0,
       hasSiteContent: true,
       isDynamic: true,

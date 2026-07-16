@@ -177,7 +177,8 @@ async function resolveLandingPages(cls, limit) {
       slug: lp.slug,
       businessName: lp.businessName,
       status: lp.status,
-      scanCount: lp.scanCount,
+      // Landing Page visits (GET /lp/:slug page loads) — not QR scans.
+      visitCount: lp.scanCount,
       updatedAt: lp.updatedAt,
     })),
     total,

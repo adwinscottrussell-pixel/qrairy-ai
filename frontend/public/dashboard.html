@@ -266,7 +266,8 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
       </div>
       <div class="kpi-row">
         <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="kpi-pages">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_pages">Smart QR Pages</div></div>
-        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val qds-surface__kpi-value" id="kpi-scans">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_scans">Total Scans</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val qds-surface__kpi-value" id="kpi-scans">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_scans">Total QR Scans</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val qds-surface__kpi-value" id="kpi-visits">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_visits">Total Page Visits</div></div>
         <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val green qds-surface__kpi-value" id="kpi-subs">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_subs">Subscribers</div></div>
         <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val purple qds-surface__kpi-value" id="kpi-wallet">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_wallet">Wallet Members</div></div>
       </div>
@@ -340,9 +341,14 @@ function normalizeSmartQRCardData(qr,options){
   var businessName=qr.businessName||(claimed?'Your Smart QR':'');
   var publicUrl=qr.publicUrl!=null?qr.publicUrl:(slug?'qraivy.com/lp/'+slug:(qr.originalUrl||''));
   var targetUrl=qr.targetUrl||qr.hostedUrl||qr.originalUrl||'';
-  var scans=Number(qr.scans!=null?qr.scans:qr.totalScans)||0;
+  // LandingPage-backed cards (source:'lp') carry totalVisits (page loads);
+  // QR-backed cards (source:'qr') carry totalScans (real QR redirect
+  // scans). The two are never combined — see Scans vs Visits correction.
+  var isVisits=qr.source==='lp';
+  var metricValue=Number(qr.scans!=null?qr.scans:(isVisits?qr.totalVisits:qr.totalScans))||0;
+  var metricLabel=isVisits?'Visits':'Scans';
   var subscribers=Number(qr.subscribers!=null?qr.subscribers:qr.totalSubscribers)||0;
-  var conversionRate=qr.conversionRate!=null?Number(qr.conversionRate)||0:(scans>0?Math.round((subscribers/scans)*100):0);
+  var conversionRate=qr.conversionRate!=null?Number(qr.conversionRate)||0:(metricValue>0?Math.round((subscribers/metricValue)*100):0);
   return{
     id:qr.id!=null?String(qr.id):'',
     slug:slug,
@@ -350,7 +356,8 @@ function normalizeSmartQRCardData(qr,options){
     publicUrl:publicUrl,
     targetUrl:targetUrl,
     qrImageUrl:qr.qrImageUrl||qr.qrSrc||'',
-    scans:scans,
+    scans:metricValue,
+    metricLabel:metricLabel,
     subscribers:subscribers,
     conversionRate:conversionRate,
     claimed:claimed
@@ -397,7 +404,7 @@ function renderSmartQRCard(qr,options){
     bodyHtml=
       '<div class="qds-surface__body">'+
         '<div class="sqr-stats">'+
-          '<div><div class="sqr-stat-v">'+d.scans+'</div><div class="sqr-stat-l">Scans</div></div>'+
+          '<div><div class="sqr-stat-v">'+d.scans+'</div><div class="sqr-stat-l">'+d.metricLabel+'</div></div>'+
           '<div><div class="sqr-stat-v">'+d.subscribers+'</div><div class="sqr-stat-l">Subs</div></div>'+
           '<div><div class="sqr-stat-v">'+d.conversionRate+'%</div><div class="sqr-stat-l">CVR</div></div>'+
         '</div>'+
@@ -435,7 +442,10 @@ function renderCards(dashboard){
   var aiPages=dashboard.filter(function(q){return!!q.businessName;});
   function setKPI(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
   setKPI('kpi-pages',aiPages.length);
-  setKPI('kpi-scans',dashboard.reduce(function(s,q){return s+q.totalScans;},0));
+  // Total QR Scans and Total Page Visits are separate metrics — never
+  // summed together. See Scans vs Visits correction.
+  setKPI('kpi-scans',dashboard.filter(function(q){return q.source==='qr';}).reduce(function(s,q){return s+(q.totalScans||0);},0));
+  setKPI('kpi-visits',dashboard.filter(function(q){return q.source==='lp';}).reduce(function(s,q){return s+(q.totalVisits||0);},0));
   setKPI('kpi-subs',dashboard.reduce(function(s,q){return s+q.totalSubscribers;},0));
   setKPI('kpi-wallet','—');
   var badge=document.getElementById('sqr-count-badge');
@@ -1812,7 +1822,8 @@ window.loadCustList = function(btn) {
       dash_sub: 'Your AI-powered business engagement system',
       btn_create: '＋ Create New Smart QR',
       kpi_pages: 'Smart QR Pages',
-      kpi_scans: 'Total Scans',
+      kpi_scans: 'Total QR Scans',
+      kpi_visits: 'Total Page Visits',
       kpi_subs: 'Subscribers',
       kpi_wallet: 'Wallet Members',
       sec_sqrpages: 'Smart QR Pages',
@@ -1892,7 +1903,8 @@ window.loadCustList = function(btn) {
       dash_sub: 'Ihr KI-gestütztes Business-Engagement-System',
       btn_create: '＋ Neuen Smart QR erstellen',
       kpi_pages: 'Smart QR-Seiten',
-      kpi_scans: 'Scans gesamt',
+      kpi_scans: 'QR-Scans gesamt',
+      kpi_visits: 'Seitenbesuche gesamt',
       kpi_subs: 'Abonnenten',
       kpi_wallet: 'Wallet-Mitglieder',
       sec_sqrpages: 'Smart QR-Seiten',
