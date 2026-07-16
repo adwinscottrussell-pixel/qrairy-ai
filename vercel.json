@@ -3,6 +3,8 @@
   "rewrites": [
     { "source": "/lp/:path*", "destination": "https://api.qraivy.com/lp/:path*" },
     { "source": "/stamp/:path*", "destination": "https://api.qraivy.com/stamp/:path*" },
-    { "source": "/wallet/:path*", "destination": "https://api.qraivy.com/wallet/:path*" }
+    { "source": "/wallet/:path*", "destination": "https://api.qraivy.com/wallet/:path*" },
+    { "source": "/manifest/:path*", "destination": "https://api.qraivy.com/manifest/:path*" },
+    { "source": "/sw.js", "destination": "https://api.qraivy.com/sw.js" }
   ]
 }
