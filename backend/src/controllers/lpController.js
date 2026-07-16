@@ -1433,7 +1433,36 @@ async function handleSendPush(req, res) {
     }
     console.log('[Push] Sent to', devices.length, 'Apple devices +', webPushSent, 'web push for', slug, results);
     console.log('[Email] Sent to', emailSubs?.length || 0, 'subscribers', emailResults);
-    return res.json({ ok: true, sent: results.success, failed: results.failed, total: devices.length, emailSent: emailResults.success, emailFailed: emailResults.failed });
+
+    // Per-channel breakdown — the accurate report this endpoint was missing.
+    const walletReport  = { attempted: devices.length, sent: results.success, failed: results.failed };
+    const emailReport   = { attempted: emailSubs.length, sent: emailResults.success, failed: emailResults.failed };
+    const webPushFailed = webSubs.length - webPushSent;
+    const webPushReport = { attempted: webSubs.length, sent: webPushSent, failed: webPushFailed };
+
+    return res.json({
+      ok: true,
+      // Legacy scalar fields, preserved unchanged for existing clients.
+      // `sent`/`failed`/`total` are wallet-channel only, exactly as before
+      // this change — `total` remains a number (devices.length), never an
+      // object. `emailSent`/`emailFailed` already existed and are unchanged.
+      sent: results.success,
+      failed: results.failed,
+      total: devices.length,
+      emailSent: emailResults.success,
+      emailFailed: emailResults.failed,
+      // New, accurate per-channel breakdown.
+      wallet: walletReport,
+      email: emailReport,
+      webPush: webPushReport,
+      // Combined totals across all channels — a new field, distinct from
+      // the legacy wallet-only `total` above.
+      deliveryTotal: {
+        attempted: walletReport.attempted + emailReport.attempted + webPushReport.attempted,
+        sent: walletReport.sent + emailReport.sent + webPushReport.sent,
+        failed: walletReport.failed + emailReport.failed + webPushReport.failed,
+      },
+    });
   } catch(e) {
     console.error('[Push] Error:', e.message);
     return res.status(500).json({ error: e.message });
@@ -1480,7 +1509,19 @@ async function handleServeLP(req, res) {
       if (page && page.status !== 'draft') pageCache.set(_cacheKey, page);
     }
     if (!page || page.status === 'draft') return res.status(404).send(render404(slug));
-    // Scan counting moved to dedicated /lp/scan/:slug endpoint
+    // Scan tracking — one increment per real (non-preview) request. Fire-and-forget
+    // and never allowed to block or break the page response, matching the QR-redirect
+    // system's existing scan-tracking philosophy in scanTracker.js. Preview/cache-bust
+    // requests (?preview= or ?t=, already used above for Cache-Control) are excluded
+    // so editor previews and forced-refresh admin views don't inflate the count.
+    if (!req.query.preview && !req.query.t) {
+      setImmediate(() => {
+        prisma.landingPage.update({
+          where: { slug },
+          data: { scanCount: { increment: 1 } },
+        }).catch(err => console.error('[LP] scan count increment error:', err.message));
+      });
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('X-Frame-Options', 'ALLOWALL');
     res.setHeader('Content-Security-Policy', "frame-ancestors *");
