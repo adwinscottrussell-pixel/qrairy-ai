@@ -1392,8 +1392,32 @@ async function initDashboard(){
         body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
       }).then(function(x){ return x.json(); })
         .then(function(d) {
-          var n = d.webPushSent || d.sent || 0;
-          msg.innerHTML = '<div class="camp-msg ok">✓ Sent to ' + n + ' subscriber' + (n !== 1 ? 's' : '') + '</div>';
+          if (!d || d.ok === false) {
+            msg.innerHTML = '<div class="camp-msg err">Failed to send' + (d && d.error ? ': ' + d.error : '') + '</div>';
+            return;
+          }
+          // Read only fields the backend actually returns (handleSendPush,
+          // lpController.js) — webPush/wallet are {attempted,sent,failed};
+          // there is no webPush.total. Missing/partial shapes fall back to 0
+          // rather than guessing, so an old response can't be misread as success.
+          var wp = d.webPush || {};
+          var wpSent = typeof wp.sent === 'number' ? wp.sent : 0;
+          var wpFailed = typeof wp.failed === 'number' ? wp.failed : 0;
+          var wpAttempted = typeof wp.attempted === 'number' ? wp.attempted : (wpSent + wpFailed);
+          var walletSent = (d.wallet && typeof d.wallet.sent === 'number') ? d.wallet.sent
+            : (typeof d.sent === 'number' ? d.sent : 0);
+          var emailSent = typeof d.emailSent === 'number' ? d.emailSent : 0;
+
+          var lines = [];
+          lines.push(wpAttempted > 0
+            ? ('Web push: ' + wpSent + ' sent' + (wpFailed > 0 ? ', ' + wpFailed + ' failed' : ''))
+            : 'Web push: no subscribers yet');
+          if (walletSent > 0) lines.push('Wallet: ' + walletSent + ' sent');
+          if (emailSent > 0) lines.push('Email: ' + emailSent + ' sent');
+
+          var hadFailure = wpAttempted > 0 && wpSent === 0 && wpFailed > 0;
+          msg.innerHTML = '<div class="camp-msg ' + (hadFailure ? 'err' : 'ok') + '">'
+            + (hadFailure ? '✗ ' : '✓ ') + lines.join(' · ') + '</div>';
           setTimeout(function() { campLoadHistory(_slug); }, 800);
           setTimeout(function() {
             document.getElementById('campPreviewPanel').style.display = 'none';
@@ -1416,12 +1440,12 @@ async function initDashboard(){
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
-          var rows = d.history || d || [];
+          var rows = d.campaigns || [];
           if (!rows.length) { panel.style.display = 'none'; return; }
           panel.style.display = 'block';
           list.innerHTML = rows.slice(0,10).map(function(r) {
             var dt = r.sentAt ? new Date(r.sentAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
-            var cnt = r.webPushSent || r.sent || '';
+            var cnt = r.sent || '';
             return '<div class="camp-hist-row"><div class="camp-hist-dot"></div><div>'
               + '<div class="camp-hist-title">' + (r.title||'—') + '</div>'
               + '<div class="camp-hist-body">' + (r.body||r.message||'') + '</div>'
