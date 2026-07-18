@@ -1374,18 +1374,28 @@ async function handleWebPushSubscribe(req, res) {
   try {
     const { slug } = req.params;
     const { endpoint, keys } = req.body || {};
-    if (!endpoint || !keys) return res.status(400).json({ error: 'missing subscription data' });
+    if (!endpoint || !keys) return res.status(400).json({ ok: false, error: 'missing subscription data' });
     await prisma.webPushSubscription.upsert({
       where: { endpoint },
       update: { slug, p256dh: keys.p256dh, auth: keys.auth },
       create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth }
     });
-    return res.json({ ok: true });
-  } catch(e) { return res.status(500).json({ error: e.message }); }
+    return res.json({ ok: true, stored: true });
+  } catch(e) {
+    console.error('[Push] webPushSubscription upsert failed:', e);
+    return res.status(500).json({ ok: false, error: 'Failed to save subscription' });
+  }
 }
 
 async function handleWebPushVapidKey(req, res) {
-  return res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+  const key = process.env.VAPID_PUBLIC_KEY;
+  // A VAPID public key is a base64url-encoded uncompressed P-256 point (65 bytes -> ~87 chars).
+  const isValidVapidKey = typeof key === 'string' && /^[A-Za-z0-9_-]{80,90}$/.test(key.trim());
+  if (!isValidVapidKey) {
+    console.error('[Push] VAPID_PUBLIC_KEY is missing or malformed');
+    return res.status(500).json({ ok: false, error: 'Web Push is not configured' });
+  }
+  return res.json({ ok: true, publicKey: key.trim() });
 }
 
 async function handleSendPush(req, res) {
@@ -2733,32 +2743,211 @@ ${sa.active !== false ? `
   window.lpEnableNotifications = function() {
     var btn = document.getElementById('lp-notif-btn');
     if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
+    if (window.__lpPushBusy) return;
+    window.__lpPushBusy = true;
+    var origText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Setting things up\u2026'; }
+    function fail(context, err) {
+      console.error('[Push] ' + context, err);
+      localStorage.removeItem('wp_sub_' + SLUG);
+      if (btn) { btn.disabled = false; btn.textContent = 'Notifications could not be enabled. Please try again.'; }
+    }
     Notification.requestPermission().then(function(p) {
-      if (p === 'granted') {
-        navigator.serviceWorker.register('/sw.js').then(function(reg) {
-          fetch('/lp/webpush/vapid-key/' + SLUG).then(function(x){ return x.json(); }).then(function(d) {
-            var arr = new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){ return c.charCodeAt(0); }));
-            return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
-          }).then(function(s) {
-            var j = s.toJSON();
-            return fetch('/lp/webpush/subscribe/' + SLUG, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
-          }).then(function() {
-            if (btn) { btn.textContent = '\u2713 Notifications enabled!'; btn.style.background = 'rgba(34,197,94,0.2)'; btn.style.borderColor = 'rgba(34,197,94,0.5)'; btn.disabled = true; }
-            localStorage.setItem('wp_sub_' + SLUG, '1');
-          }).catch(function(e) { console.error('[Push] subscribe error', e); });
-        });
-      } else if (p === 'denied') {
-        if (btn) btn.textContent = '\u26d4 Notifications blocked in browser settings';
+      if (p === 'denied') {
+        localStorage.setItem('wp_sub_' + SLUG, 'denied');
+        if (btn) { btn.disabled = false; btn.textContent = '\u26d4 Notifications blocked in browser settings'; }
+        return;
       }
-    });
+      if (p !== 'granted') {
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
+        return;
+      }
+      return navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        return reg.pushManager.getSubscription().then(function(existing) {
+          if (existing) return existing;
+          return fetch('/lp/webpush/vapid-key/' + SLUG)
+            .then(function(x) { if (!x.ok) throw new Error('vapid-key HTTP ' + x.status); return x.json(); })
+            .then(function(d) {
+              if (!d || d.ok !== true || typeof d.publicKey !== 'string' || !d.publicKey) throw new Error('vapid-key invalid response');
+              var arr = new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){ return c.charCodeAt(0); }));
+              return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
+            });
+        });
+      }).then(function(s) {
+        var j = s.toJSON();
+        return fetch('/lp/webpush/subscribe/' + SLUG, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys })
+        });
+      }).then(function(x) { if (!x.ok) throw new Error('subscribe HTTP ' + x.status); return x.json(); })
+        .then(function(body) {
+          if (!body || body.ok !== true || body.stored !== true) throw new Error('subscribe response missing ok/stored');
+          localStorage.setItem('wp_sub_' + SLUG, '1');
+          if (btn) { btn.textContent = '\u2713 Notifications enabled!'; btn.style.background = 'rgba(34,197,94,0.2)'; btn.style.borderColor = 'rgba(34,197,94,0.5)'; btn.disabled = true; }
+        }).catch(function(e) { fail('subscribe error', e); });
+    }).catch(function(e) { fail('permission request error', e); })
+      .finally(function() { window.__lpPushBusy = false; });
   };
-  // Show notif button if not already subscribed
-  if (!localStorage.getItem('wp_sub_' + SLUG) && 'Notification' in window && Notification.permission !== 'denied') {
+  // Show notif button if not already subscribed (validated against the real browser subscription)
+  (function() {
+    if (!('Notification' in window) || Notification.permission === 'denied') return;
+    var flag = localStorage.getItem('wp_sub_' + SLUG);
+    if (flag === 'dismissed' || flag === 'denied') return;
     var nb = document.getElementById('lp-notif-btn');
-    if (nb) nb.style.display = 'block';
-  }
+    if (!nb) return;
+    if (flag !== '1') { nb.style.display = 'block'; return; }
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function(sub) {
+      if (sub) return;
+      localStorage.removeItem('wp_sub_' + SLUG);
+      nb.style.display = 'block';
+    }).catch(function(e) {
+      console.error('[Push] getSubscription check failed', e);
+      localStorage.removeItem('wp_sub_' + SLUG);
+      nb.style.display = 'block';
+    });
+  })();
 })();
-(function(){var _s=window.location.pathname.split('/').pop();console.log('[Push] Premium LP loaded, slug:',_s);var isStandalone=(window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches);if(!('serviceWorker' in navigator&&'PushManager' in window)){console.log('[Push] Blocked: not PWA or unsupported');var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);if(isIOS&&isSafari&&!isStandalone){setTimeout(function(){var hint=document.createElement('div');hint.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';hint.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:6px;">\uD83D\uDCF2 Benachrichtigungen aktivieren<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">Tippe auf <b>Teilen<\/b> \u2192 <b>Zum Home-Bildschirm<\/b>, dann \u00f6ffne die App vom Home-Bildschirm, um Benachrichtigungen zu aktivieren.<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Verstanden<\/button>';document.body.appendChild(hint);},2000);}return;}navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});if(localStorage.getItem('wp_sub_'+_s)){if('Notification' in window&&Notification.permission==='granted'){(function tryAS(){if(window.__swReg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');}).catch(function(){});}else{setTimeout(tryAS,500);}})();}return;}if(!('Notification' in window)||Notification.permission==='denied'){return;}var AC='#ff6b00';var ICONS={bell:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',check:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',spin:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>'};var STATES={idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Stay updated instantly',desc:'Get special offers and updates from this business.',btn:'Enable Updates',trust:'You can turn this off anytime.'},asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Setting things up…',desc:'',btn:'',trust:''},ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:"You're subscribed!",desc:"We'll notify you about special offers.",btn:'',trust:''}};var wrap=document.createElement('div');wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';var card=document.createElement('div');card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';var xBtn=document.createElement('button');xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';xBtn.innerHTML='&times;';xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};var iWrap=document.createElement('div');iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';var iEl=document.createElement('div');iEl.style.cssText='width:26px;height:26px;';var ttl=document.createElement('div');ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';var dsc=document.createElement('div');dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';var btn=document.createElement('button');btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';var tst=document.createElement('div');tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';function setState(s){var c=STATES[s]||STATES.idle;iWrap.style.background=c.bg;iEl.style.color=c.ic;iEl.innerHTML=ICONS[c.icon]||'';ttl.textContent=c.title;dsc.textContent=c.desc;dsc.style.display=c.desc?'block':'none';btn.textContent=c.btn;btn.style.display=c.btn?'block':'none';tst.textContent=c.trust;tst.style.display=c.trust?'block':'none';if(s==='ok'){setTimeout(function(){wrap.style.display='none';},2800);}}iWrap.appendChild(iEl);card.appendChild(xBtn);card.appendChild(iWrap);card.appendChild(ttl);card.appendChild(dsc);card.appendChild(btn);card.appendChild(tst);wrap.appendChild(card);document.body.appendChild(wrap);setTimeout(function(){card.style.transform='translateY(0)';},600);setState('idle');function doSub(){setState('asking');function sub(reg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');}).catch(function(){wrap.style.display='none';});}if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register('/sw.js').then(sub);}}btn.onclick=function(){Notification.requestPermission().then(function(p){if(p==='granted'){doSub();}else if(p==='denied'){setState('ok');localStorage.setItem('wp_sub_'+_s,'denied');}else{wrap.style.display='none';}});};})()
+(function(){
+  var _s = window.location.pathname.split('/').pop();
+  console.log('[Push] Premium LP loaded, slug:', _s);
+  var isStandalone = (window.navigator.standalone === true || window.matchMedia('(display-mode:standalone)').matches);
+  if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+    console.log('[Push] Blocked: not PWA or unsupported');
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isIOS && isSafari && !isStandalone) {
+      setTimeout(function(){
+        var hint = document.createElement('div');
+        hint.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';
+        hint.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:6px;">📲 Benachrichtigungen aktivieren<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">Tippe auf <b>Teilen<\/b> → <b>Zum Home-Bildschirm<\/b>, dann öffne die App vom Home-Bildschirm, um Benachrichtigungen zu aktivieren.<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Verstanden<\/button>';
+        document.body.appendChild(hint);
+      }, 2000);
+    }
+    return;
+  }
+
+  function maybeShowSheet(flag, initialState) {
+    if (flag === 'dismissed' || flag === 'denied') return;
+    if (!('Notification' in window) || Notification.permission === 'denied') return;
+    showSheet(initialState);
+  }
+
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    window.__swReg = reg;
+    var flag = localStorage.getItem('wp_sub_' + _s);
+    if (flag !== '1') { maybeShowSheet(flag, 'idle'); return; }
+    reg.pushManager.getSubscription().then(function(sub) {
+      if (sub) return;
+      localStorage.removeItem('wp_sub_' + _s);
+      maybeShowSheet(null, 'idle');
+    }).catch(function(e) {
+      console.error('[Push] getSubscription check failed', e);
+      localStorage.removeItem('wp_sub_' + _s);
+      maybeShowSheet(null, 'idle');
+    });
+  }).catch(function(e) {
+    console.error('[Push] service worker registration failed', e);
+    var flag = localStorage.getItem('wp_sub_' + _s);
+    if (flag === '1') localStorage.removeItem('wp_sub_' + _s);
+    maybeShowSheet((flag === 'dismissed' || flag === 'denied') ? flag : null, 'error');
+  });
+
+  function showSheet(initialState) {
+    var AC = '#ff6b00';
+    var ICONS = {
+      bell: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',
+      check: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',
+      spin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>',
+      alert: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/><\/svg>'
+    };
+    var STATES = {
+      idle: { icon: 'bell', bg: 'linear-gradient(135deg,#fff5f0,#ffe4d6)', ic: AC, title: 'Stay updated instantly', desc: 'Get special offers and updates from this business.', btn: 'Enable Updates', trust: 'You can turn this off anytime.' },
+      asking: { icon: 'spin', bg: 'linear-gradient(135deg,#fff5f0,#ffe4d6)', ic: AC, title: 'Setting things up…', desc: '', btn: '', trust: '' },
+      ok: { icon: 'check', bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', ic: '#16a34a', title: "You're subscribed!", desc: "We'll notify you about special offers.", btn: '', trust: '' },
+      blocked: { icon: 'alert', bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', ic: '#dc2626', title: 'Notifications are blocked', desc: 'Allow notifications in your browser settings to receive updates.', btn: '', trust: '' },
+      error: { icon: 'alert', bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', ic: '#dc2626', title: 'Notifications could not be enabled', desc: 'Please try again.', btn: 'Try again', trust: '' }
+    };
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';
+    var card = document.createElement('div');
+    card.style.cssText = 'pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';
+    var xBtn = document.createElement('button');
+    xBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';
+    xBtn.innerHTML = '&times;';
+    xBtn.onclick = function() { localStorage.setItem('wp_sub_' + _s, 'dismissed'); wrap.style.display = 'none'; };
+    var iWrap = document.createElement('div');
+    iWrap.style.cssText = 'width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';
+    var iEl = document.createElement('div');
+    iEl.style.cssText = 'width:26px;height:26px;';
+    var ttl = document.createElement('div');
+    ttl.style.cssText = 'font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';
+    var dsc = document.createElement('div');
+    dsc.style.cssText = 'font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';
+    var btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:14px;background:' + AC + ';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';
+    var tst = document.createElement('div');
+    tst.style.cssText = 'font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';
+    function setState(s) {
+      var c = STATES[s] || STATES.idle;
+      iWrap.style.background = c.bg;
+      iEl.style.color = c.ic; iEl.innerHTML = ICONS[c.icon] || '';
+      ttl.textContent = c.title;
+      dsc.textContent = c.desc; dsc.style.display = c.desc ? 'block' : 'none';
+      btn.textContent = c.btn; btn.style.display = c.btn ? 'block' : 'none';
+      tst.textContent = c.trust; tst.style.display = c.trust ? 'block' : 'none';
+      if (s === 'ok') { setTimeout(function() { wrap.style.display = 'none'; }, 2800); }
+    }
+    iWrap.appendChild(iEl);
+    card.appendChild(xBtn); card.appendChild(iWrap); card.appendChild(ttl);
+    card.appendChild(dsc); card.appendChild(btn); card.appendChild(tst);
+    wrap.appendChild(card); document.body.appendChild(wrap);
+    setTimeout(function() { card.style.transform = 'translateY(0)'; }, 600);
+    setState(initialState || 'idle');
+    function doSub() {
+      if (window.__lpPushBusy) return;
+      window.__lpPushBusy = true;
+      setState('asking');
+      navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        window.__swReg = reg;
+        return reg.pushManager.getSubscription();
+      }).then(function(existing) {
+        if (existing) return existing;
+        return fetch('https://www.qraivy.com/lp/webpush/vapid-key/' + _s)
+          .then(function(x) { if (!x.ok) throw new Error('vapid-key HTTP ' + x.status); return x.json(); })
+          .then(function(d) {
+            if (!d || d.ok !== true || typeof d.publicKey !== 'string' || !d.publicKey) throw new Error('vapid-key invalid response');
+            var arr = new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c) { return c.charCodeAt(0); }));
+            return window.__swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
+          });
+      }).then(function(s) {
+        var j = s.toJSON();
+        return fetch('https://www.qraivy.com/lp/webpush/subscribe/' + _s, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys })
+        });
+      }).then(function(x) { if (!x.ok) throw new Error('subscribe HTTP ' + x.status); return x.json(); })
+        .then(function(body) {
+          if (!body || body.ok !== true || body.stored !== true) throw new Error('subscribe response missing ok/stored');
+          localStorage.setItem('wp_sub_' + _s, '1');
+          setState('ok');
+        }).catch(function(e) {
+          console.error('[Push] subscribe error', e);
+          localStorage.removeItem('wp_sub_' + _s);
+          setState('error');
+        }).finally(function() { window.__lpPushBusy = false; });
+    }
+    btn.onclick = function() {
+      if (window.__lpPushBusy) return;
+      Notification.requestPermission().then(function(p) {
+        if (p === 'granted') { doSub(); }
+        else if (p === 'denied') { setState('blocked'); localStorage.setItem('wp_sub_' + _s, 'denied'); }
+        else { wrap.style.display = 'none'; }
+      });
+    };
+  }
+})()
 <\/script>
 </body>
 </html>`;
