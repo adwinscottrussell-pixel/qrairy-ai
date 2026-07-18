@@ -1150,7 +1150,7 @@ async function initDashboard(){
 
 <!-- Trigger cards -->
 <div class="camp-triggers" id="campTrigs">
-  <div class="camp-trig" id="ct-boost" onclick="campSelectTrig('boost',this)">
+  <div class="camp-trig" id="ct-boost" onclick="campSelectTrig('increase_visits',this)">
     <div class="camp-trig-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4.5 16.5c-1.5 1.5-1 6.5-1 6.5s5-.5 6.5-2l9-9a2.1 2.1 0 0 0-3-3l-9 9z"/>
@@ -1160,7 +1160,7 @@ async function initDashboard(){
     <h3 data-i18n="camp_boost_title">Boost Visits</h3>
     <p data-i18n="camp_boost_desc">Drive traffic during slow periods with a timely offer or announcement.</p>
   </div>
-  <div class="camp-trig" id="ct-engage" onclick="campSelectTrig('engage',this)">
+  <div class="camp-trig" id="ct-engage" onclick="campSelectTrig('reactivation',this)">
     <div class="camp-trig-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
@@ -1169,7 +1169,7 @@ async function initDashboard(){
     <h3 data-i18n="camp_engage_title">Re-engagement</h3>
     <p data-i18n="camp_engage_desc">Bring back customers who haven't visited in a while.</p>
   </div>
-  <div class="camp-trig" id="ct-reward" onclick="campSelectTrig('reward',this)">
+  <div class="camp-trig" id="ct-reward" onclick="campSelectTrig('reward_reminder',this)">
     <div class="camp-trig-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/>
@@ -1307,11 +1307,11 @@ async function initDashboard(){
     _trig = type;
     document.querySelectorAll('.camp-trig').forEach(function(c){ c.classList.remove('sel'); });
     el.classList.add('sel');
-    var labels = { boost: '🚀 Boost Visits', engage: '🔄 Re-engagement', reward: '🎁 Reward Reminder' };
+    var labels = { increase_visits: '🚀 Boost Visits', reactivation: '🔄 Re-engagement', reward_reminder: '🎁 Reward Reminder' };
     var ph = {
-      boost: 'e.g. Boost visits this Friday with a coffee and cake offer',
-      engage: 'e.g. We miss you! Come back and earn extra stamps this week',
-      reward: 'e.g. Remind customers they are just 2 stamps from a free coffee'
+      increase_visits: 'e.g. Boost visits this Friday with a coffee and cake offer',
+      reactivation: 'e.g. We miss you! Come back and earn extra stamps this week',
+      reward_reminder: 'e.g. Remind customers they are just 2 stamps from a free coffee'
     };
     document.getElementById('campTrigLabel').textContent = labels[type] || type;
     document.getElementById('campGoalText').placeholder = ph[type] || '';
@@ -1365,7 +1365,7 @@ async function initDashboard(){
       fetch('https://api.qraivy.com/loyalty/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-        body: JSON.stringify({ type: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
+        body: JSON.stringify({ campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
       }).then(function(x){ return x.json(); })
         .then(function(d) {
           if (!d.ok) throw new Error(d.error || 'Generation failed');

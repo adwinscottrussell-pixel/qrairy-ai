@@ -5,6 +5,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
+const { buildCampaignPrompt, VALID_CAMPAIGN_TYPES } = require('../services/campaignPromptService');
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -362,33 +363,19 @@ async function getCustomers(req, res) {
 // POST /loyalty/campaign/generate
 async function generateCampaignMessage(req, res) {
   try {
-    const { type, goal, offer, tone, bizName, rewardName } = req.body || {};
-    if (!type || !goal) return res.status(400).json({ error: 'type and goal are required' });
-    const toneMap = {
-      friendly: 'warm, friendly, approachable — like a local shopkeeper',
-      premium: 'sophisticated, premium, refined',
-      urgent: 'urgent, action-oriented, time-sensitive',
-      playful: 'fun, lighthearted, a bit cheeky'
-    };
-    const sys = [
-      'You write short push notification copy for local businesses.',
-      'Respond ONLY with valid JSON, no preamble, no markdown:',
-      '{"title":"...","body":"...","cta":"..."}',
-      'Rules:',
-      '- title: max 45 characters',
-      '- body: max 120 characters',
-      '- cta: max 20 characters (e.g. "Claim Offer", "Visit Us", "Get Reward")',
-      '- tone: ' + (toneMap[tone] || toneMap.friendly),
-      '- no spam trigger words, no excessive exclamation marks',
-      '- sound like a real local business owner, not a marketer'
-    ].join('\n');
-    const usr = [
-      'Business: ' + (bizName || 'this business'),
-      'Campaign type: ' + type,
-      'Goal: ' + goal,
-      offer ? 'Offer: ' + offer : '',
-      rewardName ? 'Loyalty reward: ' + rewardName : ''
-    ].filter(Boolean).join('\n');
+    const { campaignType, goal, offer, tone, bizName, rewardName, language } = req.body || {};
+    if (!campaignType) return res.status(400).json({ error: 'campaignType is required' });
+    if (!VALID_CAMPAIGN_TYPES.includes(campaignType)) {
+      return res.status(400).json({ error: 'Unsupported campaignType: ' + campaignType });
+    }
+    if (!goal) return res.status(400).json({ error: 'goal is required' });
+
+    const { system: sys, user: usr } = buildCampaignPrompt({
+      campaignType,
+      businessContext: { bizName, offer, rewardName, tone },
+      goal,
+      language
+    });
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
