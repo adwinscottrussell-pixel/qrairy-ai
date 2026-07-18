@@ -155,7 +155,14 @@ model WebPushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
+  // Universal anonymous customer identifier (same "cTok" value used by
+  // Pass/LoyaltyCustomer via req.body.cid) — links a push subscription to
+  // its owning customer for audience segmentation. Nullable: older rows
+  // predate this column, and subscriptions can still be created without it.
+  cid       String?
   createdAt DateTime @default(now())
+
+  @@index([cid])
 }
 model StampSettings {
   id          String   @id @default(cuid())
