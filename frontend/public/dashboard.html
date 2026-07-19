@@ -785,93 +785,57 @@ async function initDashboard(){
 
 <div id="section-subscribers" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
 <style>
-#section-subscribers .sub-hdr{margin-bottom:24px;}
-#section-subscribers .sub-hdr h2{font-size:1.4rem;font-weight:700;color:#f0f4f8;margin:0 0 4px;}
-#section-subscribers .sub-hdr p{font-size:.85rem;color:rgba(240,244,248,0.5);margin:0;}
-.sub-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
-@media(max-width:700px){.sub-cards{grid-template-columns:repeat(2,1fr);}}
-.sub-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);}
-.sub-card-label{font-size:.75rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
-.sub-card-val{font-size:1.8rem;font-weight:800;color:#1a1a1a;line-height:1;}
-.sub-card-icon{font-size:1.1rem;margin-bottom:6px;}
-.sub-card.total .sub-card-val{color:#ff5a1f;}
-.sub-tbl-wrap{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.07);overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:20px;}
-.sub-tbl-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f4f4f4;}
-.sub-tbl-head h3{font-size:.95rem;font-weight:700;color:#1a1a1a;margin:0;}
-.sub-export-btn{padding:7px 14px;background:#f5f5f5;border:1px solid #e4e4e4;border-radius:8px;font-size:.78rem;font-weight:600;color:#555;cursor:pointer;transition:all .14s;}
-.sub-export-btn:hover{background:#efefef;color:#1a1a1a;}
-.sub-tbl{width:100%;border-collapse:collapse;}
-.sub-tbl th{font-size:.72rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;padding:10px 20px;text-align:left;border-bottom:1px solid #f4f4f4;white-space:nowrap;}
-.sub-tbl td{padding:13px 20px;font-size:.85rem;color:#444;border-bottom:1px solid #fafafa;vertical-align:middle;}
-.sub-tbl tr:last-child td{border-bottom:none;}
-.sub-tbl tr:hover td{background:#fafafa;}
-.sub-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:3px 8px;border-radius:20px;font-size:.72rem;font-weight:700;}
-.sub-badge.email{background:#eff6ff;color:#3b82f6;}
-.sub-badge.push{background:#fff5f0;color:#ff5a1f;}
-.sub-badge.wallet{background:#f0fdf4;color:#16a34a;}
-.sub-badge.zero{background:#f5f5f5;color:#bbb;}
-.sub-view-btn{padding:5px 12px;background:none;border:1.5px solid #e4e4e4;border-radius:7px;font-size:.75rem;font-weight:600;color:#666;cursor:pointer;transition:all .13s;white-space:nowrap;}
-.sub-view-btn:hover{border-color:#ff5a1f;color:#ff5a1f;}
-.sub-date{font-size:.75rem;color:#bbb;}
-.sub-empty{padding:40px 20px;text-align:center;color:#bbb;font-size:.88rem;}
-/* Detail panel */
-.sub-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-.sub-back-btn{background:none;border:1.5px solid #e4e4e4;color:#666;padding:7px 14px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .14s;}
-.sub-back-btn:hover{border-color:#aaa;color:#1a1a1a;}
-.sub-detail-title{font-size:1rem;font-weight:700;color:#1a1a1a;}
-.sub-detail-slug{font-size:.78rem;color:#bbb;margin-left:4px;}
-.sub-type-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;}
-.sub-type-pill.email{background:#eff6ff;color:#3b82f6;}
-.sub-type-pill.web_push{background:#fff5f0;color:#ff5a1f;}
-.sub-type-pill.wallet{background:#f0fdf4;color:#16a34a;}
-.sub-masked{font-size:.78rem;color:#888;font-family:monospace;}
-.sub-loading{padding:40px;text-align:center;color:#bbb;font-size:.85rem;}
+/* Subscribers consumes the shared dashboard design system (kpi-card, panel,
+   data-table, badge, btn-outline — the same classes/tokens the Campaigns
+   section is built from) instead of a page-local system. Only the two rules
+   below are genuinely page-specific layout, not a parallel component set. */
+#section-subscribers .sub-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+#section-subscribers .sub-detail-title{font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;}
+#section-subscribers .sub-detail-slug{font-family:var(--font-mono);font-size:.72rem;color:var(--dashboard-muted-dim);margin-left:6px;}
 </style>
 
-<div class="sub-hdr">
-  <h2 data-i18n="sub_title">Subscribers</h2>
-  <p data-i18n="sub_sub">Total reach across all your Smart QR Pages</p>
+<div class="page-header">
+  <div>
+    <div class="page-title" data-i18n="sub_title">Subscribers</div>
+    <div class="page-subtitle" data-i18n="sub_sub">Total reach across all your Smart QR Pages</div>
+  </div>
 </div>
 
 <!-- Summary cards -->
-<div class="sub-cards" id="subSummaryCards">
-  <div class="sub-card total">
-    <div class="sub-card-icon">📡</div>
-    <div class="sub-card-label" data-i18n="sub_total_reach">Total Reach</div>
-    <div class="sub-card-val" id="subTotalVal">—</div>
+<div class="kpi-row" id="subSummaryCards">
+  <div class="kpi-card">
+    <div class="kpi-val orange" id="subTotalVal">—</div>
+    <div class="kpi-lbl" data-i18n="sub_total_reach">Total Reach</div>
   </div>
-  <div class="sub-card">
-    <div class="sub-card-icon">✉️</div>
-    <div class="sub-card-label" data-i18n="sub_email">Email</div>
-    <div class="sub-card-val" id="subEmailVal">—</div>
+  <div class="kpi-card">
+    <div class="kpi-val" id="subEmailVal">—</div>
+    <div class="kpi-lbl" data-i18n="sub_email">Email</div>
   </div>
-  <div class="sub-card">
-    <div class="sub-card-icon">🔔</div>
-    <div class="sub-card-label" data-i18n="sub_webpush">Web Push</div>
-    <div class="sub-card-val" id="subPushVal">—</div>
+  <div class="kpi-card">
+    <div class="kpi-val" id="subPushVal">—</div>
+    <div class="kpi-lbl" data-i18n="sub_webpush">Web Push</div>
   </div>
-  <div class="sub-card">
-    <div class="sub-card-icon">💳</div>
-    <div class="sub-card-label" data-i18n="sub_wallet">Wallet</div>
-    <div class="sub-card-val" id="subWalletVal">—</div>
+  <div class="kpi-card">
+    <div class="kpi-val purple" id="subWalletVal">—</div>
+    <div class="kpi-lbl" data-i18n="sub_wallet">Wallet</div>
   </div>
 </div>
 
 <!-- Per-page table -->
 <div id="subTablePanel">
-  <div class="sub-tbl-wrap">
-    <div class="sub-tbl-head">
-      <h3 data-i18n="sub_pages">Pages</h3>
-      <button class="sub-export-btn" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-hdr">
+      <div class="panel-title" data-i18n="sub_pages">Pages</div>
+      <button class="btn-outline" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button>
     </div>
-    <div id="subTableBody"><div class="sub-loading">Loading subscribers…</div></div>
+    <div id="subTableBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
   </div>
 </div>
 
 <!-- Detail panel (hidden until View Details clicked) -->
 <div id="subDetailPanel" style="display:none;">
   <div class="sub-detail-hdr">
-    <button class="sub-back-btn" onclick="subShowTable()">
+    <button class="btn-outline" onclick="subShowTable()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span data-i18n="sub_all_pages">All pages</span>
     </button>
@@ -880,12 +844,12 @@ async function initDashboard(){
       <span class="sub-detail-slug" id="subDetailSlug"></span>
     </div>
   </div>
-  <div class="sub-tbl-wrap">
-    <div class="sub-tbl-head">
-      <h3 id="subDetailCount">Subscribers</h3>
-      <button class="sub-export-btn" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button>
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title" id="subDetailCount">Subscribers</div>
+      <button class="btn-outline" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button>
     </div>
-    <div id="subDetailBody"><div class="sub-loading">Loading…</div></div>
+    <div id="subDetailBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading">Loading…</div></div>
   </div>
 </div>
 
@@ -926,14 +890,14 @@ async function initDashboard(){
   }
 
   function badge(n, cls) {
-    if (!n) return '<span class="sub-badge zero">0</span>';
-    return '<span class="sub-badge ' + cls + '">' + n + '</span>';
+    if (!n) return '<span class="badge badge-zero">0</span>';
+    return '<span class="badge badge-' + cls + '">' + n + '</span>';
   }
 
   // ── Load summary ──────────────────────────────────────────────────────────
   window.subLoad = function subLoad() {
     console.log('[Subscribers] subLoad called');
-    document.getElementById('subTableBody').innerHTML = '<div class="sub-loading" data-i18n="sub_loading">Loading subscribers…</div>';
+    document.getElementById('subTableBody').innerHTML = '<div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
       fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
@@ -953,19 +917,19 @@ async function initDashboard(){
             return;
           }
 
-          var html = '<table class="sub-tbl"><thead><tr>'
+          var html = '<table class="data-table"><thead><tr>'
             + '<th data-i18n="sub_col_page">Page</th><th data-i18n="sub_col_email">Email</th><th data-i18n="sub_col_push">Web Push</th><th data-i18n="sub_col_wallet">Wallet</th><th data-i18n="sub_col_total">Total</th><th data-i18n="sub_col_last">Last Subscribed</th><th></th>'
             + '</tr></thead><tbody>';
 
           d.pages.forEach(function(p) {
             html += '<tr>'
-              + '<td><div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">' + esc(p.name) + '</div><div style="font-size:.72rem;color:#bbb;">' + esc(p.slug) + '</div></td>'
+              + '<td><div style="font-weight:600;color:#f0f4f8;margin-bottom:2px;">' + esc(p.name) + '</div><div style="font-size:.72rem;color:var(--dashboard-muted-dim);">' + esc(p.slug) + '</div></td>'
               + '<td>' + badge(p.emailCount, 'email') + '</td>'
               + '<td>' + badge(p.webPushCount, 'push') + '</td>'
               + '<td>' + badge(p.walletCount, 'wallet') + '</td>'
-              + '<td><strong>' + p.total + '</strong></td>'
-              + '<td><span class="sub-date">' + fmtDate(p.lastSub) + '</span></td>'
-              + '<td><button class="sub-view-btn" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
+              + '<td><strong style="color:#f0f4f8;">' + p.total + '</strong></td>'
+              + '<td>' + fmtDate(p.lastSub) + '</td>'
+              + '<td><button class="btn-outline" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
               + '</tr>';
           });
 
@@ -974,7 +938,7 @@ async function initDashboard(){
         })
         .catch(function(e) {
           console.error('[Subscribers] load error:', e);
-          document.getElementById('subTableBody').innerHTML = '<div class="sub-empty">Could not load subscribers: ' + e.message + '</div>';
+          document.getElementById('subTableBody').innerHTML = '<div class="state-empty">Could not load subscribers: ' + e.message + '</div>';
         });
     });
   }
@@ -986,7 +950,7 @@ async function initDashboard(){
     document.getElementById('subDetailSlug').textContent = slug;
     document.getElementById('subTablePanel').style.display = 'none';
     document.getElementById('subDetailPanel').style.display = 'block';
-    document.getElementById('subDetailBody').innerHTML = '<div class="sub-loading">Loading…</div>';
+    document.getElementById('subDetailBody').innerHTML = '<div class="state-loading">Loading…</div>';
 
     subTok(function(tok) {
       fetch('https://api.qraivy.com/loyalty/subscribers/' + slug + '/detail', {
@@ -997,24 +961,25 @@ async function initDashboard(){
           document.getElementById('subDetailCount').textContent = _subDetailRows.length + ' subscriber' + (_subDetailRows.length !== 1 ? 's' : '');
 
           if (!_subDetailRows.length) {
-            document.getElementById('subDetailBody').innerHTML = '<div class="sub-empty">No subscribers for this page yet.</div>';
+            document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">No subscribers for this page yet.</div>';
             return;
           }
 
           var typeLabel = { email: 'Email', web_push: 'Web Push', wallet: 'Wallet' };
-          var html = '<table class="sub-tbl"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
+          var typeClass = { email: 'email', web_push: 'push', wallet: 'wallet' };
+          var html = '<table class="data-table"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
           _subDetailRows.forEach(function(r) {
             html += '<tr>'
-              + '<td><span class="sub-masked">' + esc(r.masked) + '</span></td>'
-              + '<td><span class="sub-type-pill ' + r.type + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
-              + '<td><span class="sub-date">' + fmtDate(r.date) + '</span></td>'
+              + '<td>' + esc(r.masked) + '</td>'
+              + '<td><span class="badge badge-' + (typeClass[r.type] || 'zero') + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
+              + '<td>' + fmtDate(r.date) + '</td>'
               + '</tr>';
           });
           html += '</tbody></table>';
           document.getElementById('subDetailBody').innerHTML = html;
         })
         .catch(function(e) {
-          document.getElementById('subDetailBody').innerHTML = '<div class="sub-empty">Could not load detail: ' + e.message + '</div>';
+          document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">Could not load detail: ' + e.message + '</div>';
         });
     });
   };
