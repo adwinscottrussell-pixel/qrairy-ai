@@ -191,15 +191,18 @@
     if(!slug){ showScanner(); return; }
     // If already verified this session, skip PIN
     if(sessionStorage.getItem('staff_pin_ok_'+slug) === '1'){ showScanner(); return; }
-    // Check if a PIN exists for this slug
-    fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/verify', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({pin:''})
+    // Status endpoint checks existence only — no PIN guess involved. Replaces
+    // the old empty-string probe against /verify, which could never report
+    // "no PIN configured" because the server rejects an empty pin before it
+    // ever checks whether staffPin exists.
+    fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/status', {
+      method:'GET'
     }).then(function(r){ return r.json(); }).then(function(d){
-      // If no PIN set, allow through (business owner hasn't set one yet)
-      if(d.error === 'No PIN set for this page.'){ showScanner(); }
+      // Only an explicit configured:false bypasses the gate — anything else
+      // (true, or an unexpected/error response body) shows it.
+      if(d.configured === false){ showScanner(); }
       else { showPinGate(); }
-    }).catch(function(){ showScanner(); });
+    }).catch(function(){ showPinGate(); }); // request failure -> fail closed
   }
 
   var stream = null;
