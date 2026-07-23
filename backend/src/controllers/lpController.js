@@ -3004,7 +3004,7 @@ async function handleLoyaltyWelcome(req, res) {
   }
 }
 
-// ── Staff PIN — set (auth required) and verify (no auth) ─────────────────
+// ── Staff PIN — set (auth required), status (no auth), verify (no auth) ──
 // PIN is hashed with sha256 and stored in LandingPage.sections.staffPin.
 // Not high-security — this is a lightweight barrier so staff don't need
 // the business owner's Clerk account, not an access-control boundary.
@@ -3027,6 +3027,36 @@ async function handleSetStaffPin(req, res) {
   } catch (e) { return res.status(500).json({ error: e.message }); }
 }
 
+// GET /lp/staff-pin/:slug/status — existence check only, no auth, no PIN
+// guess involved. Lets the scanner ask "is a PIN configured at all" without
+// going through PIN validation, so a business with no PIN configured can be
+// detected directly instead of via the shape of a rejected guess. Never
+// returns the hash itself — only a boolean.
+async function handleGetStaffPinStatus(req, res) {
+  try {
+    const { slug } = req.params;
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    let sec;
+    try {
+      sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+    } catch (parseErr) {
+      // Malformed sections JSON (legacy/corrupt data) can't be proven to
+      // contain a configured PIN — treat as "not configured" rather than
+      // 500ing. The PIN gate is documented above as a lightweight
+      // staff-friction barrier, not an access-control boundary, so this
+      // default costs nothing security-wise and avoids a permanent scanner
+      // lockout for any business whose sections data happens to be corrupt.
+      return res.json({ configured: false });
+    }
+    return res.json({ configured: !!sec.staffPin });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+}
+
+// POST /lp/staff-pin/:slug/verify — validates an entered PIN only. Assumes
+// the caller already knows a PIN is configured (via the status endpoint
+// above); a missing/empty pin here is a bad request, not a signal to check
+// whether one exists.
 async function handleVerifyStaffPin(req, res) {
   try {
     const { slug } = req.params;
@@ -3047,7 +3077,7 @@ module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, 
   handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
-  handleSetStaffPin, handleVerifyStaffPin,
+  handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin,
 };
 
 
