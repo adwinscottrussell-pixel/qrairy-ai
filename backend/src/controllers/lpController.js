@@ -1590,7 +1590,19 @@ async function handleDeleteLP(req, res) {
     if (page.userId && page.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
     pageCache.delByPrefix('lp:' + slug);
     pageCache.delByPrefix('stamp:' + slug);
-    await prisma.landingPage.delete({ where: { slug } });
+    // Fix 3: StampToken has no Prisma relation to LandingPage — it's joined
+    // only by the plain `slug` string, the same convention already used by
+    // StampSettings/Pass/LoyaltyCustomer/WebPushSubscription (see schema
+    // comment above the Deal model). Confirmed no FK exists, so this is
+    // safe with no schema or migration change. Deleting it here closes the
+    // physical-tag reactivation gap — a deleted page's old NFC/QR link can
+    // no longer pass the token-validity check at all. Pass, PassDevice,
+    // PassRegistration, StampEntry, RewardEvent, and LoyaltyCustomer are
+    // deliberately left untouched — historical records, never deleted here.
+    await prisma.$transaction([
+      prisma.stampToken.deleteMany({ where: { slug } }),
+      prisma.landingPage.delete({ where: { slug } }),
+    ]);
     return res.json({ ok: true, success: true });
   } catch (err) {
     console.error('[LP] delete error:', err);
@@ -1798,6 +1810,15 @@ async function handleStamp(req, res) {
     if (!validToken) {
       return res.status(200).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Invalid</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">❌</div><h2>Invalid stamp token</h2><p style="color:rgba(255,255,255,0.5);margin-top:8px">This QR code has expired. Ask staff for the latest code.</p></div></body></html>`);
     }
+    // Fix 1: a deleted LandingPage must not silently keep accepting stamps.
+    // The physical NFC tag/QR is a fixed real-world object that outlives
+    // whatever page it was originally created for — this check makes that
+    // explicit rather than relying only on StampToken cleanup elsewhere.
+    // Read-only: never creates or updates a Pass, never reaches confirm.
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) {
+      return res.status(410).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inactive</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:3rem">🚫</div><h2>This loyalty program is no longer active.</h2></div></body></html>`);
+    }
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stamping…</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;overflow:hidden}.wrap{position:relative;z-index:1}.emoji{font-size:4rem;animation:pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275)}h1{font-size:1.8rem;margin:12px 0 8px;font-weight:800}p{color:rgba(255,255,255,0.6);font-size:.9rem;margin:6px 0}.dots{margin:20px 0;line-height:2}.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall linear forwards}@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style></head><body><div class="wrap" id="wrap"><div class="emoji">⏳</div><h1>Stamping…</h1></div><script>(function(){\n'
       + 'function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}\n'
       + 'function spawnConfetti(burst){var colors=["#ff5a1f","#22c55e","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#06b6d4"];for(var i=0;i<80;i++){var c=document.createElement("div");c.className="confetti-piece";c.style.cssText="left:"+Math.random()*100+"vw;top:-20px;background:"+colors[Math.floor(Math.random()*colors.length)]+";width:"+(6+Math.random()*8)+"px;height:"+(6+Math.random()*8)+"px;border-radius:"+(Math.random()>0.5?"50%":"2px")+";animation-duration:"+(1.5+Math.random()*2)+"s;animation-delay:"+(Math.random()*0.8)+"s;";document.body.appendChild(c);}if(burst){var BC=["#fbbf24","#fcd34d","#fff","#22c55e","#ef4444","#3b82f6","#ec4899"];for(var b=0;b<160;b++){var p=document.createElement("div");p.className="burst-piece";var a=(b/160)*Math.PI*2;var d=120+Math.random()*320;var ex=Math.cos(a)*d;var ey=Math.sin(a)*d-80;var sz=4+Math.random()*8;p.style.cssText="position:fixed;left:50%;top:50%;width:"+sz+"px;height:"+sz+"px;background:"+BC[Math.floor(Math.random()*BC.length)]+";border-radius:"+(Math.random()>0.5?"50%":"2px")+";z-index:10;pointer-events:none;transform:translate(-50%,-50%);transition:transform 1.4s cubic-bezier(0.15,0.7,0.3,1),opacity 1.6s ease-out;opacity:1;box-shadow:0 0 8px rgba(255,200,50,0.4);";document.body.appendChild(p);(function(el,dx,dy){setTimeout(function(){el.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px)) rotate("+(Math.random()*720)+"deg)";el.style.opacity="0";},10);})(p,ex,ey);}setTimeout(function(){document.querySelectorAll(".burst-piece").forEach(function(el){el.remove();});},2500);}setTimeout(function(){document.querySelectorAll(".confetti-piece").forEach(function(el){el.remove();});},4000);}\n'
@@ -1805,6 +1826,12 @@ async function handleStamp(req, res) {
       + 'if(d.status==="invalid"){wrap.innerHTML=\'<div class="emoji">❌</div><h1>Invalid stamp token</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">This QR code has expired. Ask staff for the latest code.</p>\';return;}\n'
       + 'if(d.status==="already"){wrap.innerHTML=\'<div class="emoji">⏱️</div><h1>Already stamped</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">You already got a stamp in the last hour. Come back next time!</p>\';return;}\n'
       + 'if(d.status==="error"){wrap.innerHTML=\'<div class="emoji">⚠️</div><h1>Something went wrong</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">Please try tapping again.</p>\';return;}\n'
+      // Fix 4: the confirm endpoint's inactive-program response uses
+      // {ok:false, error:...} (not the status:"invalid"/"already"/"error"
+      // shape above) — without this explicit check the code below would
+      // fall through and render an endless/garbage "success" state instead
+      // of stopping cleanly. No retry, no success shown.
+      + 'if(d.ok===false){wrap.innerHTML=\'<div class="emoji">🚫</div><h1>This loyalty program is no longer active.</h1>\';return;}\n'
       + 'var goal=d.goal,newCount=d.newCount,rewardReady=d.rewardReady,rewardName=esc(d.rewardName),slug=d.slug;\n'
       + 'var dots="";for(var i=0;i<goal;i++){dots+=\'<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:\'+(i<newCount?(rewardReady?"#22c55e":"#ff5a1f"):"rgba(255,255,255,0.15)")+\';margin:3px"></span>\';}\n'
       + 'wrap.innerHTML=\'<div class="emoji">\'+(rewardReady?"🎉":"✅")+\'</div><h1>\'+(rewardReady?"Belohnung bereit!":"Stempel hinzugefügt!")+\'</h1><p>\'+(rewardReady?"Zeige deinen Pass für: "+rewardName:newCount+" von "+goal+" Stempeln gesammelt")+\'</p><div class="dots">\'+dots+\'</div>\'+(rewardReady?\'<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>\':\'<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">\'+(goal-newCount)+\' Stempel noch bis zu deinem \'+rewardName+\'</p>\')+\'<a href="/lp/\'+slug+\'" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a>\';\n'
@@ -1832,6 +1859,17 @@ async function handleStampConfirm(req, res) {
       where: { slug, token, expiresAt: { gt: now } }
     });
     if (!validToken) return res.json({ status: 'invalid' });
+
+    // Fix 2: independently re-check LandingPage existence — never rely
+    // solely on the GET route's check, since this endpoint can be called
+    // directly. Deliberately placed before cid/serial resolution, Pass
+    // lookup/creation/update, StampEntry creation, reward logic, and both
+    // wallet updates, so a deleted page's old link can never touch any of
+    // that or fire a push notification.
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) {
+      return res.status(410).json({ ok: false, error: 'This loyalty program is no longer active.' });
+    }
 
     // Each customer gets their OWN Pass record (and therefore their own stamp
     // count, on their own wallet pass) when we know their cid. Without a cid
