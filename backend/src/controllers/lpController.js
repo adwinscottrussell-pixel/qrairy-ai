@@ -4,6 +4,36 @@ const prisma = require('../utils/prismaClient');
 const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
 
+// Slug-scoped cid resolver (Identity Continuity: welcome/enrollment gap
+// close). Single canonical resolution order, used by every page in the
+// landing->welcome->wallet->stamp chain so no two pages can independently
+// disagree about which cid is authoritative for this slug:
+//   1. A valid incoming ?cid= for THIS request always wins (bridges a
+//      storage-partition boundary -- Safari tab vs Home Screen, or a
+//      wallet barcode/return link -- that localStorage alone can't cross).
+//   2. Else a previously-resolved cid already stored under this slug's own
+//      key (qraivy_cid_<slug>) -- set once, authoritative for this slug
+//      from then on, deliberately NOT re-derived from global cTok every visit.
+//   3. Else the legacy global cTok, purely as a backward-compatible
+//      fallback for customers who already had one before this slug-scoped
+//      key existed -- immediately backfilled into the slug-scoped key so
+//      step 2 is what answers on every subsequent visit.
+//   4. Else mint a new one.
+// Every branch persists to BOTH the slug-scoped key and legacy cTok, and a
+// resolved value is never silently replaced by a later, lower-priority
+// source within the same call.
+const SLUG_CID_HELPER_JS = 'function resolveSlugCid(slug){try{'
+  + 'var key="qraivy_cid_"+slug;'
+  + 'var qp=null;try{qp=new URLSearchParams(window.location.search).get("cid");}catch(e){}'
+  + 'if(qp&&/^[A-Za-z0-9-]{8,64}$/.test(qp)){try{localStorage.setItem(key,qp);}catch(e){}try{localStorage.setItem("cTok",qp);}catch(e){}return qp;}'
+  + 'var sc=null;try{sc=localStorage.getItem(key);}catch(e){}'
+  + 'if(sc&&/^[A-Za-z0-9-]{8,64}$/.test(sc))return sc;'
+  + 'var g=null;try{g=localStorage.getItem("cTok");}catch(e){}'
+  + 'if(g&&/^[A-Za-z0-9-]{8,64}$/.test(g)){try{localStorage.setItem(key,g);}catch(e){}return g;}'
+  + 'var n=(window.crypto&&window.crypto.randomUUID)?window.crypto.randomUUID():(Date.now()+"-"+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));'
+  + 'try{localStorage.setItem(key,n);}catch(e){}try{localStorage.setItem("cTok",n);}catch(e){}return n;'
+  + '}catch(e){return null;}}';
+
 async function scrapeWithFirecrawl(url) {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey || !url) return null;
@@ -1545,7 +1575,7 @@ async function handleServeLP(req, res) {
         }
         if (_lset === false) _lset = null;
         if (_lset && _lset.enabled) {
-          const _es = '<scr' + 'ipt>(function(){try{var s="' + slug + '";if(!localStorage.getItem("cTok")||!localStorage.getItem("wEnr_"+s)){window.location.replace("/lp/welcome/"+s);}}catch(_e){}})();<\/scr' + 'ipt>';
+          const _es = '<scr' + 'ipt>' + SLUG_CID_HELPER_JS + '(function(){try{var s="' + slug + '";var c=resolveSlugCid(s);if(!localStorage.getItem("wEnr_"+s)){var u=new URL("/lp/welcome/"+s,window.location.origin);if(c)u.searchParams.set("cid",c);window.location.replace(u.toString());}}catch(_e){}})();<\/scr' + 'ipt>';
           return res.send(_lpHtml.replace('<head>', '<head>' + _es));
         }
       } catch(_eg) {}
@@ -1628,12 +1658,23 @@ async function handleLoyaltyCardPage(req, res) {
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
     const rewardName = settings ? settings.rewardName : 'Free item';
-    const serial = 'sqr-' + slug;
+    // Identity Continuity: read the SAME per-customer serial
+    // handleStampConfirm writes to, never the legacy shared "sqr-{slug}"
+    // bucket, when a cid is known. Read-only lookup -- never creates/
+    // upserts a Pass. Missing cid falls back to the shared bucket exactly
+    // like before this fix, so behavior for a customer with no cid at all
+    // is unchanged.
+    const cid = (req.query && req.query.cid) ? String(req.query.cid).slice(0, 64) : null;
+    const serial = cid ? `sqr-${slug}-${cid}` : 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     const stampCount = pass ? (pass.stampCount || 0) : 0;
     const logoHtml = logoUrl ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>' : '<div class="logo">' + bizName.charAt(0) + '</div>';
     const dots = Array.from({length: goal}, (_, i) => i < stampCount ? '<div class="dot filled">✓</div>' : '<div class="dot"></div>').join('');
-    const html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + bizName + ' Loyalty Card</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.card{background:' + color + ';border-radius:20px;padding:32px 24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}.logo{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz-name{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px}.reward-sub{font-size:.85rem;color:rgba(255,255,255,0.75);margin-bottom:24px}.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:24px}.dot{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4)}.dot.filled{background:rgba(255,255,255,0.92);border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:rgba(0,0,0,0.5)}.stamp-count{font-size:.78rem;color:rgba(255,255,255,0.7);margin-bottom:16px;margin-top:-10px}.wallet-btn{display:block;background:#000;color:#fff;border-radius:12px;padding:16px 28px;font-size:1rem;font-weight:700;text-decoration:none;width:100%;margin-bottom:12px}.powered{margin-top:20px;font-size:.7rem;color:rgba(255,255,255,0.3)}.powered a{color:rgba(255,255,255,0.4);text-decoration:none}</style></head><body><div class="card">' + logoHtml + '<div class="biz-name">' + bizName + '</div><div class="reward-sub">Sammle ' + goal + ' Stempel — erhalte ' + rewardName + '</div><div class="dots">' + dots + '</div><div class="stamp-count">' + stampCount + ' von ' + goal + ' Stempeln gesammelt</div><a class="wallet-btn" id="walletBtn" href="/lp/wallet/apple/' + slug + '" id="appleWalletBtn">+ Zu Apple Wallet hinzuf&#252;gen</a><a class="wallet-btn" id="googleWalletBtn" href="/lp/wallet/google/' + slug + '" style="background:#4285F4;color:#fff;margin-top:10px;">Zu Google Wallet hinzuf&#252;gen</a></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div><script>(function(){try{var c=localStorage.getItem("cTok");if(!c){c=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",c);}var ab2=document.getElementById("walletBtn"),gb2=document.getElementById("googleWalletBtn");if(ab2)ab2.href=ab2.href+(ab2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(c);if(gb2)gb2.href=gb2.href+(gb2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(c);}catch(e){}})();document.getElementById("walletBtn").addEventListener("click",function(){setTimeout(function(){window.location.href="/lp/' + slug + '";},3500);});(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.getElementById("walletBtn");var gb=document.getElementById("googleWalletBtn");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();</script></body></html>';
+    // No valid cid in the URL yet -- resolve one (URL > slug-scoped storage
+    // > legacy cTok > mint) and redirect to this same page with it attached,
+    // before any stamp-count markup is ever painted.
+    const cidBootstrapScript = cid ? '' : ('<script>' + SLUG_CID_HELPER_JS + '(function(){try{var s="' + slug + '";var c=resolveSlugCid(s);if(!c){console.error("[LoyaltyCard] customer id unavailable");return;}var u=new URL(window.location.href);u.searchParams.set("cid",c);window.location.replace(u.toString());}catch(e){console.error("[LoyaltyCard] cid redirect failed");}})();</script>');
+    const html = '<!DOCTYPE html><html lang="en"><head>' + cidBootstrapScript + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + bizName + ' Loyalty Card</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.card{background:' + color + ';border-radius:20px;padding:32px 24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}.logo{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz-name{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px}.reward-sub{font-size:.85rem;color:rgba(255,255,255,0.75);margin-bottom:24px}.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:24px}.dot{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4)}.dot.filled{background:rgba(255,255,255,0.92);border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:rgba(0,0,0,0.5)}.stamp-count{font-size:.78rem;color:rgba(255,255,255,0.7);margin-bottom:16px;margin-top:-10px}.wallet-btn{display:block;background:#000;color:#fff;border-radius:12px;padding:16px 28px;font-size:1rem;font-weight:700;text-decoration:none;width:100%;margin-bottom:12px}.powered{margin-top:20px;font-size:.7rem;color:rgba(255,255,255,0.3)}.powered a{color:rgba(255,255,255,0.4);text-decoration:none}</style></head><body><div class="card">' + logoHtml + '<div class="biz-name">' + bizName + '</div><div class="reward-sub">Sammle ' + goal + ' Stempel — erhalte ' + rewardName + '</div><div class="dots">' + dots + '</div><div class="stamp-count">' + stampCount + ' von ' + goal + ' Stempeln gesammelt</div><a class="wallet-btn" id="walletBtn" href="/lp/wallet/apple/' + slug + '" id="appleWalletBtn">+ Zu Apple Wallet hinzuf&#252;gen</a><a class="wallet-btn" id="googleWalletBtn" href="/lp/wallet/google/' + slug + '" style="background:#4285F4;color:#fff;margin-top:10px;">Zu Google Wallet hinzuf&#252;gen</a></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div><script>(function(){try{var CID=' + JSON.stringify(cid) + ';var ab2=document.getElementById("walletBtn"),gb2=document.getElementById("googleWalletBtn");if(CID){if(ab2)ab2.href=ab2.href+(ab2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);if(gb2)gb2.href=gb2.href+(gb2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);}}catch(e){}})();document.getElementById("walletBtn").addEventListener("click",function(){setTimeout(function(){window.location.href="/lp/' + slug + (cid ? '?cid=' + encodeURIComponent(cid) : '') + '";},3500);});(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.getElementById("walletBtn");var gb=document.getElementById("googleWalletBtn");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();</script></body></html>';
     return res.send(html);
   } catch(e) { console.error('[LoyaltyCard] Error:', e.message); return res.status(500).send('Error'); }
 }
@@ -1837,7 +1878,15 @@ async function handleStamp(req, res) {
       + 'wrap.innerHTML=\'<div class="emoji">\'+(rewardReady?"🎉":"✅")+\'</div><h1>\'+(rewardReady?"Belohnung bereit!":"Stempel hinzugefügt!")+\'</h1><p>\'+(rewardReady?"Zeige deinen Pass für: "+rewardName:newCount+" von "+goal+" Stempeln gesammelt")+\'</p><div class="dots">\'+dots+\'</div>\'+(rewardReady?\'<p style="color:#22c55e;font-weight:700;font-size:1.1rem;margin-top:12px">Show your wallet pass to redeem</p>\':\'<p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">\'+(goal-newCount)+\' Stempel noch bis zu deinem \'+rewardName+\'</p>\')+\'<a href="/lp/\'+slug+\'" style="display:inline-block;margin-top:20px;padding:10px 24px;background:rgba(255,255,255,0.1);color:#fff;border-radius:10px;text-decoration:none;font-size:.85rem">View your pass</a>\';\n'
       + 'spawnConfetti(rewardReady);\n'
       + 'try{fetch("/stamp/"+slug+"/customer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:window.__cid})}).catch(function(){});}catch(e){}}\n'
-      + 'try{window.__cid=localStorage.getItem("cTok");if(!window.__cid){window.__cid=Date.now()+"m"+Math.random().toString(36).slice(2);localStorage.setItem("cTok",window.__cid);}}catch(e){window.__cid=null;}\n'
+      + SLUG_CID_HELPER_JS
+      // Identity Continuity: resolveSlugCid() implements the shared 4-step
+      // resolution order (URL cid > slug-scoped storage > legacy global
+      // cTok > mint new) -- a cid supplied via the URL (e.g. from the
+      // customer's own already-installed Wallet pass barcode, or carried
+      // over from the welcome/enrollment redirect) takes priority over a
+      // fresh storage read, so a stamp can never silently create or target
+      // a second Pass the installed wallet pass isn't registered to.
+      + 'try{window.__cid=resolveSlugCid(' + JSON.stringify(slug) + ');}catch(e){window.__cid=null;}\n'
       + 'fetch(window.location.pathname+"/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:window.__cid})}).then(function(r){return r.json();}).then(render).catch(function(){render({status:"error"});});\n'
       + '})();</script></body></html>';
     return res.status(200).send(html);
@@ -1973,7 +2022,11 @@ async function handleRedeemTap(req, res) {
       + 'if(d.status==="error"){wrap.innerHTML=\'<div class="emoji">⚠️</div><h1>Something went wrong</h1><p style="color:rgba(255,255,255,0.5);margin-top:8px">Please try again.</p>\';return;}\n'
       + 'wrap.innerHTML=\'<div class="emoji">🎁</div><h1>Reward redeemed!</h1><p>Enjoy your \'+esc(d.rewardName)+\'</p><p style="color:rgba(255,255,255,0.4);font-size:.8rem;margin-top:8px">Start collecting stamps again on your next visit</p>\';\n'
       + 'spawnConfetti();}\n'
-      + 'var cid=null;try{cid=localStorage.getItem("cTok");}catch(e){}\n'
+      // Identity Continuity: a cid supplied via the URL must win over the
+      // plain localStorage read below. No new creation path introduced --
+      // with no URL cid, this remains the exact original read-only lookup
+      // (redeem never mints a cid).
+      + 'var cid=null;try{var qp=new URLSearchParams(window.location.search).get("cid");if(qp&&/^[A-Za-z0-9-]{8,64}$/.test(qp)){cid=qp;try{localStorage.setItem("cTok",qp);}catch(e){}}else{cid=localStorage.getItem("cTok");}}catch(e){}\n'
       + 'fetch(window.location.pathname+"/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:cid})}).then(function(r){return r.json();}).then(render).catch(function(){render({status:"error"});});\n'
       + '})();</script></body></html>';
     return res.status(200).send(html);
@@ -2587,6 +2640,7 @@ ${sa.active !== false ? `
 <div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0a0a0a;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:500;white-space:nowrap;z-index:100;transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;"></div>
 
 <script>
+${SLUG_CID_HELPER_JS}
 (function(){
   var SLUG = '${slug}';
   var API  = '${apiBase}';
@@ -2727,25 +2781,17 @@ ${sa.active !== false ? `
   };
 
   // ── Wallet ──
-  // Must CREATE (not just read) cTok, same as the welcome page and loyalty
-  // card page do — otherwise a customer who adds their wallet pass here
-  // first (before ever visiting those flows) gets registered to the
-  // generic no-cid pass, while their first stamp tap later mints a NEW
-  // cTok and stamps a different, unrelated Pass record. The wallet pass
-  // never reflects the stamp because they were never the same identity.
-  function _walletCid() {
-    try {
-      var c = localStorage.getItem('cTok');
-      if (!c) { c = Date.now() + 'm' + Math.random().toString(36).slice(2); localStorage.setItem('cTok', c); }
-      return c;
-    } catch(e) { return ''; }
-  }
+  // Identity Continuity: resolveSlugCid() prioritizes an incoming ?cid=
+  // (e.g. a returning customer opening "Go to Page" from their already-
+  // installed wallet pass, or arriving via the welcome-page redirect) over
+  // both slug-scoped and legacy stored values, so this never silently
+  // mints a second identity for someone who already has one.
   window.addAppleWallet = function() {
-    var c = _walletCid();
+    var c = resolveSlugCid(SLUG);
     window.location.href = API + '/lp/wallet/apple/' + SLUG + (c ? '?cid=' + encodeURIComponent(c) : '');
   };
   window.addGoogleWallet = function() {
-    var c = _walletCid();
+    var c = resolveSlugCid(SLUG);
     window.location.href = 'https://api.qraivy.com/lp/wallet/google/' + SLUG + (c ? '?cid=' + encodeURIComponent(c) : '');
   };
   // OS detection — show only relevant wallet button
@@ -2834,7 +2880,7 @@ async function handleLoyaltyWelcome(req, res) {
       skip: isDE ? 'Ohne Wallet fortfahren' : 'Continue without wallet',
       powered: isDE ? 'Unterstützt von' : 'Powered by',
     };
-    const html = '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - ' + bizName + '</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:' + color + ';border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.92);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:rgba(0,0,0,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:14px;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card">' + logoHtml + '<div class="biz">' + bizName + '</div><div class="badge">' + t.badge + '</div><div class="reward">' + t.reward + '</div><div class="explain">' + t.explain + '</div><button class="btn btn-apple" onclick="addAppleWallet()">' + t.apple + '</button><button class="btn btn-google" onclick="addGoogleWallet()">' + t.google + '</button><button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button></div><div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div><script>(function(){var s="' + slug + '";try{if(!localStorage.getItem("cTok")){localStorage.setItem("cTok",Date.now()+""+Math.random().toString(36).slice(2));}}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function addAppleWallet(){mE();var c=localStorage.getItem("cTok");window.location.href="/lp/wallet/apple/"+s+(c?"?cid="+encodeURIComponent(c):"");setTimeout(function(){window.location.href="/lp/"+s;},4000);}function addGoogleWallet(){mE();var c=localStorage.getItem("cTok");window.location.href="/lp/wallet/google/"+s+(c?"?cid="+encodeURIComponent(c):"");setTimeout(function(){window.location.href="/lp/"+s;},4000);}function continueWithout(){mE();window.location.href="/lp/"+s;}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.querySelector(".btn-apple");var gb=document.querySelector(".btn-google");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();})();<\/script></body></html>';
+    const html = '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - ' + bizName + '</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:' + color + ';border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.92);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:rgba(0,0,0,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:14px;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card">' + logoHtml + '<div class="biz">' + bizName + '</div><div class="badge">' + t.badge + '</div><div class="reward">' + t.reward + '</div><div class="explain">' + t.explain + '</div><button class="btn btn-apple" onclick="addAppleWallet()">' + t.apple + '</button><button class="btn btn-google" onclick="addGoogleWallet()">' + t.google + '</button><button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button></div><div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div><script>' + SLUG_CID_HELPER_JS + '(function(){var s="' + slug + '";var RESOLVED_CID=null;try{RESOLVED_CID=resolveSlugCid(s);}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function backToLP(){return "/lp/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");}function addAppleWallet(){mE();window.location.href="/lp/wallet/apple/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function addGoogleWallet(){mE();window.location.href="/lp/wallet/google/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function continueWithout(){mE();window.location.href=backToLP();}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.querySelector(".btn-apple");var gb=document.querySelector(".btn-google");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();})();<\/script></body></html>';
     return res.send(html);
   } catch(e) {
     console.error('[LoyaltyWelcome] Error:', e.message);
