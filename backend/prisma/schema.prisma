@@ -117,6 +117,15 @@ model Pass {
   devices         PassDevice[]
   registrations   PassRegistration[]
   rewardEvents    RewardEvent[]
+
+  // Architecture B, Stage A: optional link to the canonical cross-context
+  // identity. Nullable and additive — existing rows and every current
+  // code path are unaffected until a later stage backfills this and
+  // switches resolution logic over. See docs/WORKLOG.md 2026-07-26.
+  loyaltyCustomerId String?
+  loyaltyCustomer   LoyaltyCustomer? @relation(fields: [loyaltyCustomerId], references: [id], onDelete: Restrict)
+
+  @@index([loyaltyCustomerId])
 }
 
 model PassDevice {
@@ -215,7 +224,40 @@ model LoyaltyCustomer {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Architecture B, Stage A: additive only. LoyaltyCustomer.customerId
+  // (above) is left exactly as-is — it remains a real, independently
+  // fragmented per-cid row today (confirmed via production data review,
+  // 2026-07-26: every cid seen on a Pass.serialNumber for a given slug
+  // has its own LoyaltyCustomer row). These two relations are the new
+  // many-to-one layer that lets a single canonical LoyaltyCustomer be
+  // resolved from multiple cids going forward, without changing what
+  // customerId means or how any existing code reads/writes it.
+  passes  Pass[]
+  aliases LoyaltyCustomerAlias[]
+
   @@unique([slug, customerId])
+}
+
+// Architecture B, Stage A: new, additive-only table. Every cid ever
+// resolved for a given slug maps to exactly one canonical LoyaltyCustomer;
+// a LoyaltyCustomer can have many aliases (one per browser/app storage
+// context that ever independently minted a cid for the same physical
+// customer). Restrict (not Cascade) delete: future reconciliation logic
+// that merges duplicate LoyaltyCustomer rows must explicitly reassign
+// (UPDATE) a loser's aliases to the winner before that row can be
+// deleted — deleting a LoyaltyCustomer that still has aliases pointing
+// at it must fail loudly, never silently discard alias history.
+model LoyaltyCustomerAlias {
+  id                String          @id @default(cuid())
+  loyaltyCustomerId String
+  loyaltyCustomer   LoyaltyCustomer @relation(fields: [loyaltyCustomerId], references: [id], onDelete: Restrict)
+  slug              String
+  cid               String
+  createdAt         DateTime        @default(now())
+  lastSeenAt        DateTime        @default(now()) @updatedAt
+
+  @@unique([slug, cid])
+  @@index([loyaltyCustomerId])
 }
 
 // Durable audit log for privileged Operations Center actions (SP3.1).
