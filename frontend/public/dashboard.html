@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>QRAIVY — Smart QR Dashboard</title>
+<script src="js/url-config.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
@@ -294,7 +295,7 @@ window.QrTier={
   get: function(){ return QRairySession.get(); }
 };
 
-const API_BASE='https://api.qraivy.com';
+const API_BASE=window.API_ORIGIN;
 
 function toast(msg){
   var t=document.getElementById('cs-toast');
@@ -458,9 +459,9 @@ function renderCards(dashboard){
   }
   aiPages.forEach(function(qr){
     var slug=qr.slug||qr.lpSlug||'';
-    var lpUrl=slug?'https://www.qraivy.com/lp/welcome/'+slug:qr.originalUrl;
+    var lpUrl=slug?window.PUBLIC_APP_ORIGIN+'/lp/welcome/'+slug:qr.originalUrl;
     var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=64x64&data='+encodeURIComponent(lpUrl)+'&color=111111&bgcolor=ffffff&margin=1';
-    var qrData=Object.assign({},qr,{qrImageUrl:qrImg,publicUrl:slug?'qraivy.com/lp/'+slug:qr.originalUrl});
+    var qrData=Object.assign({},qr,{qrImageUrl:qrImg,publicUrl:slug?window.PUBLIC_APP_ORIGIN.replace(/^https?:\/\//,'')+'/lp/'+slug:qr.originalUrl});
     var wrap=document.createElement('div');
     wrap.innerHTML=renderSmartQRCard(qrData,{claimed:false});
     var card=wrap.firstElementChild;
@@ -636,7 +637,7 @@ async function initDashboard(){
     if (!pending) pending = {
       slug: claimSlug,
       businessName: claimSlug.replace(/^demo-/,'').replace(/-[a-z0-9]{3,6}$/,'').replace(/-/g,' '),
-      hostedUrl: 'https://qraivy.com/lp/' + claimSlug
+      hostedUrl: window.PUBLIC_APP_ORIGIN + '/lp/' + claimSlug
     };
 
     const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data='
@@ -900,7 +901,7 @@ async function initDashboard(){
     document.getElementById('subTableBody').innerHTML = '<div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
-      fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
+      fetch(window.API_ORIGIN + '/loyalty/subscribers/summary', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -953,7 +954,7 @@ async function initDashboard(){
     document.getElementById('subDetailBody').innerHTML = '<div class="state-loading">Loading…</div>';
 
     subTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/subscribers/' + slug + '/detail', {
+      fetch(window.API_ORIGIN + '/loyalty/subscribers/' + slug + '/detail', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1238,7 +1239,7 @@ async function initDashboard(){
     if (!sel || sel.dataset.loaded) return;
     sel.dataset.loaded = '1';
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/programs', {
+      fetch(window.API_ORIGIN + '/loyalty/programs', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1327,7 +1328,7 @@ async function initDashboard(){
     var btn = document.getElementById('campGenBtn');
     btn.disabled = true; btn.childNodes[btn.childNodes.length-1].textContent = ' Generating…';
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/campaign/generate', {
+      fetch(window.API_ORIGIN + '/loyalty/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify({ campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
@@ -1359,7 +1360,7 @@ async function initDashboard(){
     var msg = document.getElementById('campSendMsg');
     btn.disabled = true; msg.innerHTML = '';
     campTok(function(tok) {
-      fetch('https://www.qraivy.com/lp/push/' + _slug, {
+      fetch(window.PUBLIC_APP_ORIGIN + '/lp/push/' + _slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
@@ -1409,7 +1410,7 @@ async function initDashboard(){
     var panel = document.getElementById('campHistPanel');
     var list  = document.getElementById('campHistList');
     campTok(function(tok) {
-      fetch('https://www.qraivy.com/lp/push/' + slug + '/history', {
+      fetch(window.PUBLIC_APP_ORIGIN + '/lp/push/' + slug + '/history', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1439,49 +1440,62 @@ async function initDashboard(){
 </div>
 
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;"><span data-i18n="loy_title">🎟 Loyalty Programs</span></div>
-    <a id="ly-add-prog-btn" href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;" data-i18n="loy_add_prog">+ Add program</a>
+  <style>
+    .loy-wrap{max-width:820px}
+    .loy-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+    .loy-avatar{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',system-ui,sans-serif;font-weight:800;font-size:1.3rem;color:#fff;flex-shrink:0;overflow:hidden}
+    .loy-header-title{font-size:1.3rem;font-weight:800;color:#f0f4f8}
+    .loy-status-chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.68rem;font-weight:700;margin-top:2px}
+    .loy-status-chip.active{background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25)}
+    .loy-status-chip.paused{background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1)}
+    .loy-switch{margin-left:auto;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#f0f4f8;font-family:inherit;font-size:.78rem;max-width:220px}
+    .loy-tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-bottom:18px;scrollbar-width:none}
+    .loy-tabs::-webkit-scrollbar{display:none}
+    .loy-tab{flex:0 0 auto;padding:9px 16px;border-radius:9px;font-size:.8rem;font-weight:700;color:rgba(240,244,248,0.5);background:transparent;border:0.5px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit}
+    .loy-tab.active{background:rgba(255,90,31,0.1);border-color:rgba(255,90,31,0.3);color:#ff8c55}
+    .loy-panel{display:none}
+    .loy-panel.active{display:block}
+    .loy-primary-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:22px;background:#ff5a1f;border:none;border-radius:16px;color:#fff;font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.15rem;font-weight:800;cursor:pointer;text-decoration:none;margin-bottom:22px;box-shadow:0 8px 24px rgba(255,90,31,0.25)}
+    .loy-primary-cta:hover{background:#e04e18}
+    .loy-kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
+    @media(min-width:560px){.loy-kpi-grid{grid-template-columns:repeat(4,1fr)}}
+    .loy-kpi{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;text-align:center}
+    .loy-kpi-val{font-size:1.7rem;font-weight:800;color:#f0f4f8;font-family:'Space Grotesk',system-ui,sans-serif}
+    .loy-kpi-label{font-size:.66rem;color:rgba(240,244,248,0.4);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+    .loy-section-title{font-size:.95rem;font-weight:700;color:#f0f4f8;margin:22px 0 10px}
+    .loy-quicklinks{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .loy-quicklink{padding:9px 14px;border-radius:9px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);color:rgba(240,244,248,0.7);font-size:.75rem;text-decoration:none;cursor:pointer;font-family:inherit}
+    .loy-activity-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid rgba(255,255,255,0.06);font-size:.78rem;color:rgba(240,244,248,0.6)}
+    .loy-activity-row:last-child{border-bottom:none}
+    .loy-card{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:22px;text-align:center}
+    .loy-input,.loy-select{width:100%;background:#111;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#f0f4f8;font-family:inherit;font-size:.85rem;outline:none;margin-bottom:12px}
+    .loy-input:focus,.loy-select:focus{border-color:#ff5a1f}
+    .loy-toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .loy-filter-btn{padding:8px 14px;border-radius:8px;font-size:.74rem;font-weight:600;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);color:rgba(240,244,248,0.5);cursor:pointer;font-family:inherit}
+    .loy-filter-btn.active{background:rgba(255,90,31,0.12);border-color:rgba(255,90,31,0.3);color:#ff8c55}
+    .loy-member-card{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;margin-bottom:10px}
+    .loy-member-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .loy-member-ref{font-weight:700;color:#f0f4f8;font-size:.85rem}
+    .loy-member-row{display:flex;justify-content:space-between;font-size:.75rem;color:rgba(240,244,248,0.5);padding:3px 0}
+    .loy-empty{text-align:center;padding:44px 20px;color:rgba(240,244,248,0.4);font-size:.85rem}
+    .loy-note{font-size:.68rem;color:rgba(240,244,248,0.3);margin-top:14px;line-height:1.6}
+    .loy-settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)}
+    .loy-settings-label{font-size:.82rem;color:#f0f4f8;font-weight:600}
+    .loy-settings-sub{font-size:.68rem;color:rgba(240,244,248,0.4);margin-top:2px}
+    .loy-toggle{position:relative;width:44px;height:24px;border-radius:20px;background:rgba(255,255,255,0.1);border:none;cursor:pointer;flex-shrink:0}
+    .loy-toggle.on{background:#22c55e}
+    .loy-toggle span{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+    .loy-toggle.on span{transform:translateX(20px)}
+    .loy-wallet-badge{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:#22c55e}
+    .loy-swatch{width:22px;height:22px;border-radius:6px;display:inline-block;vertical-align:middle;border:1px solid rgba(255,255,255,0.15)}
+  </style>
+  <div class="loy-wrap" id="loy-root">
+    <div class="loy-empty" data-i18n="loy_loading">Loading…</div>
   </div>
-  <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;" data-i18n="loy_gdpr">Anonymous stamp tracking — GDPR compliant</div>
-  <div id="ly-pages-list" style="display:grid;gap:16px;max-width:720px;"></div>
 </div>
 
 <script>
-function _lyFixAddBtn() { var b=document.getElementById("ly-add-prog-btn"); if(b) b.href="loyalty-setup.html?lang="+(localStorage.getItem("qraivy_lang")||"en"); }
-function loadLoyaltyDashboard() {
-  try {
-    if (window.Clerk && window.Clerk.session) {
-      window.Clerk.session.getToken().then(function(t) {
-        _lyFixAddBtn(); _doLoadLoyalty(t ? { "Authorization": "Bearer " + t } : {});
-      });
-      return;
-    }
-  } catch(_) {}
-  _doLoadLoyalty({});
-}
-
-function _doLoadLoyalty(headers) {
-  var list = document.getElementById("ly-pages-list");
-  if (!list) return;
-  list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
-  fetch("https://api.qraivy.com/loyalty/programs?_=" + Date.now(), { headers: headers })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var programs = (data && data.programs) || [];
-      if (!programs.length) {
-        list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;\">No loyalty programs yet. <a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;\">Set one up →</a></div>";
-        return;
-      }
-      list.innerHTML = "";
-      programs.forEach(function(p) { list.appendChild(_lyBuildCard(p)); });
-    })
-    .catch(function() {
-      list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);padding:20px;\">Error loading loyalty data.</div>";
-    });
-}
-
-// Convert hex color to rgba string
+// ── Shared small helpers (kept from the previous implementation) ──
 function _lyRgba(hex, alpha) {
   hex = (hex || "#ff5a1f").replace("#", "");
   if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
@@ -1491,292 +1505,576 @@ function _lyRgba(hex, alpha) {
   if (isNaN(r)||isNaN(g)||isNaN(b)) { r=255; g=90; b=31; }
   return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
 }
-
-// Visual card preview — mirrors the customer loyalty card
-function _lyCardPreview(p, color) {
-  var _lang = localStorage.getItem("qraivy_lang") || "en";
-  color = color || p.color || "#ff5a1f";
-  var goal = p.stampGoal || 10;
-  var circles = "";
-  for (var i = 0; i < goal; i++) {
-    if (i < p.currentStamps) {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;background:" + _lyRgba(color,0.85) + ";border:1.5px solid " + color + ";display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;'>✓</div>";
-    } else {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);'></div>";
-    }
-  }
-  return "<div id='ly-preview-" + p.id + "' style='background:linear-gradient(135deg,#1c1c1c,#111);border:1px solid " + _lyRgba(color,0.3) + ";border-radius:14px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;'>" +
-    "<div style='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg," + color + ",transparent);'></div>" +
-    "<div style='font-size:.95rem;font-weight:600;color:#f0ece0;margin-bottom:3px;'>" + _lyEsc(p.businessName || p.slug) + "</div>" +
-    "<div style='font-size:.65rem;color:rgba(240,244,248,0.35);margin-bottom:14px;'>" + (_lang==="de" ? "Sammle " + goal + " Stempel — erhalte " : "Collect " + goal + " stamps — get a ") + _lyEsc(p.rewardText || "Free item") + "</div>" +
-    "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
-    "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
-      "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
-      "<a href='https://qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>"+ (_lang==="de"?"Karte ansehen":"View card") +" ↗</a>" +
-    "</div>" +
-  "</div>";
-}
-
-function _lyBuildCard(p) {
-  var _lang = localStorage.getItem("qraivy_lang") || "en";
-  // Store program data for live color preview
-  if (!window._lyPrograms) window._lyPrograms = {};
-  window._lyPrograms[p.id] = p;
-
-  var el = document.createElement("div");
-  el.id = "ly-card-" + p.id;
-  var pct = p.stampGoal ? Math.min(100, Math.round(p.currentStamps / p.stampGoal * 100)) : 0;
-  var color = p.color || "#ff5a1f";
-  var badgeStyle, badgeTxt;
-  if (!p.hasLoyaltyConfig) {
-    badgeStyle = "background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);";
-    badgeTxt = "<span data-i18n='loy_not_setup'>not set up</span>";
-  } else if (p.status === "active") {
-    badgeStyle = "background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25);";
-    badgeTxt = "<span data-i18n='loy_active'>● active</span>";
-  } else {
-    badgeStyle = "background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1);";
-    badgeTxt = "<span data-i18n='loy_paused'>⏸ paused</span>";
-  }
-  el.style.cssText = "background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;";
-  var goalOpts = [5,8,10,12,15].map(function(n) {
-    return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>";
-  }).join("");
-
-  var h = "";
-  // Header
-  h += "<div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;\">";
-  h +=   "<div>";
-  h +=     "<div style=\"font-size:1rem;font-weight:700;color:#f0f4f8;\">" + _lyEsc(p.businessName || p.slug) + "</div>";
-  h +=     "<div style=\"font-size:.7rem;color:rgba(240,244,248,0.4);margin-top:2px;\">";
-  h +=       p.hasLoyaltyConfig ? (_lyEsc(p.rewardText || "Free item") + " after " + p.stampGoal + " stamps") : "Loyalty not configured";
-  h +=     "</div>";
-  h +=   "</div>";
-  h +=   "<span style=\"" + badgeStyle + "border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:700;\">" + badgeTxt + "</span>";
-  h += "</div>";
-
-  if (p.hasLoyaltyConfig) {
-    // Visual card preview (uses program color)
-    h += _lyCardPreview(p, color);
-    // Stats
-    h += "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;\">";
-    h += _lyStat(_lang==="de"?"Aktuell":"Current", p.currentStamps, color);
-    h += _lyStat(_lang==="de"?"Gesamt":"All-time", p.totalStampsIssued, "#f0f4f8");
-    h += _lyStat(_lang==="de"?"Eingeloest":"Redeemed", p.rewardsRedeemed, "#f0f4f8");
-    h += "</div>";
-    // Progress bar
-    h += "<div style=\"height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;\">";
-    h += "<div style=\"height:100%;background:" + color + ";border-radius:999px;width:" + pct + "%;transition:width 0.5s;\"></div></div>";
-    // QR + NFC URL + actions
-    h += "<div style=\"display:flex;gap:10px;align-items:center;\">";
-    h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
-    if (p.nfcUrl) {
-      h += "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.nfcUrl) + "\" style=\"width:68px;height:68px;\">";
-    }
-    h +=   "</div>";
-    h +=   "<div style=\"flex:1;min-width:0;\">";
-    h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.nfcUrl || "—") + "</div>";
-    h +=     "<div style=\"display:flex;gap:6px;flex-wrap:wrap;\">";
-    h +=       "<button id=\"ly-copybtn-" + p.id + "\" data-url=\"" + _lyEsc(p.nfcUrl || "") + "\" data-id=\"" + p.id + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"flex:1;padding:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.7rem;cursor:pointer;min-width:90px;\">" + (_lang==="de"?"NFC-URL kopieren":"Copy NFC URL") + "</button>";
-    h +=       "<button data-id=\"" + p.id + "\" onclick=\"window.toggleLoyaltyEdit(this)\" style=\"padding:8px 10px;background:transparent;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(240,244,248,0.35);font-size:.7rem;cursor:pointer;\" title=\"Edit program\">" + (_lang==="de"?"&#9881; Bearbeiten":"&#9881; Edit") + "</button>";
-    h +=     "</div>";
-    h +=   "</div>";
-    h += "</div>";
-    // Second physical NFC tag — staff tap a customer's phone on this to redeem their reward
-    if (p.redeemUrl) {
-      h += "<div style=\"display:flex;gap:10px;align-items:center;margin-top:10px;\">";
-      h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
-      h +=     "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.redeemUrl) + "\" style=\"width:68px;height:68px;\">";
-      h +=   "</div>";
-      h +=   "<div style=\"flex:1;min-width:0;\">";
-      h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.redeemUrl) + "</div>";
-      h +=     "<button data-url=\"" + _lyEsc(p.redeemUrl) + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"width:100%;padding:8px;background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.2);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:600;cursor:pointer;\">" + (_lang==="de"?"🎁 Einlöse-URL kopieren":"🎁 Copy Redeem URL") + "</button>";
-      h +=   "</div>";
-      h += "</div>";
-    }
-    // Staff stamp scanner — links to the camera-based scanner page
-    h += "<a href=\"stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\" style=\"display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:8px;color:#ff8c55;font-size:.75rem;font-weight:600;text-decoration:none;\">📷 " + (_lang==="de"?"Kunden-Pass scannen & stempeln":"Scan customer pass to stamp") + "</a>";
-    // Inline edit panel
-    h += "<div id=\"ly-edit-" + p.id + "\" style=\"display:none;margin-top:12px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;padding:13px;\">";
-    h +=   "<div style=\"font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:10px;\">Edit program</div>";
-    h +=   "<div style=\"display:flex;gap:8px;margin-bottom:10px;\">";
-    h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
-    h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
-    h +=   "</div>";
-    h +=   "<div style=\"margin-bottom:10px;\"><label style=\"display:block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:6px;\">Staff PIN (4-6 digits)</label>";
-    h +=   "<div style=\"display:flex;gap:8px;\">";
-    h +=     "<input id=\"ly-pin-" + p.id + "\" type=\"number\" min=\"1000\" max=\"999999\" placeholder=\"e.g. 1234\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
-    h +=     "<button data-id=\"" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.saveStaffPin(this)\" style=\"padding:8px 14px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:7px;color:#ff8c55;font-size:.72rem;cursor:pointer;white-space:nowrap;\">Set PIN</button>";
-    h +=   "</div><span id=\"ly-pin-status-" + p.id + "\" style=\"font-size:.65rem;color:#22c55e;display:none;\">✓ PIN saved</span></div>";
-    h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
-    h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
-    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
-    h +=     "<span id=\"ly-saved-" + p.id + "\" style=\"font-size:.68rem;color:#22c55e;display:none;\">✓ Saved</span>";
-    h +=   "</div>";
-    h += "</div>";
-  } else {
-    h += "<a href=\"loyalty-setup.html\" style=\"display:block;text-align:center;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.18);border-radius:8px;color:#ff8c55;font-size:.75rem;text-decoration:none;\">" + (_lang==="de"?"+ Treueprogramm aktivieren":"+ Enable loyalty for this page") + "</a>";
-  }
-
-  // STEP3_CUST_LIST: customer list section
-  if (p.hasLoyaltyConfig) {
-    h += "<div style=\"margin-top:12px;\">";
-    h += "<button data-id=\"" + p.id + "\" onclick=\"window.loadCustList(this)\"" +
-         " style=\"width:100%;padding:8px;background:transparent;border:0.5px solid rgba(255,255,255,0.07);" +
-         "border-radius:8px;color:rgba(240,244,248,0.35);font-size:.68rem;cursor:pointer;\">" +
-         "&#128101; " + (_lang==="de"?"Kunden":"Customers") + "</button>";
-    h += "<div id=\"cust-list-" + p.id + "\" style=\"display:none;margin-top:8px;\"></div>";
-    h += "</div>";
-  }
-  el.innerHTML = h;
-  return el;
-}
-
-function _lyStat(label, val, color) {
-  return "<div style=\"background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;text-align:center;\">" +
-    "<div style=\"font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.35);margin-bottom:3px;\">" + label + "</div>" +
-    "<div style=\"font-size:1.3rem;font-weight:800;color:" + color + ";\">" + val + "</div>" +
-  "</div>";
-}
-
 function _lyEsc(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+function _lyDate(iso) {
+  if (!iso) return "No visits yet";
+  try { return new Date(iso).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}); }
+  catch(_) { return "—"; }
+}
+// No logo endpoint is currently exposed to the owner dashboard's loyalty
+// APIs (buildProgram in loyaltyAdminController.js does not return one) —
+// rather than add a new backend field for this step, every avatar always
+// renders as a colored business initial. This is the exact fallback the
+// spec itself describes for a failed logo, applied unconditionally, so a
+// broken image icon can never appear.
+function _lyAvatar(businessName, color) {
+  var initial = (businessName || "?").trim().charAt(0).toUpperCase() || "?";
+  return "<div class=\"loy-avatar\" style=\"background:" + (color || "#ff5a1f") + "\">" + _lyEsc(initial) + "</div>";
+}
+async function _lyToken() {
+  try { if (window.Clerk && window.Clerk.session) return await window.Clerk.session.getToken(); } catch(_) {}
+  return null;
+}
+async function _lyAuthHeaders() {
+  var t = await _lyToken();
+  return t ? { "Authorization": "Bearer " + t } : {};
+}
 
-window.saveStaffPin = async function(btn) {
-  var id = btn.dataset.id;
-  var slug = btn.dataset.slug;
-  var input = document.getElementById('ly-pin-' + id);
-  var status = document.getElementById('ly-pin-status-' + id);
-  var pin = (input && input.value || '').trim();
-  if(!pin || pin.length < 4) { alert('PIN must be at least 4 digits.'); return; }
-  btn.disabled = true;
-  try {
-    var tok = await window.Clerk.session.getToken();
-    var res = await fetch('https://api.qraivy.com/lp/staff-pin/' + encodeURIComponent(slug), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-      body: JSON.stringify({ pin: pin })
-    });
-    var d = await res.json();
-    if(res.ok && d.ok) {
-      if(status) { status.style.display='inline'; setTimeout(function(){ status.style.display='none'; }, 2500); }
-      if(input) input.value = '';
-    } else {
-      alert(d.error || 'Failed to save PIN');
-    }
-  } catch(e) { alert('Error: ' + e.message); }
-  btn.disabled = false;
-};
+// ── State ──
+window._loyPrograms = window._loyPrograms || [];
+window._loyCurrentId = window._loyCurrentId || null;
+window._loyActiveTab = window._loyActiveTab || "overview";
+window._loyMembersCache = null;
+window._loyStatsCache = null;
+window._loyMemberFilter = "all";
+window._loyMemberSearch = "";
 
-window.copyLoyaltyUrl = function(btn) {
-  var url = btn.dataset.url;
-  if (!url) return;
-  navigator.clipboard.writeText(url).then(function() {
-    var orig = btn.textContent;
-    btn.textContent = "✓ Copied!";
-    btn.style.color = "#22c55e";
-    btn.style.borderColor = "rgba(34,197,94,0.3)";
-    setTimeout(function() { btn.textContent = orig; btn.style.color = ""; btn.style.borderColor = ""; }, 2000);
-  }).catch(function() {});
-};
+function _loyCurrentProgram() {
+  return (window._loyPrograms || []).filter(function(p){ return p.id === window._loyCurrentId; })[0] || null;
+}
 
-window.toggleLoyaltyEdit = function(btn) {
-  var id = btn.dataset.id;
-  var panel = document.getElementById("ly-edit-" + id);
-  if (panel) panel.style.display = panel.style.display === "none" ? "" : "none";
-};
-
-window.saveLoyaltyEdit = function(btn) {
-  var id = btn.dataset.id;
-  var reward = (document.getElementById("ly-er-" + id) || {}).value || "";
-  var goal = parseInt((document.getElementById("ly-eg-" + id) || {}).value || 10);
-  try {
-    window.Clerk.session.getToken().then(function(t) {
-      var body = { rewardName: reward, goal: goal };
-      fetch("https://api.qraivy.com/loyalty/programs/" + id, {
-        method: "PUT",
-        headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.program) {
-          if (window._lyPrograms) window._lyPrograms[id] = d.program;
-          var saved = document.getElementById("ly-saved-" + id);
-          if (saved) { saved.style.display = "inline"; setTimeout(function() { saved.style.display = "none"; }, 2000); }
-          var card = document.getElementById("ly-card-" + id);
-          if (card) card.replaceWith(_lyBuildCard(d.program));
-        }
-      }).catch(function() {});
-    });
-  } catch(e) {}
-};
-
-window.toggleLoyaltyStatus = function(btn) {
-  var id = btn.dataset.id;
-  var cur = btn.dataset.status;
-  var newStatus = cur === "active" ? "paused" : "active";
-  try {
-    window.Clerk.session.getToken().then(function(t) {
-      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/status", {
-        method: "PATCH",
-        headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.program) {
-          var card = document.getElementById("ly-card-" + id);
-          if (card) card.replaceWith(_lyBuildCard(d.program));
-        }
-      }).catch(function() {});
-    });
-  } catch(e) {}
-};
-
-window.loadCustList = function(btn) {
-  var id = btn.dataset.id;
-  var container = document.getElementById("cust-list-" + id);
-  if (!container) return;
-  // Toggle off
-  if (container.style.display !== "none") {
-    container.style.display = "none";
-    btn.innerHTML = "<span data-i18n='loy_customers'>👥 Customers</span>";
-    return;
-  }
-  btn.innerHTML = "&#128101; Loading&#8230;";
-  try {
-    window.Clerk.session.getToken().then(function(t) {
-      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/customers", {
-        headers: { "Authorization": "Bearer " + t }
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        var custs = d.customers || [];
-        btn.innerHTML = "&#128101; " + custs.length + " customer" + (custs.length !== 1 ? "s" : "");
-        if (!custs.length) {
-          container.innerHTML = "<div style=\"padding:12px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.3);\">No customers yet</div>";
-          container.style.display = "block";
+// ── Entry point — same function name/signature the rest of the dashboard
+// already calls (sidebar click handler, ?section=loyalty deep link). ──
+function loadLoyaltyDashboard() {
+  var root = document.getElementById("loy-root");
+  if (!root) return;
+  root.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+  _lyAuthHeaders().then(function(headers) {
+    fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var programs = ((data && data.programs) || []).filter(function(p){ return p.hasLoyaltyConfig; });
+        window._loyPrograms = programs;
+        if (!programs.length) {
+          root.innerHTML = "<div class=\"loy-empty\">No loyalty program yet.<br><br>" +
+            "<a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;font-weight:700;\">Set one up →</a></div>";
           return;
         }
-        var rows = "";
-        custs.forEach(function(c) {
-          var icon = c.hasWallet ? "&#128179;" : "&#128100;";
-          var reward = c.rewardReady ? " <span style=\"color:#22c55e;\">&#10003; Ready</span>" : "";
-          var when = c.lastStampAt ? new Date(c.lastStampAt).toLocaleDateString() : "—";
-          var prog = c.stampCount + "/" + c.goal;
-          rows += "<div style=\"display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.05);font-size:.68rem;\">" +
-            "<span style=\"font-size:.85rem;\">" + icon + "</span>" +
-            "<span style=\"flex:1;color:rgba(240,244,248,0.5);font-family:monospace;\">" + _lyEsc(c.maskedId) + "</span>" +
-            "<span style=\"color:#ff5a1f;font-weight:700;\">" + prog + "</span>" +
-            reward +
-            "<span style=\"color:rgba(240,244,248,0.25);margin-left:auto;\">" + when + "</span>" +
-          "</div>";
-        });
-        container.innerHTML =
-          "<div style=\"background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;\">" +
-          "<div style=\"display:flex;justify-content:space-between;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.07);font-size:.6rem;color:rgba(240,244,248,0.25);letter-spacing:.06em;\">" +
-          "<span>CUSTOMER</span><span>STAMPS</span><span>DATE</span></div>" +
-          rows + "</div>";
-        container.style.display = "block";
-      }).catch(function() { btn.innerHTML = "&#128101; Customers"; });
+        if (!window._loyCurrentId || !_loyCurrentProgram()) window._loyCurrentId = programs[0].id;
+        window._loyMembersCache = null;
+        window._loyStatsCache = null;
+        _loyRenderShell();
+      })
+      .catch(function() {
+        root.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+      });
+  });
+}
+
+function _loyRenderShell() {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  var root = document.getElementById("loy-root");
+  var statusClass = p.status === "active" ? "active" : "paused";
+  var statusLabel = p.status === "active" ? "Active" : "Paused";
+
+  var switcher = "";
+  if (window._loyPrograms.length > 1) {
+    switcher = "<select class=\"loy-switch\" onchange=\"window._loySwitchProgram(this.value)\">" +
+      window._loyPrograms.map(function(pr) {
+        return "<option value=\"" + pr.id + "\"" + (pr.id === p.id ? " selected" : "") + ">" + _lyEsc(pr.businessName || pr.slug) + "</option>";
+      }).join("") + "</select>";
+  }
+
+  var tabs = [
+    ["overview", "Overview"],
+    ["stamp", "Stamp Customer"],
+    ["members", "Members"],
+    ["rewards", "Rewards"],
+    ["settings", "Settings"]
+  ];
+
+  root.innerHTML =
+    "<div class=\"loy-header\">" +
+      _lyAvatar(p.businessName, p.color) +
+      "<div><div class=\"loy-header-title\">Loyalty Program</div>" +
+      "<span class=\"loy-status-chip " + statusClass + "\">" + statusLabel + "</span></div>" +
+      switcher +
+    "</div>" +
+    "<div class=\"loy-tabs\">" +
+      tabs.map(function(t) {
+        return "<button class=\"loy-tab" + (window._loyActiveTab === t[0] ? " active" : "") + "\" onclick=\"window._loySelectTab('" + t[0] + "')\">" + t[1] + "</button>";
+      }).join("") +
+    "</div>" +
+    tabs.map(function(t) { return "<div class=\"loy-panel" + (window._loyActiveTab === t[0] ? " active" : "") + "\" id=\"loy-panel-" + t[0] + "\"></div>"; }).join("");
+
+  // Shell is (re)built every time the section becomes active (sidebar
+  // click, ?section=loyalty deep link, program switch) — always force a
+  // fresh load here rather than trusting whatever was cached before.
+  _loyRenderActiveTab(true);
+}
+
+window._loySwitchProgram = function(id) {
+  window._loyCurrentId = id;
+  window._loyMembersCache = null;
+  window._loyStatsCache = null;
+  _loyRenderShell();
+};
+
+window._loySelectTab = function(tab) {
+  window._loyActiveTab = tab;
+  document.querySelectorAll(".loy-tab").forEach(function(el, i) {
+    var tabs = ["overview","stamp","members","rewards","settings"];
+    el.classList.toggle("active", tabs[i] === tab);
+  });
+  document.querySelectorAll(".loy-panel").forEach(function(el) {
+    el.classList.toggle("active", el.id === "loy-panel-" + tab);
+  });
+  // Switching back to a data-driven tab always forces a fresh load —
+  // a stamp/redeem could have happened elsewhere (scanner, another tab)
+  // since this data was last fetched. Stamp Customer/Settings don't use
+  // the stats/customers cache at all, so forcing there would be a no-op.
+  var forceTabs = { overview: true, members: true, rewards: true };
+  _loyRenderActiveTab(!!forceTabs[tab]);
+};
+
+function _loyRenderActiveTab(force) {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  if (window._loyActiveTab === "overview") _loyRenderOverview(p, force);
+  else if (window._loyActiveTab === "stamp") _loyRenderStampCustomer(p);
+  else if (window._loyActiveTab === "members") _loyRenderMembers(p, force);
+  else if (window._loyActiveTab === "rewards") _loyRenderRewards(p, force);
+  else if (window._loyActiveTab === "settings") _loyRenderSettings(p);
+}
+
+// ── Refresh-on-return: window focus / tab visibility. Event-driven only,
+// no interval/poll anywhere. Registered once — loadLoyaltyDashboard runs
+// every time the section is opened, so this guard stops duplicate
+// listeners from piling up across repeated visits in the same page load. ──
+function _loySectionVisible() {
+  var sec = document.getElementById("section-loyalty");
+  return !!(sec && sec.style.display !== "none");
+}
+function _loyForceRefreshIfVisible() {
+  if (!_loySectionVisible() || !_loyCurrentProgram()) return;
+  _loyRenderActiveTab(true);
+}
+if (!window._loyListenersBound) {
+  window._loyListenersBound = true;
+  window.addEventListener("focus", _loyForceRefreshIfVisible);
+  document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "visible") _loyForceRefreshIfVisible();
+  });
+}
+
+// ── Data fetch helpers (shared across tabs, cached per program) ──
+// Short freshness window, not a hard cache: data younger than this is
+// reused as-is (avoids re-fetching every single tab switch), but any
+// caller can pass force=true to bypass it entirely — used when the
+// Loyalty section becomes active again, the window regains focus/
+// visibility, or the owner switches to Overview/Members/Rewards, so a
+// stamp/redeem done elsewhere (the scanner, a different tab) is never
+// left showing stale counts. No polling anywhere — purely event-driven.
+var LOY_FRESH_MS = 15000;
+window._loyStatsInflight = null;   // { id, promise } — dedupes concurrent requests
+window._loyMembersInflight = null;
+
+async function _loyFetchStats(id, force) {
+  if (!force && window._loyStatsCache && window._loyStatsCache.id === id && (Date.now() - window._loyStatsCache.time) < LOY_FRESH_MS) {
+    return window._loyStatsCache.data;
+  }
+  if (window._loyStatsInflight && window._loyStatsInflight.id === id) return window._loyStatsInflight.promise;
+  var p = _lyAuthHeaders().then(function(headers) {
+    return fetch(window.API_ORIGIN + "/loyalty/programs/" + id + "/stats", { headers: headers });
+  }).then(function(res) { return res.json(); }).then(function(d) {
+    window._loyStatsCache = { id: id, time: Date.now(), data: d };
+    window._loyStatsInflight = null;
+    return d;
+  }).catch(function(e) { window._loyStatsInflight = null; throw e; });
+  window._loyStatsInflight = { id: id, promise: p };
+  return p;
+}
+async function _loyFetchCustomers(id, force) {
+  if (!force && window._loyMembersCache && window._loyMembersCache.id === id && (Date.now() - window._loyMembersCache.time) < LOY_FRESH_MS) {
+    return window._loyMembersCache.data;
+  }
+  if (window._loyMembersInflight && window._loyMembersInflight.id === id) return window._loyMembersInflight.promise;
+  var p = _lyAuthHeaders().then(function(headers) {
+    return fetch(window.API_ORIGIN + "/loyalty/programs/" + id + "/customers", { headers: headers });
+  }).then(function(res) { return res.json(); }).then(function(d) {
+    var customers = (d && d.customers) || [];
+    window._loyMembersCache = { id: id, time: Date.now(), data: customers };
+    window._loyMembersInflight = null;
+    return customers;
+  }).catch(function(e) { window._loyMembersInflight = null; throw e; });
+  window._loyMembersInflight = { id: id, promise: p };
+  return p;
+}
+function _loyMemberRef(maskedId) {
+  var s = String(maskedId || "").replace(/\*+$/, "");
+  var tail = s.slice(-4).toUpperCase() || "????";
+  return "Member ending " + tail;
+}
+
+// ══════════════════════════════ OVERVIEW ══════════════════════════════
+function _loyRenderOverview(p, force) {
+  var panel = document.getElementById("loy-panel-overview");
+  if (!panel) return;
+  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+
+  Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
+    // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
+    var statsResp = results[0] || {};
+    var innerStats = statsResp.stats || {};
+    var customers = results[1] || [];
+    var todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    var recent = statsResp.recentStamps || [];
+    var todayStamps = recent.filter(function(e) {
+      return e.createdAt && new Date(e.createdAt) >= todayStart;
+    }).length;
+    var activeMembers = customers.length;
+    var rewardsWaiting = customers.filter(function(c){ return c.rewardReady; }).length;
+    var rewardsRedeemed = typeof innerStats.rewardsRedeemed === "number" ? innerStats.rewardsRedeemed : 0;
+
+    var activityRows = customers.slice(0, 5).map(function(c) {
+      var when = _lyDate(c.lastStampAt);
+      var status = c.rewardReady ? "🎁 Reward ready" : (c.stampCount + " of " + (p.stampGoal || 10) + " stamps");
+      return "<div class=\"loy-activity-row\"><span>" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
+        "<span style=\"margin-left:auto;\">" + status + "</span><span style=\"opacity:.6;\">" + when + "</span></div>";
+    }).join("");
+
+    panel.innerHTML =
+      (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:0.5px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
+      "<a class=\"loy-primary-cta\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 Stamp Customer</a>" +
+      "<div class=\"loy-kpi-grid\">" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + todayStamps + "</div><div class=\"loy-kpi-label\">Today's Stamps</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + activeMembers + "</div><div class=\"loy-kpi-label\">Active Members</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsWaiting + "</div><div class=\"loy-kpi-label\">Rewards Waiting</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsRedeemed + "</div><div class=\"loy-kpi-label\">Rewards Redeemed</div></div>" +
+      "</div>" +
+      "<div class=\"loy-section-title\">Recent Activity</div>" +
+      (activityRows || "<div class=\"loy-empty\" style=\"padding:20px;\">No activity yet</div>") +
+      "<div class=\"loy-quicklinks\">" +
+        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('members')\">👥 View Members</button>" +
+        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('rewards')\">🎁 View Rewards</button>" +
+        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('settings')\">⚙ Settings</button>" +
+      "</div>";
+  }).catch(function() {
+    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  });
+}
+
+// ══════════════════════════ STAMP CUSTOMER ══════════════════════════
+function _loyRenderStampCustomer(p) {
+  var panel = document.getElementById("loy-panel-stamp");
+  if (!panel) return;
+  var scannerUrl = window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug);
+  panel.innerHTML =
+    "<div class=\"loy-card\">" +
+      _lyAvatar(p.businessName, p.color) +
+      "<div style=\"font-size:1.1rem;font-weight:800;color:#f0f4f8;margin:14px 0 6px;\">Stamp a Customer</div>" +
+      "<div style=\"font-size:.82rem;color:rgba(240,244,248,0.55);line-height:1.6;margin-bottom:20px;\">Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.</div>" +
+      "<a class=\"loy-primary-cta\" style=\"margin-bottom:10px;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
+      "<a class=\"loy-quicklink\" style=\"display:block;\" href=\"" + scannerUrl + "\">Enter Code Manually</a>" +
+      "<div id=\"loy-pin-status-line\" style=\"margin-top:18px;font-size:.72rem;color:rgba(240,244,248,0.4);\">Checking staff PIN…</div>" +
+    "</div>";
+
+  fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug) + "/status")
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var line = document.getElementById("loy-pin-status-line");
+      if (!line) return;
+      line.innerHTML = d.configured
+        ? "<span style=\"color:#22c55e;\">✓ Staff PIN enabled</span>"
+        : "<span style=\"color:#ff8c55;\">Staff PIN not configured — set one in Settings</span>";
+    })
+    .catch(function() {
+      var line = document.getElementById("loy-pin-status-line");
+      if (line) line.textContent = "";
     });
-  } catch(e) { btn.innerHTML = "&#128101; Customers"; }
+}
+
+// ══════════════════════════════ MEMBERS ══════════════════════════════
+function _loyRenderMembers(p, force) {
+  var panel = document.getElementById("loy-panel-members");
+  if (!panel) return;
+  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+
+  _loyFetchCustomers(p.id, force).then(function(customers) {
+    _loyDrawMembers(p, customers);
+  }).catch(function() {
+    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  });
+}
+
+function _loyDrawMembers(p, customers) {
+  var panel = document.getElementById("loy-panel-members");
+  if (!panel) return;
+
+  var filtered = customers.filter(function(c) {
+    if (window._loyMemberFilter === "active" && c.rewardReady) return false;
+    if (window._loyMemberFilter === "ready" && !c.rewardReady) return false;
+    if (window._loyMemberSearch) {
+      var ref = _loyMemberRef(c.maskedId).toLowerCase();
+      if (ref.indexOf(window._loyMemberSearch.toLowerCase()) === -1) return false;
+    }
+    return true;
+  });
+
+  var cards = filtered.map(function(c) {
+    var statusChip = c.rewardReady
+      ? "<span class=\"status-chip ready\" style=\"display:inline-block;padding:3px 10px;border-radius:999px;font-size:.66rem;font-weight:700;background:rgba(34,212,126,0.15);color:#22d47e;\">Reward Ready</span>"
+      : "<span style=\"display:inline-block;padding:3px 10px;border-radius:999px;font-size:.66rem;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(240,244,248,0.6);\">Active</span>";
+    var redeemBtn = c.rewardReady
+      ? "<a class=\"loy-quicklink\" style=\"display:block;margin-top:10px;text-align:center;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Scan to redeem</a>"
+      : "";
+    return "<div class=\"loy-member-card\">" +
+      "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" + statusChip + "</div>" +
+      "<div class=\"loy-member-row\"><span>Stamps</span><span>" + c.stampCount + " of " + c.goal + "</span></div>" +
+      "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
+      redeemBtn +
+    "</div>";
+  }).join("");
+
+  panel.innerHTML =
+    "<input class=\"loy-input\" placeholder=\"Search members…\" value=\"" + _lyEsc(window._loyMemberSearch) + "\" oninput=\"window._loyMemberSearchInput(this.value)\" />" +
+    "<div class=\"loy-toolbar\">" +
+      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "all" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('all')\">All</button>" +
+      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "active" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('active')\">Active</button>" +
+      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "ready" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('ready')\">Reward Ready</button>" +
+    "</div>" +
+    (customers.length === 0
+      ? "<div class=\"loy-empty\">No loyalty members yet. Ask your first customer to join.</div>"
+      : (filtered.length === 0
+        ? "<div class=\"loy-empty\">No members match this filter.</div>"
+        : cards)) +
+    (customers.length > 0 ? "<div class=\"loy-note\">Some older members may appear more than once while customer records are being upgraded.</div>" : "");
+}
+
+window._loyMemberFilterSet = function(f) {
+  window._loyMemberFilter = f;
+  var p = _loyCurrentProgram();
+  if (p && window._loyMembersCache) _loyDrawMembers(p, window._loyMembersCache.data);
+};
+window._loyMemberSearchInput = function(v) {
+  window._loyMemberSearch = v;
+  var p = _loyCurrentProgram();
+  if (p && window._loyMembersCache) _loyDrawMembers(p, window._loyMembersCache.data);
+};
+
+// ══════════════════════════════ REWARDS ══════════════════════════════
+function _loyRenderRewards(p, force) {
+  var panel = document.getElementById("loy-panel-rewards");
+  if (!panel) return;
+  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+
+  Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
+    // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
+    var innerStats = (results[0] || {}).stats || {};
+    var customers = results[1] || [];
+    var ready = customers.filter(function(c){ return c.rewardReady; });
+    var rewardsRedeemed = typeof innerStats.rewardsRedeemed === "number" ? innerStats.rewardsRedeemed : 0;
+
+    var cards = ready.map(function(c) {
+      return "<div class=\"loy-member-card\">" +
+        "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
+        "<span style=\"font-size:.66rem;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(34,212,126,0.15);color:#22d47e;\">Ready</span></div>" +
+        "<div class=\"loy-member-row\"><span>Reward</span><span>" + _lyEsc(p.rewardText || "Free item") + "</span></div>" +
+        "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
+        // Redemption requires a fresh scan of the customer's actual wallet
+        // QR (same reused /redeem/:slug/:token/confirm endpoint the scanner
+        // already calls) — the admin customer list only ever exposes a
+        // masked reference, by design, so there is no cid here safe to
+        // redeem against directly without a new backend capability. Reusing
+        // the scanner keeps this to exactly one reward system.
+        "<a class=\"loy-quicklink\" style=\"display:block;margin-top:10px;text-align:center;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Mark as Redeemed →</a>" +
+      "</div>";
+    }).join("");
+
+    panel.innerHTML =
+      "<div class=\"loy-kpi-grid\">" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + _lyEsc(p.rewardText || "Free item") + "</div><div class=\"loy-kpi-label\">Reward</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"loy-kpi-label\">Stamps Required</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + ready.length + "</div><div class=\"loy-kpi-label\">Waiting</div></div>" +
+        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsRedeemed + "</div><div class=\"loy-kpi-label\">Redeemed</div></div>" +
+      "</div>" +
+      "<div class=\"loy-section-title\">Reward-Ready Members</div>" +
+      (ready.length === 0 ? "<div class=\"loy-empty\">No rewards are waiting right now.</div>" : cards) +
+      "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>";
+  }).catch(function() {
+    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  });
+}
+
+// ══════════════════════════════ SETTINGS ══════════════════════════════
+function _loyRenderSettings(p) {
+  var panel = document.getElementById("loy-panel-settings");
+  if (!panel) return;
+  var isActive = p.status === "active";
+  panel.innerHTML =
+    "<div class=\"loy-settings-row\">" +
+      "<div><div class=\"loy-settings-label\">Program active</div><div class=\"loy-settings-sub\">Customers can collect stamps</div></div>" +
+      "<button class=\"loy-toggle" + (isActive ? " on" : "") + "\" onclick=\"window._loyToggleActive()\"><span></span></button>" +
+    "</div>" +
+    "<div style=\"padding:16px 0;\">" +
+      "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Reward name</label>" +
+      "<input class=\"loy-input\" id=\"loy-set-reward\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Free coffee\" />" +
+      "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Stamps required</label>" +
+      "<select class=\"loy-select\" id=\"loy-set-goal\">" +
+        [5,8,10,12,15].map(function(n){ return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>"; }).join("") +
+      "</select>" +
+      "<button class=\"loy-primary-cta\" style=\"padding:13px;font-size:.85rem;box-shadow:none;\" onclick=\"window._loySaveSettings()\">Save</button>" +
+      "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Saved</div>" +
+    "</div>" +
+    "<div class=\"loy-settings-row\">" +
+      "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
+      "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
+    "</div>" +
+    "<div class=\"loy-settings-row\" style=\"flex-direction:column;align-items:stretch;\">" +
+      "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
+        "<div style=\"flex:1;\"><div class=\"loy-settings-label\">Staff PIN</div>" +
+          "<div class=\"loy-settings-sub\">Staff must enter this PIN before adding stamps or redeeming rewards.</div></div>" +
+        "<span id=\"loy-pin-badge\" class=\"loy-wallet-badge\">Checking…</span>" +
+      "</div>" +
+      "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
+      "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
+        "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+        "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+        "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
+        "<button class=\"loy-primary-cta\" style=\"padding:12px;font-size:.82rem;box-shadow:none;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
+      "</div>" +
+      "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
+    "</div>" +
+    "<div class=\"loy-settings-row\">" +
+      "<div class=\"loy-settings-label\">Apple Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+    "</div>" +
+    "<div class=\"loy-settings-row\">" +
+      "<div class=\"loy-settings-label\">Google Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+    "</div>" +
+    "<div class=\"loy-settings-row\" style=\"border-bottom:none;\">" +
+      "<div class=\"loy-settings-label\">Customer Welcome Page</div>" +
+      "<a class=\"loy-quicklink\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">Open →</a>" +
+    "</div>";
+
+  _loyRefreshPinBadge(p.slug);
+};
+
+// Staff PIN status badge + Set/Change/Remove actions — recognizes both the
+// legacy and current backend credential formats identically (the status
+// endpoint just reports a boolean either way).
+function _loyRefreshPinBadge(slug) {
+  var badge = document.getElementById("loy-pin-badge");
+  var actions = document.getElementById("loy-pin-actions");
+  if (!badge || !actions) return;
+  badge.textContent = "Checking…";
+  fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(slug) + "/status")
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var configured = !!d.configured;
+      badge.textContent = configured ? "Active" : "Not configured";
+      badge.style.background = configured ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.08)";
+      badge.style.color = configured ? "#22c55e" : "rgba(240,244,248,0.6)";
+      actions.innerHTML = configured
+        ? "<button class=\"loy-quicklink\" onclick=\"window._loyShowPinForm()\">Change Staff PIN</button>" +
+          "<button class=\"loy-quicklink\" style=\"color:#f87171;border-color:rgba(248,113,113,0.25);\" onclick=\"window._loyRemovePin()\">Remove Staff PIN</button>"
+        : "<button class=\"loy-quicklink\" onclick=\"window._loyShowPinForm()\">Set Staff PIN</button>";
+    }).catch(function(){ badge.textContent = "Not configured"; });
+}
+
+window._loyToggleActive = function() {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  var newStatus = p.status === "active" ? "paused" : "active";
+  _lyAuthHeaders().then(function(headers) {
+    fetch(window.API_ORIGIN + "/loyalty/programs/" + p.id + "/status", {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, headers),
+      body: JSON.stringify({ status: newStatus })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.program) {
+        window._loyPrograms = window._loyPrograms.map(function(pr){ return pr.id === d.program.id ? d.program : pr; });
+        _loyRenderShell();
+      }
+    }).catch(function(){});
+  });
+};
+
+window._loySaveSettings = function() {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  var reward = (document.getElementById("loy-set-reward") || {}).value || "";
+  var goal = parseInt((document.getElementById("loy-set-goal") || {}).value || 10, 10);
+  _lyAuthHeaders().then(function(headers) {
+    fetch(window.API_ORIGIN + "/loyalty/programs/" + p.id, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, headers),
+      body: JSON.stringify({ rewardName: reward, goal: goal })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.program) {
+        window._loyPrograms = window._loyPrograms.map(function(pr){ return pr.id === d.program.id ? d.program : pr; });
+        var saved = document.getElementById("loy-set-saved");
+        if (saved) { saved.style.display = "block"; setTimeout(function(){ saved.style.display = "none"; }, 2200); }
+      }
+    }).catch(function(){});
+  });
+};
+
+window._loyShowPinForm = function() {
+  var form = document.getElementById("loy-pin-form");
+  var err = document.getElementById("loy-pin-err");
+  var p1 = document.getElementById("loy-set-pin");
+  var p2 = document.getElementById("loy-set-pin-confirm");
+  if (err) { err.style.display = "none"; err.textContent = ""; }
+  if (p1) p1.value = "";
+  if (p2) p2.value = "";
+  if (form) form.style.display = "block";
+  if (p1) p1.focus();
+};
+
+window._loySavePin = function() {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  var pin = (document.getElementById("loy-set-pin") || {}).value || "";
+  var confirmPin = (document.getElementById("loy-set-pin-confirm") || {}).value || "";
+  var err = document.getElementById("loy-pin-err");
+  function showErr(msg) { if (err) { err.textContent = msg; err.style.display = "block"; } }
+  if (!/^\d{4}$/.test(pin)) { showErr("PIN must be exactly 4 digits."); return; }
+  if (pin !== confirmPin) { showErr("PINs don't match. Try again."); return; }
+  if (err) err.style.display = "none";
+  _lyAuthHeaders().then(function(headers) {
+    fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug), {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, headers),
+      body: JSON.stringify({ pin: pin })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) {
+        var form = document.getElementById("loy-pin-form");
+        if (form) form.style.display = "none";
+        var saved = document.getElementById("loy-pin-saved");
+        if (saved) { saved.style.display = "block"; setTimeout(function(){ saved.style.display = "none"; }, 2200); }
+        _loyRefreshPinBadge(p.slug);
+      } else {
+        showErr(d.error || "Failed to save PIN");
+      }
+    }).catch(function(){ showErr("We couldn't connect. Please try again."); });
+  });
+};
+
+window._loyRemovePin = function() {
+  var p = _loyCurrentProgram();
+  if (!p) return;
+  if (!window.confirm("Remove the Staff PIN? The scanner will be unavailable until a new one is set.")) return;
+  _lyAuthHeaders().then(function(headers) {
+    fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug), {
+      method: "DELETE",
+      headers: headers
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) _loyRefreshPinBadge(p.slug);
+    }).catch(function(){});
+  });
 };
 </script>
 
