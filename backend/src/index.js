@@ -25,7 +25,12 @@ app.use(cors({
   origin: ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com', 'https://preview.qraivy.com'],
   credentials: true
 }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
+// message as an object (not the default plain string) so express-rate-limit
+// sends a JSON body on 429 — every other endpoint on this backend already
+// returns JSON on error, and frontend fetch chains that blindly call
+// res.json() would otherwise throw a SyntaxError on the default plain-text
+// "Too many requests..." response.
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests. Please try again shortly.' } }));
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));

@@ -1532,6 +1532,53 @@ async function _lyAuthHeaders() {
   return t ? { "Authorization": "Bearer " + t } : {};
 }
 
+// ── Safe response parsing for Loyalty dashboard fetches ──
+// Never calls response.json() blindly — a non-2xx response on this backend
+// is USUALLY JSON (every handler + the global error handler return JSON),
+// but the rate limiter's default express-rate-limit handler sends plain
+// text, and any future misconfigured middleware/proxy could return HTML.
+// Reads Content-Type, tolerates plain text or an empty body, and turns any
+// non-2xx response into one structured, friendly error instead of ever
+// surfacing raw HTML or a stack trace to the UI.
+function _lyFriendlyStatusMessage(status) {
+  if (status === 429) return "Too many requests. Please wait a moment and try again.";
+  if (status === 401 || status === 403) return "Your session has expired. Please sign in again.";
+  return "We couldn't load your loyalty data. Please try again.";
+}
+
+function _lyApiError(status, message) {
+  var e = new Error(message);
+  e.isLyApiError = true;
+  e.status = status;
+  e.friendlyMessage = message;
+  return e;
+}
+
+async function _lyParseResponse(response) {
+  var raw = "";
+  try { raw = await response.text(); } catch (e) { raw = ""; }
+  var contentType = (response.headers && response.headers.get && response.headers.get("content-type")) || "";
+  var data = null;
+  if (raw && (contentType.indexOf("json") !== -1 || /^\s*[\{\[]/.test(raw))) {
+    try { data = JSON.parse(raw); } catch (e) { data = null; }
+  }
+  if (!response.ok) {
+    throw _lyApiError(response.status, _lyFriendlyStatusMessage(response.status));
+  }
+  return data || {};
+}
+
+// Shared .catch() message for every Loyalty dashboard fetch chain below.
+// Distinguishes a structured API error (thrown by _lyParseResponse, always
+// carries an already-friendly message) from a genuine network failure —
+// fetch() itself rejecting before any response arrives at all (offline,
+// DNS, CORS) — which gets its own distinct message rather than the
+// generic "couldn't load" one.
+function _lyErrorMessage(err) {
+  if (err && err.isLyApiError) return err.friendlyMessage;
+  return "We couldn't connect. Please check your connection and try again.";
+}
+
 // ── State ──
 window._loyPrograms = window._loyPrograms || [];
 window._loyCurrentId = window._loyCurrentId || null;
@@ -1553,7 +1600,7 @@ function loadLoyaltyDashboard() {
   root.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
   _lyAuthHeaders().then(function(headers) {
     fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
-      .then(function(r) { return r.json(); })
+      .then(_lyParseResponse)
       .then(function(data) {
         var programs = ((data && data.programs) || []).filter(function(p){ return p.hasLoyaltyConfig; });
         window._loyPrograms = programs;
@@ -1567,8 +1614,8 @@ function loadLoyaltyDashboard() {
         window._loyStatsCache = null;
         _loyRenderShell();
       })
-      .catch(function() {
-        root.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+      .catch(function(err) {
+        root.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
       });
   });
 }
@@ -1689,7 +1736,7 @@ async function _loyFetchStats(id, force) {
   if (window._loyStatsInflight && window._loyStatsInflight.id === id) return window._loyStatsInflight.promise;
   var p = _lyAuthHeaders().then(function(headers) {
     return fetch(window.API_ORIGIN + "/loyalty/programs/" + id + "/stats", { headers: headers });
-  }).then(function(res) { return res.json(); }).then(function(d) {
+  }).then(_lyParseResponse).then(function(d) {
     window._loyStatsCache = { id: id, time: Date.now(), data: d };
     window._loyStatsInflight = null;
     return d;
@@ -1704,7 +1751,7 @@ async function _loyFetchCustomers(id, force) {
   if (window._loyMembersInflight && window._loyMembersInflight.id === id) return window._loyMembersInflight.promise;
   var p = _lyAuthHeaders().then(function(headers) {
     return fetch(window.API_ORIGIN + "/loyalty/programs/" + id + "/customers", { headers: headers });
-  }).then(function(res) { return res.json(); }).then(function(d) {
+  }).then(_lyParseResponse).then(function(d) {
     var customers = (d && d.customers) || [];
     window._loyMembersCache = { id: id, time: Date.now(), data: customers };
     window._loyMembersInflight = null;
@@ -1762,8 +1809,8 @@ function _loyRenderOverview(p, force) {
         "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('rewards')\">🎁 View Rewards</button>" +
         "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('settings')\">⚙ Settings</button>" +
       "</div>";
-  }).catch(function() {
-    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  }).catch(function(err) {
+    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
   });
 }
 
@@ -1805,8 +1852,8 @@ function _loyRenderMembers(p, force) {
 
   _loyFetchCustomers(p.id, force).then(function(customers) {
     _loyDrawMembers(p, customers);
-  }).catch(function() {
-    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  }).catch(function(err) {
+    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
   });
 }
 
@@ -1904,8 +1951,8 @@ function _loyRenderRewards(p, force) {
       "<div class=\"loy-section-title\">Reward-Ready Members</div>" +
       (ready.length === 0 ? "<div class=\"loy-empty\">No rewards are waiting right now.</div>" : cards) +
       "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>";
-  }).catch(function() {
-    panel.innerHTML = "<div class=\"loy-empty\">We couldn't load your loyalty data. Please try again.</div>";
+  }).catch(function(err) {
+    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
   });
 }
 
