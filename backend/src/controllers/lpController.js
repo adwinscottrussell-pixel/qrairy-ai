@@ -5,6 +5,7 @@ const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
 const { PUBLIC_APP_ORIGIN, API_ORIGIN } = require('../config/urls');
 const { getCustomerSerialNumber } = require('../utils/customerSerial');
+const { signStaffToken } = require('../utils/staffSession');
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -3163,34 +3164,107 @@ async function handleLoyaltyWelcome(req, res) {
   }
 }
 
-// ── Staff PIN — set (auth required), status (no auth), verify (no auth) ──
-// PIN is hashed with sha256 and stored in LandingPage.sections.staffPin.
-// Not high-security — this is a lightweight barrier so staff don't need
-// the business owner's Clerk account, not an access-control boundary.
+// ── Staff PIN — set/change (auth required), status (no auth), verify (no
+// auth), remove (auth required) ──
+// Credential lives at LandingPage.sections.staffPin, either the legacy
+// sha256 hex string (records from before 2026-07-27) or the current
+// { hash, salt, algo:'scrypt' } object — both are supported indefinitely
+// on verify; only Set/Change write the new format. A successful legacy
+// verify silently upgrades the record to scrypt. Lockout state lives in a
+// SEPARATE sections.staffPinLock key ({ failCount, lockedUntil }) so it
+// never has to share a shape with either credential format, and removing
+// a PIN clears both keys together.
+//
+// Still not an access-control boundary in the sense of gating the data
+// itself — it gates the STAFF SESSION TOKEN a successful verify mints
+// (see ../utils/staffSession). That token, not the PIN, is what the
+// staff-only scanner/stamp/redeem routes actually check on every request.
 
-const _pinHash = (pin) => require('crypto').createHash('sha256').update(String(pin).trim() + 'qraivy-pin-salt').digest('hex');
+const crypto = require('crypto');
+
+const _legacyPinHash = (pin) => crypto.createHash('sha256').update(String(pin).trim() + 'qraivy-pin-salt').digest('hex');
+const _scryptHashPin = (pin, salt) => crypto.scryptSync(String(pin).trim(), salt, 64).toString('hex');
+const _newPinSalt = () => crypto.randomBytes(16).toString('hex');
+
+function _timingSafeEqualHex(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+}
+
+function _parseSections(page) {
+  try {
+    return page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+  } catch (e) { return {}; }
+}
+
+// Re-reads sections immediately before writing so a slow request clobbers
+// as little concurrent state as possible — best-effort, not a guarantee.
+// See the concurrency note on handleVerifyStaffPin for the known limit.
+async function _persistSections(slug, mutate) {
+  const page = await prisma.landingPage.findUnique({ where: { slug } });
+  if (!page) return null;
+  const sec = _parseSections(page);
+  mutate(sec);
+  await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(sec) } });
+  pageCache.delByPrefix('lp:' + slug);
+  return sec;
+}
+
+// Verifies a PIN against either credential format. Never logs the PIN,
+// the hash, or the salt.
+function _verifyPinCredential(staffPin, pin) {
+  if (!staffPin) return { exists: false, valid: false, needsUpgrade: false };
+  if (typeof staffPin === 'string') {
+    const valid = staffPin === _legacyPinHash(pin);
+    return { exists: true, valid, needsUpgrade: valid };
+  }
+  if (staffPin.hash && staffPin.salt) {
+    const candidate = _scryptHashPin(pin, staffPin.salt);
+    return { exists: true, valid: _timingSafeEqualHex(candidate, staffPin.hash), needsUpgrade: false };
+  }
+  return { exists: false, valid: false, needsUpgrade: false };
+}
 
 async function handleSetStaffPin(req, res) {
   try {
     const { slug } = req.params;
     const { pin } = req.body || {};
-    if (!pin || String(pin).trim().length < 4) return res.status(400).json({ error: 'PIN must be at least 4 digits.' });
+    if (!/^\d{4}$/.test(String(pin || '').trim())) return res.status(400).json({ error: 'PIN must be exactly 4 digits.' });
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
     if (page.userId && req.userId && page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
-    let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
-    sec.staffPin = _pinHash(pin);
-    await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(sec) } });
-    pageCache.delByPrefix('lp:' + slug);
+    const salt = _newPinSalt();
+    const hash = _scryptHashPin(pin, salt);
+    await _persistSections(slug, (sec) => {
+      sec.staffPin = { hash, salt, algo: 'scrypt' };
+      sec.staffPinLock = { failCount: 0, lockedUntil: null };
+    });
+    return res.json({ ok: true });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+}
+
+// DELETE /lp/staff-pin/:slug — removes the PIN and its lockout state
+// entirely. There is deliberately no fallback "no PIN" scanner access —
+// removing a PIN makes the scanner unusable for this business again until
+// a new one is set (see Correction 2: no unprotected bypass).
+async function handleRemoveStaffPin(req, res) {
+  try {
+    const { slug } = req.params;
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
+    if (page.userId && req.userId && page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await _persistSections(slug, (sec) => {
+      delete sec.staffPin;
+      delete sec.staffPinLock;
+    });
     return res.json({ ok: true });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 }
 
 // GET /lp/staff-pin/:slug/status — existence check only, no auth, no PIN
-// guess involved. Lets the scanner ask "is a PIN configured at all" without
-// going through PIN validation, so a business with no PIN configured can be
-// detected directly instead of via the shape of a rejected guess. Never
-// returns the hash itself — only a boolean.
+// guess involved. Recognizes both the legacy string and current object
+// credential formats identically (both are simply truthy). Never returns
+// the hash/salt themselves — only a boolean.
 async function handleGetStaffPinStatus(req, res) {
   try {
     const { slug } = req.params;
@@ -3198,24 +3272,35 @@ async function handleGetStaffPinStatus(req, res) {
     if (!page) return res.status(404).json({ error: 'Page not found.' });
     let sec;
     try {
-      sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+      sec = _parseSections(page);
     } catch (parseErr) {
       // Malformed sections JSON (legacy/corrupt data) can't be proven to
       // contain a configured PIN — treat as "not configured" rather than
-      // 500ing. The PIN gate is documented above as a lightweight
-      // staff-friction barrier, not an access-control boundary, so this
-      // default costs nothing security-wise and avoids a permanent scanner
-      // lockout for any business whose sections data happens to be corrupt.
+      // 500ing. Correction 2 means this now maps to a hard-locked scanner
+      // (no bypass), not a silently-open one, so this default no longer
+      // costs anything security-wise on the frontend either.
       return res.json({ configured: false });
     }
     return res.json({ configured: !!sec.staffPin });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 }
 
-// POST /lp/staff-pin/:slug/verify — validates an entered PIN only. Assumes
-// the caller already knows a PIN is configured (via the status endpoint
-// above); a missing/empty pin here is a bad request, not a signal to check
-// whether one exists.
+// POST /lp/staff-pin/:slug/verify — validates an entered PIN, enforces a
+// server-side lockout (5 wrong attempts -> 30s), upgrades a legacy sha256
+// credential to scrypt on a successful legacy verify, and on success mints
+// a short-lived signed staff-session token (30 min) that every staff-only
+// scanner/stamp/redeem route requires. Assumes the caller already knows a
+// PIN is configured (via the status endpoint above); a missing/empty pin
+// here is a bad request, not a signal to check whether one exists.
+//
+// Concurrency limitation: lockout state lives inside the same JSON blob as
+// the rest of LandingPage.sections and is read-then-written per request,
+// same as every other section field here — two failed attempts arriving
+// within the same read/write window can race and undercount, at worst
+// delaying a lockout by one extra attempt. Acceptable for a staff-friction
+// barrier; would not be acceptable if this were ever promoted to a real
+// access-control boundary (would need a dedicated, atomically-updated
+// column/row instead of a shared JSON blob).
 async function handleVerifyStaffPin(req, res) {
   try {
     const { slug } = req.params;
@@ -3223,10 +3308,35 @@ async function handleVerifyStaffPin(req, res) {
     if (!pin) return res.status(400).json({ error: 'PIN required.' });
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
-    let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
+    const sec = _parseSections(page);
     if (!sec.staffPin) return res.status(404).json({ error: 'No PIN set for this page.' });
-    if (sec.staffPin !== _pinHash(pin)) return res.status(401).json({ error: 'Incorrect PIN.' });
-    return res.json({ ok: true, slug });
+
+    const now = Date.now();
+    const lock = sec.staffPinLock || { failCount: 0, lockedUntil: null };
+    if (lock.lockedUntil && lock.lockedUntil > now) {
+      return res.status(429).json({ error: 'staff_locked', retryAfterMs: lock.lockedUntil - now });
+    }
+
+    const check = _verifyPinCredential(sec.staffPin, pin);
+    if (!check.valid) {
+      lock.failCount = (lock.failCount || 0) + 1;
+      if (lock.failCount >= 5) { lock.lockedUntil = now + 30 * 1000; lock.failCount = 0; }
+      await _persistSections(slug, (s) => { s.staffPinLock = lock; });
+      return res.status(401).json({ error: 'Incorrect PIN.' });
+    }
+
+    let upgradedCredential = null;
+    if (check.needsUpgrade) {
+      const upgSalt = _newPinSalt();
+      upgradedCredential = { hash: _scryptHashPin(pin, upgSalt), salt: upgSalt, algo: 'scrypt' };
+    }
+    await _persistSections(slug, (s) => {
+      s.staffPinLock = { failCount: 0, lockedUntil: null };
+      if (upgradedCredential) s.staffPin = upgradedCredential;
+    });
+
+    const { token, expiresAt } = signStaffToken(slug);
+    return res.json({ ok: true, slug, staffToken: token, expiresAt });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 }
 
@@ -3236,7 +3346,7 @@ module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, 
   handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
-  handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin,
+  handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,
 };
 
 
