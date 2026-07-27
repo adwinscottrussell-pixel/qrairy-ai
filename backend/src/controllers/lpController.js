@@ -2060,6 +2060,52 @@ async function handleStampConfirm(req, res) {
   }
 }
 
+// GET /scanner/:slug/preview?cid=... — read-only staff-scanner
+// preview of exactly one customer's card, called after decoding an Apple or
+// Google Wallet barcode and before any stamp is added. Zero writes: every
+// lookup below is a findUnique/findFirst, deliberately no create/update/
+// upsert anywhere in this handler, so it's safe to call on every scan and
+// on repeated scans of the same card. Never returns cid, Pass.id,
+// serialNumber, authToken, or any device/push token — only the plain-
+// language fields the staff-facing preview screen needs. "Wrong business"
+// is handled by construction, not a separate check: serial is built from
+// THIS route's :slug, so a cid belonging to a different business's Pass
+// simply won't match any row here — it can never accidentally return
+// another business's card data.
+async function handleScannerPreview(req, res) {
+  try {
+    const { slug } = req.params;
+    const cid = (req.query && req.query.cid) ? String(req.query.cid).slice(0, 64) : null;
+
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!page) return res.json({ status: 'inactive' });
+
+    const settings = await prisma.stampSettings.findUnique({ where: { slug } });
+    if (!settings || !settings.enabled) return res.json({ status: 'inactive' });
+
+    const serial = getCustomerSerialNumber(slug, cid);
+    if (!serial) return res.json({ status: 'invalid' });
+
+    const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
+    if (!pass) return res.json({ status: 'not_found' });
+
+    return res.json({
+      status: 'ok',
+      businessName: page.businessName,
+      memberRef: cid.slice(-4).toUpperCase(),
+      stampCount: pass.stampCount,
+      goal: settings.goal,
+      rewardName: settings.rewardName,
+      rewardReady: pass.rewardReady,
+      lastVisit: pass.lastStampAt,
+      active: true
+    });
+  } catch(e) {
+    console.error('[ScannerPreview] error:', e.message);
+    return res.json({ status: 'error' });
+  }
+}
+
 // GET /redeem/:slug/:token — a second physical NFC tag staff use to redeem a
 // customer's earned reward. Uses the SAME long-lived token as the stamp tag
 // (no separate token system needed) on a different route. Mirrors handleStamp's
@@ -3344,7 +3390,7 @@ async function handleVerifyStaffPin(req, res) {
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
-  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
+  handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,
 };

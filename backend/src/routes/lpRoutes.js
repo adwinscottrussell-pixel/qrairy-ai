@@ -1,10 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
+const { requireStaffSession } = require('../utils/staffSession');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
-  handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
+  handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,
@@ -95,9 +96,26 @@ router.get('/lp/wallet-hero/:slug', (req, res) => {
   }
 });
 
-// Loyalty stamp (public — no auth — QR and NFC target)
+// Loyalty stamp (public — no auth — QR and NFC target, customer-facing.
+// Deliberately untouched by the staff-session requirement below: a
+// customer tapping their own physical NFC tag has no staff PIN and must
+// not need one.)
 router.get('/stamp/:slug/:token', handleStamp);
 router.post('/stamp/:slug/:token/confirm', handleStampConfirm);
+// Staff-scanner read-only preview — now requires a valid staff-session
+// token (X-Staff-Token header, minted by a successful /verify above).
+// This route has no customer-facing use, so it's safe to gate directly
+// rather than fork a separate path.
+router.get('/scanner/:slug/preview', requireStaffSession, handleScannerPreview);
+// Staff-only stamp/redeem — same handlers as the public customer routes
+// above (handleStampConfirm/handleRedeemTapConfirm read :slug/:token/cid
+// identically either way), reached via a separate path so the shared
+// public customer routes never need a staff-session check. This is the
+// smallest safe separation: no controller logic duplicated, no change to
+// customer NFC behavior, staff scanner calls these instead of the public
+// ones and must present a valid staff-session token to reach them.
+router.post('/scanner/:slug/:token/stamp', requireStaffSession, handleStampConfirm);
+router.post('/scanner/:slug/:token/redeem', requireStaffSession, handleRedeemTapConfirm);
 // Loyalty redeem (public — no auth — second physical NFC tag, same token as stamp)
 router.get('/redeem/:slug/:token', handleRedeemTap);
 router.post('/redeem/:slug/:token/confirm', handleRedeemTapConfirm);
