@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>QRAIVY — Stamp Scanner</title>
+  <script src="js/url-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=DM+Mono:wght@400&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" type="text/javascript" onload="window.Clerk.load()"></script>
@@ -62,12 +63,29 @@
     .pin-key.wide{grid-column:span 1}
     .pin-key.del{color:rgba(240,244,248,0.5);font-size:.9rem}
     .pin-err{color:#f87171;font-size:.75rem;min-height:18px}
+    .biz-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',system-ui,sans-serif;font-weight:800;font-size:1.4rem;color:#fff;overflow:hidden;flex-shrink:0}
+    .biz-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .biz-name{font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.05rem;font-weight:700}
+    .scan-brand{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+    .scan-brand .biz-avatar{width:40px;height:40px;font-size:1rem}
+    .lock-icon{font-size:2.4rem}
+    /* Preview / confirm / success cards */
+    .preview-card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:18px;text-align:left}
+    .preview-title{font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:14px;text-align:center}
+    .preview-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:.82rem}
+    .preview-row:last-of-type{border-bottom:none}
+    .preview-label{color:rgba(240,244,248,0.5)}
+    .preview-value{font-weight:700;text-align:right}
+    .status-chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(240,244,248,0.7)}
+    .status-chip.ready{background:rgba(34,212,126,0.15);color:#22d47e}
+    .btn-row{display:flex;flex-direction:column;gap:10px;margin-top:14px}
   </style>
 </head>
 <body>
 <!-- PIN gate — shown before scanner if no PIN verified yet -->
 <div id="pin-gate" style="display:none">
-  <div class="pin-logo">Q</div>
+  <div class="biz-avatar" id="pin-logo" style="background:#ff5a1f">Q</div>
+  <div class="biz-name" id="pin-bizname"></div>
   <div class="pin-title" data-i18n="ss_pin_title">Staff Access</div>
   <p class="pin-sub" data-i18n="ss_pin_sub">Enter your staff PIN to open the stamp scanner.</p>
   <div class="pin-dots" id="pin-dots">
@@ -77,7 +95,7 @@
     <div class="pin-dot"></div>
   </div>
   <div class="pin-err" id="pin-err"></div>
-  <div class="pin-grid">
+  <div class="pin-grid" id="pin-grid">
     <button class="pin-key" onclick="pinKey('1')">1</button>
     <button class="pin-key" onclick="pinKey('2')">2</button>
     <button class="pin-key" onclick="pinKey('3')">3</button>
@@ -92,13 +110,29 @@
   </div>
 </div>
 
+<!-- Shown when no Staff PIN is configured yet — no camera, no manual entry,
+     no "Continue anyway". Only path forward is the owner setting a PIN in
+     Loyalty Settings. -->
+<div id="pin-locked" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;width:100%;max-width:320px;text-align:center;margin:0 auto">
+  <div class="biz-avatar" id="locked-logo" style="background:#ff5a1f">Q</div>
+  <div class="biz-name" id="locked-bizname"></div>
+  <div class="lock-icon">🔒</div>
+  <div class="pin-title" data-i18n="ss_locked_title">Staff PIN not configured</div>
+  <p class="pin-sub" data-i18n="ss_locked_sub">Set a Staff PIN in Loyalty Settings before using the scanner.</p>
+  <button class="btn btn-primary" style="max-width:280px" onclick="window.location.href='dashboard.html?section=loyalty'" data-i18n="ss_back_dashboard">Back to Dashboard</button>
+</div>
+
 <div class="wrap" id="scanner-wrap" style="display:none">
   <div style="margin-bottom:4px">
     <button class="header-back" onclick="history.back()" data-i18n="ss_back">← Back</button>
   </div>
+  <div class="scan-brand" id="scan-brand" style="display:none">
+    <div class="biz-avatar" id="scan-logo" style="background:#ff5a1f">Q</div>
+    <div class="biz-name" id="scan-bizname"></div>
+  </div>
   <div>
-    <div class="title" data-i18n="ss_title">Stamp Scanner</div>
-    <p class="sub" style="margin-top:6px" data-i18n="ss_sub">Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.</p>
+    <div class="title" data-i18n="ss_title">Stamp Customer</div>
+    <p class="sub" style="margin-top:6px" data-i18n="ss_sub">Scan the customer's Apple or Google Wallet loyalty card.</p>
   </div>
 
   <div class="select-wrap" id="slug-wrap">
@@ -134,16 +168,97 @@
 <script>
 (function(){
   'use strict';
-  var API = 'https://api.qraivy.com';
+  var API = window.API_ORIGIN;
   var PIN_LEN = 4;
   var pinBuffer = '';
   var pinSlug = new URLSearchParams(window.location.search).get('slug') || '';
   var scanning = false;
   var animFrame = null;
 
-  // ── PIN gate ──
-  function showPinGate(){ document.getElementById('pin-gate').style.display='flex'; document.getElementById('scanner-wrap').style.display='none'; }
-  function showScanner(){ document.getElementById('pin-gate').style.display='none'; document.getElementById('scanner-wrap').style.display='flex'; }
+  // ── PIN gate / lockout / staff session ──
+  function showPinGate(){
+    document.getElementById('pin-gate').style.display='flex';
+    document.getElementById('pin-locked').style.display='none';
+    document.getElementById('scanner-wrap').style.display='none';
+  }
+  // No PIN configured: no camera, no manual entry, no "Continue anyway" —
+  // the only way forward is the owner setting a PIN in Loyalty Settings.
+  function showLocked(){
+    document.getElementById('pin-gate').style.display='none';
+    document.getElementById('pin-locked').style.display='flex';
+    document.getElementById('scanner-wrap').style.display='none';
+  }
+  function showScanner(){
+    document.getElementById('pin-gate').style.display='none';
+    document.getElementById('pin-locked').style.display='none';
+    document.getElementById('scanner-wrap').style.display='flex';
+  }
+
+  // Staff session is a signed server-issued token, not a boolean — a
+  // sessionStorage flag alone proves nothing to the backend, which is why
+  // every staff API call below sends this token and the backend
+  // independently verifies it on every request.
+  function getStaffSession(slug){
+    try{
+      var raw = sessionStorage.getItem('staff_session_'+slug);
+      if(!raw) return null;
+      var s = JSON.parse(raw);
+      if(!s || !s.token || !s.expiresAt || s.expiresAt <= Date.now()) return null;
+      return s;
+    }catch(e){ return null; }
+  }
+  function setStaffSession(slug, token, expiresAt){
+    try{ sessionStorage.setItem('staff_session_'+slug, JSON.stringify({token:token, expiresAt:expiresAt})); }catch(e){}
+  }
+  function clearStaffSession(slug){
+    try{ sessionStorage.removeItem('staff_session_'+slug); }catch(e){}
+  }
+  function staffAuthHeaders(slug){
+    var s = getStaffSession(slug);
+    return s ? {'X-Staff-Token': s.token} : {};
+  }
+  // Called when any staff API call comes back 401 staff_auth_required /
+  // staff_session_expired — the local session is no longer trustworthy
+  // regardless of what sessionStorage still says, so re-gate immediately.
+  function handleStaffAuthFailure(slug, errCode){
+    clearStaffSession(slug);
+    pinBuffer=''; updatePinDots();
+    document.getElementById('pin-err').textContent = errCode === 'staff_session_expired'
+      ? ((window.SS_T&&window.SS_T.ss_session_expired)||'Your staff session expired. Enter your PIN again.')
+      : '';
+    showPinGate();
+  }
+  // Shared 401 handling for every staff-only API call below (preview, stamp,
+  // redeem). Returns true if this WAS an auth failure — caller must stop
+  // rendering anything from the response body in that case.
+  function handleStaffAuthError(res, d, slug){
+    if(res.status === 401 && d && (d.error === 'staff_auth_required' || d.error === 'staff_session_expired')){
+      handleStaffAuthFailure(slug, d.error);
+      return true;
+    }
+    return false;
+  }
+
+  var lockoutTimer = null;
+  function showLockoutCountdown(retryAfterMs){
+    var el = document.getElementById('pin-err');
+    var until = Date.now() + (retryAfterMs || 30000);
+    if(lockoutTimer) clearInterval(lockoutTimer);
+    var grid = document.getElementById('pin-grid');
+    if(grid) grid.style.pointerEvents = 'none';
+    function tick(){
+      var remain = Math.ceil((until - Date.now())/1000);
+      if(remain <= 0){
+        clearInterval(lockoutTimer); lockoutTimer = null;
+        if(grid) grid.style.pointerEvents = '';
+        el.textContent = '';
+        return;
+      }
+      el.textContent = ((window.SS_T&&window.SS_T.ss_locked)||'Too many attempts. Try again in') + ' ' + remain + 's';
+    }
+    tick();
+    lockoutTimer = setInterval(tick, 250);
+  }
 
   function updatePinDots(){
     var dots = document.querySelectorAll('.pin-dot');
@@ -151,6 +266,7 @@
   }
 
   window.pinKey = function(k){
+    if(lockoutTimer) return; // locked out — ignore taps
     if(pinBuffer.length >= PIN_LEN) return;
     pinBuffer += k;
     updatePinDots();
@@ -172,8 +288,13 @@
         body: JSON.stringify({pin: pinBuffer})
       });
       var d = await res.json();
-      if(res.ok && d.ok){
-        sessionStorage.setItem('staff_pin_ok_'+slug, '1');
+      if(res.status === 429 && d.error === 'staff_locked'){
+        pinBuffer=''; updatePinDots();
+        showLockoutCountdown(d.retryAfterMs);
+        return;
+      }
+      if(res.ok && d.ok && d.staffToken){
+        setStaffSession(slug, d.staffToken, d.expiresAt);
         showScanner();
       } else {
         document.getElementById('pin-err').textContent = d.error === 'No PIN set for this page.' ? (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet' : (window.SS_T&&window.SS_T.ss_pin_wrong)||'Incorrect PIN. Try again.';
@@ -189,18 +310,16 @@
     var slug = pinSlug;
     // If no slug in URL, go straight to scanner (owner-accessed without slug)
     if(!slug){ showScanner(); return; }
-    // If already verified this session, skip PIN
-    if(sessionStorage.getItem('staff_pin_ok_'+slug) === '1'){ showScanner(); return; }
-    // Status endpoint checks existence only — no PIN guess involved. Replaces
-    // the old empty-string probe against /verify, which could never report
-    // "no PIN configured" because the server rejects an empty pin before it
-    // ever checks whether staffPin exists.
+    // Valid, unexpired signed staff session already on file -> skip PIN.
+    if(getStaffSession(slug)){ showScanner(); return; }
+    // Status endpoint checks existence only — no PIN guess involved.
     fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/status', {
       method:'GET'
     }).then(function(r){ return r.json(); }).then(function(d){
-      // Only an explicit configured:false bypasses the gate — anything else
-      // (true, or an unexpected/error response body) shows it.
-      if(d.configured === false){ showScanner(); }
+      // Correction 2: no unprotected bypass. Not configured -> hard-locked
+      // screen, never the scanner. Configured (or an unexpected response
+      // shape) -> PIN gate.
+      if(d.configured === false){ showLocked(); }
       else { showPinGate(); }
     }).catch(function(){ showPinGate(); }); // request failure -> fail closed
   }
@@ -277,48 +396,240 @@
     }catch(_){ return null; }
   }
 
-  // ── Stamp action ──
-  async function doStamp(slug, cid){
-    setResult('info', '⏳', 'Stamping…', '');
+  // ── Plain-language error mapping — never show a raw backend status/message ──
+  var FRIENDLY = {
+    invalid: 'This is not a valid QRAIVY loyalty card.',
+    inactive: 'This loyalty program is no longer active.',
+    not_found: 'This customer card could not be found.',
+    wrong_business: 'This loyalty card belongs to another business.',
+    already: 'This customer received a stamp recently.',
+    network: "We couldn't connect. Please try again.",
+    generic: 'Something went wrong. Please try again.'
+  };
+
+  // Hide/show the idle "Start Camera Scanner" + manual-entry controls while
+  // a card is being previewed/confirmed, so staff can't start a second scan
+  // mid-review.
+  function setIdleControlsVisible(visible){
+    var d = visible ? '' : 'none';
+    document.getElementById('start-btn').style.display = d;
+    var divider = document.querySelector('.divider');
+    if(divider) divider.style.display = d;
+    var manualToggle = document.querySelector('[onclick="toggleManual()"]');
+    if(manualToggle) manualToggle.style.display = d;
+    if(!visible) document.getElementById('manual-section').style.display = 'none';
+  }
+
+  function formatFriendlyDate(iso){
+    if(!iso) return 'First visit';
     try{
-      if(!currentToken) currentToken = await fetchToken(slug);
-      var res = await fetch(API+'/stamp/'+encodeURIComponent(slug)+'/'+currentToken+'/confirm', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({cid: cid})
+      var d = new Date(iso);
+      return d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+    }catch(_){ return 'Recently'; }
+  }
+
+  function renderError(message){
+    var box = document.getElementById('result-box');
+    box.innerHTML = '<div class="result err"><div class="stamp-big">❌</div><strong>'+message+'</strong>'
+      + '<div class="btn-row"><button class="btn btn-secondary" onclick="scanNextCustomer()">Scan Next Customer</button></div></div>';
+    setIdleControlsVisible(true);
+  }
+
+  // ── Step 5/6: read-only preview — no stamp can occur from this call ──
+  async function previewCard(slug, cid){
+    setIdleControlsVisible(false);
+    var box = document.getElementById('result-box');
+    box.innerHTML = '<div class="result info"><div class="stamp-big">⏳</div><strong>Checking card…</strong></div>';
+    var res;
+    try{
+      res = await fetch(API+'/scanner/'+encodeURIComponent(slug)+'/preview?cid='+encodeURIComponent(cid), {
+        headers: staffAuthHeaders(slug)
       });
-      var d = await res.json();
-      currentToken = null; // token may be consumed/rotated — fetch fresh next time
-      if(d.status === 'ok'){
-        setResult('ok','✅','Stamp added!', d.newCount+' of '+d.goal+' stamps — '+d.rewardName);
-        lastStampedCid = cid;
-        lastStampTime = Date.now();
-      } else if(d.status === 'already'){
-        setResult('info','⏱️','Already stamped','This customer already got a stamp recently. Come back next visit!');
-        lastStampedCid = cid;
-        lastStampTime = Date.now();
-      } else if(d.status === 'invalid'){
-        currentToken = null;
-        setResult('err','❌','Invalid token','Please try again.');
-      } else {
-        setResult('err','⚠️','Something went wrong', JSON.stringify(d));
-      }
     }catch(e){
-      setResult('err','❌','Error',e.message);
+      renderError(FRIENDLY.network);
+      return;
+    }
+    var d;
+    try{ d = await res.json(); }catch(e){ renderError(FRIENDLY.network); return; }
+    if(handleStaffAuthError(res, d, slug)) return;
+
+    if(d.status === 'ok'){
+      renderPreview(slug, cid, d);
+    } else if(FRIENDLY[d.status]){
+      renderError(FRIENDLY[d.status]);
+    } else {
+      renderError(FRIENDLY.generic);
     }
   }
 
-  // ── Stamp from URL string (manual entry or scan result) ──
+  // ── Step 6: confirmation screen — Add 1 Stamp / Cancel ──
+  function renderPreview(slug, cid, d){
+    var box = document.getElementById('result-box');
+    var memberRef = 'Member ending ' + (d.memberRef || '????');
+    var statusChip = d.rewardReady
+      ? '<span class="status-chip ready">Reward Ready</span>'
+      : '<span class="status-chip">Active</span>';
+    box.innerHTML =
+      '<div class="preview-card">'
+      + '<div class="preview-title">Customer card found</div>'
+      + '<div class="preview-row"><span class="preview-label">Member</span><span class="preview-value">'+memberRef+'</span></div>'
+      + '<div class="preview-row"><span class="preview-label">Current stamps</span><span class="preview-value">'+d.stampCount+' of '+d.goal+'</span></div>'
+      + '<div class="preview-row"><span class="preview-label">Reward</span><span class="preview-value">'+(d.rewardName||'')+'</span></div>'
+      + '<div class="preview-row"><span class="preview-label">Last visit</span><span class="preview-value">'+formatFriendlyDate(d.lastVisit)+'</span></div>'
+      + '<div class="preview-row"><span class="preview-label">Status</span><span class="preview-value">'+statusChip+'</span></div>'
+      + '<div class="btn-row">'
+      + '<button class="btn btn-primary" onclick="confirmStamp(\''+slug+'\',\''+cid+'\')">Add 1 Stamp</button>'
+      + '<button class="btn btn-secondary" onclick="cancelToScanner()">Cancel</button>'
+      + '</div></div>';
+  }
+
+  window.cancelToScanner = function(){
+    document.getElementById('result-box').innerHTML = '';
+    setIdleControlsVisible(true);
+  };
+
+  window.scanNextCustomer = function(){
+    document.getElementById('result-box').innerHTML = '';
+    setIdleControlsVisible(true);
+    startScanner();
+  };
+
+  window.doneScanning = function(){
+    stopScanner();
+    document.getElementById('result-box').innerHTML = '';
+    setIdleControlsVisible(true);
+    history.back();
+  };
+
+  // ── Step 7/8/9: only this, triggered by the explicit "Add 1 Stamp" tap,
+  // calls the staff-only stamp route (Correction 1) — same handler as the
+  // public customer NFC route server-side, reached via a separate,
+  // staff-session-gated path so the customer route needs no auth change. ──
+  window.confirmStamp = async function(slug, cid){
+    var box = document.getElementById('result-box');
+    box.innerHTML = '<div class="result info"><div class="stamp-big">⏳</div><strong>Stamping…</strong></div>';
+    var res, d;
+    try{
+      if(!currentToken) currentToken = await fetchToken(slug);
+      res = await fetch(API+'/scanner/'+encodeURIComponent(slug)+'/'+currentToken+'/stamp', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, staffAuthHeaders(slug)),
+        body: JSON.stringify({cid: cid})
+      });
+      d = await res.json();
+    }catch(e){
+      renderError(FRIENDLY.network);
+      return;
+    }
+    currentToken = null; // token may be consumed/rotated — fetch fresh next time
+    if(handleStaffAuthError(res, d, slug)) return;
+
+    if(d.status === 'ok'){
+      lastStampedCid = cid; lastStampTime = Date.now();
+      if(d.rewardReady){ renderRewardUnlocked(slug, cid, d); }
+      else { renderStampSuccess(d); }
+    } else if(d.status === 'already'){
+      lastStampedCid = cid; lastStampTime = Date.now();
+      renderError(FRIENDLY.already);
+    } else if(FRIENDLY[d.status]){
+      renderError(FRIENDLY[d.status]);
+    } else {
+      renderError(FRIENDLY.generic);
+    }
+  };
+
+  function renderStampSuccess(d){
+    var box = document.getElementById('result-box');
+    box.innerHTML =
+      '<div class="result ok"><div class="stamp-big">✅</div><strong>Stamp added</strong>'
+      + '<div style="margin-top:6px">This customer now has '+d.newCount+' of '+d.goal+' stamps.</div>'
+      // The backend never reports whether the Apple/Google Wallet push
+      // itself succeeded (it's caught and logged server-side only) — so
+      // this note is shown on every success, never a claimed "Wallet
+      // updated" confirmation we can't actually verify from the response.
+      + '<div style="font-size:.72rem;opacity:.65;margin-top:6px">The stamp was saved. The Wallet card may take a moment to refresh.</div>'
+      + '<div class="btn-row"><button class="btn btn-primary" onclick="scanNextCustomer()">Scan Next Customer</button>'
+      + '<button class="btn btn-secondary" onclick="doneScanning()">Done</button></div></div>';
+    setIdleControlsVisible(true);
+  }
+
+  function renderRewardUnlocked(slug, cid, d){
+    var box = document.getElementById('result-box');
+    box.innerHTML =
+      '<div class="result ok"><div class="stamp-big">🎁</div><strong>Reward unlocked</strong>'
+      + '<div style="margin-top:6px;font-weight:700">'+(d.rewardName||'')+'</div>'
+      + '<div style="font-size:.72rem;opacity:.65;margin-top:6px">The stamp was saved. The Wallet card may take a moment to refresh.</div>'
+      + '<div class="btn-row"><button class="btn btn-primary" onclick="redeemReward(\''+slug+'\',\''+cid+'\')">Mark as redeemed</button>'
+      + '<button class="btn btn-secondary" onclick="scanNextCustomer()">Scan Next Customer</button>'
+      + '<button class="btn btn-secondary" onclick="doneScanning()">Done</button></div></div>';
+    setIdleControlsVisible(true);
+  }
+
+  // ── Redeem — staff-only route (Correction 1), same underlying handler as
+  // the public customer redeem-confirm endpoint, no separate reward
+  // system. ──
+  window.redeemReward = async function(slug, cid){
+    var box = document.getElementById('result-box');
+    box.innerHTML = '<div class="result info"><div class="stamp-big">⏳</div><strong>Redeeming…</strong></div>';
+    var res, d;
+    try{
+      var token = await fetchToken(slug);
+      res = await fetch(API+'/scanner/'+encodeURIComponent(slug)+'/'+token+'/redeem', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, staffAuthHeaders(slug)),
+        body: JSON.stringify({cid: cid})
+      });
+      d = await res.json();
+    }catch(e){
+      renderError(FRIENDLY.network);
+      return;
+    }
+    if(handleStaffAuthError(res, d, slug)) return;
+    if(d.status === 'ok'){
+      box.innerHTML = '<div class="result ok"><div class="stamp-big">🎉</div><strong>Reward redeemed</strong>'
+        + '<div style="margin-top:6px">'+(d.rewardName||'')+' — enjoy!</div>'
+        + '<div class="btn-row"><button class="btn btn-primary" onclick="scanNextCustomer()">Scan Next Customer</button>'
+        + '<button class="btn btn-secondary" onclick="doneScanning()">Done</button></div></div>';
+      setIdleControlsVisible(true);
+    } else if(d.status === 'not_ready'){
+      renderError('This customer is not ready to redeem yet.');
+    } else {
+      renderError(FRIENDLY.generic);
+    }
+  };
+
+  // The scanner's own business context (?slug= from the launching page) is
+  // authoritative — it must never be silently overridden by whatever
+  // business a scanned card happens to belong to. sel.value only matters
+  // as a fallback for the no-?slug= owner-direct-access case.
+  function getActiveSlug(){
+    var sel = document.getElementById('slug-select');
+    return pinSlug || (sel && sel.value) || '';
+  }
+
+  // Never preview or stamp before this passes. A scanned card whose own URL
+  // encodes a different slug than the scanner's active business must be
+  // rejected outright, before the preview endpoint is even called — not
+  // silently stamped into the wrong business's Pass/LoyaltyCustomer records.
+  function rejectIfWrongBusiness(activeSlug, slugFromUrl){
+    if(slugFromUrl && activeSlug && slugFromUrl !== activeSlug){
+      renderError(FRIENDLY.wrong_business);
+      return true;
+    }
+    return false;
+  }
+
+  // ── Scan/manual entry -> read-only preview (never stamps by itself) ──
   window.stampFromUrl = async function(url){
     if(!url || !url.trim()){ setResult('err','❌','No URL','Please scan or paste a barcode URL.'); return; }
     url = url.trim();
     var cid = extractCid(url);
     var slugFromUrl = extractSlug(url);
-    var sel = document.getElementById('slug-select');
-    var slug = sel.value || slugFromUrl;
+    var slug = getActiveSlug() || slugFromUrl;
     if(!slug){ setResult('err','❌',(window.SS_T&&window.SS_T.ss_no_slug)||'No program selected',''); return; }
     if(!cid){ setResult('err','❌','No customer ID','This barcode doesn\'t contain a customer ID. Make sure customers add the wallet pass fresh so the new barcode is generated.'); return; }
-    await doStamp(slug, cid);
+    if(rejectIfWrongBusiness(slug, slugFromUrl)) return;
+    await previewCard(slug, cid);
   };
 
   // ── UI result display ──
@@ -375,11 +686,12 @@
         var cid = extractCid(url);
         // dedupe: ignore same cid for 3 seconds
         if(cid && !(cid === lastStampedCid && Date.now() - lastStampTime < DEDUPE_MS)){
-          var sel = document.getElementById('slug-select');
-          var slug = sel.value || extractSlug(url);
+          var slugFromUrl = extractSlug(url);
+          var slug = getActiveSlug() || slugFromUrl;
           if(slug){
             stopScanner();
-            doStamp(slug, cid);
+            if(rejectIfWrongBusiness(slug, slugFromUrl)){ return; }
+            previewCard(slug, cid);
             return;
           }
         }
@@ -394,7 +706,46 @@
   };
 
   // ── Boot ──
+  // ── Branding — business logo (or a colored initial fallback), name, and
+  // brand color shown on the PIN gate, the locked screen, and the scanner
+  // itself. Reuses the existing public /manifest/:slug endpoint (already
+  // exposes name/theme_color/icon for the PWA manifest) rather than adding
+  // a new backend surface. ──
+  function applyBrand(brand){
+    var name = (brand.name || '').trim();
+    var initial = (name.charAt(0) || 'Q').toUpperCase();
+    var color = brand.color || '#ff5a1f';
+    // /manifest/:slug falls back to the generic Qraivy icon when no
+    // business logo was uploaded — treat that specific fallback as "no
+    // logo" so the initial-letter avatar shows instead of a generic mark.
+    var logoUrl = (brand.logoUrl && !/\/icon-(192|512)\.png$/.test(brand.logoUrl)) ? brand.logoUrl : '';
+    ['pin-logo','locked-logo','scan-logo'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.style.background = color;
+      el.innerHTML = logoUrl ? '<img src="'+logoUrl+'" alt="">' : initial;
+    });
+    ['pin-bizname','locked-bizname','scan-bizname'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.textContent = name;
+    });
+    var scanBrand = document.getElementById('scan-brand');
+    if(scanBrand) scanBrand.style.display = 'flex';
+  }
+
+  function loadBranding(slug){
+    if(!slug) return;
+    fetch(API+'/manifest/'+encodeURIComponent(slug)).then(function(r){ return r.json(); }).then(function(m){
+      applyBrand({
+        name: m && m.name,
+        color: m && m.theme_color,
+        logoUrl: m && m.icons && m.icons[0] && m.icons[0].src
+      });
+    }).catch(function(){});
+  }
+
   function boot(){
+    loadBranding(pinSlug);
     checkPinGate();
     loadPrograms();
     if(window.Clerk){
@@ -421,8 +772,8 @@
       ss_back: '← Back',
       ss_pin_title: 'Staff Access',
       ss_pin_sub: 'Enter your staff PIN to open the stamp scanner.',
-      ss_title: 'Stamp Scanner',
-      ss_sub: "Point your camera at a customer's loyalty pass barcode to add a stamp directly against their identity.",
+      ss_title: 'Stamp Customer',
+      ss_sub: "Scan the customer's Apple or Google Wallet loyalty card.",
       ss_scanning: 'Scanning…',
       ss_start: 'Start Camera Scanner',
       ss_stop: 'Stop Scanner',
@@ -439,13 +790,18 @@
       ss_pin_none: (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet',
       ss_net_err: (window.SS_T&&window.SS_T.ss_net_err)||'Network error. Check connection.',
       ss_cam_err: 'Camera error',
+      ss_locked_title: 'Staff PIN not configured',
+      ss_locked_sub: 'Set a Staff PIN in Loyalty Settings before using the scanner.',
+      ss_back_dashboard: 'Back to Dashboard',
+      ss_session_expired: 'Your staff session expired. Enter your PIN again.',
+      ss_locked: 'Too many attempts. Try again in',
     },
     de: {
       ss_back: '← Zurück',
       ss_pin_title: 'Mitarbeiterzugang',
       ss_pin_sub: 'Gib deine Mitarbeiter-PIN ein, um den Stempelscanner zu öffnen.',
-      ss_title: 'Stempelscanner',
-      ss_sub: 'Richte die Kamera auf den Barcode der Treuekarte des Kunden, um einen Stempel direkt zu vergeben.',
+      ss_title: 'Kunde stempeln',
+      ss_sub: 'Scanne die Apple oder Google Wallet Treuekarte des Kunden.',
       ss_scanning: 'Scannt…',
       ss_start: 'Kamerascanner starten',
       ss_stop: 'Scanner stoppen',
@@ -462,6 +818,11 @@
       ss_pin_none: 'Noch keine PIN gesetzt — bitte den Geschäftsinhaber, eine PIN im Dashboard einzurichten.',
       ss_net_err: 'Netzwerkfehler. Verbindung prüfen.',
       ss_cam_err: 'Kamerafehler',
+      ss_locked_title: 'Mitarbeiter-PIN nicht eingerichtet',
+      ss_locked_sub: 'Richte eine Mitarbeiter-PIN in den Treueprogramm-Einstellungen ein, bevor du den Scanner benutzt.',
+      ss_back_dashboard: 'Zurück zum Dashboard',
+      ss_session_expired: 'Deine Mitarbeitersitzung ist abgelaufen. Gib deine PIN erneut ein.',
+      ss_locked: 'Zu viele Versuche. Erneut versuchen in',
     }
   };
   var t = T[lang] || T.en;
