@@ -328,11 +328,10 @@ async function getStats(req, res) {
 // GET /loyalty/programs/:id/customers
 async function getCustomers(req, res) {
   try {
-    const ownerId = req.auth.userId;
-    if (!ownerId) return res.status(401).json({ error: 'Unauthorized' });
-    const whereClause = { id: req.params.id, clerkUserId: ownerId };
-    const lp = await prisma.landingPage.findFirst({ where: whereClause });
+    const userId = req.userId;
+    const lp = await prisma.landingPage.findUnique({ where: { id: req.params.id } });
     if (!lp) return res.status(404).json({ error: 'Not found' });
+    if (lp.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
     const settings = await prisma.stampSettings.findUnique({ where: { slug: lp.slug } });
     const goal = settings ? settings.goal : 10;
     const rows = await prisma.loyaltyCustomer.findMany({
