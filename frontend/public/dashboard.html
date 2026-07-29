@@ -1453,6 +1453,10 @@ async function initDashboard(){
        way #section-campaigns already does locally, rather than changing
        the global rule for every page that uses it. */
     #section-loyalty .sec-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    /* Consistent gap between stacked sec-hdr+panel sections, same value and
+       pattern as .analytics-section on the Smart QR dashboard — one shared
+       rule instead of a repeated inline style per section. */
+    .loy-section{margin-bottom:32px;}
     /* Responsive card grid for Members/Rewards — same auto-fill pattern as
        the Smart QR Pages grid (.sqr-grid), sized for a lighter card. */
     .loy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
@@ -1770,6 +1774,16 @@ function _loyMemberRef(maskedId) {
   return "Member ending " + tail;
 }
 
+// Shared row formatter — used by both Overview's "Recent Activity" and
+// Stamp Customer's "Recent Stamp Activity", which render the same shape
+// of data (a customer + their current stamp/reward state + last visit).
+function _loyActivityRowHtml(c, p) {
+  var when = _lyDate(c.lastStampAt);
+  var status = c.rewardReady ? "🎁 Reward ready" : (c.stampCount + " of " + (p.stampGoal || 10) + " stamps");
+  return "<div class=\"loy-activity-row\"><span>" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
+    "<span style=\"margin-left:auto;\">" + status + "</span><span style=\"opacity:.6;\">" + when + "</span></div>";
+}
+
 // ══════════════════════════════ OVERVIEW ══════════════════════════════
 function _loyRenderOverview(p, force) {
   var panel = document.getElementById("loy-panel-overview");
@@ -1789,24 +1803,44 @@ function _loyRenderOverview(p, force) {
     var activeMembers = customers.length;
     var rewardsWaiting = customers.filter(function(c){ return c.rewardReady; }).length;
     var rewardsRedeemed = typeof innerStats.rewardsRedeemed === "number" ? innerStats.rewardsRedeemed : 0;
+    var rewardsEarned = typeof innerStats.rewardsEarned === "number" ? innerStats.rewardsEarned : 0;
 
-    var activityRows = customers.slice(0, 5).map(function(c) {
-      var when = _lyDate(c.lastStampAt);
-      var status = c.rewardReady ? "🎁 Reward ready" : (c.stampCount + " of " + (p.stampGoal || 10) + " stamps");
+    var activityRows = customers.slice(0, 5).map(function(c) { return _loyActivityRowHtml(c, p); }).join("");
+
+    // Recent Customers — the SAME customers array already fetched above,
+    // re-sorted client-side by createdAt instead of the server's default
+    // lastStampAt order. No new fetch.
+    var byCreated = customers.slice().sort(function(a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+    var recentCustomerRows = byCreated.slice(0, 5).map(function(c) {
       return "<div class=\"loy-activity-row\"><span>" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
-        "<span style=\"margin-left:auto;\">" + status + "</span><span style=\"opacity:.6;\">" + when + "</span></div>";
+        "<span style=\"margin-left:auto;opacity:.6;\">Joined " + _lyDate(c.createdAt) + "</span></div>";
     }).join("");
+
+    // Reward Progress — buckets computed from the already-fetched customers
+    // array. No new fetch, no invented data. "Reward ready" itself is
+    // already shown as a KPI card above, so this panel only breaks down
+    // the remaining, not-yet-ready members — no duplicate row for it here.
+    var oneAway = customers.filter(function(c){ return !c.rewardReady && c.stampCount === ((c.goal || p.stampGoal || 10) - 1); }).length;
+    var buildingUp = customers.length - rewardsWaiting - oneAway;
+
+    // Program Health — derived from stats + customers already in hand.
+    var redemptionRate = rewardsEarned > 0 ? Math.round((rewardsRedeemed / rewardsEarned) * 100) + "%" : "—";
+    var avgStamps = customers.length > 0
+      ? (customers.reduce(function(sum, c){ return sum + (c.stampCount || 0); }, 0) / customers.length).toFixed(1)
+      : "—";
 
     panel.innerHTML =
       (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
       "<div class=\"kpi-row\">" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + todayStamps + "</div><div class=\"kpi-lbl\">Today's Stamps</div></div>" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + activeMembers + "</div><div class=\"kpi-lbl\">Active Members</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsWaiting + "</div><div class=\"kpi-lbl\">Rewards Waiting</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsWaiting + "</div><div class=\"kpi-lbl\">Reward Ready</div></div>" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Rewards Redeemed</div></div>" +
       "</div>" +
       "<div class=\"sec-hdr\"><span class=\"section-title\">Quick Actions</span></div>" +
-      "<div class=\"panel\" style=\"margin-bottom:32px;\"><div class=\"panel-body\">" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
         "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:12px;\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 Stamp Customer</a>" +
         "<div style=\"display:flex;gap:10px;flex-wrap:wrap;\">" +
           "<button class=\"btn-outline\" onclick=\"window._loySelectTab('members')\">👥 View Members</button>" +
@@ -1815,11 +1849,23 @@ function _loyRenderOverview(p, force) {
         "</div>" +
       "</div></div>" +
       "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Activity</span></div>" +
-      "<div class=\"panel\">" +
-        "<div class=\"panel-body\">" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
         (activityRows || "<div class=\"state-empty\">No activity yet</div>") +
-        "</div>" +
-      "</div>";
+      "</div></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Customers</span></div>" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
+        (recentCustomerRows || "<div class=\"state-empty\">No customers yet</div>") +
+      "</div></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward Progress</span></div>" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">1 stamp away</span><span class=\"metric-val orange\">" + oneAway + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">Building up</span><span class=\"metric-val\">" + buildingUp + "</span></div>" +
+      "</div></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Program Health</span></div>" +
+      "<div class=\"panel\"><div class=\"panel-body\">" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">Redemption rate</span><span class=\"metric-val orange\">" + redemptionRate + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">Avg. stamps per member</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
+      "</div></div>";
   }).catch(function(err) {
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
@@ -1830,20 +1876,50 @@ function _loyRenderStampCustomer(p) {
   var panel = document.getElementById("loy-panel-stamp");
   if (!panel) return;
   var scannerUrl = window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug);
+
+  // Scanner, Manual Entry, and Staff Status all render synchronously,
+  // immediately, in this one assignment — Recent Stamp Activity's own
+  // fetch below must never delay or block any of them.
   panel.innerHTML =
     "<div class=\"sec-hdr\"><div><span class=\"section-title\">Scan a Customer</span>" +
       "<div class=\"section-count\" style=\"margin-left:0;display:block;margin-top:2px;\">Add a stamp or check a reward using the customer's Wallet card</div></div></div>" +
-    "<div class=\"panel\">" +
-      "<div class=\"panel-body\" style=\"text-align:center;\">" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">Scanner</span></div>" +
+    "<div class=\"panel loy-section\"><div class=\"panel-body\" style=\"text-align:center;\">" +
       "<div style=\"display:flex;justify-content:center;\">" + _lyAvatar(p.businessName, p.color) + "</div>" +
       "<div style=\"font-size:1.1rem;font-weight:800;color:#f0f4f8;margin:14px 0 6px;\">Stamp a Customer</div>" +
       "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:20px;\">Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.</div>" +
-      "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:10px;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
+      "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
+    "</div></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">Manual Entry</span></div>" +
+    "<div class=\"panel loy-section\"><div class=\"panel-body\" style=\"text-align:center;\">" +
+      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:16px;\">If the camera can't read the code, enter it manually on the scanner page.</div>" +
       "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;\" href=\"" + scannerUrl + "\">Enter Code Manually</a>" +
-      "<div id=\"loy-pin-status-line\" style=\"margin-top:18px;font-size:.72rem;color:var(--dashboard-muted);\">Checking staff PIN…</div>" +
-      "</div>" +
-    "</div>";
+    "</div></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Stamp Activity</span></div>" +
+    "<div class=\"panel loy-section\"><div class=\"panel-body\" id=\"loy-stamp-activity-body\">" +
+      "<div class=\"state-loading\">Loading…</div>" +
+    "</div></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">Staff Status</span></div>" +
+    "<div class=\"panel\"><div class=\"panel-body\">" +
+      "<div id=\"loy-pin-status-line\" style=\"font-size:.82rem;color:var(--dashboard-muted);\">Checking staff PIN…</div>" +
+    "</div></div>";
 
+  // Recent Stamp Activity — reuses the existing, unmodified _loyFetchCustomers
+  // helper (same 15s cache / in-flight dedupe as every other tab). A
+  // failure here only replaces this one panel's body — Scanner, Manual
+  // Entry, and Staff Status above are already rendered and unaffected.
+  _loyFetchCustomers(p.id).then(function(customers) {
+    var body = document.getElementById("loy-stamp-activity-body");
+    if (!body) return;
+    var rows = customers.slice(0, 5).map(function(c) { return _loyActivityRowHtml(c, p); }).join("");
+    body.innerHTML = rows || "<div class=\"state-empty\">No activity yet</div>";
+  }).catch(function(err) {
+    var body = document.getElementById("loy-stamp-activity-body");
+    if (body) body.innerHTML = "<div class=\"state-empty\">" + _lyErrorMessage(err) + "</div>";
+  });
+
+  // Staff Status — same fetch, same element, unchanged, independent of
+  // the Recent Stamp Activity fetch above.
   fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug) + "/status")
     .then(function(r){ return r.json(); })
     .then(function(d) {
@@ -1965,12 +2041,30 @@ function _loyRenderRewards(p, force) {
       "<div class=\"kpi-row\">" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + _lyEsc(p.rewardText || "Free item") + "</div><div class=\"kpi-lbl\">Reward</div></div>" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"kpi-lbl\">Stamps Required</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + ready.length + "</div><div class=\"kpi-lbl\">Waiting</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + ready.length + "</div><div class=\"kpi-lbl\">Reward Ready</div></div>" +
         "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Redeemed</div></div>" +
       "</div>" +
       "<div class=\"sec-hdr\"><span class=\"section-title\">Reward-Ready Members<span class=\"section-count\">(" + ready.length + ")</span></span></div>" +
-      (ready.length === 0 ? "<div class=\"state-empty\">No rewards are waiting right now.</div>" : "<div class=\"loy-grid\">" + cards + "</div>") +
-      "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>";
+      "<div class=\"loy-section\">" +
+        (ready.length === 0 ? "<div class=\"state-empty\">No rewards are waiting right now.</div>" : "<div class=\"loy-grid\">" + cards + "</div>") +
+        "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>" +
+      "</div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Redemption Summary</span></div>" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">Rewards redeemed in total</span><span class=\"metric-val orange\">" + rewardsRedeemed + "</span></div>" +
+      "</div></div>" +
+      // Detailed per-event redemption history (which customer, what time,
+      // which reward) is not tracked anywhere in the current data model —
+      // only the aggregate count above exists. Stated honestly rather than
+      // omitted, per explicit founder requirement.
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Detailed History</span></div>" +
+      "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
+        "<div class=\"loy-note\" style=\"margin-top:0;\">Detailed redemption history isn't tracked yet — QRAIVY doesn't currently record which customer redeemed, when, or which specific reward. Only the total count above is available.</div>" +
+      "</div></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward Settings</span></div>" +
+      "<div class=\"panel\"><div class=\"panel-body\">" +
+        "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">Edit reward name &amp; stamp goal →</button>" +
+      "</div></div>";
   }).catch(function(err) {
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
@@ -1984,8 +2078,8 @@ function _loyRenderSettings(p) {
   panel.innerHTML =
     "<div class=\"sec-hdr\"><span class=\"section-title\">Settings</span></div>" +
     "<div class=\"metrics-grid\">" +
-      // Left panel — program behavior
-      "<div class=\"panel\"><div class=\"panel-body\" style=\"padding:0;\">" +
+      // Program
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Program</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
           "<div><div class=\"loy-settings-label\">Program active</div><div class=\"loy-settings-sub\">Customers can collect stamps</div></div>" +
           "<button class=\"loy-toggle" + (isActive ? " on" : "") + "\" onclick=\"window._loyToggleActive()\"><span></span></button>" +
@@ -2001,35 +2095,41 @@ function _loyRenderSettings(p) {
           "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Saved</div>" +
         "</div>" +
       "</div></div>" +
-      // Right panel — brand, access, integrations
-      "<div class=\"panel\"><div class=\"panel-body\" style=\"padding:0;\">" +
-        "<div class=\"loy-settings-row\">" +
-          "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
-          "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
+      // Staff PIN
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Staff PIN</div></div><div class=\"panel-body\">" +
+        "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
+          "<div class=\"loy-settings-sub\" style=\"margin-top:0;flex:1;\">Staff must enter this PIN before adding stamps or redeeming rewards.</div>" +
+          "<span id=\"loy-pin-badge\" class=\"badge badge-free\">Checking…</span>" +
         "</div>" +
-        "<div class=\"loy-settings-row\" style=\"flex-direction:column;align-items:stretch;\">" +
-          "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
-            "<div style=\"flex:1;\"><div class=\"loy-settings-label\">Staff PIN</div>" +
-              "<div class=\"loy-settings-sub\">Staff must enter this PIN before adding stamps or redeeming rewards.</div></div>" +
-            "<span id=\"loy-pin-badge\" class=\"badge badge-free\">Checking…</span>" +
-          "</div>" +
-          "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
-          "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
-            "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
-            "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
-            "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
-            "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:12px;font-size:.82rem;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
-          "</div>" +
-          "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
+        "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
+        "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
+          "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+          "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+          "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
+          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:12px;font-size:.82rem;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
         "</div>" +
+        "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
+      "</div></div>" +
+      // Wallet
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Wallet</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
           "<div class=\"loy-settings-label\">Apple Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
         "</div>" +
         "<div class=\"loy-settings-row\">" +
           "<div class=\"loy-settings-label\">Google Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
         "</div>" +
+      "</div></div>" +
+      // Brand
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Brand</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
-          "<div class=\"loy-settings-label\">Customer Welcome Page</div>" +
+          "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
+          "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
+        "</div>" +
+      "</div></div>" +
+      // Customer Welcome
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Customer Welcome</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
+        "<div class=\"loy-settings-row\">" +
+          "<div class=\"loy-settings-label\">Welcome Page</div>" +
           "<a class=\"btn-outline\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">Open →</a>" +
         "</div>" +
       "</div></div>" +
