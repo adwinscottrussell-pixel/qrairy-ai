@@ -1441,47 +1441,44 @@ async function initDashboard(){
 
 <div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
   <style>
-    .loy-wrap{max-width:820px}
-    .loy-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+    /* Loyalty consumes the shared dashboard design system (page-wrap,
+       page-header, kpi-row/kpi-card, panel, badge, btn-primary/btn-outline,
+       empty-state/state-*) instead of its own standalone layout — see
+       docs/dashboard-design-system.md. Only genuinely unique widgets (tab
+       bar, staff-PIN toggle/inputs, member filter pills, settings rows)
+       stay page-local below, restyled onto the shared color/spacing tokens
+       rather than their own literal values. */
+    /* .sec-hdr's shared rule (dashboard-shell.css) is just margin-bottom —
+       its flex layout is intentionally added per-page-section, the same
+       way #section-campaigns already does locally, rather than changing
+       the global rule for every page that uses it. */
+    #section-loyalty .sec-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    /* Responsive card grid for Members/Rewards — same auto-fill pattern as
+       the Smart QR Pages grid (.sqr-grid), sized for a lighter card. */
+    .loy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
     .loy-avatar{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',system-ui,sans-serif;font-weight:800;font-size:1.3rem;color:#fff;flex-shrink:0;overflow:hidden}
-    .loy-header-title{font-size:1.3rem;font-weight:800;color:#f0f4f8}
-    .loy-status-chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.68rem;font-weight:700;margin-top:2px}
-    .loy-status-chip.active{background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25)}
-    .loy-status-chip.paused{background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1)}
-    .loy-switch{margin-left:auto;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#f0f4f8;font-family:inherit;font-size:.78rem;max-width:220px}
-    .loy-tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-bottom:18px;scrollbar-width:none}
+    .loy-switch{margin-left:auto;background:var(--dashboard-card-bg);border:1px solid var(--dashboard-border);border-radius:10px;padding:8px 12px;color:#f0f4f8;font-family:inherit;font-size:.78rem;max-width:220px}
+    .loy-tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-bottom:24px;scrollbar-width:none}
     .loy-tabs::-webkit-scrollbar{display:none}
-    .loy-tab{flex:0 0 auto;padding:9px 16px;border-radius:9px;font-size:.8rem;font-weight:700;color:rgba(240,244,248,0.5);background:transparent;border:0.5px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit}
-    .loy-tab.active{background:rgba(255,90,31,0.1);border-color:rgba(255,90,31,0.3);color:#ff8c55}
+    .loy-tab{flex:0 0 auto;padding:9px 16px;border-radius:9px;font-size:.8rem;font-weight:700;color:var(--dashboard-muted);background:transparent;border:1px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit}
+    .loy-tab.active{background:var(--dashboard-accent-dim);border-color:var(--dashboard-accent-border);color:#ff8c55}
     .loy-panel{display:none}
     .loy-panel.active{display:block}
-    .loy-primary-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:22px;background:#ff5a1f;border:none;border-radius:16px;color:#fff;font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.15rem;font-weight:800;cursor:pointer;text-decoration:none;margin-bottom:22px;box-shadow:0 8px 24px rgba(255,90,31,0.25)}
-    .loy-primary-cta:hover{background:#e04e18}
-    .loy-kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
-    @media(min-width:560px){.loy-kpi-grid{grid-template-columns:repeat(4,1fr)}}
-    .loy-kpi{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;text-align:center}
-    .loy-kpi-val{font-size:1.7rem;font-weight:800;color:#f0f4f8;font-family:'Space Grotesk',system-ui,sans-serif}
-    .loy-kpi-label{font-size:.66rem;color:rgba(240,244,248,0.4);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
-    .loy-section-title{font-size:.95rem;font-weight:700;color:#f0f4f8;margin:22px 0 10px}
-    .loy-quicklinks{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-    .loy-quicklink{padding:9px 14px;border-radius:9px;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);color:rgba(240,244,248,0.7);font-size:.75rem;text-decoration:none;cursor:pointer;font-family:inherit}
-    .loy-activity-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid rgba(255,255,255,0.06);font-size:.78rem;color:rgba(240,244,248,0.6)}
+    .loy-activity-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.78rem;color:var(--dashboard-muted)}
     .loy-activity-row:last-child{border-bottom:none}
-    .loy-card{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:22px;text-align:center}
-    .loy-input,.loy-select{width:100%;background:#111;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#f0f4f8;font-family:inherit;font-size:.85rem;outline:none;margin-bottom:12px}
-    .loy-input:focus,.loy-select:focus{border-color:#ff5a1f}
+    .loy-input,.loy-select{width:100%;background:var(--dashboard-card-bg);border:1px solid var(--dashboard-border);border-radius:8px;padding:10px 14px;color:#f0f4f8;font-family:inherit;font-size:.85rem;outline:none;margin-bottom:12px}
+    .loy-input:focus,.loy-select:focus{border-color:var(--dashboard-accent)}
     .loy-toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-    .loy-filter-btn{padding:8px 14px;border-radius:8px;font-size:.74rem;font-weight:600;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.08);color:rgba(240,244,248,0.5);cursor:pointer;font-family:inherit}
-    .loy-filter-btn.active{background:rgba(255,90,31,0.12);border-color:rgba(255,90,31,0.3);color:#ff8c55}
-    .loy-member-card{background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;margin-bottom:10px}
+    .loy-filter-btn{padding:8px 14px;border-radius:8px;font-size:.74rem;font-weight:600;background:var(--dashboard-card-bg);border:1px solid var(--dashboard-border);color:var(--dashboard-muted);cursor:pointer;font-family:inherit}
+    .loy-filter-btn.active{background:var(--dashboard-accent-dim);border-color:var(--dashboard-accent-border);color:#ff8c55}
     .loy-member-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
     .loy-member-ref{font-weight:700;color:#f0f4f8;font-size:.85rem}
-    .loy-member-row{display:flex;justify-content:space-between;font-size:.75rem;color:rgba(240,244,248,0.5);padding:3px 0}
-    .loy-empty{text-align:center;padding:44px 20px;color:rgba(240,244,248,0.4);font-size:.85rem}
-    .loy-note{font-size:.68rem;color:rgba(240,244,248,0.3);margin-top:14px;line-height:1.6}
-    .loy-settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)}
+    .loy-member-row{display:flex;justify-content:space-between;font-size:.75rem;color:var(--dashboard-muted);padding:3px 0}
+    .loy-note{font-size:.68rem;color:var(--dashboard-muted-dim);margin-top:14px;line-height:1.6}
+    .loy-settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .loy-settings-row:last-child{border-bottom:none}
     .loy-settings-label{font-size:.82rem;color:#f0f4f8;font-weight:600}
-    .loy-settings-sub{font-size:.68rem;color:rgba(240,244,248,0.4);margin-top:2px}
+    .loy-settings-sub{font-size:.68rem;color:var(--dashboard-muted);margin-top:2px}
     .loy-toggle{position:relative;width:44px;height:24px;border-radius:20px;background:rgba(255,255,255,0.1);border:none;cursor:pointer;flex-shrink:0}
     .loy-toggle.on{background:#22c55e}
     .loy-toggle span{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
@@ -1489,8 +1486,10 @@ async function initDashboard(){
     .loy-wallet-badge{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:#22c55e}
     .loy-swatch{width:22px;height:22px;border-radius:6px;display:inline-block;vertical-align:middle;border:1px solid rgba(255,255,255,0.15)}
   </style>
-  <div class="loy-wrap" id="loy-root">
-    <div class="loy-empty" data-i18n="loy_loading">Loading…</div>
+  <div class="page-wrap">
+    <div id="loy-root">
+      <div class="state-loading" data-i18n="loy_loading">Loading…</div>
+    </div>
   </div>
 </div>
 
@@ -1597,7 +1596,7 @@ function _loyCurrentProgram() {
 function loadLoyaltyDashboard() {
   var root = document.getElementById("loy-root");
   if (!root) return;
-  root.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+  root.innerHTML = "<div class=\"state-loading\">Loading…</div>";
   _lyAuthHeaders().then(function(headers) {
     fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
       .then(_lyParseResponse)
@@ -1605,8 +1604,11 @@ function loadLoyaltyDashboard() {
         var programs = ((data && data.programs) || []).filter(function(p){ return p.hasLoyaltyConfig; });
         window._loyPrograms = programs;
         if (!programs.length) {
-          root.innerHTML = "<div class=\"loy-empty\">No loyalty program yet.<br><br>" +
-            "<a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;font-weight:700;\">Set one up →</a></div>";
+          root.innerHTML = "<div class=\"empty-state\">" +
+            "<div class=\"empty-icon\">🎯</div>" +
+            "<div class=\"empty-title\">No loyalty program yet</div>" +
+            "<div class=\"empty-sub\">Set one up to start collecting stamps and rewarding repeat customers.</div>" +
+            "<a class=\"empty-cta\" href=\"loyalty-setup.html\">Set one up →</a></div>";
           return;
         }
         if (!window._loyCurrentId || !_loyCurrentProgram()) window._loyCurrentId = programs[0].id;
@@ -1615,7 +1617,7 @@ function loadLoyaltyDashboard() {
         _loyRenderShell();
       })
       .catch(function(err) {
-        root.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
+        root.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
       });
   });
 }
@@ -1644,10 +1646,12 @@ function _loyRenderShell() {
   ];
 
   root.innerHTML =
-    "<div class=\"loy-header\">" +
-      _lyAvatar(p.businessName, p.color) +
-      "<div><div class=\"loy-header-title\">Loyalty Program</div>" +
-      "<span class=\"loy-status-chip " + statusClass + "\">" + statusLabel + "</span></div>" +
+    "<div class=\"page-header\">" +
+      "<div style=\"display:flex;align-items:center;gap:14px;\">" +
+        _lyAvatar(p.businessName, p.color) +
+        "<div><div class=\"page-title\">Loyalty Program</div>" +
+        "<span class=\"badge " + (statusClass === "active" ? "badge-live" : "badge-free") + "\">" + statusLabel + "</span></div>" +
+      "</div>" +
       switcher +
     "</div>" +
     "<div class=\"loy-tabs\">" +
@@ -1770,7 +1774,7 @@ function _loyMemberRef(maskedId) {
 function _loyRenderOverview(p, force) {
   var panel = document.getElementById("loy-panel-overview");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
@@ -1794,23 +1798,30 @@ function _loyRenderOverview(p, force) {
     }).join("");
 
     panel.innerHTML =
-      (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:0.5px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
-      "<a class=\"loy-primary-cta\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 Stamp Customer</a>" +
-      "<div class=\"loy-kpi-grid\">" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + todayStamps + "</div><div class=\"loy-kpi-label\">Today's Stamps</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + activeMembers + "</div><div class=\"loy-kpi-label\">Active Members</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsWaiting + "</div><div class=\"loy-kpi-label\">Rewards Waiting</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsRedeemed + "</div><div class=\"loy-kpi-label\">Rewards Redeemed</div></div>" +
+      (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
+      "<div class=\"kpi-row\">" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + todayStamps + "</div><div class=\"kpi-lbl\">Today's Stamps</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + activeMembers + "</div><div class=\"kpi-lbl\">Active Members</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsWaiting + "</div><div class=\"kpi-lbl\">Rewards Waiting</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Rewards Redeemed</div></div>" +
       "</div>" +
-      "<div class=\"loy-section-title\">Recent Activity</div>" +
-      (activityRows || "<div class=\"loy-empty\" style=\"padding:20px;\">No activity yet</div>") +
-      "<div class=\"loy-quicklinks\">" +
-        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('members')\">👥 View Members</button>" +
-        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('rewards')\">🎁 View Rewards</button>" +
-        "<button class=\"loy-quicklink\" onclick=\"window._loySelectTab('settings')\">⚙ Settings</button>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Quick Actions</span></div>" +
+      "<div class=\"panel\" style=\"margin-bottom:32px;\"><div class=\"panel-body\">" +
+        "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:12px;\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 Stamp Customer</a>" +
+        "<div style=\"display:flex;gap:10px;flex-wrap:wrap;\">" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('members')\">👥 View Members</button>" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('rewards')\">🎁 View Rewards</button>" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">⚙ Settings</button>" +
+        "</div>" +
+      "</div></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Activity</span></div>" +
+      "<div class=\"panel\">" +
+        "<div class=\"panel-body\">" +
+        (activityRows || "<div class=\"state-empty\">No activity yet</div>") +
+        "</div>" +
       "</div>";
   }).catch(function(err) {
-    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
+    panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
 
@@ -1820,13 +1831,17 @@ function _loyRenderStampCustomer(p) {
   if (!panel) return;
   var scannerUrl = window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug);
   panel.innerHTML =
-    "<div class=\"loy-card\">" +
-      _lyAvatar(p.businessName, p.color) +
+    "<div class=\"sec-hdr\"><div><span class=\"section-title\">Scan a Customer</span>" +
+      "<div class=\"section-count\" style=\"margin-left:0;display:block;margin-top:2px;\">Add a stamp or check a reward using the customer's Wallet card</div></div></div>" +
+    "<div class=\"panel\">" +
+      "<div class=\"panel-body\" style=\"text-align:center;\">" +
+      "<div style=\"display:flex;justify-content:center;\">" + _lyAvatar(p.businessName, p.color) + "</div>" +
       "<div style=\"font-size:1.1rem;font-weight:800;color:#f0f4f8;margin:14px 0 6px;\">Stamp a Customer</div>" +
-      "<div style=\"font-size:.82rem;color:rgba(240,244,248,0.55);line-height:1.6;margin-bottom:20px;\">Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.</div>" +
-      "<a class=\"loy-primary-cta\" style=\"margin-bottom:10px;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
-      "<a class=\"loy-quicklink\" style=\"display:block;\" href=\"" + scannerUrl + "\">Enter Code Manually</a>" +
-      "<div id=\"loy-pin-status-line\" style=\"margin-top:18px;font-size:.72rem;color:rgba(240,244,248,0.4);\">Checking staff PIN…</div>" +
+      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:20px;\">Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.</div>" +
+      "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:10px;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
+      "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;\" href=\"" + scannerUrl + "\">Enter Code Manually</a>" +
+      "<div id=\"loy-pin-status-line\" style=\"margin-top:18px;font-size:.72rem;color:var(--dashboard-muted);\">Checking staff PIN…</div>" +
+      "</div>" +
     "</div>";
 
   fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug) + "/status")
@@ -1848,12 +1863,12 @@ function _loyRenderStampCustomer(p) {
 function _loyRenderMembers(p, force) {
   var panel = document.getElementById("loy-panel-members");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   _loyFetchCustomers(p.id, force).then(function(customers) {
     _loyDrawMembers(p, customers);
   }).catch(function(err) {
-    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
+    panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
 
@@ -1873,31 +1888,36 @@ function _loyDrawMembers(p, customers) {
 
   var cards = filtered.map(function(c) {
     var statusChip = c.rewardReady
-      ? "<span class=\"status-chip ready\" style=\"display:inline-block;padding:3px 10px;border-radius:999px;font-size:.66rem;font-weight:700;background:rgba(34,212,126,0.15);color:#22d47e;\">Reward Ready</span>"
-      : "<span style=\"display:inline-block;padding:3px 10px;border-radius:999px;font-size:.66rem;font-weight:700;background:rgba(255,255,255,0.08);color:rgba(240,244,248,0.6);\">Active</span>";
+      ? "<span class=\"badge badge-success\">Reward Ready</span>"
+      : "<span class=\"badge badge-free\">Active</span>";
     var redeemBtn = c.rewardReady
-      ? "<a class=\"loy-quicklink\" style=\"display:block;margin-top:10px;text-align:center;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Scan to redeem</a>"
+      ? "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Scan to redeem</a>"
       : "";
-    return "<div class=\"loy-member-card\">" +
+    return "<div class=\"panel\"><div class=\"panel-body\">" +
       "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" + statusChip + "</div>" +
       "<div class=\"loy-member-row\"><span>Stamps</span><span>" + c.stampCount + " of " + c.goal + "</span></div>" +
       "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
       redeemBtn +
-    "</div>";
+    "</div></div>";
   }).join("");
 
   panel.innerHTML =
-    "<input class=\"loy-input\" placeholder=\"Search members…\" value=\"" + _lyEsc(window._loyMemberSearch) + "\" oninput=\"window._loyMemberSearchInput(this.value)\" />" +
-    "<div class=\"loy-toolbar\">" +
-      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "all" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('all')\">All</button>" +
-      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "active" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('active')\">Active</button>" +
-      "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "ready" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('ready')\">Reward Ready</button>" +
+    "<div class=\"sec-hdr\">" +
+      "<span class=\"section-title\">Members<span class=\"section-count\">(" + customers.length + ")</span></span>" +
+      "<div style=\"display:flex;gap:8px;flex-wrap:wrap;align-items:center;\">" +
+        "<input class=\"loy-input\" style=\"width:180px;margin-bottom:0;\" placeholder=\"Search members…\" value=\"" + _lyEsc(window._loyMemberSearch) + "\" oninput=\"window._loyMemberSearchInput(this.value)\" />" +
+        "<div class=\"loy-toolbar\" style=\"margin-bottom:0;\">" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "all" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('all')\">All</button>" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "active" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('active')\">Active</button>" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "ready" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('ready')\">Reward Ready</button>" +
+        "</div>" +
+      "</div>" +
     "</div>" +
     (customers.length === 0
-      ? "<div class=\"loy-empty\">No loyalty members yet. Ask your first customer to join.</div>"
+      ? "<div class=\"state-empty\">No loyalty members yet. Ask your first customer to join.</div>"
       : (filtered.length === 0
-        ? "<div class=\"loy-empty\">No members match this filter.</div>"
-        : cards)) +
+        ? "<div class=\"state-empty\">No members match this filter.</div>"
+        : "<div class=\"loy-grid\">" + cards + "</div>")) +
     (customers.length > 0 ? "<div class=\"loy-note\">Some older members may appear more than once while customer records are being upgraded.</div>" : "");
 }
 
@@ -1916,7 +1936,7 @@ window._loyMemberSearchInput = function(v) {
 function _loyRenderRewards(p, force) {
   var panel = document.getElementById("loy-panel-rewards");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"loy-empty\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
@@ -1926,9 +1946,9 @@ function _loyRenderRewards(p, force) {
     var rewardsRedeemed = typeof innerStats.rewardsRedeemed === "number" ? innerStats.rewardsRedeemed : 0;
 
     var cards = ready.map(function(c) {
-      return "<div class=\"loy-member-card\">" +
+      return "<div class=\"panel\"><div class=\"panel-body\">" +
         "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
-        "<span style=\"font-size:.66rem;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(34,212,126,0.15);color:#22d47e;\">Ready</span></div>" +
+        "<span class=\"badge badge-success\">Ready</span></div>" +
         "<div class=\"loy-member-row\"><span>Reward</span><span>" + _lyEsc(p.rewardText || "Free item") + "</span></div>" +
         "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
         // Redemption requires a fresh scan of the customer's actual wallet
@@ -1937,22 +1957,22 @@ function _loyRenderRewards(p, force) {
         // masked reference, by design, so there is no cid here safe to
         // redeem against directly without a new backend capability. Reusing
         // the scanner keeps this to exactly one reward system.
-        "<a class=\"loy-quicklink\" style=\"display:block;margin-top:10px;text-align:center;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Mark as Redeemed →</a>" +
-      "</div>";
+        "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Mark as Redeemed →</a>" +
+      "</div></div>";
     }).join("");
 
     panel.innerHTML =
-      "<div class=\"loy-kpi-grid\">" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + _lyEsc(p.rewardText || "Free item") + "</div><div class=\"loy-kpi-label\">Reward</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"loy-kpi-label\">Stamps Required</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + ready.length + "</div><div class=\"loy-kpi-label\">Waiting</div></div>" +
-        "<div class=\"loy-kpi\"><div class=\"loy-kpi-val\">" + rewardsRedeemed + "</div><div class=\"loy-kpi-label\">Redeemed</div></div>" +
+      "<div class=\"kpi-row\">" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + _lyEsc(p.rewardText || "Free item") + "</div><div class=\"kpi-lbl\">Reward</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"kpi-lbl\">Stamps Required</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + ready.length + "</div><div class=\"kpi-lbl\">Waiting</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Redeemed</div></div>" +
       "</div>" +
-      "<div class=\"loy-section-title\">Reward-Ready Members</div>" +
-      (ready.length === 0 ? "<div class=\"loy-empty\">No rewards are waiting right now.</div>" : cards) +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward-Ready Members<span class=\"section-count\">(" + ready.length + ")</span></span></div>" +
+      (ready.length === 0 ? "<div class=\"state-empty\">No rewards are waiting right now.</div>" : "<div class=\"loy-grid\">" + cards + "</div>") +
       "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>";
   }).catch(function(err) {
-    panel.innerHTML = "<div class=\"loy-empty\">" + _lyErrorMessage(err) + "</div>";
+    panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
 
@@ -1962,48 +1982,57 @@ function _loyRenderSettings(p) {
   if (!panel) return;
   var isActive = p.status === "active";
   panel.innerHTML =
-    "<div class=\"loy-settings-row\">" +
-      "<div><div class=\"loy-settings-label\">Program active</div><div class=\"loy-settings-sub\">Customers can collect stamps</div></div>" +
-      "<button class=\"loy-toggle" + (isActive ? " on" : "") + "\" onclick=\"window._loyToggleActive()\"><span></span></button>" +
-    "</div>" +
-    "<div style=\"padding:16px 0;\">" +
-      "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Reward name</label>" +
-      "<input class=\"loy-input\" id=\"loy-set-reward\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Free coffee\" />" +
-      "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Stamps required</label>" +
-      "<select class=\"loy-select\" id=\"loy-set-goal\">" +
-        [5,8,10,12,15].map(function(n){ return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>"; }).join("") +
-      "</select>" +
-      "<button class=\"loy-primary-cta\" style=\"padding:13px;font-size:.85rem;box-shadow:none;\" onclick=\"window._loySaveSettings()\">Save</button>" +
-      "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Saved</div>" +
-    "</div>" +
-    "<div class=\"loy-settings-row\">" +
-      "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
-      "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
-    "</div>" +
-    "<div class=\"loy-settings-row\" style=\"flex-direction:column;align-items:stretch;\">" +
-      "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
-        "<div style=\"flex:1;\"><div class=\"loy-settings-label\">Staff PIN</div>" +
-          "<div class=\"loy-settings-sub\">Staff must enter this PIN before adding stamps or redeeming rewards.</div></div>" +
-        "<span id=\"loy-pin-badge\" class=\"loy-wallet-badge\">Checking…</span>" +
-      "</div>" +
-      "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
-      "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
-        "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
-        "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
-        "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
-        "<button class=\"loy-primary-cta\" style=\"padding:12px;font-size:.82rem;box-shadow:none;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
-      "</div>" +
-      "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
-    "</div>" +
-    "<div class=\"loy-settings-row\">" +
-      "<div class=\"loy-settings-label\">Apple Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
-    "</div>" +
-    "<div class=\"loy-settings-row\">" +
-      "<div class=\"loy-settings-label\">Google Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
-    "</div>" +
-    "<div class=\"loy-settings-row\" style=\"border-bottom:none;\">" +
-      "<div class=\"loy-settings-label\">Customer Welcome Page</div>" +
-      "<a class=\"loy-quicklink\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">Open →</a>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">Settings</span></div>" +
+    "<div class=\"metrics-grid\">" +
+      // Left panel — program behavior
+      "<div class=\"panel\"><div class=\"panel-body\" style=\"padding:0;\">" +
+        "<div class=\"loy-settings-row\">" +
+          "<div><div class=\"loy-settings-label\">Program active</div><div class=\"loy-settings-sub\">Customers can collect stamps</div></div>" +
+          "<button class=\"loy-toggle" + (isActive ? " on" : "") + "\" onclick=\"window._loyToggleActive()\"><span></span></button>" +
+        "</div>" +
+        "<div style=\"padding:16px 18px;\">" +
+          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Reward name</label>" +
+          "<input class=\"loy-input\" id=\"loy-set-reward\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Free coffee\" />" +
+          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Stamps required</label>" +
+          "<select class=\"loy-select\" id=\"loy-set-goal\">" +
+            [5,8,10,12,15].map(function(n){ return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>"; }).join("") +
+          "</select>" +
+          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:13px;font-size:.85rem;\" onclick=\"window._loySaveSettings()\">Save</button>" +
+          "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Saved</div>" +
+        "</div>" +
+      "</div></div>" +
+      // Right panel — brand, access, integrations
+      "<div class=\"panel\"><div class=\"panel-body\" style=\"padding:0;\">" +
+        "<div class=\"loy-settings-row\">" +
+          "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
+          "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
+        "</div>" +
+        "<div class=\"loy-settings-row\" style=\"flex-direction:column;align-items:stretch;\">" +
+          "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
+            "<div style=\"flex:1;\"><div class=\"loy-settings-label\">Staff PIN</div>" +
+              "<div class=\"loy-settings-sub\">Staff must enter this PIN before adding stamps or redeeming rewards.</div></div>" +
+            "<span id=\"loy-pin-badge\" class=\"badge badge-free\">Checking…</span>" +
+          "</div>" +
+          "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
+          "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
+            "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+            "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+            "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
+            "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:12px;font-size:.82rem;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
+          "</div>" +
+          "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
+        "</div>" +
+        "<div class=\"loy-settings-row\">" +
+          "<div class=\"loy-settings-label\">Apple Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+        "</div>" +
+        "<div class=\"loy-settings-row\">" +
+          "<div class=\"loy-settings-label\">Google Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+        "</div>" +
+        "<div class=\"loy-settings-row\">" +
+          "<div class=\"loy-settings-label\">Customer Welcome Page</div>" +
+          "<a class=\"btn-outline\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">Open →</a>" +
+        "</div>" +
+      "</div></div>" +
     "</div>";
 
   _loyRefreshPinBadge(p.slug);
@@ -2022,13 +2051,12 @@ function _loyRefreshPinBadge(slug) {
     .then(function(d) {
       var configured = !!d.configured;
       badge.textContent = configured ? "Active" : "Not configured";
-      badge.style.background = configured ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.08)";
-      badge.style.color = configured ? "#22c55e" : "rgba(240,244,248,0.6)";
+      badge.className = "badge " + (configured ? "badge-success" : "badge-free");
       actions.innerHTML = configured
-        ? "<button class=\"loy-quicklink\" onclick=\"window._loyShowPinForm()\">Change Staff PIN</button>" +
-          "<button class=\"loy-quicklink\" style=\"color:#f87171;border-color:rgba(248,113,113,0.25);\" onclick=\"window._loyRemovePin()\">Remove Staff PIN</button>"
-        : "<button class=\"loy-quicklink\" onclick=\"window._loyShowPinForm()\">Set Staff PIN</button>";
-    }).catch(function(){ badge.textContent = "Not configured"; });
+        ? "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">Change Staff PIN</button>" +
+          "<button class=\"btn-outline\" style=\"color:#f87171;border-color:rgba(248,113,113,0.25);\" onclick=\"window._loyRemovePin()\">Remove Staff PIN</button>"
+        : "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">Set Staff PIN</button>";
+    }).catch(function(){ badge.textContent = "Not configured"; badge.className = "badge badge-free"; });
 }
 
 window._loyToggleActive = function() {
