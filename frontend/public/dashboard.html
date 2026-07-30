@@ -1907,6 +1907,58 @@ function _loyRenderOverview(p, force) {
       "overview rendered",
       _loyFixLiveOverview && _loyFixLiveOverview.innerHTML.slice(0, 100)
     );
+
+    // TEMP INSTRUMENTATION — remove before commit — computed-style diagnostic
+    (function() {
+      function logStyle(label, el) {
+        if (!el) {
+          console.log("[LOY-STYLE]", label, { exists: false });
+          return;
+        }
+        var rect = el.getBoundingClientRect();
+        var cs = getComputedStyle(el);
+        var centerX = rect.left + rect.width / 2;
+        var centerY = rect.top + rect.height / 2;
+        var hit = document.elementFromPoint(centerX, centerY);
+        var offsetParent = el.offsetParent;
+        console.log("[LOY-STYLE]", label, {
+          exists: true,
+          className: el.className,
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          computed: {
+            display: cs.display,
+            visibility: cs.visibility,
+            opacity: cs.opacity,
+            position: cs.position,
+            overflow: cs.overflow,
+            color: cs.color,
+            backgroundColor: cs.backgroundColor,
+            zIndex: cs.zIndex
+          },
+          offsetParent: offsetParent ? (offsetParent.id || offsetParent.className) : null,
+          elementAtCenterIsSelf: hit === el,
+          elementAtCenter: hit ? (hit.id || hit.className || hit.tagName) : null
+        });
+      }
+
+      var secEl = document.getElementById("section-loyalty");
+      var rootEl = document.getElementById("loy-root");
+      var ovEl = document.getElementById("loy-panel-overview");
+      var kpiRowEl = ovEl ? ovEl.querySelector(".kpi-row") : null;
+      var kpiCardEl = ovEl ? ovEl.querySelector(".kpi-card") : null;
+
+      logStyle("#section-loyalty", secEl);
+      logStyle("#loy-root", rootEl);
+      logStyle("#loy-panel-overview", ovEl);
+      logStyle("#loy-panel-overview .kpi-row", kpiRowEl);
+      logStyle("#loy-panel-overview .kpi-card (first)", kpiCardEl);
+
+      console.log("[LOY-STYLE]", "kpi-card count:", document.querySelectorAll("#loy-panel-overview .kpi-card").length);
+      console.log("[LOY-STYLE]", "loy-panel.active count:", document.querySelectorAll(".loy-panel.active").length);
+      console.log("[LOY-STYLE]", "window.innerWidth:", window.innerWidth, "window.innerHeight:", window.innerHeight);
+      console.log("[LOY-STYLE]", "document.body.scrollHeight:", document.body.scrollHeight);
+      console.log("[LOY-STYLE]", "#section-loyalty.scrollHeight:", secEl ? secEl.scrollHeight : null);
+    })();
   }).catch(function(err) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
