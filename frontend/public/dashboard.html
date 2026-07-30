@@ -1609,10 +1609,23 @@ function _loyPanelIsLive(panel) {
 // any future caller) share one in-flight load instead of racing separate
 // /loyalty/programs requests and shell rebuilds against each other.
 function loadLoyaltyDashboard() {
-  if (window._loyDashboardLoadPromise) return window._loyDashboardLoadPromise;
+  // TEMP INSTRUMENTATION — remove before commit
+  console.log(
+    "[LOY-FIX]",
+    "called",
+    "hasInflight:",
+    !!window._loyDashboardLoadPromise
+  );
+  if (window._loyDashboardLoadPromise) {
+    // TEMP INSTRUMENTATION — remove before commit
+    console.log("[LOY-FIX] reusing in-flight dashboard load");
+    return window._loyDashboardLoadPromise;
+  }
   var root = document.getElementById("loy-root");
   if (!root) return;
   root.innerHTML = "<div class=\"state-loading\">Loading…</div>";
+  // TEMP INSTRUMENTATION — remove before commit
+  console.log("[LOY-FIX] starting new dashboard load");
   window._loyDashboardLoadPromise = _lyAuthHeaders().then(function(headers) {
     return fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
       .then(_lyParseResponse)
@@ -1630,12 +1643,16 @@ function loadLoyaltyDashboard() {
         if (!window._loyCurrentId || !_loyCurrentProgram()) window._loyCurrentId = programs[0].id;
         window._loyMembersCache = null;
         window._loyStatsCache = null;
+        // TEMP INSTRUMENTATION — remove before commit
+        console.log("[LOY-FIX] rendering shell");
         _loyRenderShell();
       })
       .catch(function(err) {
         root.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
       });
   }).finally(function() {
+    // TEMP INSTRUMENTATION — remove before commit
+    console.log("[LOY-FIX] clearing in-flight dashboard load");
     window._loyDashboardLoadPromise = null;
   });
   return window._loyDashboardLoadPromise;
@@ -1882,6 +1899,14 @@ function _loyRenderOverview(p, force) {
         "<div class=\"metric-row\"><span class=\"metric-lbl\">Redemption rate</span><span class=\"metric-val orange\">" + redemptionRate + "</span></div>" +
         "<div class=\"metric-row\"><span class=\"metric-lbl\">Avg. stamps per member</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
       "</div></div>";
+
+    // TEMP INSTRUMENTATION — remove before commit
+    var _loyFixLiveOverview = document.getElementById("loy-panel-overview");
+    console.log(
+      "[LOY-FIX]",
+      "overview rendered",
+      _loyFixLiveOverview && _loyFixLiveOverview.innerHTML.slice(0, 100)
+    );
   }).catch(function(err) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
