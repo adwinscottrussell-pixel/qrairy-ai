@@ -1595,14 +1595,26 @@ function _loyCurrentProgram() {
   return (window._loyPrograms || []).filter(function(p){ return p.id === window._loyCurrentId; })[0] || null;
 }
 
+// Guards async Loyalty render callbacks against writing into a panel that a
+// later shell rebuild has already detached — a resolved fetch from a stale
+// invocation must never touch a node that's no longer the live #loy-panel-*
+// element.
+function _loyPanelIsLive(panel) {
+  return !!(panel && panel.isConnected && document.getElementById(panel.id) === panel);
+}
+
 // ── Entry point — same function name/signature the rest of the dashboard
 // already calls (sidebar click handler, ?section=loyalty deep link). ──
+// Concurrent callers (sidebar click + ?section= deep link + showSection, or
+// any future caller) share one in-flight load instead of racing separate
+// /loyalty/programs requests and shell rebuilds against each other.
 function loadLoyaltyDashboard() {
+  if (window._loyDashboardLoadPromise) return window._loyDashboardLoadPromise;
   var root = document.getElementById("loy-root");
   if (!root) return;
   root.innerHTML = "<div class=\"state-loading\">Loading…</div>";
-  _lyAuthHeaders().then(function(headers) {
-    fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
+  window._loyDashboardLoadPromise = _lyAuthHeaders().then(function(headers) {
+    return fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
       .then(_lyParseResponse)
       .then(function(data) {
         var programs = ((data && data.programs) || []).filter(function(p){ return p.hasLoyaltyConfig; });
@@ -1623,14 +1635,13 @@ function loadLoyaltyDashboard() {
       .catch(function(err) {
         root.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
       });
+  }).finally(function() {
+    window._loyDashboardLoadPromise = null;
   });
+  return window._loyDashboardLoadPromise;
 }
 
 function _loyRenderShell() {
-  // TEMP INSTRUMENTATION — remove before commit
-  window._loyShellRenderCount = (window._loyShellRenderCount || 0) + 1;
-  console.log("[LOY-SHELL] render #" + window._loyShellRenderCount + " starting");
-  console.trace("[LOY-SHELL] render #" + window._loyShellRenderCount + " caller");
   var p = _loyCurrentProgram();
   if (!p) return;
   var root = document.getElementById("loy-root");
@@ -1668,10 +1679,6 @@ function _loyRenderShell() {
       }).join("") +
     "</div>" +
     tabs.map(function(t) { return "<div class=\"loy-panel" + (window._loyActiveTab === t[0] ? " active" : "") + "\" id=\"loy-panel-" + t[0] + "\"></div>"; }).join("");
-
-  // TEMP INSTRUMENTATION — remove before commit
-  var _loyDebugNewPanel = document.getElementById("loy-panel-overview");
-  console.log("[LOY-SHELL] render #" + window._loyShellRenderCount + " replaced root.innerHTML — new #loy-panel-overview node:", _loyDebugNewPanel, "isConnected:", _loyDebugNewPanel && _loyDebugNewPanel.isConnected);
 
   // Shell is (re)built every time the section becomes active (sidebar
   // click, ?section=loyalty deep link, program switch) — always force a
@@ -1794,20 +1801,12 @@ function _loyActivityRowHtml(c, p) {
 
 // ══════════════════════════════ OVERVIEW ══════════════════════════════
 function _loyRenderOverview(p, force) {
-  // TEMP INSTRUMENTATION — remove before commit
-  window._loyOverviewInvocation = (window._loyOverviewInvocation || 0) + 1;
-  var _loyInv = window._loyOverviewInvocation;
   var panel = document.getElementById("loy-panel-overview");
-  console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " captured panel:", panel, "isConnected:", panel && panel.isConnected, "id:", panel && panel.id);
   if (!panel) return;
   panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
-  // TEMP INSTRUMENTATION — remove before commit
-  console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " before Promise.all — panel.isConnected:", panel.isConnected, "panel === live DOM node:", document.getElementById("loy-panel-overview") === panel);
-
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
-    // TEMP INSTRUMENTATION — remove before commit
-    console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " Promise.all resolved — panel.isConnected:", panel.isConnected, "panel === live DOM node:", document.getElementById("loy-panel-overview") === panel, "results[0] present:", !!results[0], "results[1] present:", !!results[1], "results[1] length:", results[1] && results[1].length);
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
     var statsResp = results[0] || {};
     var innerStats = statsResp.stats || {};
@@ -1848,9 +1847,6 @@ function _loyRenderOverview(p, force) {
       ? (customers.reduce(function(sum, c){ return sum + (c.stampCount || 0); }, 0) / customers.length).toFixed(1)
       : "—";
 
-    // TEMP INSTRUMENTATION — remove before commit
-    console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " immediately before panel.innerHTML assignment — panel.isConnected:", panel.isConnected, "panel === live DOM node:", document.getElementById("loy-panel-overview") === panel);
-
     panel.innerHTML =
       (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
       "<div class=\"kpi-row\">" +
@@ -1886,16 +1882,8 @@ function _loyRenderOverview(p, force) {
         "<div class=\"metric-row\"><span class=\"metric-lbl\">Redemption rate</span><span class=\"metric-val orange\">" + redemptionRate + "</span></div>" +
         "<div class=\"metric-row\"><span class=\"metric-lbl\">Avg. stamps per member</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
       "</div></div>";
-
-    // TEMP INSTRUMENTATION — remove before commit
-    (function() {
-      var liveNode = document.getElementById("loy-panel-overview");
-      console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " AFTER panel.innerHTML assignment — panel (captured ref) first 200 chars:", panel.innerHTML.slice(0, 200));
-      console.log("[LOY-OVERVIEW] invocation #" + _loyInv + " live document.getElementById(\"loy-panel-overview\") first 200 chars:", liveNode && liveNode.innerHTML.slice(0, 200), "same object as captured panel:", liveNode === panel);
-    })();
   }).catch(function(err) {
-    // TEMP INSTRUMENTATION — remove before commit
-    console.error("[LOY-OVERVIEW] invocation #" + _loyInv + " CAUGHT ERROR:", err, "panel.isConnected:", panel.isConnected, "panel === live DOM node:", document.getElementById("loy-panel-overview") === panel);
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
@@ -1973,6 +1961,7 @@ function _loyRenderMembers(p, force) {
   _loyFetchCustomers(p.id, force).then(function(customers) {
     _loyDrawMembers(p, customers);
   }).catch(function(err) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
@@ -2044,6 +2033,7 @@ function _loyRenderRewards(p, force) {
   panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
     var innerStats = (results[0] || {}).stats || {};
     var customers = results[1] || [];
@@ -2095,6 +2085,7 @@ function _loyRenderRewards(p, force) {
         "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">Edit reward name &amp; stamp goal →</button>" +
       "</div></div>";
   }).catch(function(err) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
