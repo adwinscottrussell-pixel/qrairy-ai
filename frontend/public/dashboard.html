@@ -155,7 +155,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 .dub-close:hover{color:rgba(240,244,248,0.6);}
 </style>
 </head>
-<body>
+<body data-shell="customer" data-active-nav="nav-dashboard">
 
 
 
@@ -201,49 +201,8 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   <button class="claim-banner-btn" id="claim-manage-btn" data-i18n="banner_btn">Manage Smart QR</button>
   <button class="claim-banner-close" onclick="document.getElementById('claim-banner').classList.remove('show')">✕</button>
 </div>
-<div id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-icon">Q</div>
-    <div class="sb-logo-text">QR<span>Aivy</span></div>
-  </div>
-  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
-  <nav class="sb-nav">
-    <div class="sb-group" data-i18n="nav_main">Main</div>
-    <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
-    <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar" id="sb-avatar">?</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
-      </div>
-    </div>
-    <div style="padding:6px 12px 2px;">
-      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-        <span style="font-size:.8rem;">🌐</span>
-        <span id="lang-toggle-label">Deutsch</span>
-      </button>
-    </div>
-    <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
-  </div>
-</div>
-<button id="mob-btn">&#x2630;</button>
-<div class="sb-overlay" id="sb-overlay"></div>
+<div id="sidebar"></div>
+<script src="js/dashboard-shell.js"></script>
 <div id="cs-toast"><span style="color:#ff5a1f">&#x26A1;</span><span id="cs-toast-msg"></span></div>
 <div id="main-content">
   <div class="noise"></div>
@@ -449,8 +408,7 @@ function renderCards(dashboard){
   setKPI('kpi-visits',dashboard.filter(function(q){return q.source==='lp';}).reduce(function(s,q){return s+(q.totalVisits||0);},0));
   setKPI('kpi-subs',dashboard.reduce(function(s,q){return s+q.totalSubscribers;},0));
   setKPI('kpi-wallet','—');
-  var badge=document.getElementById('sqr-count-badge');
-  if(badge)badge.textContent=aiPages.length;
+  if(window.QraivyDashboardShell)window.QraivyDashboardShell.setSmartQrCount(aiPages.length);
   var cnt=document.getElementById('sqr-section-count');
   if(cnt)cnt.textContent=aiPages.length>0?'('+aiPages.length+')':'';
   if(aiPages.length===0){
@@ -500,25 +458,7 @@ async function initDashboard(){
   if(!window.Clerk.user){window.location.href='login.html';return;}
   var name=window.Clerk.user.firstName||window.Clerk.user.emailAddresses[0].emailAddress;
   window._userId=window.Clerk.user.id;
-  var avatarEl=document.getElementById('sb-avatar');
-  var nameEl=document.getElementById('sb-username');
-  if(avatarEl)avatarEl.textContent=name[0].toUpperCase();
-  if(nameEl)nameEl.textContent=name;
-  document.getElementById('sb-signout').addEventListener('click',async function(e){
-    e.preventDefault();await window.Clerk.signOut();window.location.href='login.html';
-  });
-  var sidebar=document.getElementById('sidebar');
-  var sbToggle=document.getElementById('sb-toggle');
-  if(localStorage.getItem('sb-collapsed')==='true'){sidebar.classList.add('collapsed');document.body.classList.add('sb-collapsed');}
-  sbToggle.addEventListener('click',function(){
-    var c=sidebar.classList.toggle('collapsed');
-    document.body.classList.toggle('sb-collapsed',c);
-    localStorage.setItem('sb-collapsed',c);
-  });
-  var mobBtn=document.getElementById('mob-btn');
-  var overlay=document.getElementById('sb-overlay');
-  if(mobBtn)mobBtn.addEventListener('click',function(){sidebar.classList.add('mob-open');overlay.classList.add('on');});
-  if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
+  if(window.QraivyDashboardShell)window.QraivyDashboardShell.setUser({name:name,initial:name[0].toUpperCase()});
   ['sb-settings'].forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.addEventListener('click',function(e){e.preventDefault();toast('Coming soon — stay tuned!');});
@@ -2450,8 +2390,7 @@ window._loyRemovePin = function() {
       var key = el.getAttribute('data-i18n');
       if (t[key] !== undefined) el.textContent = t[key];
     });
-    var toggleLabel = document.getElementById('lang-toggle-label');
-    if (toggleLabel) toggleLabel.textContent = t.lang_toggle;
+    if (window.QraivyDashboardShell) window.QraivyDashboardShell.updateLanguageLabel(t.lang_toggle);
     // Update dynamic card content language for future renders
     window._qraivyLang = lang;
     // Re-render empty state if visible
