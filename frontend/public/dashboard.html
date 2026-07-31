@@ -1595,14 +1595,26 @@ function _loyCurrentProgram() {
   return (window._loyPrograms || []).filter(function(p){ return p.id === window._loyCurrentId; })[0] || null;
 }
 
+// Guards async Loyalty render callbacks against writing into a panel that a
+// later shell rebuild has already detached — a resolved fetch from a stale
+// invocation must never touch a node that's no longer the live #loy-panel-*
+// element.
+function _loyPanelIsLive(panel) {
+  return !!(panel && panel.isConnected && document.getElementById(panel.id) === panel);
+}
+
 // ── Entry point — same function name/signature the rest of the dashboard
 // already calls (sidebar click handler, ?section=loyalty deep link). ──
+// Concurrent callers (sidebar click + ?section= deep link + showSection, or
+// any future caller) share one in-flight load instead of racing separate
+// /loyalty/programs requests and shell rebuilds against each other.
 function loadLoyaltyDashboard() {
+  if (window._loyDashboardLoadPromise) return window._loyDashboardLoadPromise;
   var root = document.getElementById("loy-root");
   if (!root) return;
   root.innerHTML = "<div class=\"state-loading\">Loading…</div>";
-  _lyAuthHeaders().then(function(headers) {
-    fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
+  window._loyDashboardLoadPromise = _lyAuthHeaders().then(function(headers) {
+    return fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
       .then(_lyParseResponse)
       .then(function(data) {
         var programs = ((data && data.programs) || []).filter(function(p){ return p.hasLoyaltyConfig; });
@@ -1623,7 +1635,10 @@ function loadLoyaltyDashboard() {
       .catch(function(err) {
         root.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
       });
+  }).finally(function() {
+    window._loyDashboardLoadPromise = null;
   });
+  return window._loyDashboardLoadPromise;
 }
 
 function _loyRenderShell() {
@@ -1791,6 +1806,7 @@ function _loyRenderOverview(p, force) {
   panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
     var statsResp = results[0] || {};
     var innerStats = statsResp.stats || {};
@@ -1867,6 +1883,7 @@ function _loyRenderOverview(p, force) {
         "<div class=\"metric-row\"><span class=\"metric-lbl\">Avg. stamps per member</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
       "</div></div>";
   }).catch(function(err) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
@@ -1944,6 +1961,7 @@ function _loyRenderMembers(p, force) {
   _loyFetchCustomers(p.id, force).then(function(customers) {
     _loyDrawMembers(p, customers);
   }).catch(function(err) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
@@ -2015,6 +2033,7 @@ function _loyRenderRewards(p, force) {
   panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     // GET /loyalty/programs/:id/stats returns { stats: {...}, recentStamps: [...] }
     var innerStats = (results[0] || {}).stats || {};
     var customers = results[1] || [];
@@ -2066,6 +2085,7 @@ function _loyRenderRewards(p, force) {
         "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">Edit reward name &amp; stamp goal →</button>" +
       "</div></div>";
   }).catch(function(err) {
+    if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
     panel.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">" + _lyErrorMessage(err) + "</div></div>";
   });
 }
