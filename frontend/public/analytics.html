@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics — Qraivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="dashboard-shell.css"/>
+  <link rel="stylesheet" href="qds/qds.css"/>
   <link rel="stylesheet" href="analytics-page.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
@@ -20,29 +21,29 @@
 <div id="main-content">
   <div class="noise"></div>
   <main>
-    <div class="page-wrap">
+    <div class="qds-page-wrap">
 
       <!-- Header -->
-      <div class="page-header">
+      <div class="qds-page-header">
         <div>
-          <h1 class="dash-title"><span data-i18n="an_title">Business</span> <em data-i18n="an_title_em">Intelligence</em></h1>
-          <div class="dash-sub" data-i18n="an_sub">Deep engagement reporting across all Smart QR Pages</div>
+          <h1 class="qds-page-title"><span data-i18n="an_title">Business</span> <em data-i18n="an_title_em">Intelligence</em></h1>
+          <div class="qds-page-subtitle" data-i18n="an_sub">Deep engagement reporting across all Smart QR Pages</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select class="filter-select" id="qr-filter">
+          <select class="qds-toolbar__select" id="qr-filter">
             <option value="all" data-i18n="filter_all_qr">All QR Pages</option>
           </select>
         </div>
       </div>
 
       <!-- Date filters -->
-      <div class="filter-bar">
-        <button class="filter-btn active" data-range="7" data-i18n="range_7">Last 7 days</button>
-        <button class="filter-btn" data-range="30" data-i18n="range_30">Last 30 days</button>
-        <button class="filter-btn" data-range="90" data-i18n="range_90">Last 90 days</button>
-        <button class="filter-btn" data-range="1" data-i18n="range_24">Last 24h</button>
-        <div class="filter-sep"></div>
-        <select class="filter-select" id="usecase-filter">
+      <div class="qds-toolbar">
+        <button class="qds-toolbar__btn qds-toolbar__btn--active" data-range="7" data-i18n="range_7">Last 7 days</button>
+        <button class="qds-toolbar__btn" data-range="30" data-i18n="range_30">Last 30 days</button>
+        <button class="qds-toolbar__btn" data-range="90" data-i18n="range_90">Last 90 days</button>
+        <button class="qds-toolbar__btn" data-range="1" data-i18n="range_24">Last 24h</button>
+        <div class="qds-toolbar__sep"></div>
+        <select class="qds-toolbar__select" id="usecase-filter">
           <option value="all" data-i18n="filter_all_uc">All use cases</option>
           <option value="restaurant">Restaurant</option>
           <option value="ecommerce">Ecommerce</option>
@@ -56,7 +57,7 @@
       </div>
 
       <!-- KPI strip -->
-      <div class="kpi-row">
+      <div class="qds-grid--kpi">
         <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl" data-i18n="kpi_scans">Total QR Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
         <div class="kpi-card"><div class="kpi-val orange" id="an-visits">—</div><div class="kpi-lbl" data-i18n="kpi_visits">Total Page Visits</div></div>
         <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
@@ -67,7 +68,7 @@
       </div>
 
       <!-- Charts -->
-      <div class="chart-grid">
+      <div class="qds-grid--split">
         <div class="chart-card wide">
           <div class="cc-header">
             <div>
@@ -102,26 +103,26 @@
       <div class="perf-section">
         <div class="perf-hdr">
           <div class="perf-title" data-i18n="perf_title">Smart QR Performance</div>
-          <input class="perf-search" id="perf-search" type="text" placeholder="Search pages…" data-i18n-placeholder="perf_search" />
+          <input class="qds-toolbar__search" id="perf-search" type="text" placeholder="Search pages…" data-i18n-placeholder="perf_search" />
         </div>
-        <div class="empty-state compact" id="perf-empty" style="display:none"><div class="empty-icon">&#x1F4CA;</div><div class="empty-title">No Smart QR Pages yet</div><div class="empty-sub">Create your first Smart QR Page to start seeing performance data here.</div><a class="empty-cta" href="dashboard.html?launch=onboarding">Create Smart QR</a></div>
-        <div class="perf-table-wrap" id="perf-table-wrap">
-          <table class="perf-table" id="perf-table">
+        <div class="qds-empty-state qds-empty-state--compact" id="perf-empty" style="display:none"><div class="qds-empty-state__icon">&#x1F4CA;</div><div class="qds-empty-state__title">No Smart QR Pages yet</div><div class="qds-empty-state__sub">Create your first Smart QR Page to start seeing performance data here.</div><a class="empty-cta" href="dashboard.html?launch=onboarding">Create Smart QR</a></div>
+        <div class="qds-table-wrap qds-table-wrap--scroll" id="perf-table-wrap">
+          <table class="qds-table" id="perf-table" style="min-width:640px">
             <thead>
               <tr>
-                <th data-col="name"><span data-i18n="col_page">Page</span> <span class="sort-icon">↕</span></th>
-                <th data-col="scans" class="sorted"><span data-i18n="col_scans">Scans / Visits</span> <span class="sort-icon">↓</span></th>
-                <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="sort-icon">↕</span></th>
-                <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="sort-icon">↕</span></th>
-                <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="sort-icon">↕</span></th>
-                <th data-col="cvr"><span data-i18n="col_cvr">CVR</span> <span class="sort-icon">↕</span></th>
-                <th data-col="status"><span data-i18n="col_status">Status</span> <span class="sort-icon">↕</span></th>
+                <th data-col="name"><span data-i18n="col_page">Page</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="scans" class="qds-table__th--sorted"><span data-i18n="col_scans">Scans / Visits</span> <span class="qds-table__sort-icon">↓</span></th>
+                <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="cvr"><span data-i18n="col_cvr">CVR</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="status"><span data-i18n="col_status">Status</span> <span class="qds-table__sort-icon">↕</span></th>
               </tr>
             </thead>
             <tbody id="perf-tbody">
-              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-line w-60" style="height:14px"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-80" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-60" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-80" style="height:14px"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -130,7 +131,7 @@
 
 
       <!-- Top prompts / engagement breakdown -->
-      <div class="metrics-grid" style="margin-bottom:0">
+      <div class="qds-grid--split" style="margin-bottom:0">
         <div class="metric-card">
           <div class="mc-title"><span class="mc-icon">📊</span> <span data-i18n="mc_breakdown">Engagement Breakdown by Page</span></div>
           <div id="scan-breakdown" class="mc-rows"></div>
@@ -270,7 +271,7 @@ function renderCharts(dashboard) {
     const palette  = ['#ff5a1f','#22c55e','#a78bfa','#3b82f6','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
     if (usecaseChartInst) usecaseChartInst.destroy();
     if (ucLabels.length === 0) {
-      ucCtx.parentElement.innerHTML = '<div class="state-empty">No data yet</div>';
+      ucCtx.parentElement.innerHTML = '<div class="qds-state-empty">No data yet</div>';
     } else {
       usecaseChartInst = new Chart(ucCtx, {
         type: 'doughnut',
@@ -317,8 +318,8 @@ function renderTable(dashboard) {
     const cvr     = val > 0 ? Math.round((qr.totalSubscribers / val) * 100) : 0;
     const qrImg   = `https://api.qrserver.com/v1/create-qr-code/?size=36x36&data=${encodeURIComponent(qr.originalUrl)}&color=111111&bgcolor=ffffff&margin=1`;
     const statusBadge = isAI
-      ? '<span class="pt-badge-live">● Live</span>'
-      : '<span class="pt-badge-basic">Basic</span>';
+      ? '<span class="qds-badge qds-badge--success">● Live</span>'
+      : '<span class="qds-badge qds-badge--neutral">Basic</span>';
     return `<tr>
       <td><div class="pt-qr">
         <div class="pt-qr-thumb"><img src="${qrImg}" loading="lazy" /></div>
@@ -433,7 +434,7 @@ async function loadAnalytics() {
     renderMetrics(allData);
   } catch (err) {
     console.error(err);
-    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="state-loading">Failed to load data.</td></tr>';
+    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="qds-state-loading">Failed to load data.</td></tr>';
   }
 }
 
@@ -458,24 +459,24 @@ async function initAnalytics() {
   });
 
   // Date range buttons
-  document.querySelectorAll('.filter-btn[data-range]').forEach(btn => {
+  document.querySelectorAll('.qds-toolbar__btn[data-range]').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn[data-range]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      document.querySelectorAll('.qds-toolbar__btn[data-range]').forEach(b => b.classList.remove('qds-toolbar__btn--active'));
+      btn.classList.add('qds-toolbar__btn--active');
       activeRange = parseInt(btn.dataset.range);
       renderCharts(allData);
     });
   });
 
   // Table sort
-  document.querySelectorAll('.perf-table th[data-col]').forEach(th => {
+  document.querySelectorAll('.qds-table th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
       if (sortCol === col) sortAsc = !sortAsc;
       else { sortCol = col; sortAsc = false; }
-      document.querySelectorAll('.perf-table th').forEach(h => h.classList.remove('sorted'));
-      th.classList.add('sorted');
-      th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+      document.querySelectorAll('.qds-table th').forEach(h => h.classList.remove('qds-table__th--sorted'));
+      th.classList.add('qds-table__th--sorted');
+      th.querySelector('.qds-table__sort-icon').textContent = sortAsc ? '↑' : '↓';
       renderTable(allData);
     });
   });

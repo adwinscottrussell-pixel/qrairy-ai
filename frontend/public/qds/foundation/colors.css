@@ -1,45 +1,51 @@
 /* QDS Foundation — Colors
-   Semantic roles only. Navy-vs-black conflict resolved in favor of the
-   current business dashboard's near-black foundation. Duplicate accent
-   (--accent-2 / #ff8c00) dropped — no distinct semantic purpose from
-   brand-primary was found in the source CSS. */
+   Dashboard (frontend/public/dashboard-shell.css) is the visual source of
+   truth for this file, not the other way around — reconciled against its
+   actual rendered values, not the other way around. Every token below that
+   has a real Dashboard reference now matches that reference exactly;
+   tokens with no corresponding value anywhere in dashboard-shell.css are
+   left as originally authored (nothing to reconcile them against) and
+   flagged inline. See docs/dashboard-design-system.md and
+   dashboard-shell.css:8-25 for the source values. */
 
 :root {
   /* Surfaces */
-  --qds-color-background: #0a0a0a;
-  --qds-color-surface-1: #111111;
-  --qds-color-surface-2: #1a1a1a;
-  --qds-color-surface-3: #232323;
+  --qds-color-background: #0a0a0a; /* matches body background, dashboard-shell.css:32 */
+  --qds-color-surface-1: #0d0d0d; /* was #111111 — now matches --dashboard-card-bg, dashboard-shell.css:16 */
+  --qds-color-surface-2: #1a1a1a; /* no single Dashboard reference (Dashboard uses translucent white overlays instead of a second opaque surface tone) — left as authored */
+  --qds-color-surface-3: #232323; /* no Dashboard reference — left as authored */
 
   /* Borders */
-  --qds-color-border-subtle: rgba(255, 255, 255, 0.06);
-  --qds-color-border-default: rgba(255, 255, 255, 0.12);
+  --qds-color-border-subtle: rgba(255, 255, 255, 0.07); /* was 0.06 — now matches --dashboard-border, dashboard-shell.css:17 */
+  --qds-color-border-default: rgba(255, 255, 255, 0.12); /* UNCHANGED — dashboard.html's Campaigns section (#campProgSel, .camp-field input/textarea) already consumes this exact token live via var(--qds-color-border-default, rgba(255,255,255,.12)); changing it would be a real visual regression there. dashboard-shell.css's own .sb-toggle/#mob-btn use a hardcoded rgba(255,255,255,0.1) instead (dashboard-shell.css:66,142) — a real, pre-existing inconsistency between two Dashboard-owned values, not something this token change should silently resolve either way. Flagged for a founder decision, not fixed here. */
 
   /* Text */
-  --qds-color-text-primary: #f0ece0;
-  --qds-color-text-secondary: #c8c8c0;
-  --qds-color-text-muted: #a0a09a;
-  --qds-color-text-inverse: #0a0a0a;
+  --qds-color-text-primary: #f0f4f8; /* was #f0ece0 — now matches body text color, dashboard-shell.css:32 */
+  --qds-color-text-secondary: #a8b4c0; /* was #c8c8c0 — now matches Dashboard's recurring secondary text tone, e.g. .sb-item/.trial-text/.breadcrumb-current, dashboard-shell.css:90,298,354 */
+  --qds-color-text-muted: #9ab0c8; /* was #a0a09a — now matches --dashboard-muted, dashboard-shell.css:19 */
+  --qds-color-text-inverse: #0a0a0a; /* no Dashboard reference (dark theme has no dark-on-light text usage today) — left as authored */
 
   /* Brand */
-  --qds-color-brand-primary: #ff5a1f;
-  --qds-color-brand-hover: #ff7a45;
-  --qds-color-brand-active: #e6490f;
+  --qds-color-brand-primary: #ff5a1f; /* matches --dashboard-accent, dashboard-shell.css:21 */
+  --qds-color-brand-hover: #ff7a45; /* matches .btn-primary:hover etc., dashboard-shell.css:240 */
+  --qds-color-brand-active: #e6490f; /* no literal Dashboard reference (Dashboard uses a brightness filter on :active, not a distinct hex) — left as authored */
 
   /* Status */
-  --qds-color-success: #22c55e;
-  --qds-color-warning: #f59e0b;
-  --qds-color-danger: #ef4444;
-  --qds-color-danger-hover: #f26a6a;
-  --qds-color-danger-active: #df2828;
-  --qds-color-information: #3b82f6;
+  --qds-color-success: #22c55e; /* matches .badge-live/.kpi-val.green etc. */
+  --qds-color-warning: #fbbf24; /* was #f59e0b — now matches .badge-trial, dashboard-shell.css:203 */
+  --qds-color-danger: #ef4444; /* matches .sb-signout:hover/.psb-status.expired */
+  --qds-color-danger-hover: #f26a6a; /* no Dashboard reference — left as authored (derived, per README, from --qds-color-danger using the same lighten relationship as brand-hover) */
+  --qds-color-danger-active: #df2828; /* no Dashboard reference — left as authored, see above */
+  --qds-color-information: #3b82f6; /* matches .badge-email, dashboard-shell.css:207 */
 
   /* Interaction */
-  --qds-color-focus-ring: rgba(255, 90, 31, 0.55);
-  --qds-color-disabled: rgba(255, 255, 255, 0.28);
-  --qds-color-overlay: rgba(0, 0, 0, 0.6);
-  /* Selected-surface tint (Surface §14/§31.2). Low-opacity brand-primary
-     tint; alpha pending a dedicated WCAG AA contrast pass — do not treat
-     as final without that check (doc §31.10). */
-  --qds-color-selected-surface: rgba(255, 90, 31, 0.12);
+  --qds-color-focus-ring: rgba(255, 90, 31, 0.55); /* no Dashboard reference (no :focus-visible box-shadow defined there today) — left as authored */
+  --qds-color-disabled: rgba(255, 255, 255, 0.28); /* no Dashboard reference — left as authored */
+  --qds-color-overlay: rgba(0, 0, 0, 0.6); /* matches .sb-overlay, dashboard-shell.css:146 */
+  /* Selected-surface tint (Surface §14/§31.2). Was 0.12, now 0.1 to match
+     --dashboard-accent-dim (dashboard-shell.css:22), Dashboard's actual
+     active/selected-state tint (e.g. .filter-btn.active). Alpha still
+     pending a dedicated WCAG AA contrast pass — do not treat as final
+     without that check (doc §31.10). */
+  --qds-color-selected-surface: rgba(255, 90, 31, 0.1);
 }

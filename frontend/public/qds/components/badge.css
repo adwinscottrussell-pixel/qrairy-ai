@@ -1,0 +1,109 @@
+/* QDS Component — Badge
+   Extracted from frontend/public/dashboard-shell.css:195-210 (.badge /
+   .badge-*), Dashboard's 10-tone pill system. Values match Dashboard
+   exactly. Additive only — see qds/layouts/page.css's header comment for
+   the shared rationale.
+
+   .badge-live/.badge-success/.badge-wallet are byte-identical in the
+   source (same green/0.1/0.18 values under three different names) —
+   converged here into one .qds-badge--success tone rather than kept as
+   three duplicate QDS classes, since they were never visually distinct to
+   begin with; this is deduplication of an existing redundancy, not a
+   design change. .badge-free and .badge-zero are also near-identical
+   (0.05 vs 0.04 background alpha) and kept as two distinct neutral tones
+   since that one differs by a real, if small, amount.
+
+   Base padding/font-size have no exact match on the QDS scales; kept as
+   exact raw values per the same pixel-parity-over-token-purity approach
+   used throughout this extraction. */
+
+.qds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--qds-space-1); /* matches Dashboard's 4px exactly */
+  font-family: var(--qds-font-family-mono);
+  font-size: .5rem; /* no exact --qds-text-* role matches this size — kept raw */
+  font-weight: var(--qds-font-weight-bold);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 2px 7px; /* no exact tokens for either value — kept raw */
+  border-radius: var(--qds-radius-full);
+}
+
+.qds-badge--success {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--qds-color-success);
+  border: 1px solid rgba(34, 197, 94, 0.18); /* no --qds-* token for this alpha — kept raw */
+}
+
+.qds-badge--brand {
+  background: var(--qds-color-selected-surface);
+  color: #ff8c55; /* no --qds-* token matches this lighter accent tone — kept raw, matches Dashboard's .badge-ai */
+  border: 1px solid rgba(255, 90, 31, 0.2); /* no --qds-* token — kept raw, matches --dashboard-accent-border */
+}
+
+.qds-badge--brand-solid {
+  /* Matches Dashboard's .badge-push, which — unlike .badge-ai above —
+     uses the full brand color for its text, not the lighter #ff8c55
+     variant. Two real, distinct existing tones, not one with a typo. */
+  background: var(--qds-color-selected-surface);
+  color: var(--qds-color-brand-primary);
+  border: 1px solid rgba(255, 90, 31, 0.2);
+}
+
+.qds-badge--warning {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--qds-color-warning);
+  border: 1px solid rgba(251, 191, 36, 0.2); /* no --qds-* token — kept raw */
+}
+
+.qds-badge--neutral {
+  background: rgba(255, 255, 255, 0.05); /* no --qds-* token — kept raw, matches Dashboard's .badge-free */
+  color: var(--qds-color-text-muted);
+  border: 1px solid var(--qds-color-border-subtle);
+}
+
+.qds-badge--neutral-dim {
+  /* Matches Dashboard's .badge-zero — a slightly fainter neutral tone
+     (0.04 vs 0.05 background, dimmer text) than .qds-badge--neutral above. */
+  background: rgba(255, 255, 255, 0.04); /* no --qds-* token — kept raw */
+  color: #5a6b7a; /* no --qds-* token for this "dimmer muted" tier — kept raw, matches --dashboard-muted-dim */
+  border: 1px solid var(--qds-color-border-subtle);
+}
+
+.qds-badge--premium {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa; /* no --qds-* token for purple exists on this foundation today — kept raw, matches Dashboard's .badge-premium */
+  border: 1px solid rgba(139, 92, 246, 0.2); /* no --qds-* token — kept raw */
+}
+
+.qds-badge--info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--qds-color-information);
+  border: 1px solid rgba(59, 130, 246, 0.2); /* no --qds-* token — kept raw */
+}
+
+/* ---------- Count badge ---------- */
+/* A genuinely different, real pattern from the tone pills above — a small
+   solid numeric indicator (Dashboard's own Smart QR sidebar-nav count),
+   not a status/text pill. Extracted from .sb-badge (dashboard-shell.css:
+   102-108). Its two shell-context modifiers — active-nav-item contrast
+   background, and hidden/collapsed state — are genuinely sidebar-specific
+   behavior (they only make sense wrapped in #sidebar/.sb-item context),
+   so they stay in dashboard-shell.css/dashboard-shell.js, which already
+   own shell layout and navigation; only the base visual shape is
+   extracted here as a reusable "count badge" for any future context that
+   needs one, not just the sidebar. */
+.qds-badge--count {
+  display: inline-block;
+  font-family: var(--qds-font-family-mono);
+  font-size: .5rem; /* no exact --qds-text-* role matches this size — kept raw */
+  font-weight: var(--qds-font-weight-bold);
+  padding: 2px 5px; /* no exact tokens for either value — kept raw */
+  border-radius: var(--qds-radius-full);
+  background: var(--qds-color-brand-primary);
+  color: #fff;
+  transition: opacity var(--qds-duration-standard) var(--qds-easing-standard);
+  min-width: var(--qds-space-4); /* matches Dashboard's 16px exactly */
+  text-align: center;
+}
