@@ -783,12 +783,12 @@ async function initDashboard(){
 
 <!-- Per-page table -->
 <div id="subTablePanel">
-  <div class="qds-surface qds-surface--default qds-surface--padding-none" style="margin-bottom:20px;overflow:hidden;border-radius:14px;">
-    <div class="qds-surface__header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+  <div class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--flush-body" style="margin-bottom:20px;">
+    <div class="qds-surface__header">
       <div class="qds-surface__title" data-i18n="sub_pages">Pages</div>
       <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button></div>
     </div>
-    <div id="subTableBody" class="qds-table-wrap--scroll"><div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
+    <div id="subTableBody" class="qds-table-wrap qds-table-wrap--nested qds-table-wrap--scroll"><div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
   </div>
 </div>
 
@@ -804,12 +804,12 @@ async function initDashboard(){
       <span class="sub-detail-slug" id="subDetailSlug"></span>
     </div>
   </div>
-  <div class="qds-surface qds-surface--default qds-surface--padding-none" style="overflow:hidden;border-radius:14px;">
-    <div class="qds-surface__header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+  <div class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--flush-body">
+    <div class="qds-surface__header">
       <div class="qds-surface__title" id="subDetailCount">Subscribers</div>
       <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button></div>
     </div>
-    <div id="subDetailBody" class="qds-table-wrap--scroll"><div class="qds-state-loading">Loading…</div></div>
+    <div id="subDetailBody" class="qds-table-wrap qds-table-wrap--nested qds-table-wrap--scroll"><div class="qds-state-loading">Loading…</div></div>
   </div>
 </div>
 
