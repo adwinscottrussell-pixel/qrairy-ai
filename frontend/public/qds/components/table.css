@@ -63,6 +63,29 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* ---------- Nested variant ----------
+   STOP-and-extend case, found migrating Subscribers: a table sometimes
+   sits inside an existing qds-surface (qds-surface--flush-body, see
+   surface.css) rather than standing alone on the page. The base rule's
+   own background/border/radius would then draw a second card nested
+   inside the surface's — this modifier cancels exactly those three
+   properties so the table sits flush against its parent surface with no
+   visible seam, while everything else about .qds-table-wrap (and its
+   children — th/td/sort-icon styling, the responsive 640px padding
+   override) is untouched. overflow is deliberately left alone: the base
+   rule's overflow:hidden is harmless here (the parent surface already
+   clips corners via its own overflow:hidden) and --scroll still composes
+   normally on top when horizontal scroll is also needed — always use
+   qds-table-wrap qds-table-wrap--nested together, plus qds-table-wrap
+   --scroll if the table needs to scroll, exactly like the standalone
+   pattern. This does not change the standalone (non-nested) appearance
+   at all — .qds-table-wrap's own rule above is untouched. */
+.qds-table-wrap--nested {
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
 .qds-table {
   width: 100%;
   border-collapse: collapse;

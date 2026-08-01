@@ -400,3 +400,45 @@
     var(--qds-space-6)
     var(--qds-space-6);
 }
+
+/* ---------- Flush body (§8) — companion to padding-none, for a root that
+   needs a padded header but a body/content area flush to the surface
+   edges (nested tables, lists, full-width charts/media). Opt-in requires
+   .qds-surface--flush-body alongside .qds-surface--padding-none on the
+   root — same composition pattern as --region-inset above, and the same
+   "always explicit" convention this file's header comment describes.
+   These selectors do not touch unqualified .qds-surface__header, so
+   every other Surface is unaffected.
+
+   Extracted from Dashboard's .panel/.panel-hdr (dashboard-shell.css:225-
+   227, and the "Premium polish" override at :676). Note dashboard-shell.
+   css declares .panel-hdr's padding TWICE — 14px 18px at its original
+   definition (:227), then 15px 20px later in the file's "Premium polish"
+   section (:676). Same selector, same specificity, later source order —
+   the second declaration wins the cascade, so 15px 20px is .panel-hdr's
+   real, currently-rendering value and what's reproduced below (not the
+   first, visually-superseded 14px 18px some earlier page-level inline-
+   style workarounds for this pattern used — see the Subscribers QDS
+   migration report, which will need a small correction once it adopts
+   this class).
+
+   gap:0 cancels the base .qds-surface flex gap (--qds-space-4, meant for
+   spaced-out regions) — a flush body sits directly under the header with
+   only its border-bottom as a separator, not an extra gap. Two values
+   have no exact match on the QDS scales — the header's 15px 20px padding
+   and the root's 14px corner radius (no --qds-radius-* token is exact;
+   lg=12px nearest) — kept as raw values per the same pixel-parity-over-
+   token-purity approach used throughout this extraction, matching
+   --card-radius-lg exactly (same reasoning already used in table.css's
+   own .qds-table-wrap radius). */
+
+.qds-surface--flush-body {
+  gap: 0;
+  overflow: hidden;
+  border-radius: 14px; /* no exact --qds-radius-* token — kept raw, matches --card-radius-lg */
+}
+
+.qds-surface--flush-body > .qds-surface__header {
+  padding: 15px 20px; /* no exact spacing-scale match — kept raw, matches .panel-hdr's cascaded (not first-declared) value */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* no --qds-* token for this faint separator — kept raw, matches .panel-hdr */
+}
