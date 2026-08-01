@@ -726,57 +726,61 @@ async function initDashboard(){
 
 <div id="section-subscribers" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
 <style>
-/* Subscribers consumes the shared dashboard design system (kpi-card, panel,
-   data-table, badge, btn-outline — the same classes/tokens the Campaigns
-   section is built from) instead of a page-local system. Only the two rules
-   below are genuinely page-specific layout, not a parallel component set. */
-#section-subscribers .sub-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-#section-subscribers .sub-detail-title{font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;}
-#section-subscribers .sub-detail-slug{font-family:var(--font-mono);font-size:.72rem;color:var(--dashboard-muted-dim);margin-left:6px;}
+/* Subscribers now consumes QDS (qds-page-header, qds-grid--kpi, qds-surface,
+   qds-btn, qds-table, qds-badge, qds-empty-state, qds-state-*) instead of
+   the shared dashboard-shell.css classes it used before. Only the three
+   rules below are genuinely page-specific layout, not a parallel component
+   set. font-family: var(--font-display) has no QDS equivalent (no display-
+   font token exists in qds/foundation/typography.css) and font-size/
+   margin-left:6px have no exact --qds-* match — kept raw, same pixel-
+   parity-over-token-purity approach used throughout this migration. */
+#section-subscribers .sub-detail-hdr{display:flex;align-items:center;gap:var(--qds-space-3);margin-bottom:var(--qds-space-5);}
+#section-subscribers .sub-detail-title{font-family:var(--font-display);font-size:1rem;font-weight:var(--qds-font-weight-bold);color:var(--qds-color-text-primary);}
+#section-subscribers .sub-detail-slug{font-family:var(--qds-font-family-mono);font-size:.72rem;color:var(--dashboard-muted-dim);margin-left:6px;}
 </style>
 
-<div class="page-header">
+<div class="qds-page-header">
   <div>
-    <div class="page-title" data-i18n="sub_title">Subscribers</div>
-    <div class="page-subtitle" data-i18n="sub_sub">Total reach across all your Smart QR Pages</div>
+    <div class="qds-page-title" data-i18n="sub_title">Subscribers</div>
+    <div class="qds-page-subtitle" data-i18n="sub_sub">Total reach across all your Smart QR Pages</div>
   </div>
 </div>
 
 <!-- Summary cards -->
-<div class="kpi-row" id="subSummaryCards">
-  <div class="kpi-card">
-    <div class="kpi-val orange" id="subTotalVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_total_reach">Total Reach</div>
+<div class="qds-grid--kpi" id="subSummaryCards">
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val orange qds-surface__kpi-value" id="subTotalVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_total_reach">Total Reach</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val" id="subEmailVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_email">Email</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val qds-surface__kpi-value" id="subEmailVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_email">Email</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val" id="subPushVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_webpush">Web Push</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val qds-surface__kpi-value" id="subPushVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_webpush">Web Push</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val purple" id="subWalletVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_wallet">Wallet</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val purple qds-surface__kpi-value" id="subWalletVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_wallet">Wallet</div>
   </div>
 </div>
 
 <!-- Per-page table -->
 <div id="subTablePanel">
-  <div class="panel" style="margin-bottom:20px;">
-    <div class="panel-hdr">
-      <div class="panel-title" data-i18n="sub_pages">Pages</div>
-      <button class="btn-outline" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button>
+  <div class="qds-surface qds-surface--default qds-surface--padding-none" style="margin-bottom:20px;overflow:hidden;border-radius:14px;">
+    <div class="qds-surface__header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div class="qds-surface__title" data-i18n="sub_pages">Pages</div>
+      <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button></div>
     </div>
-    <div id="subTableBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
+    <div id="subTableBody" class="qds-table-wrap--scroll"><div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
   </div>
 </div>
 
 <!-- Detail panel (hidden until View Details clicked) -->
 <div id="subDetailPanel" style="display:none;">
   <div class="sub-detail-hdr">
-    <button class="btn-outline" onclick="subShowTable()">
+    <button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subShowTable()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span data-i18n="sub_all_pages">All pages</span>
     </button>
@@ -785,12 +789,12 @@ async function initDashboard(){
       <span class="sub-detail-slug" id="subDetailSlug"></span>
     </div>
   </div>
-  <div class="panel">
-    <div class="panel-hdr">
-      <div class="panel-title" id="subDetailCount">Subscribers</div>
-      <button class="btn-outline" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button>
+  <div class="qds-surface qds-surface--default qds-surface--padding-none" style="overflow:hidden;border-radius:14px;">
+    <div class="qds-surface__header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div class="qds-surface__title" id="subDetailCount">Subscribers</div>
+      <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button></div>
     </div>
-    <div id="subDetailBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading">Loading…</div></div>
+    <div id="subDetailBody" class="qds-table-wrap--scroll"><div class="qds-state-loading">Loading…</div></div>
   </div>
 </div>
 
@@ -831,14 +835,14 @@ async function initDashboard(){
   }
 
   function badge(n, cls) {
-    if (!n) return '<span class="badge badge-zero">0</span>';
-    return '<span class="badge badge-' + cls + '">' + n + '</span>';
+    if (!n) return '<span class="qds-badge qds-badge--zero">0</span>';
+    return '<span class="qds-badge qds-badge--' + cls + '">' + n + '</span>';
   }
 
   // ── Load summary ──────────────────────────────────────────────────────────
   window.subLoad = function subLoad() {
     console.log('[Subscribers] subLoad called');
-    document.getElementById('subTableBody').innerHTML = '<div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
+    document.getElementById('subTableBody').innerHTML = '<div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
       fetch(window.API_ORIGIN + '/loyalty/subscribers/summary', {
@@ -854,11 +858,11 @@ async function initDashboard(){
 
           // Render table
           if (!d.pages || !d.pages.length) {
-            document.getElementById('subTableBody').innerHTML = '<div class="empty-state compact"><div class="empty-icon">&#x1F465;</div><div class="empty-title">No subscribers yet</div><div class="empty-sub">Share your Smart QR Pages to start collecting subscribers.</div><button class="empty-cta" onclick="document.getElementById(\'sqrGrid\').scrollIntoView({behavior:\'smooth\'})">View Smart QR Pages</button></div>';
+            document.getElementById('subTableBody').innerHTML = '<div class="qds-empty-state qds-empty-state--compact"><div class="qds-empty-state__icon">&#x1F465;</div><div class="qds-empty-state__title">No subscribers yet</div><div class="qds-empty-state__sub">Share your Smart QR Pages to start collecting subscribers.</div><button class="empty-cta" onclick="document.getElementById(\'sqrGrid\').scrollIntoView({behavior:\'smooth\'})">View Smart QR Pages</button></div>';
             return;
           }
 
-          var html = '<table class="data-table"><thead><tr>'
+          var html = '<table class="qds-table"><thead><tr>'
             + '<th data-i18n="sub_col_page">Page</th><th data-i18n="sub_col_email">Email</th><th data-i18n="sub_col_push">Web Push</th><th data-i18n="sub_col_wallet">Wallet</th><th data-i18n="sub_col_total">Total</th><th data-i18n="sub_col_last">Last Subscribed</th><th></th>'
             + '</tr></thead><tbody>';
 
@@ -870,7 +874,7 @@ async function initDashboard(){
               + '<td>' + badge(p.walletCount, 'wallet') + '</td>'
               + '<td><strong style="color:#f0f4f8;">' + p.total + '</strong></td>'
               + '<td>' + fmtDate(p.lastSub) + '</td>'
-              + '<td><button class="btn-outline" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
+              + '<td><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
               + '</tr>';
           });
 
@@ -879,7 +883,7 @@ async function initDashboard(){
         })
         .catch(function(e) {
           console.error('[Subscribers] load error:', e);
-          document.getElementById('subTableBody').innerHTML = '<div class="state-empty">Could not load subscribers: ' + e.message + '</div>';
+          document.getElementById('subTableBody').innerHTML = '<div class="qds-state-empty">Could not load subscribers: ' + e.message + '</div>';
         });
     });
   }
@@ -891,7 +895,7 @@ async function initDashboard(){
     document.getElementById('subDetailSlug').textContent = slug;
     document.getElementById('subTablePanel').style.display = 'none';
     document.getElementById('subDetailPanel').style.display = 'block';
-    document.getElementById('subDetailBody').innerHTML = '<div class="state-loading">Loading…</div>';
+    document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-loading">Loading…</div>';
 
     subTok(function(tok) {
       fetch(window.API_ORIGIN + '/loyalty/subscribers/' + slug + '/detail', {
@@ -902,17 +906,17 @@ async function initDashboard(){
           document.getElementById('subDetailCount').textContent = _subDetailRows.length + ' subscriber' + (_subDetailRows.length !== 1 ? 's' : '');
 
           if (!_subDetailRows.length) {
-            document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">No subscribers for this page yet.</div>';
+            document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-empty">No subscribers for this page yet.</div>';
             return;
           }
 
           var typeLabel = { email: 'Email', web_push: 'Web Push', wallet: 'Wallet' };
           var typeClass = { email: 'email', web_push: 'push', wallet: 'wallet' };
-          var html = '<table class="data-table"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
+          var html = '<table class="qds-table"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
           _subDetailRows.forEach(function(r) {
             html += '<tr>'
               + '<td>' + esc(r.masked) + '</td>'
-              + '<td><span class="badge badge-' + (typeClass[r.type] || 'zero') + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
+              + '<td><span class="qds-badge qds-badge--' + (typeClass[r.type] || 'zero') + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
               + '<td>' + fmtDate(r.date) + '</td>'
               + '</tr>';
           });
@@ -920,7 +924,7 @@ async function initDashboard(){
           document.getElementById('subDetailBody').innerHTML = html;
         })
         .catch(function(e) {
-          document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">Could not load detail: ' + e.message + '</div>';
+          document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-empty">Could not load detail: ' + e.message + '</div>';
         });
     });
   };

@@ -13,6 +13,24 @@
    (0.05 vs 0.04 background alpha) and kept as two distinct neutral tones
    since that one differs by a real, if small, amount.
 
+   Subscribers audit (dashboard.html #section-subscribers) found four more
+   Dashboard tones that are also byte-identical to existing variants:
+   .badge-email == this file's .qds-badge--info exactly (rgba(59,130,246,
+   .1)/var(--qds-color-information)/rgba(59,130,246,.2), confirmed against
+   dashboard-shell.css:207 and the --qds-color-information token comment).
+   .badge-push == .qds-badge--brand-solid exactly (verified --dashboard-
+   accent-dim === --qds-color-selected-surface, --dashboard-accent ===
+   --qds-color-brand-primary, --dashboard-accent-border === the raw
+   rgba(255,90,31,.2) already used below). .badge-wallet == .qds-badge
+   --success exactly (same green already documented above). .badge-zero
+   == .qds-badge--neutral-dim exactly (verified --dashboard-muted-dim ===
+   #5a6b7a and --dashboard-border === --qds-color-border-subtle, both
+   already the exact values used below). Rather than duplicate any of
+   these four declaration blocks under new names, --email/--push/--wallet
+   --zero are added as additional selectors on the existing rules — one
+   implementation, multiple semantic names, per "do not create a second
+   badge implementation."
+
    Base padding/font-size have no exact match on the QDS scales; kept as
    exact raw values per the same pixel-parity-over-token-purity approach
    used throughout this extraction. */
@@ -30,7 +48,8 @@
   border-radius: var(--qds-radius-full);
 }
 
-.qds-badge--success {
+.qds-badge--success,
+.qds-badge--wallet {
   background: rgba(34, 197, 94, 0.1);
   color: var(--qds-color-success);
   border: 1px solid rgba(34, 197, 94, 0.18); /* no --qds-* token for this alpha — kept raw */
@@ -42,7 +61,8 @@
   border: 1px solid rgba(255, 90, 31, 0.2); /* no --qds-* token — kept raw, matches --dashboard-accent-border */
 }
 
-.qds-badge--brand-solid {
+.qds-badge--brand-solid,
+.qds-badge--push {
   /* Matches Dashboard's .badge-push, which — unlike .badge-ai above —
      uses the full brand color for its text, not the lighter #ff8c55
      variant. Two real, distinct existing tones, not one with a typo. */
@@ -63,7 +83,8 @@
   border: 1px solid var(--qds-color-border-subtle);
 }
 
-.qds-badge--neutral-dim {
+.qds-badge--neutral-dim,
+.qds-badge--zero {
   /* Matches Dashboard's .badge-zero — a slightly fainter neutral tone
      (0.04 vs 0.05 background, dimmer text) than .qds-badge--neutral above. */
   background: rgba(255, 255, 255, 0.04); /* no --qds-* token — kept raw */
@@ -77,7 +98,8 @@
   border: 1px solid rgba(139, 92, 246, 0.2); /* no --qds-* token — kept raw */
 }
 
-.qds-badge--info {
+.qds-badge--info,
+.qds-badge--email {
   background: rgba(59, 130, 246, 0.1);
   color: var(--qds-color-information);
   border: 1px solid rgba(59, 130, 246, 0.2); /* no --qds-* token — kept raw */
