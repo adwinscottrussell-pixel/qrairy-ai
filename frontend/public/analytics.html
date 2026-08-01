@@ -12,52 +12,10 @@
   
   
 </head>
-<body>
+<body data-shell="customer" data-active-nav="nav-analytics">
 
-<!-- SIDEBAR -->
-<div id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-icon">Q</div>
-    <div class="sb-logo-text">QR<span>Aivy</span></div>
-  </div>
-  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
-  <nav class="sb-nav">
-    <div class="sb-group" data-i18n="nav_main">Main</div>
-    <a href="dashboard.html" class="sb-item "><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item active"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar" id="sb-avatar">?</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
-      </div>
-    </div>
-<div style="padding:6px 12px 2px;">
-      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-        <span style="font-size:.8rem;">🌐</span>
-        <span id="lang-toggle-label">Deutsch</span>
-      </button>
-    </div>
-    <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
-  </div>
-</div>
-
-<button id="mob-btn">☰</button>
-<div class="sb-overlay" id="sb-overlay"></div>
+<div id="sidebar"></div>
+<script src="js/dashboard-shell.js"></script>
 
 <div id="main-content">
   <div class="noise"></div>
@@ -456,6 +414,14 @@ async function loadAnalytics() {
     const data = await res.json();
     allData = data.dashboard || [];
 
+    // Smart QR badge — same source and same "AI page" definition
+    // (!!q.businessName) that dashboard.html's loadDashboard()/renderCards()
+    // uses for the identical badge, since both pages fetch this exact
+    // ${API_BASE}/dashboard payload. No new endpoint added.
+    if (window.QraivyDashboardShell) {
+      window.QraivyDashboardShell.setSmartQrCount(allData.filter(q => !!q.businessName).length);
+    }
+
     // Update plan badge
     if (data.planInfo) {
       const b = document.getElementById('plan-badge');
@@ -478,46 +444,13 @@ async function initAnalytics() {
   if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
 
   const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
-  document.getElementById('sb-username').textContent = name;
-  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
-  document.getElementById('sb-signout').addEventListener('click', async e => {
-    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
-  });
+  if (window.QraivyDashboardShell) window.QraivyDashboardShell.setUser({ name, initial: name[0].toUpperCase() });
 
-  // ── Sidebar init ──────────────────────────────────────────────────────────
-  const _sidebar = document.getElementById('sidebar');
-  const _sbToggle = document.getElementById('sb-toggle');
-  if (_sidebar && _sbToggle) {
-    if (localStorage.getItem('sb-collapsed') === 'true') { _sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-    _sbToggle.addEventListener('click', function() {
-      const c = _sidebar.classList.toggle('collapsed');
-      document.body.classList.toggle('sb-collapsed', c);
-      localStorage.setItem('sb-collapsed', c);
-    });
-  }
-  const _mobBtn = document.getElementById('mob-btn');
-  const _overlay = document.getElementById('sb-overlay');
-  if (_mobBtn) _mobBtn.addEventListener('click', function() { _sidebar.classList.add('mob-open'); _overlay.classList.add('on'); });
-  if (_overlay) _overlay.addEventListener('click', function() { _sidebar.classList.remove('mob-open'); _overlay.classList.remove('on'); });
   // Toast items (unfinished features)
   ['sb-settings'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { e.preventDefault(); const t=document.getElementById('cs-toast'); if(t){document.getElementById('cs-toast-msg').textContent=' Coming soon!';t.style.display='flex';setTimeout(function(){t.style.display='none';},2000);} });
   });
-  // sb-create-sqr uses href="dashboard.html?launch=onboarding" directly
-
-
-  // Sidebar collapse
-  const sidebar = document.getElementById('sidebar');
-  const sbToggle = document.getElementById('sb-toggle');
-  if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-  sbToggle.addEventListener('click', () => {
-    const c = sidebar.classList.toggle('collapsed');
-    document.body.classList.toggle('sb-collapsed', c);
-    localStorage.setItem('sb-collapsed', c);
-  });
-  document.getElementById('mob-btn').addEventListener('click', () => { sidebar.classList.add('mob-open'); document.getElementById('sb-overlay').classList.add('on'); });
-  document.getElementById('sb-overlay').addEventListener('click', () => { sidebar.classList.remove('mob-open'); document.getElementById('sb-overlay').classList.remove('on'); });
 
   // Soon toast
   document.querySelectorAll('.sb-soon-item').forEach(item => {
