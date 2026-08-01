@@ -150,7 +150,15 @@ body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
   #sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; transition: transform .22s; }
   #sidebar.mob-open { transform: translateX(0); }
   #main-content { margin-left: 0 !important; padding-top: 52px; }
-  #mob-btn { display: flex; }
+  /* #mob-btn intentionally stays display:none (its default) at this
+     breakpoint — #bottom-nav below is the one approved mobile
+     navigation system. dashboard-shell.js (dashboard.html, analytics.html)
+     no longer renders a #mob-btn/#sb-overlay at all — these rules now
+     only serve loyalty-setup.html/wallet-pass-studio.html/qr-manage.html,
+     which render their own static sidebar and hamburger independently of
+     this shell and are out of scope here. See the #bottom-nav block
+     further down, which already enforces #mob-btn{display:none!important}
+     for any page that does have one. */
   .sb-toggle { display: none; }
 }
 

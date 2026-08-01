@@ -472,8 +472,7 @@ async function initDashboard(){
     document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
     var lp = document.getElementById('section-loyalty');
     if (lp) { lp.style.display='block'; loadLoyaltyDashboard(); }
-    document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
-    sbLoyalty.classList.add('active');
+    if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-loyalty');
   });
   // Subscribers sidebar
   var sbSub = document.getElementById('sb-subscribers');
@@ -482,9 +481,8 @@ async function initDashboard(){
       e.preventDefault();
       var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
       document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
-      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
       var sec = document.getElementById('section-subscribers'); if (sec) sec.style.display = 'block';
-      sbSub.classList.add('active');
+      if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
       var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
       var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
       if (window.subLoad) { setTimeout(window.subLoad, 100); }
@@ -498,13 +496,22 @@ async function initDashboard(){
       e.preventDefault();
       var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
       document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
-      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
       var sec = document.getElementById('section-campaigns');
       if (sec) sec.style.display = 'block';
-      sbCampMain.classList.add('active');
+      if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-campaigns');
       if (typeof campInitProgs === 'function') campInitProgs();
     });
   }
+
+  // Bottom-nav (mobile) — shell renders the markup/hrefs; this page still
+  // owns the section-switching business logic, same as the desktop
+  // handlers above. Intercepts the shell's real hrefs to keep the
+  // existing instant, no-reload behavior instead of a full navigation.
+  var bnSectionMap = { 'bn-pages': 'sqr', 'bn-loyalty': 'loyalty', 'bn-subs': 'subscribers', 'bn-campaigns': 'campaigns', 'bn-settings': 'settings' };
+  Object.keys(bnSectionMap).forEach(function(bnId) {
+    var el = document.getElementById(bnId);
+    if (el) el.addEventListener('click', function(e) { e.preventDefault(); showSection(bnSectionMap[bnId]); });
+  });
 
     var btnCreate=document.getElementById('btn-create-sqr');
   if(btnCreate)btnCreate.addEventListener('click',launchOnboarding);
@@ -521,20 +528,27 @@ async function initDashboard(){
   // Handle ?section= param for cross-page navigation
   var sectionP = new URLSearchParams(window.location.search).get('section');
   if (sectionP) {
+    // Highlight the correct nav item immediately (desktop sidebar + mobile
+    // bottom nav together, via the shared shell) rather than waiting on
+    // the setTimeout below — that delay is for section display/data
+    // loading settling in, not for which nav item should look active.
+    if (window.QraivyDashboardShell) {
+      var deepLinkNavIdMap = { campaigns: 'nav-campaigns', subscribers: 'nav-subscribers', loyalty: 'nav-loyalty' };
+      window.QraivyDashboardShell.setActive(deepLinkNavIdMap[sectionP] || 'nav-dashboard');
+    }
     setTimeout(function() {
       var mc = document.getElementById('main-content');
       if (mc) mc.style.display = 'none';
       document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
-      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
       if (sectionP === 'campaigns') {
         var sec = document.getElementById('section-campaigns');
         if (sec) sec.style.display = 'block';
-        var el = document.getElementById('sb-campaigns'); if (el) el.classList.add('active');
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-campaigns');
         if (typeof window.campInitProgs === 'function') window.campInitProgs();
       } else if (sectionP === 'subscribers') {
         var sec = document.getElementById('section-subscribers');
         if (sec) sec.style.display = 'block';
-        var el = document.getElementById('sb-subscribers'); if (el) el.classList.add('active');
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
         var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
         var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
         var sbSubEl = document.getElementById('sb-subscribers');
@@ -542,10 +556,11 @@ async function initDashboard(){
       } else if (sectionP === 'loyalty') {
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
-        var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-loyalty');
       } else {
         // Unknown section param - show main dashboard
         if (mc) mc.style.display = 'block';
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-dashboard');
       }
     }, 300);
   }
@@ -2448,33 +2463,6 @@ window._loyRemovePin = function() {
   <button onclick="handleSignOut()" style="width:100%;padding:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(240,244,248,0.5);font-size:.85rem;cursor:pointer;font-family:inherit;" data-i18n="nav_signout">Sign Out</button>
 </div>
 
-<!-- Bottom Nav (mobile only) -->
-<nav id="bottom-nav">
-  <a href="dashboard.html" class="bn-item" id="bn-home">
-    <span class="bn-icon">&#x229E;</span>
-    <span class="bn-label">Home</span>
-  </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-pages" onclick="if(window.showSection)showSection('sqr');bnSetActive('bn-pages')">
-    <span class="bn-icon">&#x2B21;</span>
-    <span class="bn-label">Pages</span>
-  </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-loyalty" onclick="if(window.showSection)showSection('loyalty');bnSetActive('bn-loyalty')">
-    <span class="bn-icon">&#x1F3AB;</span>
-    <span class="bn-label">Loyalty</span>
-  </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-subs" onclick="if(window.showSection)showSection('subscribers');bnSetActive('bn-subs')">
-    <span class="bn-icon">&#x1F465;</span>
-    <span class="bn-label">Subs</span>
-  </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-campaigns" onclick="if(window.showSection)showSection('campaigns');bnSetActive('bn-campaigns')">
-    <span class="bn-icon">&#x1F4E3;</span>
-    <span class="bn-label">Campaigns</span>
-  </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-settings" onclick="if(window.showSection)showSection('settings');bnSetActive('bn-settings')">
-    <span class="bn-icon">&#x2699;</span>
-    <span class="bn-label">Settings</span>
-  </a>
-</nav>
 <button class="fab ripple" id="fab-main" aria-label="Create Smart QR" onclick="launchOnboarding()">+</button>
 <script>
 (function(){
@@ -2492,15 +2480,12 @@ window._loyRemovePin = function() {
     setTimeout(function(){ span.remove(); }, 500);
   });
 })();
-function bnSetActive(id) {
-  document.querySelectorAll('#bottom-nav .bn-item').forEach(function(el) { el.classList.remove('active'); });
-  var el = document.getElementById(id);
-  if (el) el.classList.add('active');
-}
-// Real section switcher — shared by sidebar items and bottom nav
+// Real section switcher — shared by sidebar items and the shell's
+// mobile bottom nav. Active-state highlighting (desktop sidebar + mobile
+// bottom nav together) goes through the shared shell's single setActive()
+// — no separate per-surface active-state system here.
 window.showSection = function(sec) {
-  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns' };
+  var navIdMap = { sqr:'nav-sqrpages', loyalty:'nav-loyalty', subscribers:'nav-subscribers', campaigns:'nav-campaigns', settings:'nav-settings' };
 
   if (sec === 'settings') {
     var mc2 = document.getElementById('main-content');
@@ -2514,12 +2499,12 @@ window.showSection = function(sec) {
     var mobBtn = document.getElementById('mob-lang-btn');
     if (mobLbl) mobLbl.textContent = curLang === 'de' ? 'Deutsch' : 'English';
     if (mobBtn) mobBtn.textContent = curLang === 'de' ? 'Switch to English' : 'Switch to Deutsch';
+    if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-settings');
     return;
   }
 
   var mc = document.getElementById('main-content');
   document.querySelectorAll('.dash-section').forEach(function(s) { s.style.display = 'none'; });
-  document.querySelectorAll('.sb-item').forEach(function(i) { i.classList.remove('active'); });
 
   if (sec === 'sqr' || !sec) {
     if (mc) mc.style.display = 'block';
@@ -2527,8 +2512,6 @@ window.showSection = function(sec) {
     if (mc) mc.style.display = 'none';
     var target = document.getElementById('section-' + sec);
     if (target) target.style.display = 'block';
-    var sbId = sbIdMap[sec];
-    if (sbId) { var sbEl = document.getElementById(sbId); if (sbEl) sbEl.classList.add('active'); }
     if (sec === 'loyalty' && typeof loadLoyaltyDashboard === 'function') loadLoyaltyDashboard();
     if (sec === 'subscribers' && window.subLoad) {
       setTimeout(window.subLoad, 100);
@@ -2538,23 +2521,8 @@ window.showSection = function(sec) {
     if (sec === 'campaigns' && typeof window.campInitProgs === 'function') window.campInitProgs();
   }
 
-  // Close mobile sidebar drawer if open
-  var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sb-overlay');
-  if (sidebar) sidebar.classList.remove('mob-open');
-  if (overlay) overlay.classList.remove('on');
-
-  var bnId = sectionMap[sec];
-  bnSetActive(bnId || 'bn-home');
+  if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive(navIdMap[sec] || 'nav-dashboard');
 };
-
-// Set initial active state based on URL
-(function() {
-  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var urlSec = new URLSearchParams(window.location.search).get('section');
-  if (urlSec && sectionMap[urlSec]) bnSetActive(sectionMap[urlSec]);
-  else bnSetActive('bn-home');
-})();
 </script>
 </body>
 </html>

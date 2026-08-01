@@ -5,7 +5,10 @@
  * Fails (non-zero exit) if any customer dashboard page under
  * frontend/public contains its own copy of the shared sidebar markup
  * instead of the empty <div id="sidebar"></div> placeholder that
- * frontend/public/js/dashboard-shell.js renders into.
+ * frontend/public/js/dashboard-shell.js renders into — or its own copy
+ * of the shared mobile bottom-navigation markup, which the same shell
+ * renders entirely at runtime (no placeholder needed; the raw HTML
+ * source should never contain #bottom-nav/.bn-item at all).
  *
  * Run: node scripts/check-duplicate-sidebar.js
  */
@@ -23,6 +26,9 @@ const ALLOWLIST = new Set([
 const VIOLATION_PATTERNS = [
   { name: '<nav class="sb-nav">', re: /<nav[^>]*class="sb-nav"/ },
   { name: '<div class="sb-logo">', re: /<div[^>]*class="sb-logo"/ },
+  { name: '<nav id="bottom-nav"> (bottom nav is shell-rendered only, never static markup)', re: /<nav[^>]*id="bottom-nav"/ },
+  { name: 'class="bn-item" (bottom-nav item copied into page markup)', re: /class="bn-item"/ },
+  { name: 'bnSetActive( (page-owned bottom-nav active-state duplicate of the shared setActive())', re: /function\s+bnSetActive\s*\(/ },
 ];
 
 function findHtmlFiles(dir) {
