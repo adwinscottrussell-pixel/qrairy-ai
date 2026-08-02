@@ -1115,7 +1115,7 @@ async function initDashboard(){
 <div class="camp-card" id="campGoalPanel" style="display:none;margin-top:16px;">
   <button class="camp-back" onclick="campResetTrig()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Change type
+    <span data-i18n="camp_change_type">Change type</span>
   </button>
   <div class="camp-label" id="campTrigLabel"></div>
   <div class="camp-field">
@@ -1289,12 +1289,13 @@ async function initDashboard(){
     if (!goal) { alert('Please describe your campaign goal.'); return; }
     var offer = (document.getElementById('campOfferText').value || '').trim();
     var btn = document.getElementById('campGenBtn');
-    btn.disabled = true; btn.childNodes[btn.childNodes.length-1].textContent = ' Generating…';
+    var btnLabel = btn.querySelector('span');
+    btn.disabled = true; btnLabel.textContent = window._qt ? window._qt('camp_generating', 'Generating…') : 'Generating…';
     campTok(function(tok) {
       fetch(window.API_ORIGIN + '/loyalty/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-        body: JSON.stringify({ campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
+        body: JSON.stringify({ type: _trig, campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
       }).then(function(x){ return x.json(); })
         .then(function(d) {
           if (!d.ok) throw new Error(d.error || 'Generation failed');
@@ -1307,7 +1308,7 @@ async function initDashboard(){
         .catch(function(e) { alert('Could not generate message: ' + e.message); })
         .finally(function() {
           btn.disabled = false;
-          btn.childNodes[btn.childNodes.length-1].textContent = ' Generate Push Message';
+          btnLabel.textContent = window._qt ? window._qt('camp_gen_btn', 'Generate Push Message') : 'Generate Push Message';
         });
     });
   };
@@ -2302,6 +2303,7 @@ window._loyRemovePin = function() {
       camp_reward_title: 'Reward Reminder', camp_reward_desc: "Remind customers they're close to unlocking their next reward.",
       camp_goal_label: 'Campaign goal', camp_offer_label: 'Offer or detail',
       camp_tone_label: 'Tone', tone_friendly: 'Friendly', tone_premium: 'Premium', tone_urgent: 'Urgent', tone_playful: 'Playful',
+      camp_change_type: 'Change type', camp_generating: 'Generating…',
       camp_gen_btn: 'Generate Push Message', camp_send_btn: 'Send to Subscribers', camp_history: 'Recent Campaigns',
       camp_notif_app: 'Qraivy Loyalty', camp_notif_now: 'now',
       camp_prev_title: 'Your push title', camp_prev_body: 'Your push message will appear here',
@@ -2434,6 +2436,7 @@ window._loyRemovePin = function() {
       camp_reward_title: 'Belohnungserinnerung', camp_reward_desc: 'Erinnern Sie Kunden daran, dass sie kurz vor ihrer nächsten Belohnung sind.',
       camp_goal_label: 'Kampagnenziel', camp_offer_label: 'Angebot oder Detail',
       camp_tone_label: 'Ton', tone_friendly: 'Freundlich', tone_premium: 'Premium', tone_urgent: 'Dringend', tone_playful: 'Spielerisch',
+      camp_change_type: 'Typ ändern', camp_generating: 'Wird generiert…',
       camp_gen_btn: 'Push-Nachricht generieren', camp_send_btn: 'An Abonnenten senden', camp_history: 'Letzte Kampagnen',
       camp_notif_app: 'Qraivy Treue', camp_notif_now: 'jetzt',
       camp_prev_title: 'Ihr Push-Titel', camp_prev_body: 'Ihre Push-Nachricht erscheint hier',
