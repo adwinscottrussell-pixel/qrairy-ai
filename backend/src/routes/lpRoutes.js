@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireStaffSession } = require('../utils/staffSession');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushClickResolve, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
@@ -132,6 +132,9 @@ router.get('/lp/:slug', handleServeLP);
 router.post('/lp/chat', handleChatLP);
 // Push notification endpoint
 router.post('/lp/push/:slug', requireAuth, handleSendPush);
+// Same-origin redirect resolver for notification clicks — public, no auth
+// (called directly by a customer's browser from push-open.html).
+router.get('/push/click/:id', handlePushClickResolve);
 router.get('/lp/push/:slug/count', handlePushCount);
 router.get('/lp/push/:slug/history', handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
