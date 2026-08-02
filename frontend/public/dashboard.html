@@ -1474,9 +1474,13 @@ function _lyRgba(hex, alpha) {
 function _lyEsc(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+// Thin accessor over the shared dictionary exposed by the bottom-of-page
+// applyLang() script block (window._qraivyT/window._qt) — not a second
+// translation system, just a short local alias for this section's use.
+function _lt(key, fallback) { return window._qt ? window._qt(key, fallback) : fallback; }
 function _lyDate(iso) {
-  if (!iso) return "No visits yet";
-  try { return new Date(iso).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}); }
+  if (!iso) return _lt('loy_no_visits_yet', 'No visits yet');
+  try { return new Date(iso).toLocaleDateString((window._qraivyLang==='de'?'de-DE':undefined), {year:'numeric', month:'short', day:'numeric'}); }
   catch(_) { return "—"; }
 }
 // No logo endpoint is currently exposed to the owner dashboard's loyalty
@@ -1507,9 +1511,9 @@ async function _lyAuthHeaders() {
 // non-2xx response into one structured, friendly error instead of ever
 // surfacing raw HTML or a stack trace to the UI.
 function _lyFriendlyStatusMessage(status) {
-  if (status === 429) return "Too many requests. Please wait a moment and try again.";
-  if (status === 401 || status === 403) return "Your session has expired. Please sign in again.";
-  return "We couldn't load your loyalty data. Please try again.";
+  if (status === 429) return _lt('loy_err_rate_limited', "Too many requests. Please wait a moment and try again.");
+  if (status === 401 || status === 403) return _lt('loy_err_session_expired', "Your session has expired. Please sign in again.");
+  return _lt('loy_err_load_failed', "We couldn't load your loyalty data. Please try again.");
 }
 
 function _lyApiError(status, message) {
@@ -1542,7 +1546,7 @@ async function _lyParseResponse(response) {
 // generic "couldn't load" one.
 function _lyErrorMessage(err) {
   if (err && err.isLyApiError) return err.friendlyMessage;
-  return "We couldn't connect. Please check your connection and try again.";
+  return _lt('loy_connection_error', "We couldn't connect. Please check your connection and try again.");
 }
 
 // ── State ──
@@ -1575,7 +1579,7 @@ function loadLoyaltyDashboard() {
   if (window._loyDashboardLoadPromise) return window._loyDashboardLoadPromise;
   var root = document.getElementById("loy-root");
   if (!root) return;
-  root.innerHTML = "<div class=\"state-loading\">Loading…</div>";
+  root.innerHTML = "<div class=\"state-loading\">" + _lt('loy_loading','Loading…') + "</div>";
   window._loyDashboardLoadPromise = _lyAuthHeaders().then(function(headers) {
     return fetch(window.API_ORIGIN + "/loyalty/programs?_=" + Date.now(), { headers: headers })
       .then(_lyParseResponse)
@@ -1585,9 +1589,9 @@ function loadLoyaltyDashboard() {
         if (!programs.length) {
           root.innerHTML = "<div class=\"empty-state\">" +
             "<div class=\"empty-icon\">🎯</div>" +
-            "<div class=\"empty-title\">No loyalty program yet</div>" +
-            "<div class=\"empty-sub\">Set one up to start collecting stamps and rewarding repeat customers.</div>" +
-            "<a class=\"empty-cta\" href=\"loyalty-setup.html\">Set one up →</a></div>";
+            "<div class=\"empty-title\">" + _lyEsc(_lt('loy_no_program_title','No loyalty program yet')) + "</div>" +
+            "<div class=\"empty-sub\">" + _lyEsc(_lt('loy_no_program_sub','Set one up to start collecting stamps and rewarding repeat customers.')) + "</div>" +
+            "<a class=\"empty-cta\" href=\"loyalty-setup.html\">" + _lyEsc(_lt('loy_no_program_cta','Set one up →')) + "</a></div>";
           return;
         }
         if (!window._loyCurrentId || !_loyCurrentProgram()) window._loyCurrentId = programs[0].id;
@@ -1609,7 +1613,7 @@ function _loyRenderShell() {
   if (!p) return;
   var root = document.getElementById("loy-root");
   var statusClass = p.status === "active" ? "active" : "paused";
-  var statusLabel = p.status === "active" ? "Active" : "Paused";
+  var statusLabel = p.status === "active" ? _lt('loy_status_active','Active') : _lt('loy_status_paused','Paused');
 
   var switcher = "";
   if (window._loyPrograms.length > 1) {
@@ -1620,18 +1624,18 @@ function _loyRenderShell() {
   }
 
   var tabs = [
-    ["overview", "Overview"],
-    ["stamp", "Stamp Customer"],
-    ["members", "Members"],
-    ["rewards", "Rewards"],
-    ["settings", "Settings"]
+    ["overview", _lt('loy_tab_overview','Overview')],
+    ["stamp", _lt('loy_tab_stamp','Stamp Customer')],
+    ["members", _lt('loy_tab_members','Members')],
+    ["rewards", _lt('loy_tab_rewards','Rewards')],
+    ["settings", _lt('nav_settings','Settings')]
   ];
 
   root.innerHTML =
     "<div class=\"page-header\">" +
       "<div style=\"display:flex;align-items:center;gap:14px;\">" +
         _lyAvatar(p.businessName, p.color) +
-        "<div><div class=\"page-title\">Loyalty Program</div>" +
+        "<div><div class=\"page-title\">" + _lt('loy_program_heading','Loyalty Program') + "</div>" +
         "<span class=\"badge " + (statusClass === "active" ? "badge-live" : "badge-free") + "\">" + statusLabel + "</span></div>" +
       "</div>" +
       switcher +
@@ -1749,7 +1753,7 @@ async function _loyFetchCustomers(id, force) {
 function _loyMemberRef(maskedId) {
   var s = String(maskedId || "").replace(/\*+$/, "");
   var tail = s.slice(-4).toUpperCase() || "????";
-  return "Member ending " + tail;
+  return _lt('loy_member_ending_prefix', 'Member ending ') + tail;
 }
 
 // Shared row formatter — used by both Overview's "Recent Activity" and
@@ -1757,7 +1761,7 @@ function _loyMemberRef(maskedId) {
 // of data (a customer + their current stamp/reward state + last visit).
 function _loyActivityRowHtml(c, p) {
   var when = _lyDate(c.lastStampAt);
-  var status = c.rewardReady ? "🎁 Reward ready" : (c.stampCount + " of " + (p.stampGoal || 10) + " stamps");
+  var status = c.rewardReady ? ("🎁 " + _lt('loy_reward_ready_status','Reward ready')) : (c.stampCount + " " + _lt('loy_of','of') + " " + (p.stampGoal || 10) + " " + _lt('loy_stamps_lc','stamps'));
   return "<div class=\"loy-activity-row\"><span>" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
     "<span style=\"margin-left:auto;\">" + status + "</span><span style=\"opacity:.6;\">" + when + "</span></div>";
 }
@@ -1766,7 +1770,7 @@ function _loyActivityRowHtml(c, p) {
 function _loyRenderOverview(p, force) {
   var panel = document.getElementById("loy-panel-overview");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">" + _lt('loy_loading','Loading…') + "</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
@@ -1794,7 +1798,7 @@ function _loyRenderOverview(p, force) {
     });
     var recentCustomerRows = byCreated.slice(0, 5).map(function(c) {
       return "<div class=\"loy-activity-row\"><span>" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
-        "<span style=\"margin-left:auto;opacity:.6;\">Joined " + _lyDate(c.createdAt) + "</span></div>";
+        "<span style=\"margin-left:auto;opacity:.6;\">" + _lt('loy_joined_prefix','Joined ') + _lyDate(c.createdAt) + "</span></div>";
     }).join("");
 
     // Reward Progress — buckets computed from the already-fetched customers
@@ -1811,39 +1815,39 @@ function _loyRenderOverview(p, force) {
       : "—";
 
     panel.innerHTML =
-      (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.</div>" : "") +
+      (p.status !== "active" ? "<div class=\"loy-note\" style=\"background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;padding:12px 14px;border-radius:10px;margin-bottom:16px;\">" + _lt('loy_paused_notice','Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.') + "</div>" : "") +
       "<div class=\"kpi-row\">" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + todayStamps + "</div><div class=\"kpi-lbl\">Today's Stamps</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + activeMembers + "</div><div class=\"kpi-lbl\">Active Members</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsWaiting + "</div><div class=\"kpi-lbl\">Reward Ready</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Rewards Redeemed</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + todayStamps + "</div><div class=\"kpi-lbl\">" + _lt('loy_kpi_today_stamps',"Today's Stamps") + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + activeMembers + "</div><div class=\"kpi-lbl\">" + _lt('loy_kpi_active_members','Active Members') + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsWaiting + "</div><div class=\"kpi-lbl\">" + _lt('loy_kpi_reward_ready','Reward Ready') + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">" + _lt('loy_kpi_rewards_redeemed','Rewards Redeemed') + "</div></div>" +
       "</div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Quick Actions</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_quick_actions','Quick Actions') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:12px;\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 Stamp Customer</a>" +
+        "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;margin-bottom:12px;\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">📷 " + _lt('loy_stamp_customer_btn','Stamp Customer') + "</a>" +
         "<div style=\"display:flex;gap:10px;flex-wrap:wrap;\">" +
-          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('members')\">👥 View Members</button>" +
-          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('rewards')\">🎁 View Rewards</button>" +
-          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">⚙ Settings</button>" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('members')\">👥 " + _lt('loy_view_members_btn','View Members') + "</button>" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('rewards')\">🎁 " + _lt('loy_view_rewards_btn','View Rewards') + "</button>" +
+          "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">⚙ " + _lt('nav_settings','Settings') + "</button>" +
         "</div>" +
       "</div></div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Activity</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_recent_activity','Recent Activity') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        (activityRows || "<div class=\"state-empty\">No activity yet</div>") +
+        (activityRows || "<div class=\"state-empty\">" + _lt('loy_no_activity_yet','No activity yet') + "</div>") +
       "</div></div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Customers</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_recent_customers','Recent Customers') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        (recentCustomerRows || "<div class=\"state-empty\">No customers yet</div>") +
+        (recentCustomerRows || "<div class=\"state-empty\">" + _lt('loy_no_customers_yet','No customers yet') + "</div>") +
       "</div></div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward Progress</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_reward_progress','Reward Progress') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        "<div class=\"metric-row\"><span class=\"metric-lbl\">1 stamp away</span><span class=\"metric-val orange\">" + oneAway + "</span></div>" +
-        "<div class=\"metric-row\"><span class=\"metric-lbl\">Building up</span><span class=\"metric-val\">" + buildingUp + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">" + _lt('loy_one_stamp_away','1 stamp away') + "</span><span class=\"metric-val orange\">" + oneAway + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">" + _lt('loy_building_up','Building up') + "</span><span class=\"metric-val\">" + buildingUp + "</span></div>" +
       "</div></div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Program Health</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_program_health','Program Health') + "</span></div>" +
       "<div class=\"panel\"><div class=\"panel-body\">" +
-        "<div class=\"metric-row\"><span class=\"metric-lbl\">Redemption rate</span><span class=\"metric-val orange\">" + redemptionRate + "</span></div>" +
-        "<div class=\"metric-row\"><span class=\"metric-lbl\">Avg. stamps per member</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">" + _lt('loy_redemption_rate','Redemption rate') + "</span><span class=\"metric-val orange\">" + redemptionRate + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">" + _lt('loy_avg_stamps','Avg. stamps per member') + "</span><span class=\"metric-val\">" + avgStamps + "</span></div>" +
       "</div></div>";
   }).catch(function(err) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
@@ -1861,27 +1865,27 @@ function _loyRenderStampCustomer(p) {
   // immediately, in this one assignment — Recent Stamp Activity's own
   // fetch below must never delay or block any of them.
   panel.innerHTML =
-    "<div class=\"sec-hdr\"><div><span class=\"section-title\">Scan a Customer</span>" +
-      "<div class=\"section-count\" style=\"margin-left:0;display:block;margin-top:2px;\">Add a stamp or check a reward using the customer's Wallet card</div></div></div>" +
-    "<div class=\"sec-hdr\"><span class=\"section-title\">Scanner</span></div>" +
+    "<div class=\"sec-hdr\"><div><span class=\"section-title\">" + _lt('loy_scan_customer','Scan a Customer') + "</span>" +
+      "<div class=\"section-count\" style=\"margin-left:0;display:block;margin-top:2px;\">" + _lt('loy_scan_customer_sub',"Add a stamp or check a reward using the customer's Wallet card") + "</div></div></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_scanner','Scanner') + "</span></div>" +
     "<div class=\"panel loy-section\"><div class=\"panel-body\" style=\"text-align:center;\">" +
       "<div style=\"display:flex;justify-content:center;\">" + _lyAvatar(p.businessName, p.color) + "</div>" +
-      "<div style=\"font-size:1.1rem;font-weight:800;color:#f0f4f8;margin:14px 0 6px;\">Stamp a Customer</div>" +
-      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:20px;\">Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.</div>" +
-      "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;\" href=\"" + scannerUrl + "\">Open Scanner</a>" +
+      "<div style=\"font-size:1.1rem;font-weight:800;color:#f0f4f8;margin:14px 0 6px;\">" + _lt('loy_stamp_a_customer','Stamp a Customer') + "</div>" +
+      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:20px;\">" + _lt('loy_stamp_instructions','Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.') + "</div>" +
+      "<a class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:14px;font-size:.95rem;\" href=\"" + scannerUrl + "\">" + _lt('loy_open_scanner','Open Scanner') + "</a>" +
     "</div></div>" +
-    "<div class=\"sec-hdr\"><span class=\"section-title\">Manual Entry</span></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_manual_entry','Manual Entry') + "</span></div>" +
     "<div class=\"panel loy-section\"><div class=\"panel-body\" style=\"text-align:center;\">" +
-      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:16px;\">If the camera can't read the code, enter it manually on the scanner page.</div>" +
-      "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;\" href=\"" + scannerUrl + "\">Enter Code Manually</a>" +
+      "<div style=\"font-size:.82rem;color:var(--dashboard-muted);line-height:1.6;margin-bottom:16px;\">" + _lt('loy_manual_entry_sub',"If the camera can't read the code, enter it manually on the scanner page.") + "</div>" +
+      "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;\" href=\"" + scannerUrl + "\">" + _lt('loy_enter_code_manually','Enter Code Manually') + "</a>" +
     "</div></div>" +
-    "<div class=\"sec-hdr\"><span class=\"section-title\">Recent Stamp Activity</span></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_recent_stamp_activity','Recent Stamp Activity') + "</span></div>" +
     "<div class=\"panel loy-section\"><div class=\"panel-body\" id=\"loy-stamp-activity-body\">" +
-      "<div class=\"state-loading\">Loading…</div>" +
+      "<div class=\"state-loading\">" + _lt('loy_loading','Loading…') + "</div>" +
     "</div></div>" +
-    "<div class=\"sec-hdr\"><span class=\"section-title\">Staff Status</span></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_staff_status','Staff Status') + "</span></div>" +
     "<div class=\"panel\"><div class=\"panel-body\">" +
-      "<div id=\"loy-pin-status-line\" style=\"font-size:.82rem;color:var(--dashboard-muted);\">Checking staff PIN…</div>" +
+      "<div id=\"loy-pin-status-line\" style=\"font-size:.82rem;color:var(--dashboard-muted);\">" + _lt('loy_checking_staff_pin','Checking staff PIN…') + "</div>" +
     "</div></div>";
 
   // Recent Stamp Activity — reuses the existing, unmodified _loyFetchCustomers
@@ -1892,7 +1896,7 @@ function _loyRenderStampCustomer(p) {
     var body = document.getElementById("loy-stamp-activity-body");
     if (!body) return;
     var rows = customers.slice(0, 5).map(function(c) { return _loyActivityRowHtml(c, p); }).join("");
-    body.innerHTML = rows || "<div class=\"state-empty\">No activity yet</div>";
+    body.innerHTML = rows || "<div class=\"state-empty\">" + _lt('loy_no_activity_yet','No activity yet') + "</div>";
   }).catch(function(err) {
     var body = document.getElementById("loy-stamp-activity-body");
     if (body) body.innerHTML = "<div class=\"state-empty\">" + _lyErrorMessage(err) + "</div>";
@@ -1906,8 +1910,8 @@ function _loyRenderStampCustomer(p) {
       var line = document.getElementById("loy-pin-status-line");
       if (!line) return;
       line.innerHTML = d.configured
-        ? "<span style=\"color:#22c55e;\">✓ Staff PIN enabled</span>"
-        : "<span style=\"color:#ff8c55;\">Staff PIN not configured — set one in Settings</span>";
+        ? "<span style=\"color:#22c55e;\">✓ " + _lt('loy_staff_pin_enabled','Staff PIN enabled') + "</span>"
+        : "<span style=\"color:#ff8c55;\">" + _lt('loy_staff_pin_not_configured_hint','Staff PIN not configured — set one in Settings') + "</span>";
     })
     .catch(function() {
       var line = document.getElementById("loy-pin-status-line");
@@ -1919,7 +1923,7 @@ function _loyRenderStampCustomer(p) {
 function _loyRenderMembers(p, force) {
   var panel = document.getElementById("loy-panel-members");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">" + _lt('loy_loading','Loading…') + "</div>";
 
   _loyFetchCustomers(p.id, force).then(function(customers) {
     _loyDrawMembers(p, customers);
@@ -1945,37 +1949,37 @@ function _loyDrawMembers(p, customers) {
 
   var cards = filtered.map(function(c) {
     var statusChip = c.rewardReady
-      ? "<span class=\"badge badge-success\">Reward Ready</span>"
-      : "<span class=\"badge badge-free\">Active</span>";
+      ? "<span class=\"badge badge-success\">" + _lt('loy_reward_ready_badge','Reward Ready') + "</span>"
+      : "<span class=\"badge badge-free\">" + _lt('loy_status_active','Active') + "</span>";
     var redeemBtn = c.rewardReady
-      ? "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Scan to redeem</a>"
+      ? "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">" + _lt('loy_scan_to_redeem','Scan to redeem') + "</a>"
       : "";
     return "<div class=\"panel\"><div class=\"panel-body\">" +
       "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" + statusChip + "</div>" +
-      "<div class=\"loy-member-row\"><span>Stamps</span><span>" + c.stampCount + " of " + c.goal + "</span></div>" +
-      "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
+      "<div class=\"loy-member-row\"><span>" + _lt('loy_stamps_label','Stamps') + "</span><span>" + c.stampCount + " " + _lt('loy_of','of') + " " + c.goal + "</span></div>" +
+      "<div class=\"loy-member-row\"><span>" + _lt('loy_last_visit','Last visit') + "</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
       redeemBtn +
     "</div></div>";
   }).join("");
 
   panel.innerHTML =
     "<div class=\"sec-hdr\">" +
-      "<span class=\"section-title\">Members<span class=\"section-count\">(" + customers.length + ")</span></span>" +
+      "<span class=\"section-title\">" + _lt('loy_members_heading','Members') + "<span class=\"section-count\">(" + customers.length + ")</span></span>" +
       "<div style=\"display:flex;gap:8px;flex-wrap:wrap;align-items:center;\">" +
-        "<input class=\"loy-input\" style=\"width:180px;margin-bottom:0;\" placeholder=\"Search members…\" value=\"" + _lyEsc(window._loyMemberSearch) + "\" oninput=\"window._loyMemberSearchInput(this.value)\" />" +
+        "<input class=\"loy-input\" style=\"width:180px;margin-bottom:0;\" placeholder=\"" + _lt('loy_search_members_placeholder','Search members…') + "\" value=\"" + _lyEsc(window._loyMemberSearch) + "\" oninput=\"window._loyMemberSearchInput(this.value)\" />" +
         "<div class=\"loy-toolbar\" style=\"margin-bottom:0;\">" +
-          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "all" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('all')\">All</button>" +
-          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "active" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('active')\">Active</button>" +
-          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "ready" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('ready')\">Reward Ready</button>" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "all" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('all')\">" + _lt('loy_filter_all','All') + "</button>" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "active" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('active')\">" + _lt('loy_status_active','Active') + "</button>" +
+          "<button class=\"loy-filter-btn" + (window._loyMemberFilter === "ready" ? " active" : "") + "\" onclick=\"window._loyMemberFilterSet('ready')\">" + _lt('loy_reward_ready_badge','Reward Ready') + "</button>" +
         "</div>" +
       "</div>" +
     "</div>" +
     (customers.length === 0
-      ? "<div class=\"state-empty\">No loyalty members yet. Ask your first customer to join.</div>"
+      ? "<div class=\"state-empty\">" + _lt('loy_no_members_yet','No loyalty members yet. Ask your first customer to join.') + "</div>"
       : (filtered.length === 0
-        ? "<div class=\"state-empty\">No members match this filter.</div>"
+        ? "<div class=\"state-empty\">" + _lt('loy_no_members_match','No members match this filter.') + "</div>"
         : "<div class=\"loy-grid\">" + cards + "</div>")) +
-    (customers.length > 0 ? "<div class=\"loy-note\">Some older members may appear more than once while customer records are being upgraded.</div>" : "");
+    (customers.length > 0 ? "<div class=\"loy-note\">" + _lt('loy_older_members_note','Some older members may appear more than once while customer records are being upgraded.') + "</div>" : "");
 }
 
 window._loyMemberFilterSet = function(f) {
@@ -1993,7 +1997,7 @@ window._loyMemberSearchInput = function(v) {
 function _loyRenderRewards(p, force) {
   var panel = document.getElementById("loy-panel-rewards");
   if (!panel) return;
-  panel.innerHTML = "<div class=\"state-loading\">Loading…</div>";
+  panel.innerHTML = "<div class=\"state-loading\">" + _lt('loy_loading','Loading…') + "</div>";
 
   Promise.all([_loyFetchStats(p.id, force), _loyFetchCustomers(p.id, force)]).then(function(results) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
@@ -2006,46 +2010,46 @@ function _loyRenderRewards(p, force) {
     var cards = ready.map(function(c) {
       return "<div class=\"panel\"><div class=\"panel-body\">" +
         "<div class=\"loy-member-top\"><span class=\"loy-member-ref\">" + _lyEsc(_loyMemberRef(c.maskedId)) + "</span>" +
-        "<span class=\"badge badge-success\">Ready</span></div>" +
-        "<div class=\"loy-member-row\"><span>Reward</span><span>" + _lyEsc(p.rewardText || "Free item") + "</span></div>" +
-        "<div class=\"loy-member-row\"><span>Last visit</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
+        "<span class=\"badge badge-success\">" + _lt('loy_ready_badge','Ready') + "</span></div>" +
+        "<div class=\"loy-member-row\"><span>" + _lt('loy_reward_label','Reward') + "</span><span>" + _lyEsc(p.rewardText || _lt('loy_default_reward','Free item')) + "</span></div>" +
+        "<div class=\"loy-member-row\"><span>" + _lt('loy_last_visit','Last visit') + "</span><span>" + _lyDate(c.lastStampAt) + "</span></div>" +
         // Redemption requires a fresh scan of the customer's actual wallet
         // QR (same reused /redeem/:slug/:token/confirm endpoint the scanner
         // already calls) — the admin customer list only ever exposes a
         // masked reference, by design, so there is no cid here safe to
         // redeem against directly without a new backend capability. Reusing
         // the scanner keeps this to exactly one reward system.
-        "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">Mark as Redeemed →</a>" +
+        "<a class=\"btn-outline\" style=\"width:100%;justify-content:center;margin-top:10px;color:#22c55e;border-color:rgba(34,197,94,0.25);\" href=\"" + window.PUBLIC_APP_ORIGIN + "/stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\">" + _lt('loy_mark_as_redeemed','Mark as Redeemed →') + "</a>" +
       "</div></div>";
     }).join("");
 
     panel.innerHTML =
       "<div class=\"kpi-row\">" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + _lyEsc(p.rewardText || "Free item") + "</div><div class=\"kpi-lbl\">Reward</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"kpi-lbl\">Stamps Required</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + ready.length + "</div><div class=\"kpi-lbl\">Reward Ready</div></div>" +
-        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">Redeemed</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + _lyEsc(p.rewardText || _lt('loy_default_reward','Free item')) + "</div><div class=\"kpi-lbl\">" + _lt('loy_reward_label','Reward') + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + (p.stampGoal || 10) + "</div><div class=\"kpi-lbl\">" + _lt('loy_stamps_required','Stamps Required') + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + ready.length + "</div><div class=\"kpi-lbl\">" + _lt('loy_kpi_reward_ready','Reward Ready') + "</div></div>" +
+        "<div class=\"kpi-card\"><div class=\"kpi-val\">" + rewardsRedeemed + "</div><div class=\"kpi-lbl\">" + _lt('loy_redeemed_label','Redeemed') + "</div></div>" +
       "</div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward-Ready Members<span class=\"section-count\">(" + ready.length + ")</span></span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_reward_ready_members','Reward-Ready Members') + "<span class=\"section-count\">(" + ready.length + ")</span></span></div>" +
       "<div class=\"loy-section\">" +
-        (ready.length === 0 ? "<div class=\"state-empty\">No rewards are waiting right now.</div>" : "<div class=\"loy-grid\">" + cards + "</div>") +
-        "<div class=\"loy-note\">To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.</div>" +
+        (ready.length === 0 ? "<div class=\"state-empty\">" + _lt('loy_no_rewards_waiting','No rewards are waiting right now.') + "</div>" : "<div class=\"loy-grid\">" + cards + "</div>") +
+        "<div class=\"loy-note\">" + _lt('loy_redeem_note',"To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.") + "</div>" +
       "</div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Redemption Summary</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_redemption_summary','Redemption Summary') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        "<div class=\"metric-row\"><span class=\"metric-lbl\">Rewards redeemed in total</span><span class=\"metric-val orange\">" + rewardsRedeemed + "</span></div>" +
+        "<div class=\"metric-row\"><span class=\"metric-lbl\">" + _lt('loy_rewards_redeemed_total','Rewards redeemed in total') + "</span><span class=\"metric-val orange\">" + rewardsRedeemed + "</span></div>" +
       "</div></div>" +
       // Detailed per-event redemption history (which customer, what time,
       // which reward) is not tracked anywhere in the current data model —
       // only the aggregate count above exists. Stated honestly rather than
       // omitted, per explicit founder requirement.
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Detailed History</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_detailed_history','Detailed History') + "</span></div>" +
       "<div class=\"panel loy-section\"><div class=\"panel-body\">" +
-        "<div class=\"loy-note\" style=\"margin-top:0;\">Detailed redemption history isn't tracked yet — QRAIVY doesn't currently record which customer redeemed, when, or which specific reward. Only the total count above is available.</div>" +
+        "<div class=\"loy-note\" style=\"margin-top:0;\">" + _lt('loy_detailed_history_note',"Detailed redemption history isn't tracked yet — QRAIVY doesn't currently record which customer redeemed, when, or which specific reward. Only the total count above is available.") + "</div>" +
       "</div></div>" +
-      "<div class=\"sec-hdr\"><span class=\"section-title\">Reward Settings</span></div>" +
+      "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('loy_reward_settings','Reward Settings') + "</span></div>" +
       "<div class=\"panel\"><div class=\"panel-body\">" +
-        "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">Edit reward name &amp; stamp goal →</button>" +
+        "<button class=\"btn-outline\" onclick=\"window._loySelectTab('settings')\">" + _lt('loy_edit_reward_link','Edit reward name &amp; stamp goal →') + "</button>" +
       "</div></div>";
   }).catch(function(err) {
     if (!_loyPanelIsLive(panel)) return; // stale invocation — panel detached by a later render, do not write
@@ -2059,61 +2063,61 @@ function _loyRenderSettings(p) {
   if (!panel) return;
   var isActive = p.status === "active";
   panel.innerHTML =
-    "<div class=\"sec-hdr\"><span class=\"section-title\">Settings</span></div>" +
+    "<div class=\"sec-hdr\"><span class=\"section-title\">" + _lt('nav_settings','Settings') + "</span></div>" +
     "<div class=\"metrics-grid\">" +
       // Program
-      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Program</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">" + _lt('loy_program_label','Program') + "</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
-          "<div><div class=\"loy-settings-label\">Program active</div><div class=\"loy-settings-sub\">Customers can collect stamps</div></div>" +
+          "<div><div class=\"loy-settings-label\">" + _lt('loy_program_active_label','Program active') + "</div><div class=\"loy-settings-sub\">" + _lt('loy_program_active_sub','Customers can collect stamps') + "</div></div>" +
           "<button class=\"loy-toggle" + (isActive ? " on" : "") + "\" onclick=\"window._loyToggleActive()\"><span></span></button>" +
         "</div>" +
         "<div style=\"padding:16px 18px;\">" +
-          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Reward name</label>" +
-          "<input class=\"loy-input\" id=\"loy-set-reward\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Free coffee\" />" +
-          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">Stamps required</label>" +
+          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">" + _lt('loy_reward_name_label','Reward name') + "</label>" +
+          "<input class=\"loy-input\" id=\"loy-set-reward\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"" + _lt('loy_reward_name_placeholder','Free coffee') + "\" />" +
+          "<label class=\"loy-settings-sub\" style=\"display:block;margin-bottom:6px;\">" + _lt('loy_stamps_required_label','Stamps required') + "</label>" +
           "<select class=\"loy-select\" id=\"loy-set-goal\">" +
-            [5,8,10,12,15].map(function(n){ return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>"; }).join("") +
+            [5,8,10,12,15].map(function(n){ return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + _lt('loy_stamps_suffix',' stamps') + "</option>"; }).join("") +
           "</select>" +
-          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:13px;font-size:.85rem;\" onclick=\"window._loySaveSettings()\">Save</button>" +
-          "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Saved</div>" +
+          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:13px;font-size:.85rem;\" onclick=\"window._loySaveSettings()\">" + _lt('loy_save','Save') + "</button>" +
+          "<div id=\"loy-set-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ " + _lt('loy_saved','Saved') + "</div>" +
         "</div>" +
       "</div></div>" +
       // Staff PIN
-      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Staff PIN</div></div><div class=\"panel-body\">" +
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">" + _lt('loy_staff_pin_label','Staff PIN') + "</div></div><div class=\"panel-body\">" +
         "<div style=\"display:flex;justify-content:space-between;align-items:center;\">" +
-          "<div class=\"loy-settings-sub\" style=\"margin-top:0;flex:1;\">Staff must enter this PIN before adding stamps or redeeming rewards.</div>" +
-          "<span id=\"loy-pin-badge\" class=\"badge badge-free\">Checking…</span>" +
+          "<div class=\"loy-settings-sub\" style=\"margin-top:0;flex:1;\">" + _lt('loy_staff_pin_sub','Staff must enter this PIN before adding stamps or redeeming rewards.') + "</div>" +
+          "<span id=\"loy-pin-badge\" class=\"badge badge-free\">" + _lt('loy_checking_ellipsis','Checking…') + "</span>" +
         "</div>" +
         "<div id=\"loy-pin-actions\" style=\"display:flex;gap:8px;margin-top:10px;\"></div>" +
         "<div id=\"loy-pin-form\" style=\"display:none;margin-top:10px;\">" +
-          "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"4-digit PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
-          "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"Confirm PIN\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+          "<input class=\"loy-input\" id=\"loy-set-pin\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"" + _lt('loy_pin_placeholder','4-digit PIN') + "\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
+          "<input class=\"loy-input\" id=\"loy-set-pin-confirm\" type=\"text\" inputmode=\"numeric\" maxlength=\"4\" placeholder=\"" + _lt('loy_pin_confirm_placeholder','Confirm PIN') + "\" style=\"margin-bottom:8px;\" oninput=\"this.value=this.value.replace(/\\D/g,'').slice(0,4)\" />" +
           "<div id=\"loy-pin-err\" style=\"display:none;color:#f87171;font-size:.72rem;margin-bottom:8px;\"></div>" +
-          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:12px;font-size:.82rem;\" onclick=\"window._loySavePin()\">Save PIN</button>" +
+          "<button class=\"btn-primary\" style=\"width:100%;justify-content:center;padding:12px;font-size:.82rem;\" onclick=\"window._loySavePin()\">" + _lt('loy_save_pin','Save PIN') + "</button>" +
         "</div>" +
-        "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ Staff PIN saved.</div>" +
+        "<div id=\"loy-pin-saved\" style=\"display:none;color:#22c55e;font-size:.75rem;text-align:center;margin-top:8px;\">✓ " + _lt('loy_staff_pin_saved','Staff PIN saved.') + "</div>" +
       "</div></div>" +
       // Wallet
-      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Wallet</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">" + _lt('loy_wallet_label','Wallet') + "</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
-          "<div class=\"loy-settings-label\">Apple Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+          "<div class=\"loy-settings-label\">" + _lt('loy_apple_wallet','Apple Wallet') + "</div><span class=\"loy-wallet-badge\">✓ " + _lt('loy_enabled','Enabled') + "</span>" +
         "</div>" +
         "<div class=\"loy-settings-row\">" +
-          "<div class=\"loy-settings-label\">Google Wallet</div><span class=\"loy-wallet-badge\">✓ Enabled</span>" +
+          "<div class=\"loy-settings-label\">" + _lt('loy_google_wallet','Google Wallet') + "</div><span class=\"loy-wallet-badge\">✓ " + _lt('loy_enabled','Enabled') + "</span>" +
         "</div>" +
       "</div></div>" +
       // Brand
-      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Brand</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">" + _lt('loy_brand_label','Brand') + "</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
-          "<div><div class=\"loy-settings-label\">Brand color</div><div class=\"loy-settings-sub\">Set from your Smart Landing Page design</div></div>" +
+          "<div><div class=\"loy-settings-label\">" + _lt('loy_brand_color_label','Brand color') + "</div><div class=\"loy-settings-sub\">" + _lt('loy_brand_color_sub','Set from your Smart Landing Page design') + "</div></div>" +
           "<span class=\"loy-swatch\" style=\"background:" + (p.color || "#ff5a1f") + "\"></span>" +
         "</div>" +
       "</div></div>" +
       // Customer Welcome
-      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">Customer Welcome</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
+      "<div class=\"panel\"><div class=\"panel-hdr\"><div class=\"panel-title\">" + _lt('loy_customer_welcome','Customer Welcome') + "</div></div><div class=\"panel-body\" style=\"padding:0;\">" +
         "<div class=\"loy-settings-row\">" +
-          "<div class=\"loy-settings-label\">Welcome Page</div>" +
-          "<a class=\"btn-outline\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">Open →</a>" +
+          "<div class=\"loy-settings-label\">" + _lt('loy_welcome_page','Welcome Page') + "</div>" +
+          "<a class=\"btn-outline\" target=\"_blank\" href=\"" + window.PUBLIC_APP_ORIGIN + "/lp/welcome/" + encodeURIComponent(p.slug) + "\">" + _lt('loy_open_arrow','Open →') + "</a>" +
         "</div>" +
       "</div></div>" +
     "</div>";
@@ -2128,18 +2132,18 @@ function _loyRefreshPinBadge(slug) {
   var badge = document.getElementById("loy-pin-badge");
   var actions = document.getElementById("loy-pin-actions");
   if (!badge || !actions) return;
-  badge.textContent = "Checking…";
+  badge.textContent = _lt('loy_checking_ellipsis','Checking…');
   fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(slug) + "/status")
     .then(function(r){ return r.json(); })
     .then(function(d) {
       var configured = !!d.configured;
-      badge.textContent = configured ? "Active" : "Not configured";
+      badge.textContent = configured ? _lt('loy_status_active','Active') : _lt('loy_pin_not_configured','Not configured');
       badge.className = "badge " + (configured ? "badge-success" : "badge-free");
       actions.innerHTML = configured
-        ? "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">Change Staff PIN</button>" +
-          "<button class=\"btn-outline\" style=\"color:#f87171;border-color:rgba(248,113,113,0.25);\" onclick=\"window._loyRemovePin()\">Remove Staff PIN</button>"
-        : "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">Set Staff PIN</button>";
-    }).catch(function(){ badge.textContent = "Not configured"; badge.className = "badge badge-free"; });
+        ? "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">" + _lt('loy_change_staff_pin','Change Staff PIN') + "</button>" +
+          "<button class=\"btn-outline\" style=\"color:#f87171;border-color:rgba(248,113,113,0.25);\" onclick=\"window._loyRemovePin()\">" + _lt('loy_remove_staff_pin','Remove Staff PIN') + "</button>"
+        : "<button class=\"btn-outline\" onclick=\"window._loyShowPinForm()\">" + _lt('loy_set_staff_pin','Set Staff PIN') + "</button>";
+    }).catch(function(){ badge.textContent = _lt('loy_pin_not_configured','Not configured'); badge.className = "badge badge-free"; });
 }
 
 window._loyToggleActive = function() {
@@ -2199,8 +2203,8 @@ window._loySavePin = function() {
   var confirmPin = (document.getElementById("loy-set-pin-confirm") || {}).value || "";
   var err = document.getElementById("loy-pin-err");
   function showErr(msg) { if (err) { err.textContent = msg; err.style.display = "block"; } }
-  if (!/^\d{4}$/.test(pin)) { showErr("PIN must be exactly 4 digits."); return; }
-  if (pin !== confirmPin) { showErr("PINs don't match. Try again."); return; }
+  if (!/^\d{4}$/.test(pin)) { showErr(_lt('loy_pin_must_be_4_digits','PIN must be exactly 4 digits.')); return; }
+  if (pin !== confirmPin) { showErr(_lt('loy_pins_dont_match',"PINs don't match. Try again.")); return; }
   if (err) err.style.display = "none";
   _lyAuthHeaders().then(function(headers) {
     fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug), {
@@ -2215,16 +2219,16 @@ window._loySavePin = function() {
         if (saved) { saved.style.display = "block"; setTimeout(function(){ saved.style.display = "none"; }, 2200); }
         _loyRefreshPinBadge(p.slug);
       } else {
-        showErr(d.error || "Failed to save PIN");
+        showErr(d.error || _lt('loy_failed_to_save_pin','Failed to save PIN'));
       }
-    }).catch(function(){ showErr("We couldn't connect. Please try again."); });
+    }).catch(function(){ showErr(_lt('loy_could_not_connect',"We couldn't connect. Please try again.")); });
   });
 };
 
 window._loyRemovePin = function() {
   var p = _loyCurrentProgram();
   if (!p) return;
-  if (!window.confirm("Remove the Staff PIN? The scanner will be unavailable until a new one is set.")) return;
+  if (!window.confirm(_lt('loy_confirm_remove_pin','Remove the Staff PIN? The scanner will be unavailable until a new one is set.'))) return;
   _lyAuthHeaders().then(function(headers) {
     fetch(window.API_ORIGIN + "/lp/staff-pin/" + encodeURIComponent(p.slug), {
       method: "DELETE",
@@ -2320,6 +2324,57 @@ window._loyRemovePin = function() {
       loy_enable: '+ Enable loyalty for this page', loy_loading: 'Loading…',
       loy_empty: 'No loyalty programs yet.',
       loy_col_customer: 'CUSTOMER', loy_col_stamps: 'STAMPS', loy_col_date: 'DATE',
+      loy_confirm_remove_pin: 'Remove the Staff PIN? The scanner will be unavailable until a new one is set.',
+      loy_no_visits_yet: 'No visits yet',
+      loy_reward_ready_status: 'Reward ready', loy_of: 'of', loy_stamps_lc: 'stamps', loy_default_reward: 'Free item',
+      loy_tab_overview: 'Overview', loy_tab_stamp: 'Stamp Customer', loy_tab_members: 'Members', loy_tab_rewards: 'Rewards',
+      loy_program_heading: 'Loyalty Program', loy_status_active: 'Active', loy_status_paused: 'Paused',
+      loy_paused_notice: 'Your loyalty program is paused. Customers cannot collect stamps until it is turned back on.',
+      loy_kpi_today_stamps: "Today's Stamps", loy_kpi_active_members: 'Active Members', loy_kpi_reward_ready: 'Reward Ready', loy_kpi_rewards_redeemed: 'Rewards Redeemed',
+      loy_quick_actions: 'Quick Actions', loy_stamp_customer_btn: 'Stamp Customer', loy_view_members_btn: 'View Members', loy_view_rewards_btn: 'View Rewards',
+      loy_recent_activity: 'Recent Activity', loy_no_activity_yet: 'No activity yet',
+      loy_recent_customers: 'Recent Customers', loy_no_customers_yet: 'No customers yet', loy_joined_prefix: 'Joined ',
+      loy_reward_progress: 'Reward Progress', loy_one_stamp_away: '1 stamp away', loy_building_up: 'Building up',
+      loy_program_health: 'Program Health', loy_redemption_rate: 'Redemption rate', loy_avg_stamps: 'Avg. stamps per member',
+      loy_scan_customer: 'Scan a Customer', loy_scan_customer_sub: "Add a stamp or check a reward using the customer's Wallet card",
+      loy_scanner: 'Scanner', loy_stamp_a_customer: 'Stamp a Customer',
+      loy_stamp_instructions: 'Ask the customer to open their Apple or Google Wallet loyalty card and show the QR code.',
+      loy_open_scanner: 'Open Scanner', loy_manual_entry: 'Manual Entry',
+      loy_manual_entry_sub: "If the camera can't read the code, enter it manually on the scanner page.",
+      loy_enter_code_manually: 'Enter Code Manually', loy_recent_stamp_activity: 'Recent Stamp Activity',
+      loy_staff_status: 'Staff Status', loy_checking_staff_pin: 'Checking staff PIN…',
+      loy_staff_pin_enabled: 'Staff PIN enabled', loy_staff_pin_not_configured_hint: 'Staff PIN not configured — set one in Settings',
+      loy_reward_ready_badge: 'Reward Ready', loy_scan_to_redeem: 'Scan to redeem', loy_stamps_label: 'Stamps', loy_last_visit: 'Last visit',
+      loy_members_heading: 'Members', loy_search_members_placeholder: 'Search members…', loy_filter_all: 'All',
+      loy_no_members_yet: 'No loyalty members yet. Ask your first customer to join.', loy_no_members_match: 'No members match this filter.',
+      loy_older_members_note: 'Some older members may appear more than once while customer records are being upgraded.',
+      loy_ready_badge: 'Ready', loy_reward_label: 'Reward', loy_mark_as_redeemed: 'Mark as Redeemed →',
+      loy_stamps_required: 'Stamps Required', loy_redeemed_label: 'Redeemed', loy_reward_ready_members: 'Reward-Ready Members',
+      loy_no_rewards_waiting: 'No rewards are waiting right now.',
+      loy_redeem_note: "To mark a reward as redeemed, scan the customer's Wallet card at the counter — this confirms it's the right customer before their reward is used.",
+      loy_redemption_summary: 'Redemption Summary', loy_rewards_redeemed_total: 'Rewards redeemed in total',
+      loy_detailed_history: 'Detailed History',
+      loy_detailed_history_note: "Detailed redemption history isn't tracked yet — QRAIVY doesn't currently record which customer redeemed, when, or which specific reward. Only the total count above is available.",
+      loy_reward_settings: 'Reward Settings', loy_edit_reward_link: 'Edit reward name & stamp goal →',
+      loy_program_label: 'Program', loy_program_active_label: 'Program active', loy_program_active_sub: 'Customers can collect stamps',
+      loy_reward_name_label: 'Reward name', loy_reward_name_placeholder: 'Free coffee',
+      loy_stamps_required_label: 'Stamps required', loy_stamps_suffix: ' stamps', loy_saved: 'Saved',
+      loy_staff_pin_label: 'Staff PIN', loy_staff_pin_sub: 'Staff must enter this PIN before adding stamps or redeeming rewards.',
+      loy_checking_ellipsis: 'Checking…', loy_pin_placeholder: '4-digit PIN', loy_pin_confirm_placeholder: 'Confirm PIN',
+      loy_save_pin: 'Save PIN', loy_staff_pin_saved: 'Staff PIN saved.',
+      loy_wallet_label: 'Wallet', loy_apple_wallet: 'Apple Wallet', loy_google_wallet: 'Google Wallet', loy_enabled: 'Enabled',
+      loy_brand_label: 'Brand', loy_brand_color_label: 'Brand color', loy_brand_color_sub: 'Set from your Smart Landing Page design',
+      loy_customer_welcome: 'Customer Welcome', loy_welcome_page: 'Welcome Page', loy_open_arrow: 'Open →',
+      loy_pin_not_configured: 'Not configured', loy_change_staff_pin: 'Change Staff PIN', loy_remove_staff_pin: 'Remove Staff PIN',
+      loy_set_staff_pin: 'Set Staff PIN', loy_pin_must_be_4_digits: 'PIN must be exactly 4 digits.',
+      loy_pins_dont_match: "PINs don't match. Try again.", loy_failed_to_save_pin: 'Failed to save PIN',
+      loy_could_not_connect: "We couldn't connect. Please try again.",
+      loy_connection_error: "We couldn't connect. Please check your connection and try again.",
+      loy_err_rate_limited: "Too many requests. Please wait a moment and try again.",
+      loy_err_session_expired: "Your session has expired. Please sign in again.",
+      loy_err_load_failed: "We couldn't load your loyalty data. Please try again.",
+      loy_no_program_title: 'No loyalty program yet', loy_no_program_sub: 'Set one up to start collecting stamps and rewarding repeat customers.',
+      loy_no_program_cta: 'Set one up →', loy_member_ending_prefix: 'Member ending ',
       lang_toggle: 'Deutsch'
     },
     de: {
@@ -2401,6 +2456,57 @@ window._loyRemovePin = function() {
       loy_enable: '+ Treue für diese Seite aktivieren', loy_loading: 'Wird geladen…',
       loy_empty: 'Noch keine Treueprogramme.',
       loy_col_customer: 'KUNDE', loy_col_stamps: 'STEMPEL', loy_col_date: 'DATUM',
+      loy_confirm_remove_pin: 'Staff-PIN entfernen? Der Scanner ist erst nach Einrichtung einer neuen PIN wieder verfügbar.',
+      loy_no_visits_yet: 'Noch keine Besuche',
+      loy_reward_ready_status: 'Belohnung bereit', loy_of: 'von', loy_stamps_lc: 'Stempeln', loy_default_reward: 'Kostenloser Artikel',
+      loy_tab_overview: 'Übersicht', loy_tab_stamp: 'Kunden stempeln', loy_tab_members: 'Mitglieder', loy_tab_rewards: 'Belohnungen',
+      loy_program_heading: 'Treueprogramm', loy_status_active: 'Aktiv', loy_status_paused: 'Pausiert',
+      loy_paused_notice: 'Ihr Treueprogramm ist pausiert. Kunden können erst wieder Stempel sammeln, wenn es reaktiviert wird.',
+      loy_kpi_today_stamps: 'Stempel heute', loy_kpi_active_members: 'Aktive Mitglieder', loy_kpi_reward_ready: 'Belohnung bereit', loy_kpi_rewards_redeemed: 'Eingelöste Belohnungen',
+      loy_quick_actions: 'Schnellaktionen', loy_stamp_customer_btn: 'Kunden stempeln', loy_view_members_btn: 'Mitglieder anzeigen', loy_view_rewards_btn: 'Belohnungen anzeigen',
+      loy_recent_activity: 'Letzte Aktivitäten', loy_no_activity_yet: 'Noch keine Aktivitäten',
+      loy_recent_customers: 'Neueste Kunden', loy_no_customers_yet: 'Noch keine Kunden', loy_joined_prefix: 'Beigetreten ',
+      loy_reward_progress: 'Belohnungsfortschritt', loy_one_stamp_away: 'Noch 1 Stempel', loy_building_up: 'Im Aufbau',
+      loy_program_health: 'Programmzustand', loy_redemption_rate: 'Einlösequote', loy_avg_stamps: 'Ø Stempel pro Mitglied',
+      loy_scan_customer: 'Kunde scannen', loy_scan_customer_sub: 'Stempel hinzufügen oder Belohnung mit der Wallet-Karte des Kunden prüfen',
+      loy_scanner: 'Scanner', loy_stamp_a_customer: 'Kunde stempeln',
+      loy_stamp_instructions: 'Bitten Sie den Kunden, seine Apple- oder Google-Wallet-Treuekarte zu öffnen und den QR-Code zu zeigen.',
+      loy_open_scanner: 'Scanner öffnen', loy_manual_entry: 'Manuelle Eingabe',
+      loy_manual_entry_sub: 'Falls die Kamera den Code nicht lesen kann, geben Sie ihn manuell auf der Scanner-Seite ein.',
+      loy_enter_code_manually: 'Code manuell eingeben', loy_recent_stamp_activity: 'Letzte Stempelaktivität',
+      loy_staff_status: 'Mitarbeiterstatus', loy_checking_staff_pin: 'Mitarbeiter-PIN wird geprüft…',
+      loy_staff_pin_enabled: 'Mitarbeiter-PIN aktiviert', loy_staff_pin_not_configured_hint: 'Mitarbeiter-PIN nicht eingerichtet — in den Einstellungen festlegen',
+      loy_reward_ready_badge: 'Belohnung bereit', loy_scan_to_redeem: 'Zum Einlösen scannen', loy_stamps_label: 'Stempel', loy_last_visit: 'Letzter Besuch',
+      loy_members_heading: 'Mitglieder', loy_search_members_placeholder: 'Mitglieder suchen…', loy_filter_all: 'Alle',
+      loy_no_members_yet: 'Noch keine Treue-Mitglieder. Laden Sie Ihren ersten Kunden zum Beitritt ein.', loy_no_members_match: 'Keine Mitglieder entsprechen diesem Filter.',
+      loy_older_members_note: 'Ältere Mitglieder können vorübergehend doppelt erscheinen, während Kundendatensätze aktualisiert werden.',
+      loy_ready_badge: 'Bereit', loy_reward_label: 'Belohnung', loy_mark_as_redeemed: 'Als eingelöst markieren →',
+      loy_stamps_required: 'Erforderliche Stempel', loy_redeemed_label: 'Eingelöst', loy_reward_ready_members: 'Mitglieder mit bereiter Belohnung',
+      loy_no_rewards_waiting: 'Derzeit warten keine Belohnungen.',
+      loy_redeem_note: 'Um eine Belohnung als eingelöst zu markieren, scannen Sie die Wallet-Karte des Kunden an der Kasse — so wird sichergestellt, dass es der richtige Kunde ist, bevor die Belohnung genutzt wird.',
+      loy_redemption_summary: 'Einlösungsübersicht', loy_rewards_redeemed_total: 'Insgesamt eingelöste Belohnungen',
+      loy_detailed_history: 'Detaillierter Verlauf',
+      loy_detailed_history_note: 'Ein detaillierter Einlöseverlauf wird noch nicht erfasst — QRAIVY speichert derzeit nicht, welcher Kunde wann welche Belohnung eingelöst hat. Nur die Gesamtzahl oben ist verfügbar.',
+      loy_reward_settings: 'Belohnungseinstellungen', loy_edit_reward_link: 'Belohnungsname &amp; Stempelziel bearbeiten →',
+      loy_program_label: 'Programm', loy_program_active_label: 'Programm aktiv', loy_program_active_sub: 'Kunden können Stempel sammeln',
+      loy_reward_name_label: 'Belohnungsname', loy_reward_name_placeholder: 'Kostenloser Kaffee',
+      loy_stamps_required_label: 'Erforderliche Stempel', loy_stamps_suffix: ' Stempel', loy_saved: 'Gespeichert',
+      loy_staff_pin_label: 'Mitarbeiter-PIN', loy_staff_pin_sub: 'Mitarbeiter müssen diese PIN eingeben, bevor sie Stempel hinzufügen oder Belohnungen einlösen.',
+      loy_checking_ellipsis: 'Wird geprüft…', loy_pin_placeholder: '4-stellige PIN', loy_pin_confirm_placeholder: 'PIN bestätigen',
+      loy_save_pin: 'PIN speichern', loy_staff_pin_saved: 'Mitarbeiter-PIN gespeichert.',
+      loy_wallet_label: 'Wallet', loy_apple_wallet: 'Apple Wallet', loy_google_wallet: 'Google Wallet', loy_enabled: 'Aktiviert',
+      loy_brand_label: 'Marke', loy_brand_color_label: 'Markenfarbe', loy_brand_color_sub: 'Wird aus dem Design Ihrer Smart Landing Page übernommen',
+      loy_customer_welcome: 'Kunden-Willkommensseite', loy_welcome_page: 'Willkommensseite', loy_open_arrow: 'Öffnen →',
+      loy_pin_not_configured: 'Nicht eingerichtet', loy_change_staff_pin: 'Mitarbeiter-PIN ändern', loy_remove_staff_pin: 'Mitarbeiter-PIN entfernen',
+      loy_set_staff_pin: 'Mitarbeiter-PIN festlegen', loy_pin_must_be_4_digits: 'Die PIN muss genau 4 Ziffern haben.',
+      loy_pins_dont_match: 'Die PINs stimmen nicht überein. Bitte erneut versuchen.', loy_failed_to_save_pin: 'PIN konnte nicht gespeichert werden',
+      loy_could_not_connect: 'Verbindung fehlgeschlagen. Bitte erneut versuchen.',
+      loy_connection_error: 'Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.',
+      loy_err_rate_limited: 'Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
+      loy_err_session_expired: 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+      loy_err_load_failed: 'Ihre Treueprogramm-Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
+      loy_no_program_title: 'Noch kein Treueprogramm', loy_no_program_sub: 'Richten Sie eines ein, um Stempel zu sammeln und Stammkunden zu belohnen.',
+      loy_no_program_cta: 'Jetzt einrichten →', loy_member_ending_prefix: 'Mitglied endet auf ',
       lang_toggle: 'English'
     }
   };
@@ -2416,6 +2522,18 @@ window._loyRemovePin = function() {
     if (window.QraivyDashboardShell) window.QraivyDashboardShell.updateLanguageLabel(t.lang_toggle);
     // Update dynamic card content language for future renders
     window._qraivyLang = lang;
+    // Expose the same dictionary to the page's other <script> blocks
+    // (Smart QR cards, Subscribers, AI Campaigns, Loyalty) so dynamically
+    // built content can reuse it instead of a second translation system —
+    // window._qraivyT[window._qraivyLang || 'en'].KEY, with an English
+    // literal fallback at each call site.
+    window._qraivyT = _t;
+    // Thin accessor over the same dictionary for other <script> blocks —
+    // not a second translation system, just a convenience wrapper.
+    window._qt = function(key, fallback) {
+      var dict = (window._qraivyT && window._qraivyT[window._qraivyLang]) || (window._qraivyT && window._qraivyT.en) || {};
+      return dict[key] !== undefined ? dict[key] : fallback;
+    };
     // Re-render empty state if visible
     var emptyTitle = document.querySelector('.sqr-empty-title');
     if (emptyTitle) emptyTitle.textContent = t.empty_title;
@@ -2423,6 +2541,14 @@ window._loyRemovePin = function() {
     if (emptySub) emptySub.textContent = t.empty_sub;
     var emptyBtn = document.querySelector('.sqr-empty .btn-create');
     if (emptyBtn) emptyBtn.textContent = t.empty_btn;
+    // Re-render the Loyalty shell/active tab if that section is currently
+    // visible and a program is already loaded — its content is built via
+    // innerHTML template strings, not [data-i18n], so it needs an explicit
+    // refresh hook here, same reasoning as the Smart QR empty-state above.
+    if (typeof _loySectionVisible === 'function' && _loySectionVisible() &&
+        typeof _loyCurrentProgram === 'function' && _loyCurrentProgram()) {
+      _loyRenderShell();
+    }
   }
 
   window.toggleLang = function() {
