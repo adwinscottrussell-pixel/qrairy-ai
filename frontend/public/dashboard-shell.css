@@ -132,8 +132,19 @@ body { display: flex; min-height: 100vh; background: #0a0a0a; color: #f0f4f8; fo
 .sb-signout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
 
 /* ── Main content area ─────────────────────────────────────────────────────── */
-#main-content { margin-left: var(--sidebar-width); flex: 1; min-width: 0; min-height: 100vh; transition: margin-left .22s; }
-body.sb-collapsed #main-content { margin-left: var(--sidebar-collapsed-width); }
+/* .dash-section (Subscribers/Campaigns/Loyalty) shares this exact rule
+   with #main-content rather than redefining its own sidebar-offset value
+   — same "one implementation, multiple selectors" pattern used elsewhere
+   in this codebase. Previously each .dash-section reimplemented this with
+   its own inline margin-left, which never responded to sidebar-collapse
+   state (see body.sb-collapsed below) and put its content at a different
+   X position than #main-content's. #section-settings also carries
+   .dash-section but keeps its own inline margin-left:0, which — being
+   inline — still overrides this class rule for that one section only;
+   it is a mobile-only view with no desktop sidebar-aware layout, so it's
+   intentionally left out of this shared mechanism. */
+#main-content, .dash-section { margin-left: var(--sidebar-width); flex: 1; min-width: 0; min-height: 100vh; transition: margin-left .22s; }
+body.sb-collapsed #main-content, body.sb-collapsed .dash-section { margin-left: var(--sidebar-collapsed-width); }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────────── */
 #mob-btn {
