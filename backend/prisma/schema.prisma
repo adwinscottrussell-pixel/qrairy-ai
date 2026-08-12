@@ -63,6 +63,17 @@ model Subscriber {
   subscribedAt    DateTime  @default(now())
   unsubscribedAt  DateTime?
   resendContactId String?
+  // Email Unsubscribe Phase B1 (double opt-in, 2026-08-12): when the
+  // subscriber's *current* consent cycle was cryptographically confirmed
+  // via the double-opt-in link. Null on every pre-existing row (no DOI
+  // evidence was ever collected for them — never fabricated) and reset to
+  // null whenever a subscriber re-enters 'pending' (an old confirmation
+  // proves a consent that has since been withdrawn, not the current one).
+  // A status:'subscribed' row with confirmedAt:null is a legacy,
+  // pre-DOI-confirmed subscriber; one with confirmedAt set went through
+  // double opt-in. This single nullable field is the entire B1 evidence
+  // model — no separate consent-history/versioning storage yet (Phase B2).
+  confirmedAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
   qr              QR?       @relation(fields: [qrId], references: [id])

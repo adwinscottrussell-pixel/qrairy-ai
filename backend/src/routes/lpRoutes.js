@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireStaffSession } = require('../utils/staffSession');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleUnsubscribe,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleUnsubscribe, handleConfirmEmail,
   handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
@@ -142,6 +142,11 @@ router.post('/lp/subscribe/:slug', handleSubscribe);
 // from the signed token (see unsubscribeToken.js), verified inside the
 // handler before anything is read or written.
 router.get('/lp/unsubscribe/:slug/:subscriberId', handleUnsubscribe);
+// Double Opt-In Phase B1 (2026-08-12): public, no auth — same reasoning as
+// the unsubscribe route above. Safety comes from the signed, expiring
+// token (see doubleOptInToken.js), verified before anything is read or
+// written.
+router.get('/lp/confirm-email/:slug/:subscriberId', handleConfirmEmail);
 // P0 SECURITY FIX (2026-08-11): GET /lp/subscribers/:slug removed — see
 // the comment left in lpController.js at the former handleGetSubscribers
 // location for details. Confirmed dead (zero callers repo-wide) before

@@ -2,11 +2,12 @@ const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
 const prisma = require('../utils/prismaClient');
 const https = require('https');
-const { sendWelcomeEmail } = require('../services/emailService');
+const { sendWelcomeEmail, sendDoubleOptInEmail } = require('../services/emailService');
 const { PUBLIC_APP_ORIGIN, API_ORIGIN } = require('../config/urls');
 const { getCustomerSerialNumber } = require('../utils/customerSerial');
 const { signStaffToken } = require('../utils/staffSession');
 const { verifyUnsubscribeToken } = require('../utils/unsubscribeToken');
+const { verifyDoubleOptInSignature, isDoubleOptInTokenExpired } = require('../utils/doubleOptInToken');
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -1338,6 +1339,17 @@ async function handlePublishLP(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+// Same page.sections.language parsing renderPremiumLP already uses
+// (line ~2482) — the landing page's own configured language, not a query
+// param. Shared here so handleSubscribe/handleConfirmEmail pick the same
+// language as the page the visitor actually submitted the form on.
+function getLandingPageLang(page) {
+  try {
+    const s = page && page.sections ? (typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections) : {};
+    return s.language || 'en';
+  } catch (_) { return 'en'; }
+}
+
 // ── POST /lp/subscribe/:slug ──
 async function handleSubscribe(req, res) {
   try {
@@ -1350,10 +1362,11 @@ async function handleSubscribe(req, res) {
     if (!emailNorm.includes('@') || emailNorm.length < 5) return res.status(400).json({ error: 'Valid email required' });
     if (!gdprConsent) return res.status(400).json({ error: 'GDPR consent required' });
 
-    // Get landing page for userId and bizName
+    // Get landing page for userId, bizName and language
     const lpPage = await prisma.landingPage.findUnique({ where: { slug } });
     const userId = lpPage ? lpPage.userId : null;
     const bizName = lpPage ? (lpPage.businessName || slug) : slug;
+    const lang = getLandingPageLang(lpPage);
 
     // Check for existing subscriber
     const existing = await prisma.subscriber.findFirst({
@@ -1361,56 +1374,185 @@ async function handleSubscribe(req, res) {
     });
 
     let subscriber;
-    let sendWelcome = false;
+    let sendConfirmation = false;
 
     if (existing) {
       if (existing.status === 'unsubscribed') {
-        // Email Unsubscribe Phase A follow-up (2026-08-12): must also
-        // reset gdprConsent back to true on reactivation. The unsubscribe
-        // handler (handleUnsubscribe) now correctly sets gdprConsent:false
-        // — without this, a resubscribed customer would show
-        // status:'subscribed' but stay permanently excluded from campaign
-        // eligibility (which requires both fields). Safe to set
-        // unconditionally here: the gdprConsent gate above (line ~1355)
-        // already rejects the whole request before this branch is ever
-        // reached unless gdprConsent was truthy.
+        // Double Opt-In Phase B1 (2026-08-12): re-subscribing after an
+        // unsubscribe requires a FRESH confirmation, not immediate
+        // reactivation. An old confirmation (or none at all, for legacy
+        // rows) proves consent that has since been withdrawn — it must
+        // not be silently reused to restore eligibility. confirmedAt is
+        // reset to null: the previous confirmation, if any, belonged to a
+        // consent cycle that no longer exists.
         subscriber = await prisma.subscriber.update({
           where: { id: existing.id },
-          data: { status: 'subscribed', gdprConsent: true, unsubscribedAt: null, subscribedAt: new Date(), updatedAt: new Date() }
+          data: { status: 'pending', gdprConsent: true, unsubscribedAt: null, confirmedAt: null, updatedAt: new Date() }
         });
-        sendWelcome = true;
-        console.log('[Subscribe] Reactivated:', emailNorm, slug);
+        sendConfirmation = true;
+        console.log('[Subscribe] Re-subscribe, pending DOI confirmation:', emailNorm, slug);
+      } else if (existing.status === 'pending') {
+        // Already mid-flow. No duplicate row, no state change — just
+        // resend the confirmation email with a fresh token/expiry. The
+        // response below is identical to the new-subscriber case so this
+        // doesn't disclose that the email already exists in the system.
+        subscriber = existing;
+        sendConfirmation = true;
+        console.log('[Subscribe] Pending — resending confirmation:', emailNorm, slug);
       } else {
+        // status === 'subscribed' — existing, untouched, pre-existing
+        // response shape (including its pre-existing template-literal
+        // bug, deliberately not fixed here — out of scope for this task).
         return res.json({ ok: true, message: '${t.alreadySubscribed}' });
       }
     } else {
+      // Double Opt-In Phase B1: created as 'pending', NOT campaign
+      // eligible (handleSendPush's eligibility query already requires
+      // status:'subscribed', so a pending row is excluded with no query
+      // change needed). subscribedAt keeps its schema default (now()) at
+      // creation but is deliberately overwritten again at confirmation
+      // time in handleConfirmEmail, per the Phase B1 spec — it should
+      // reflect when they became an actual confirmed subscriber, not when
+      // the form was merely submitted.
       subscriber = await prisma.subscriber.create({
-        data: { email: emailNorm, slug, gdprConsent: true, userId, source: 'email', status: 'subscribed', subscribedAt: new Date() }
+        data: { email: emailNorm, slug, gdprConsent: true, userId, source: 'email', status: 'pending' }
       });
-      sendWelcome = true;
-      console.log('[Subscribe] New subscriber:', emailNorm, slug);
+      sendConfirmation = true;
+      console.log('[Subscribe] New subscriber, pending DOI confirmation:', emailNorm, slug);
     }
 
-    if (sendWelcome) {
-      sendWelcomeEmail(emailNorm, { bizName, slug }).catch(e => console.error('[Welcome Email]', e.message));
+    if (sendConfirmation) {
+      // Resend contact sync deliberately does NOT happen here anymore.
+      // Registering the contact as an active Resend audience member before
+      // they've confirmed would misrepresent them as marketing-eligible in
+      // Resend while QRAIVY correctly still considers them 'pending'. The
+      // sync now happens in handleConfirmEmail, only on successful
+      // confirmation.
+      sendDoubleOptInEmail(emailNorm, { bizName, slug, subscriberId: subscriber.id, lang })
+        .catch(e => console.error('[DOI Email]', e.message));
     }
 
-    // Resend contact sync — async, non-blocking, non-fatal
-    if (process.env.RESEND_API_KEY && process.env.RESEND_AUDIENCE_ID) {
-      syncResendContact(emailNorm, process.env.RESEND_AUDIENCE_ID)
-        .then(function(contactId) {
-          if (contactId && subscriber) {
-            prisma.subscriber.update({ where: { id: subscriber.id }, data: { resendContactId: contactId } })
-              .catch(e => console.error('[Resend] Store contactId failed:', e.message));
-          }
-        })
-        .catch(e => console.error('[Resend] Sync failed (non-fatal):', e.message));
-    }
-
-    return res.json({ ok: true, message: 'Subscribed successfully' });
+    // Deliberately generic and identical for both the new-subscriber and
+    // pending-resend branches — avoids disclosing via response content
+    // whether this email already existed in the system.
+    return res.json({ ok: true, status: 'pending', message: 'Please check your email to confirm your subscription.' });
   } catch(e) {
     console.error('[Subscribe] Error:', e.message);
     return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── GET /lp/confirm-email/:slug/:subscriberId — public, no auth ──
+// Double Opt-In Phase B1 (2026-08-12). Same public-no-auth reasoning and
+// same HMAC discipline as handleUnsubscribe: the recipient has no QRAIVY
+// account, so safety comes entirely from the signed token (see
+// doubleOptInToken.js), verified before anything is read or written.
+// Unlike handleUnsubscribe, this token DOES expire (48h) and the expired
+// case is reported distinctly, so the visitor can be told to request a
+// new confirmation rather than seeing a bare "invalid link".
+async function handleConfirmEmail(req, res) {
+  const { slug, subscriberId } = req.params;
+  const { t: token, exp } = req.query;
+
+  function renderPage(bizName, lang, outcome) {
+    // outcome: 'confirmed' | 'invalid' | 'expired'
+    const isDE = lang === 'de';
+    const title = isDE ? 'Bestätigung' : 'Confirmation';
+    const heading = outcome === 'confirmed'
+      ? (isDE ? 'Anmeldung bestätigt' : 'Subscription confirmed')
+      : outcome === 'expired'
+        ? (isDE ? 'Link abgelaufen' : 'Link expired')
+        : (isDE ? 'Ungültiger Link' : 'Invalid link');
+    const body = outcome === 'confirmed'
+      ? (isDE
+          ? `Danke! Deine Anmeldung für Marketing-E-Mails von ${bizName} ist jetzt bestätigt.`
+          : `Thanks! Your email subscription for ${bizName} is now confirmed.`)
+      : outcome === 'expired'
+        ? (isDE
+            ? 'Dieser Bestätigungslink ist abgelaufen. Bitte melde dich erneut an, um einen neuen Link zu erhalten.'
+            : 'This confirmation link has expired. Please sign up again to receive a new one.')
+        : (isDE
+            ? 'Dieser Bestätigungslink ist ungültig.'
+            : 'This confirmation link is invalid.');
+    return `<!DOCTYPE html>
+<html lang="${isDE ? 'de' : 'en'}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} — QRAIVY</title></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <div style="max-width:420px;margin:24px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);text-align:center;">
+    <div style="background:#ff5a1f;padding:24px;">
+      <h1 style="color:#ffffff;margin:0;font-size:18px;">QRAIVY</h1>
+    </div>
+    <div style="padding:32px 28px;">
+      <h2 style="color:#1a1a1a;margin:0 0 12px;font-size:20px;">${heading}</h2>
+      <p style="color:#444;font-size:15px;line-height:1.6;margin:0;">${body}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  try {
+    const langParam = req.query.lang === 'en' ? 'en' : 'de';
+
+    // Missing params or a bad signature: generic invalid response, no DB
+    // access at all — a tampered subscriberId, slug, or exp value fails
+    // here because all three are bound into the signature (see
+    // doubleOptInToken.js), not just the raw token string.
+    if (!slug || !subscriberId || !token || !exp || !verifyDoubleOptInSignature(subscriberId, slug, exp, token)) {
+      return res.status(400).send(renderPage('', langParam, 'invalid'));
+    }
+
+    // Expiry is checked only AFTER the signature is confirmed genuine —
+    // otherwise an attacker could learn whether a forged exp value was
+    // merely "expired" vs "invalid" without a valid signature at all.
+    if (isDoubleOptInTokenExpired(exp)) {
+      return res.status(400).send(renderPage('', langParam, 'expired'));
+    }
+
+    const subscriber = await prisma.subscriber.findFirst({ where: { id: subscriberId, slug } });
+    if (!subscriber) {
+      return res.status(400).send(renderPage('', langParam, 'invalid'));
+    }
+
+    const page = await prisma.landingPage.findUnique({ where: { slug } });
+    const bizName = (page && page.businessName) || slug;
+    const lang = getLandingPageLang(page) === 'de' ? 'de' : (page ? 'en' : langParam);
+
+    if (subscriber.status === 'pending') {
+      const confirmedAt = new Date();
+      const updated = await prisma.subscriber.update({
+        where: { id: subscriber.id },
+        data: { status: 'subscribed', confirmedAt, subscribedAt: confirmedAt, updatedAt: confirmedAt }
+      });
+      sendWelcomeEmail(subscriber.email, { bizName, slug }).catch(e => console.error('[Welcome Email]', e.message));
+
+      // Resend contact sync happens here — on successful confirmation —
+      // not at pending-creation time (see handleSubscribe). Best-effort,
+      // non-blocking, never allowed to affect the response below.
+      if (process.env.RESEND_API_KEY && process.env.RESEND_AUDIENCE_ID && subscriber.email) {
+        syncResendContact(subscriber.email, process.env.RESEND_AUDIENCE_ID)
+          .then(function(contactId) {
+            if (contactId) {
+              prisma.subscriber.update({ where: { id: updated.id }, data: { resendContactId: contactId } })
+                .catch(e => console.error('[Resend] Store contactId failed:', e.message));
+            }
+          })
+          .catch(e => console.error('[Resend] Sync failed (non-fatal):', e.message));
+      }
+    } else if (subscriber.status === 'unsubscribed') {
+      // A confirmation token for a subscriber who has since unsubscribed
+      // (e.g. a stale confirmation email clicked after unsubscribing, or
+      // after a re-subscribe/unsubscribe cycle that bypassed confirming)
+      // must never silently resurrect marketing eligibility.
+      return res.status(400).send(renderPage(bizName, lang, 'invalid'));
+    }
+    // else: status is already 'subscribed' — idempotent, falls through to
+    // the same success page below, no additional writes.
+
+    return res.status(200).send(renderPage(bizName, lang, 'confirmed'));
+  } catch(e) {
+    console.error('[ConfirmEmail] Error:', e.message);
+    return res.status(400).send(renderPage('', 'de', 'invalid'));
   }
 }
 
@@ -2458,6 +2600,7 @@ function renderPremiumLP(page) {
       tapWelcome: 'Tap welcome to activate', subscribeDesc: 'Subscribe for updates, exclusive offers and early access from ',
       gdpr: 'I agree to receive marketing messages from ', gdprSuffix: '. I can unsubscribe at any time.',
       alreadySubscribed: 'Already subscribed', subscribedOk: '✓ Subscribed successfully',
+      confirmationSent: 'Check your email to confirm your subscription',
       aiPowered: 'AI Powered', autoFill: 'Auto-fill from your URL →',
       whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop'
     },
@@ -2470,6 +2613,7 @@ function renderPremiumLP(page) {
       tapWelcome: 'Willkommensnachricht antippen', subscribeDesc: 'Abonnieren Sie für Updates, exklusive Angebote und Frühzugang von ',
       gdpr: 'Ich erkläre mich einverstanden, Marketingmitteilungen von ', gdprSuffix: ' zu erhalten. Ich kann mich jederzeit abmelden.',
       alreadySubscribed: 'Bereits abonniert', subscribedOk: '✓ Erfolgreich abonniert',
+      confirmationSent: 'Bitte bestätige deine Anmeldung per E-Mail',
       aiPowered: 'KI-Powered', autoFill: 'Auto-Ausfüllen von Ihrer URL →',
       whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert'
     }
@@ -3027,6 +3171,10 @@ ${WALLET_URL_HELPER_JS}
         var isAlready = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('bereits');
         if (isAlready) {
           toast('${t.alreadySubscribed} 👍');
+        } else if (d.status === 'pending') {
+          toast('${t.confirmationSent}');
+          document.getElementById('sub-email').value = '';
+          document.getElementById('gdpr').checked = false;
         } else {
           toast('${t.subscribedOk}');
           document.getElementById('sub-email').value = '';
@@ -3509,7 +3657,7 @@ async function handleVerifyStaffPin(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleUnsubscribe,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleUnsubscribe, handleConfirmEmail,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,
