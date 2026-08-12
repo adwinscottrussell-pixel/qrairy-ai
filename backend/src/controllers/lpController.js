@@ -1350,6 +1350,15 @@ function getLandingPageLang(page) {
   } catch (_) { return 'en'; }
 }
 
+// Consent Evidence Phase B2B (2026-08-13): simple code-level constants —
+// no ConsentPolicy table. Selected via the same page.sections.language
+// resolution B1 already uses for the confirmation email itself, so the
+// recorded version always matches what the visitor actually saw.
+const EMAIL_MARKETING_POLICY_VERSION = { en: 'EMAIL_MARKETING_V1_EN', de: 'EMAIL_MARKETING_V1_DE' };
+function getEmailMarketingPolicyVersion(lang) {
+  return EMAIL_MARKETING_POLICY_VERSION[lang] || EMAIL_MARKETING_POLICY_VERSION.en;
+}
+
 // ── POST /lp/subscribe/:slug ──
 async function handleSubscribe(req, res) {
   try {
@@ -1385,17 +1394,36 @@ async function handleSubscribe(req, res) {
         // not be silently reused to restore eligibility. confirmedAt is
         // reset to null: the previous confirmation, if any, belonged to a
         // consent cycle that no longer exists.
-        subscriber = await prisma.subscriber.update({
-          where: { id: existing.id },
-          data: { status: 'pending', gdprConsent: true, unsubscribedAt: null, confirmedAt: null, updatedAt: new Date() }
+        const reSubscribeAt = new Date();
+        subscriber = await prisma.$transaction(async (tx) => {
+          const sub = await tx.subscriber.update({
+            where: { id: existing.id },
+            data: { status: 'pending', gdprConsent: true, unsubscribedAt: null, confirmedAt: null, updatedAt: reSubscribeAt }
+          });
+          // Consent Evidence Phase B2B (2026-08-13): a re-subscribe starts
+          // a BRAND NEW consent cycle — the previous withdrawn
+          // CustomerConsent row (if any) is left completely untouched,
+          // preserving the historical fact that they withdrew once
+          // before. Only a fresh row can become active again.
+          await tx.customerConsent.create({
+            data: {
+              slug, subscriberId: sub.id, purpose: 'email_marketing', status: 'pending',
+              method: null, policyVersion: getEmailMarketingPolicyVersion(lang),
+              requestedAt: reSubscribeAt, source: 'landing_page_signup'
+            }
+          });
+          return sub;
         });
         sendConfirmation = true;
         console.log('[Subscribe] Re-subscribe, pending DOI confirmation:', emailNorm, slug);
       } else if (existing.status === 'pending') {
-        // Already mid-flow. No duplicate row, no state change — just
-        // resend the confirmation email with a fresh token/expiry. The
-        // response below is identical to the new-subscriber case so this
-        // doesn't disclose that the email already exists in the system.
+        // Already mid-flow. No duplicate Subscriber row, no duplicate
+        // CustomerConsent row — the pending row created when this cycle
+        // started already correctly represents it (Consent Evidence
+        // Phase B2B). Just resend the confirmation email with a fresh
+        // token/expiry. The response below is identical to the
+        // new-subscriber case so this doesn't disclose that the email
+        // already exists in the system.
         subscriber = existing;
         sendConfirmation = true;
         console.log('[Subscribe] Pending — resending confirmation:', emailNorm, slug);
@@ -1414,8 +1442,23 @@ async function handleSubscribe(req, res) {
       // time in handleConfirmEmail, per the Phase B1 spec — it should
       // reflect when they became an actual confirmed subscriber, not when
       // the form was merely submitted.
-      subscriber = await prisma.subscriber.create({
-        data: { email: emailNorm, slug, gdprConsent: true, userId, source: 'email', status: 'pending' }
+      const signupAt = new Date();
+      subscriber = await prisma.$transaction(async (tx) => {
+        const sub = await tx.subscriber.create({
+          data: { email: emailNorm, slug, gdprConsent: true, userId, source: 'email', status: 'pending' }
+        });
+        // Consent Evidence Phase B2B: the first consent cycle for this
+        // Subscriber. policyVersion records the exact wording version
+        // shown at signup time, resolved the same way B1 already
+        // resolves the confirmation email's language.
+        await tx.customerConsent.create({
+          data: {
+            slug, subscriberId: sub.id, purpose: 'email_marketing', status: 'pending',
+            method: null, policyVersion: getEmailMarketingPolicyVersion(lang),
+            requestedAt: signupAt, source: 'landing_page_signup'
+          }
+        });
+        return sub;
       });
       sendConfirmation = true;
       console.log('[Subscribe] New subscriber, pending DOI confirmation:', emailNorm, slug);
@@ -1520,9 +1563,28 @@ async function handleConfirmEmail(req, res) {
 
     if (subscriber.status === 'pending') {
       const confirmedAt = new Date();
-      const updated = await prisma.subscriber.update({
-        where: { id: subscriber.id },
-        data: { status: 'subscribed', confirmedAt, subscribedAt: confirmedAt, updatedAt: confirmedAt }
+      const updated = await prisma.$transaction(async (tx) => {
+        const sub = await tx.subscriber.update({
+          where: { id: subscriber.id },
+          data: { status: 'subscribed', confirmedAt, subscribedAt: confirmedAt, updatedAt: confirmedAt }
+        });
+        // Consent Evidence Phase B2B: activate the SAME pending cycle
+        // this confirmation belongs to — never create a second row here.
+        // If no matching pending row exists (e.g. a Subscriber that
+        // entered 'pending' before B2B was wired up), skip silently
+        // rather than fabricate a requestedAt we don't actually have
+        // evidence for.
+        const pendingConsent = await tx.customerConsent.findFirst({
+          where: { subscriberId: sub.id, slug, purpose: 'email_marketing', status: 'pending' },
+          orderBy: { requestedAt: 'desc' }
+        });
+        if (pendingConsent) {
+          await tx.customerConsent.update({
+            where: { id: pendingConsent.id },
+            data: { status: 'active', method: 'double_opt_in_v1', confirmedAt }
+          });
+        }
+        return sub;
       });
       sendWelcomeEmail(subscriber.email, { bizName, slug }).catch(e => console.error('[Welcome Email]', e.message));
 
@@ -1632,9 +1694,28 @@ async function handleUnsubscribe(req, res) {
     const bizName = (page && page.businessName) || slug;
 
     if (subscriber.status !== 'unsubscribed') {
-      await prisma.subscriber.update({
-        where: { id: subscriber.id },
-        data: { status: 'unsubscribed', unsubscribedAt: new Date(), gdprConsent: false }
+      const withdrawnAt = new Date();
+      await prisma.$transaction(async (tx) => {
+        await tx.subscriber.update({
+          where: { id: subscriber.id },
+          data: { status: 'unsubscribed', unsubscribedAt: withdrawnAt, gdprConsent: false }
+        });
+        // Consent Evidence Phase B2B: withdraw the CURRENT active cycle.
+        // This row is now frozen — never touched again, even by a later
+        // re-subscribe (which creates a brand-new row instead, see
+        // handleSubscribe). If no active row exists (a legacy subscriber
+        // with no CustomerConsent history, or one confirmed before B2B
+        // was wired up), skip silently rather than fabricate one.
+        const activeConsent = await tx.customerConsent.findFirst({
+          where: { subscriberId: subscriber.id, slug, purpose: 'email_marketing', status: 'active' },
+          orderBy: { requestedAt: 'desc' }
+        });
+        if (activeConsent) {
+          await tx.customerConsent.update({
+            where: { id: activeConsent.id },
+            data: { status: 'withdrawn', withdrawnAt }
+          });
+        }
       });
 
       // Resend sync — best-effort, non-blocking, and never allowed to
