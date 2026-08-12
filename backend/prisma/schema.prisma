@@ -77,6 +77,9 @@ model Subscriber {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
   qr              QR?       @relation(fields: [qrId], references: [id])
+  // Consent Evidence Phase B2A: reverse relation only, no new column on
+  // Subscriber itself.
+  consents        CustomerConsent[]
 
   @@index([slug])
   @@index([userId])
@@ -288,4 +291,60 @@ model SupportAction {
   @@index([actorId])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// ============================================================
+// Consent Evidence — Phase B2A (standalone, 2026-08-13).
+//
+// Deliberately independent of Customer Foundation (Customer/
+// CustomerChannel), which has NOT been applied to production. No
+// customerRecordId, no channelId — those are additive future links, added
+// only once Customer Foundation itself is deployed. Referencing only
+// Subscriber (already in production) keeps this migration safely
+// deployable against today's actual production schema.
+//
+// One row per consent CYCLE, not one row per Subscriber: a
+// pending->active transition updates the same row; an active->withdrawn
+// transition updates the same row and then that row is frozen forever;
+// a NEW cycle (first signup, or re-subscribe after unsubscribe) always
+// creates a NEW row. Withdrawn rows are never revived or mutated again —
+// this is what lets CustomerConsent answer "when did they first
+// withdraw" even after a later resubscribe, which Subscriber's own
+// single mutable row structurally cannot.
+// ============================================================
+model CustomerConsent {
+  id            String    @id @default(cuid())
+
+  // Collision-safety anchor, denormalized directly here — same
+  // reasoning as every other slug-scoped table in this schema. Must
+  // remain trustworthy on its own since there is no Customer/
+  // CustomerChannel link in B2A.
+  slug          String
+
+  purpose       String    // "email_marketing" only for B2. Plain string,
+                           // not a DB enum, so a future purpose needs no
+                           // migration to add.
+
+  status        String    // "pending" | "active" | "withdrawn"
+  method        String?   // "double_opt_in_v1" | "legacy" | null (pending)
+  policyVersion String?   // e.g. "EMAIL_MARKETING_V1_DE" -- points at a
+                           // code-level wording constant, never stores
+                           // the rendered copy itself.
+
+  requestedAt   DateTime  // start of this consent cycle
+  confirmedAt   DateTime?
+  withdrawnAt   DateTime?
+  source        String?   // e.g. "landing_page_signup"
+
+  // The operational Subscriber row this evidence was derived from.
+  // Many-to-one, not 1:1 -- a single Subscriber accumulates multiple
+  // CustomerConsent rows over its lifetime (one per consent cycle).
+  subscriberId  String?
+  subscriber    Subscriber? @relation(fields: [subscriberId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@index([slug, purpose])
+  @@index([subscriberId])
 }
