@@ -1,4 +1,6 @@
 const { Resend } = require('resend');
+const { PUBLIC_APP_ORIGIN } = require('../config/urls');
+const { signUnsubscribeToken } = require('../utils/unsubscribeToken');
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@mail.qraivy.com';
 function getFrom(bizName) { return (bizName ? bizName + ' <' + FROM_EMAIL + '>' : FROM_EMAIL); }
@@ -42,6 +44,13 @@ async function sendCampaignEmail(subscribers, { title, message, linkUrl, bizName
   for (const sub of subscribers) {
     if (!sub.email) continue;
     try {
+      // Recipient-specific, tamper-resistant unsubscribe link. The token
+      // binds sub.id + slug + a dedicated purpose string (see
+      // unsubscribeToken.js) — a recipient can only unsubscribe their own
+      // record for this exact business, not anyone else's, and the link
+      // never carries a plaintext email address.
+      const unsubToken = signUnsubscribeToken(sub.id, slug);
+      const unsubUrl = `${PUBLIC_APP_ORIGIN}/lp/unsubscribe/${slug}/${sub.id}?t=${unsubToken}`;
       await resend.emails.send({
         from: getFrom(bizName),
         to: sub.email,
@@ -63,7 +72,7 @@ async function sendCampaignEmail(subscribers, { title, message, linkUrl, bizName
     </div>
     <div style="background:#f9f9f9;padding:16px;text-align:center;font-size:12px;color:#999;">
       You received this because you subscribed to updates from ${bizName}.<br/>
-      <a href="https://api.qraivy.com/lp/unsubscribe/${sub.id}" style="color:#999;">Unsubscribe</a>
+      <a href="${unsubUrl}" style="color:#999;">Unsubscribe</a>
     </div>
   </div>
 </body>

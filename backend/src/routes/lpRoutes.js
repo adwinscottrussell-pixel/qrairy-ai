@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireStaffSession } = require('../utils/staffSession');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleUnsubscribe,
   handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
@@ -137,6 +137,11 @@ router.get('/lp/push/:slug/history', handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
+// Email Unsubscribe Phase A (2026-08-12): public, no auth — the recipient
+// of a campaign email has no QRAIVY account to log into. Safety comes
+// from the signed token (see unsubscribeToken.js), verified inside the
+// handler before anything is read or written.
+router.get('/lp/unsubscribe/:slug/:subscriberId', handleUnsubscribe);
 // P0 SECURITY FIX (2026-08-11): GET /lp/subscribers/:slug removed — see
 // the comment left in lpController.js at the former handleGetSubscribers
 // location for details. Confirmed dead (zero callers repo-wide) before
