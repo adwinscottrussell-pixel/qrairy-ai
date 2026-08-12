@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requireStaffSession } = require('../utils/staffSession');
 const router  = express.Router();
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe,
   handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
@@ -137,7 +137,11 @@ router.get('/lp/push/:slug/history', handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
-router.get('/lp/subscribers/:slug', handleGetSubscribers);
+// P0 SECURITY FIX (2026-08-11): GET /lp/subscribers/:slug removed — see
+// the comment left in lpController.js at the former handleGetSubscribers
+// location for details. Confirmed dead (zero callers repo-wide) before
+// removal; the authenticated, masked equivalents are
+// /loyalty/subscribers/summary and /loyalty/subscribers/:slug/detail.
 // Staff PIN — set/change (owner auth), remove (owner auth), status (no
 // auth, existence check only), verify (no auth, validates an entered PIN
 // and mints a staff-session token on success)

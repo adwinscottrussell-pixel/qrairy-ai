@@ -1415,19 +1415,17 @@ async function syncResendContact(email, audienceId) {
     return null;
   }
 }
-// ── GET /lp/subscribers/:slug ──
-async function handleGetSubscribers(req, res) {
-  try {
-    const { slug } = req.params;
-    const subscribers = await prisma.subscriber.findMany({
-      where: { slug },
-      orderBy: { createdAt: 'desc' }
-    });
-    return res.json({ ok: true, count: subscribers.length, subscribers });
-  } catch(e) {
-    return res.status(500).json({ error: e.message });
-  }
-}
+// P0 SECURITY FIX (2026-08-11): handleGetSubscribers (GET /lp/subscribers/:slug)
+// removed. It had no requireAuth and no ownership check, returning full
+// unmasked Subscriber rows (including plaintext email) to any caller who
+// knew a slug — slugs are not secret, they appear in every public landing
+// page URL/QR code. Confirmed via repo-wide grep this handler had zero
+// callers anywhere in the frontend or backend — genuinely dead code, so it
+// is retired outright rather than gated, per the smallest-safe-fix
+// preference for unused attack surface. The authenticated, masked
+// equivalents (used by the real Subscribers admin UI) are
+// GET /loyalty/subscribers/summary and GET /loyalty/subscribers/:slug/detail
+// in loyaltyAdminController.js — unaffected by this change.
 
 // ── POST /lp/push/:slug — send push to all wallet pass holders ──
 async function handleWebPushSubscribe(req, res) {
@@ -1465,6 +1463,20 @@ async function handleSendPush(req, res) {
     const { title, message, linkUrl } = req.body || {};
     if (!slug) return res.status(400).json({ error: 'missing slug' });
     if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
+
+    // P0 SECURITY FIX (2026-08-12): ownership check, deliberately placed
+    // before ANY audience lookup or send attempt (Resend/APNs/web-push/
+    // campaign-history write). Without this, any authenticated user could
+    // send a real campaign to any other business's subscribers just by
+    // knowing their slug. Same convention already used elsewhere in this
+    // file (see handleUploadLogo) — findUnique by slug, 404 if missing,
+    // 403 if the requester isn't the owner.
+    const ownerPage = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!ownerPage) return res.status(404).json({ error: 'Page not found.' });
+    if (ownerPage.userId && req.userId && ownerPage.userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const serial = 'sqr-' + slug;
     const devices = await prisma.passDevice.findMany({
       where: { pass: { serialNumber: serial } },
@@ -3389,7 +3401,7 @@ async function handleVerifyStaffPin(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,

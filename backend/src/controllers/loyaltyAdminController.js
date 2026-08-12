@@ -403,14 +403,36 @@ async function generateCampaignMessage(req, res) {
 // GET /loyalty/subscribers/summary
 async function getSubscriberSummary(req, res) {
   try {
-    const [pages, webGroups, emailGroups] = await Promise.all([
-      prisma.landingPage.findMany({ select: { slug: true, businessName: true, name: true } }).catch(() => []),
-      prisma.webPushSubscription.groupBy({ by: ['slug'], _count: { id: true } }),
-      prisma.subscriber.groupBy({ by: ['slug'], _count: { id: true } }).catch(() => [])
+    const userId = req.userId;
+
+    // P0 SECURITY FIX (2026-08-12): this previously queried every table
+    // completely unfiltered, aggregating subscriber counts and business
+    // names across ALL businesses on the platform for any authenticated
+    // caller. Fix scopes the owner's LandingPages first, then restricts
+    // BOTH group-by queries to only those slugs -- filtering `pages`
+    // alone would not have been sufficient, since webGroups/emailGroups
+    // were still deriving `allSlugs` from every slug in the system.
+    // BUGFIX (2026-08-12): this previously selected `name`, which does not
+    // exist on LandingPage (only `businessName` does), throwing on every
+    // call. The `.catch(() => [])` below silently turned that error into an
+    // empty result, so this endpoint always returned `pages: []` for every
+    // caller regardless of ownership. Removed here; the outer try/catch
+    // (below) already returns a proper 500 for genuine failures, so a real
+    // error is no longer indistinguishable from an authentic empty state.
+    const pages = await prisma.landingPage.findMany({ where: { userId }, select: { slug: true, businessName: true } });
+    const ownedSlugs = pages.map(function(p) { return p.slug; });
+
+    const [webGroups, emailGroups] = await Promise.all([
+      ownedSlugs.length
+        ? prisma.webPushSubscription.groupBy({ by: ['slug'], where: { slug: { in: ownedSlugs } }, _count: { id: true } })
+        : [],
+      ownedSlugs.length
+        ? prisma.subscriber.groupBy({ by: ['slug'], where: { slug: { in: ownedSlugs } }, _count: { id: true } })
+        : []
     ]);
 
     const pageNameMap = {};
-    pages.forEach(function(p) { pageNameMap[p.slug] = p.businessName || p.name || p.slug; });
+    pages.forEach(function(p) { pageNameMap[p.slug] = p.businessName || p.slug; });
 
     const webMap = {};
     webGroups.forEach(function(g) { webMap[g.slug] = g._count.id; });
@@ -464,6 +486,17 @@ async function getSubscriberSummary(req, res) {
 async function getSubscriberDetail(req, res) {
   try {
     const { slug } = req.params;
+    const userId = req.userId;
+
+    // P0 SECURITY FIX (2026-08-12): ownership check. This endpoint was
+    // authenticated and masked, but any logged-in user could view any
+    // other business's masked subscriber activity by slug. Same
+    // findUnique-then-compare convention used by every sibling handler in
+    // this file (getProgram, createProgram, updateProgram, toggleStatus,
+    // adminStamp, getStats, getCustomers).
+    const lp = await prisma.landingPage.findUnique({ where: { slug } });
+    if (!lp) return res.status(404).json({ error: 'Page not found' });
+    if (lp.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     const [webSubs, emailSubs, passIds] = await Promise.all([
       prisma.webPushSubscription.findMany({ where: { slug }, select: { endpoint: true, createdAt: true }, orderBy: { createdAt: 'desc' } }),
