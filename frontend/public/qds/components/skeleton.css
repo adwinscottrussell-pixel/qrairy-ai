@@ -1,0 +1,64 @@
+/* QDS Component — Skeleton
+   Extracted from frontend/public/dashboard-shell.css:328-344 (@keyframes
+   skel-shimmer, .skel/.skel-line/.skel-card/.skel-row/.skel-avatar).
+   Values match Dashboard exactly. Additive only — see qds/layouts/page.css's
+   header comment for the shared rationale. This is the pattern
+   qds/components/surface.css's own header comment explicitly defers to
+   ("pending a real Skeleton component (catalog #28)") — this file is that
+   component.
+
+   Reduced-motion note: this file intentionally does NOT add its own
+   prefers-reduced-motion override. dashboard-shell.css already has a
+   global @media(prefers-reduced-motion:reduce){*,*::before,*::after{...}}
+   catch-all covering any animated element, including this one, on every
+   page that loads both files together. Duplicating that override here
+   would itself be exactly the kind of duplicate CSS this effort exists to
+   remove — flagging the dependency instead. A page using this file
+   without dashboard-shell.css would need its own reduced-motion handling. */
+
+@keyframes qds-skel-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.qds-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  ); /* no --qds-* tokens for these three alpha stops — kept raw */
+  background-size: 400% 100%;
+  animation: qds-skel-shimmer 1.6s ease-in-out infinite; /* 1.6s is a slow decorative loop, not one of the interaction-feedback --qds-duration-* tokens — kept raw */
+  border-radius: var(--qds-radius-sm);
+}
+
+.qds-skeleton--line {
+  height: var(--qds-space-3); /* matches Dashboard's 12px exactly */
+  margin-bottom: var(--qds-space-2); /* matches Dashboard's 8px exactly */
+}
+
+.qds-skeleton--line.qds-skeleton--w-40 { width: 40%; }
+.qds-skeleton--line.qds-skeleton--w-60 { width: 60%; }
+.qds-skeleton--line.qds-skeleton--w-80 { width: 80%; }
+
+.qds-skeleton--card {
+  background: var(--qds-color-surface-1);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: 14px; /* no exact --qds-radius-* token (lg=12/xl=16 nearest) — kept raw, matches --card-radius-lg */
+  padding: 18px; /* no exact token (16/20 nearest) — kept raw */
+}
+
+.qds-skeleton--row {
+  display: flex;
+  align-items: center;
+  gap: var(--qds-space-3); /* matches Dashboard's 12px exactly */
+  padding: var(--qds-space-3) var(--qds-space-4); /* matches Dashboard's 12px 16px exactly */
+}
+
+.qds-skeleton--avatar {
+  width: 36px; /* no exact token (32/40 nearest) — kept raw */
+  height: 36px;
+  border-radius: var(--qds-radius-md);
+  flex-shrink: 0;
+}

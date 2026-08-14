@@ -1,0 +1,119 @@
+/* QDS Component — Toolbar / Filter Bar
+   Extracted from frontend/public/dashboard-shell.css:
+     .filter-bar/.filter-btn/.filter-select/.filter-sep (284-290)
+     .table-search (365-367)
+   Values match Dashboard exactly. Additive only — see qds/layouts/page.css's
+   header comment for the shared rationale (dashboard-shell.css's originals
+   are untouched; analytics.html and any unmigrated page keeps working).
+
+   Provenance note, checked directly against live markup: .filter-bar/
+   .filter-btn/.filter-select/.filter-sep are defined in the shared
+   dashboard-shell.css, but dashboard.html itself renders zero instances of
+   any of them — analytics.html is the only current live consumer (its
+   date-range filter row, analytics.html:39-52). Flagging this plainly
+   since these rules were extracted from the shared shell file Dashboard
+   loads, not from something Dashboard's own page visibly uses today.
+
+   toolbar-left / toolbar-right: not added. Analytics' actual .filter-bar
+   markup is a single flat flex row (buttons, a separator, a select) with
+   no left/right grouping, margin-left:auto push, or two-section structure
+   anywhere in it — there is no real pattern to extract this from. Per
+   "report it instead of creating it," noting the absence here rather than
+   inventing a two-region toolbar that doesn't exist yet.
+
+   Several current values have no exact match on the QDS scales (filter-bar
+   gap 7px, filter-btn/select radius 7px, .68rem font-size, the lighter
+   hover orange #ff8c55, the "muted-dim" text tier used by the search
+   placeholder, and the accent-border alpha variant used on focus/hover) —
+   kept as exact raw values rather than rounded or substituted, so this
+   extraction stays pixel-identical to Dashboard rather than introducing a
+   token that doesn't actually exist yet. Flagged inline; a future token
+   pass can decide whether any of these deserve a real foundation token. */
+
+.qds-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px; /* no exact token (4/8 nearest) — kept raw */
+  flex-wrap: wrap;
+  margin-bottom: var(--qds-space-6); /* matches Dashboard's 24px exactly */
+}
+
+.qds-toolbar__btn {
+  padding: 6px 13px; /* no exact tokens for either value — kept raw */
+  background: var(--qds-color-surface-1);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: 7px; /* no exact --qds-radius-* token (sm=6/md=8 nearest) — kept raw */
+  font-family: var(--qds-font-family-mono);
+  font-size: .68rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: var(--qds-color-text-muted);
+  cursor: pointer;
+  transition: all var(--qds-duration-standard) var(--qds-easing-standard);
+}
+
+.qds-toolbar__btn:hover {
+  border-color: rgba(255, 90, 31, 0.2); /* no --qds-* accent-border-alpha token exists today — kept raw, matches --dashboard-accent-border */
+  color: #ff8c55; /* no --qds-* token matches this lighter hover orange — kept raw */
+}
+
+.qds-toolbar__btn--active {
+  background: var(--qds-color-selected-surface);
+  border-color: var(--qds-color-brand-primary);
+  color: var(--qds-color-brand-primary);
+}
+
+.qds-toolbar__select {
+  padding: 6px 11px; /* no exact tokens — kept raw */
+  background: var(--qds-color-surface-1);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: 7px; /* see .qds-toolbar__btn note above */
+  font-family: var(--qds-font-family-mono);
+  font-size: .68rem;
+  color: var(--qds-color-text-muted);
+  cursor: pointer;
+  outline: none;
+}
+
+.qds-toolbar__select option {
+  background: var(--qds-color-surface-1);
+  color: var(--qds-color-text-primary);
+}
+
+.qds-toolbar__sep {
+  width: 1px;
+  height: 18px; /* no exact token — kept raw */
+  background: var(--qds-color-border-subtle);
+  margin: 0 2px; /* no exact token (space-1=4px nearest, not exact) — kept raw */
+}
+
+.qds-toolbar__search {
+  padding: 6px 12px; /* no exact tokens — kept raw */
+  background: var(--qds-color-surface-1);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: 7px; /* see .qds-toolbar__btn note above */
+  font-family: var(--qds-font-family-mono);
+  font-size: .68rem;
+  color: var(--qds-color-text-primary);
+  outline: none;
+  width: 180px; /* page-specific fixed width, kept as-is per Dashboard's current usage */
+}
+
+.qds-toolbar__search::placeholder {
+  color: #5a6b7a; /* no --qds-* token for this "dimmer muted" tier — kept raw, matches --dashboard-muted-dim */
+}
+
+/* STOP-and-extend case, found migrating Analytics' second, separate search
+   input (.perf-search, analytics-page.css) onto this component: below
+   640px the fixed 180px width becomes full-width. Not present on the
+   .table-search rules this file was originally built from — a genuine
+   responsive behavior this component was missing, not page-specific
+   sizing (the breakpoint and value are the same 640px .qds-page-wrap
+   already uses elsewhere in QDS). */
+@media (max-width: 640px) {
+  .qds-toolbar__search {
+    width: 100%;
+  }
+}
+
+.qds-toolbar__search:focus {
+  border-color: rgba(255, 90, 31, 0.2); /* see .qds-toolbar__btn:hover note above */
+}

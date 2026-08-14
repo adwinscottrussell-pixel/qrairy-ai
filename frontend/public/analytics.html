@@ -473,11 +473,23 @@ async function loadAnalytics() {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function initAnalytics() {
-  await window.Clerk.load();
-  await new Promise(r => setTimeout(r, 400));
-  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+  // Local-only visual preview stand-in — requires BOTH a local hostname AND
+  // ?preview=1, matching dashboard.html's initDashboard() and
+  // js/auth-guard.js's bypass exactly. Off localhost, or without the flag,
+  // this is skipped and the real Clerk check below runs unchanged.
+  const _host = window.location.hostname;
+  const _isLocalPreview = (_host === 'localhost' || _host === '127.0.0.1') && /(?:^|[?&])preview=1(?:&|$)/.test(window.location.search);
+  let _user;
+  if (_isLocalPreview) {
+    _user = { firstName: 'Preview', emailAddresses: [{ emailAddress: 'preview@localhost' }], id: 'local-preview-user' };
+  } else {
+    await window.Clerk.load();
+    await new Promise(r => setTimeout(r, 400));
+    if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+    _user = window.Clerk.user;
+  }
 
-  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  const name = _user.firstName || _user.emailAddresses[0].emailAddress;
   document.getElementById('sb-username').textContent = name;
   document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
   document.getElementById('sb-signout').addEventListener('click', async e => {

@@ -20,6 +20,15 @@
  */
 
 (function () {
+  // Local-only visual preview bypass. Requires BOTH a local hostname AND an
+  // explicit ?preview=1 flag — never true on qraivy.com, a Vercel preview
+  // deployment, or Railway. If either condition is false, this is a no-op
+  // and the guard below runs exactly as it always has.
+  var _host = window.location.hostname;
+  var _isLocalHost = _host === 'localhost' || _host === '127.0.0.1';
+  var _hasPreviewFlag = /(?:^|[?&])preview=1(?:&|$)/.test(window.location.search);
+  if (_isLocalHost && _hasPreviewFlag) return;
+
   // Hide page immediately — revealed only after auth resolves
   document.documentElement.style.visibility = 'hidden';
 

@@ -1,6 +1,8 @@
 /* QDS — QRAIVY Design System
-   Single entry point. Not imported anywhere in the application yet (v0.1 foundation phase).
-   Import order matters: colors/typography/spacing define primitives other files may reference. */
+   Single entry point. Imported by dashboard.html today; analytics.html and
+   other admin pages are migrated separately (out of scope for this phase).
+   Import order matters: colors/typography/spacing define primitives other
+   files may reference; layouts before components that use them. */
 
 @import url('./foundation/colors.css');
 @import url('./foundation/typography.css');
@@ -10,6 +12,14 @@
 @import url('./foundation/motion.css');
 @import url('./foundation/breakpoints.css');
 
+@import url('./layouts/page.css');
+@import url('./layouts/grid.css');
+
 @import url('./components/button.css');
 @import url('./components/surface.css');
 @import url('./components/input.css');
+@import url('./components/toolbar.css');
+@import url('./components/table.css');
+@import url('./components/badge.css');
+@import url('./components/empty-state.css');
+@import url('./components/skeleton.css');

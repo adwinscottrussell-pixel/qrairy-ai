@@ -13,9 +13,12 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#0a0a0a;color:#f0ece0;font-family:"DM Mono",monospace;min-height:100vh}
-    #main-content{margin-left:240px;min-height:100vh;padding:40px;transition:margin-left .22s ease}
-    body.sb-collapsed #main-content{margin-left:60px}
-    @media(max-width:768px){#main-content{margin-left:0!important;padding:72px 16px 40px}}
+    /* margin-left/collapsed-width/mobile-zero come from the shared
+       dashboard-shell.css #main-content rule now (var(--sidebar-width),
+       matching every other shell page) — this page only adds its own
+       content padding on top. */
+    #main-content{padding:40px}
+    @media(max-width:768px){#main-content{padding:72px 16px 40px}}
     .wps-wrap{max-width:980px;margin:0 auto}
     .wps-head{margin-bottom:24px}
     .wps-tag{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:#ff5a1f;margin-bottom:8px}
@@ -86,45 +89,9 @@
     #wps-empty,#wps-loading{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
   </style>
 </head>
-<body>
-<div id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-icon">Q</div>
-    <div class="sb-logo-text">QR<span>Aivy</span></div>
-  </div>
-  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
-  <nav class="sb-nav">
-    <div class="sb-group" data-i18n="nav_main">Main</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
-    <a href="dashboard.html?section=loyalty" class="sb-item"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="wallet-pass-studio.html" class="sb-item active"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar" id="sb-avatar">?</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
-      </div>
-    </div>
-    <button onclick="handleSignOut()" class="sb-signout">&#x2192; <span data-i18n="nav_signout">Sign Out</span></button>
-  </div>
-  <div style="padding:8px 12px 12px;">
-    <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:7px;"><span style="font-size:.8rem;">🌐</span><span id="lang-toggle-label">Deutsch</span></button>
-  </div>
-</div>
-<div id="sb-overlay" class="sb-overlay"></div>
+<body data-shell="customer" data-active-nav="nav-wallet">
+<div id="sidebar"></div>
+<script src="js/dashboard-shell.js"></script>
 
 <div id="main-content">
   <div class="wps-wrap">
@@ -226,8 +193,8 @@
   var CURRENT_SLUG = null;
 
   var NAV_T = {
-    en: { nav_main:'Main', nav_dashboard:'Dashboard', nav_analytics:'Analytics', nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR Pages', nav_createnew:'Create New QR', nav_engage:'Engage', nav_campaigns:'AI Campaigns', nav_subscribers:'Subscribers', nav_loyalty:'Loyalty', nav_configure:'Configure', nav_wallet:'Wallet Passes', nav_account:'Account', nav_billing:'Billing & Plans', nav_settings:'Settings', role_owner:'Business Owner', nav_signout:'Sign Out' },
-    de: { nav_main:'Hauptmenü', nav_dashboard:'Dashboard', nav_analytics:'Analytics', nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR-Seiten', nav_createnew:'Neuen QR erstellen', nav_engage:'Engagement', nav_campaigns:'KI-Kampagnen', nav_subscribers:'Abonnenten', nav_loyalty:'Treue', nav_configure:'Konfigurieren', nav_wallet:'Wallet-Pässe', nav_account:'Konto', nav_billing:'Abrechnung & Pläne', nav_settings:'Einstellungen', role_owner:'Unternehmensinhaber', nav_signout:'Abmelden' }
+    en: { nav_main:'Main', nav_dashboard:'Dashboard', nav_analytics:'Analytics', nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR Pages', nav_createnew:'Create New QR', nav_engage:'Engage', nav_campaigns:'AI Campaigns', nav_subscribers:'Customers', nav_loyalty:'Loyalty', nav_configure:'Configure', nav_wallet:'Wallet Passes', nav_account:'Account', nav_billing:'Billing & Plans', nav_settings:'Settings', role_owner:'Business Owner', nav_signout:'Sign Out' },
+    de: { nav_main:'Hauptmenü', nav_dashboard:'Dashboard', nav_analytics:'Analytics', nav_smartpages:'Smart Pages', nav_sqrpages:'Smart QR-Seiten', nav_createnew:'Neuen QR erstellen', nav_engage:'Engagement', nav_campaigns:'KI-Kampagnen', nav_subscribers:'Kunden', nav_loyalty:'Treue', nav_configure:'Konfigurieren', nav_wallet:'Wallet-Pässe', nav_account:'Konto', nav_billing:'Abrechnung & Pläne', nav_settings:'Einstellungen', role_owner:'Unternehmensinhaber', nav_signout:'Abmelden' }
   };
 
   var WPS_T = {
@@ -458,37 +425,19 @@
 
 <script>
 (function(){
-  var sidebar = document.getElementById('sidebar');
-  var sbToggle = document.getElementById('sb-toggle');
-  if(localStorage.getItem('sb-collapsed')==='true'){sidebar.classList.add('collapsed');document.body.classList.add('sb-collapsed');}
-  if(sbToggle) sbToggle.addEventListener('click',function(){
-    var col = sidebar.classList.toggle('collapsed');
-    document.body.classList.toggle('sb-collapsed', col);
-    localStorage.setItem('sb-collapsed', col);
-  });
-  var overlay = document.getElementById('sb-overlay');
-  if(overlay) overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
-
+  // Sidebar chrome (collapse, mobile bottom nav, sign-out) is now owned
+  // entirely by dashboard-shell.js — this page only fills in the
+  // page-specific piece the shell can't know: the signed-in user's
+  // name/avatar initial, once Clerk resolves.
   if(window.Clerk){
     window.Clerk.load().then(function(){
       var u = window.Clerk.user;
-      if(u){
+      if(u && window.QraivyDashboardShell){
         var name = u.firstName || u.emailAddresses[0].emailAddress;
-        var el = document.getElementById('sb-username');
-        var av = document.getElementById('sb-avatar');
-        if(el) el.textContent = u.emailAddresses[0].emailAddress;
-        if(av) av.textContent = name[0].toUpperCase();
+        window.QraivyDashboardShell.setUser({ name: u.emailAddresses[0].emailAddress, initial: name[0].toUpperCase() });
       }
     });
   }
-
-  window.handleSignOut = function(){
-    if(window.Clerk) window.Clerk.signOut().then(function(){ window.location.href='index.html'; });
-    else window.location.href='index.html';
-  };
-
-  var sbSettings = document.getElementById('sb-settings');
-  if(sbSettings) sbSettings.addEventListener('click', function(e){ e.preventDefault(); });
 })();
 </script>
 </body>
