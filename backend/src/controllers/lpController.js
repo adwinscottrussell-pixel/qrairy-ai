@@ -8,6 +8,9 @@ const { getCustomerSerialNumber } = require('../utils/customerSerial');
 const { signStaffToken } = require('../utils/staffSession');
 const { verifyUnsubscribeToken } = require('../utils/unsubscribeToken');
 const { verifyDoubleOptInSignature, isDoubleOptInTokenExpired } = require('../utils/doubleOptInToken');
+// Customer Foundation Phase 2: canonical dual-write, additive only. Never
+// blocks or fails the legacy writes below it — see service header comment.
+const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -1416,6 +1419,14 @@ async function handleSubscribe(req, res) {
         });
         sendConfirmation = true;
         console.log('[Subscribe] Re-subscribe, pending DOI confirmation:', emailNorm, slug);
+        // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+        // A re-subscribe is genuinely new customer activity (the previous
+        // consent cycle ended), so this resolves/creates the same way a
+        // brand-new subscriber does below.
+        if (userId) {
+          resolveOrCreateCustomerIdentity({ ownerUserId: userId, slug, type: 'email', value: emailNorm, source: 'landing_page_signup' })
+            .catch(() => {});
+        }
       } else if (existing.status === 'pending') {
         // Already mid-flow. No duplicate Subscriber row, no duplicate
         // CustomerConsent row — the pending row created when this cycle
@@ -1462,6 +1473,13 @@ async function handleSubscribe(req, res) {
       });
       sendConfirmation = true;
       console.log('[Subscribe] New subscriber, pending DOI confirmation:', emailNorm, slug);
+      // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+      // Never awaited into the response — a canonical-layer failure must
+      // never affect the real Subscriber flow above.
+      if (userId) {
+        resolveOrCreateCustomerIdentity({ ownerUserId: userId, slug, type: 'email', value: emailNorm, source: 'landing_page_signup' })
+          .catch(() => {});
+      }
     }
 
     if (sendConfirmation) {
@@ -1763,6 +1781,19 @@ async function handleWebPushSubscribe(req, res) {
       update: { slug, p256dh: keys.p256dh, auth: keys.auth, cid },
       create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth, cid }
     });
+    // Customer Foundation Phase 2: canonical dual-write, fire-and-forget —
+    // never awaited into the response. Only proceeds when a valid cid was
+    // supplied (a push subscription with no cid has no deterministic
+    // identity signal to record).
+    if (cid) {
+      prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } })
+        .then((lp) => {
+          if (lp && lp.userId) {
+            return resolveOrCreateCustomerIdentity({ ownerUserId: lp.userId, slug, type: 'cid', value: cid, source: 'webpush_subscribe' });
+          }
+        })
+        .catch(() => {});
+    }
     return res.json({ ok: true, stored: true });
   } catch(e) {
     console.error('[Push] webPushSubscription upsert failed:', e);
@@ -2122,6 +2153,20 @@ async function handleGenerateAppleWalletPass(req, res) {
           update: { hasWallet: true }
         });
       } catch(_we) { console.error('[Wallet] LoyaltyCustomer upsert error:', _we.message); }
+
+      // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+      // The cid deterministically owns the Pass/serialNumber just created
+      // in THIS request, so the wallet_serial identity can be safely
+      // attached to the same Customer without any later inference.
+      if (page.userId) {
+        resolveOrCreateCustomerIdentity({ ownerUserId: page.userId, slug, type: 'cid', value: _cid, source: 'wallet_enrollment_apple' })
+          .then((resolved) => {
+            if (resolved) {
+              return attachDeterministicIdentity({ customerId: resolved.customerId, ownerUserId: page.userId, slug, type: 'wallet_serial', value: serialNumber, source: 'wallet_enrollment_apple' });
+            }
+          })
+          .catch(() => {});
+      }
     }
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
@@ -2330,6 +2375,15 @@ async function handleStampConfirm(req, res) {
       console.error('[Stamp] rejected: missing or invalid cid for slug', slug);
       return res.status(400).json({ status: 'error', error: 'A valid customer id is required to stamp.' });
     }
+
+    // Customer Foundation Phase 2: canonical dual-write, fire-and-forget —
+    // never awaited into the stamp response. cid + page.userId are both
+    // already deterministically established above.
+    if (page.userId) {
+      resolveOrCreateCustomerIdentity({ ownerUserId: page.userId, slug, type: 'cid', value: cid, source: 'loyalty_stamp' })
+        .catch(() => {});
+    }
+
     let pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     if (!pass) { // auto-create so customers can stamp on first tap without having added a wallet yet
       const _cr = require('crypto');
