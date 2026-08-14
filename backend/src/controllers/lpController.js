@@ -3,6 +3,19 @@ const { pageCache } = require('../utils/pageCache');
 const prisma = require('../utils/prismaClient');
 const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
+// Customer Foundation Phase 2: canonical dual-write, additive only. Never
+// blocks or fails the legacy writes below it — see service header comment.
+const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
+
+// Client-side customer identity (Milestone A: Identity Refactor).
+// This is the single authored source of truth for reading/creating/storing
+// the anonymous customer id ("cTok" in localStorage). Every server-rendered
+// page that needs it interpolates this exact source into its own <script>
+// tag — there is no shared script file these pages can load, so identical
+// interpolation is how "one canonical implementation" works in this
+// architecture. Always returns an existing valid id untouched; only issues
+// a new one (crypto.randomUUID() where available) when none exists yet.
+const CUSTOMER_ID_HELPER_JS = 'function getOrCreateCustomerId(){try{var c=localStorage.getItem("cTok");if(c&&/^[A-Za-z0-9-]{8,64}$/.test(c))return c;c=(window.crypto&&window.crypto.randomUUID)?window.crypto.randomUUID():(Date.now()+"-"+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));localStorage.setItem("cTok",c);return c;}catch(e){return null;}}';
 
 // Slug-scoped cid resolver (Identity Continuity: welcome/enrollment gap
 // close). Single canonical resolution order, used by every page in the
@@ -1340,6 +1353,17 @@ async function handleSubscribe(req, res) {
         });
         sendWelcome = true;
         console.log('[Subscribe] Reactivated:', emailNorm, slug);
+        // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+        // A reactivation is genuinely new customer activity, so this
+        // resolves/creates the same way a brand-new subscriber does below.
+        // main has no double-opt-in flow yet (that lands separately, not
+        // part of this targeted deployment), so this hooks the actual
+        // current reactivation branch rather than a 'pending' DOI state
+        // that doesn't exist here.
+        if (userId) {
+          resolveOrCreateCustomerIdentity({ ownerUserId: userId, slug, type: 'email', value: emailNorm, source: 'landing_page_signup' })
+            .catch(() => {});
+        }
       } else {
         return res.json({ ok: true, message: '${t.alreadySubscribed}' });
       }
@@ -1349,6 +1373,13 @@ async function handleSubscribe(req, res) {
       });
       sendWelcome = true;
       console.log('[Subscribe] New subscriber:', emailNorm, slug);
+      // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+      // Never awaited into the response — a canonical-layer failure must
+      // never affect the real Subscriber flow above.
+      if (userId) {
+        resolveOrCreateCustomerIdentity({ ownerUserId: userId, slug, type: 'email', value: emailNorm, source: 'landing_page_signup' })
+          .catch(() => {});
+      }
     }
 
     if (sendWelcome) {
@@ -1410,6 +1441,17 @@ async function handleWebPushSubscribe(req, res) {
       update: { slug, p256dh: keys.p256dh, auth: keys.auth },
       create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth }
     });
+    // Customer Foundation dual-write intentionally NOT added here for this
+    // targeted deployment: it depends on WebPushSubscription.cid, which
+    // migration 20260718000000_add_webpush_subscription_cid already
+    // applied to the production DATABASE, but that column is absent from
+    // main's schema.prisma and from this handler's request/upsert data —
+    // a real pre-existing drift between main and production, unrelated to
+    // Customer Foundation. Adding the hook here would require either a cid
+    // param this handler doesn't read, or editing schema.prisma outside
+    // this deployment's approved scope (20260815120000_add_customer_
+    // foundation_phase1 only). Flagged for a separate decision rather than
+    // silently resolved. main's existing behavior is unchanged below.
     return res.json({ ok: true });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -1720,6 +1762,20 @@ async function handleGenerateAppleWalletPass(req, res) {
           update: { hasWallet: true }
         });
       } catch(_we) { console.error('[Wallet] LoyaltyCustomer upsert error:', _we.message); }
+
+      // Customer Foundation Phase 2: canonical dual-write, fire-and-forget.
+      // The cid deterministically owns the Pass/serialNumber just created
+      // in THIS request, so the wallet_serial identity can be safely
+      // attached to the same Customer without any later inference.
+      if (page.userId) {
+        resolveOrCreateCustomerIdentity({ ownerUserId: page.userId, slug, type: 'cid', value: _cid, source: 'wallet_enrollment_apple' })
+          .then((resolved) => {
+            if (resolved) {
+              return attachDeterministicIdentity({ customerId: resolved.customerId, ownerUserId: page.userId, slug, type: 'wallet_serial', value: serialNumber, source: 'wallet_enrollment_apple' });
+            }
+          })
+          .catch(() => {});
+      }
     }
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
@@ -1925,6 +1981,18 @@ async function handleStampConfirm(req, res) {
     // (e.g. JS/localStorage unavailable) we fall back to one shared pass for
     // the business, same as before this customer-tracking existed.
     const serial = cid ? `sqr-${slug}-${cid}` : 'sqr-' + slug;
+
+    // Customer Foundation Phase 2: canonical dual-write, fire-and-forget —
+    // never awaited into the stamp response. main allows a null cid here
+    // (shared-pass fallback above, unlike the stricter Phase 1B cid
+    // rejection that isn't part of this targeted deployment), so this
+    // explicitly requires a real cid rather than assuming one like the
+    // original Phase 2 hook did.
+    if (page.userId && cid) {
+      resolveOrCreateCustomerIdentity({ ownerUserId: page.userId, slug, type: 'cid', value: cid, source: 'loyalty_stamp' })
+        .catch(() => {});
+    }
+
     let pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     if (!pass) { // auto-create so customers can stamp on first tap without having added a wallet yet
       const _cr = require('crypto');

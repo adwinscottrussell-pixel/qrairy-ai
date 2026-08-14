@@ -229,3 +229,117 @@ model SupportAction {
   @@index([targetType, targetId])
   @@index([createdAt])
 }
+
+// ============================================================
+// Canonical Customer Foundation — Phase 1 (infrastructure only, 2026-08-15).
+//
+// Corrects an earlier draft of this same foundation (2026-08-11) that
+// anchored Customer ownership to `slug` (one landing page). That draft
+// was never applied to production and is superseded entirely by this
+// version — re-anchored to `ownerUserId` (the authenticated business
+// owner / Clerk User.id), which is today's REAL tenant boundary
+// (LandingPage.userId), not a single page. This is also the smallest
+// upgrade path to the future Brand -> Locations -> Landing Pages
+// hierarchy (ADR-004): ownerUserId today is exactly who a future
+// Brand's owner would be, so promoting it to a brandId later is a
+// straightforward swap, not a redesign. `slug` is kept only as
+// optional first-touch/source context, never as the ownership anchor.
+//
+// Phase 1 is additive infrastructure only:
+//   - no customerId/customerRecordId FK added to any existing model
+//     (Subscriber, WebPushSubscription, Pass, LoyaltyCustomer,
+//     StampEntry, Scan, DealClaim) — that is a later, separate phase
+//   - no backfill, no dual-write, no existing behavior changed
+//   - CustomerConsent is intentionally NOT part of this targeted
+//     deployment (deploy/customer-foundation-phase1-4) — it ships
+//     separately, on its own schedule, on the development branch this
+//     was cherry-picked from
+//
+// CustomerChannel (from the superseded draft) is renamed to
+// CustomerIdentity here rather than kept as a second, overlapping
+// concept — confirmed safe: zero application code referenced
+// `prisma.customerChannel` anywhere, so this is a pure rename plus the
+// ownerUserId correction, not a breaking change to anything live.
+// ============================================================
+model Customer {
+  id String @id @default(cuid())
+
+  // Tenant anchor. The authenticated business owner (Clerk User.id).
+  // Required — every Customer must belong to exactly one business from
+  // the moment it's created. This, not slug, is what guarantees
+  // customers from different businesses can never collide, and it's
+  // what lets one Customer span multiple landing pages owned by the
+  // same business.
+  ownerUserId String
+
+  // Optional first-touch/source context only — which landing page this
+  // identity was first seen on. Never used to decide ownership or
+  // collision; ownerUserId alone governs that. Nullable because a
+  // future non-page-sourced Customer (e.g. an external CRM import)
+  // won't have one.
+  slug String?
+
+  displayName  String?
+  primaryEmail String?
+  primaryEmailVerifiedAt DateTime?
+
+  status       String  @default("active") // active | merged | anonymized | deleted
+  mergedIntoId String?
+  source       String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+  firstSeenAt    DateTime  @default(now())
+  lastActivityAt DateTime?
+
+  identities CustomerIdentity[]
+
+  @@index([ownerUserId])
+  @@index([slug])
+  @@index([primaryEmail])
+  // Scoped per business, not global — the same real person who is a
+  // customer of two unrelated QRAIVY businesses must never collide into
+  // one Customer row. NULL primaryEmail values are exempt from this
+  // constraint (standard SQL NULL semantics), so many identity-only
+  // Customers with no email yet can coexist.
+  @@unique([ownerUserId, primaryEmail])
+}
+
+model CustomerIdentity {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  // Denormalized from the owning Customer, not independently settable —
+  // same reasoning as every other tenant-scoped table in this schema.
+  // This is what makes the collision guarantee a real DB constraint
+  // (below), not just an application-level convention.
+  ownerUserId String
+
+  // Optional context: which landing page this specific identity value
+  // was captured on. Not part of the uniqueness/collision guarantee —
+  // ownerUserId alone governs that, so the same cid/email seen on two
+  // different pages owned by the SAME business correctly resolves to
+  // one identity row instead of two.
+  slug String?
+
+  type String // "cid" | "email" | "wallet_serial" | "push_endpoint" | "phone" | "whatsapp" | "external_crm"
+              // No rows exist yet — Phase 1 creates the table only.
+  value      String
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  source     String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now()) @updatedAt
+
+  // Scoped per business (ownerUserId), not per page and not global —
+  // the same cid/email appearing on two pages of the SAME business
+  // correctly collides into one row (a real same-person signal); the
+  // same value appearing under two DIFFERENT businesses never collides
+  // (cross-tenant safety), since cid itself is a shared-browser token
+  // with no tenant awareness at generation time (see
+  // docs/architecture/CUSTOMER_FOUNDATION.md).
+  @@unique([ownerUserId, type, value])
+  @@index([customerId])
+  @@index([slug])
+}
