@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIVY — Hero V3 concept (asset-composed, desktop only, unrouted)</title>
+  <!--
+    CONCEPT / PREVIEW FILE — not linked from any nav or route, not touching
+    frontend/public/homepage-v2.html (Hero V2, currently FROZEN) or
+    frontend/public/index.html. Founder-authorized reopening of the Hero,
+    2026-08-09: replace the CSS-built device composition with three
+    founder-supplied production PNG assets (laptop, iPhone, orange AI-energy
+    glow), composed only — no redesign, no redrawing, no rotation applied.
+
+    Left column (headline/subcopy/invite/input/CTA/supporting line/nav) is
+    copied verbatim from the FROZEN homepage-v2.html Hero (docs/product/
+    homepage/01-Hero.md v1.3) and is unchanged in this pass.
+
+    Desktop (1440px) composition only, per this task's explicit scope --
+    no tablet/mobile pass yet.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="qds/qds.css" />
+  <script src="js/qraivy-lang.js"></script>
+  <style>
+    :root {
+      --bg: #080b10;
+      --bg2: #0d1117;
+      --surface: #141c26;
+      --surface2: #1a2535;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent: #ff5a1f;
+      --accent2: #ff8c55;
+      --text: #f0f4f8;
+      --text-mid: #8fa3b8;
+      --text-dim: #4a6078;
+      --radius: 10px;
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'Manrope', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-hero: 'Inter', var(--font-body);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
+    img, video, iframe, svg { max-width: 100%; height: auto; display: block; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); font-size: 16px;
+      line-height: 1.6; overflow-x: hidden;
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    :focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
+
+    /* ================= NAV — copied verbatim from homepage-v2.html ================= */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--qds-space-4) var(--qds-space-12); line-height: 1.2;
+      background: rgba(10,10,10,0.85); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--qds-color-border-subtle);
+    }
+    .nav-logo {
+      font-family: var(--qds-font-family-primary); font-size: 1.15rem;
+      font-weight: var(--qds-font-weight-bold);
+      text-decoration: none; letter-spacing: -0.01em; color: var(--qds-color-text-primary);
+    }
+    .nav-logo span { color: var(--qds-color-brand-primary); }
+    .nav-center { display: flex; align-items: center; gap: var(--qds-space-8); }
+    .nav-link {
+      font-family: var(--qds-text-body-sm-family); font-size: var(--qds-text-body-sm-size);
+      font-weight: 500; color: var(--qds-color-text-muted); text-decoration: none;
+      display: inline-flex; align-items: center; gap: var(--qds-space-1);
+      transition: color var(--qds-duration-fast) var(--qds-easing-standard);
+    }
+    .nav-link:hover { color: var(--qds-color-text-primary); }
+    .nav-link svg { width: 10px; height: 10px; }
+    .nav-right { display: flex; align-items: center; gap: var(--qds-space-5); }
+    .nav-login {
+      font-family: var(--qds-text-body-sm-family); font-size: var(--qds-text-body-sm-size);
+      color: var(--qds-color-text-muted); text-decoration: none; white-space: nowrap;
+    }
+    .nav-login:hover { color: var(--qds-color-text-primary); }
+    /* Language toggle -- reuses this repo's existing EN/DE mechanism
+       (frontend/public/js/qraivy-lang.js + a data-i18n/applyLang pattern
+       matching dashboard.html's, per 2026-08-09 research into how the
+       Loyalty dashboard was already localized). New control, but the
+       underlying storage/detection is the existing shared system, not a
+       new one. */
+    .lang-toggle {
+      display: flex; align-items: center; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--qds-color-border-subtle, var(--border2));
+      border-radius: 999px; padding: 3px; cursor: pointer; flex-shrink: 0;
+    }
+    .lang-toggle-opt {
+      font-family: var(--qds-text-caption-family); font-size: 0.7rem; font-weight: 700;
+      padding: 5px 10px; border-radius: 999px; color: var(--text-mid);
+      transition: all 0.15s;
+    }
+    .lang-toggle[data-active="en"] .lang-toggle-opt[data-lang-opt="en"],
+    .lang-toggle[data-active="de"] .lang-toggle-opt[data-lang-opt="de"] {
+      background: var(--accent); color: #fff;
+    }
+
+    /* ================= HERO LEFT — copied verbatim from homepage-v2.html (FROZEN) ================= */
+    .hero { position: relative; padding: var(--qds-space-8) 0 var(--qds-space-16); }
+    .hero-glow {
+      position: absolute; width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(255,90,31,0.08) 0%, transparent 65%);
+      top: -200px; right: -200px; pointer-events: none; z-index: 0;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.15fr 1fr; align-items: center;
+      gap: var(--qds-space-12); position: relative; z-index: 1;
+    }
+    .hero-headline {
+      font-family: var(--qds-font-family-primary);
+      font-size: clamp(1.7rem, 3.4vw, var(--qds-text-display-size));
+      font-weight: var(--qds-text-display-weight);
+      line-height: var(--qds-text-display-line-height);
+      letter-spacing: var(--qds-text-display-letter-spacing);
+      margin-bottom: var(--qds-space-4); max-width: 388px;
+      color: var(--qds-color-text-primary);
+      overflow-wrap: break-word;
+    }
+    /* German-only headline size reduction (2026-08-09) -- scoped via the
+       html[lang] attribute applyLang() already sets, so switching back to
+       EN restores the unmodified clamp() above untouched. All three clamp
+       values scaled by ~0.88 (a ~12% reduction) so "Kundenbindungsplattform"
+       fits without an ugly break; English is not selected by this rule. */
+    html[lang="de"] .hero-headline {
+      font-size: clamp(1.3rem, 2.6vw, 1.75rem);
+    }
+    .hero-headline .accent { color: var(--qds-color-brand-primary); white-space: nowrap; }
+    .hero-subcopy {
+      font-family: var(--qds-text-body-sm-family); font-size: var(--qds-text-body-sm-size);
+      line-height: var(--qds-text-body-sm-line-height); color: var(--qds-color-text-secondary);
+      max-width: 380px; margin-bottom: var(--qds-space-5);
+    }
+    .hero-invite {
+      font-family: var(--qds-text-caption-family); font-size: var(--qds-text-caption-size);
+      line-height: var(--qds-text-caption-line-height); color: var(--qds-color-text-muted);
+      margin-bottom: var(--qds-space-2);
+    }
+    .hero-supporting-line {
+      font-family: var(--qds-text-caption-family); font-size: var(--qds-text-caption-size);
+      line-height: var(--qds-text-caption-line-height); color: var(--qds-color-text-muted);
+      max-width: 420px; margin-top: var(--qds-space-4);
+    }
+    .hero-form { max-width: 460px; margin-bottom: var(--qds-space-3); }
+    .input-row { display: flex; align-items: center; gap: var(--qds-space-2); }
+    .input-row .qds-input { flex: 1; min-width: 0; }
+    .hero .qds-btn--lg { border-radius: var(--qds-radius-lg); }
+    .hero .qds-input { border-radius: var(--qds-radius-lg); }
+    .hero .qds-btn--ai, .nav .qds-btn--primary { color: #fff; }
+
+    /* ================= HERO RIGHT — single-asset swap, this task's scope =================
+       2026-08-09, narrow follow-up: the separate laptop + iPhone PNGs below
+       are replaced by ONE founder-approved combined transparent PNG
+       (img/hero-v3/hero-laptop-iphone-combined-asset-v1.png -- confirmed via
+       PNG header/pixel inspection: RGBA, transparent at all sampled edges).
+       Not recreated/redrawn/cropped/separated -- placed as one image. The
+       orange energy-glow layer/positioning is unchanged from the prior pass.
+       Nothing else in this file was touched. */
+    .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; }
+    .device-wrap { position: relative; width: 100%; }
+    .hero-device-img {
+      position: relative; z-index: 1; width: 100%; display: block;
+      filter: drop-shadow(0 40px 55px rgba(0,0,0,0.55));
+    }
+    /* Base/default (mobile, <768px per --qds-breakpoint-tablet) energy
+       position -- TUNED AND MEASURED at 390px in this pass (see the
+       responsive block near the end of this stylesheet for the full
+       per-breakpoint rationale and getBoundingClientRect numbers). */
+    .hero-energy-img {
+      position: absolute; z-index: 0; pointer-events: none;
+      width: 145%; max-width: none; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* =====================================================================
+       DESKTOP (>=1440px, --qds-breakpoint-wide-desktop) -- APPROVED + LOCKED
+       2026-08-09. Everything in this block is the exact composition the
+       founder approved across the last several rounds (device enlargement,
+       then energy-glow clipping fix). Do not edit these values when making
+       any further responsive/tablet/mobile pass -- add new rules in the
+       responsive section instead of touching this block. ===================== */
+    @media (min-width: 1440px) {
+      .hero-visual { width: 122%; justify-self: end; }
+      .hero-energy-img { width: 123%; top: 54%; }
+    }
+
+    /* ================= FEATURE BAR — new, 2026-08-09 =================
+       Added below the hero grid only; hero-left/hero-visual/nav untouched.
+       Real HTML/SVG, no baked image. Colors MEASURED by pixel-sampling the
+       founder-supplied reference (ChatGPT Image Aug 9, 2026, 12_41_27 PM.png):
+       container background sampled ~#0a0e10 -> matches this file's existing
+       --bg2 (#0d1117) token, reused rather than a new one-off value; icon
+       color sampled ~#e95a01-#ff5902 -> matches existing --accent (#ff5a1f).
+       Column count (5), icon-left/text-right layout, and divider placement
+       are MEASURED from the reference. Icon size, padding, gap, and border
+       radius are ESTIMATED (the reference is a generated mockup, not a
+       pixel grid) -- close but not claimed as exact pixel values.
+       The bar's own left/right edges sit outside the hero's normal
+       1200px .container (MEASURED: in the reference, the bar's left edge
+       falls left of the nav logo / headline's left edge) -- given its own
+       wider wrapper below rather than reusing .container. */
+    .feature-bar-wrap { max-width: 1360px; margin: 64px auto 0; padding: 0 24px; position: relative; z-index: 1; }
+    .feature-bar {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+    }
+    .feature-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 28px 24px;
+      border-right: 1px solid var(--border);
+    }
+    .feature-item:last-child { border-right: none; }
+    .feature-icon {
+      width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.08);
+      border: 1px solid rgba(255,90,31,0.35);
+      color: var(--accent);
+    }
+    .feature-icon svg { width: 21px; height: 21px; }
+    .feature-text { min-width: 0; }
+    .feature-title {
+      font-family: var(--font-hero); font-size: 0.92rem; font-weight: 700;
+      color: var(--text); margin-bottom: 6px; line-height: 1.3;
+    }
+    .feature-desc {
+      font-family: var(--font-body); font-size: 0.78rem; line-height: 1.5;
+      color: var(--text-mid);
+    }
+
+    /* ================= SECTION 2 — TOP STORY =================
+       New section, 2026-08-09. Appended directly below the hero's
+       feature-bar; hero, nav, feature-bar and existing responsive rules
+       above are untouched. Built as real HTML/CSS with temporary CSS
+       mockups for the deal/automation/phone visuals (per founder
+       direction: structure the composition first, swap in final
+       screenshot assets afterward). Self-contained responsive rules
+       below (own media queries) rather than extending the hero's shared
+       RESPONSIVE block, to keep this section isolated.
+
+       2026-08-09 revision (light theme + enlarged workflow): founder
+       reviewed the dark-theme v1 and asked for Section 2 specifically to
+       switch to a warm off-white background with dark text, a larger
+       deal->automation->phone workflow, and a tighter gap under the
+       hero's feature bar. Hero/nav/feature-bar CSS above is NOT touched.
+       Section-local --story-* custom properties are defined on .story
+       below so this recolor cannot leak into the hero (which keeps using
+       its own --bg/--text/etc tokens unchanged). The phone mockup's
+       outer frame intentionally keeps reusing the hero's dark tokens
+       (--bg2/--surface/--border2) -- that's a deliberate "real device
+       has a dark bezel/screen" choice, not a leftover, so the
+       notification banner inside it can read as a light iOS-style card
+       popping off a dark screen. */
+    .story {
+      position: relative; padding: var(--qds-space-12) 0 var(--qds-space-16);
+      --story-bg: #F3F0EA;
+      --story-card-bg: #FFFFFF;
+      --story-card-bg-alt: #FBF9F4;
+      --story-border: rgba(23,18,12,0.08);
+      --story-border-2: rgba(23,18,12,0.14);
+      --story-text: #1A1512;
+      --story-text-mid: #6B6459;
+      --story-text-dim: #A39C90;
+      background: var(--story-bg);
+    }
+    /* Wider than the hero's 1200px .container (deliberate, matches the
+       precedent already set by .feature-bar-wrap above) -- gives the
+       enlarged workflow enough room to read as "substantially larger"
+       without overflowing at any tested width; flex-shrink on the
+       workflow cards below is still the actual overflow guarantee. */
+    .story-container { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+    .story-grid {
+      display: flex; flex-direction: column; gap: var(--qds-space-12);
+      position: relative; z-index: 1;
+    }
+    .story-copy { max-width: 460px; }
+    .story-headline {
+      font-family: var(--font-hero); font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+      font-weight: 800; line-height: 1.25; letter-spacing: -0.01em;
+      color: var(--story-text); margin-bottom: var(--qds-space-4);
+    }
+    .story-headline-line { display: block; }
+    .story-headline .accent { color: var(--accent); }
+    .story-subcopy {
+      font-family: var(--font-body); font-size: 1rem; line-height: 1.6;
+      color: var(--story-text-mid); max-width: 420px;
+    }
+
+    /* ---- Workflow (deal card -> automation card -> phone) ----
+       Mobile-first: stacked column, connector arrows point down.
+       Rotated to a horizontal row at >=768px (see responsive block).
+       Sizes below are the enlarged (2026-08-09) baseline; the >=1024px
+       block further enlarges the phone/connector and lets the cards
+       grow via flex up to their max-width as the viewport widens.
+
+       2026-08-09 polish pass: founder approved the light-theme
+       composition and asked for the three nodes to read as "one
+       connected visual story" rather than three separate objects, with
+       the automation card as the strongest visual object. Two changes
+       drive that: (1) .story-workflow::before -- a single thin orange
+       gradient line threading behind all three nodes (hidden by their
+       opaque backgrounds except in the gaps, so it reads as one path
+       the eye follows left-to-right/top-to-bottom); (2) automation-card
+       gets a bigger max-width + a 3px top accent bar so it visually
+       outweighs the deal card and phone without adding extra glow. */
+    .story-workflow {
+      display: flex; flex-direction: column; align-items: stretch;
+      gap: var(--qds-space-8); position: relative;
+    }
+    .story-workflow::before {
+      content: ''; position: absolute; z-index: 0;
+      left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%);
+      background: linear-gradient(to bottom, rgba(255,90,31,0.05), rgba(255,90,31,0.35) 20%, rgba(255,90,31,0.35) 80%, rgba(255,90,31,0.05));
+    }
+    .workflow-connector {
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; width: 50px; height: 50px; border-radius: 50%;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.28);
+      color: var(--accent); position: relative; z-index: 1;
+    }
+    .workflow-connector svg { width: 21px; height: 21px; transform: rotate(90deg); }
+    .workflow-card {
+      background: var(--story-card-bg); border: 1px solid var(--story-border);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-8);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 16px 32px -20px rgba(23,18,12,0.14);
+      position: relative; z-index: 1;
+    }
+    .workflow-card-label {
+      font-family: var(--font-mono); font-size: 0.74rem; font-weight: 400;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--story-text-dim);
+      margin-bottom: var(--qds-space-3);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .workflow-card-label svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .deal-card { max-width: 340px; margin: 0 auto; width: 100%; }
+    .deal-card-title {
+      font-family: var(--font-hero); font-size: 1.3rem; font-weight: 700;
+      color: var(--story-text); margin-bottom: 4px;
+    }
+    .deal-card-desc {
+      font-family: var(--font-body); font-size: 0.95rem; color: var(--story-text-mid);
+      margin-bottom: var(--qds-space-5);
+    }
+    /* width:100% alone isn't enough for the DE label ("Angebot
+       veröffentlichen") -- the base .qds-btn has white-space:nowrap and a
+       fixed --sm height, so long text just overflowed the button edges
+       instead of wrapping (MEASURED, looked broken). Overriding to a
+       auto-height button with normal wrapping keeps it centered/padded
+       and single-line at any width that comfortably fits the text, while
+       degrading to a clean two-line button rather than a broken overflow
+       at the rare squeezed laptop width. */
+    .deal-card .qds-btn {
+      width: 100%; justify-content: center; text-align: center;
+      white-space: normal; height: auto; min-height: var(--qds-control-height-sm);
+      padding: 9px var(--qds-space-4); line-height: 1.3;
+    }
+
+    /* Strongest visual object in the workflow: wider than the deal card
+       and phone (see the >=1024px block for the desktop max-width), plus
+       a 3px orange top edge -- overrides only the top side of the
+       border-color line above, restrained rather than an extra glow. */
+    .automation-card {
+      max-width: 380px; margin: 0 auto; width: 100%;
+      border-color: rgba(255,90,31,0.30);
+      border-top: 3px solid var(--accent);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 0 0 1px rgba(255,90,31,0.10), 0 20px 36px -20px rgba(255,90,31,0.22);
+    }
+    .automation-card .workflow-card-label { color: var(--accent); }
+    .automation-card .workflow-card-label svg { width: 14px; height: 14px; }
+    .automation-list { list-style: none; display: flex; flex-direction: column; gap: var(--qds-space-5); }
+    .automation-list li {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-body); font-size: 0.96rem; color: var(--story-text);
+    }
+    .automation-list svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--accent); }
+
+    .workflow-phone-wrap { display: flex; justify-content: center; position: relative; z-index: 1; }
+    .workflow-phone {
+      position: relative; width: 190px; height: 335px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 30px; padding: 10px; box-shadow: 0 30px 55px -22px rgba(23,18,12,0.35);
+    }
+    .workflow-phone::before {
+      content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 46px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.15);
+    }
+    /* Lock-screen treatment: a bare black rectangle above the
+       notification read as unfinished. A large time + small date (both
+       plain lock-screen chrome, not tied to the Deal story) plus a
+       restrained warm glow make it immediately read as "a customer's
+       phone", while the notification card -- the actual point of this
+       node -- stays the dominant, highest-contrast element on screen. */
+    .workflow-phone-screen {
+      width: 100%; height: 100%; border-radius: 20px;
+      background: radial-gradient(circle at 50% 18%, rgba(255,150,95,0.4), rgba(255,90,31,0.10) 42%, var(--bg) 72%);
+      padding: 28px 10px 10px; position: relative; overflow: hidden;
+    }
+    .workflow-phone-time {
+      font-family: var(--font-hero); font-weight: 300; color: #fff;
+      font-size: 1.6rem; line-height: 1; letter-spacing: -0.01em;
+      text-align: center; margin-top: 2px;
+    }
+    .workflow-phone-date {
+      font-family: var(--font-body); font-size: 0.6rem; font-weight: 500;
+      color: rgba(255,255,255,0.78); text-align: center;
+      margin-top: 4px; margin-bottom: 16px;
+    }
+    .workflow-notification {
+      background: #FFFFFF; border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 13px; padding: 12px; display: flex; gap: 9px;
+      align-items: flex-start; box-shadow: 0 10px 22px -8px rgba(0,0,0,0.4);
+    }
+    .workflow-notification-icon {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .workflow-notification-icon svg { width: 14px; height: 14px; color: #fff; }
+    .workflow-notification-body { min-width: 0; }
+    .workflow-notification-title {
+      font-family: var(--font-hero); font-size: 0.7rem; font-weight: 700;
+      color: #17140F; margin-bottom: 2px;
+    }
+    .workflow-notification-text {
+      font-family: var(--font-body); font-size: 0.64rem; line-height: 1.4;
+      color: #6B6459;
+    }
+
+    /* ================= SECTION 2 — PLATFORM CAPABILITIES ================= */
+    .capabilities { margin-top: var(--qds-space-20); position: relative; z-index: 1; }
+    .capabilities-headline {
+      font-family: var(--font-hero); font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+      font-weight: 800; text-align: center; color: var(--story-text);
+      max-width: 640px; margin: 0 auto var(--qds-space-10);
+    }
+    .capabilities-grid { display: grid; grid-template-columns: 1fr; gap: var(--qds-space-6); align-items: stretch; }
+    /* Equal card heights come from CSS Grid's default align-items:stretch on
+       the grid items (.cap-card) -- explicit here for clarity. Internal
+       rhythm below uses a single flex `gap` instead of per-element margins
+       so preview/icon/title/desc spacing stays consistent across all six
+       cards regardless of description length. */
+    .cap-card {
+      background: var(--story-card-bg); border: 1px solid var(--story-border);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-6);
+      display: flex; flex-direction: column; gap: var(--qds-space-4);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 14px 28px -20px rgba(23,18,12,0.12);
+    }
+    /* 2026-08-09: real product screenshots replace the CSS placeholders
+       below. Fixed aspect-ratio (not a natural-height <img>) so all six
+       preview boxes stay visually identical regardless of each source
+       photo's own crop height (they range ~1536x705 to 1536x800 -- each
+       image was individually cropped to drop its baked-in title/
+       description footer while keeping the full dashboard+phone mockup
+       intact; see frontend/public/images/features/originals/ for the
+       uncropped source and docs on the crop line per file). object-fit:
+       contain guarantees no distortion and no cropping of UI regardless
+       of the box/image ratio mismatch -- any slack is absorbed as
+       letterboxing against --story-card-bg-alt, not by stretching or
+       clipping the screenshot. */
+    .cap-preview {
+      aspect-ratio: 1536 / 758; border-radius: var(--qds-radius-lg);
+      background: var(--story-card-bg-alt); border: 1px solid var(--story-border);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cap-preview img {
+      width: 100%; height: 100%; object-fit: contain; display: block;
+    }
+    .cap-icon {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.35);
+      color: var(--accent);
+    }
+    .cap-icon svg { width: 18px; height: 18px; }
+    .cap-title {
+      font-family: var(--font-hero); font-size: 1.05rem; font-weight: 700;
+      color: var(--story-text);
+    }
+    .cap-desc {
+      font-family: var(--font-body); font-size: 0.85rem; line-height: 1.6;
+      color: var(--story-text-mid);
+    }
+
+    /* ---- Section 2 responsive ----
+       Progressive layout, not just shrinking: <768 stacked column (deal
+       -> automation -> phone, connecting line vertical); 768-1023 wraps
+       to a balanced 2-up + centered-below arrangement (connecting line
+       hidden here -- flex-wrap makes a single straight line's geometry
+       unpredictable across the wrap point, so the connector circles
+       alone carry the "flow" at this tier); >=1024 full horizontal row
+       with the connecting line running left-to-right behind all three
+       nodes. */
+    @media (max-width: 767px) {
+      .story-container { padding: 0 20px; }
+    }
+    @media (min-width: 480px) {
+      .capabilities-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .story-workflow::before { display: none; }
+    }
+    @media (min-width: 768px) {
+      .story-workflow {
+        flex-direction: row; align-items: center; justify-content: center;
+        flex-wrap: wrap; gap: var(--qds-space-8);
+      }
+      .workflow-connector svg { transform: rotate(0deg); }
+      .deal-card { flex: 0 1 300px; margin: 0; }
+      .automation-card { flex: 0 1 330px; margin: 0; }
+      .workflow-phone-wrap { flex-shrink: 0; }
+    }
+    /* Tablet-only override: the shared >=768px sizing above is tuned for
+       >=1024px's wider row and doesn't leave enough room at 768-1023px
+       for "deal + connector + automation" to fit on one wrapped line --
+       MEASURED: it broke into an uneven deal-card-alone-then-zigzag
+       instead of the intended 2-up-then-phone-below arrangement. Smaller
+       gap/connector/basis here restores that clean wrap. */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .story-workflow { gap: var(--qds-space-6); }
+      .deal-card { flex: 0 1 280px; }
+      .automation-card { flex: 0 1 300px; }
+      .workflow-connector { width: 42px; height: 42px; }
+      .workflow-connector svg { width: 19px; height: 19px; }
+    }
+    /* >=1024px: shared structural switch to a horizontal, non-wrapping
+       row. Sizing itself is deliberately conservative here -- a fixed
+       200px phone + a 400px-capped automation card don't consistently
+       fit at 1024px (MEASURED: caused an 11px real overflow at exactly
+       1024px, findoutoverflow1024.js). The bigger "locked" sizes live in
+       the >=1440px block below instead, mirroring this file's existing
+       laptop-vs-wide-desktop split for the hero's own device composite. */
+    @media (min-width: 1024px) {
+      .story-grid {
+        display: grid; grid-template-columns: 0.9fr 1.6fr; align-items: center;
+        gap: var(--qds-space-10);
+      }
+      .story-copy { max-width: none; }
+      .story-workflow { flex-wrap: nowrap; justify-content: space-between; gap: var(--qds-space-5); }
+      .story-workflow::before {
+        left: 0; right: 0; top: 50%; bottom: auto; height: 2px; width: auto; transform: translateY(-50%);
+        background: linear-gradient(to right, rgba(255,90,31,0.05), rgba(255,90,31,0.35) 15%, rgba(255,90,31,0.35) 85%, rgba(255,90,31,0.05));
+      }
+      .deal-card { flex: 1 1 0; min-width: 0; max-width: 240px; }
+      /* flex-grow 1.2 (not 1) so it actually claims more of the
+         distributed space than the deal card, rather than the two
+         growing equally and both landing on the same width regardless
+         of their different max-width caps. */
+      .automation-card { flex: 1.2 1 0; min-width: 0; max-width: 280px; }
+      /* height 335 (not a scaled-down 265) -- MEASURED: at 150px width the
+         notification body text wraps to enough lines that a proportionally
+         shorter phone clipped it (up to 59px cut off in DE) via the
+         screen's overflow:hidden. Widening the phone was not affordable in
+         this tier's horizontal budget, so the fix is on the height axis
+         only -- an intentionally taller-than-proportional phone here, not
+         a redesign. */
+      .workflow-phone { width: 150px; height: 335px; }
+      .workflow-connector { width: 40px; height: 40px; }
+      .workflow-connector svg { width: 18px; height: 18px; }
+      .capabilities-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    /* Wide desktop (>=1440px). 2026-08-09 correction: the previous
+       340/400px "locked" caps here were never actually reached -- no
+       horizontal overflow occurred, but only because flex-shrink was
+       silently squeezing both cards far below those caps (MEASURED:
+       deal-card rendered at 190px, automation at 233px at 1440), which
+       is exactly what made the German CTA ("Angebot veröffentlichen")
+       overflow its button. The workflow column here is a fixed ~855px
+       (driven by the story-grid 0.9fr/1.6fr split, unchanged) -- not
+       enough room for 340+400px cards plus a 200px phone at generous
+       gaps. Rebalanced: deal-card gets a firm, non-shrinking 250px
+       floor (MEASURED: the longest button label needs ~178px, so 250px
+       leaves real margin), phone/connector/gap trimmed to the same
+       scale already used at the 1024-1439px tier, and automation-card
+       absorbs the remainder via flex-grow so it still renders wider
+       than the deal card. */
+    @media (min-width: 1440px) {
+      .story-workflow { gap: var(--qds-space-5); }
+      .deal-card { flex: 0 0 250px; max-width: 250px; }
+      .automation-card { flex: 1 1 0; min-width: 0; max-width: 340px; }
+      .workflow-phone { width: 170px; height: 300px; }
+      .workflow-connector { width: 42px; height: 42px; }
+      .workflow-connector svg { width: 18px; height: 18px; }
+    }
+
+    /* =====================================================================
+       RESPONSIVE — 2026-08-09. Desktop (>=1440px) block above is untouched
+       by everything below. Breakpoints reuse this repo's own documented
+       tiers (qds/foundation/breakpoints.css): small-mobile 360, mobile 480,
+       tablet 768, desktop 1024, wide-desktop 1440 -- not invented cutoffs.
+       Content DOM order (headline -> subcopy -> invite -> form ->
+       supporting-line, then hero-visual, then feature-bar) already matches
+       the founder's requested mobile stacking order 1-6 exactly, so no
+       flex/grid `order` reshuffling was needed -- single-column stacking
+       alone produces the requested order. ===================== */
+
+    /* ---- Nav hamburger (<1024px, i.e. below --qds-breakpoint-desktop) ---- */
+    .nav-hamburger {
+      display: none; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: var(--qds-radius-md, 8px);
+      background: transparent; border: 1px solid var(--qds-color-border-subtle, var(--border2));
+      color: var(--text); cursor: pointer;
+    }
+    .nav-hamburger svg { width: 20px; height: 20px; }
+    .nav-mobile-panel {
+      display: none;
+      flex-direction: column; gap: var(--qds-space-4);
+      padding: var(--qds-space-5) var(--qds-space-6) var(--qds-space-6);
+      background: rgba(10,10,10,0.97); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--qds-color-border-subtle, var(--border2));
+    }
+    .nav-mobile-panel.open { display: flex; }
+    .nav-mobile-panel .nav-link { padding: var(--qds-space-2) 0; }
+    @media (max-width: 1023px) {
+      .nav-center { display: none; }
+      .nav-login { display: none; }
+      .nav-hamburger { display: flex; }
+    }
+    /* MEASURED at 320px: the desktop nav's 48px side padding (--qds-space-12)
+       left the logo and "Get Started" button touching with a 0px gap
+       (logo.right === getStarted.left, confirmed via getBoundingClientRect)
+       -- not an actual horizontal-scroll overflow (html's overflow-x:hidden
+       absorbed it), but visibly cramped. Reduced padding fixes it. */
+    @media (max-width: 767px) {
+      .nav { padding: var(--qds-space-3) var(--qds-space-4); gap: var(--qds-space-2); }
+      .nav-right { gap: var(--qds-space-2); }
+    }
+
+    /* ---- Container padding: mobile only (<768px) -- tablet/laptop/desktop
+       keep the original unconditional 48px padding untouched. ---- */
+    @media (max-width: 767px) {
+      .container { padding: 0 20px; }
+    }
+
+    /* ---- Hero grid: stacked below 1024px (--qds-breakpoint-desktop),
+       matching the precedent already established and founder-approved for
+       this same Hero at tablet width in docs/product/homepage/01-Hero.md
+       ("Tablet (834px): .hero-grid collapses to 1fr"). ---- */
+    @media (max-width: 1023px) {
+      /* minmax(0,1fr), not bare 1fr -- a bare <flex> track has an implicit
+         min-width:auto, so the track itself (not just the grid item)
+         refused to shrink below its content's min-content width. This is
+         the actual root cause of the 320px German overflow -- .hero-left's
+         own min-width:0 (below) is necessary but not sufficient for a grid
+         track. */
+      .hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--qds-space-8); }
+      /* min-width:0 overrides the grid item's default min-width:auto --
+         MEASURED bug (2026-08-09, adding German): without it, a single
+         unbreakable German word ("Kundenbindungsplattform.") forced this
+         grid cell to refuse to shrink below its own min-content width,
+         causing real overflow at 320px that scrollWidth-vs-clientWidth
+         didn't catch (html's overflow-x:hidden absorbed the scrollbar but
+         the text still rendered past the viewport edge, visible only via
+         a full-page screenshot). English never hit this case at any
+         tested width, which is why it wasn't caught until German was
+         added. */
+      /* width:100% is required here, not just max-width -- a grid item
+         with an auto margin (margin:0 auto, for centering once max-width
+         caps it below the track width) disables the default
+         justify-self:stretch per the grid spec, so without an explicit
+         width it fell back to shrink-to-fit sizing instead of filling the
+         track. That shrink-to-fit sizing is what caused the 320px German
+         overflow above, not the min-width:auto issue alone. */
+      .hero-left { width: 100%; max-width: 560px; min-width: 0; margin: 0 auto; text-align: left; }
+      .hero-headline, .hero-subcopy, .hero-supporting-line { max-width: none; }
+      .hero-form { max-width: 100%; }
+      .hero-visual { margin-top: var(--qds-space-10); }
+      .device-wrap { margin: 0 auto; }
+    }
+
+    /* ---- Laptop (1024-1439px): 2-column restored, device composite
+       modestly enlarged (not the full desktop 122% -- MEASURED that 122%
+       collides with the headline column below 1440px), feature bar stays
+       5 columns but tightened so titles don't wrap at this narrower
+       container width (MEASURED: 1104px/5 columns wasn't enough room at
+       the original desktop padding/icon/gap). ---- */
+    @media (min-width: 1024px) and (max-width: 1439px) {
+      .hero-visual { width: 104%; justify-self: end; }
+      .hero-energy-img { width: 120%; top: 52%; }
+      .feature-item { padding: 22px 16px; gap: 10px; }
+      .feature-icon { width: 38px; height: 38px; }
+      .feature-icon svg { width: 18px; height: 18px; }
+      .feature-title { font-size: 0.82rem; }
+      .feature-desc { font-size: 0.72rem; }
+    }
+
+    /* ---- Tablet (768-1023px): stacked hero (see hero-grid rule above),
+       device composite centered and sized to stay clearly readable,
+       feature bar adapts from 5 columns to 2. ---- */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .device-wrap { width: 78%; }
+      .hero-energy-img { width: 125%; top: 46%; }
+      .feature-bar-wrap { max-width: 700px; margin-top: 48px; }
+      .feature-bar { grid-template-columns: repeat(2, 1fr); border-radius: 16px; }
+      .feature-item {
+        border-right: none; border-bottom: 1px solid var(--border);
+      }
+      .feature-item:nth-last-child(-n+1) { border-bottom: none; }
+    }
+
+    /* ---- Mobile (<768px): device composite centered, never overflows;
+       feature bar becomes single-column cards. Small-mobile (<480px, i.e.
+       below --qds-breakpoint-mobile) gets a further-reduced device scale,
+       MEASURED per-breakpoint in this pass at 430/390/320px so the
+       composite/energy stay clear of the nav above and never cause
+       horizontal overflow -- see inline notes at each width below. ---- */
+    @media (max-width: 767px) {
+      .hero { padding: var(--qds-space-6) 0 var(--qds-space-10); }
+      .hero-headline { max-width: 100%; }
+      .input-row { flex-wrap: wrap; }
+      .input-row .qds-btn--lg { width: 100%; justify-content: center; }
+      .input-row .qds-field { flex-basis: 100%; }
+
+      .device-wrap { width: 92%; max-width: 420px; }
+      .hero-energy-img { width: 130%; top: 46%; }
+
+      .feature-bar-wrap { max-width: 480px; margin-top: 40px; padding: 0 20px; }
+      .feature-bar { grid-template-columns: 1fr; border-radius: 16px; }
+      .feature-item {
+        border-right: none; border-bottom: 1px solid var(--border);
+        padding: 22px 20px;
+      }
+      .feature-item:last-child { border-bottom: none; }
+    }
+    /* Small mobile (<480px, --qds-breakpoint-mobile): 2-column feature
+       cards would be too cramped with this copy length, so this tier
+       stays single-column (inherits the <768px rule above) -- only the
+       device composite gets a further reduction here to guarantee no
+       horizontal overflow down to 320px, MEASURED in this pass. */
+    @media (max-width: 479px) {
+      .device-wrap { width: 94%; max-width: 340px; }
+      /* MEASURED regression at 320px: adding the language toggle pushed
+         .nav-right past the viewport by ~12-20px (it wasn't there when
+         the nav-padding fix was last verified). Below 480px, collapse the
+         two-option pill to a single compact button showing only the
+         active language -- still fully functional (click toggles), just
+         narrower. Nav-right gap tightened slightly too for extra margin. */
+      .nav-right { gap: var(--qds-space-1); }
+      .lang-toggle-opt { display: none; }
+      .lang-toggle[data-active="en"] .lang-toggle-opt[data-lang-opt="en"],
+      .lang-toggle[data-active="de"] .lang-toggle-opt[data-lang-opt="de"] {
+        display: block; padding: 5px 7px;
+      }
+    }
+
+    /* ================= SECTION 3 — GIVE US YOUR WEBSITE =================
+       2026-08-09. New section, appended directly below Section 2 (.story);
+       Section 1 (hero) and Section 2 (.story/.capabilities, cream bg) are
+       untouched. Reference: founder-supplied ChatGPT mockup image, used
+       for layout/spacing/proportion/hierarchy only -- NOT embedded as a
+       flat image. Dark theme, so this reuses the hero's own global
+       --bg/--bg2/--text/--text-mid/--border/--accent tokens directly
+       (no local --story-* override needed, unlike Section 2's cream
+       recolor). First pass: the three step visuals (website preview / AI
+       orb / platform dashboard+phone) are lightweight CSS placeholders,
+       matching how Section 2's six capability cards started before their
+       final screenshots were cropped in -- these will get the same
+       treatment once final assets exist. */
+    .s3 { position: relative; background: var(--bg); padding: var(--qds-space-20) 0 var(--qds-space-20); overflow: hidden; }
+    .s3-container { max-width: 1560px; margin: 0 auto; padding: 0 24px; }
+    .s3-head { text-align: center; max-width: 720px; margin: 0 auto var(--qds-space-12); }
+    .s3-headline {
+      font-family: var(--font-hero); font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+      font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; color: var(--text);
+    }
+    .s3-headline-line { display: block; }
+    .s3-headline .accent { color: var(--accent); }
+    .s3-subcopy {
+      font-family: var(--font-body); font-size: 1.02rem; line-height: 1.6;
+      color: var(--text-mid); margin-top: var(--qds-space-4);
+    }
+
+    .s3-steps { display: flex; flex-direction: column; align-items: stretch; gap: var(--qds-space-8); }
+    .s3-step { display: flex; flex-direction: column; }
+    .s3-step-head { display: flex; align-items: center; gap: 14px; margin-bottom: var(--qds-space-4); }
+    .s3-step-number {
+      width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--accent);
+      color: var(--accent); font-family: var(--font-mono); font-weight: 700; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .s3-step-label {
+      font-family: var(--font-hero); font-weight: 800; font-size: 0.95rem; letter-spacing: 0.03em;
+      text-transform: uppercase; color: var(--text);
+    }
+    /* 2026-08-10: real final assets replace the CSS placeholders that
+       used to live here (URL-bar+lines mockup / CSS orb+checklist /
+       dashboard-block mockup). Each image already contains its own dark
+       bordered card presentation (near-black canvas matching this
+       section's own --bg, plus its own rounded frame/shadow) -- so
+       .s3-step-card carries no visible background/border of its own
+       (would double up with what's baked into the image); it's purely a
+       flex layout wrapper. width:100%/height:auto lets each image keep
+       its own natural aspect ratio (website ~1.43, AI/platform exactly
+       1.5 -- confirmed via file metadata, not assumed) rather than
+       forcing a shared box and letterboxing. Step 3 (dashboard+phone,
+       the most detail-dense image) gets a bit more flex-grow than Steps
+       1-2 at desktop (see the >=768px block) so its UI doesn't shrink
+       as much as the other two. */
+    .s3-step-card {
+      flex: 1; display: flex; align-items: flex-start; justify-content: center;
+    }
+    .s3-step-card img {
+      width: 100%; height: auto; display: block; object-fit: contain;
+      border-radius: var(--qds-radius-lg);
+    }
+    .s3-connector { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); align-self: center; }
+    .s3-connector svg { width: 27px; height: 27px; transform: rotate(90deg); }
+
+    /* ---- Closing line ---- */
+    .s3-closing { text-align: center; margin-top: var(--qds-space-10); }
+    .s3-closing-icon {
+      width: 52px; height: 52px; border-radius: 50%; margin: 0 auto var(--qds-space-5);
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--accent); color: var(--accent);
+      background: rgba(255,90,31,0.08);
+    }
+    .s3-closing-icon svg { width: 24px; height: 24px; }
+    .s3-closing-line {
+      font-family: var(--font-hero); font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+      font-weight: 800; color: var(--text);
+    }
+    .s3-closing-line .accent { color: var(--accent); }
+    .s3-closing-sub {
+      font-family: var(--font-body); font-size: 0.95rem; color: var(--text-mid);
+      margin-top: var(--qds-space-3);
+    }
+
+    /* ---- Section 3 responsive ----
+       Mobile-first: steps stack, connectors point down. Row layout from
+       >=768px. Step 3 (dashboard+phone, the most detail-dense image)
+       gets a bit more flex-grow than Steps 1-2 so it doesn't shrink as
+       much -- per founder direction to widen a step rather than shrink
+       its UI, instead of forcing three strictly equal columns.
+
+       2026-08-10 polish: founder asked for the three images to read
+       ~15-20% larger on desktop. Mobile/tablet (<1024px) intentionally
+       untouched per that request -- the container/gap trims below apply
+       only at >=1024px, freeing width for the columns rather than
+       forcing identical fixed image dimensions (which would have meant
+       cropping or distorting -- not done). MEASURED after the change:
+       columns grow ~16% at 1440px, no horizontal overflow. */
+    @media (max-width: 767px) {
+      .s3-container { padding: 0 20px; }
+    }
+    @media (min-width: 768px) {
+      .s3-steps { flex-direction: row; align-items: stretch; gap: var(--qds-space-5); }
+      .s3-connector svg { transform: rotate(0deg); }
+      .s3-step { flex: 1; min-width: 0; }
+      .s3-step--wide { flex: 1.15; }
+    }
+    @media (min-width: 1024px) {
+      .s3-container { padding: 0 16px; }
+      .s3-steps { gap: var(--qds-space-4); }
+    }
+
+    /* ================= SECTION 4 — TURN ONE VISIT INTO THE NEXT =================
+       2026-08-10. New section, appended directly below Section 3 (.s3);
+       Sections 1-3 untouched. Reference: founder-supplied ChatGPT mockup
+       image, used for layout/proportion/hierarchy/spacing only -- copy is
+       from the founder's separately-approved Section 4 copy doc, NOT
+       transcribed from the image. First pass: the six step visuals are
+       lightweight CSS/icon placeholders (same approach Section 2's six
+       cards and Section 3's three steps started with) -- final assets
+       come later, same workflow as before.
+       Cream theme reuses the exact --story-*-style token values Section
+       2/3 already established (#F3F0EA family) via a local --s4-*
+       override on .s4, so it reads as the same design system without
+       touching Section 2/3's own tokens. The closing dark CTA panel
+       reuses the hero's own dark tokens (--bg2/--text/--accent) and its
+       existing qds-input/qds-btn markup pattern directly (same URL-field
+       + "Generate My Platform" concept as the hero, intentional
+       callback), rather than inventing new form styling. */
+    .s4 {
+      position: relative; background: var(--s4-bg); padding: var(--qds-space-20) 0;
+      --s4-bg: #F3F0EA;
+      --s4-card-bg: #FFFFFF;
+      --s4-card-bg-alt: #FBF9F4;
+      --s4-border: rgba(23,18,12,0.08);
+      --s4-border-2: rgba(23,18,12,0.14);
+      --s4-text: #1A1512;
+      --s4-text-mid: #6B6459;
+      --s4-text-dim: #A39C90;
+    }
+    .s4-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .s4-head { text-align: center; max-width: 640px; margin: 0 auto var(--qds-space-10); }
+    .s4-eyebrow {
+      font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+      margin-bottom: var(--qds-space-3);
+    }
+    .s4-headline {
+      font-family: var(--font-hero); font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+      font-weight: 800; line-height: 1.18; letter-spacing: -0.01em; color: var(--s4-text);
+    }
+    .s4-headline .accent { color: var(--accent); }
+    .s4-subcopy {
+      font-family: var(--font-body); font-size: 1.02rem; line-height: 1.6;
+      color: var(--s4-text-mid); margin-top: var(--qds-space-3);
+    }
+
+    /* ---- Six-step journey ---- */
+    .s4-journey { display: flex; flex-direction: column; gap: var(--qds-space-10); }
+    .s4-step-head { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; margin-bottom: var(--qds-space-3); }
+    .s4-step-number {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff;
+      font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .s4-step-label {
+      font-family: var(--font-hero); font-weight: 800; font-size: 0.78rem; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--s4-text);
+    }
+    .s4-step-card-wrap { position: relative; }
+    /* 2026-08-10: real final photography replaces the icon placeholders.
+       Source assets are ~0.70-0.75 width/height ratio (MEASURED, not
+       assumed) -- close enough to this card's 3/4 (0.75) that
+       object-fit:cover crops only a small, even margin off the sides,
+       never the subject. Cover (not contain) is intentional here, per
+       founder direction: these six should read as one continuous
+       photographic journey filling the cards, not thumbnails floating in
+       letterboxed padding the way Section 2/3's screenshots do. */
+    .s4-step-card {
+      aspect-ratio: 3 / 4; border-radius: var(--qds-radius-lg);
+      background: var(--s4-card-bg-alt); border: 1px solid var(--s4-border);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .s4-step-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .s4-step-desc {
+      font-family: var(--font-body); font-size: 0.82rem; line-height: 1.5;
+      color: var(--s4-text-mid); text-align: center; margin-top: var(--qds-space-8);
+    }
+    /* Arrow lives inside the card wrapper (not as a row sibling) so its
+       position is always a % of the CARD specifically -- self-scaling at
+       any width/breakpoint, and immune to caption-length differences
+       between steps (which a row-level flex/grid centering trick is not).
+       Mobile-first: points down, sits just under the card; the extra
+       margin-top on .s4-step-desc above clears it. Flips to the card's
+       right edge, centered in the column gap, at >=1024px. */
+    .s4-arrow {
+      position: absolute; left: 50%; top: 100%; margin-top: 10px;
+      transform: translate(-50%, 0);
+      display: flex; color: var(--accent); z-index: 2; pointer-events: none;
+    }
+    .s4-arrow svg { width: 20px; height: 20px; transform: rotate(90deg); }
+
+    /* ---- Retention loop (desktop-only decorative element; a vertical
+       stack has no natural place for a horizontal "loop back" line, so
+       this is hidden below the row breakpoint rather than forced) ---- */
+    .s4-loop { display: none; }
+
+    /* ---- Outcome statement + CTA ---- */
+    .s4-outcome {
+      text-align: center; font-family: var(--font-hero); font-weight: 800;
+      font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.45; color: var(--s4-text);
+      max-width: 760px; margin: var(--qds-space-8) auto 0;
+    }
+    .s4-outcome .accent { color: var(--accent); }
+    .s4-cta-wrap { text-align: center; margin-top: var(--qds-space-8); }
+    .s4-cta-arrow { width: 18px; height: 18px; }
+
+    /* ---- Final dark CTA panel ---- */
+    .s4-panel-wrap { margin-top: var(--qds-space-12); }
+    .s4-panel {
+      background: var(--bg2); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-8);
+      display: flex; flex-direction: column; gap: var(--qds-space-6);
+    }
+    .s4-panel-left { display: flex; align-items: flex-start; gap: var(--qds-space-4); }
+    .s4-panel-icon {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.35); color: var(--accent);
+    }
+    .s4-panel-icon svg { width: 20px; height: 20px; }
+    .s4-panel-headline { font-family: var(--font-hero); font-weight: 800; font-size: 1.15rem; color: var(--text); margin-bottom: 6px; }
+    .s4-panel-sub { font-family: var(--font-body); font-size: 0.9rem; color: var(--text-mid); }
+    .s4-panel-right { display: flex; flex-direction: column; gap: var(--qds-space-3); }
+    .s4-panel-form { display: flex; flex-direction: column; gap: var(--qds-space-3); }
+    .s4-panel-form .qds-input { border-radius: var(--qds-radius-lg); }
+    .s4-panel-form .qds-btn--lg { border-radius: var(--qds-radius-lg); white-space: nowrap; }
+    .s4-panel-note { font-family: var(--font-body); font-size: 0.75rem; color: var(--text-dim); text-align: center; }
+
+    /* ---- Section 4 responsive ---- */
+    @media (max-width: 767px) {
+      .s4-container { padding: 0 20px; }
+    }
+    @media (min-width: 900px) {
+      .s4-panel { flex-direction: row; align-items: center; justify-content: space-between; }
+      .s4-panel-right { flex-direction: row; align-items: center; gap: var(--qds-space-4); flex-shrink: 0; }
+      .s4-panel-form { flex-direction: row; align-items: center; gap: var(--qds-space-3); }
+      .s4-panel-form .qds-input { min-width: 220px; }
+      .s4-panel-note { text-align: left; white-space: nowrap; }
+    }
+    @media (min-width: 1024px) {
+      .s4-container { padding: 0 16px; }
+      .s4-journey { flex-direction: row; align-items: flex-start; --s4-gap: 20px; gap: var(--s4-gap); }
+      .s4-step { flex: 1; min-width: 0; }
+      .s4-step-desc { margin-top: var(--qds-space-3); }
+      .s4-arrow {
+        left: 100%; top: 50%; margin-top: 0; margin-left: calc(var(--s4-gap) / 2);
+        transform: translate(-50%, -50%);
+      }
+      .s4-arrow svg { transform: rotate(0deg); }
+      .s4-loop {
+        display: flex; position: relative; align-items: center; justify-content: center;
+        margin-top: var(--qds-space-6); height: 1px;
+      }
+      .s4-loop-line { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed rgba(255,90,31,0.35); }
+      .s4-loop::before, .s4-loop::after {
+        content: ''; position: absolute; top: -14px; width: 0; height: 14px;
+        border-left: 2px dashed rgba(255,90,31,0.35);
+      }
+      .s4-loop::before { left: 0; }
+      .s4-loop::after { right: 0; }
+      .s4-loop-icon {
+        position: relative; z-index: 1; width: 30px; height: 30px; border-radius: 50%;
+        background: var(--s4-bg); border: 1.5px solid var(--accent); color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .s4-loop-icon svg { width: 15px; height: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="hero-v3-concept.html" class="nav-logo">QRAIVY</a>
+    <div class="nav-center">
+      <a href="#" class="nav-link"><span data-i18n="nav_product">Product</span></a>
+      <a href="#" class="nav-link"><span data-i18n="nav_solutions">Solutions</span> <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></a>
+      <a href="#pricing" class="nav-link"><span data-i18n="nav_pricing">Pricing</span></a>
+      <a href="#" class="nav-link"><span data-i18n="nav_resources">Resources</span> <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></a>
+    </div>
+    <div class="nav-right">
+      <button type="button" class="lang-toggle" id="langToggle" aria-label="Switch language">
+        <span class="lang-toggle-opt" data-lang-opt="en">EN</span><span class="lang-toggle-opt" data-lang-opt="de">DE</span>
+      </button>
+      <a href="login.html" class="nav-login" data-i18n="nav_login">Log in</a>
+      <a href="login.html" class="qds-btn qds-btn--primary qds-btn--md" data-i18n="nav_cta">Get Started</a>
+      <button type="button" class="nav-hamburger" id="navHamburger" aria-expanded="false" aria-controls="navMobilePanel" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </nav>
+  <div class="nav-mobile-panel" id="navMobilePanel">
+    <a href="#" class="nav-link" data-i18n="nav_product">Product</a>
+    <a href="#" class="nav-link" data-i18n="nav_solutions">Solutions</a>
+    <a href="#pricing" class="nav-link" data-i18n="nav_pricing">Pricing</a>
+    <a href="#" class="nav-link" data-i18n="nav_resources">Resources</a>
+    <a href="login.html" class="nav-link" data-i18n="nav_login">Log in</a>
+  </div>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container hero-grid">
+      <div class="hero-left">
+        <h1 class="hero-headline"><span data-i18n="hero_headline_pre">Turn your website into an </span><span class="accent" data-i18n="hero_headline_accent">AI-powered</span><span data-i18n="hero_headline_post"> customer engagement platform.</span></h1>
+        <p class="hero-subcopy" data-i18n="hero_subcopy">Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.</p>
+        <p class="hero-invite" data-i18n="hero_invite">Curious how it works?</p>
+        <form class="hero-form" onsubmit="return false;">
+          <div class="input-row">
+            <div class="qds-field" style="flex:1; min-width:0;">
+              <label for="hero-url-input" class="sr-only" data-i18n="hero_input_label">Your website URL</label>
+              <div class="qds-input qds-input--md">
+                <span class="qds-input__prefix" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
+                </span>
+                <input type="text" id="hero-url-input" class="qds-input__control" data-i18n-placeholder="hero_input_placeholder" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+              </div>
+            </div>
+            <button type="button" class="qds-btn qds-btn--ai qds-btn--lg">
+              <span class="qds-btn__content"><span data-i18n="hero_cta">Generate My Platform</span>
+                <span class="qds-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+              </span>
+            </button>
+          </div>
+        </form>
+        <p class="hero-supporting-line" data-i18n="hero_supporting_line">We'll discover your brand, build your platform, and prepare it for launch.</p>
+      </div>
+
+      <div class="hero-visual">
+        <div class="device-wrap">
+          <img class="hero-energy-img" src="img/hero-v3/hero-energy-glow-asset-v1.png" alt="" aria-hidden="true" />
+          <!-- DE screen-text asset supplied 2026-08-09 (real German
+               Sunrise Bakery screen content, same device photography per
+               founder instruction). Only this attribute changed --
+               data-src-en, positioning, sizing, and the separate
+               .hero-energy-img layer above are untouched. -->
+          <img class="hero-device-img" id="heroDeviceImg" data-src-en="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" data-src-de="img/hero-v3/hero-laptop-iphone-combined-asset-de-v1.png" src="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" alt="" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-bar-wrap">
+      <div class="feature-bar">
+        <div class="feature-item">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M19 3v3M17.5 4.5h3"/></svg>
+          </div>
+          <div class="feature-text">
+            <div class="feature-title" data-i18n="feat1_title">AI Does the Work</div>
+            <div class="feature-desc" data-i18n="feat1_desc">We scan your website, understand your business and build everything for you automatically.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M11 18h2"/></svg>
+          </div>
+          <div class="feature-text">
+            <div class="feature-title" data-i18n="feat2_title">Engage Everywhere</div>
+            <div class="feature-desc" data-i18n="feat2_desc">Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>
+          </div>
+          <div class="feature-text">
+            <div class="feature-title" data-i18n="feat3_title">Grow Faster</div>
+            <div class="feature-desc" data-i18n="feat3_desc">AI campaigns and smart analytics help you drive more visits and increase customer loyalty.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M8 15h8v6H8z"/></svg>
+          </div>
+          <div class="feature-text">
+            <div class="feature-title" data-i18n="feat4_title">Print &amp; Ship</div>
+            <div class="feature-desc" data-i18n="feat4_desc">AI designs your table tents, posters and more. We print and ship to your door.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.6 3.6 5.8 3.6 9s-1.3 6.4-3.6 9c-2.3-2.6-3.6-5.8-3.6-9s1.3-6.4 3.6-9z"/></svg>
+          </div>
+          <div class="feature-text">
+            <div class="feature-title" data-i18n="feat5_title">Built for Scale</div>
+            <div class="feature-desc" data-i18n="feat5_desc">Manage one location or hundreds from a powerful dashboard built for enterprises.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story">
+    <div class="story-container story-grid">
+      <div class="story-copy">
+        <h2 class="story-headline">
+          <span class="story-headline-line" data-i18n="story_headline_line1">Create a Deal.</span>
+          <span class="story-headline-line"><span data-i18n="story_headline_line2_pre">Everything else happens </span><span class="accent" data-i18n="story_headline_accent">automatically.</span></span>
+        </h2>
+        <p class="story-subcopy" data-i18n="story_subcopy">Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.</p>
+      </div>
+
+      <div class="story-workflow">
+        <div class="workflow-card deal-card">
+          <div class="workflow-card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+            <span data-i18n="story_deal_label">Today's Deal</span>
+          </div>
+          <div class="deal-card-title" data-i18n="story_deal_title">Free Coffee Friday</div>
+          <div class="deal-card-desc" data-i18n="story_deal_desc">Buy one coffee, get one free</div>
+          <button type="button" class="qds-btn qds-btn--primary qds-btn--sm" data-i18n="story_deal_cta">Publish Deal</button>
+        </div>
+
+        <div class="workflow-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="workflow-card automation-card">
+          <div class="workflow-card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
+            <span data-i18n="story_auto_label">QRAIVY Automation</span>
+          </div>
+          <ul class="automation-list">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+              <span data-i18n="story_auto_1">Landing Page updated</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+              <span data-i18n="story_auto_2">Wallet updated</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+              <span data-i18n="story_auto_3">Push Notification ready</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg>
+              <span data-i18n="story_auto_4">Analytics tracking enabled</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="workflow-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="workflow-phone-wrap">
+          <div class="workflow-phone" aria-hidden="true">
+            <div class="workflow-phone-screen">
+              <div class="workflow-phone-time">9:41</div>
+              <div class="workflow-phone-date" data-i18n="story_phone_date">Friday, May 24</div>
+              <div class="workflow-notification">
+                <div class="workflow-notification-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a5 5 0 0 0-5 5v3.5c0 .9-.36 1.77-1 2.4L5 15h14l-1-1.1c-.64-.63-1-1.5-1-2.4V8a5 5 0 0 0-5-5z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
+                </div>
+                <div class="workflow-notification-body">
+                  <div class="workflow-notification-title" data-i18n="story_notif_title">Free Coffee Friday</div>
+                  <div class="workflow-notification-text" data-i18n="story_notif_text">Buy one coffee, get one free — tap to redeem.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-container capabilities">
+      <h3 class="capabilities-headline" data-i18n="cap_headline">Everything you need to keep customers coming back.</h3>
+      <div class="capabilities-grid">
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/smart-landing-pages-en.png" data-src-de="images/features/smart-landing-pages-de.png" src="images/features/smart-landing-pages-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap1_title">Smart Landing Pages</div>
+          <div class="cap-desc" data-i18n="cap1_desc">AI creates a beautiful, mobile-first website that converts.</div>
+        </div>
+
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/wallet-passes-en.png" data-src-de="images/features/wallet-passes-de.png" src="images/features/wallet-passes-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.4"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap2_title">Wallet Passes</div>
+          <div class="cap-desc" data-i18n="cap2_desc">One tap access for your customers. Always with them.</div>
+        </div>
+
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/loyalty-programs-en.png" data-src-de="images/features/loyalty-programs-de.png" src="images/features/loyalty-programs-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3-4.8-4.3 6.4-.6L12 3z"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap3_title">Loyalty Programs</div>
+          <div class="cap-desc" data-i18n="cap3_desc">Reward loyalty. Increase repeat visits and lifetime value.</div>
+        </div>
+
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/deals-promotions-en.png" data-src-de="images/features/deals-promotions-de.png" src="images/features/deals-promotions-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap4_title">Deals &amp; Promotions</div>
+          <div class="cap-desc" data-i18n="cap4_desc">Create, schedule and promote deals that drive action.</div>
+        </div>
+
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/ai-campaigns-en.png" data-src-de="images/features/ai-campaigns-de.png" src="images/features/ai-campaigns-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l5 4V6l-5 4H3z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6a8 8 0 0 1 0 12"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap5_title">AI Campaigns</div>
+          <div class="cap-desc" data-i18n="cap5_desc">AI writes, targets and sends campaigns that work.</div>
+        </div>
+
+        <div class="cap-card">
+          <div class="cap-preview">
+            <img data-src-en="images/features/analytics-en.png" data-src-de="images/features/analytics-de.png" src="images/features/analytics-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+          <div class="cap-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.25" y="7" width="3.5" height="13"/><rect x="16.5" y="10" width="3.5" height="10"/></svg>
+          </div>
+          <div class="cap-title" data-i18n="cap6_title">Analytics &amp; Insights</div>
+          <div class="cap-desc" data-i18n="cap6_desc">Track performance and understand what drives growth.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="s3">
+    <div class="s3-container">
+      <div class="s3-head">
+        <h2 class="s3-headline">
+          <span class="s3-headline-line" data-i18n="s3_headline_1">Give us your website.</span>
+          <span class="s3-headline-line"><span class="accent" data-i18n="s3_headline_2_accent">QRAIVY</span> <span data-i18n="s3_headline_2_rest">builds the rest.</span></span>
+        </h2>
+        <p class="s3-subcopy" data-i18n="s3_subcopy">QRAIVY learns your business and creates your customer engagement platform.</p>
+      </div>
+
+      <div class="s3-steps">
+        <div class="s3-step">
+          <div class="s3-step-head">
+            <div class="s3-step-number">1</div>
+            <div class="s3-step-label" data-i18n="s3_step1_label">Your Website</div>
+          </div>
+          <div class="s3-step-card">
+            <img data-src-en="images/section3/website-en.png" data-src-de="images/section3/website-de.png" src="images/section3/website-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="s3-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="s3-step">
+          <div class="s3-step-head">
+            <div class="s3-step-number">2</div>
+            <div class="s3-step-label" data-i18n="s3_step2_label">QRAIVY AI</div>
+          </div>
+          <div class="s3-step-card">
+            <img data-src-en="images/section3/qraivy-ai-en.png" data-src-de="images/section3/qraivy-ai-de.png" src="images/section3/qraivy-ai-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="s3-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="s3-step s3-step--wide">
+          <div class="s3-step-head">
+            <div class="s3-step-number">3</div>
+            <div class="s3-step-label" data-i18n="s3_step3_label">Your Platform</div>
+          </div>
+          <div class="s3-step-card">
+            <img data-src-en="images/section3/platform-en.png" data-src-de="images/section3/platform-de.png" src="images/section3/platform-en.png" alt="" aria-hidden="true" loading="lazy" />
+          </div>
+        </div>
+      </div>
+
+      <div class="s3-closing">
+        <div class="s3-closing-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 19 4c0 2.5-.5 6.5-4 9a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        </div>
+        <div class="s3-closing-line">
+          <span data-i18n="s3_closing_1">Review</span><span class="accent">.</span>
+          <span data-i18n="s3_closing_2">Customize</span><span class="accent">.</span>
+          <span data-i18n="s3_closing_3">Publish</span><span class="accent">.</span>
+        </div>
+        <p class="s3-closing-sub" data-i18n="s3_closing_sub">You're in control. Make it yours and go live when you're ready.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="s4">
+    <div class="s4-container">
+      <div class="s4-head">
+        <div class="s4-eyebrow" data-i18n="s4_eyebrow">KEEP CUSTOMERS COMING BACK</div>
+        <h2 class="s4-headline">
+          <span data-i18n="s4_headline_pre">Turn </span><span class="accent" data-i18n="s4_headline_accent">one visit</span><span data-i18n="s4_headline_post"> into the next.</span>
+        </h2>
+        <p class="s4-subcopy" data-i18n="s4_subcopy">QRAIVY keeps your customers connected after they leave.</p>
+      </div>
+
+      <div class="s4-journey">
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">1</div>
+            <div class="s4-step-label" data-i18n="s4_step1_label">VISIT</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-visit-en.png" data-src-de="images/section4/customer-loop-visit-de.png" src="images/section4/customer-loop-visit-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+            <div class="s4-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step1_desc">A customer visits your business.</p>
+        </div>
+
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">2</div>
+            <div class="s4-step-label" data-i18n="s4_step2_label">JOIN</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-join-en.png" data-src-de="images/section4/customer-loop-join-de.png" src="images/section4/customer-loop-join-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+            <div class="s4-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step2_desc">They scan, discover and join in seconds.</p>
+        </div>
+
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">3</div>
+            <div class="s4-step-label" data-i18n="s4_step3_label">WALLET</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-wallet-en.png" data-src-de="images/section4/customer-loop-wallet-de.png" src="images/section4/customer-loop-wallet-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+            <div class="s4-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step3_desc">They save your loyalty pass to their wallet.</p>
+        </div>
+
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">4</div>
+            <div class="s4-step-label" data-i18n="s4_step4_label">RETURN</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-return-en.png" data-src-de="images/section4/customer-loop-return-de.png" src="images/section4/customer-loop-return-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+            <div class="s4-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step4_desc">You send deals and reminders they care about.</p>
+        </div>
+
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">5</div>
+            <div class="s4-step-label" data-i18n="s4_step5_label">REWARD</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-reward-en.png" data-src-de="images/section4/customer-loop-reward-de.png" src="images/section4/customer-loop-reward-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+            <div class="s4-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step5_desc">They return, redeem and feel appreciated.</p>
+        </div>
+
+        <div class="s4-step">
+          <div class="s4-step-head">
+            <div class="s4-step-number">6</div>
+            <div class="s4-step-label" data-i18n="s4_step6_label">RETURN AGAIN</div>
+          </div>
+          <div class="s4-step-card-wrap">
+            <div class="s4-step-card">
+              <img data-src-en="images/section4/customer-loop-return-again-en.png" data-src-de="images/section4/customer-loop-return-again-de.png" src="images/section4/customer-loop-return-again-en.png" alt="" aria-hidden="true" loading="lazy" />
+            </div>
+          </div>
+          <p class="s4-step-desc" data-i18n="s4_step6_desc">They come back again. And again.</p>
+        </div>
+      </div>
+
+      <div class="s4-loop" aria-hidden="true">
+        <span class="s4-loop-line"></span>
+        <span class="s4-loop-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+        </span>
+      </div>
+
+      <p class="s4-outcome">
+        <span data-i18n="s4_outcome_pre">QRAIVY turns a </span><span class="accent" data-i18n="s4_outcome_accent">one-time visitor</span><span data-i18n="s4_outcome_post"> into a customer you can reach again.</span>
+      </p>
+
+      <div class="s4-cta-wrap">
+        <button type="button" class="qds-btn qds-btn--primary qds-btn--lg">
+          <span data-i18n="s4_cta">Build My Customer Loop</span>
+          <svg class="s4-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <div class="s4-panel-wrap">
+        <div class="s4-panel">
+          <div class="s4-panel-left">
+            <div class="s4-panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
+            </div>
+            <div>
+              <div class="s4-panel-headline" data-i18n="s4_panel_headline">Ready to build your customer engagement platform?</div>
+              <div class="s4-panel-sub" data-i18n="s4_panel_sub">Enter your website and QRAIVY will handle the rest.</div>
+            </div>
+          </div>
+          <div class="s4-panel-right">
+            <div class="s4-panel-form">
+              <div class="qds-field">
+                <div class="qds-input qds-input--md">
+                  <span class="qds-input__prefix" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
+                  </span>
+                  <input type="text" class="qds-input__control" data-i18n-placeholder="s4_panel_url_placeholder" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+                </div>
+              </div>
+              <button type="button" class="qds-btn qds-btn--ai qds-btn--lg">
+                <span class="qds-btn__content"><span data-i18n="s4_panel_cta">Generate My Platform</span>
+                  <span class="qds-btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </span>
+              </button>
+            </div>
+            <div class="s4-panel-note" data-i18n="s4_panel_note">No credit card required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    var navHamburger = document.getElementById('navHamburger');
+    var navMobilePanel = document.getElementById('navMobilePanel');
+    navHamburger.addEventListener('click', function () {
+      var open = navMobilePanel.classList.toggle('open');
+      navHamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    /* EN/DE — same pattern as dashboard.html's _t/applyLang (data-i18n
+       textContent swap), scoped to this standalone page. Language
+       detection/storage reuses js/qraivy-lang.js (window.QRAIVY_LANGUAGE /
+       window.setQraivyLang), the repo's actual shared mechanism, rather
+       than a page-local storage key. German copy for the Hero/feature bar
+       is MEASURED (read directly off the founder-supplied reference,
+       ChatGPT Image Aug 9, 2026, 01_48_59 PM.png); nav labels reuse
+       dashboard.html's already-approved German nav terms where they exist. */
+    var _t = {
+      en: {
+        nav_product: 'Product', nav_solutions: 'Solutions', nav_pricing: 'Pricing',
+        nav_resources: 'Resources', nav_login: 'Log in', nav_cta: 'Get Started',
+        hero_headline_pre: 'Turn your website into an ',
+        hero_headline_accent: 'AI-powered',
+        hero_headline_post: ' customer engagement platform.',
+        hero_subcopy: 'Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.',
+        hero_invite: 'Curious how it works?',
+        hero_input_label: 'Your website URL',
+        hero_input_placeholder: 'yourwebsite.com',
+        hero_cta: 'Generate My Platform',
+        hero_supporting_line: "We'll discover your brand, build your platform, and prepare it for launch.",
+        feat1_title: 'AI Does the Work',
+        feat1_desc: 'We scan your website, understand your business and build everything for you automatically.',
+        feat2_title: 'Engage Everywhere',
+        feat2_desc: 'Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.',
+        feat3_title: 'Grow Faster',
+        feat3_desc: 'AI campaigns and smart analytics help you drive more visits and increase customer loyalty.',
+        feat4_title: 'Print & Ship',
+        feat4_desc: 'AI designs your table tents, posters and more. We print and ship to your door.',
+        feat5_title: 'Built for Scale',
+        feat5_desc: 'Manage one location or hundreds from a powerful dashboard built for enterprises.',
+        story_headline_line1: 'Create a Deal.',
+        story_headline_line2_pre: 'Everything else happens ',
+        story_headline_accent: 'automatically.',
+        story_subcopy: 'Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.',
+        story_deal_label: "Today's Deal",
+        story_deal_title: 'Free Coffee Friday',
+        story_deal_desc: 'Buy one coffee, get one free',
+        story_deal_cta: 'Publish Deal',
+        story_auto_label: 'QRAIVY Automation',
+        story_auto_1: 'Landing Page updated',
+        story_auto_2: 'Wallet updated',
+        story_auto_3: 'Push Notification ready',
+        story_auto_4: 'Analytics tracking enabled',
+        story_notif_title: 'Free Coffee Friday',
+        story_notif_text: 'Buy one coffee, get one free — tap to redeem.',
+        story_phone_date: 'Friday, May 24',
+        cap_headline: 'Everything you need to keep customers coming back.',
+        cap1_title: 'Smart Landing Pages',
+        cap1_desc: 'AI creates a beautiful, mobile-first website that converts.',
+        cap2_title: 'Wallet Passes',
+        cap2_desc: 'One tap access for your customers. Always with them.',
+        cap3_title: 'Loyalty Programs',
+        cap3_desc: 'Reward loyalty. Increase repeat visits and lifetime value.',
+        cap4_title: 'Deals & Promotions',
+        cap4_desc: 'Create, schedule and promote deals that drive action.',
+        cap5_title: 'AI Campaigns',
+        cap5_desc: 'AI writes, targets and sends campaigns that work.',
+        cap6_title: 'Analytics & Insights',
+        cap6_desc: 'Track performance and understand what drives growth.',
+        s3_headline_1: 'Give us your website.',
+        s3_headline_2_accent: 'QRAIVY',
+        s3_headline_2_rest: 'builds the rest.',
+        s3_subcopy: 'QRAIVY learns your business and creates your customer engagement platform.',
+        s3_step1_label: 'Your Website',
+        s3_step2_label: 'QRAIVY AI',
+        s3_step3_label: 'Your Platform',
+        s3_closing_1: 'Review',
+        s3_closing_2: 'Customize',
+        s3_closing_3: 'Publish',
+        s3_closing_sub: "You're in control. Make it yours and go live when you're ready.",
+        s4_eyebrow: 'KEEP CUSTOMERS COMING BACK',
+        s4_headline_pre: 'Turn ',
+        s4_headline_accent: 'one visit',
+        s4_headline_post: ' into the next.',
+        s4_subcopy: 'QRAIVY keeps your customers connected after they leave.',
+        s4_step1_label: 'VISIT',
+        s4_step1_desc: 'A customer visits your business.',
+        s4_step2_label: 'JOIN',
+        s4_step2_desc: 'They scan, discover and join in seconds.',
+        s4_step3_label: 'WALLET',
+        s4_step3_desc: 'They save your loyalty pass to their wallet.',
+        s4_step4_label: 'RETURN',
+        s4_step4_desc: 'You send deals and reminders they care about.',
+        s4_step5_label: 'REWARD',
+        s4_step5_desc: 'They return, redeem and feel appreciated.',
+        s4_step6_label: 'RETURN AGAIN',
+        s4_step6_desc: 'They come back again. And again.',
+        s4_outcome_pre: 'QRAIVY turns a ',
+        s4_outcome_accent: 'one-time visitor',
+        s4_outcome_post: ' into a customer you can reach again.',
+        s4_cta: 'Build My Customer Loop',
+        s4_panel_headline: 'Ready to build your customer engagement platform?',
+        s4_panel_sub: 'Enter your website and QRAIVY will handle the rest.',
+        s4_panel_url_placeholder: 'yourwebsite.com',
+        s4_panel_cta: 'Generate My Platform',
+        s4_panel_note: 'No credit card required.'
+      },
+      de: {
+        nav_product: 'Produkt', nav_solutions: 'Lösungen', nav_pricing: 'Preise',
+        nav_resources: 'Ressourcen', nav_login: 'Anmelden', nav_cta: 'Jetzt starten',
+        hero_headline_pre: 'Verwandle deine Website in eine ',
+        hero_headline_accent: 'KI-gestützte',
+        hero_headline_post: ' Kundenbindungsplattform.',
+        hero_subcopy: 'Erstelle intelligente Landingpages, Wallet-Pässe, Treueprogramme, Angebote, KI-Kampagnen und vieles mehr – alles aus der Website, die du bereits hast.',
+        hero_invite: 'Neugierig, wie es funktioniert?',
+        hero_input_label: 'Deine Website-URL',
+        hero_input_placeholder: 'deinewebsite.de',
+        hero_cta: 'Plattform erstellen',
+        hero_supporting_line: 'Wir entdecken deine Marke, erstellen deine Plattform und bereiten sie für den Start vor.',
+        feat1_title: 'KI übernimmt die Arbeit',
+        feat1_desc: 'Wir analysieren deine Website, verstehen dein Unternehmen und erstellen alles automatisch für dich.',
+        feat2_title: 'Überall Kunden binden',
+        feat2_desc: 'Intelligente Landingpages, Wallet-Pässe, Treueprogramme, Angebote und Push-Benachrichtigungen – alles an einem Ort.',
+        feat3_title: 'Schneller wachsen',
+        feat3_desc: 'KI-Kampagnen und smarte Analysen helfen dir, mehr Besuche zu generieren und die Kundentreue zu steigern.',
+        feat4_title: 'Drucken & Versenden',
+        feat4_desc: 'KI erstellt dein Design für Tischaufsteller, Poster und mehr. Wir drucken und versenden direkt zu dir.',
+        feat5_title: 'Für jedes Unternehmen',
+        feat5_desc: 'Verwalte einen Standort oder Hunderte – mit einem leistungsstarken Dashboard für Unternehmen.',
+        story_headline_line1: 'Erstelle ein Angebot.',
+        story_headline_line2_pre: 'Alles andere passiert ',
+        story_headline_accent: 'automatisch.',
+        story_subcopy: 'Veröffentliche ein Angebot einmal, und KI aktualisiert sofort deine Website, Wallet, Benachrichtigungen und Analysen.',
+        story_deal_label: 'Heutiges Angebot',
+        story_deal_title: 'Free Coffee Friday',
+        story_deal_desc: 'Einen Kaffee kaufen, einen gratis erhalten',
+        story_deal_cta: 'Angebot veröffentlichen',
+        story_auto_label: 'QRAIVY Automatisierung',
+        story_auto_1: 'Landingpage aktualisiert',
+        story_auto_2: 'Wallet aktualisiert',
+        story_auto_3: 'Push-Benachrichtigung bereit',
+        story_auto_4: 'Analyse-Tracking aktiviert',
+        story_notif_title: 'Free Coffee Friday',
+        story_notif_text: 'Einen Kaffee kaufen, einen gratis erhalten – zum Einlösen tippen.',
+        story_phone_date: 'Freitag, 24. Mai',
+        cap_headline: 'Alles, was du brauchst, damit Kunden wiederkommen.',
+        cap1_title: 'Intelligente Landingpages',
+        cap1_desc: 'KI erstellt eine schöne, mobile-first Website, die konvertiert.',
+        cap2_title: 'Wallet-Pässe',
+        cap2_desc: 'Ein Fingertipp Zugang für deine Kunden. Immer griffbereit.',
+        cap3_title: 'Treueprogramme',
+        cap3_desc: 'Belohne Treue. Steigere Wiederbesuche und Kundenwert.',
+        cap4_title: 'Angebote & Aktionen',
+        cap4_desc: 'Erstelle, plane und bewirb Angebote, die zum Handeln anregen.',
+        cap5_title: 'KI-Kampagnen',
+        cap5_desc: 'KI schreibt, zielt und versendet Kampagnen, die wirken.',
+        cap6_title: 'Analytik & Insights',
+        cap6_desc: 'Verfolge die Performance und verstehe, was Wachstum antreibt.',
+        s3_headline_1: 'Gib uns deine Website.',
+        s3_headline_2_accent: 'QRAIVY',
+        s3_headline_2_rest: 'baut den Rest.',
+        s3_subcopy: 'QRAIVY lernt dein Unternehmen kennen und erstellt deine Kundenbindungsplattform.',
+        s3_step1_label: 'Deine Website',
+        s3_step2_label: 'QRAIVY KI',
+        s3_step3_label: 'Deine Plattform',
+        s3_closing_1: 'Prüfen',
+        s3_closing_2: 'Anpassen',
+        s3_closing_3: 'Veröffentlichen',
+        s3_closing_sub: 'Du behältst die Kontrolle. Passe alles an und veröffentliche, wenn du bereit bist.',
+        s4_eyebrow: 'KUNDEN ZURÜCKBRINGEN',
+        s4_headline_pre: 'Mach aus ',
+        s4_headline_accent: 'einem Besuch',
+        s4_headline_post: ' den nächsten.',
+        s4_subcopy: 'QRAIVY hält deine Kunden auch nach ihrem Besuch mit deinem Unternehmen verbunden.',
+        s4_step1_label: 'BESUCH',
+        s4_step1_desc: 'Ein Kunde besucht dein Unternehmen.',
+        s4_step2_label: 'BEITRETEN',
+        s4_step2_desc: 'Er scannt, entdeckt dein Angebot und tritt in Sekunden bei.',
+        s4_step3_label: 'WALLET',
+        s4_step3_desc: 'Er speichert deinen Treuepass in seiner Wallet.',
+        s4_step4_label: 'RÜCKKEHR',
+        s4_step4_desc: 'Du sendest relevante Angebote und Erinnerungen.',
+        s4_step5_label: 'BELOHNUNG',
+        s4_step5_desc: 'Er kommt zurück, löst seine Belohnung ein und fühlt sich wertgeschätzt.',
+        s4_step6_label: 'WIEDERKOMMEN',
+        s4_step6_desc: 'Er kommt wieder. Und wieder.',
+        s4_outcome_pre: 'QRAIVY macht aus einem ',
+        s4_outcome_accent: 'einmaligen Besucher',
+        s4_outcome_post: ' einen Kunden, den du wieder erreichen kannst.',
+        s4_cta: 'Meinen Kundenkreislauf erstellen',
+        s4_panel_headline: 'Bereit, deine Kundenbindungsplattform zu erstellen?',
+        s4_panel_sub: 'Gib deine Website ein und QRAIVY übernimmt den Rest.',
+        s4_panel_url_placeholder: 'deinewebsite.de',
+        s4_panel_cta: 'Plattform erstellen',
+        s4_panel_note: 'Keine Kreditkarte erforderlich.'
+      }
+    };
+
+    var langToggle = document.getElementById('langToggle');
+    var heroDeviceImg = document.getElementById('heroDeviceImg');
+
+    function applyLang(lang) {
+      var t = _t[lang] || _t.en;
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) el.textContent = t[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+        var key = el.getAttribute('data-i18n-placeholder');
+        if (t[key] !== undefined) el.placeholder = t[key];
+      });
+      var src = heroDeviceImg.getAttribute('data-src-' + lang);
+      if (src) heroDeviceImg.src = src;
+      document.querySelectorAll('.cap-preview img[data-src-en], .s3-step-card img[data-src-en], .s4-step-card img[data-src-en]').forEach(function (el) {
+        var s = el.getAttribute('data-src-' + lang);
+        if (s) el.src = s;
+      });
+      langToggle.setAttribute('data-active', lang);
+      document.documentElement.setAttribute('lang', lang);
+      window.setQraivyLang(lang);
+    }
+
+    langToggle.addEventListener('click', function () {
+      applyLang(window.QRAIVY_LANGUAGE === 'de' ? 'en' : 'de');
+    });
+
+    applyLang(window.QRAIVY_LANGUAGE || 'en');
+  </script>
+</body>
+</html>
