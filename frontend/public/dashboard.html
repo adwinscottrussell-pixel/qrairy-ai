@@ -498,6 +498,7 @@ async function initDashboard(){
       document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
       var sec = document.getElementById('section-customers'); if (sec) sec.style.display = 'block';
       if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
+      if (window.custInitPage) window.custInitPage();
     });
   }
 
@@ -573,12 +574,13 @@ async function initDashboard(){
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
         if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-loyalty');
       } else if (sectionP === 'customers') {
-        // Customers section renders synchronously from mock data (see its
-        // own inline script, custRenderTable() at the bottom) — no
-        // async load/token dance needed here, unlike Subscribers.
+        // Loads real data from the canonical Customer API on first entry
+        // (Phase 5) — same async/token pattern as Subscribers and
+        // Loyalty above, via window.custInitPage() (idempotent).
         var sec = document.getElementById('section-customers');
         if (sec) sec.style.display = 'block';
         if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
+        if (window.custInitPage) window.custInitPage();
       } else {
         // Unknown section param - show main dashboard
         if (mc) mc.style.display = 'block';
@@ -1288,7 +1290,6 @@ async function initDashboard(){
 }
 </style>
 
-<div class="preview-banner">PREVIEW — visual prototype only, not connected to live customer data</div>
 <div id="customers-page" style="padding:var(--dashboard-padding);">
 
   <!-- ── Page header ── -->
@@ -1317,11 +1318,11 @@ async function initDashboard(){
           <div class="cust-filter-item" data-filter="inactive" onclick="custSelectFilter('inactive')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>Inactive</div>
         </div>
       </div>
-      <button class="btn-outline" onclick="alert('Export — preview only')">
+      <button class="btn-outline" onclick="custExportClick()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export
       </button>
-      <button class="btn-primary" onclick="alert('Create Campaign — preview only')">Create Campaign</button>
+      <button class="btn-primary" onclick="custCreateCampaignClick()">Create Campaign</button>
     </div>
   </div>
 
@@ -1329,27 +1330,27 @@ async function initDashboard(){
   <div class="cust-kpi-row">
     <div class="kpi-card cust-kpi--accent">
       <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="kpi-val orange">1,284</div>
+      <div class="kpi-val orange" id="custKpiTotal">—</div>
       <div class="kpi-lbl">Total Customers</div>
     </div>
     <div class="kpi-card">
       <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
-      <div class="kpi-val">823</div>
+      <div class="kpi-val" id="custKpiEmail">—</div>
       <div class="kpi-lbl">Email</div>
     </div>
     <div class="kpi-card">
       <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-      <div class="kpi-val">642</div>
+      <div class="kpi-val" id="custKpiPush">—</div>
       <div class="kpi-lbl">Push</div>
     </div>
     <div class="kpi-card">
       <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-      <div class="kpi-val purple">518</div>
+      <div class="kpi-val purple" id="custKpiWallet">—</div>
       <div class="kpi-lbl">Wallet</div>
     </div>
     <div class="kpi-card">
       <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-      <div class="kpi-val green">391</div>
+      <div class="kpi-val green" id="custKpiLoyalty">—</div>
       <div class="kpi-lbl">Loyalty</div>
     </div>
   </div>
@@ -1368,6 +1369,15 @@ async function initDashboard(){
         <tbody id="custTableBody"></tbody>
       </table>
     </div>
+    <!-- Minimal pagination footer — the approved screenshot has no
+         pagination control; this is the smallest addition that keeps the
+         table from silently truncating at 25 rows once real data exists,
+         without altering the panel's visual structure. -->
+    <div id="custPager" style="display:none;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--dashboard-border);">
+      <span id="custPagerLabel" style="font-size:.72rem;color:var(--dashboard-muted-dim);font-family:var(--font-mono);"></span>
+      <button class="btn-outline" id="custPagerPrev" style="padding:5px 12px;font-size:.72rem;" onclick="custGoToPage(_custState.page - 1)">Prev</button>
+      <button class="btn-outline" id="custPagerNext" style="padding:5px 12px;font-size:.72rem;" onclick="custGoToPage(_custState.page + 1)">Next</button>
+    </div>
   </div>
 
   <!-- ── Smart Segments ── -->
@@ -1377,34 +1387,34 @@ async function initDashboard(){
   <div class="segment-grid">
     <div class="segment-card">
       <div class="segment-card-title">Reward Ready</div>
-      <div class="segment-card-count">47 customers</div>
+      <div class="segment-card-count" id="custSegRewardCount">—</div>
       <div class="segment-card-actions">
-        <button class="btn-outline" onclick="alert('Preview only')">View Customers</button>
-        <button class="btn-ghost" onclick="alert('Preview only')">Create Campaign</button>
+        <button class="btn-outline" onclick="custViewSegment('reward')">View Customers</button>
+        <button class="btn-ghost" onclick="custCreateCampaignClick('reward')">Create Campaign</button>
       </div>
     </div>
     <div class="segment-card">
       <div class="segment-card-title">Inactive 30+ Days</div>
-      <div class="segment-card-count">126 customers</div>
+      <div class="segment-card-count" id="custSegInactiveCount">—</div>
       <div class="segment-card-actions">
-        <button class="btn-outline" onclick="alert('Preview only')">View Customers</button>
-        <button class="btn-ghost" onclick="alert('Preview only')">Create Campaign</button>
+        <button class="btn-outline" onclick="custViewSegment('inactive')">View Customers</button>
+        <button class="btn-ghost" onclick="custCreateCampaignClick('inactive')">Create Campaign</button>
       </div>
     </div>
     <div class="segment-card">
       <div class="segment-card-title">Wallet Customers</div>
-      <div class="segment-card-count">518 customers</div>
+      <div class="segment-card-count" id="custSegWalletCount">—</div>
       <div class="segment-card-actions">
-        <button class="btn-outline" onclick="alert('Preview only')">View Customers</button>
-        <button class="btn-ghost" onclick="alert('Preview only')">Create Campaign</button>
+        <button class="btn-outline" onclick="custViewSegment('wallet')">View Customers</button>
+        <button class="btn-ghost" onclick="custCreateCampaignClick('wallet')">Create Campaign</button>
       </div>
     </div>
     <div class="segment-card">
       <div class="segment-card-title">Most Engaged</div>
-      <div class="segment-card-count">94 customers</div>
+      <div class="segment-card-count">Coming soon</div>
       <div class="segment-card-actions">
-        <button class="btn-outline" onclick="alert('Preview only')">View Customers</button>
-        <button class="btn-ghost" onclick="alert('Preview only')">Create Campaign</button>
+        <button class="btn-outline" disabled style="opacity:.45;cursor:not-allowed;">View Customers</button>
+        <button class="btn-ghost" disabled style="opacity:.45;cursor:not-allowed;">Create Campaign</button>
       </div>
     </div>
   </div>
@@ -1418,11 +1428,14 @@ async function initDashboard(){
 
 <script>
 /* ============================================================
-   MOCK DATA — Customers.
-   Clearly-defined frontend mock data, isolated in this one array, so it
-   can be swapped for a real GET /admin/customers response later without
-   restructuring this section's rendering code. NOT real database
-   records — no backend wiring exists for this section yet.
+   MOCK DATA — Customers (Phase 5: superseded, kept for isolated dev/
+   visual work only). Nothing below this array reads from it anymore —
+   the live authenticated page is driven entirely by the canonical
+   Customer API (GET /customers/summary, /customers, /customers/:id,
+   /customers/:id/activity — see docs/architecture/CUSTOMER_FOUNDATION.md
+   Phase 5). Left in place, unreferenced, rather than deleted, in case a
+   future visual-only iteration on this page wants fixture data again.
+   Never falls back to this on an API error — see custShowError().
    ============================================================ */
 var MOCK_CUSTOMERS = [
   {
@@ -1510,9 +1523,6 @@ var STATUS_META = {
   inactive: { label: 'Inactive',     cls: 'badge-inactive' }
 };
 
-var _custFilter = 'all';
-var _custSearch = '';
-
 function custChanIcon(on, label, svg) {
   return '<span class="cust-chan-icon' + (on ? ' on' : '') + '" title="' + label + (on ? ' active' : ' not enabled') + '">' + svg + '</span>';
 }
@@ -1522,62 +1532,212 @@ var ICON_PUSH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" str
 var ICON_WALLET = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
 
 function custLoyaltyCell(loyalty) {
-  if (!loyalty || loyalty.stampCount === 0) {
-    return '<span class="cust-loyalty-none">No loyalty</span>';
+  if (!loyalty || !loyalty.enrolled) {
+    return '<span class="cust-loyalty-none">' + custEsc(_lt('cust_no_loyalty', 'No loyalty')) + '</span>';
   }
-  var pct = Math.round((loyalty.stampCount / loyalty.stampGoal) * 100);
-  var full = loyalty.stampCount >= loyalty.stampGoal;
+  var goal = loyalty.stampGoal || 1;
+  var pct = Math.round((loyalty.stampCount / goal) * 100);
+  var full = loyalty.stampCount >= goal;
   return '<div class="cust-loyalty">' +
-    '<div class="cust-loyalty-bar"><div class="cust-loyalty-bar-fill' + (full ? ' full' : '') + '" style="width:' + pct + '%;"></div></div>' +
-    '<span class="cust-loyalty-text">' + loyalty.stampCount + ' / ' + loyalty.stampGoal + '</span>' +
+    '<div class="cust-loyalty-bar"><div class="cust-loyalty-bar-fill' + (full ? ' full' : '') + '" style="width:' + Math.min(pct, 100) + '%;"></div></div>' +
+    '<span class="cust-loyalty-text">' + loyalty.stampCount + ' / ' + goal + '</span>' +
     '</div>';
 }
 
-function custMatchesFilter(c) {
-  switch (_custFilter) {
-    case 'email': return !!c.channels.email;
-    case 'push': return !!c.channels.push;
-    case 'wallet': return !!c.channels.wallet;
-    case 'loyalty': return c.loyalty && c.loyalty.stampCount > 0;
-    case 'reward': return c.status === 'reward';
-    case 'inactive': return c.status === 'inactive';
-    default: return true;
+// ============================================================
+// Phase 5 — canonical Customer API wiring. Same helper shape as the
+// Loyalty dashboard's _ly* functions above (_lyToken/_lyAuthHeaders/
+// _lyParseResponse/_lyErrorMessage) — one consistent fetch pattern
+// across this file, not a second one invented here.
+// ============================================================
+async function _custToken() {
+  try { if (window.Clerk && window.Clerk.session) return await window.Clerk.session.getToken(); } catch (_) {}
+  return null;
+}
+async function _custAuthHeaders() {
+  var t = await _custToken();
+  return t ? { "Authorization": "Bearer " + t } : {};
+}
+function _custFriendlyStatusMessage(status) {
+  if (status === 429) return _lt('cust_err_rate_limited', 'Too many requests. Please wait a moment and try again.');
+  if (status === 401 || status === 403) return _lt('cust_err_session_expired', 'Your session has expired. Please sign in again.');
+  return _lt('cust_err_load_failed', "We couldn't load your customers. Please try again.");
+}
+function _custApiError(status, message) { var e = new Error(message); e.isCustApiError = true; e.status = status; e.friendlyMessage = message; return e; }
+async function _custParseResponse(response) {
+  var raw = ''; try { raw = await response.text(); } catch (e) { raw = ''; }
+  var ct = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
+  var data = null;
+  if (raw && (ct.indexOf('json') !== -1 || /^\s*[\{\[]/.test(raw))) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
+  if (!response.ok) throw _custApiError(response.status, _custFriendlyStatusMessage(response.status));
+  return data || {};
+}
+function _custErrorMessage(err) {
+  if (err && err.isCustApiError) return err.friendlyMessage;
+  return _lt('cust_connection_error', "We couldn't connect. Please check your connection and try again.");
+}
+function custEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// displayName is not yet populated by any canonical write path (Phase
+// 2/3 never set it — see docs/architecture/CUSTOMER_FOUNDATION.md) — a
+// known, documented gap, not a bug here. Falls back to the resolved
+// email, then a generic label, rather than showing a blank/"null" name.
+function custDisplayName(c) {
+  return c.displayName || c.email || _lt('cust_unnamed', 'Customer');
+}
+function custInitials(c) {
+  var n = custDisplayName(c);
+  return (n || '?').trim().charAt(0).toUpperCase() || '?';
+}
+function custRelativeTime(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  var days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return _lt('cust_today', 'Today');
+  if (days === 1) return _lt('cust_yesterday', 'Yesterday');
+  if (days < 30) return days + ' ' + _lt('cust_days_ago', 'days ago');
+  try { return d.toLocaleDateString((window._qraivyLang === 'de' ? 'de-DE' : undefined), { year: 'numeric', month: 'short', day: 'numeric' }); }
+  catch (_) { return '—'; }
+}
+var STATUS_TO_BADGE = { active: 'active', new: 'new', reward_ready: 'reward', inactive: 'inactive' };
+function custBadgeMeta(presentationStatus) {
+  return STATUS_META[STATUS_TO_BADGE[presentationStatus]] || STATUS_META.active;
+}
+
+// ── State ──
+var _custState = { page: 1, limit: 25, total: 0, totalPages: 1, hasNext: false, segment: null, search: '' };
+var _custSearchDebounceTimer = null;
+var _custListLoadToken = 0; // guards against an older, slower request overwriting a newer one
+
+function custShowLoading() {
+  document.getElementById('custTableBody').innerHTML = '<tr><td colspan="5"><div class="state-loading">' + custEsc(_lt('cust_loading', 'Loading customers…')) + '</div></td></tr>';
+  document.getElementById('custPager').style.display = 'none';
+}
+function custShowError(err) {
+  var msg = _custErrorMessage(err);
+  document.getElementById('custTableBody').innerHTML = '<tr><td colspan="5"><div class="state-empty">' + custEsc(msg) + ' <a href="#" onclick="event.preventDefault();custLoadList();">' + custEsc(_lt('cust_retry', 'Retry')) + '</a></div></td></tr>';
+  document.getElementById('custPager').style.display = 'none';
+  document.getElementById('custRowCount').textContent = '';
+}
+
+async function custLoadSummary() {
+  try {
+    var headers = await _custAuthHeaders();
+    var res = await fetch(window.API_ORIGIN + '/customers/summary', { headers: headers });
+    var d = await _custParseResponse(res);
+    document.getElementById('custKpiTotal').textContent = (d.totalCustomers || 0).toLocaleString();
+    document.getElementById('custKpiEmail').textContent = (d.emailCustomers || 0).toLocaleString();
+    document.getElementById('custKpiPush').textContent = (d.pushCustomers || 0).toLocaleString();
+    document.getElementById('custKpiWallet').textContent = (d.walletCustomers || 0).toLocaleString();
+    document.getElementById('custKpiLoyalty').textContent = (d.loyaltyCustomers || 0).toLocaleString();
+    // Segment cards double as a lightweight count surface until each
+    // segment's own list is opened — reward_ready/wallet counts aren't
+    // separately exposed by /customers/summary, so those two cards load
+    // their real counts from their own filtered list call below instead.
+  } catch (err) {
+    ['custKpiTotal', 'custKpiEmail', 'custKpiPush', 'custKpiWallet', 'custKpiLoyalty'].forEach(function (id) {
+      document.getElementById(id).textContent = '—';
+    });
   }
 }
 
-function custMatchesSearch(c) {
-  if (!_custSearch) return true;
-  var q = _custSearch.toLowerCase();
-  return c.name.toLowerCase().indexOf(q) !== -1 || c.email.toLowerCase().indexOf(q) !== -1;
+async function custLoadSegmentCounts() {
+  var segs = [
+    { id: 'custSegRewardCount', segment: 'reward_ready' },
+    { id: 'custSegWalletCount', segment: 'wallet' },
+    { id: 'custSegInactiveCount', segment: 'inactive' }
+  ];
+  var headers = await _custAuthHeaders();
+  segs.forEach(function (s) {
+    fetch(window.API_ORIGIN + '/customers?limit=1&segment=' + s.segment, { headers: headers })
+      .then(_custParseResponse)
+      .then(function (d) {
+        var n = d.total || 0;
+        document.getElementById(s.id).textContent = n + (n === 1 ? ' ' + _lt('cust_customer_singular', 'customer') : ' ' + _lt('cust_customer_plural', 'customers'));
+      })
+      .catch(function () { document.getElementById(s.id).textContent = '—'; });
+  });
 }
 
-function custRenderTable() {
-  var rows = MOCK_CUSTOMERS.filter(function (c) { return custMatchesFilter(c) && custMatchesSearch(c); });
-  document.getElementById('custRowCount').textContent = rows.length + (rows.length === 1 ? ' customer' : ' customers');
+function custRenderTable(data) {
+  var rows = data.items || [];
+  var count = data.total || 0;
+  document.getElementById('custRowCount').textContent = count + (count === 1 ? ' ' + _lt('cust_customer_singular', 'customer') : ' ' + _lt('cust_customer_plural', 'customers'));
 
   if (!rows.length) {
-    document.getElementById('custTableBody').innerHTML = '<tr><td colspan="5"><div class="state-empty">No customers match this view.</div></td></tr>';
+    var emptyMsg = (_custState.search || _custState.segment)
+      ? _lt('cust_no_match', 'No customers match this view.')
+      : _lt('cust_empty_all', 'No customers yet. Customers will appear here as they join loyalty, subscribe, add Wallet passes, or enable notifications.');
+    document.getElementById('custTableBody').innerHTML = '<tr><td colspan="5"><div class="state-empty">' + custEsc(emptyMsg) + '</div></td></tr>';
+    document.getElementById('custPager').style.display = 'none';
     return;
   }
 
   var html = rows.map(function (c) {
-    var st = STATUS_META[c.status];
+    var badge = custBadgeMeta(c.presentationStatus);
+    var name = custEsc(custDisplayName(c));
+    var email = c.email ? custEsc(c.email) : '';
     return '<tr class="cust-row" onclick="custOpenDrawer(\'' + c.id + '\')">' +
-      '<td><div class="cust-name-cell"><div class="cust-avatar">' + c.initials + '</div><div class="cust-name-info"><div class="cust-name">' + c.name + '</div><div class="cust-email">' + c.email + '</div></div></div></td>' +
+      '<td><div class="cust-name-cell"><div class="cust-avatar">' + custEsc(custInitials(c)) + '</div><div class="cust-name-info"><div class="cust-name">' + name + '</div><div class="cust-email">' + email + '</div></div></div></td>' +
       '<td><div class="cust-channels">' +
         custChanIcon(c.channels.email, 'Email', ICON_EMAIL) +
         custChanIcon(c.channels.push, 'Push', ICON_PUSH) +
-        custChanIcon(c.channels.wallet, 'Wallet', ICON_WALLET) +
+        custChanIcon(c.channels.wallet, 'Wallet pass', ICON_WALLET) +
       '</div></td>' +
       '<td>' + custLoyaltyCell(c.loyalty) + '</td>' +
-      '<td style="color:var(--dashboard-muted);font-size:.76rem;">' + c.lastActivity + '</td>' +
-      '<td><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
+      '<td style="color:var(--dashboard-muted);font-size:.76rem;">' + custEsc(custRelativeTime(c.lastActivityAt)) + '</td>' +
+      '<td><span class="badge ' + badge.cls + '">' + custEsc(badge.label) + '</span></td>' +
       '</tr>';
   }).join('');
   document.getElementById('custTableBody').innerHTML = html;
+
+  var pager = document.getElementById('custPager');
+  if (data.totalPages > 1) {
+    pager.style.display = 'flex';
+    document.getElementById('custPagerLabel').textContent = _lt('cust_page_label', 'Page') + ' ' + data.page + ' / ' + data.totalPages;
+    document.getElementById('custPagerPrev').disabled = data.page <= 1;
+    document.getElementById('custPagerNext').disabled = !data.hasNext;
+  } else {
+    pager.style.display = 'none';
+  }
 }
 
-function custApplySearch(v) { _custSearch = v; custRenderTable(); }
+function custLoadList() {
+  custShowLoading();
+  var myToken = ++_custListLoadToken;
+  var params = new URLSearchParams();
+  params.set('page', _custState.page);
+  params.set('limit', _custState.limit);
+  if (_custState.search) params.set('search', _custState.search);
+  if (_custState.segment) params.set('segment', _custState.segment);
+  _custAuthHeaders().then(function (headers) {
+    return fetch(window.API_ORIGIN + '/customers?' + params.toString(), { headers: headers });
+  }).then(_custParseResponse).then(function (d) {
+    if (myToken !== _custListLoadToken) return; // a newer request already superseded this one
+    _custState.total = d.total || 0; _custState.totalPages = d.totalPages || 1; _custState.hasNext = !!d.hasNext;
+    custRenderTable(d);
+  }).catch(function (err) {
+    if (myToken !== _custListLoadToken) return;
+    custShowError(err);
+  });
+}
+
+function custGoToPage(p) {
+  if (p < 1 || p > _custState.totalPages) return;
+  _custState.page = p;
+  custLoadList();
+}
+
+function custApplySearch(v) {
+  clearTimeout(_custSearchDebounceTimer);
+  _custSearchDebounceTimer = setTimeout(function () {
+    _custState.search = v.trim();
+    _custState.page = 1;
+    custLoadList();
+  }, 300);
+}
 
 function custToggleFilter() {
   document.getElementById('custFilterMenu').classList.toggle('open');
@@ -1586,13 +1746,39 @@ document.addEventListener('click', function (e) {
   var wrap = document.querySelector('.cust-filter-wrap');
   if (wrap && !wrap.contains(e.target)) document.getElementById('custFilterMenu').classList.remove('open');
 });
+var FILTER_TO_SEGMENT = { all: null, email: 'email', push: 'push', wallet: 'wallet', loyalty: 'loyalty', reward: 'reward_ready', inactive: 'inactive' };
 function custSelectFilter(f) {
-  _custFilter = f;
   document.querySelectorAll('.cust-filter-item').forEach(function (el) {
     el.classList.toggle('active', el.getAttribute('data-filter') === f);
   });
   document.getElementById('custFilterMenu').classList.remove('open');
-  custRenderTable();
+  _custState.segment = FILTER_TO_SEGMENT[f] || null;
+  _custState.page = 1;
+  custLoadList();
+}
+// Smart Segment "View Customers" buttons reuse the same filter plumbing
+// as the Filter menu — one segment-application code path, not two.
+function custViewSegment(filterKey) {
+  custSelectFilter(filterKey);
+  var searchEl = document.getElementById('custSearch');
+  if (searchEl) searchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Export: no canonical Customer export endpoint exists yet (Phase 4 is
+// read-only summary/list/detail/activity only). Rather than export
+// legacy Subscriber rows relabeled as Customers, this stays a deferred
+// action — visible, not wired to a fake export.
+function custExportClick() {
+  toast(_lt('cust_export_soon', 'Customer export is coming soon.'));
+}
+// Create Campaign: the existing Campaign flow (AI Campaigns section) is
+// built around selecting a landing-page program, not a canonical
+// Customer/segment context — there is no parameter anywhere in that
+// flow for "target these Customer ids". Wiring a real segment hand-off
+// would mean adding to that system, out of Phase 5's read-only-API
+// scope. Deferred and reported, not faked.
+function custCreateCampaignClick(segmentKey) {
+  toast(_lt('cust_campaign_soon', 'Sending a campaign to a Customer segment is coming soon — use AI Campaigns for now.'));
 }
 
 function custDrawerReachRow(label, iconSvg, on, onText, offText) {
@@ -1601,66 +1787,96 @@ function custDrawerReachRow(label, iconSvg, on, onText, offText) {
 }
 
 function custOpenDrawer(id) {
-  var c = MOCK_CUSTOMERS.filter(function (x) { return x.id === id; })[0];
-  if (!c) return;
+  document.getElementById('custDrawerBody').innerHTML = '<div class="state-loading">' + custEsc(_lt('cust_loading_detail', 'Loading…')) + '</div>';
+  document.getElementById('custDrawer').classList.add('open');
+  document.getElementById('custDrawerOverlay').classList.add('open');
 
-  var loyaltyHtml = '';
-  if (c.loyalty && c.loyalty.stampCount > 0) {
-    var pct = Math.round((c.loyalty.stampCount / c.loyalty.stampGoal) * 100);
-    var remaining = c.loyalty.stampGoal - c.loyalty.stampCount;
-    loyaltyHtml =
-      '<div class="drawer-section"><div class="drawer-section-title">Loyalty</div>' +
-      '<div class="drawer-loyalty-visual"><div class="drawer-loyalty-bar"><div class="drawer-loyalty-bar-fill" style="width:' + pct + '%;"></div></div>' +
-      '<span class="drawer-loyalty-fraction">' + c.loyalty.stampCount + ' / ' + c.loyalty.stampGoal + '</span></div>' +
-      '<div class="drawer-loyalty-sub">' + (remaining > 0 ? remaining + ' stamp' + (remaining === 1 ? '' : 's') + ' until reward' : 'Reward ready!') + '</div>' +
-      '</div>';
+  _custAuthHeaders().then(function (headers) {
+    return Promise.all([
+      fetch(window.API_ORIGIN + '/customers/' + encodeURIComponent(id), { headers: headers }).then(_custParseResponse),
+      fetch(window.API_ORIGIN + '/customers/' + encodeURIComponent(id) + '/activity', { headers: headers }).then(_custParseResponse).catch(function () { return { activity: [] }; })
+    ]);
+  }).then(function (results) {
+    custRenderDrawer(results[0], results[1].activity || []);
+  }).catch(function (err) {
+    document.getElementById('custDrawerBody').innerHTML = '<div class="state-empty">' + custEsc(_custErrorMessage(err)) + '</div>';
+  });
+}
+
+function custRenderDrawer(c, activity) {
+  var name = custEsc(custDisplayName(c));
+  var email = c.primaryEmail ? custEsc(c.primaryEmail) : '';
+  var since = custRelativeTimeAbs(c.firstSeenAt);
+
+  // Loyalty: renders EVERY membership Phase 4 returns, never flattens to
+  // one arbitrarily (see docs/architecture/CUSTOMER_FOUNDATION.md Phase
+  // 4's documented multi-membership rule).
+  var loyaltyHtml;
+  var memberships = (c.loyalty && c.loyalty.memberships) || [];
+  if (!memberships.length) {
+    loyaltyHtml = '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_lt('cust_loyalty_hdr', 'Loyalty')) + '</div><div class="cust-loyalty-none">' + custEsc(_lt('cust_not_enrolled', 'Not enrolled in loyalty')) + '</div></div>';
   } else {
-    loyaltyHtml = '<div class="drawer-section"><div class="drawer-section-title">Loyalty</div><div class="cust-loyalty-none">Not enrolled in loyalty</div></div>';
+    loyaltyHtml = '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_lt('cust_loyalty_hdr', 'Loyalty')) + (memberships.length > 1 ? ' (' + memberships.length + ')' : '') + '</div>' +
+      memberships.map(function (m) {
+        var goal = m.stampGoal || 1;
+        var pct = Math.min(Math.round((m.stampCount / goal) * 100), 100);
+        var remaining = goal - m.stampCount;
+        return '<div style="margin-bottom:14px;">' +
+          (memberships.length > 1 ? '<div style="font-size:.68rem;color:var(--dashboard-muted-dim);margin-bottom:4px;">' + custEsc(m.slug || '') + '</div>' : '') +
+          '<div class="drawer-loyalty-visual"><div class="drawer-loyalty-bar"><div class="drawer-loyalty-bar-fill" style="width:' + pct + '%;"></div></div>' +
+          '<span class="drawer-loyalty-fraction">' + m.stampCount + ' / ' + goal + '</span></div>' +
+          '<div class="drawer-loyalty-sub">' + (m.rewardReady ? custEsc(_lt('cust_reward_ready_sub', 'Reward ready!')) : (remaining > 0 ? remaining + ' ' + custEsc(_lt('cust_stamps_until_reward', 'stamp(s) until reward')) : '')) + '</div>' +
+        '</div>';
+      }).join('');
+    loyaltyHtml += '</div>';
   }
 
-  var consentHtml = '';
-  if (c.consent) {
-    var isActive = c.consent.emailMarketing === 'active';
-    consentHtml =
-      '<div class="drawer-section"><div class="drawer-section-title">Consent</div>' +
-      '<div class="drawer-row"><span class="drawer-row-label">Email Marketing</span><span class="drawer-row-value' + (isActive ? ' ok' : '') + '">' + (isActive ? 'Active ✓' : 'Withdrawn') + '</span></div>' +
-      '<div class="drawer-row"><span class="drawer-row-label">Method</span><span class="drawer-row-value">' + c.consent.method + '</span></div>' +
-      '<div class="drawer-row"><span class="drawer-row-label">Confirmed</span><span class="drawer-row-value">' + c.consent.confirmed + '</span></div>' +
-      '<div class="drawer-row"><span class="drawer-row-label">Consent version</span><span class="drawer-row-value" style="font-family:var(--font-mono);font-size:.7rem;">' + c.consent.version + '</span></div>' +
-      '<div class="drawer-row"><span class="drawer-row-label">Source</span><span class="drawer-row-value">' + c.consent.source + '</span></div>' +
-      '</div>';
+  // Consent is deliberately NOT rendered — CustomerConsent has no
+  // deterministic link to Customer/CustomerIdentity yet (Phase 4,
+  // documented) so there is nothing real to show here. Showing a fake
+  // "no consent data" row would still imply a concept the API can't
+  // back up; omitting the section entirely is the honest choice.
+
+  var activityHtml = '';
+  if (activity.length) {
+    activityHtml = '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_lt('cust_activity_hdr', 'Activity')) + '</div><div class="drawer-timeline">' +
+      activity.map(function (a) {
+        return '<div class="drawer-tl-item"><div class="drawer-tl-date">' + custEsc(custRelativeTimeAbs(a.occurredAt)) + '</div><div class="drawer-tl-text">' + custEsc(a.event || '') + '</div></div>';
+      }).join('') + '</div></div>';
   }
 
-  var activityHtml = '<div class="drawer-section"><div class="drawer-section-title">Activity</div><div class="drawer-timeline">' +
-    c.activity.map(function (a) {
-      return '<div class="drawer-tl-item"><div class="drawer-tl-date">' + a.date + '</div><div class="drawer-tl-text">' + a.text + '</div></div>';
-    }).join('') + '</div></div>';
+  var wallet = (c.channels && c.channels.wallet) || {};
+  var walletOn, walletOnText;
+  if (wallet.installed) { walletOn = true; walletOnText = _lt('cust_wallet_installed', 'Installed'); }
+  else if (wallet.passExists) { walletOn = false; walletOnText = _lt('cust_wallet_pending', 'Pass created, not installed'); }
+  else { walletOn = false; walletOnText = ''; }
 
   var html =
     '<button class="drawer-close" onclick="custCloseDrawer()">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
     '</button>' +
-    '<div class="drawer-avatar">' + c.initials + '</div>' +
-    '<div class="drawer-name">' + c.name.toUpperCase() + '</div>' +
-    '<div class="drawer-email">' + c.email + '</div>' +
-    '<div class="drawer-since">Customer since ' + c.customerSince + '</div>' +
+    '<div class="drawer-avatar">' + custEsc(custInitials(c)) + '</div>' +
+    '<div class="drawer-name">' + name.toUpperCase() + '</div>' +
+    (email ? '<div class="drawer-email">' + email + '</div>' : '') +
+    '<div class="drawer-since">' + custEsc(_lt('cust_since', 'Customer since')) + ' ' + custEsc(since) + '</div>' +
     '<div class="drawer-actions">' +
-      '<button class="btn-primary" onclick="alert(\'Preview only\')">Send Campaign</button>' +
-      '<button class="btn-outline" onclick="alert(\'Preview only\')">View Loyalty</button>' +
-      '<button class="btn-outline" onclick="alert(\'Preview only\')">View Activity</button>' +
+      '<button class="btn-primary" onclick="custCreateCampaignClick()">' + custEsc(_lt('cust_send_campaign', 'Send Campaign')) + '</button>' +
     '</div>' +
-    '<div class="drawer-section"><div class="drawer-section-title">Reachability</div>' +
-      custDrawerReachRow('Email', ICON_EMAIL, c.channels.email, 'Active', 'Not subscribed') +
-      custDrawerReachRow('Push', ICON_PUSH, c.channels.push, 'Enabled', 'Not enabled') +
-      custDrawerReachRow('Wallet', ICON_WALLET, c.channels.wallet, 'Installed', 'Not installed') +
+    '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_lt('cust_reachability_hdr', 'Reachability')) + '</div>' +
+      custDrawerReachRow('Email', ICON_EMAIL, c.channels.email.known, _lt('cust_email_known', 'Known'), _lt('cust_email_unknown', 'No email on file')) +
+      custDrawerReachRow('Push', ICON_PUSH, c.channels.push.subscribed, _lt('cust_push_enabled', 'Enabled'), _lt('cust_push_disabled', 'Not enabled')) +
+      custDrawerReachRow('Wallet', ICON_WALLET, walletOn, walletOnText, walletOnText || _lt('cust_wallet_none', 'No Wallet pass')) +
     '</div>' +
     loyaltyHtml +
-    consentHtml +
     activityHtml;
 
   document.getElementById('custDrawerBody').innerHTML = html;
-  document.getElementById('custDrawer').classList.add('open');
-  document.getElementById('custDrawerOverlay').classList.add('open');
+}
+
+function custRelativeTimeAbs(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString((window._qraivyLang === 'de' ? 'de-DE' : undefined), { year: 'numeric', month: 'long' }); }
+  catch (_) { return '—'; }
 }
 
 function custCloseDrawer() {
@@ -1668,7 +1884,24 @@ function custCloseDrawer() {
   document.getElementById('custDrawerOverlay').classList.remove('open');
 }
 
-custRenderTable();
+// Loaded on-demand, not eagerly at parse time — this script block runs
+// before initDashboard()'s Clerk auth is guaranteed ready (same reasoning
+// as loadLoyaltyDashboard() below, which is likewise only invoked from
+// navigation, never at parse time). window.custInitPage() is called from
+// the three places the Customers section is actually opened: the
+// desktop sidebar handler, the ?section=customers deep link, and the
+// showSection('customers') dispatcher. Idempotent — a second navigation
+// into an already-loaded page just re-shows current state; use
+// custLoadList()/custLoadSummary() directly for an explicit refresh.
+window.custPageLoaded = false;
+window.custInitPage = function () {
+  if (window.custPageLoaded) return;
+  window.custPageLoaded = true;
+  custShowLoading();
+  custLoadSummary();
+  custLoadList();
+  custLoadSegmentCounts();
+};
 </script>
 </div>
 
@@ -2990,6 +3223,24 @@ window._loyRemovePin = function() {
       sub_pages: 'Pages', sub_export_all: '↓ Export All CSV', sub_export_page: '↓ Export Page CSV',
       sub_all_pages: 'All pages', sub_loading: 'Loading subscribers…',
       sub_empty_msg: 'No subscribers yet. Share your Smart QR Pages to start growing your audience.',
+      cust_loading: 'Loading customers…', cust_loading_detail: 'Loading…',
+      cust_empty_all: 'No customers yet. Customers will appear here as they join loyalty, subscribe, add Wallet passes, or enable notifications.',
+      cust_no_match: 'No customers match this view.', cust_retry: 'Retry',
+      cust_err_rate_limited: 'Too many requests. Please wait a moment and try again.',
+      cust_err_session_expired: 'Your session has expired. Please sign in again.',
+      cust_err_load_failed: "We couldn't load your customers. Please try again.",
+      cust_connection_error: "We couldn't connect. Please check your connection and try again.",
+      cust_unnamed: 'Customer', cust_no_loyalty: 'No loyalty', cust_not_enrolled: 'Not enrolled in loyalty',
+      cust_today: 'Today', cust_yesterday: 'Yesterday', cust_days_ago: 'days ago',
+      cust_customer_singular: 'customer', cust_customer_plural: 'customers', cust_page_label: 'Page',
+      cust_export_soon: 'Customer export is coming soon.',
+      cust_campaign_soon: 'Sending a campaign to a Customer segment is coming soon — use AI Campaigns for now.',
+      cust_loyalty_hdr: 'Loyalty', cust_reward_ready_sub: 'Reward ready!', cust_stamps_until_reward: 'stamp(s) until reward',
+      cust_activity_hdr: 'Activity', cust_reachability_hdr: 'Reachability', cust_since: 'Customer since',
+      cust_email_known: 'Known', cust_email_unknown: 'No email on file',
+      cust_push_enabled: 'Enabled', cust_push_disabled: 'Not enabled',
+      cust_wallet_installed: 'Installed', cust_wallet_pending: 'Pass created, not installed', cust_wallet_none: 'No Wallet pass',
+      cust_send_campaign: 'Send Campaign',
       sub_col_page: 'Page', sub_col_email: 'Email', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
       sub_col_total: 'Total', sub_col_last: 'Last Subscribed', sub_view_details: 'View details →',
       sub_col_id: 'Identifier', sub_col_type: 'Type', sub_col_date: 'Date',
@@ -3123,6 +3374,24 @@ window._loyRemovePin = function() {
       sub_pages: 'Seiten', sub_export_all: '↓ Alle als CSV exportieren', sub_export_page: '↓ Seite als CSV exportieren',
       sub_all_pages: 'Alle Seiten', sub_loading: 'Abonnenten werden geladen…',
       sub_empty_msg: 'Noch keine Abonnenten. Teilen Sie Ihre Smart QR-Seiten, um Ihr Publikum zu vergrößern.',
+      cust_loading: 'Kunden werden geladen…', cust_loading_detail: 'Wird geladen…',
+      cust_empty_all: 'Noch keine Kunden. Kunden erscheinen hier, sobald sie dem Treueprogramm beitreten, sich anmelden, eine Wallet-Karte hinzufügen oder Benachrichtigungen aktivieren.',
+      cust_no_match: 'Keine Kunden entsprechen dieser Ansicht.', cust_retry: 'Erneut versuchen',
+      cust_err_rate_limited: 'Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
+      cust_err_session_expired: 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+      cust_err_load_failed: 'Ihre Kunden konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
+      cust_connection_error: 'Keine Verbindung möglich. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.',
+      cust_unnamed: 'Kunde', cust_no_loyalty: 'Keine Treue', cust_not_enrolled: 'Nicht am Treueprogramm angemeldet',
+      cust_today: 'Heute', cust_yesterday: 'Gestern', cust_days_ago: 'Tage her',
+      cust_customer_singular: 'Kunde', cust_customer_plural: 'Kunden', cust_page_label: 'Seite',
+      cust_export_soon: 'Kundenexport folgt in Kürze.',
+      cust_campaign_soon: 'Kampagnen an ein Kundensegment senden folgt in Kürze — nutzen Sie vorerst KI-Kampagnen.',
+      cust_loyalty_hdr: 'Treueprogramm', cust_reward_ready_sub: 'Prämie bereit!', cust_stamps_until_reward: 'Stempel bis zur Prämie',
+      cust_activity_hdr: 'Aktivität', cust_reachability_hdr: 'Erreichbarkeit', cust_since: 'Kunde seit',
+      cust_email_known: 'Bekannt', cust_email_unknown: 'Keine E-Mail hinterlegt',
+      cust_push_enabled: 'Aktiviert', cust_push_disabled: 'Nicht aktiviert',
+      cust_wallet_installed: 'Installiert', cust_wallet_pending: 'Karte erstellt, nicht installiert', cust_wallet_none: 'Keine Wallet-Karte',
+      cust_send_campaign: 'Kampagne senden',
       sub_col_page: 'Seite', sub_col_email: 'E-Mail', sub_col_push: 'Web Push', sub_col_wallet: 'Wallet',
       sub_col_total: 'Gesamt', sub_col_last: 'Zuletzt abonniert', sub_view_details: 'Details anzeigen →',
       sub_col_id: 'Kennung', sub_col_type: 'Typ', sub_col_date: 'Datum',
@@ -3326,6 +3595,7 @@ window.showSection = function(sec) {
     if (mc) mc.style.display = 'none';
     var custTarget = document.getElementById('section-customers');
     if (custTarget) custTarget.style.display = 'block';
+    if (window.custInitPage) window.custInitPage();
   } else {
     if (mc) mc.style.display = 'none';
     var target = document.getElementById('section-' + sec);
