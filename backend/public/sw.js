@@ -36,5 +36,22 @@ self.addEventListener('push', function(e) {
 self.addEventListener('notificationclick', function(e) {
   e.notification.close();
   var url = e.notification.data && e.notification.data.url ? e.notification.data.url : '/';
-  e.waitUntil(clients.openWindow(url));
+  // clients.openWindow() alone opens a new window on Chrome, but on iOS
+  // Safari it instead focuses an already-open matching window/tab WITHOUT
+  // navigating it — leaving it on whatever page it was already showing.
+  // Explicitly navigating an existing client first (falling back to
+  // openWindow only when none exists) makes the destination URL honored
+  // on both. (The URL itself is always same-origin by the time it reaches
+  // here — see push-open.html for how a cross-origin destination bounces
+  // through a same-origin redirect first.)
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        if ('navigate' in clientList[i]) {
+          return clientList[i].navigate(url).then(function(client) { return client.focus(); });
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

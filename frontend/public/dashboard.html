@@ -517,9 +517,11 @@ async function initDashboard(){
 
   // Bottom-nav (mobile) — shell renders the markup/hrefs (dashboard-shell.js
   // renderBottomNav()); this page still owns section-switching business
-  // logic, same as the desktop handlers above. bn-subs intentionally routes
-  // to 'customers', matching the sidebar's Subscribers->Customers rename,
-  // so desktop and mobile can never point at different sections again.
+  // logic, same as the desktop handlers above. Intercepts the shell's real
+  // hrefs to keep the existing instant, no-reload behavior instead of a
+  // full navigation. bn-subs intentionally routes to 'customers', matching
+  // the sidebar's Subscribers->Customers rename, so desktop and mobile can
+  // never point at different sections again.
   var bnSectionMap = { 'bn-pages': 'sqr', 'bn-loyalty': 'loyalty', 'bn-subs': 'customers', 'bn-campaigns': 'campaigns', 'bn-settings': 'settings' };
   Object.keys(bnSectionMap).forEach(function(bnId) {
     var el = document.getElementById(bnId);
@@ -556,10 +558,12 @@ async function initDashboard(){
       if (sectionP === 'campaigns') {
         var sec = document.getElementById('section-campaigns');
         if (sec) sec.style.display = 'block';
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-campaigns');
         if (typeof window.campInitProgs === 'function') window.campInitProgs();
       } else if (sectionP === 'subscribers') {
         var sec = document.getElementById('section-subscribers');
         if (sec) sec.style.display = 'block';
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
         var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
         var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
         var sbSubEl = document.getElementById('sb-subscribers');
@@ -567,15 +571,18 @@ async function initDashboard(){
       } else if (sectionP === 'loyalty') {
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-loyalty');
       } else if (sectionP === 'customers') {
         // Customers section renders synchronously from mock data (see its
         // own inline script, custRenderTable() at the bottom) — no
         // async load/token dance needed here, unlike Subscribers.
         var sec = document.getElementById('section-customers');
         if (sec) sec.style.display = 'block';
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-subscribers');
       } else {
         // Unknown section param - show main dashboard
         if (mc) mc.style.display = 'block';
+        if (window.QraivyDashboardShell) window.QraivyDashboardShell.setActive('nav-dashboard');
       }
     }, 300);
   }
@@ -754,59 +761,64 @@ async function initDashboard(){
 <!-- LOYALTY_DASH_V4: color picker + fixed card link -->
 
 
-<div id="section-subscribers" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
+<div id="section-subscribers" class="dash-section" style="display:none;">
 <style>
-/* Subscribers consumes the shared dashboard design system (kpi-card, panel,
-   data-table, badge, btn-outline — the same classes/tokens the Campaigns
-   section is built from) instead of a page-local system. Only the two rules
-   below are genuinely page-specific layout, not a parallel component set. */
-#section-subscribers .sub-detail-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-#section-subscribers .sub-detail-title{font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;}
-#section-subscribers .sub-detail-slug{font-family:var(--font-mono);font-size:.72rem;color:var(--dashboard-muted-dim);margin-left:6px;}
+/* Subscribers now consumes QDS (qds-page-header, qds-grid--kpi, qds-surface,
+   qds-btn, qds-table, qds-badge, qds-empty-state, qds-state-*) instead of
+   the shared dashboard-shell.css classes it used before. Only the three
+   rules below are genuinely page-specific layout, not a parallel component
+   set. font-family: var(--font-display) has no QDS equivalent (no display-
+   font token exists in qds/foundation/typography.css) and font-size/
+   margin-left:6px have no exact --qds-* match — kept raw, same pixel-
+   parity-over-token-purity approach used throughout this migration. */
+#section-subscribers .sub-detail-hdr{display:flex;align-items:center;gap:var(--qds-space-3);margin-bottom:var(--qds-space-5);}
+#section-subscribers .sub-detail-title{font-family:var(--font-display);font-size:1rem;font-weight:var(--qds-font-weight-bold);color:var(--qds-color-text-primary);}
+#section-subscribers .sub-detail-slug{font-family:var(--qds-font-family-mono);font-size:.72rem;color:var(--dashboard-muted-dim);margin-left:6px;}
 </style>
 
-<div class="page-header">
+<div class="qds-page-wrap">
+<div class="qds-page-header">
   <div>
-    <div class="page-title" data-i18n="sub_title">Subscribers</div>
-    <div class="page-subtitle" data-i18n="sub_sub">Total reach across all your Smart QR Pages</div>
+    <div class="qds-page-title" data-i18n="sub_title">Subscribers</div>
+    <div class="qds-page-subtitle" data-i18n="sub_sub">Total reach across all your Smart QR Pages</div>
   </div>
 </div>
 
 <!-- Summary cards -->
-<div class="kpi-row" id="subSummaryCards">
-  <div class="kpi-card">
-    <div class="kpi-val orange" id="subTotalVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_total_reach">Total Reach</div>
+<div class="qds-grid--kpi" id="subSummaryCards">
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val orange qds-surface__kpi-value" id="subTotalVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_total_reach">Total Reach</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val" id="subEmailVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_email">Email</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val qds-surface__kpi-value" id="subEmailVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_email">Email</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val" id="subPushVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_webpush">Web Push</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val qds-surface__kpi-value" id="subPushVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_webpush">Web Push</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-val purple" id="subWalletVal">—</div>
-    <div class="kpi-lbl" data-i18n="sub_wallet">Wallet</div>
+  <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised">
+    <div class="kpi-val purple qds-surface__kpi-value" id="subWalletVal">—</div>
+    <div class="qds-surface__kpi-label" data-i18n="sub_wallet">Wallet</div>
   </div>
 </div>
 
 <!-- Per-page table -->
 <div id="subTablePanel">
-  <div class="panel" style="margin-bottom:20px;">
-    <div class="panel-hdr">
-      <div class="panel-title" data-i18n="sub_pages">Pages</div>
-      <button class="btn-outline" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button>
+  <div class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--flush-body" style="margin-bottom:20px;">
+    <div class="qds-surface__header">
+      <div class="qds-surface__title" data-i18n="sub_pages">Pages</div>
+      <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportAll()" data-i18n="sub_export_all">↓ Export All CSV</button></div>
     </div>
-    <div id="subTableBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
+    <div id="subTableBody" class="qds-table-wrap qds-table-wrap--nested qds-table-wrap--scroll"><div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div></div>
   </div>
 </div>
 
 <!-- Detail panel (hidden until View Details clicked) -->
 <div id="subDetailPanel" style="display:none;">
   <div class="sub-detail-hdr">
-    <button class="btn-outline" onclick="subShowTable()">
+    <button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subShowTable()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       <span data-i18n="sub_all_pages">All pages</span>
     </button>
@@ -815,13 +827,14 @@ async function initDashboard(){
       <span class="sub-detail-slug" id="subDetailSlug"></span>
     </div>
   </div>
-  <div class="panel">
-    <div class="panel-hdr">
-      <div class="panel-title" id="subDetailCount">Subscribers</div>
-      <button class="btn-outline" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button>
+  <div class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--flush-body">
+    <div class="qds-surface__header">
+      <div class="qds-surface__title" id="subDetailCount">Subscribers</div>
+      <div class="qds-surface__toolbar"><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subExportPage()" data-i18n="sub_export_page">↓ Export Page CSV</button></div>
     </div>
-    <div id="subDetailBody" style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div class="state-loading">Loading…</div></div>
+    <div id="subDetailBody" class="qds-table-wrap qds-table-wrap--nested qds-table-wrap--scroll"><div class="qds-state-loading">Loading…</div></div>
   </div>
+</div>
 </div>
 
 <script>
@@ -861,14 +874,14 @@ async function initDashboard(){
   }
 
   function badge(n, cls) {
-    if (!n) return '<span class="badge badge-zero">0</span>';
-    return '<span class="badge badge-' + cls + '">' + n + '</span>';
+    if (!n) return '<span class="qds-badge qds-badge--zero">0</span>';
+    return '<span class="qds-badge qds-badge--' + cls + '">' + n + '</span>';
   }
 
   // ── Load summary ──────────────────────────────────────────────────────────
   window.subLoad = function subLoad() {
     console.log('[Subscribers] subLoad called');
-    document.getElementById('subTableBody').innerHTML = '<div class="state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
+    document.getElementById('subTableBody').innerHTML = '<div class="qds-state-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
       fetch(window.API_ORIGIN + '/loyalty/subscribers/summary', {
@@ -884,11 +897,11 @@ async function initDashboard(){
 
           // Render table
           if (!d.pages || !d.pages.length) {
-            document.getElementById('subTableBody').innerHTML = '<div class="empty-state compact"><div class="empty-icon">&#x1F465;</div><div class="empty-title">No subscribers yet</div><div class="empty-sub">Share your Smart QR Pages to start collecting subscribers.</div><button class="empty-cta" onclick="document.getElementById(\'sqrGrid\').scrollIntoView({behavior:\'smooth\'})">View Smart QR Pages</button></div>';
+            document.getElementById('subTableBody').innerHTML = '<div class="qds-empty-state qds-empty-state--compact"><div class="qds-empty-state__icon">&#x1F465;</div><div class="qds-empty-state__title">No subscribers yet</div><div class="qds-empty-state__sub">Share your Smart QR Pages to start collecting subscribers.</div><button class="empty-cta" onclick="document.getElementById(\'sqrGrid\').scrollIntoView({behavior:\'smooth\'})">View Smart QR Pages</button></div>';
             return;
           }
 
-          var html = '<table class="data-table"><thead><tr>'
+          var html = '<table class="qds-table"><thead><tr>'
             + '<th data-i18n="sub_col_page">Page</th><th data-i18n="sub_col_email">Email</th><th data-i18n="sub_col_push">Web Push</th><th data-i18n="sub_col_wallet">Wallet</th><th data-i18n="sub_col_total">Total</th><th data-i18n="sub_col_last">Last Subscribed</th><th></th>'
             + '</tr></thead><tbody>';
 
@@ -900,7 +913,7 @@ async function initDashboard(){
               + '<td>' + badge(p.walletCount, 'wallet') + '</td>'
               + '<td><strong style="color:#f0f4f8;">' + p.total + '</strong></td>'
               + '<td>' + fmtDate(p.lastSub) + '</td>'
-              + '<td><button class="btn-outline" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
+              + '<td><button class="qds-btn qds-btn--secondary qds-btn--sm" onclick="subViewDetail(\x27' + esc(p.slug) + '\x27,\x27' + esc(p.name) + '\x27)">View details →</button></td>'
               + '</tr>';
           });
 
@@ -909,7 +922,7 @@ async function initDashboard(){
         })
         .catch(function(e) {
           console.error('[Subscribers] load error:', e);
-          document.getElementById('subTableBody').innerHTML = '<div class="state-empty">Could not load subscribers: ' + e.message + '</div>';
+          document.getElementById('subTableBody').innerHTML = '<div class="qds-state-empty">Could not load subscribers: ' + e.message + '</div>';
         });
     });
   }
@@ -921,7 +934,7 @@ async function initDashboard(){
     document.getElementById('subDetailSlug').textContent = slug;
     document.getElementById('subTablePanel').style.display = 'none';
     document.getElementById('subDetailPanel').style.display = 'block';
-    document.getElementById('subDetailBody').innerHTML = '<div class="state-loading">Loading…</div>';
+    document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-loading">Loading…</div>';
 
     subTok(function(tok) {
       fetch(window.API_ORIGIN + '/loyalty/subscribers/' + slug + '/detail', {
@@ -932,17 +945,17 @@ async function initDashboard(){
           document.getElementById('subDetailCount').textContent = _subDetailRows.length + ' subscriber' + (_subDetailRows.length !== 1 ? 's' : '');
 
           if (!_subDetailRows.length) {
-            document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">No subscribers for this page yet.</div>';
+            document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-empty">No subscribers for this page yet.</div>';
             return;
           }
 
           var typeLabel = { email: 'Email', web_push: 'Web Push', wallet: 'Wallet' };
           var typeClass = { email: 'email', web_push: 'push', wallet: 'wallet' };
-          var html = '<table class="data-table"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
+          var html = '<table class="qds-table"><thead><tr><th data-i18n="sub_col_id">Identifier</th><th data-i18n="sub_col_type">Type</th><th data-i18n="sub_col_date">Date</th></tr></thead><tbody>';
           _subDetailRows.forEach(function(r) {
             html += '<tr>'
               + '<td>' + esc(r.masked) + '</td>'
-              + '<td><span class="badge badge-' + (typeClass[r.type] || 'zero') + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
+              + '<td><span class="qds-badge qds-badge--' + (typeClass[r.type] || 'zero') + '">' + (typeLabel[r.type] || r.type) + '</span></td>'
               + '<td>' + fmtDate(r.date) + '</td>'
               + '</tr>';
           });
@@ -950,7 +963,7 @@ async function initDashboard(){
           document.getElementById('subDetailBody').innerHTML = html;
         })
         .catch(function(e) {
-          document.getElementById('subDetailBody').innerHTML = '<div class="state-empty">Could not load detail: ' + e.message + '</div>';
+          document.getElementById('subDetailBody').innerHTML = '<div class="qds-state-empty">Could not load detail: ' + e.message + '</div>';
         });
     });
   };
@@ -1005,7 +1018,7 @@ async function initDashboard(){
 </script>
 </div>
 
-<div id="section-customers" class="dash-section" style="display:none;margin-left:var(--sidebar-width,240px);">
+<div id="section-customers" class="dash-section" style="display:none;">
 <style>
 /* ============================================================
    Customers — consumes the shared dashboard design system exactly like
@@ -1018,15 +1031,15 @@ async function initDashboard(){
    segment cards, detail drawer) — nothing here duplicates an existing
    shared component under a new name.
 
-   margin-left:var(--sidebar-width,240px) here matches every other
-   .dash-section in this file exactly -- confirmed via the real live DOM
-   that these sections are direct children of <body>, NOT nested inside
-   #main-content, so each one needs its own sidebar offset (unlike the
-   standalone customers-preview.html prototype, which nests its content
-   inside #main-content and therefore must NOT repeat that offset --
-   different host structure, different correct fix). #customers-page's
-   own padding:var(--dashboard-padding) below provides the actual
-   32px content gutter past that offset.
+   Sidebar offset: no inline margin-left here — .dash-section now carries
+   a shared margin-left:var(--sidebar-width) rule (dashboard-shell.css)
+   that also responds to body.sb-collapsed, which a hardcoded inline value
+   never could. Every sibling section (#section-subscribers, #section-
+   loyalty) was already fixed to rely on that shared rule instead of
+   reimplementing it inline; this section is ported to match. See that
+   rule's own comment in dashboard-shell.css for the full history.
+   #customers-page's own padding:var(--dashboard-padding) below still
+   provides the actual 32px content gutter past that offset.
    ============================================================ */
 #customers-page * { box-sizing: border-box; }
 
@@ -1659,7 +1672,7 @@ custRenderTable();
 </script>
 </div>
 
-<div id="section-campaigns" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
+<div id="section-campaigns" class="dash-section" style="display:none;padding:24px;">
 <style>
 #section-campaigns .sec-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;}
 #section-campaigns .sec-hdr h2{font-size:1.4rem;font-weight:700;color:#f0f4f8;margin:0 0 4px;}
@@ -1725,6 +1738,7 @@ custRenderTable();
 .camp-hist-meta{font-size:.73rem;color:var(--dashboard-muted-dim);margin-top:3px;}
 </style>
 
+<div class="qds-page-wrap">
 <div class="sec-hdr">
   <div>
     <h2 data-i18n="camp_title">AI Campaigns</h2>
@@ -1777,7 +1791,7 @@ custRenderTable();
 <div class="camp-card" id="campGoalPanel" style="display:none;margin-top:16px;">
   <button class="camp-back" onclick="campResetTrig()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Change type
+    <span data-i18n="camp_change_type">Change type</span>
   </button>
   <div class="camp-label" id="campTrigLabel"></div>
   <div class="camp-field">
@@ -1844,6 +1858,7 @@ custRenderTable();
 <div class="camp-card camp-hist" id="campHistPanel" style="display:none;">
   <h3 data-i18n="camp_history">Recent Campaigns</h3>
   <div id="campHistList"></div>
+</div>
 </div>
 
 <script>
@@ -1950,12 +1965,13 @@ custRenderTable();
     if (!goal) { alert('Please describe your campaign goal.'); return; }
     var offer = (document.getElementById('campOfferText').value || '').trim();
     var btn = document.getElementById('campGenBtn');
-    btn.disabled = true; btn.childNodes[btn.childNodes.length-1].textContent = ' Generating…';
+    var btnLabel = btn.querySelector('span');
+    btn.disabled = true; btnLabel.textContent = window._qt ? window._qt('camp_generating', 'Generating…') : 'Generating…';
     campTok(function(tok) {
       fetch(window.API_ORIGIN + '/loyalty/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-        body: JSON.stringify({ campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
+        body: JSON.stringify({ type: _trig, campaignType: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
       }).then(function(x){ return x.json(); })
         .then(function(d) {
           if (!d.ok) throw new Error(d.error || 'Generation failed');
@@ -1968,7 +1984,7 @@ custRenderTable();
         .catch(function(e) { alert('Could not generate message: ' + e.message); })
         .finally(function() {
           btn.disabled = false;
-          btn.childNodes[btn.childNodes.length-1].textContent = ' Generate Push Message';
+          btnLabel.textContent = window._qt ? window._qt('camp_gen_btn', 'Generate Push Message') : 'Generate Push Message';
         });
     });
   };
@@ -2063,7 +2079,7 @@ custRenderTable();
 </script>
 </div>
 
-<div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
+<div id="section-loyalty" class="dash-section" style="display:none;">
   <style>
     /* Loyalty consumes the shared dashboard design system (page-wrap,
        page-header, kpi-row/kpi-card, panel, badge, btn-primary/btn-outline,
@@ -2963,6 +2979,7 @@ window._loyRemovePin = function() {
       camp_reward_title: 'Reward Reminder', camp_reward_desc: "Remind customers they're close to unlocking their next reward.",
       camp_goal_label: 'Campaign goal', camp_offer_label: 'Offer or detail',
       camp_tone_label: 'Tone', tone_friendly: 'Friendly', tone_premium: 'Premium', tone_urgent: 'Urgent', tone_playful: 'Playful',
+      camp_change_type: 'Change type', camp_generating: 'Generating…',
       camp_gen_btn: 'Generate Push Message', camp_send_btn: 'Send to Subscribers', camp_history: 'Recent Campaigns',
       camp_notif_app: 'Qraivy Loyalty', camp_notif_now: 'now',
       camp_prev_title: 'Your push title', camp_prev_body: 'Your push message will appear here',
@@ -3095,6 +3112,7 @@ window._loyRemovePin = function() {
       camp_reward_title: 'Belohnungserinnerung', camp_reward_desc: 'Erinnern Sie Kunden daran, dass sie kurz vor ihrer nächsten Belohnung sind.',
       camp_goal_label: 'Kampagnenziel', camp_offer_label: 'Angebot oder Detail',
       camp_tone_label: 'Ton', tone_friendly: 'Freundlich', tone_premium: 'Premium', tone_urgent: 'Dringend', tone_playful: 'Spielerisch',
+      camp_change_type: 'Typ ändern', camp_generating: 'Wird generiert…',
       camp_gen_btn: 'Push-Nachricht generieren', camp_send_btn: 'An Abonnenten senden', camp_history: 'Letzte Kampagnen',
       camp_notif_app: 'Qraivy Treue', camp_notif_now: 'jetzt',
       camp_prev_title: 'Ihr Push-Titel', camp_prev_body: 'Ihre Push-Nachricht erscheint hier',

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Opening…</title>
+<script src="js/url-config.js"></script>
+<style>
+  body{background:#05082e;color:#f0f4f8;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .msg{font-size:.85rem;opacity:.7;}
+</style>
+</head>
+<body>
+<div class="msg">Opening…</div>
+<script>
+// Same-origin bounce target for push-notification clicks whose real
+// destination is cross-origin (see handleSendPush in lpController.js).
+// This page's own URL is always same-origin with the service worker
+// (window.PUBLIC_APP_ORIGIN), which is what lets notificationclick's
+// WindowClient.navigate()/clients.openWindow() reach it reliably on every
+// platform, including iOS Safari — it never carries the destination
+// itself, only an opaque campaign id resolved server-side.
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var campaign = params.get('campaign');
+  function go(url) {
+    window.location.replace(url);
+  }
+  if (!campaign) { go(window.PUBLIC_APP_ORIGIN + '/'); return; }
+  fetch(window.API_ORIGIN + '/push/click/' + encodeURIComponent(campaign))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.ok && d.url) { go(d.url); return; }
+      go(window.PUBLIC_APP_ORIGIN + (d && d.slug ? '/lp/' + d.slug : '/'));
+    })
+    .catch(function () { go(window.PUBLIC_APP_ORIGIN + '/'); });
+})();
+</script>
+</body>
+</html>

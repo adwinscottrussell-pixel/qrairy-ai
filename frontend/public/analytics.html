@@ -5,86 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics — Qraivy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="dashboard-shell.css"/>
+  <link rel="stylesheet" href="qds/qds.css"/>
   <link rel="stylesheet" href="analytics-page.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
   
 </head>
-<body>
+<body data-shell="customer" data-active-nav="nav-analytics">
 
-<!-- SIDEBAR -->
-<div id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-icon">Q</div>
-    <div class="sb-logo-text">QR<span>Aivy</span></div>
-  </div>
-  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
-  <nav class="sb-nav">
-    <div class="sb-group" data-i18n="nav_main">Main</div>
-    <a href="dashboard.html" class="sb-item "><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
-    <a href="analytics.html" class="sb-item active"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge">0</span></a>
-    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
-    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
-    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
-    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar" id="sb-avatar">?</div>
-      <div class="sb-user-info">
-        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
-        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
-      </div>
-    </div>
-<div style="padding:6px 12px 2px;">
-      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-        <span style="font-size:.8rem;">🌐</span>
-        <span id="lang-toggle-label">Deutsch</span>
-      </button>
-    </div>
-    <div class="sb-divider"></div>
-    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
-  </div>
-</div>
-
-<button id="mob-btn">☰</button>
-<div class="sb-overlay" id="sb-overlay"></div>
+<div id="sidebar"></div>
+<script src="js/dashboard-shell.js"></script>
 
 <div id="main-content">
   <div class="noise"></div>
   <main>
-    <div class="page-wrap">
+    <div class="qds-page-wrap">
 
       <!-- Header -->
-      <div class="page-header">
+      <div class="qds-page-header">
         <div>
-          <h1 class="dash-title"><span data-i18n="an_title">Business</span> <em data-i18n="an_title_em">Intelligence</em></h1>
-          <div class="dash-sub" data-i18n="an_sub">Deep engagement reporting across all Smart QR Pages</div>
+          <h1 class="qds-page-title"><span data-i18n="an_title">Business</span> <em data-i18n="an_title_em">Intelligence</em></h1>
+          <div class="qds-page-subtitle" data-i18n="an_sub">Deep engagement reporting across all Smart QR Pages</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select class="filter-select" id="qr-filter">
+          <select class="qds-toolbar__select" id="qr-filter">
             <option value="all" data-i18n="filter_all_qr">All QR Pages</option>
           </select>
         </div>
       </div>
 
       <!-- Date filters -->
-      <div class="filter-bar">
-        <button class="filter-btn active" data-range="7" data-i18n="range_7">Last 7 days</button>
-        <button class="filter-btn" data-range="30" data-i18n="range_30">Last 30 days</button>
-        <button class="filter-btn" data-range="90" data-i18n="range_90">Last 90 days</button>
-        <button class="filter-btn" data-range="1" data-i18n="range_24">Last 24h</button>
-        <div class="filter-sep"></div>
-        <select class="filter-select" id="usecase-filter">
+      <div class="qds-toolbar">
+        <button class="qds-toolbar__btn qds-toolbar__btn--active" data-range="7" data-i18n="range_7">Last 7 days</button>
+        <button class="qds-toolbar__btn" data-range="30" data-i18n="range_30">Last 30 days</button>
+        <button class="qds-toolbar__btn" data-range="90" data-i18n="range_90">Last 90 days</button>
+        <button class="qds-toolbar__btn" data-range="1" data-i18n="range_24">Last 24h</button>
+        <div class="qds-toolbar__sep"></div>
+        <select class="qds-toolbar__select" id="usecase-filter">
           <option value="all" data-i18n="filter_all_uc">All use cases</option>
           <option value="restaurant">Restaurant</option>
           <option value="ecommerce">Ecommerce</option>
@@ -98,18 +57,18 @@
       </div>
 
       <!-- KPI strip -->
-      <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val orange" id="an-scans">—</div><div class="kpi-lbl" data-i18n="kpi_scans">Total QR Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
-        <div class="kpi-card"><div class="kpi-val orange" id="an-visits">—</div><div class="kpi-lbl" data-i18n="kpi_visits">Total Page Visits</div></div>
-        <div class="kpi-card"><div class="kpi-val green" id="an-subs">—</div><div class="kpi-lbl" data-i18n="kpi_subs">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
-        <div class="kpi-card" style="display:none"><div class="kpi-val purple" id="an-wallet">—</div><div class="kpi-lbl">Wallet Members</div></div>
-        <div class="kpi-card" style="display:none"><div class="kpi-val" id="an-ai">—</div><div class="kpi-lbl">AI Conversations</div></div>
-        <div class="kpi-card"><div class="kpi-val orange" id="an-cvr">—%</div><div class="kpi-lbl" data-i18n="kpi_cvr">QR Conversion Rate</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="an-pages">—</div><div class="kpi-lbl" data-i18n="kpi_pages">Active Pages</div></div>
+      <div class="qds-grid--kpi">
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="an-scans">—</div><div class="qds-surface__kpi-label" data-i18n="kpi_scans">Total QR Scans</div><div class="kpi-trend" id="an-scans-d"></div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="an-visits">—</div><div class="qds-surface__kpi-label" data-i18n="kpi_visits">Total Page Visits</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val green qds-surface__kpi-value" id="an-subs">—</div><div class="qds-surface__kpi-label" data-i18n="kpi_subs">Subscribers</div><div class="kpi-trend" id="an-subs-d"></div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised" style="display:none"><div class="kpi-val purple qds-surface__kpi-value" id="an-wallet">—</div><div class="qds-surface__kpi-label">Wallet Members</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised" style="display:none"><div class="kpi-val qds-surface__kpi-value" id="an-ai">—</div><div class="qds-surface__kpi-label">AI Conversations</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="an-cvr">—%</div><div class="qds-surface__kpi-label" data-i18n="kpi_cvr">QR Conversion Rate</div></div>
+        <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val qds-surface__kpi-value" id="an-pages">—</div><div class="qds-surface__kpi-label" data-i18n="kpi_pages">Active Pages</div></div>
       </div>
 
       <!-- Charts -->
-      <div class="chart-grid">
+      <div class="qds-grid--split">
         <div class="chart-card wide">
           <div class="cc-header">
             <div>
@@ -144,26 +103,26 @@
       <div class="perf-section">
         <div class="perf-hdr">
           <div class="perf-title" data-i18n="perf_title">Smart QR Performance</div>
-          <input class="perf-search" id="perf-search" type="text" placeholder="Search pages…" data-i18n-placeholder="perf_search" />
+          <input class="qds-toolbar__search" id="perf-search" type="text" placeholder="Search pages…" data-i18n-placeholder="perf_search" />
         </div>
-        <div class="empty-state compact" id="perf-empty" style="display:none"><div class="empty-icon">&#x1F4CA;</div><div class="empty-title">No Smart QR Pages yet</div><div class="empty-sub">Create your first Smart QR Page to start seeing performance data here.</div><a class="empty-cta" href="dashboard.html?launch=onboarding">Create Smart QR</a></div>
-        <div class="perf-table-wrap" id="perf-table-wrap">
-          <table class="perf-table" id="perf-table">
+        <div class="qds-empty-state qds-empty-state--compact" id="perf-empty" style="display:none"><div class="qds-empty-state__icon">&#x1F4CA;</div><div class="qds-empty-state__title">No Smart QR Pages yet</div><div class="qds-empty-state__sub">Create your first Smart QR Page to start seeing performance data here.</div><a class="empty-cta" href="dashboard.html?launch=onboarding">Create Smart QR</a></div>
+        <div class="qds-table-wrap qds-table-wrap--scroll" id="perf-table-wrap">
+          <table class="qds-table" id="perf-table" style="min-width:640px">
             <thead>
               <tr>
-                <th data-col="name"><span data-i18n="col_page">Page</span> <span class="sort-icon">↕</span></th>
-                <th data-col="scans" class="sorted"><span data-i18n="col_scans">Scans / Visits</span> <span class="sort-icon">↓</span></th>
-                <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="sort-icon">↕</span></th>
-                <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="sort-icon">↕</span></th>
-                <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="sort-icon">↕</span></th>
-                <th data-col="cvr"><span data-i18n="col_cvr">CVR</span> <span class="sort-icon">↕</span></th>
-                <th data-col="status"><span data-i18n="col_status">Status</span> <span class="sort-icon">↕</span></th>
+                <th data-col="name"><span data-i18n="col_page">Page</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="scans" class="qds-table__th--sorted"><span data-i18n="col_scans">Scans / Visits</span> <span class="qds-table__sort-icon">↓</span></th>
+                <th data-col="subs"><span data-i18n="col_subs">Subscribers</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="ai"><span data-i18n="col_ai">AI Chats</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="wallet"><span data-i18n="col_wallet">Wallet</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="cvr"><span data-i18n="col_cvr">CVR</span> <span class="qds-table__sort-icon">↕</span></th>
+                <th data-col="status"><span data-i18n="col_status">Status</span> <span class="qds-table__sort-icon">↕</span></th>
               </tr>
             </thead>
             <tbody id="perf-tbody">
-              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-line w-60" style="height:14px"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-line w-80" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-80" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-60" style="height:14px"></div></td></tr>
+              <tr><td colspan="7"><div class="qds-skeleton qds-skeleton--line qds-skeleton--w-80" style="height:14px"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -172,12 +131,12 @@
 
 
       <!-- Top prompts / engagement breakdown -->
-      <div class="metrics-grid" style="margin-bottom:0">
-        <div class="metric-card">
+      <div class="qds-grid--split" style="margin-bottom:0">
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised">
           <div class="mc-title"><span class="mc-icon">📊</span> <span data-i18n="mc_breakdown">Engagement Breakdown by Page</span></div>
           <div id="scan-breakdown" class="mc-rows"></div>
         </div>
-        <div class="metric-card">
+        <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised">
           <div class="mc-title"><span class="mc-icon">⚡</span> <span data-i18n="mc_activity">Recent Activity</span></div>
           <div id="recent-activity" style="display:flex;flex-direction:column;gap:0"></div>
         </div>
@@ -312,7 +271,7 @@ function renderCharts(dashboard) {
     const palette  = ['#ff5a1f','#22c55e','#a78bfa','#3b82f6','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
     if (usecaseChartInst) usecaseChartInst.destroy();
     if (ucLabels.length === 0) {
-      ucCtx.parentElement.innerHTML = '<div class="state-empty">No data yet</div>';
+      ucCtx.parentElement.innerHTML = '<div class="qds-state-empty">No data yet</div>';
     } else {
       usecaseChartInst = new Chart(ucCtx, {
         type: 'doughnut',
@@ -359,8 +318,8 @@ function renderTable(dashboard) {
     const cvr     = val > 0 ? Math.round((qr.totalSubscribers / val) * 100) : 0;
     const qrImg   = `https://api.qrserver.com/v1/create-qr-code/?size=36x36&data=${encodeURIComponent(qr.originalUrl)}&color=111111&bgcolor=ffffff&margin=1`;
     const statusBadge = isAI
-      ? '<span class="pt-badge-live">● Live</span>'
-      : '<span class="pt-badge-basic">Basic</span>';
+      ? '<span class="qds-badge qds-badge--success">● Live</span>'
+      : '<span class="qds-badge qds-badge--neutral">Basic</span>';
     return `<tr>
       <td><div class="pt-qr">
         <div class="pt-qr-thumb"><img src="${qrImg}" loading="lazy" /></div>
@@ -456,6 +415,14 @@ async function loadAnalytics() {
     const data = await res.json();
     allData = data.dashboard || [];
 
+    // Smart QR badge — same source and same "AI page" definition
+    // (!!q.businessName) that dashboard.html's loadDashboard()/renderCards()
+    // uses for the identical badge, since both pages fetch this exact
+    // ${API_BASE}/dashboard payload. No new endpoint added.
+    if (window.QraivyDashboardShell) {
+      window.QraivyDashboardShell.setSmartQrCount(allData.filter(q => !!q.businessName).length);
+    }
+
     // Update plan badge
     if (data.planInfo) {
       const b = document.getElementById('plan-badge');
@@ -467,7 +434,7 @@ async function loadAnalytics() {
     renderMetrics(allData);
   } catch (err) {
     console.error(err);
-    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="state-loading">Failed to load data.</td></tr>';
+    document.getElementById('perf-tbody').innerHTML = '<tr><td colspan="7" class="qds-state-loading">Failed to load data.</td></tr>';
   }
 }
 
@@ -489,47 +456,18 @@ async function initAnalytics() {
     _user = window.Clerk.user;
   }
 
+  // Shared-shell owns username/avatar/signout rendering (QDS migration).
+  // Reads `_user`, not `window.Clerk.user` directly, so this still works
+  // in the local-preview stand-in branch above, where window.Clerk is
+  // never loaded at all.
   const name = _user.firstName || _user.emailAddresses[0].emailAddress;
-  document.getElementById('sb-username').textContent = name;
-  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
-  document.getElementById('sb-signout').addEventListener('click', async e => {
-    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
-  });
+  if (window.QraivyDashboardShell) window.QraivyDashboardShell.setUser({ name, initial: name[0].toUpperCase() });
 
-  // ── Sidebar init ──────────────────────────────────────────────────────────
-  const _sidebar = document.getElementById('sidebar');
-  const _sbToggle = document.getElementById('sb-toggle');
-  if (_sidebar && _sbToggle) {
-    if (localStorage.getItem('sb-collapsed') === 'true') { _sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-    _sbToggle.addEventListener('click', function() {
-      const c = _sidebar.classList.toggle('collapsed');
-      document.body.classList.toggle('sb-collapsed', c);
-      localStorage.setItem('sb-collapsed', c);
-    });
-  }
-  const _mobBtn = document.getElementById('mob-btn');
-  const _overlay = document.getElementById('sb-overlay');
-  if (_mobBtn) _mobBtn.addEventListener('click', function() { _sidebar.classList.add('mob-open'); _overlay.classList.add('on'); });
-  if (_overlay) _overlay.addEventListener('click', function() { _sidebar.classList.remove('mob-open'); _overlay.classList.remove('on'); });
   // Toast items (unfinished features)
   ['sb-settings'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { e.preventDefault(); const t=document.getElementById('cs-toast'); if(t){document.getElementById('cs-toast-msg').textContent=' Coming soon!';t.style.display='flex';setTimeout(function(){t.style.display='none';},2000);} });
   });
-  // sb-create-sqr uses href="dashboard.html?launch=onboarding" directly
-
-
-  // Sidebar collapse
-  const sidebar = document.getElementById('sidebar');
-  const sbToggle = document.getElementById('sb-toggle');
-  if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
-  sbToggle.addEventListener('click', () => {
-    const c = sidebar.classList.toggle('collapsed');
-    document.body.classList.toggle('sb-collapsed', c);
-    localStorage.setItem('sb-collapsed', c);
-  });
-  document.getElementById('mob-btn').addEventListener('click', () => { sidebar.classList.add('mob-open'); document.getElementById('sb-overlay').classList.add('on'); });
-  document.getElementById('sb-overlay').addEventListener('click', () => { sidebar.classList.remove('mob-open'); document.getElementById('sb-overlay').classList.remove('on'); });
 
   // Soon toast
   document.querySelectorAll('.sb-soon-item').forEach(item => {
@@ -537,24 +475,24 @@ async function initAnalytics() {
   });
 
   // Date range buttons
-  document.querySelectorAll('.filter-btn[data-range]').forEach(btn => {
+  document.querySelectorAll('.qds-toolbar__btn[data-range]').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn[data-range]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      document.querySelectorAll('.qds-toolbar__btn[data-range]').forEach(b => b.classList.remove('qds-toolbar__btn--active'));
+      btn.classList.add('qds-toolbar__btn--active');
       activeRange = parseInt(btn.dataset.range);
       renderCharts(allData);
     });
   });
 
   // Table sort
-  document.querySelectorAll('.perf-table th[data-col]').forEach(th => {
+  document.querySelectorAll('.qds-table th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
       if (sortCol === col) sortAsc = !sortAsc;
       else { sortCol = col; sortAsc = false; }
-      document.querySelectorAll('.perf-table th').forEach(h => h.classList.remove('sorted'));
-      th.classList.add('sorted');
-      th.querySelector('.sort-icon').textContent = sortAsc ? '↑' : '↓';
+      document.querySelectorAll('.qds-table th').forEach(h => h.classList.remove('qds-table__th--sorted'));
+      th.classList.add('qds-table__th--sorted');
+      th.querySelector('.qds-table__sort-icon').textContent = sortAsc ? '↑' : '↓';
       renderTable(allData);
     });
   });

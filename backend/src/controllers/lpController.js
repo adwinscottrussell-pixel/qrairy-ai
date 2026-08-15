@@ -1812,6 +1812,25 @@ async function handleWebPushVapidKey(req, res) {
   return res.json({ ok: true, publicKey: key.trim() });
 }
 
+// Validates a business-owner-supplied campaign destination URL before it is
+// ever stored or forwarded to any channel (wallet pass link, email CTA, web
+// push). Rejects non-HTTPS schemes (javascript:, data:, file:, plain
+// http:), malformed URLs, and URLs carrying embedded credentials — exactly
+// the input classes an open-redirect vector would rely on. Returns null
+// (never throws) so callers can treat "invalid" the same as "not supplied".
+function sanitizeDestinationUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  let parsed;
+  try {
+    parsed = new URL(rawUrl.trim());
+  } catch (e) {
+    return null;
+  }
+  if (parsed.protocol !== 'https:') return null;
+  if (parsed.username || parsed.password) return null;
+  return parsed.href;
+}
+
 async function handleSendPush(req, res) {
   try {
     const { slug } = req.params;
@@ -1832,6 +1851,7 @@ async function handleSendPush(req, res) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    const sanitizedLink = sanitizeDestinationUrl(linkUrl);
     const serial = 'sqr-' + slug;
     const devices = await prisma.passDevice.findMany({
       where: { pass: { serialNumber: serial } },
@@ -1845,9 +1865,7 @@ async function handleSendPush(req, res) {
       const { pushUpdateToDevices } = require('../services/apnsService');
       results = await pushUpdateToDevices(devices);
       // Save message to Pass record so it appears on pass back
-      await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { lastMsgTitle: title, lastMsg: message, lastMsgLink: linkUrl || null } });
-      // Save campaign to history
-      await prisma.pushCampaign.create({ data: { slug, title, message, linkUrl: linkUrl || null, sent: results.success } });
+      await prisma.pass.updateMany({ where: { serialNumber: serial }, data: { lastMsgTitle: title, lastMsg: message, lastMsgLink: sanitizedLink } });
     }
     // Also send email to all subscribers
     // Email Unsubscribe Phase A fix: eligibility must require BOTH
@@ -1864,26 +1882,75 @@ async function handleSendPush(req, res) {
     if (emailSubs.length > 0) {
       const { sendCampaignEmail, sendWelcomeEmail } = require('../services/emailService');
       const page = await prisma.landingPage.findUnique({ where: { slug } });
-      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });
+      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl: sanitizedLink, bizName: page?.businessName || slug, slug });
     }
     // Also send web push to browser subscribers
     const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
     let webPushSent = 0;
+    let webPushRemoved = 0;
+    // Created only when actually needed (a cross-origin destination with at
+    // least one web-push subscriber) — gives the /push-open.html bounce page
+    // a safe server-side id to resolve, instead of ever putting the raw
+    // destination in the push payload/URL bar. Backfilled with the real
+    // sent count once delivery finishes below.
+    let campaignForRedirect = null;
     if (webSubs.length > 0) {
+      const smartLandingPageUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug;
+      let webPushUrl = smartLandingPageUrl;
+      if (sanitizedLink) {
+        const sameOrigin = new URL(sanitizedLink).origin === new URL(PUBLIC_APP_ORIGIN).origin;
+        if (sameOrigin) {
+          webPushUrl = sanitizedLink;
+        } else {
+          // WindowClient.navigate() rejects non-same-origin URLs, and
+          // clients.openWindow() with an external URL falls back to the
+          // installed PWA's start_url on iOS Safari instead of the
+          // destination — so a genuinely cross-origin destination must be
+          // opened via a same-origin bounce page that resolves and
+          // forwards to the real target.
+          campaignForRedirect = await prisma.pushCampaign.create({ data: { slug, title, message, linkUrl: sanitizedLink, sent: 0 } });
+          webPushUrl = PUBLIC_APP_ORIGIN + '/push-open.html?campaign=' + encodeURIComponent(campaignForRedirect.id);
+        }
+      }
       const { sendWebPush } = require('../services/webPushService');
       for (const sub of webSubs) {
-        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://www.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
-        if (r.ok) webPushSent++;
+        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: webPushUrl, icon: 'https://qraivy.com/icon-192.png' });
+        if (r.ok) {
+          webPushSent++;
+        } else if (r.statusCode === 404 || r.statusCode === 410) {
+          // Push service confirms this subscription is gone (browser unsubscribed,
+          // uninstalled, or the endpoint expired) — it will never succeed again,
+          // so remove it rather than let it fail silently on every future send.
+          await prisma.webPushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+          webPushRemoved++;
+        }
       }
     }
-    console.log('[Push] Sent to', devices.length, 'Apple devices +', webPushSent, 'web push for', slug, results);
+    console.log('[Push] Sent to', devices.length, 'Apple devices +', webPushSent, 'web push for', slug, results, webPushRemoved ? ('(' + webPushRemoved + ' expired subscriptions removed)') : '');
     console.log('[Email] Sent to', emailSubs?.length || 0, 'subscribers', emailResults);
 
     // Per-channel breakdown — the accurate report this endpoint was missing.
     const walletReport  = { attempted: devices.length, sent: results.success, failed: results.failed };
     const emailReport   = { attempted: emailSubs.length, sent: emailResults.success, failed: emailResults.failed };
+    // Expired subscriptions we just removed are reported as failed deliveries
+    // for this send (they did not receive the message), not silently dropped
+    // from the count.
     const webPushFailed = webSubs.length - webPushSent;
-    const webPushReport = { attempted: webSubs.length, sent: webPushSent, failed: webPushFailed };
+    const webPushReport = { attempted: webSubs.length, sent: webPushSent, failed: webPushFailed, removed: webPushRemoved };
+
+    // Record history once all channels have been attempted, regardless of
+    // which channel(s) actually had recipients — previously this was only
+    // saved when Apple Wallet devices existed, so a page with only web-push
+    // or email subscribers never got a history entry at all.
+    const totalSent = walletReport.sent + emailReport.sent + webPushReport.sent;
+    const totalAttempted = walletReport.attempted + emailReport.attempted + webPushReport.attempted;
+    if (campaignForRedirect) {
+      // Already created above (to mint the redirect id) — just backfill the
+      // real sent count now that delivery has finished.
+      await prisma.pushCampaign.update({ where: { id: campaignForRedirect.id }, data: { sent: totalSent } });
+    } else if (totalAttempted > 0) {
+      await prisma.pushCampaign.create({ data: { slug, title, message, linkUrl: sanitizedLink, sent: totalSent } });
+    }
 
     return res.json({
       ok: true,
@@ -1911,6 +1978,29 @@ async function handleSendPush(req, res) {
   } catch(e) {
     console.error('[Push] Error:', e.message);
     return res.status(500).json({ error: e.message });
+  }
+}
+
+// ── GET /push/click/:id — same-origin redirect resolver ──
+// Called by frontend/public/push-open.html (opened by the service worker's
+// notificationclick handler for a cross-origin destination — see
+// handleSendPush above). Never receives the destination URL from the
+// client; looks it up server-side by the opaque campaign id and
+// re-validates it before handing it back, so /push-open.html never has to
+// trust an unvalidated URL. Always resolves to *some* safe URL — an
+// unknown/invalid id or destination falls back to that campaign's own
+// Smart Landing Page rather than failing the redirect outright.
+async function handlePushClickResolve(req, res) {
+  try {
+    const { id } = req.params;
+    const campaign = id ? await prisma.pushCampaign.findUnique({ where: { id } }) : null;
+    if (!campaign) return res.status(404).json({ ok: false, error: 'Unknown campaign' });
+    const safeUrl = sanitizeDestinationUrl(campaign.linkUrl) || (PUBLIC_APP_ORIGIN + '/lp/' + campaign.slug);
+    console.log('[Push] click resolved:', campaign.id, '->', safeUrl);
+    return res.json({ ok: true, url: safeUrl, slug: campaign.slug });
+  } catch(e) {
+    console.error('[Push] click resolve error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
   }
 }
 
@@ -3792,7 +3882,7 @@ async function handleVerifyStaffPin(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleUnsubscribe, handleConfirmEmail,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushClickResolve, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleUnsubscribe, handleConfirmEmail,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleScannerPreview, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin, handleRemoveStaffPin,
