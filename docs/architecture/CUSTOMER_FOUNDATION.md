@@ -70,9 +70,50 @@ Additive only:
 
 **No historical backfill occurred** — only brand-new activity from this point forward triggers a canonical write. **No new Prisma migration** — Phase 2 wrote to tables Phase 1 already created. **Read paths remain entirely legacy** — nothing anywhere reads from `Customer`/`CustomerIdentity` yet. **Customers UI remains canonical-data-pending** — `MOCK_CUSTOMERS` untouched.
 
+## Phase 3 — Deterministic Historical Backfill (validated locally, not run against production)
+
+**Script**: `backend/scripts/backfill-customer-foundation-phase3.js`. Supersedes the untracked `backfill-customer-foundation-phase1.js` (2026-08-11), which targeted the superseded slug-anchored draft (`customerChannel`, `customerRecordId` FKs) and is incompatible with the current schema — do not run it.
+
+Dry run by default; writes only with `--apply`:
+
+```
+DATABASE_URL=... node backend/scripts/backfill-customer-foundation-phase3.js
+DATABASE_URL=... node backend/scripts/backfill-customer-foundation-phase3.js --apply
+```
+
+Reuses `customerIdentityService.js` exclusively — the script contains no independent resolve/create logic, only the decision of which legacy rows are deterministic enough to submit to it. Every legacy table is read-only; nothing is ever written to `Subscriber`, `WebPushSubscription`, `Pass`, `LoyaltyCustomer`, `LoyaltyCustomerAlias`, `StampEntry`, `Scan`, `DealClaim`, or `CustomerConsent`.
+
+**Eligible sources**:
+
+| Source | Rule | Identity type(s) | Source tag |
+|---|---|---|---|
+| `LoyaltyCustomer` | `slug` → `LandingPage.userId` resolvable | `cid` | `backfill_loyalty_customer` |
+| `LoyaltyCustomerAlias` | FK-linked to an already-resolved `LoyaltyCustomer` row (deterministic: same real customer by construction) | `cid` | `backfill_loyalty_customer_alias` |
+| `WebPushSubscription` | `cid` present (non-null) and slug resolvable | `cid` + `push_endpoint` | `backfill_webpush` |
+| `Pass` | `loyaltyCustomerId` populated AND `Pass.slug` matches its linked `LoyaltyCustomer.slug` (mismatch = skipped as ambiguous). Resolves via the linked `LoyaltyCustomer.customerId` — never reverse-parses `serialNumber`. | `wallet_serial` | `backfill_pass` |
+| `Subscriber` | non-null `email`, slug resolvable. Normalized identically to the live Phase 2 write (`email.toLowerCase().trim()`) so backfilled and live rows always converge. Never merged with any cid-based Customer — a different `type`, so it can never collide under `[ownerUserId, type, value]`. | `email` | `backfill_subscriber_email` |
+
+**Excluded sources**:
+
+| Source | Reason |
+|---|---|
+| `Scan` | Carries no identity signal of any kind (`qrId`/`userAgent`/`ip`/`referer` only) — never processed. |
+| `DealClaim` | No live claim/redemption endpoint exists yet, so a `DealClaim.cid` has no deterministic proof tying it to a real redemption event. Script counts rows only (`totalRows`, `rowsWithCid`) and links nothing. |
+
+**Tenant resolution**: always `slug → LandingPage.userId`, the same path Phase 2's live dual-writes use — never a model's own denormalized `userId` field, for consistency across every source. A row with no slug, no matching `LandingPage`, or a `LandingPage` with a null `userId` is skipped and counted (`skippedNoSlug` / `skippedNoLandingPage` / `skippedNoOwner`), never guessed.
+
+**Idempotency**: every write goes through `resolveOrCreateCustomerIdentity`/`attachDeterministicIdentity`'s existing idempotent, race-safe resolve-or-create logic — re-running the script (dry run or apply) after a successful apply finds every identity already resolved and creates nothing further. Verified locally: a second dry run after apply produced zero `wouldCreate` across every source.
+
+**Cross-system convergence verified locally**: a `LoyaltyCustomer` row, its `LoyaltyCustomerAlias` rows, and a `Pass` linked via `loyaltyCustomerId` for the same tenant all converged onto one `Customer`. The same `cid` value under two different `ownerUserId`s produced two separate `Customer` rows (tenant isolation held). A `Subscriber` email for the same tenant as an existing cid-based `Customer` produced a distinct `Customer` — never merged.
+
+**Local validation performed**: synthetic fixtures in `qraivy_phase1_test` covering a plain loyalty cid, a duplicate alias cid (same as its parent, and a genuinely different second cid), the same cid under two businesses, WebPush with and without cid, a safe wallet identity, an ambiguous Pass (slug mismatch vs. its linked LoyaltyCustomer), a missing LandingPage, a LandingPage with a null `userId`, a pre-existing Phase 2 canonical identity, and a Subscriber email-only candidate. Full integrity check passed: every `Customer` has a non-null `ownerUserId`, every `CustomerIdentity` belongs to a `Customer`, `CustomerIdentity.ownerUserId` always matches its parent `Customer.ownerUserId`, zero duplicate `[ownerUserId, type, value]` rows, zero orphan `Customer` rows, `CustomerConsent` untouched (0 rows), legacy table schemas unchanged (no new columns).
+
+**Local apply executed** (`qraivy_phase1_test` only): first dry run projected 5 new `Customer` / 8 new `CustomerIdentity` rows; `--apply` created exactly that (`Customer` 1→6, `CustomerIdentity` 1→9); a second dry run immediately after reported zero `wouldCreate` across every source (idempotency confirmed). Post-apply integrity re-check: 0 null `ownerUserId`, 0 orphan `CustomerIdentity`, 0 `ownerUserId` mismatches, 0 duplicate `[ownerUserId,type,value]`, 0 orphan `Customer`. Every legacy table's row count was identical before and after (`Subscriber`, `WebPushSubscription`, `Pass`, `LoyaltyCustomer`, `LoyaltyCustomerAlias`, `PassDevice`, `StampEntry`, `Scan`, `DealClaim`, `CustomerConsent` all unchanged) — only `Customer`/`CustomerIdentity` changed. Source tags on the created rows were exactly `backfill_loyalty_customer`, `backfill_loyalty_customer_alias`, `backfill_webpush`, `backfill_pass`, `backfill_subscriber_email` — no ambiguous values.
+
+**Not run against production.** Not committed as a migration (no schema change — Phase 1 already created these tables). No Customer-facing API or frontend change in this phase. Not yet committed to git.
+
 ## Future phases (not implemented)
 
-3. Backfill deterministic historical identities only (see the approved architecture report's Section H for exactly which historical records are safe/uncertain/impossible to backfill).
 4. Add nullable `customerId` FKs to `Subscriber`/`WebPushSubscription`/`LoyaltyCustomer`/`DealClaim`.
 5. Switch reads to the canonical `Customer` model.
 6. Customers UI consumes the real Customer API.
