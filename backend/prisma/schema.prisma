@@ -8,17 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id
-  email     String?
-  phone     String?
-  plan      String   @default("free")
-  createdAt        DateTime  @default(now())
-  trialExpiresAt   DateTime?
-  accountType      String?   @default("free")
+  id                   String    @id
+  email                String?
+  phone                String?
+  plan                 String    @default("free")
+  createdAt            DateTime  @default(now())
+  trialExpiresAt       DateTime?
+  accountType          String?   @default("free")
   stripeCustomerId     String?
   stripeSubscriptionId String?
   subscriptionStatus   String?
-  qrs       QR[]
+  qrs                  QR[]
 
   @@index([email])
 }
@@ -93,60 +93,61 @@ model LandingPage {
 }
 
 model Pass {
-  id              String             @id @default(cuid())
-  serialNumber    String             @unique
+  id            String             @id @default(cuid())
+  serialNumber  String             @unique
   // Set at creation time. serialNumber encodes slug + an optional customer
   // cid as "sqr-{slug}-{cid}", but slugs themselves contain hyphens, so
   // reverse-parsing the slug back out of serialNumber is ambiguous —
   // storing it directly is the only reliable way to look up which
   // landing page a given Pass belongs to.
-  slug            String?
-  passTypeId      String
-  authToken       String?
-  lastMsgTitle    String?
-  lastMsg         String?
-  lastMsgLink     String?
-  stampCount      Int                @default(0)
-  stampGoal       Int                @default(10)
-  rewardReady     Boolean            @default(false)
-  totalStamps     Int                @default(0)
-  rewardsEarned   Int                @default(0)
-  lastStampAt     DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @default(now()) @updatedAt
-  devices         PassDevice[]
-  registrations   PassRegistration[]
-  rewardEvents    RewardEvent[]
+  slug          String?
+  passTypeId    String
+  authToken     String?
+  lastMsgTitle  String?
+  lastMsg       String?
+  lastMsgLink   String?
+  stampCount    Int                @default(0)
+  stampGoal     Int                @default(10)
+  rewardReady   Boolean            @default(false)
+  totalStamps   Int                @default(0)
+  rewardsEarned Int                @default(0)
+  lastStampAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now()) @updatedAt
+  devices       PassDevice[]
+  registrations PassRegistration[]
+  rewardEvents  RewardEvent[]
 }
 
 model PassDevice {
-  id                    String   @id @default(cuid())
-  deviceLibraryId       String
-  pushToken             String
-  walletType            String   @default("apple")
-  passId                String
-  pass                  Pass     @relation(fields: [passId], references: [id])
-  createdAt             DateTime @default(now())
+  id              String   @id @default(cuid())
+  deviceLibraryId String
+  pushToken       String
+  walletType      String   @default("apple")
+  passId          String
+  pass            Pass     @relation(fields: [passId], references: [id])
+  createdAt       DateTime @default(now())
+
   @@unique([passId, deviceLibraryId])
 }
 
 model PassRegistration {
-  id                    String   @id @default(cuid())
-  deviceLibraryId       String
-  serialNumber          String
-  passId                String
-  pass                  Pass     @relation(fields: [passId], references: [id])
-  createdAt             DateTime @default(now())
+  id              String   @id @default(cuid())
+  deviceLibraryId String
+  serialNumber    String
+  passId          String
+  pass            Pass     @relation(fields: [passId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model PushCampaign {
-  id           String   @id @default(cuid())
-  slug         String
-  title        String
-  message      String
-  linkUrl      String?
-  sent         Int      @default(0)
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  slug      String
+  title     String
+  message   String
+  linkUrl   String?
+  sent      Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model WebPushSubscription {
@@ -155,17 +156,25 @@ model WebPushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
+  // Schema-representation fix only: migration 20260718000000_add_webpush_
+  // subscription_cid already applied this nullable column to the real
+  // production database; schema.prisma just never caught up. No new
+  // migration created here — see docs/architecture/CUSTOMER_FOUNDATION.md.
+  cid       String?
   createdAt DateTime @default(now())
+
+  @@index([cid])
 }
+
 model StampSettings {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  goal        Int      @default(10)
-  rewardName  String   @default("Free item")
-  enabled     Boolean  @default(false)
-  color       String   @default("#ff5a1f")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  goal       Int      @default(10)
+  rewardName String   @default("Free item")
+  enabled    Boolean  @default(false)
+  color      String   @default("#ff5a1f")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 }
 
 model StampToken {
@@ -185,14 +194,14 @@ model StampEntry {
 }
 
 model RewardEvent {
-  id          String    @id @default(cuid())
-  slug        String
-  passId      String
-  pass        Pass      @relation(fields: [passId], references: [id])
-  rewardText  String
-  status      String    @default("earned")
-  createdAt   DateTime  @default(now())
-  redeemedAt  DateTime?
+  id         String    @id @default(cuid())
+  slug       String
+  passId     String
+  pass       Pass      @relation(fields: [passId], references: [id])
+  rewardText String
+  status     String    @default("earned")
+  createdAt  DateTime  @default(now())
+  redeemedAt DateTime?
 }
 
 model LoyaltyCustomer {
@@ -279,8 +288,8 @@ model Customer {
   // won't have one.
   slug String?
 
-  displayName  String?
-  primaryEmail String?
+  displayName            String?
+  primaryEmail           String?
   primaryEmailVerifiedAt DateTime?
 
   status       String  @default("active") // active | merged | anonymized | deleted
@@ -294,15 +303,15 @@ model Customer {
 
   identities CustomerIdentity[]
 
-  @@index([ownerUserId])
-  @@index([slug])
-  @@index([primaryEmail])
   // Scoped per business, not global — the same real person who is a
   // customer of two unrelated QRAIVY businesses must never collide into
   // one Customer row. NULL primaryEmail values are exempt from this
   // constraint (standard SQL NULL semantics), so many identity-only
   // Customers with no email yet can coexist.
   @@unique([ownerUserId, primaryEmail])
+  @@index([ownerUserId])
+  @@index([slug])
+  @@index([primaryEmail])
 }
 
 model CustomerIdentity {
@@ -323,8 +332,8 @@ model CustomerIdentity {
   // one identity row instead of two.
   slug String?
 
-  type String // "cid" | "email" | "wallet_serial" | "push_endpoint" | "phone" | "whatsapp" | "external_crm"
-              // No rows exist yet — Phase 1 creates the table only.
+  type       String // "cid" | "email" | "wallet_serial" | "push_endpoint" | "phone" | "whatsapp" | "external_crm"
+  // No rows exist yet — Phase 1 creates the table only.
   value      String
   verified   Boolean   @default(false)
   verifiedAt DateTime?

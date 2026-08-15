@@ -1024,6 +1024,11 @@ ${sectionsHTML}`;
 })();
 (function(){
   var _s=window.location.pathname.split('/').pop();
+  // Reads the existing canonical browser cid ("cTok") -- same mechanism
+  // CUSTOMER_ID_HELPER_JS/SLUG_CID_HELPER_JS already establish elsewhere
+  // on this page. Read-only: never mints a new one here, and a missing/
+  // unavailable cid never blocks push subscription itself (see below).
+  var _pc=null;try{_pc=localStorage.getItem('cTok');}catch(e){}
   if(!('serviceWorker' in navigator&&'PushManager' in window)){return;}
   navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});
   if(localStorage.getItem('wp_sub_'+_s)){
@@ -1036,7 +1041,7 @@ ${sectionsHTML}`;
               var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
               return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
             })
-            .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+            .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});})
             .then(function(){localStorage.setItem('wp_sub_'+_s,'1');})
             .catch(function(){});
         }else{setTimeout(tryAS,500);}
@@ -1111,7 +1116,7 @@ ${sectionsHTML}`;
           var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
           return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
         })
-        .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+        .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});})
         .then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');})
         .catch(function(){wrap.style.display='none';});
     }
@@ -1436,22 +1441,41 @@ async function handleWebPushSubscribe(req, res) {
     const { slug } = req.params;
     const { endpoint, keys } = req.body || {};
     if (!endpoint || !keys) return res.status(400).json({ error: 'missing subscription data' });
+    // Same cid format used to mint it client-side (CUSTOMER_ID_HELPER_JS /
+    // SLUG_CID_HELPER_JS above) — reject anything else rather than store
+    // garbage. Absent/invalid cid is not an error for this endpoint; push
+    // subscription itself must keep working either way (see below).
+    const rawCid = req.body ? req.body.cid : null;
+    const validCid = (typeof rawCid === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(rawCid)) ? rawCid : null;
+
+    // Only include `cid` in the update payload when a valid new value was
+    // supplied — Prisma's update() only touches fields actually present in
+    // this object, so omitting the key here leaves an existing stored cid
+    // (valid or not) untouched instead of overwriting it with null.
+    const updateData = { slug, p256dh: keys.p256dh, auth: keys.auth };
+    if (validCid) updateData.cid = validCid;
+
     await prisma.webPushSubscription.upsert({
       where: { endpoint },
-      update: { slug, p256dh: keys.p256dh, auth: keys.auth },
-      create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth }
+      update: updateData,
+      create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth, cid: validCid }
     });
-    // Customer Foundation dual-write intentionally NOT added here for this
-    // targeted deployment: it depends on WebPushSubscription.cid, which
-    // migration 20260718000000_add_webpush_subscription_cid already
-    // applied to the production DATABASE, but that column is absent from
-    // main's schema.prisma and from this handler's request/upsert data —
-    // a real pre-existing drift between main and production, unrelated to
-    // Customer Foundation. Adding the hook here would require either a cid
-    // param this handler doesn't read, or editing schema.prisma outside
-    // this deployment's approved scope (20260815120000_add_customer_
-    // foundation_phase1 only). Flagged for a separate decision rather than
-    // silently resolved. main's existing behavior is unchanged below.
+
+    // Customer Foundation Phase 2: canonical dual-write, fire-and-forget —
+    // never awaited into the response, never allowed to affect whether
+    // this endpoint reports success. Only proceeds when a valid cid was
+    // supplied; a subscription with no/invalid cid has no deterministic
+    // identity signal to record and is simply skipped.
+    if (validCid) {
+      prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } })
+        .then((lp) => {
+          if (lp && lp.userId) {
+            return resolveOrCreateCustomerIdentity({ ownerUserId: lp.userId, slug, type: 'cid', value: validCid, source: 'webpush_subscribe' });
+          }
+        })
+        .catch(() => {});
+    }
+
     return res.json({ ok: true });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -2893,7 +2917,11 @@ ${SLUG_CID_HELPER_JS}
             return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: arr });
           }).then(function(s) {
             var j = s.toJSON();
-            return fetch('/lp/webpush/subscribe/' + SLUG, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
+            // Existing canonical browser cid ("cTok") -- read-only, same
+            // mechanism CUSTOMER_ID_HELPER_JS/SLUG_CID_HELPER_JS already
+            // establish elsewhere on this page. Never blocks subscribing.
+            var _pc = null; try { _pc = localStorage.getItem('cTok'); } catch (e) {}
+            return fetch('/lp/webpush/subscribe/' + SLUG, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: _pc }) });
           }).then(function() {
             if (btn) { btn.textContent = '\u2713 Notifications enabled!'; btn.style.background = 'rgba(34,197,94,0.2)'; btn.style.borderColor = 'rgba(34,197,94,0.5)'; btn.disabled = true; }
             localStorage.setItem('wp_sub_' + SLUG, '1');
@@ -2910,7 +2938,7 @@ ${SLUG_CID_HELPER_JS}
     if (nb) nb.style.display = 'block';
   }
 })();
-(function(){var _s=window.location.pathname.split('/').pop();console.log('[Push] Premium LP loaded, slug:',_s);var isStandalone=(window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches);if(!('serviceWorker' in navigator&&'PushManager' in window)){console.log('[Push] Blocked: not PWA or unsupported');var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);if(isIOS&&isSafari&&!isStandalone){setTimeout(function(){var hint=document.createElement('div');hint.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';hint.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:6px;">\uD83D\uDCF2 Benachrichtigungen aktivieren<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">Tippe auf <b>Teilen<\/b> \u2192 <b>Zum Home-Bildschirm<\/b>, dann \u00f6ffne die App vom Home-Bildschirm, um Benachrichtigungen zu aktivieren.<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Verstanden<\/button>';document.body.appendChild(hint);},2000);}return;}navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});if(localStorage.getItem('wp_sub_'+_s)){if('Notification' in window&&Notification.permission==='granted'){(function tryAS(){if(window.__swReg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');}).catch(function(){});}else{setTimeout(tryAS,500);}})();}return;}if(!('Notification' in window)||Notification.permission==='denied'){return;}var AC='#ff6b00';var ICONS={bell:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',check:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',spin:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>'};var STATES={idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Stay updated instantly',desc:'Get special offers and updates from this business.',btn:'Enable Updates',trust:'You can turn this off anytime.'},asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Setting things up…',desc:'',btn:'',trust:''},ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:"You're subscribed!",desc:"We'll notify you about special offers.",btn:'',trust:''}};var wrap=document.createElement('div');wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';var card=document.createElement('div');card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';var xBtn=document.createElement('button');xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';xBtn.innerHTML='&times;';xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};var iWrap=document.createElement('div');iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';var iEl=document.createElement('div');iEl.style.cssText='width:26px;height:26px;';var ttl=document.createElement('div');ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';var dsc=document.createElement('div');dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';var btn=document.createElement('button');btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';var tst=document.createElement('div');tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';function setState(s){var c=STATES[s]||STATES.idle;iWrap.style.background=c.bg;iEl.style.color=c.ic;iEl.innerHTML=ICONS[c.icon]||'';ttl.textContent=c.title;dsc.textContent=c.desc;dsc.style.display=c.desc?'block':'none';btn.textContent=c.btn;btn.style.display=c.btn?'block':'none';tst.textContent=c.trust;tst.style.display=c.trust?'block':'none';if(s==='ok'){setTimeout(function(){wrap.style.display='none';},2800);}}iWrap.appendChild(iEl);card.appendChild(xBtn);card.appendChild(iWrap);card.appendChild(ttl);card.appendChild(dsc);card.appendChild(btn);card.appendChild(tst);wrap.appendChild(card);document.body.appendChild(wrap);setTimeout(function(){card.style.transform='translateY(0)';},600);setState('idle');function doSub(){setState('asking');function sub(reg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');}).catch(function(){wrap.style.display='none';});}if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register('/sw.js').then(sub);}}btn.onclick=function(){Notification.requestPermission().then(function(p){if(p==='granted'){doSub();}else if(p==='denied'){setState('ok');localStorage.setItem('wp_sub_'+_s,'denied');}else{wrap.style.display='none';}});};})()
+(function(){var _s=window.location.pathname.split('/').pop();var _pc=null;try{_pc=localStorage.getItem('cTok');}catch(e){}console.log('[Push] Premium LP loaded, slug:',_s);var isStandalone=(window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches);if(!('serviceWorker' in navigator&&'PushManager' in window)){console.log('[Push] Blocked: not PWA or unsupported');var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);if(isIOS&&isSafari&&!isStandalone){setTimeout(function(){var hint=document.createElement('div');hint.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';hint.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:6px;">\uD83D\uDCF2 Benachrichtigungen aktivieren<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">Tippe auf <b>Teilen<\/b> \u2192 <b>Zum Home-Bildschirm<\/b>, dann \u00f6ffne die App vom Home-Bildschirm, um Benachrichtigungen zu aktivieren.<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">Verstanden<\/button>';document.body.appendChild(hint);},2000);}return;}navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});if(localStorage.getItem('wp_sub_'+_s)){if('Notification' in window&&Notification.permission==='granted'){(function tryAS(){if(window.__swReg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');}).catch(function(){});}else{setTimeout(tryAS,500);}})();}return;}if(!('Notification' in window)||Notification.permission==='denied'){return;}var AC='#ff6b00';var ICONS={bell:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',check:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',spin:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>'};var STATES={idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Stay updated instantly',desc:'Get special offers and updates from this business.',btn:'Enable Updates',trust:'You can turn this off anytime.'},asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:'Setting things up…',desc:'',btn:'',trust:''},ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:"You're subscribed!",desc:"We'll notify you about special offers.",btn:'',trust:''}};var wrap=document.createElement('div');wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';var card=document.createElement('div');card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';var xBtn=document.createElement('button');xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';xBtn.innerHTML='&times;';xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};var iWrap=document.createElement('div');iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';var iEl=document.createElement('div');iEl.style.cssText='width:26px;height:26px;';var ttl=document.createElement('div');ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';var dsc=document.createElement('div');dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';var btn=document.createElement('button');btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';var tst=document.createElement('div');tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';function setState(s){var c=STATES[s]||STATES.idle;iWrap.style.background=c.bg;iEl.style.color=c.ic;iEl.innerHTML=ICONS[c.icon]||'';ttl.textContent=c.title;dsc.textContent=c.desc;dsc.style.display=c.desc?'block':'none';btn.textContent=c.btn;btn.style.display=c.btn?'block':'none';tst.textContent=c.trust;tst.style.display=c.trust?'block':'none';if(s==='ok'){setTimeout(function(){wrap.style.display='none';},2800);}}iWrap.appendChild(iEl);card.appendChild(xBtn);card.appendChild(iWrap);card.appendChild(ttl);card.appendChild(dsc);card.appendChild(btn);card.appendChild(tst);wrap.appendChild(card);document.body.appendChild(wrap);setTimeout(function(){card.style.transform='translateY(0)';},600);setState('idle');function doSub(){setState('asking');function sub(reg){fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');}).catch(function(){wrap.style.display='none';});}if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register('/sw.js').then(sub);}}btn.onclick=function(){Notification.requestPermission().then(function(p){if(p==='granted'){doSub();}else if(p==='denied'){setState('ok');localStorage.setItem('wp_sub_'+_s,'denied');}else{wrap.style.display='none';}});};})()
 <\/script>
 </body>
 </html>`;
