@@ -1040,8 +1040,15 @@ async function initDashboard(){
    loyalty) was already fixed to rely on that shared rule instead of
    reimplementing it inline; this section is ported to match. See that
    rule's own comment in dashboard-shell.css for the full history.
-   #customers-page's own padding:var(--dashboard-padding) below still
-   provides the actual 32px content gutter past that offset.
+   Content gutter: #customers-page uses the shared .qds-page-wrap class
+   (qds/layouts/page.css) — same 36px/32px padding as the raw
+   --dashboard-padding value it replaced, PLUS max-width:960px +
+   margin:0 auto, which analytics.html's own .qds-page-wrap content
+   already relies on. Without the max-width/centering, content sat
+   flush against the sidebar-offset edge instead of in the same
+   centered column Analytics uses — same padding number, visibly
+   different result. Fixed by using the existing shared class instead
+   of a one-off margin.
    ============================================================ */
 #customers-page * { box-sizing: border-box; }
 
@@ -1290,7 +1297,7 @@ async function initDashboard(){
 }
 </style>
 
-<div id="customers-page" style="padding:var(--dashboard-padding);">
+<div id="customers-page" class="qds-page-wrap">
 
   <!-- ── Page header ── -->
   <div class="cust-header">
