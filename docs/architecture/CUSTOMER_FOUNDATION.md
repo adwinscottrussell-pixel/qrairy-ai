@@ -110,11 +110,59 @@ Reuses `customerIdentityService.js` exclusively — the script contains no indep
 
 **Local apply executed** (`qraivy_phase1_test` only): first dry run projected 5 new `Customer` / 8 new `CustomerIdentity` rows; `--apply` created exactly that (`Customer` 1→6, `CustomerIdentity` 1→9); a second dry run immediately after reported zero `wouldCreate` across every source (idempotency confirmed). Post-apply integrity re-check: 0 null `ownerUserId`, 0 orphan `CustomerIdentity`, 0 `ownerUserId` mismatches, 0 duplicate `[ownerUserId,type,value]`, 0 orphan `Customer`. Every legacy table's row count was identical before and after (`Subscriber`, `WebPushSubscription`, `Pass`, `LoyaltyCustomer`, `LoyaltyCustomerAlias`, `PassDevice`, `StampEntry`, `Scan`, `DealClaim`, `CustomerConsent` all unchanged) — only `Customer`/`CustomerIdentity` changed. Source tags on the created rows were exactly `backfill_loyalty_customer`, `backfill_loyalty_customer_alias`, `backfill_webpush`, `backfill_pass`, `backfill_subscriber_email` — no ambiguous values.
 
-**Not run against production.** Not committed as a migration (no schema change — Phase 1 already created these tables). No Customer-facing API or frontend change in this phase. Not yet committed to git.
+**Not run against production.** Not committed as a migration (no schema change — Phase 1 already created these tables). No Customer-facing API or frontend change in this phase. Committed: `42cb715`.
+
+## Phase 4 — Canonical Customer Read API (backend only, not wired to UI)
+
+**No schema migration.** Every endpoint reads from tables Phase 1 already created; nothing new required.
+
+**Files**: `backend/src/services/customerQueryService.js` (all Prisma access — the only place that queries `Customer`/`CustomerIdentity`/`LoyaltyCustomer`/`Pass`/`PassDevice`/`StampSettings` for this API), `backend/src/services/customerDtoService.js` (pure DTO-shaping, no Prisma calls — reused identically by list/detail so derivation rules never diverge), `backend/src/controllers/customerController.js` (thin HTTP layer), `backend/src/routes/customerRoutes.js`, registered at `/customers` in `backend/src/index.js`.
+
+**Endpoints** (all `requireAuth`, tenant-scoped by `req.userId` → `Customer.ownerUserId`):
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /customers/summary` | Aggregated counts for the authenticated owner |
+| `GET /customers` | Paginated, searchable, filterable canonical Customer list |
+| `GET /customers/:id` | Single Customer detail DTO |
+| `GET /customers/:id/activity` | Deterministic identity-lifecycle timeline |
+
+**Not implemented — `/customers/:id/consents`**: `CustomerConsent` has no deterministic linkage to `Customer`/`CustomerIdentity` in the current schema (only `slug` + `subscriberId`, confirmed by direct schema inspection — its own comment states "no Customer/CustomerChannel link in B2A"). `Subscriber` likewise has no FK to `Customer`. Joining by email would not be deterministic (`Customer.primaryEmail` is never set by any write path today — see below). Deferred rather than invented.
+
+**Tenant security**: every list/summary query is scoped by `ownerUserId` in the `WHERE` clause. Detail/activity use a single `findFirst({ id, ownerUserId })` — never find-then-compare — so a Customer belonging to another tenant and a nonexistent id both resolve to the same `null` → `404`, never confirming existence of another tenant's id (deliberately different from this codebase's existing find-then-403 convention, chosen here to avoid an existence-confirmation side channel).
+
+**Cross-tenant collision fix (found and fixed during this phase, not shipped)**: an early draft of the loyalty-lookup batching keyed `LoyaltyCustomer` rows by raw `cid` value alone. `LoyaltyCustomer.customerId` (cid) is only unique per `[slug, customerId]`, not globally — cid is a shared-browser token with no tenant awareness at generation (see Phase 1 above) — so two different tenants' rows can share the same cid string. Keying by raw cid let one tenant's loyalty data silently overwrite another's map entry for a colliding cid. Fixed by keying every loyalty lookup (`fetchLoyaltyByIdentityPairs`, `resolveLoyaltyCustomerIds`, `resolveRewardReadyCustomerIds`) by the composite `(slug, cid)` pair instead — safe because `LandingPage.slug` is globally unique. Caught by inspecting real output, not by the first test pass (two fixtures happened to share the same `rewardReady` value, masking it); a dedicated regression test now asserts the exact collision scenario.
+
+**Email exposure**: the DTO exposes the resolved `email`-type identity value directly (`channels.email.address` / detail `primaryEmail`) — the one deliberate exception to "never return raw identity values." The approved Customers UI displays a real email address per row, and the authenticated business owner is entitled to see their own customer's contact info. `cid`, `push_endpoint`, and `wallet_serial` values are never exposed. `Customer.primaryEmail` itself is not used as the source — no Phase 2/3 write path has ever set it (a known, documented gap), so the DTO derives the display email from the `email`-type `CustomerIdentity` instead.
+
+**Channel derivation**:
+- `email.known` = has an `email` identity. `email.marketingAllowed` = always `null` — not "false" — because consent cannot be deterministically linked (see the deferred consents endpoint above).
+- `push.subscribed` = has a `push_endpoint` identity. Presence-only: `WebPushSubscription` has no active/expired column in the schema.
+- `wallet.passExists` = has a `wallet_serial` identity. `wallet.installed` = a real `PassDevice` registration exists for that serial — the only genuine "added to wallet" signal; a `Pass` row existing alone only proves one was generated.
+
+**Loyalty aggregation rule** (documented, not silent — a Customer can have more than one `cid` identity, e.g. via `LoyaltyCustomerAlias` convergence, and each may be its own `LoyaltyCustomer` membership): the **list** DTO flattens to the single most-recently-active membership (by `lastStampAt`, falling back to `createdAt`). The **detail** DTO returns every membership as a structured array instead of flattening — verified locally with a two-membership fixture.
+
+**Smart segments**:
+
+| Segment | Status | Rule |
+|---|---|---|
+| Reward Ready | Ready | Any linked `LoyaltyCustomer` membership has `rewardReady = true` |
+| Wallet Customers | Ready | Has a `wallet_serial` identity |
+| Inactive 30+ Days | Ready | `Customer.lastActivityAt` is null or older than 30 days (kept current by Phase 2's `touchExisting`) |
+| Most Engaged | **Deferred** | No engagement-score formula exists anywhere in this codebase; not invented here |
+
+**Presentation status**: a UI-facing computed field (`presentationStatus`: `active` \| `new` \| `reward_ready` \| `inactive`, or the canonical value passed through for `merged`/`anonymized`/`deleted`), recomputed on every read — never written back to `Customer.status` (the canonical lifecycle field, which remains exactly `active | merged | anonymized | deleted`).
+
+**GDPR/lifecycle**: list/summary default to `status: 'active'` only; `merged`/`anonymized`/`deleted` Customers are excluded by default and only returned via an explicit `?status=` filter. No merge-redirect behavior implemented — no merge write path exists anywhere in Phase 1-3, so there are no `merged` rows to test against yet.
+
+**Query strategy**: list/detail/summary each run a small, fixed number of queries regardless of page size — one `Customer` query, one batched `CustomerIdentity` query for the whole page (`customerId IN (...)`), one batched `LoyaltyCustomer` query, one batched `Pass`+`PassDevice` query — never one query per row.
+
+**Explicitly excluded from any endpoint**: `Scan` (never queried — no identity signal exists on the row, no per-customer visit count is fabricated), `StampEntry`/`RewardEvent` (no direct Customer link, would require the same Pass→loyaltyCustomerId ambiguity guard as Phase 3 for a nice-to-have), ambiguous Pass linkage (only `wallet_serial` identities already resolved by Phase 2/3 are used — no `serialNumber` parsing anywhere in Phase 4).
+
+**Local validation**: 47 tests against synthetic two-tenant fixtures in `qraivy_phase1_test` (tenant isolation for list/detail/summary/search/segments, pagination and bounded `limit`, default-status exclusion, channel/loyalty derivation, multi-membership flattening vs. structured array, wallet-installed-vs-exists distinction, activity determinism, and the cross-tenant collision regression above) plus 5 routing/auth-wiring tests (unauthenticated and forged-token requests correctly rejected with `401`). All passing. Not run against production; `Customers` UI (`MOCK_CUSTOMERS`) not touched.
 
 ## Future phases (not implemented)
 
-4. Add nullable `customerId` FKs to `Subscriber`/`WebPushSubscription`/`LoyaltyCustomer`/`DealClaim`.
 5. Switch reads to the canonical `Customer` model.
-6. Customers UI consumes the real Customer API.
+6. Customers UI consumes the real Customer API (Phase 5).
 7. Legacy identity cleanup (separate future decision).

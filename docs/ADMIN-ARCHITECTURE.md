@@ -99,8 +99,8 @@ This is **APPROVED CUSTOMERS DESIGN BASELINE — V1**.
 **Customers status summary:**
 - Design: **APPROVED**
 - Navigation: **CURRENT**
-- Canonical Customer foundation: **PHASE 3 VALIDATED LOCALLY** (see `docs/architecture/CUSTOMER_FOUNDATION.md`)
-- Live Customer API: **NOT YET**
+- Canonical Customer foundation: **PHASE 4 READ API** (see `docs/architecture/CUSTOMER_FOUNDATION.md`)
+- Live Customer API: **BACKEND READY / NOT YET WIRED TO UI**
 - UI data: **PREVIEW/MOCK** until a later phase wires it
 
 Confirmed elements matching the current `#section-customers` implementation: header ("Customers" + description), 5 KPI cards (Total Customers/Email/Push/Wallet/Loyalty), unified customer table (avatar/initials, name, email, channel indicators, loyalty progress bar, last activity, status badge), Smart Segments (Reward Ready/Inactive 30+ Days/Wallet Customers/Most Engaged) each with "View Customers"/"Create Campaign" actions, dark/orange QRAIVY visual language, shared sidebar. **No visual redesign occurred in producing this document or in Phase 2 work.**
