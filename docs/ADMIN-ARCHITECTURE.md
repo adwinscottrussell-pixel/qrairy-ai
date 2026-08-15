@@ -99,7 +99,7 @@ This is **APPROVED CUSTOMERS DESIGN BASELINE — V1**.
 **Customers status summary:**
 - Design: **APPROVED**
 - Navigation: **CURRENT**
-- Canonical Customer foundation: **IN PROGRESS** (Phase 1 schema + Phase 2 dual-write done; see `docs/architecture/CUSTOMER_FOUNDATION.md`)
+- Canonical Customer foundation: **PHASE 3 VALIDATED LOCALLY** (see `docs/architecture/CUSTOMER_FOUNDATION.md`)
 - Live Customer API: **NOT YET**
 - UI data: **PREVIEW/MOCK** until a later phase wires it
 
