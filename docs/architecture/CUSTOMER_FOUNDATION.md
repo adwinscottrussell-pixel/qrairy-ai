@@ -161,8 +161,36 @@ Reuses `customerIdentityService.js` exclusively — the script contains no indep
 
 **Local validation**: 47 tests against synthetic two-tenant fixtures in `qraivy_phase1_test` (tenant isolation for list/detail/summary/search/segments, pagination and bounded `limit`, default-status exclusion, channel/loyalty derivation, multi-membership flattening vs. structured array, wallet-installed-vs-exists distinction, activity determinism, and the cross-tenant collision regression above) plus 5 routing/auth-wiring tests (unauthenticated and forged-token requests correctly rejected with `401`). All passing. Not run against production; `Customers` UI (`MOCK_CUSTOMERS`) not touched.
 
+## Phase 5 — Customers UI Integration (deployed to preview, not yet production-approved)
+
+**Commit**: `0f14e75` (on top of merge commit `317b243`, which reconciled 15 origin-only commits with local's Phase 1-4 work — see that commit's message for the conflict-resolution record). File: `frontend/public/dashboard.html`, `#section-customers` only.
+
+**Endpoints consumed**: `GET /customers/summary`, `GET /customers` (page/limit/search/segment), `GET /customers/:id`, `GET /customers/:id/activity`. `/customers/:id/consents` not consumed — not implemented in Phase 4.
+
+**Loading model**: real API calls are deferred until the section is actually opened (`window.custInitPage()`, idempotent, called from the desktop sidebar handler, the `?section=customers` deep link, and the `showSection('customers')` dispatcher) rather than firing eagerly at parse time — this script block runs before `initDashboard()`'s Clerk auth is guaranteed ready, same reasoning `loadLoyaltyDashboard()` already used.
+
+**Frontend → DTO mapping**: KPI cards read `totalCustomers/emailCustomers/pushCustomers/walletCustomers/loyaltyCustomers` directly (no relabeling). Table rows use `displayName` (falls back to `email`, then a generic label — `displayName` is not yet set by any write path, a known Phase 2/3 gap, not new here), `channels.email/push/wallet`, `loyalty.stampCount/stampGoal` (flattened list snapshot), `lastActivityAt` (relative time), `presentationStatus` (mapped onto the existing `active/new/reward/inactive` badge set — `reward_ready` → `reward`). Detail drawer additionally uses `primaryEmail`, `channels.wallet.passExists`/`installed` (rendered as three distinct states: installed / pass created but not installed / no pass — never claims install from `passExists` alone), and `loyalty.memberships[]` in full (never flattened to one, unlike the table's necessarily-simplified snapshot).
+
+**Consent**: the old mock "Consent" drawer section is removed entirely, not faked — `channels.email.marketingAllowed` is always `null` from Phase 4 (no deterministic `CustomerConsent` linkage exists yet), so there is nothing real to render there. The "Reachability › Email" row uses `channels.email.known` only, worded as "Known" / "No email on file" — never implies marketing permission.
+
+**Smart Segments**: Reward Ready, Wallet Customers, and Inactive 30+ Days are live — each card's count comes from `GET /customers?limit=1&segment=<value>`, and "View Customers" applies that segment to the table via the same code path as the Filter menu. Most Engaged stays visually present with both actions disabled — no engagement-score formula exists anywhere in this codebase.
+
+**Search / filter / pagination**: search is backend-scoped (debounced 300ms, `?search=`), never client-side filtering of an already-loaded page. All 6 filter menu options map 1:1 onto Phase 4 `segment` values. A minimal pagination footer (Prev/Next + "Page X / Y") was added below the table — the approved screenshot shows no pagination control, so this is the smallest addition that keeps a >25-row tenant from silently truncating, not a redesign.
+
+**Deferred, reported rather than faked**:
+- **Export** — no canonical Customer export endpoint exists in Phase 4. Button stays visible; click shows a "coming soon" toast. Never exports legacy `Subscriber` rows relabeled as Customers.
+- **Create Campaign** (header + drawer + segment cards) — the existing AI Campaigns flow is built around selecting a landing-page program (`_slug`), with no parameter anywhere for "target these Customer ids/segment". Wiring a real hand-off would mean extending that system, out of Phase 5's read-only-API scope. Button stays visible; click shows a "coming soon" toast pointing at AI Campaigns.
+
+**MOCK_CUSTOMERS**: left in the file, fully disconnected — confirmed by grep that its only remaining reference is its own declaration. Never used as an error fallback; a failed API call shows a contained error state with a retry link instead.
+
+**i18n**: ~25 new `cust_*` keys added to both the `en` and `de` dictionaries (loading/error/empty/retry/segment/drawer strings), following the same `window._qt`/`_lt(key, fallback)` pattern already used by Loyalty/Subscribers — no second translation system.
+
+**Local validation**: all 7 inline `<script>` blocks in `dashboard.html` parse cleanly (`new Function()` check per block); `<div>` tags remain balanced (487/487); the 52 Phase 4 backend tests (47 service-layer + 5 routing/auth) re-run clean after the merge. No browser/visual QA was performed locally (no browser automation available this session) — visual comparison against the approved screenshot requires the deployed preview, see below.
+
+**Preview deployment**: pushed to `origin/preview/sprint-2d-smart-qr-renderer` (fast-forward, `c94149b..0f14e75`, no force). Vercel preview: `https://preview.qraivy.com/dashboard.html?section=customers`. **Production (`main`) not touched** — confirmed separate branch, separate Vercel target.
+
 ## Future phases (not implemented)
 
-5. Switch reads to the canonical `Customer` model.
-6. Customers UI consumes the real Customer API (Phase 5).
+6. Add nullable `customerId` FKs to legacy tables, or a `CustomerConsent` → `Customer` linkage, so the deferred consent endpoint becomes possible.
+7. Wire Export and Create Campaign to real canonical behavior.
 7. Legacy identity cleanup (separate future decision).
