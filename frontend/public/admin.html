@@ -979,6 +979,7 @@
       </div>
       <div class="table-wrap">
         <div class="table-header"><div class="table-title" data-i18n="sp_unmapped_pages">Unmapped Landing Pages (same owner)</div></div>
+        <div style="padding:10px 20px 0;font-size:0.68rem;color:var(--text-dim)" data-i18n="sp_unmapped_pages_helper">Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.</div>
         <div id="sp-bd-unmapped-pages" style="padding:14px 20px"></div>
       </div>
     </div>
@@ -1141,6 +1142,34 @@
       <div class="modal-btns">
         <button class="modal-btn" onclick="closeModal('sp-create-business-modal')" data-i18n="sp_cancel">Cancel</button>
         <button class="modal-btn primary" onclick="submitCreateBusiness()" data-i18n="sp_create_business">Create Business</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move Landing Page to Business Modal (Phase 1B-B2) -->
+  <div class="modal-overlay" id="sp-move-to-business-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_move_to_business">Move to Business</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_pages">Landing Page</label>
+        <div id="sp-move-lp-name" style="font-size:0.85rem;font-weight:600"></div>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_current_business">Current Business</label>
+        <div id="sp-move-current-business" style="font-size:0.85rem;color:var(--text-dim)"></div>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_target_business">Target Business</label>
+        <select class="modal-select" id="sp-move-target-business"></select>
+        <div id="sp-move-empty-state" style="display:none;font-size:0.68rem;color:var(--text-dim);margin-top:6px">
+          <div data-i18n="sp_no_eligible_businesses">No eligible real Businesses exist for this owner yet.</div>
+          <button class="action-btn" style="margin-top:8px" onclick="closeModal('sp-move-to-business-modal'); openCreateBusinessModal();" data-i18n="sp_create_business">Create Business</button>
+        </div>
+      </div>
+      <div id="sp-move-to-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-move-to-business-modal')" data-i18n="sp_cancel">Cancel</button>
+        <button class="modal-btn primary" id="sp-move-submit-btn" onclick="submitMoveLandingPage()" data-i18n="sp_move_landing_page">Move Landing Page</button>
       </div>
     </div>
   </div>
@@ -2043,6 +2072,7 @@
     let currentLocationNetworkId = null;
     let currentBusinessDetailId = null;
     let currentBusinessDetailData = null;
+    let currentMoveLandingPageId = null;
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2433,6 +2463,7 @@
           <div class="health-row">
             <div class="health-name">${escapeHtml(p.businessName || p.slug)}</div>
             <div class="health-status">${escapeHtml(p.status)}</div>
+            ${b.isLegacyShim ? `<button class="action-btn" onclick="openMoveToBusinessModal('${p.id}')" data-i18n="sp_move_to_business">Move to Business</button>` : ''}
           </div>
         `).join('')
         : '<div style="font-size:0.78rem;color:var(--text-dim)">No landing pages yet.</div>';
@@ -2475,6 +2506,70 @@
         }
         loadBusinessDetail(currentBusinessDetailId);
       } catch (err) { alert('Could not reach server.'); }
+    }
+
+    // ── MOVE LANDING PAGE: legacy shim -> real Business (Phase 1B-B2) ──
+    // Uses the same PATCH /admin/landing-pages/:id/business endpoint as
+    // attachLandingPageToBusiness above -- mapLandingPageToBusiness already
+    // supports moving a page away from any current businessId (null or a
+    // legacy shim's id), so no new backend route exists for this. The
+    // target-Business filtering below is convenience only; the backend
+    // still authoritatively rejects cross-owner mapping regardless of what
+    // this dropdown offers.
+    async function openMoveToBusinessModal(landingPageId) {
+      const business = currentBusinessDetailData;
+      const page = business?.landingPages.find(p => p.id === landingPageId);
+      if (!business || !page) return;
+      currentMoveLandingPageId = landingPageId;
+
+      document.getElementById('sp-move-lp-name').textContent = page.businessName || page.slug;
+      document.getElementById('sp-move-current-business').textContent = business.name;
+      document.getElementById('sp-move-to-business-modal-error').textContent = '';
+
+      const result = await safeFetchAdmin('/admin/businesses');
+      const allBusinesses = result.ok ? (result.data.businesses || []) : [];
+      const eligible = allBusinesses.filter(b =>
+        b.primaryOwnerUserId === business.primaryOwnerUserId &&
+        !b.isLegacyShim &&
+        b.id !== business.id &&
+        b.status === 'active'
+      );
+
+      const select = document.getElementById('sp-move-target-business');
+      const emptyState = document.getElementById('sp-move-empty-state');
+      const submitBtn = document.getElementById('sp-move-submit-btn');
+
+      if (eligible.length) {
+        select.style.display = '';
+        select.innerHTML = optionsHtml(eligible, b => b.id, b => b.name);
+        emptyState.style.display = 'none';
+        submitBtn.style.display = '';
+      } else {
+        select.style.display = 'none';
+        select.innerHTML = '';
+        emptyState.style.display = 'block';
+        submitBtn.style.display = 'none';
+      }
+
+      openModal('sp-move-to-business-modal');
+    }
+
+    async function submitMoveLandingPage() {
+      const targetBusinessId = document.getElementById('sp-move-target-business').value;
+      const errEl = document.getElementById('sp-move-to-business-modal-error');
+      errEl.textContent = '';
+      if (!targetBusinessId) { errEl.textContent = 'Select a target Business.'; return; }
+      try {
+        const res = await fetch(`${API_BASE}/admin/landing-pages/${currentMoveLandingPageId}/business`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ businessId: targetBusinessId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to move landing page.'; return; }
+        closeModal('sp-move-to-business-modal');
+        loadBusinessDetail(currentBusinessDetailId);
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
     // ── CREATE BUSINESS (Phase 1B-B1) ──────────────────────────
@@ -2648,6 +2743,9 @@
         sp_edit_network: 'Edit Network', sp_save_changes: 'Save Changes', sp_cancel: 'Cancel',
         sp_create_business: 'Create Business', sp_business_owner_helper: 'The owner must already be a known QRAIVY account. A Business never creates a new account.',
         sp_legacy_business: 'Legacy Account Business', sp_unmapped_pages: 'Unmapped Landing Pages (same owner)', sp_attach: 'Attach',
+        sp_unmapped_pages_helper: "Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.",
+        sp_move_to_business: 'Move to Business', sp_current_business: 'Current Business', sp_target_business: 'Target Business',
+        sp_no_eligible_businesses: 'No eligible real Businesses exist for this owner yet.', sp_move_landing_page: 'Move Landing Page',
         sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
         sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
         sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner',
@@ -2667,6 +2765,9 @@
         sp_edit_network: 'Netzwerk bearbeiten', sp_save_changes: 'Änderungen speichern', sp_cancel: 'Abbrechen',
         sp_create_business: 'Unternehmen erstellen', sp_business_owner_helper: 'Der Inhaber muss bereits ein bekanntes QRAIVY-Konto sein. Ein Unternehmen erstellt niemals ein neues Konto.',
         sp_legacy_business: 'Alt-Konto-Unternehmen', sp_unmapped_pages: 'Nicht zugeordnete Landing Pages (gleicher Inhaber)', sp_attach: 'Zuordnen',
+        sp_unmapped_pages_helper: 'Seiten, die noch nie einem Unternehmen zugeordnet wurden. Seiten, die bereits einem Alt-Konto-Unternehmen zugeordnet sind, müssen von der Detailseite dieses Unternehmens aus verschoben werden.',
+        sp_move_to_business: 'Zu Unternehmen verschieben', sp_current_business: 'Aktuelles Unternehmen', sp_target_business: 'Ziel-Unternehmen',
+        sp_no_eligible_businesses: 'Für diesen Inhaber existieren noch keine geeigneten echten Unternehmen.', sp_move_landing_page: 'Landingpage verschieben',
         sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
         sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
         sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber',
