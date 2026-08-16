@@ -17,6 +17,7 @@ const router  = express.Router();
 const prisma  = require('../utils/prismaClient');
 const { requireAdmin } = require('../middleware/adminMiddleware');
 const { getHealthChecks } = require('../services/attentionService');
+const networkAdmin = require('../services/networkAdminService');
 
 // ── GET /admin/overview ───────────────────────────────────────
 router.get('/overview', requireAdmin, async (req, res) => {
@@ -244,6 +245,147 @@ router.get('/qr-analytics', requireAdmin, async (req, res) => {
 router.get('/health', async (req, res) => {
   const checks = await getHealthChecks();
   return res.json(checks);
+});
+
+// ────────────────────────────────────────────────────────────────────
+// Stadt Pocket Phase 1B — Network / Location / Business / Manager admin
+// ─────────────────────────────────────────────────────────────────────
+// All routes below are requireAdmin-protected platform-owner-only APIs.
+// See docs/architecture/NETWORK_LOCATION_FOUNDATION.md. Business creation
+// is intentionally not exposed here this phase — only read/edit/assign —
+// see that doc for why.
+
+function handleAdminServiceError(err, res) {
+  if (err instanceof networkAdmin.AdminServiceError) {
+    const statusByCode = { NOT_FOUND: 404, INVALID: 400, DUPLICATE: 409 };
+    return res.status(statusByCode[err.code] || 500).json({ error: err.message });
+  }
+  console.error('[admin/network-foundation]', err);
+  return res.status(500).json({ error: 'Internal server error.' });
+}
+
+// ── Networks ─────────────────────────────────────────────────────────
+router.get('/networks', requireAdmin, async (req, res) => {
+  try {
+    return res.json({ networks: await networkAdmin.listNetworks() });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.get('/networks/:id', requireAdmin, async (req, res) => {
+  try {
+    return res.json({ network: await networkAdmin.getNetwork(req.params.id) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.post('/networks', requireAdmin, async (req, res) => {
+  try {
+    const network = await networkAdmin.createNetwork(req.body || {});
+    console.log(`[admin/networks] Admin ${req.adminUser.email} created Network ${network.id}`);
+    return res.status(201).json({ network });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.patch('/networks/:id', requireAdmin, async (req, res) => {
+  try {
+    const network = await networkAdmin.updateNetwork(req.params.id, req.body || {});
+    console.log(`[admin/networks] Admin ${req.adminUser.email} updated Network ${network.id}`);
+    return res.json({ network });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// ── Locations ────────────────────────────────────────────────────────
+router.get('/locations', requireAdmin, async (req, res) => {
+  try {
+    const { networkId, type, status } = req.query;
+    return res.json({ locations: await networkAdmin.listLocations({ networkId, type, status }) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.get('/locations/:id', requireAdmin, async (req, res) => {
+  try {
+    return res.json({ location: await networkAdmin.getLocation(req.params.id) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.post('/locations', requireAdmin, async (req, res) => {
+  try {
+    const location = await networkAdmin.createLocation(req.body || {});
+    console.log(`[admin/locations] Admin ${req.adminUser.email} created Location ${location.id}`);
+    return res.status(201).json({ location });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.patch('/locations/:id', requireAdmin, async (req, res) => {
+  try {
+    const location = await networkAdmin.updateLocation(req.params.id, req.body || {});
+    console.log(`[admin/locations] Admin ${req.adminUser.email} updated Location ${location.id}`);
+    return res.json({ location });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// ── Businesses (platform read/manage — no creation this phase) ────────
+router.get('/businesses', requireAdmin, async (req, res) => {
+  try {
+    const { networkId, locationId, status } = req.query;
+    return res.json({ businesses: await networkAdmin.listBusinesses({ networkId, locationId, status }) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.get('/businesses/:id', requireAdmin, async (req, res) => {
+  try {
+    return res.json({ business: await networkAdmin.getBusiness(req.params.id) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.patch('/businesses/:id', requireAdmin, async (req, res) => {
+  try {
+    const business = await networkAdmin.updateBusiness(req.params.id, req.body || {});
+    console.log(`[admin/businesses] Admin ${req.adminUser.email} updated Business ${business.id}`);
+    return res.json({ business });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// ── Business ↔ Location assignment ─────────────────────────────────────
+router.post('/business-locations', requireAdmin, async (req, res) => {
+  try {
+    const { businessId, locationId } = req.body || {};
+    const businessLocation = await networkAdmin.assignBusinessToLocation({ businessId, locationId });
+    console.log(`[admin/business-locations] Admin ${req.adminUser.email} assigned Business ${businessId} to Location ${locationId}`);
+    return res.status(201).json({ businessLocation });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.patch('/business-locations/:id', requireAdmin, async (req, res) => {
+  try {
+    const businessLocation = await networkAdmin.setBusinessLocationStatus(req.params.id, (req.body || {}).status);
+    console.log(`[admin/business-locations] Admin ${req.adminUser.email} set BusinessLocation ${businessLocation.id} to ${businessLocation.status}`);
+    return res.json({ businessLocation });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// ── Managers (NetworkMember) ────────────────────────────────────────────
+router.get('/managers', requireAdmin, async (req, res) => {
+  try {
+    const { networkId, locationId } = req.query;
+    return res.json({ managers: await networkAdmin.listManagers({ networkId, locationId }) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.post('/managers', requireAdmin, async (req, res) => {
+  try {
+    const { userId, networkId, locationId, role } = req.body || {};
+    const manager = await networkAdmin.assignManager({ userId, networkId, locationId, role });
+    console.log(`[admin/managers] Admin ${req.adminUser.email} assigned ${userId} as ${role} on Network ${networkId}`);
+    return res.status(201).json({ manager });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.delete('/managers/:id', requireAdmin, async (req, res) => {
+  try {
+    await networkAdmin.removeManager(req.params.id);
+    console.log(`[admin/managers] Admin ${req.adminUser.email} removed manager assignment ${req.params.id}`);
+    return res.json({ success: true });
+  } catch (err) { return handleAdminServiceError(err, res); }
 });
 
 module.exports = router;
