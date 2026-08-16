@@ -323,7 +323,7 @@ router.patch('/locations/:id', requireAdmin, async (req, res) => {
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 
-// ── Businesses (platform read/manage — no creation this phase) ────────
+// ── Businesses (platform read/manage/create — Phase 1B-B1 adds creation) ──
 router.get('/businesses', requireAdmin, async (req, res) => {
   try {
     const { networkId, locationId, status } = req.query;
@@ -337,11 +337,37 @@ router.get('/businesses/:id', requireAdmin, async (req, res) => {
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 
+router.post('/businesses', requireAdmin, async (req, res) => {
+  try {
+    const { name, primaryOwnerUserId, status } = req.body || {};
+    const business = await networkAdmin.createBusiness({ name, primaryOwnerUserId, status });
+    console.log(`[admin/businesses] Admin ${req.adminUser.email} created Business ${business.id} for owner ${primaryOwnerUserId}`);
+    return res.status(201).json({ business });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
 router.patch('/businesses/:id', requireAdmin, async (req, res) => {
   try {
     const business = await networkAdmin.updateBusiness(req.params.id, req.body || {});
     console.log(`[admin/businesses] Admin ${req.adminUser.email} updated Business ${business.id}`);
     return res.json({ business });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// ── LandingPage -> Business mapping (Phase 1B-B1) ──────────────────────
+router.get('/landing-pages/unmapped', requireAdmin, async (req, res) => {
+  try {
+    const { ownerUserId } = req.query;
+    return res.json({ landingPages: await networkAdmin.listUnmappedLandingPages(ownerUserId) });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+router.patch('/landing-pages/:id/business', requireAdmin, async (req, res) => {
+  try {
+    const { businessId } = req.body || {};
+    const landingPage = await networkAdmin.mapLandingPageToBusiness(req.params.id, businessId);
+    console.log(`[admin/landing-pages] Admin ${req.adminUser.email} mapped LandingPage ${landingPage.id} to Business ${businessId}`);
+    return res.json({ landingPage });
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 

@@ -366,6 +366,12 @@
       text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
       background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3);
     }
+    .tag-legacy {
+      font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+      background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3);
+      margin-left: 8px;
+    }
     .sp-back-link {
       display: inline-flex; align-items: center; gap: 6px;
       color: var(--text-dim); font-size: 0.72rem; cursor: pointer;
@@ -917,7 +923,10 @@
     <div class="page" id="page-sp-businesses">
       <div class="page-header">
         <div class="page-title" data-i18n="nav_businesses">Businesses</div>
-        <button class="refresh-btn" onclick="loadBusinessesPage()">↻ Refresh</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openCreateBusinessModal()">+ <span data-i18n="sp_create_business">Create Business</span></button>
+          <button class="refresh-btn" onclick="loadBusinessesPage()">↻ Refresh</button>
+        </div>
       </div>
       <div class="sp-filters">
         <select id="sp-biz-filter-network" onchange="loadBusinessesPage()"><option value="">All Networks</option></select>
@@ -967,6 +976,10 @@
       <div class="table-wrap">
         <div class="table-header"><div class="table-title" data-i18n="sp_col_pages">Landing Pages</div></div>
         <div id="sp-bd-pages" style="padding:14px 20px"></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title" data-i18n="sp_unmapped_pages">Unmapped Landing Pages (same owner)</div></div>
+        <div id="sp-bd-unmapped-pages" style="padding:14px 20px"></div>
       </div>
     </div>
 
@@ -1099,6 +1112,35 @@
       <div class="modal-btns">
         <button class="modal-btn" onclick="closeModal('sp-location-modal')">Cancel</button>
         <button class="modal-btn primary" onclick="submitAddLocation()" data-i18n="sp_add_location">Add Location</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Business Modal (Phase 1B-B1) -->
+  <div class="modal-overlay" id="sp-create-business-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_create_business">Create Business</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_business">Business Name</label>
+        <input class="sp-form-input" id="sp-create-business-name" placeholder="Bäckerei Betz" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_owner">Primary Owner</label>
+        <select class="modal-select" id="sp-create-business-owner"></select>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_owner_helper">The owner must already be a known QRAIVY account. A Business never creates a new account.</div>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_status">Status</label>
+        <select class="modal-select" id="sp-create-business-status">
+          <option value="active" data-i18n="sp_status_active">Active</option>
+          <option value="paused" data-i18n="sp_status_paused">Paused</option>
+          <option value="archived" data-i18n="sp_status_archived">Archived</option>
+        </select>
+      </div>
+      <div id="sp-create-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-create-business-modal')" data-i18n="sp_cancel">Cancel</button>
+        <button class="modal-btn primary" onclick="submitCreateBusiness()" data-i18n="sp_create_business">Create Business</button>
       </div>
     </div>
   </div>
@@ -2000,6 +2042,7 @@
     let currentLocationDetailId = null;
     let currentLocationNetworkId = null;
     let currentBusinessDetailId = null;
+    let currentBusinessDetailData = null;
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2349,7 +2392,7 @@
       document.getElementById('sp-businesses-count').textContent = `${businesses.length} businesses`;
       tbody.innerHTML = businesses.length ? businesses.map(b => `
         <tr>
-          <td class="td-name">${escapeHtml(b.name)}</td>
+          <td class="td-name">${escapeHtml(b.name)}${b.isLegacyShim ? `<span class="tag-legacy" data-i18n="sp_legacy_business">Legacy Account Business</span>` : ''}</td>
           <td class="td-email">${escapeHtml(b.owner?.email || b.primaryOwnerUserId)}</td>
           <td>${b.standalone ? '<span class="tag-standalone">Standalone</span>' : b.businessLocations.map(bl => escapeHtml(bl.location.network.name + ' → ' + bl.location.name)).join(', ')}</td>
           <td>${b.landingPagesCount}</td>
@@ -2372,7 +2415,8 @@
         return;
       }
       const b = result.data.business;
-      document.getElementById('sp-bd-title').innerHTML = `${escapeHtml(b.name)} ${spStatusBadge(b.status)}`;
+      currentBusinessDetailData = b;
+      document.getElementById('sp-bd-title').innerHTML = `${escapeHtml(b.name)} ${spStatusBadge(b.status)}${b.isLegacyShim ? `<span class="tag-legacy" data-i18n="sp_legacy_business">Legacy Account Business</span>` : ''}`;
       document.getElementById('sp-bd-sub').textContent = `Owner: ${b.owner?.email || b.primaryOwnerUserId}`;
 
       document.getElementById('sp-bd-memberships').innerHTML = b.businessLocations.length
@@ -2392,6 +2436,79 @@
           </div>
         `).join('')
         : '<div style="font-size:0.78rem;color:var(--text-dim)">No landing pages yet.</div>';
+
+      await loadUnmappedLandingPagesFor(b);
+    }
+
+    // Lists this Business's owner's LandingPages that have no Business yet,
+    // each with an explicit "Attach" action — the admin chooses the
+    // mapping, nothing here infers or auto-groups pages (Phase 1B-B1).
+    async function loadUnmappedLandingPagesFor(business) {
+      const el = document.getElementById('sp-bd-unmapped-pages');
+      const result = await safeFetchAdmin(`/admin/landing-pages/unmapped?ownerUserId=${encodeURIComponent(business.primaryOwnerUserId)}`);
+      if (!result.ok) {
+        el.innerHTML = `<div style="font-size:0.78rem;color:var(--red)">${adminErrorMessage(result)}</div>`;
+        return;
+      }
+      const pages = result.data.landingPages || [];
+      el.innerHTML = pages.length
+        ? pages.map(p => `
+          <div class="health-row">
+            <div class="health-name">${escapeHtml(p.businessName || p.slug)}</div>
+            <button class="action-btn" onclick="attachLandingPageToBusiness('${p.id}')" data-i18n="sp_attach">Attach</button>
+          </div>
+        `).join('')
+        : '<div style="font-size:0.78rem;color:var(--text-dim)">No unmapped landing pages for this owner.</div>';
+    }
+
+    async function attachLandingPageToBusiness(landingPageId) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/landing-pages/${landingPageId}/business`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ businessId: currentBusinessDetailId }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || 'Failed to attach landing page.');
+          return;
+        }
+        loadBusinessDetail(currentBusinessDetailId);
+      } catch (err) { alert('Could not reach server.'); }
+    }
+
+    // ── CREATE BUSINESS (Phase 1B-B1) ──────────────────────────
+    async function openCreateBusinessModal() {
+      document.getElementById('sp-create-business-name').value = '';
+      document.getElementById('sp-create-business-status').value = 'active';
+      document.getElementById('sp-create-business-modal-error').textContent = '';
+
+      const ownerSelect = document.getElementById('sp-create-business-owner');
+      ownerSelect.innerHTML = '<option value="">Loading owners…</option>';
+      const result = await safeFetchAdmin('/admin/users');
+      const users = result.ok ? (result.data.users || []) : [];
+      ownerSelect.innerHTML = optionsHtml(users, u => u.id, u => u.email || u.id);
+
+      openModal('sp-create-business-modal');
+    }
+
+    async function submitCreateBusiness() {
+      const name = document.getElementById('sp-create-business-name').value.trim();
+      const primaryOwnerUserId = document.getElementById('sp-create-business-owner').value;
+      const status = document.getElementById('sp-create-business-status').value;
+      const errEl = document.getElementById('sp-create-business-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/businesses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ name, primaryOwnerUserId, status }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to create business.'; return; }
+        closeModal('sp-create-business-modal');
+        loadBusinessesPage();
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
     // ── ASSIGN BUSINESS TO LOCATION (modal, shared by Businesses/Business Detail/Location Detail) ──
@@ -2529,6 +2646,8 @@
         sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
         sp_create_network: 'Create Network', sp_add_location: 'Add Location',
         sp_edit_network: 'Edit Network', sp_save_changes: 'Save Changes', sp_cancel: 'Cancel',
+        sp_create_business: 'Create Business', sp_business_owner_helper: 'The owner must already be a known QRAIVY account. A Business never creates a new account.',
+        sp_legacy_business: 'Legacy Account Business', sp_unmapped_pages: 'Unmapped Landing Pages (same owner)', sp_attach: 'Attach',
         sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
         sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
         sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner',
@@ -2546,6 +2665,8 @@
         sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
         sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
         sp_edit_network: 'Netzwerk bearbeiten', sp_save_changes: 'Änderungen speichern', sp_cancel: 'Abbrechen',
+        sp_create_business: 'Unternehmen erstellen', sp_business_owner_helper: 'Der Inhaber muss bereits ein bekanntes QRAIVY-Konto sein. Ein Unternehmen erstellt niemals ein neues Konto.',
+        sp_legacy_business: 'Alt-Konto-Unternehmen', sp_unmapped_pages: 'Nicht zugeordnete Landing Pages (gleicher Inhaber)', sp_attach: 'Zuordnen',
         sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
         sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
         sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber',

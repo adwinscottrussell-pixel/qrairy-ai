@@ -4,7 +4,10 @@
 > → `main`, not this file's `preview/sprint-2d-smart-qr-renderer` branch)
 > shipped Customer Foundation and Stadt Pocket Phase 1A to production, and
 > built Stadt Pocket Phase 1B (Operations Center Network/Location/Business/
-> Manager admin) on a new preview branch pending founder visual approval. See
+> Manager admin) on a new preview branch pending founder visual approval.
+> Phase 1B-B1 (Business creation + LandingPage mapping, correcting the
+> Phase 1A "Business = Clerk User" shim assumption) added on the same
+> preview branch, preview only. See
 > `docs/architecture/NETWORK_LOCATION_FOUNDATION.md`. Unrelated to MC-2 below.
 
 None active — MC-1 (Mission Control foundation) complete, committed, and

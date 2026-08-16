@@ -11,7 +11,12 @@
 > Networks/Locations/Businesses/Managers) is implemented and tested on a new
 > preview branch (`preview/stadt-pocket-phase1b-operations-center`, off
 > `main` at `217403e`) — **not merged, not deployed**, pending founder visual
-> review of the preview.
+> review of the preview. Its backend routes (Network/Location CRUD,
+> Business read/edit) were later promoted to `main`/production separately.
+> **Phase 1B-B1** (Business creation + LandingPage-to-Business mapping,
+> correcting Phase 1A's "one Business per Clerk User" shim assumption) is
+> implemented on the same preview branch, **preview only, backend not yet
+> promoted**.
 
 > Canonical project snapshot for Claude Code sessions. Complements
 > `CLAUDE.md` (rules/conventions) and `docs/` (durable architecture) —
