@@ -240,13 +240,28 @@ async function listBusinesses({ networkId, locationId, status } = {}) {
 
   const owners = await resolveUsers(businesses.map((b) => b.primaryOwnerUserId));
 
-  return businesses.map((b) => ({
-    ...b,
-    owner: owners.get(b.primaryOwnerUserId) || null,
-    landingPagesCount: b._count.landingPages,
-    standalone: b.businessLocations.length === 0,
-    _count: undefined,
-  }));
+  return businesses.map((b) => {
+    const owner = owners.get(b.primaryOwnerUserId) || null;
+    return {
+      ...b,
+      owner,
+      landingPagesCount: b._count.landingPages,
+      standalone: b.businessLocations.length === 0,
+      isLegacyShim: isLegacyShimBusiness(b, owner),
+      _count: undefined,
+    };
+  });
+}
+
+// Phase 1A's backfill named every shim Business after its owner's email (or
+// raw id if no email) — see backfill-network-location-business-phase1a.js.
+// A Business created through the real Phase 1B-B1 creation flow always gets
+// an admin-chosen merchant name instead, so this equality is a reliable,
+// no-schema-change way to flag "never reviewed by an admin yet" rows for
+// the UI, without deleting/archiving anything automatically.
+function isLegacyShimBusiness(business, owner) {
+  const fallbackName = owner?.email || business.primaryOwnerUserId;
+  return business.name === fallbackName;
 }
 
 async function getBusiness(id) {
@@ -261,7 +276,8 @@ async function getBusiness(id) {
   if (!business) throw notFound('Business');
 
   const owners = await resolveUsers([business.primaryOwnerUserId]);
-  return { ...business, owner: owners.get(business.primaryOwnerUserId) || null, standalone: business.businessLocations.length === 0 };
+  const owner = owners.get(business.primaryOwnerUserId) || null;
+  return { ...business, owner, standalone: business.businessLocations.length === 0, isLegacyShim: isLegacyShimBusiness(business, owner) };
 }
 
 async function updateBusiness(id, { name, slug, status }) {
@@ -280,6 +296,33 @@ async function updateBusiness(id, { name, slug, status }) {
     if (e.code === 'P2002') throw duplicate('A Business with this slug already exists.');
     throw e;
   }
+}
+
+// Phase 1B-B1 — Business creation, platform-admin only. A Business
+// represents a real merchant/company, deliberately distinct from the Clerk
+// User (authenticated principal) that owns it — see
+// docs/architecture/NETWORK_LOCATION_FOUNDATION.md. primaryOwnerUserId must
+// already be a known QRAIVY User row; this never creates a Clerk user.
+async function createBusiness({ name, primaryOwnerUserId, status }) {
+  if (!name || !String(name).trim()) throw invalid('Business name is required.');
+  if (!primaryOwnerUserId || !String(primaryOwnerUserId).trim()) throw invalid('primaryOwnerUserId is required.');
+  if (status && !BUSINESS_STATUSES.includes(status)) throw invalid(`Invalid status. Must be one of: ${BUSINESS_STATUSES.join(', ')}.`);
+
+  const owner = await prisma.user.findUnique({ where: { id: primaryOwnerUserId } });
+  if (!owner) throw invalid('primaryOwnerUserId does not match a known QRAIVY user/account.');
+
+  // Business + its owner BusinessMember are created atomically so a
+  // Business row can never exist with no owner membership.
+  return prisma.$transaction(async (tx) => {
+    const business = await tx.business.create({
+      data: { name: String(name).trim(), primaryOwnerUserId, status },
+    });
+    const existingMember = await tx.businessMember.findFirst({ where: { businessId: business.id, userId: primaryOwnerUserId } });
+    if (!existingMember) {
+      await tx.businessMember.create({ data: { businessId: business.id, userId: primaryOwnerUserId, role: 'owner' } });
+    }
+    return business;
+  });
 }
 
 // ── Business ↔ Location assignment ─────────────────────────────────────
@@ -359,6 +402,47 @@ async function removeManager(id) {
   return { removed: true };
 }
 
+// ── LandingPage -> Business mapping (Phase 1B-B1) ───────────────────────
+// This is the ONLY write path that touches LandingPage.businessId. It never
+// touches LandingPage.userId, Customer.ownerUserId, or CustomerIdentity.
+// ownerUserId -- those remain exactly as authoritative as before for every
+// existing route (QR, wallet, loyalty, webpush, analytics, Customer
+// Foundation). See docs/architecture/NETWORK_LOCATION_FOUNDATION.md.
+
+async function listUnmappedLandingPages(ownerUserId) {
+  if (!ownerUserId) throw invalid('ownerUserId is required.');
+  return prisma.landingPage.findMany({
+    where: { userId: ownerUserId, businessId: null },
+    select: { id: true, slug: true, businessName: true, status: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+async function mapLandingPageToBusiness(landingPageId, businessId) {
+  if (!businessId) throw invalid('businessId is required.');
+
+  const [landingPage, business] = await Promise.all([
+    prisma.landingPage.findUnique({ where: { id: landingPageId } }),
+    prisma.business.findUnique({ where: { id: businessId } }),
+  ]);
+  if (!landingPage) throw notFound('LandingPage');
+  if (!business) throw notFound('Business');
+
+  // Critical tenant-protection rule (Phase 1B-B1): a LandingPage may only
+  // be mapped to a Business owned by the same Clerk user that already owns
+  // the page. No agency/staff cross-owner mapping exists yet -- reject it
+  // outright rather than silently allowing a page to move between tenants.
+  if (landingPage.userId !== business.primaryOwnerUserId) {
+    throw invalid('This LandingPage is owned by a different user than this Business — cross-owner mapping is not allowed.');
+  }
+
+  return prisma.landingPage.update({
+    where: { id: landingPageId },
+    data: { businessId },
+    select: { id: true, slug: true, businessName: true, businessId: true },
+  });
+}
+
 // ── Shared: resolve Clerk userIds to local User rows (email/plan) ──────
 // Never calls out to Clerk directly — uses the same local `User` table
 // the rest of the Operations Center (`/admin/users`) already treats as
@@ -389,10 +473,13 @@ module.exports = {
   updateLocation,
   listBusinesses,
   getBusiness,
+  createBusiness,
   updateBusiness,
   assignBusinessToLocation,
   setBusinessLocationStatus,
   listManagers,
   assignManager,
   removeManager,
+  listUnmappedLandingPages,
+  mapLandingPageToBusiness,
 };
