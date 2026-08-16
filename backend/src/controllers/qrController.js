@@ -3,6 +3,7 @@ const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
+const { getCustomerCountsBySlug, getCustomerGrowthSeries, getCustomerSummary } = require('../services/customerQueryService');
 
 // ─── Tier definitions ────────────────────────────────────────────────────────
 const PLAN_LIMITS = { free: Infinity, starter: 10, pro: Infinity };
@@ -380,6 +381,18 @@ async function handleDashboard(req, res) {
       _count: { id: true },
     });
     const lpSubMap = Object.fromEntries(lpSubCounts.map(r => [r.slug, r._count.id]));
+
+    // Canonical Customer Foundation counts, additive to the legacy Subscriber
+    // counts above — never replaces them. Only LandingPage-backed (source:'lp')
+    // items have a slug, which is the only thing Customer Foundation's
+    // dual-write hooks (all rooted in lpController.js) ever attach an identity
+    // to; bare QR items below have no slug and therefore no possible canonical
+    // attribution yet — their totalCustomers stays undefined, not 0, so the
+    // Analytics UI can distinguish "not attributable" from "genuinely zero".
+    const customerCountsBySlug = userId
+      ? await getCustomerCountsBySlug({ ownerUserId: userId, slugs: lpSlugs })
+      : new Map();
+
     const lpCards = lpData.map(lp => ({
       id: lp.id,
       originalUrl: lp.websiteUrl || '',
@@ -390,6 +403,7 @@ async function handleDashboard(req, res) {
       // scans — never exposed as totalScans. See docs on Scans vs Visits.
       totalVisits: lp.scanCount || 0,
       totalSubscribers: lpSubMap[lp.slug] || 0,
+      totalCustomers: customerCountsBySlug.get(lp.slug) ?? 0,
       hasSiteContent: true,
       isDynamic: true,
       destinationUrl: lp.websiteUrl || null,
@@ -419,7 +433,26 @@ async function handleDashboard(req, res) {
       };
     }
 
-    return res.status(200).json({ dashboard: allCards, planInfo });
+    // Canonical Customer Foundation, additive to the response — the top-level
+    // KPI card and the growth chart. totalCustomers here is the SAME
+    // all-time, tenant-scoped count getCustomerSummary already exposes on
+    // /customers/summary, reused rather than recomputed. 90 days is the
+    // largest window Analytics' date-range filter supports; the frontend
+    // slices the trailing N days it needs from this one fetched series,
+    // matching how the rest of this endpoint's payload is fetched once and
+    // re-rendered client-side on range change, not re-fetched per range.
+    let customerSummary = null;
+    let customerGrowth = [];
+    if (userId) {
+      const [summary, growth] = await Promise.all([
+        getCustomerSummary({ ownerUserId: userId }),
+        getCustomerGrowthSeries({ ownerUserId: userId, days: 90 }),
+      ]);
+      customerSummary = summary;
+      customerGrowth = growth;
+    }
+
+    return res.status(200).json({ dashboard: allCards, planInfo, customerSummary, customerGrowth });
   } catch (err) {
     console.error('handleDashboard error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

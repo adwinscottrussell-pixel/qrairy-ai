@@ -309,7 +309,69 @@ async function getCustomerSummary({ ownerUserId }) {
   return { totalCustomers, emailCustomers, pushCustomers, walletCustomers, loyaltyCustomers };
 }
 
+// Distinct canonical Customer count per slug, tenant-scoped, for Analytics'
+// per-page display (see docs/architecture/CUSTOMER_FOUNDATION.md). Grouped
+// by CustomerIdentity.slug (the identity's own first-touch page context) —
+// never by cid/email alone, so cross-tenant collision is structurally
+// impossible (the initial query is already ownerUserId-scoped). A Customer
+// with multiple identities on the SAME slug counts once (deduped via Set).
+// A Customer known on two DIFFERENT slugs for the same owner legitimately
+// counts once on EACH of those slugs' rows — each identity's own slug is
+// its own first-touch context; this is the existing Phase 1 slug semantic,
+// not a new relationship model. Slugs with no `LandingPage` (e.g. legacy
+// bare QR codes, which Customer Foundation has no linkage to at all) are
+// simply absent from the returned map — callers must treat a missing key
+// as "not yet attributable", not zero, since zero would falsely imply
+// Customer Foundation ran and found none.
+async function getCustomerCountsBySlug({ ownerUserId, slugs }) {
+  const map = new Map();
+  if (!slugs.length) return map;
+  const identities = await prisma.customerIdentity.findMany({
+    where: { ownerUserId, slug: { in: slugs } },
+    select: { slug: true, customerId: true },
+  });
+  const bySlug = new Map();
+  for (const i of identities) {
+    if (!bySlug.has(i.slug)) bySlug.set(i.slug, new Set());
+    bySlug.get(i.slug).add(i.customerId);
+  }
+  for (const [slug, set] of bySlug) map.set(slug, set.size);
+  return map;
+}
+
+// Cumulative canonical Customer count per day, tenant-scoped, for the
+// trailing `days` days (index 0 = oldest, last index = today) — "cumulative"
+// means the true as-of-that-day total (every Customer whose firstSeenAt is
+// on or before that day), matching Customer.firstSeenAt as the established
+// Phase 1 creation timestamp, not a synthetic/estimated distribution. Two
+// bounded queries regardless of `days` size.
+async function getCustomerGrowthSeries({ ownerUserId, days }) {
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setHours(0, 0, 0, 0);
+  windowStart.setDate(windowStart.getDate() - (days - 1));
+
+  const [totalBeforeWindow, withinWindow] = await Promise.all([
+    prisma.customer.count({ where: { ownerUserId, status: 'active', firstSeenAt: { lt: windowStart } } }),
+    prisma.customer.findMany({
+      where: { ownerUserId, status: 'active', firstSeenAt: { gte: windowStart } },
+      select: { firstSeenAt: true },
+    }),
+  ]);
+
+  const perDay = new Array(days).fill(0);
+  for (const c of withinWindow) {
+    const dayIndex = Math.floor((new Date(c.firstSeenAt).getTime() - windowStart.getTime()) / (24 * 60 * 60 * 1000));
+    if (dayIndex >= 0 && dayIndex < days) perDay[dayIndex]++;
+  }
+
+  let running = totalBeforeWindow;
+  return perDay.map((c) => (running += c));
+}
+
 module.exports = {
+  getCustomerCountsBySlug,
+  getCustomerGrowthSeries,
   listCustomers,
   getCustomerDetail,
   getCustomerActivity,
