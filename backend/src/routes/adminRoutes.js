@@ -362,6 +362,15 @@ router.get('/landing-pages/unmapped', requireAdmin, async (req, res) => {
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 
+// Global, platform-wide intake queue (Phase 1B-B2) — every LandingPage with
+// businessId: null across all owners, not scoped to one Business's owner
+// the way /landing-pages/unmapped above is. Read-only.
+router.get('/landing-pages/unassigned', requireAdmin, async (req, res) => {
+  try {
+    return res.json({ landingPages: await networkAdmin.listUnassignedLandingPages() });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
 router.patch('/landing-pages/:id/business', requireAdmin, async (req, res) => {
   try {
     const { businessId } = req.body || {};

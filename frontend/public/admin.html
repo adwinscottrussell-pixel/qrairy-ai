@@ -361,6 +361,8 @@
     .status-badge.active { background: rgba(34,197,94,0.2); color: var(--green); }
     .status-badge.paused { background: rgba(245,158,11,0.2); color: var(--yellow); }
     .status-badge.archived { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .status-badge.live { background: rgba(34,197,94,0.2); color: var(--green); }
+    .status-badge.draft { background: rgba(107,114,128,0.2); color: #9ca3af; }
     .tag-standalone {
       font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
@@ -928,34 +930,64 @@
           <button class="refresh-btn" onclick="loadBusinessesPage()">↻ Refresh</button>
         </div>
       </div>
-      <div class="sp-filters">
-        <select id="sp-biz-filter-network" onchange="loadBusinessesPage()"><option value="">All Networks</option></select>
-        <select id="sp-biz-filter-location" onchange="loadBusinessesPage()"><option value="">All Locations</option></select>
-        <select id="sp-biz-filter-status" onchange="loadBusinessesPage()">
-          <option value="">All Statuses</option>
-          <option value="active" data-i18n="sp_status_active">Active</option>
-          <option value="paused" data-i18n="sp_status_paused">Paused</option>
-          <option value="archived" data-i18n="sp_status_archived">Archived</option>
-        </select>
+      <div class="sp-tabs">
+        <button class="sp-tab active" onclick="showBusinessesTab('businesses')" data-i18n="nav_businesses">Businesses</button>
+        <button class="sp-tab" onclick="showBusinessesTab('unassigned')">
+          <span data-i18n="sp_unassigned_pages">Unassigned Landing Pages</span> (<span id="sp-unassigned-tab-count">0</span>)
+        </button>
       </div>
-      <div class="table-wrap">
-        <div class="table-header">
-          <div class="table-title" data-i18n="nav_businesses">Businesses</div>
-          <span class="table-count" id="sp-businesses-count">—</span>
+      <div class="sp-tab-panel active" id="sp-tab-panel-businesses">
+        <div class="sp-filters">
+          <select id="sp-biz-filter-network" onchange="loadBusinessesPage()"><option value="">All Networks</option></select>
+          <select id="sp-biz-filter-location" onchange="loadBusinessesPage()"><option value="">All Locations</option></select>
+          <select id="sp-biz-filter-status" onchange="loadBusinessesPage()">
+            <option value="">All Statuses</option>
+            <option value="active" data-i18n="sp_status_active">Active</option>
+            <option value="paused" data-i18n="sp_status_paused">Paused</option>
+            <option value="archived" data-i18n="sp_status_archived">Archived</option>
+          </select>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th data-i18n="sp_col_business">Business</th>
-              <th data-i18n="sp_col_owner">Primary Owner</th>
-              <th data-i18n="sp_col_memberships">Network / Location</th>
-              <th data-i18n="sp_col_pages">Landing Pages</th>
-              <th data-i18n="sp_col_status">Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="sp-businesses-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
-        </table>
+        <div class="table-wrap">
+          <div class="table-header">
+            <div class="table-title" data-i18n="nav_businesses">Businesses</div>
+            <span class="table-count" id="sp-businesses-count">—</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="sp_col_business">Business</th>
+                <th data-i18n="sp_col_owner">Primary Owner</th>
+                <th data-i18n="sp_col_memberships">Network / Location</th>
+                <th data-i18n="sp_col_pages">Landing Pages</th>
+                <th data-i18n="sp_col_status">Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="sp-businesses-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sp-tab-panel" id="sp-tab-panel-unassigned">
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-bottom:12px" data-i18n="sp_unassigned_pages_helper">Newly created Landing Pages that have never been attached to any Business (Legacy or real). This is separate from the legacy migration — legacy-mapped pages are moved from their Legacy Account Business's own detail page instead.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <div class="table-title" data-i18n="sp_unassigned_pages">Unassigned Landing Pages</div>
+            <span class="table-count" id="sp-unassigned-count">—</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="sp_col_pages">Landing Page</th>
+                <th data-i18n="sp_col_owner">Owner</th>
+                <th>Slug</th>
+                <th data-i18n="sp_col_status">Status</th>
+                <th data-i18n="sp_col_created">Created</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="sp-unassigned-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1154,16 +1186,20 @@
         <label class="modal-label" data-i18n="sp_col_pages">Landing Page</label>
         <div id="sp-move-lp-name" style="font-size:0.85rem;font-weight:600"></div>
       </div>
-      <div class="sp-form-row">
+      <div class="sp-form-row" id="sp-move-current-business-row">
         <label class="modal-label" data-i18n="sp_current_business">Current Business</label>
         <div id="sp-move-current-business" style="font-size:0.85rem;color:var(--text-dim)"></div>
+      </div>
+      <div class="sp-form-row" id="sp-move-owner-row" style="display:none">
+        <label class="modal-label" data-i18n="sp_col_owner">Owner</label>
+        <div id="sp-move-owner" style="font-size:0.85rem;color:var(--text-dim)"></div>
       </div>
       <div class="sp-form-row">
         <label class="modal-label" data-i18n="sp_target_business">Target Business</label>
         <select class="modal-select" id="sp-move-target-business"></select>
         <div id="sp-move-empty-state" style="display:none;font-size:0.68rem;color:var(--text-dim);margin-top:6px">
           <div data-i18n="sp_no_eligible_businesses">No eligible real Businesses exist for this owner yet.</div>
-          <button class="action-btn" style="margin-top:8px" onclick="closeModal('sp-move-to-business-modal'); openCreateBusinessModal();" data-i18n="sp_create_business">Create Business</button>
+          <button class="action-btn" style="margin-top:8px" onclick="closeModal('sp-move-to-business-modal'); openCreateBusinessModal(true);" data-i18n="sp_create_business">Create Business</button>
         </div>
       </div>
       <div id="sp-move-to-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
@@ -2073,6 +2109,15 @@
     let currentBusinessDetailId = null;
     let currentBusinessDetailData = null;
     let currentMoveLandingPageId = null;
+    let spUnassignedPagesCache = [];
+    // Where the Move/Assign modal should refresh after a successful move:
+    // the Business Detail page it was opened from (legacy flow), or the
+    // Unassigned Landing Pages tab (Phase 1B-B2 flow).
+    let moveModalReturnTo = 'business-detail';
+    // Whether Create Business was launched from inside the Move/Assign
+    // modal's empty-target-state CTA -- if so, reopen that modal (refreshed)
+    // after a successful create instead of dropping to the Businesses list.
+    let createBusinessReturnToMove = false;
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2391,8 +2436,20 @@
     }
 
     // ── BUSINESSES ────────────────────────────────────────────
+    // Businesses page has two tabs: the existing Businesses table, and the
+    // Phase 1B-B2 global Unassigned Landing Pages queue. Scoped to this page
+    // only -- separate from showNetworkDetailTab, which toggles a different
+    // set of panels on a different page.
+    function showBusinessesTab(tab) {
+      document.querySelectorAll('#page-sp-businesses .sp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('#page-sp-businesses .sp-tab-panel').forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById(`sp-tab-panel-${tab}`).classList.add('active');
+    }
+
     async function loadBusinessesPage() {
       await refreshNetworkOptionsEverywhere();
+      loadUnassignedLandingPagesPage();
       const networkId = document.getElementById('sp-biz-filter-network').value;
 
       // Location filter options depend on the selected network (or all
@@ -2433,6 +2490,37 @@
           </td>
         </tr>
       `).join('') : `<tr><td colspan="6" class="sp-empty">No businesses match these filters.</td></tr>`;
+    }
+
+    // ── UNASSIGNED LANDING PAGES (Phase 1B-B2) ─────────────────
+    // Global, platform-wide intake queue: every LandingPage with
+    // businessId: null, across all owners. Separate from the legacy
+    // migration flow (Legacy Account Business -> Move to Business) --
+    // these pages were created after the migration work, or never went
+    // through the Phase 1A backfill at all, so they have no Business yet.
+    async function loadUnassignedLandingPagesPage() {
+      const result = await safeFetchAdmin('/admin/landing-pages/unassigned');
+      const tbody = document.getElementById('sp-unassigned-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('sp-unassigned-count').textContent = '—';
+        document.getElementById('sp-unassigned-tab-count').textContent = '0';
+        return;
+      }
+      const pages = result.data.landingPages || [];
+      spUnassignedPagesCache = pages;
+      document.getElementById('sp-unassigned-count').textContent = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
+      document.getElementById('sp-unassigned-tab-count').textContent = pages.length;
+      tbody.innerHTML = pages.length ? pages.map(p => `
+        <tr>
+          <td class="td-name">${escapeHtml(p.businessName || p.slug)}</td>
+          <td class="td-email">${escapeHtml(p.owner?.email || p.userId)}</td>
+          <td>${escapeHtml(p.slug)}</td>
+          <td>${spStatusBadge(p.status)}</td>
+          <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+          <td><button class="action-btn" onclick="openAssignUnassignedModal('${p.id}')" data-i18n="sp_assign_to_business">Assign to Business</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="6" class="sp-empty" data-i18n="sp_no_unassigned_pages">No unassigned Landing Pages.</td></tr>`;
     }
 
     // ── BUSINESS DETAIL ───────────────────────────────────────
@@ -2508,30 +2596,30 @@
       } catch (err) { alert('Could not reach server.'); }
     }
 
-    // ── MOVE LANDING PAGE: legacy shim -> real Business (Phase 1B-B2) ──
-    // Uses the same PATCH /admin/landing-pages/:id/business endpoint as
-    // attachLandingPageToBusiness above -- mapLandingPageToBusiness already
-    // supports moving a page away from any current businessId (null or a
-    // legacy shim's id), so no new backend route exists for this. The
-    // target-Business filtering below is convenience only; the backend
-    // still authoritatively rejects cross-owner mapping regardless of what
-    // this dropdown offers.
-    async function openMoveToBusinessModal(landingPageId) {
-      const business = currentBusinessDetailData;
-      const page = business?.landingPages.find(p => p.id === landingPageId);
-      if (!business || !page) return;
-      currentMoveLandingPageId = landingPageId;
-
-      document.getElementById('sp-move-lp-name').textContent = page.businessName || page.slug;
-      document.getElementById('sp-move-current-business').textContent = business.name;
-      document.getElementById('sp-move-to-business-modal-error').textContent = '';
-
+    // ── MOVE/ASSIGN LANDING PAGE -> real Business (Phase 1B-B2) ──
+    // Two entry points share this one modal + PATCH /admin/landing-pages/:id
+    // /business call: moving a page off a legacy shim Business (from that
+    // Business's own detail page), and assigning a genuinely unassigned page
+    // (businessId: null) from the global Unassigned Landing Pages tab.
+    // mapLandingPageToBusiness already supports moving a page away from any
+    // current businessId (null or a legacy shim's id), so no new backend
+    // route exists for either flow. Target-Business filtering below is
+    // convenience only; the backend still authoritatively rejects
+    // cross-owner mapping regardless of what this dropdown offers.
+    // Shared by both Move-to-Business entry points (legacy Business detail,
+    // and the Unassigned Landing Pages tab): populates the Target Business
+    // dropdown to real (non-legacy-shim) active Businesses owned by
+    // ownerUserId, excluding excludeBusinessId (the page's current Business,
+    // if any -- moving a page to the Business it's already on is a no-op).
+    // Convenience filtering only; the backend independently enforces the
+    // owner match regardless of what this dropdown offers.
+    async function populateMoveModalTargetBusinesses(ownerUserId, excludeBusinessId) {
       const result = await safeFetchAdmin('/admin/businesses');
       const allBusinesses = result.ok ? (result.data.businesses || []) : [];
       const eligible = allBusinesses.filter(b =>
-        b.primaryOwnerUserId === business.primaryOwnerUserId &&
+        b.primaryOwnerUserId === ownerUserId &&
         !b.isLegacyShim &&
-        b.id !== business.id &&
+        b.id !== excludeBusinessId &&
         b.status === 'active'
       );
 
@@ -2550,7 +2638,43 @@
         emptyState.style.display = 'block';
         submitBtn.style.display = 'none';
       }
+    }
 
+    async function openMoveToBusinessModal(landingPageId) {
+      const business = currentBusinessDetailData;
+      const page = business?.landingPages.find(p => p.id === landingPageId);
+      if (!business || !page) return;
+      currentMoveLandingPageId = landingPageId;
+      moveModalReturnTo = 'business-detail';
+
+      document.getElementById('sp-move-lp-name').textContent = page.businessName || page.slug;
+      document.getElementById('sp-move-current-business').textContent = business.name;
+      document.getElementById('sp-move-current-business-row').style.display = '';
+      document.getElementById('sp-move-owner-row').style.display = 'none';
+      document.getElementById('sp-move-to-business-modal-error').textContent = '';
+
+      await populateMoveModalTargetBusinesses(business.primaryOwnerUserId, business.id);
+      openModal('sp-move-to-business-modal');
+    }
+
+    // Phase 1B-B2: same modal, opened from the Unassigned Landing Pages tab
+    // instead of a Business detail page. The page has no current Business
+    // (that's the whole point of "unassigned"), so there's nothing to
+    // exclude from the target list and the modal shows Owner instead of
+    // Current Business.
+    async function openAssignUnassignedModal(landingPageId) {
+      const page = spUnassignedPagesCache.find(p => p.id === landingPageId);
+      if (!page) return;
+      currentMoveLandingPageId = landingPageId;
+      moveModalReturnTo = 'unassigned';
+
+      document.getElementById('sp-move-lp-name').textContent = page.businessName || page.slug;
+      document.getElementById('sp-move-owner').textContent = page.owner?.email || page.userId;
+      document.getElementById('sp-move-current-business-row').style.display = 'none';
+      document.getElementById('sp-move-owner-row').style.display = '';
+      document.getElementById('sp-move-to-business-modal-error').textContent = '';
+
+      await populateMoveModalTargetBusinesses(page.userId, null);
       openModal('sp-move-to-business-modal');
     }
 
@@ -2568,12 +2692,14 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) { errEl.textContent = data.error || 'Failed to move landing page.'; return; }
         closeModal('sp-move-to-business-modal');
-        loadBusinessDetail(currentBusinessDetailId);
+        if (moveModalReturnTo === 'unassigned') { loadUnassignedLandingPagesPage(); }
+        else { loadBusinessDetail(currentBusinessDetailId); }
       } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
     // ── CREATE BUSINESS (Phase 1B-B1) ──────────────────────────
-    async function openCreateBusinessModal() {
+    async function openCreateBusinessModal(returnToMove) {
+      createBusinessReturnToMove = !!returnToMove;
       document.getElementById('sp-create-business-name').value = '';
       document.getElementById('sp-create-business-status').value = 'active';
       document.getElementById('sp-create-business-modal-error').textContent = '';
@@ -2602,7 +2728,18 @@
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Failed to create business.'; return; }
         closeModal('sp-create-business-modal');
-        loadBusinessesPage();
+        // Preferred safe behavior (Phase 1B-B2): if Create Business was
+        // launched from the Move/Assign modal's empty-target-state, return
+        // to that modal (refreshed) instead of the Businesses list, so the
+        // admin can explicitly finish assigning the same LandingPage --
+        // never auto-mapped as a side effect of creation.
+        if (createBusinessReturnToMove) {
+          createBusinessReturnToMove = false;
+          if (moveModalReturnTo === 'unassigned') { await openAssignUnassignedModal(currentMoveLandingPageId); }
+          else { await openMoveToBusinessModal(currentMoveLandingPageId); }
+        } else {
+          loadBusinessesPage();
+        }
       } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
@@ -2746,9 +2883,11 @@
         sp_unmapped_pages_helper: "Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.",
         sp_move_to_business: 'Move to Business', sp_current_business: 'Current Business', sp_target_business: 'Target Business',
         sp_no_eligible_businesses: 'No eligible real Businesses exist for this owner yet.', sp_move_landing_page: 'Move Landing Page',
+        sp_unassigned_pages: 'Unassigned Landing Pages', sp_assign_to_business: 'Assign to Business', sp_no_unassigned_pages: 'No unassigned Landing Pages.',
+        sp_unassigned_pages_helper: "Newly created Landing Pages that have never been attached to any Business (Legacy or real). This is separate from the legacy migration — legacy-mapped pages are moved from their Legacy Account Business's own detail page instead.",
         sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
         sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
-        sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner',
+        sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner', sp_col_created: 'Created',
         sp_col_manager: 'Manager', sp_col_role: 'Role', sp_col_name: 'Name',
         sp_col_memberships: 'Network / Location', sp_col_pages: 'Landing Pages',
         sp_businesses_in_location: 'Businesses in this Location',
@@ -2768,9 +2907,11 @@
         sp_unmapped_pages_helper: 'Seiten, die noch nie einem Unternehmen zugeordnet wurden. Seiten, die bereits einem Alt-Konto-Unternehmen zugeordnet sind, müssen von der Detailseite dieses Unternehmens aus verschoben werden.',
         sp_move_to_business: 'Zu Unternehmen verschieben', sp_current_business: 'Aktuelles Unternehmen', sp_target_business: 'Ziel-Unternehmen',
         sp_no_eligible_businesses: 'Für diesen Inhaber existieren noch keine geeigneten echten Unternehmen.', sp_move_landing_page: 'Landingpage verschieben',
+        sp_unassigned_pages: 'Nicht zugewiesene Landing Pages', sp_assign_to_business: 'Unternehmen zuweisen', sp_no_unassigned_pages: 'Keine nicht zugewiesenen Landing Pages.',
+        sp_unassigned_pages_helper: 'Neu erstellte Landing Pages, die noch keinem Unternehmen (weder Alt-Konto noch echt) zugeordnet wurden. Dies ist unabhängig von der Alt-Konto-Migration — dort zugeordnete Seiten werden von der Detailseite dieses Alt-Konto-Unternehmens aus verschoben.',
         sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
         sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
-        sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber',
+        sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber', sp_col_created: 'Erstellt',
         sp_col_manager: 'Manager', sp_col_role: 'Rolle', sp_col_name: 'Name',
         sp_col_memberships: 'Netzwerk / Standort', sp_col_pages: 'Landing Pages',
         sp_businesses_in_location: 'Unternehmen an diesem Standort',

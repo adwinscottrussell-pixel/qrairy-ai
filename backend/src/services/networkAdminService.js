@@ -418,6 +418,24 @@ async function listUnmappedLandingPages(ownerUserId) {
   });
 }
 
+// Global admin-level view (Phase 1B-B2) — every LandingPage with no Business
+// yet, across all owners, not scoped to one Business's owner the way
+// listUnmappedLandingPages above is. Deliberately a separate function
+// rather than an optional-ownerUserId mode on that one: the two have
+// different callers (a single Business's detail page vs. a platform-wide
+// admin queue) and different meanings ("this owner's leftover pages" vs.
+// "everything nobody has triaged yet") that would only get harder to read
+// if force-merged into one conditional.
+async function listUnassignedLandingPages() {
+  const pages = await prisma.landingPage.findMany({
+    where: { businessId: null },
+    select: { id: true, slug: true, businessName: true, userId: true, status: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  const owners = await resolveUsers(pages.map((p) => p.userId));
+  return pages.map((p) => ({ ...p, owner: owners.get(p.userId) || null }));
+}
+
 async function mapLandingPageToBusiness(landingPageId, businessId) {
   if (!businessId) throw invalid('businessId is required.');
 
@@ -481,5 +499,6 @@ module.exports = {
   assignManager,
   removeManager,
   listUnmappedLandingPages,
+  listUnassignedLandingPages,
   mapLandingPageToBusiness,
 };
