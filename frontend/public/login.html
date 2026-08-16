@@ -30,16 +30,31 @@
   </div>
 
   <script>
+    // Only ever a same-origin relative path: must start with exactly one
+    // '/' (never '//', which browsers treat as protocol-relative to an
+    // arbitrary host) and never contain '://' (an absolute URL to another
+    // origin). Anything else falls back to the default target instead of
+    // being used — this is what prevents the `redirect` query param from
+    // becoming an open redirect.
+    function safeRedirectPath(raw) {
+      if (!raw) return null;
+      if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('://')) return null;
+      return raw;
+    }
+
     async function initClerk() {
+      // Same-origin target, derived from the actual current origin — not
+      // hardcoded to production — so production stays on production and
+      // any preview deployment stays on that same preview after sign-in.
+      const _origin = window.location.origin + '/';
+      const _rp = safeRedirectPath(new URLSearchParams(window.location.search).get('redirect'));
+      const _target = _origin + (_rp ? _rp.replace(/^\//, '') : 'dashboard.html');
+
       await window.Clerk.load();
       if (window.Clerk.user) {
-        const _r = new URLSearchParams(window.location.search).get('redirect');
-        window.location.href = _r || 'dashboard.html';
+        window.location.href = _target;
         return;
       }
-      const _rp = new URLSearchParams(window.location.search).get('redirect');
-      const _base = 'https://www.qraivy.com/';
-      const _target = _rp ? _base + _rp : _base + 'dashboard.html';
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,
         afterSignUpUrl: _target,
