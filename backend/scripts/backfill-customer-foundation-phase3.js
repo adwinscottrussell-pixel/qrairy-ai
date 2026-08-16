@@ -23,23 +23,39 @@
 //   DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/qraivy_phase1_test \
 //     node backend/scripts/backfill-customer-foundation-phase3.js --apply
 //
-// Source matrix (see docs/architecture/CUSTOMER_FOUNDATION.md, Phase 3):
+// ============================================================
+// 2026-08-16 correction — brought back into alignment with the schema
+// actually deployed to production (see docs/architecture/CUSTOMER_FOUNDATION.md,
+// "Phase 3 — historical backfill scope correction"). The original version of
+// this script assumed three things that do not exist in the deployed schema
+// and crashed immediately on the second one:
+//   - LoyaltyCustomerAlias model — never shipped; removed from this script.
+//   - Pass.loyaltyCustomerId FK — never shipped. The deployed Pass model has
+//     NO deterministic FK to LoyaltyCustomer; cid is embedded directly in
+//     serialNumber ("sqr-{slug}-{cid}"), and reverse-parsing that is
+//     explicitly forbidden (slugs contain hyphens, making it ambiguous).
+//     Historical Pass/Wallet backfill is therefore INTENTIONALLY DESCOPED
+//     from this script, not a bug to fix — there is no deterministic
+//     relationship to backfill from with the current schema. Live Wallet
+//     dual-write (handleGenerateAppleWalletPass) is unaffected and continues
+//     to correctly attach new customers in real time.
+//   - DealClaim model — Deal features were never deployed to production;
+//     removed from this script's inventory check.
+// ============================================================
+//
+// Source matrix (current, as actually implemented below):
 //   LoyaltyCustomer        -> cid identity                  [backfill_loyalty_customer]
-//   LoyaltyCustomerAlias   -> additional cid identity, same Customer as its
-//                             parent LoyaltyCustomer (FK-deterministic)
-//                                                            [backfill_loyalty_customer_alias]
 //   WebPushSubscription    -> cid + push_endpoint identity, cid-present only
 //                                                            [backfill_webpush]
-//   Pass                   -> wallet_serial identity, loyaltyCustomerId-linked
-//                             only. Never reverse-parses serialNumber.
-//                                                            [backfill_pass]
 //   Subscriber             -> email identity, slug-resolvable only. Never
 //                             merged with any cid-based Customer.
 //                                                            [backfill_subscriber_email]
 //   Scan                   -> never processed (no identity signal on the row).
-//   DealClaim              -> counted only, never linked (no live
-//                             claim/redemption endpoint exists to supply
-//                             deterministic proof — see checkDealClaims()).
+//   Pass                   -> INTENTIONALLY SKIPPED. No deterministic
+//                             relationship to a canonical Customer exists in
+//                             the deployed schema. Not an error.
+//   DealClaim              -> not applicable. Model does not exist in the
+//                             deployed schema; Deal features not deployed.
 //
 // Tenant resolution is always slug -> LandingPage.userId, the same path
 // Phase 2's live dual-writes use. A row with no slug, no matching
@@ -58,7 +74,7 @@ const APPLY = process.argv.includes('--apply');
 
 // Hard safety guard: this script must never run against anything but a
 // local database. Parsed, not string-matched, so "localhost.evil.example"
-// can't slip past a naive substring check.
+// can't slip past a naive substring check. UNCHANGED — do not weaken.
 function assertLocalDatabase() {
   const raw = process.env.DATABASE_URL || '';
   let host = '';
@@ -79,9 +95,7 @@ function assertLocalDatabase() {
 // Deduplicated projection tracking for the dry-run summary: a Customer and
 // a CustomerIdentity are created together exactly once per distinct
 // (ownerUserId, type, value) triple, regardless of which source function
-// discovers that triple first (e.g. LoyaltyCustomer and Pass deliberately
-// resolve the SAME cid triple — Set dedup makes that converge into one
-// projected Customer here too, matching what --apply would actually do).
+// discovers that triple first.
 const projection = { newCustomerKeys: new Set(), newIdentityKeys: new Set() };
 function keyOf({ ownerUserId, type, value }) { return `${ownerUserId}|${type}|${value}`; }
 
@@ -149,10 +163,10 @@ async function attachIdentity({ customerId, ownerUserId, type, value, slug, sour
 
 // Two-hop dry-run projection helper: hop 1 resolves/creates the "anchor"
 // identity (e.g. cid), hop 2 attaches a second identity to whatever
-// Customer hop 1 resolves to (e.g. push_endpoint, wallet_serial). In dry
-// run, hop 1 never actually creates anything, so its customerId is null
-// even when apply would succeed — that is NOT an error, it's a dependent
-// projection: hop 2 "wouldCreate" exactly when hop 1 "wouldCreate".
+// Customer hop 1 resolves to (e.g. push_endpoint). In dry run, hop 1 never
+// actually creates anything, so its customerId is null even when apply
+// would succeed — that is NOT an error, it's a dependent projection: hop 2
+// "wouldCreate" exactly when hop 1 "wouldCreate".
 async function resolveThenAttach(anchorCall, attachCallFactory, anchorCounter, attachCounter) {
   const anchorResult = await resolveIdentity(anchorCall);
   tally(anchorCounter, anchorResult);
@@ -191,30 +205,6 @@ async function backfillLoyaltyCustomers(slugOwnerMap, counts) {
       source: 'backfill_loyalty_customer',
     });
     tally(counts.loyaltyCustomer, result);
-
-    // Deterministic cross-cid convergence: every alias FK-linked to this
-    // same LoyaltyCustomer row is, by that FK, the same real customer.
-    const aliases = await prisma.loyaltyCustomerAlias.findMany({
-      where: { loyaltyCustomerId: row.id },
-      select: { cid: true, slug: true },
-    });
-    for (const alias of aliases) {
-      counts.loyaltyCustomerAlias.scanned++;
-      if (alias.cid === row.customerId) { counts.loyaltyCustomerAlias.resolved++; continue; }
-      if (!result.customerId) {
-        // Dry-run projection: the anchor cid itself would only be created
-        // once --apply runs, so the alias attach is contingent on it too.
-        counts.loyaltyCustomerAlias.wouldCreate++;
-        projection.newIdentityKeys.add(keyOf({ ownerUserId: owner, type: 'cid', value: alias.cid }));
-        continue;
-      }
-      const aliasResult = await attachIdentity({
-        customerId: result.customerId, ownerUserId: owner, type: 'cid',
-        value: alias.cid, slug: alias.slug || row.slug,
-        source: 'backfill_loyalty_customer_alias',
-      });
-      tally(counts.loyaltyCustomerAlias, aliasResult);
-    }
   }
 }
 
@@ -224,6 +214,8 @@ async function backfillWebPush(slugOwnerMap, counts) {
     where: { cid: { not: null } },
     select: { slug: true, cid: true, endpoint: true },
   });
+  // WebPush rows with cid = null are never linked by guessing — counted,
+  // never processed.
   counts.webpush.skippedNoCid = totalRows - rows.length;
 
   for (const row of rows) {
@@ -236,56 +228,6 @@ async function backfillWebPush(slugOwnerMap, counts) {
       (customerId) => ({ customerId, ownerUserId: owner, type: 'push_endpoint', value: row.endpoint, slug: row.slug, source: 'backfill_webpush' }),
       counts.webpush, counts.webpushEndpoint,
     );
-  }
-}
-
-async function backfillPass(slugOwnerMap, counts) {
-  const totalRows = await prisma.pass.count();
-  const rows = await prisma.pass.findMany({
-    where: { loyaltyCustomerId: { not: null } },
-    select: {
-      serialNumber: true, slug: true, loyaltyCustomerId: true,
-      loyaltyCustomer: { select: { slug: true, customerId: true } },
-    },
-  });
-  counts.pass.skippedNoLoyaltyLink = totalRows - rows.length;
-
-  for (const row of rows) {
-    counts.pass.scanned++;
-    if (!row.loyaltyCustomer) { counts.pass.skippedOrphanFk++; continue; } // defensive; FK guarantees this shouldn't happen
-    if (row.slug && row.loyaltyCustomer.slug && row.slug !== row.loyaltyCustomer.slug) {
-      // Ambiguous — a Pass and its linked LoyaltyCustomer disagree on slug.
-      // Never guess which one is right; skip.
-      counts.pass.skippedSlugMismatch++;
-      continue;
-    }
-    const effectiveSlug = row.slug || row.loyaltyCustomer.slug;
-    const owner = resolveOwner(effectiveSlug, slugOwnerMap, counts.pass);
-    if (!owner) continue;
-
-    // Resolve (never reverse-parse) via the SAME cid the LoyaltyCustomer
-    // step above already owns — guarantees a Pass never lands on a
-    // different Customer than its own LoyaltyCustomer resolved to. This is
-    // a dependency lookup, not a distinct Pass-owned identity, so its
-    // outcome gates the wallet_serial attach below but is not itself
-    // tallied into counts.pass (that would double-count the LoyaltyCustomer
-    // step's own cid creation under the wrong source).
-    const cidResult = await resolveIdentity({
-      ownerUserId: owner, type: 'cid', value: row.loyaltyCustomer.customerId,
-      slug: effectiveSlug, source: 'backfill_pass',
-    });
-    if (cidResult.error) { counts.pass.errors++; continue; }
-    if (!cidResult.customerId) {
-      counts.pass.wouldCreate++;
-      projection.newIdentityKeys.add(keyOf({ ownerUserId: owner, type: 'wallet_serial', value: row.serialNumber }));
-      continue;
-    }
-
-    const serialResult = await attachIdentity({
-      customerId: cidResult.customerId, ownerUserId: owner, type: 'wallet_serial',
-      value: row.serialNumber, slug: effectiveSlug, source: 'backfill_pass',
-    });
-    tally(counts.pass, serialResult);
   }
 }
 
@@ -315,13 +257,26 @@ async function backfillSubscribers(slugOwnerMap, counts) {
   }
 }
 
-async function checkDealClaims(counts) {
-  const totalRows = await prisma.dealClaim.count();
-  const rowsWithCid = await prisma.dealClaim.count({ where: { cid: { not: null } } });
+// Pass/Wallet historical backfill is intentionally out of scope for this
+// script — see the 2026-08-16 correction note at the top of this file.
+// Reports counts for visibility only; never queries anything requiring a
+// field/relation that doesn't exist in the deployed schema, and never
+// creates/attaches any identity from Pass data.
+async function reportPassSkipped(counts) {
+  const totalPassRows = await prisma.pass.count();
+  counts.pass = {
+    status: 'SKIPPED — NO DETERMINISTIC RELATIONSHIP IN CURRENT SCHEMA',
+    totalPassRows,
+    reason: 'Deployed Pass model has no loyaltyCustomerId FK or equivalent deterministic link to a canonical Customer. Reverse-parsing serialNumber, inferring by timestamp/business/device, or any probabilistic match is explicitly disallowed. Live Wallet dual-write (handleGenerateAppleWalletPass) already handles new/current customers correctly — this is a historical-data limitation, not an error.',
+  };
+}
+
+// DealClaim does not exist in the deployed schema — Deal features were not
+// part of this targeted deployment. Reported for visibility only.
+async function reportDealClaimNotApplicable(counts) {
   counts.dealClaim = {
-    totalRows,
-    rowsWithCid,
-    action: 'skipped — no live claim/redemption endpoint exists yet, so no deterministic proof ties a DealClaim.cid to a real redemption event',
+    status: 'NOT APPLICABLE — model does not exist in deployed schema',
+    reason: 'Deal features are not part of this targeted Customer Foundation deployment.',
   };
 }
 
@@ -331,12 +286,11 @@ async function main() {
 
   const counts = {
     loyaltyCustomer: freshCounter(),
-    loyaltyCustomerAlias: freshCounter(),
     webpush: freshCounter(),
     webpushEndpoint: freshCounter(),
-    pass: { ...freshCounter(), skippedOrphanFk: 0, skippedSlugMismatch: 0 },
     subscriber: freshCounter(),
     scan: { note: 'not processed by design — no identity signal exists on Scan rows' },
+    pass: null,
     dealClaim: null,
   };
 
@@ -344,15 +298,15 @@ async function main() {
 
   await backfillLoyaltyCustomers(slugOwnerMap, counts);
   await backfillWebPush(slugOwnerMap, counts);
-  await backfillPass(slugOwnerMap, counts);
   await backfillSubscribers(slugOwnerMap, counts);
-  await checkDealClaims(counts);
+  await reportPassSkipped(counts);
+  await reportDealClaimNotApplicable(counts);
 
   if (!APPLY) {
     counts.summary = {
       customersWouldBeCreated: projection.newCustomerKeys.size,
       customerIdentitiesWouldBeCreated: projection.newIdentityKeys.size,
-      note: 'Deduplicated by (ownerUserId, type, value) — Pass/alias rows that converge onto the same cid as a LoyaltyCustomer row are counted once, matching what --apply would actually do.',
+      note: 'Deduplicated by (ownerUserId, type, value). Pass/Wallet historical backfill is intentionally excluded from these totals — see counts.pass.',
     };
   }
 

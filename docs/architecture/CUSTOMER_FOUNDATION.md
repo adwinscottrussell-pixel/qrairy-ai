@@ -112,6 +112,20 @@ Reuses `customerIdentityService.js` exclusively — the script contains no indep
 
 **Not run against production.** Not committed as a migration (no schema change — Phase 1 already created these tables). No Customer-facing API or frontend change in this phase. Committed: `42cb715`.
 
+### Phase 3 — historical backfill scope correction (2026-08-16)
+
+The local validation above was performed against an earlier schema draft that included `LoyaltyCustomerAlias` and a `Pass.loyaltyCustomerId` FK. **Neither shipped in the targeted Customer Foundation production deployment.** Running the original script against the actually-deployed schema — local or production — throws immediately (`Unknown argument loyaltyCustomerId` / missing `loyaltyCustomerAlias` model), confirmed directly, not assumed.
+
+The script has been corrected to match the deployed schema:
+
+- `LoyaltyCustomerAlias` handling removed (model does not exist).
+- `DealClaim` inventory check removed (model does not exist; Deal features were never deployed).
+- **Historical `Pass`/Wallet backfill is intentionally out of scope**, not merely deferred pending a fix. The deployed `Pass` model has no deterministic FK to `LoyaltyCustomer` — `cid` is embedded only inside `serialNumber` (`sqr-{slug}-{cid}`), and reverse-parsing that is explicitly disallowed (slugs contain hyphens, making it ambiguous). There is currently no deterministic relationship to backfill historical Pass rows from. This is a historical-data limitation, **not a defect in Customer Foundation** — live Wallet dual-write (`handleGenerateAppleWalletPass`) continues to correctly attach new and current customers in real time; only pre-Phase-2 Wallet-only enrollments with no other matching identity remain outside canonical Customer Foundation until a future deterministic relationship exists.
+
+Corrected source matrix: `LoyaltyCustomer` → cid, `WebPushSubscription` (cid-present only) → cid + push_endpoint, `Subscriber` (email-present only) → email. `Pass` and `DealClaim` are reported for visibility only, never processed.
+
+Re-validated locally (idempotency, cross-tenant collision, already-canonical-Customer, missing-owner-skip, all confirmed via 1 dry run + 3 `--apply` runs with 0 duplicates/orphans afterward) and via a read-only projection against real production data. Still not run against production.
+
 ## Phase 4 — Canonical Customer Read API (backend only, not wired to UI)
 
 **No schema migration.** Every endpoint reads from tables Phase 1 already created; nothing new required.
