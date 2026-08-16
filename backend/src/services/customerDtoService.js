@@ -33,14 +33,20 @@ function groupIdentitiesByCustomer(identities) {
 // CustomerConsent has no deterministic Customer linkage yet, so this can
 // never be safely computed as true/false. null means "not determinable",
 // never "declined").
-// channels.push: existence of a push_endpoint identity. WebPushSubscription
-// has no active/expired flag in the schema, so this is presence-only, not
-// a liveness guarantee.
+// channels.push: `push_endpoint` identity presence, OR'd with a direct
+// WebPushSubscription lookup keyed by this Customer's own (slug, cid) pairs
+// — the same composite-key rule as loyaltyKey()/loyaltyMembershipsFor()
+// (cid is a shared-browser token with no tenant awareness at generation
+// time, so it is never safe to match by cid alone). No live write path
+// creates `push_endpoint` identities today (only the Phase 3 backfill,
+// not yet run, would), so in practice this is currently driven entirely by
+// the WebPushSubscription lookup; the identity check is kept so a future
+// backfill or a `push_endpoint`-writing hook doesn't silently regress this.
 // channels.wallet: `passExists` (a wallet_serial identity exists) vs
 // `installed` (a real PassDevice registration was found for that serial —
 // the only genuine "added to wallet" signal in the schema; Pass existing
 // alone only proves a pass was generated, not that it was installed).
-function deriveChannels(identitiesForCustomer, walletInstalledBySerial) {
+function deriveChannels(identitiesForCustomer, walletInstalledBySerial, webPushSubscribedPairs) {
   const byType = { email: [], push_endpoint: [], wallet_serial: [], cid: [] };
   for (const identity of identitiesForCustomer) {
     if (byType[identity.type]) byType[identity.type].push(identity);
@@ -49,6 +55,9 @@ function deriveChannels(identitiesForCustomer, walletInstalledBySerial) {
   const emailIdentity = byType.email[0] || null;
   const walletSerials = byType.wallet_serial.map((i) => i.value);
   const installed = walletSerials.some((serial) => walletInstalledBySerial.get(serial) === true);
+  const hasWebPushSubscription = byType.cid.some(
+    (i) => i.slug && webPushSubscribedPairs && webPushSubscribedPairs.has(i.slug + '|' + i.value)
+  );
 
   return {
     email: {
@@ -57,7 +66,7 @@ function deriveChannels(identitiesForCustomer, walletInstalledBySerial) {
       marketingAllowed: null, // not determinable — see module comment
     },
     push: {
-      subscribed: byType.push_endpoint.length > 0,
+      subscribed: byType.push_endpoint.length > 0 || hasWebPushSubscription,
     },
     wallet: {
       passExists: byType.wallet_serial.length > 0,
@@ -139,9 +148,9 @@ function loyaltyMembershipsFor(identities, loyaltyByIdentity) {
     .filter(Boolean);
 }
 
-function toListItemDto(customer, identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial) {
+function toListItemDto(customer, identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs) {
   const identities = identitiesByCustomer.get(customer.id) || [];
-  const channels = deriveChannels(identities, walletInstalledBySerial);
+  const channels = deriveChannels(identities, walletInstalledBySerial, webPushSubscribedPairs);
   const loyaltyMemberships = loyaltyMembershipsFor(identities, loyaltyByIdentity);
 
   return {
@@ -162,8 +171,8 @@ function toListItemDto(customer, identitiesByCustomer, loyaltyByIdentity, wallet
   };
 }
 
-function toDetailDto(customer, identities, loyaltyByIdentity, walletInstalledBySerial) {
-  const channels = deriveChannels(identities, walletInstalledBySerial);
+function toDetailDto(customer, identities, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs) {
+  const channels = deriveChannels(identities, walletInstalledBySerial, webPushSubscribedPairs);
   const loyaltyMemberships = loyaltyMembershipsFor(identities, loyaltyByIdentity);
   const slugsSeen = Array.from(new Set(identities.map((i) => i.slug).filter(Boolean)));
   const sortedByFirstSeen = identities.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));

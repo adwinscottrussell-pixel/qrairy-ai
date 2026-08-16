@@ -83,17 +83,43 @@ async function fetchWalletInstalledBySerial(serialValues) {
   return map;
 }
 
+// Same composite-key rule as loyaltyKey() — never key a WebPushSubscription
+// lookup by raw cid alone (see that function's comment for why).
+function webPushKey(slug, cid) { return slug + '|' + cid; }
+
+// Batch-check WebPushSubscription existence for a set of (slug, cid)
+// identity pairs, keyed by the same composite (slug, cid) convention as
+// loyaltyKey() — never by cid alone. cid is a shared-browser token with no
+// tenant awareness at generation time, so the exact same cid string can
+// legitimately belong to a different tenant's WebPushSubscription row under
+// a different slug; matching by cid alone would let that other tenant's
+// subscription make this Customer appear push-subscribed. Rows with a null
+// cid are excluded by the query itself and can never match.
+async function fetchWebPushSubscribedByIdentityPairs(cidIdentities) {
+  const set = new Set();
+  const pairs = cidIdentities.filter((i) => i.slug && i.value);
+  if (!pairs.length) return set;
+
+  const rows = await prisma.webPushSubscription.findMany({
+    where: { cid: { not: null }, OR: pairs.map((p) => ({ slug: p.slug, cid: p.value })) },
+    select: { slug: true, cid: true },
+  });
+  for (const row of rows) set.add(webPushKey(row.slug, row.cid));
+  return set;
+}
+
 async function hydrateRelated(customers) {
   const customerIds = customers.map((c) => c.id);
   const identitiesByCustomer = await fetchIdentitiesForCustomers(customerIds);
   const allIdentities = Array.from(identitiesByCustomer.values()).flat();
   const cidIdentities = allIdentities.filter((i) => i.type === 'cid');
   const walletSerials = Array.from(new Set(allIdentities.filter((i) => i.type === 'wallet_serial').map((i) => i.value)));
-  const [loyaltyByIdentity, walletInstalledBySerial] = await Promise.all([
+  const [loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs] = await Promise.all([
     fetchLoyaltyByIdentityPairs(cidIdentities),
     fetchWalletInstalledBySerial(walletSerials),
+    fetchWebPushSubscribedByIdentityPairs(cidIdentities),
   ]);
-  return { identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial };
+  return { identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs };
 }
 
 // Resolves a segment filter to an extra Prisma `where` fragment. Channel
@@ -105,7 +131,13 @@ async function hydrateRelated(customers) {
 async function resolveSegmentWhere(ownerUserId, segment) {
   switch (segment) {
     case 'email': return { identities: { some: { type: 'email' } } };
-    case 'push': return { identities: { some: { type: 'push_endpoint' } } };
+    case 'push': {
+      // push_endpoint kept as an OR'd compatibility fallback (see
+      // fetchWebPushSubscribedByIdentityPairs's comment) — WebPushSubscription
+      // via resolveWebPushCustomerIds is the real, current source of truth.
+      const ids = await resolveWebPushCustomerIds(ownerUserId);
+      return { OR: [{ identities: { some: { type: 'push_endpoint' } } }, { id: { in: ids } }] };
+    }
     case 'wallet': return { identities: { some: { type: 'wallet_serial' } } };
     case 'loyalty': {
       const ids = await resolveLoyaltyCustomerIds(ownerUserId);
@@ -153,6 +185,26 @@ async function resolveRewardReadyCustomerIds(ownerUserId) {
   return resolveLoyaltyCustomerIds(ownerUserId, true);
 }
 
+// cid identities -> WebPushSubscription -> back to Customer.id. Same shape
+// and same collision-safety reasoning as resolveLoyaltyCustomerIds(): two
+// bounded queries, matched by the composite (slug, cid) key via
+// webPushKey(), never by cid alone.
+async function resolveWebPushCustomerIds(ownerUserId) {
+  const cidIdentities = await prisma.customerIdentity.findMany({
+    where: { ownerUserId, type: 'cid', slug: { not: null } },
+    select: { customerId: true, value: true, slug: true },
+  });
+  if (!cidIdentities.length) return [];
+  const keyToCustomer = new Map(cidIdentities.map((i) => [webPushKey(i.slug, i.value), i.customerId]));
+  const subscriptions = await prisma.webPushSubscription.findMany({
+    where: { cid: { not: null }, OR: cidIdentities.map((i) => ({ slug: i.slug, cid: i.value })) },
+    select: { slug: true, cid: true },
+  });
+  return Array.from(new Set(
+    subscriptions.map((s) => keyToCustomer.get(webPushKey(s.slug, s.cid))).filter(Boolean)
+  ));
+}
+
 async function listCustomers({ ownerUserId, page, limit, search, segment, status }) {
   const { page: p, limit: l } = clampPagination(page, limit);
   const statuses = status ? [status] : DEFAULT_STATUSES;
@@ -178,10 +230,10 @@ async function listCustomers({ ownerUserId, page, limit, search, segment, status
     }),
   ]);
 
-  const { identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial } = await hydrateRelated(customers);
+  const { identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs } = await hydrateRelated(customers);
 
   return {
-    items: customers.map((c) => dto.toListItemDto(c, identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial)),
+    items: customers.map((c) => dto.toListItemDto(c, identitiesByCustomer, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs)),
     page: p,
     limit: l,
     total,
@@ -205,12 +257,13 @@ async function getCustomerDetail({ ownerUserId, customerId }) {
   });
   const cidIdentities = identities.filter((i) => i.type === 'cid');
   const walletSerials = Array.from(new Set(identities.filter((i) => i.type === 'wallet_serial').map((i) => i.value)));
-  const [loyaltyByIdentity, walletInstalledBySerial] = await Promise.all([
+  const [loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs] = await Promise.all([
     fetchLoyaltyByIdentityPairs(cidIdentities),
     fetchWalletInstalledBySerial(walletSerials),
+    fetchWebPushSubscribedByIdentityPairs(cidIdentities),
   ]);
 
-  return dto.toDetailDto(customer, identities, loyaltyByIdentity, walletInstalledBySerial);
+  return dto.toDetailDto(customer, identities, loyaltyByIdentity, walletInstalledBySerial, webPushSubscribedPairs);
 }
 
 async function getCustomerActivity({ ownerUserId, customerId }) {
@@ -230,17 +283,28 @@ async function getCustomerActivity({ ownerUserId, customerId }) {
 // is shared by push/wallet/loyalty flows, so it needs the same
 // cid->LoyaltyCustomer resolution the `loyalty` segment filter uses).
 async function getCustomerSummary({ ownerUserId }) {
-  const [totalCustomers, emailCustomers, pushCustomers, walletCustomers, loyaltyCustomerIds] = await Promise.all([
+  const [totalCustomers, emailCustomers, walletCustomers, loyaltyCustomerIds, webPushCustomerIds] = await Promise.all([
     prisma.customer.count({ where: { ownerUserId, status: 'active' } }),
     prisma.customer.count({ where: { ownerUserId, status: 'active', identities: { some: { type: 'email' } } } }),
-    prisma.customer.count({ where: { ownerUserId, status: 'active', identities: { some: { type: 'push_endpoint' } } } }),
     prisma.customer.count({ where: { ownerUserId, status: 'active', identities: { some: { type: 'wallet_serial' } } } }),
     resolveLoyaltyCustomerIds(ownerUserId),
+    resolveWebPushCustomerIds(ownerUserId),
   ]);
 
-  const loyaltyCustomers = loyaltyCustomerIds.length
-    ? await prisma.customer.count({ where: { id: { in: loyaltyCustomerIds }, ownerUserId, status: 'active' } })
-    : 0;
+  const [loyaltyCustomers, pushCustomers] = await Promise.all([
+    loyaltyCustomerIds.length
+      ? prisma.customer.count({ where: { id: { in: loyaltyCustomerIds }, ownerUserId, status: 'active' } })
+      : 0,
+    // push_endpoint kept as an OR'd compatibility fallback, same as the
+    // 'push' segment above — WebPushSubscription is the real source of truth.
+    prisma.customer.count({
+      where: {
+        ownerUserId,
+        status: 'active',
+        OR: [{ identities: { some: { type: 'push_endpoint' } } }, { id: { in: webPushCustomerIds } }],
+      },
+    }),
+  ]);
 
   return { totalCustomers, emailCustomers, pushCustomers, walletCustomers, loyaltyCustomers };
 }
