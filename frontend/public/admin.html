@@ -807,7 +807,10 @@
           <div class="page-title" id="sp-nd-title">—</div>
           <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-nd-sub"></div>
         </div>
-        <button class="refresh-btn" onclick="loadNetworkDetail(currentNetworkDetailId)">↻ Refresh</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openEditNetworkModal()">✎ <span data-i18n="sp_edit_network">Edit Network</span></button>
+          <button class="refresh-btn" onclick="loadNetworkDetail(currentNetworkDetailId)">↻ Refresh</button>
+        </div>
       </div>
       <div class="stats-grid" id="sp-nd-stats"></div>
       <div class="sp-tabs">
@@ -1015,12 +1018,54 @@
       </div>
       <div class="sp-form-row">
         <label class="modal-label" data-i18n="sp_col_type">Type</label>
-        <input class="sp-form-input" id="sp-network-type" placeholder="city_network" />
+        <select class="modal-select" id="sp-network-type">
+          <option value="local_network" data-i18n="sp_type_local_network">Local Network</option>
+          <option value="brand_network" data-i18n="sp_type_brand_network">Brand Network</option>
+          <option value="enterprise_network" data-i18n="sp_type_enterprise_network">Enterprise Network</option>
+        </select>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_network_type_helper">Network type describes the kind of network. Cities such as Ulm are added separately as Locations.</div>
       </div>
       <div id="sp-network-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
       <div class="modal-btns">
         <button class="modal-btn" onclick="closeModal('sp-network-modal')">Cancel</button>
         <button class="modal-btn primary" onclick="submitCreateNetwork()" data-i18n="sp_create_network">Create Network</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Network Modal -->
+  <div class="modal-overlay" id="sp-edit-network-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_edit_network">Edit Network</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_network">Network Name</label>
+        <input class="sp-form-input" id="sp-edit-network-name" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label">Slug</label>
+        <input class="sp-form-input" id="sp-edit-network-slug" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_type">Type</label>
+        <select class="modal-select" id="sp-edit-network-type">
+          <option value="local_network" data-i18n="sp_type_local_network">Local Network</option>
+          <option value="brand_network" data-i18n="sp_type_brand_network">Brand Network</option>
+          <option value="enterprise_network" data-i18n="sp_type_enterprise_network">Enterprise Network</option>
+        </select>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_network_type_helper">Network type describes the kind of network. Cities such as Ulm are added separately as Locations.</div>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_status">Status</label>
+        <select class="modal-select" id="sp-edit-network-status">
+          <option value="active" data-i18n="sp_status_active">Active</option>
+          <option value="paused" data-i18n="sp_status_paused">Paused</option>
+          <option value="archived" data-i18n="sp_status_archived">Archived</option>
+        </select>
+      </div>
+      <div id="sp-edit-network-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-edit-network-modal')">Cancel</button>
+        <button class="modal-btn primary" onclick="submitEditNetwork()" data-i18n="sp_edit_network">Edit Network</button>
       </div>
     </div>
   </div>
@@ -1951,6 +1996,7 @@
     let spNetworksCache = [];
     let spLocationsCache = [];
     let currentNetworkDetailId = null;
+    let currentNetworkDetailData = null;
     let currentLocationDetailId = null;
     let currentLocationNetworkId = null;
     let currentBusinessDetailId = null;
@@ -2003,7 +2049,7 @@
       tbody.innerHTML = networks.length ? networks.map(n => `
         <tr>
           <td class="td-name">${escapeHtml(n.name)}</td>
-          <td>${escapeHtml(n.type)}</td>
+          <td>${escapeHtml(networkTypeLabel(n.type))}</td>
           <td>${n.locationsCount}</td>
           <td>${n.businessesCount}</td>
           <td>${n.managersCount}</td>
@@ -2016,9 +2062,28 @@
     function openCreateNetworkModal() {
       document.getElementById('sp-network-name').value = '';
       document.getElementById('sp-network-slug').value = '';
-      document.getElementById('sp-network-type').value = '';
+      document.getElementById('sp-network-type').value = 'local_network';
       document.getElementById('sp-network-modal-error').textContent = '';
       openModal('sp-network-modal');
+    }
+
+    // Known stable Network.type values -> their i18n label key. `type` is
+    // free-text on the backend (no enum, no migration needed) — this is a
+    // display/UX convenience only. Values outside this map (e.g. a legacy
+    // typo like "Ulm", or the old "generic" default) fall back to showing
+    // the raw stored string, both in read-only displays and as an extra
+    // dropdown option in the Edit modal so the current value stays visible
+    // instead of being silently discarded.
+    const NETWORK_TYPE_I18N_KEYS = {
+      local_network: 'sp_type_local_network',
+      brand_network: 'sp_type_brand_network',
+      enterprise_network: 'sp_type_enterprise_network',
+    };
+    function networkTypeLabel(type) {
+      const key = NETWORK_TYPE_I18N_KEYS[type];
+      if (!key) return type;
+      const lang = window.QRAIVY_LANGUAGE || localStorage.getItem('qraivy_lang') || 'en';
+      return (SP_I18N[lang] || SP_I18N.en)[key] || type;
     }
 
     async function submitCreateNetwork() {
@@ -2050,8 +2115,9 @@
         return;
       }
       const n = result.data.network;
+      currentNetworkDetailData = n;
       document.getElementById('sp-nd-title').innerHTML = `${escapeHtml(n.name)} ${spStatusBadge(n.status)}`;
-      document.getElementById('sp-nd-sub').textContent = `${n.type} · ${n.slug}`;
+      document.getElementById('sp-nd-sub').textContent = `${networkTypeLabel(n.type)} · ${n.slug}`;
       document.getElementById('sp-nd-stats').innerHTML = `
         <div class="stat-card blue"><div class="stat-label">Locations</div><div class="stat-value">${n.locations.length}</div></div>
         <div class="stat-card purple"><div class="stat-label">Businesses</div><div class="stat-value">${n.businesses.length}</div></div>
@@ -2091,6 +2157,54 @@
       document.querySelectorAll('.sp-tab-panel').forEach(p => p.classList.remove('active'));
       event.currentTarget.classList.add('active');
       document.getElementById(`sp-nd-panel-${tab}`).classList.add('active');
+    }
+
+    function openEditNetworkModal() {
+      const n = currentNetworkDetailData;
+      if (!n) return;
+      document.getElementById('sp-edit-network-name').value = n.name || '';
+      document.getElementById('sp-edit-network-slug').value = n.slug || '';
+
+      const typeSelect = document.getElementById('sp-edit-network-type');
+      // Drop any leftover legacy option from a previous open, then, if the
+      // current value isn't one of the known stable types (e.g. the "Ulm"
+      // typo this feature exists to fix), add it back as a visible option
+      // instead of silently discarding it — the admin needs to see what's
+      // actually stored before they change it.
+      const legacyOption = typeSelect.querySelector('option[data-legacy]');
+      if (legacyOption) legacyOption.remove();
+      if (n.type && !NETWORK_TYPE_I18N_KEYS[n.type]) {
+        const opt = document.createElement('option');
+        opt.value = n.type;
+        opt.textContent = `${n.type} (current)`;
+        opt.setAttribute('data-legacy', '1');
+        typeSelect.prepend(opt);
+      }
+      typeSelect.value = n.type || 'local_network';
+
+      document.getElementById('sp-edit-network-status').value = n.status || 'active';
+      document.getElementById('sp-edit-network-modal-error').textContent = '';
+      openModal('sp-edit-network-modal');
+    }
+
+    async function submitEditNetwork() {
+      const name = document.getElementById('sp-edit-network-name').value.trim();
+      const slug = document.getElementById('sp-edit-network-slug').value.trim();
+      const type = document.getElementById('sp-edit-network-type').value;
+      const status = document.getElementById('sp-edit-network-status').value;
+      const errEl = document.getElementById('sp-edit-network-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/networks/${currentNetworkDetailId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ name, slug, type, status }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to update network.'; return; }
+        closeModal('sp-edit-network-modal');
+        loadNetworkDetail(currentNetworkDetailId);
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
     // ── LOCATIONS ─────────────────────────────────────────────
@@ -2414,6 +2528,7 @@
         nav_networks: 'Networks', nav_locations: 'Locations', nav_businesses: 'Businesses', nav_managers: 'Managers',
         sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
         sp_create_network: 'Create Network', sp_add_location: 'Add Location',
+        sp_edit_network: 'Edit Network',
         sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
         sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
         sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner',
@@ -2421,6 +2536,8 @@
         sp_col_memberships: 'Network / Location', sp_col_pages: 'Landing Pages',
         sp_businesses_in_location: 'Businesses in this Location',
         sp_type_city: 'City', sp_type_mall: 'Mall', sp_type_district: 'District', sp_type_generic: 'Generic',
+        sp_type_local_network: 'Local Network', sp_type_brand_network: 'Brand Network', sp_type_enterprise_network: 'Enterprise Network',
+        sp_network_type_helper: 'Network type describes the kind of network. Cities such as Ulm are added separately as Locations.',
         sp_status_active: 'Active', sp_status_paused: 'Paused', sp_status_archived: 'Archived',
       },
       de: {
@@ -2428,6 +2545,7 @@
         nav_networks: 'Netzwerke', nav_locations: 'Standorte', nav_businesses: 'Unternehmen', nav_managers: 'Manager',
         sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
         sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
+        sp_edit_network: 'Netzwerk bearbeiten',
         sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
         sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
         sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber',
@@ -2435,6 +2553,8 @@
         sp_col_memberships: 'Netzwerk / Standort', sp_col_pages: 'Landing Pages',
         sp_businesses_in_location: 'Unternehmen an diesem Standort',
         sp_type_city: 'Stadt', sp_type_mall: 'Einkaufszentrum', sp_type_district: 'Bezirk', sp_type_generic: 'Allgemein',
+        sp_type_local_network: 'Lokales Netzwerk', sp_type_brand_network: 'Marken-Netzwerk', sp_type_enterprise_network: 'Unternehmens-Netzwerk',
+        sp_network_type_helper: 'Der Netzwerktyp beschreibt die Art des Netzwerks. Städte wie Ulm werden separat als Standorte hinzugefügt.',
         sp_status_active: 'Aktiv', sp_status_paused: 'Pausiert', sp_status_archived: 'Archiviert',
       },
     };
