@@ -1,5 +1,12 @@
 # Current Sprint
 
+> **2026-08-16 addendum** — a separate work stream (`deploy/customer-foundation-phase1-4`
+> → `main`, not this file's `preview/sprint-2d-smart-qr-renderer` branch)
+> shipped Customer Foundation and Stadt Pocket Phase 1A to production, and
+> built Stadt Pocket Phase 1B (Operations Center Network/Location/Business/
+> Manager admin) on a new preview branch pending founder visual approval. See
+> `docs/architecture/NETWORK_LOCATION_FOUNDATION.md`. Unrelated to MC-2 below.
+
 None active — MC-1 (Mission Control foundation) complete, committed, and
 pushed. MC-2 not yet scoped or approved. Do not begin MC-2.
 

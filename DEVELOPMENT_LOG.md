@@ -74,3 +74,32 @@ cards for Businesses/Users/Subscribers/Wallet Passes/QR Codes
 (duplicate Landing Pages group intentionally not rendered). No backend,
 Prisma, or route changes.
 Commit: none yet — do not commit until founder approval is given.
+
+---
+
+**2026-08-16 — Stadt Pocket Phase 1A: Network/Location/Business foundation — PRODUCTION**
+Status: DONE, LIVE IN PRODUCTION
+Separate work stream (`deploy/customer-foundation-phase1-4` → `main`, not
+this branch). Additive schema (`Network`, `Location`, `Business`,
+`BusinessMember`, `BusinessLocation`, `NetworkMember`, nullable
+`LandingPage.businessId`) migrated to production; Business compatibility
+backfill run (3 Businesses / 3 BusinessMembers / 5 LandingPages linked,
+idempotency proven). `Customer.ownerUserId`/`LandingPage.userId` scoping
+unchanged. See `docs/architecture/NETWORK_LOCATION_FOUNDATION.md`.
+Commit: `217403e` (promoted to `main`, previous `main` SHA `3be60c9`).
+
+---
+
+**2026-08-16 — Stadt Pocket Phase 1B: Operations Center Network/Location/Business/Manager admin**
+Status: IMPLEMENTED, TESTED, NOT DEPLOYED — pending founder visual approval
+Extends `admin.html` with a new STADT POCKET nav group (Networks,
+Locations, Businesses, Managers), platform-owner-only, `requireAdmin`-
+protected. New service `backend/src/services/networkAdminService.js` +
+routes in `adminRoutes.js`. Renamed the pre-existing "All Customers" nav
+item/page to "Business Accounts" to resolve the naming collision with
+Customer Foundation's end-consumer `Customer` concept (label-only, no
+model/route change). 48 new tests (43 service + 5 route-auth), full
+regression suite green. See
+`docs/architecture/NETWORK_LOCATION_FOUNDATION.md` § Phase 1B.
+Branch: `preview/stadt-pocket-phase1b-operations-center` (off `main` at
+`217403e`). Commit: see branch history — not merged to `main`.

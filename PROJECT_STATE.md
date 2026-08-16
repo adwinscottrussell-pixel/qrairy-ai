@@ -1,5 +1,18 @@
 # QRAIVY — Project State
 
+> **2026-08-16 production addendum** (does not rewrite the Mission
+> Control narrative below, which tracks `preview/sprint-2d-smart-qr-renderer`
+> separately): `main` is now well ahead of the `e7d209b` snapshot this file
+> otherwise describes. Customer Foundation (Phases 1-4) and the Stadt Pocket
+> **Phase 1A Network/Location/Business foundation are both live in
+> production** — see `docs/architecture/CUSTOMER_FOUNDATION.md` and
+> `docs/architecture/NETWORK_LOCATION_FOUNDATION.md` for full detail.
+> Stadt Pocket **Phase 1B** (Operations Center platform-admin UI for
+> Networks/Locations/Businesses/Managers) is implemented and tested on a new
+> preview branch (`preview/stadt-pocket-phase1b-operations-center`, off
+> `main` at `217403e`) — **not merged, not deployed**, pending founder visual
+> review of the preview.
+
 > Canonical project snapshot for Claude Code sessions. Complements
 > `CLAUDE.md` (rules/conventions) and `docs/` (durable architecture) —
 > does not duplicate them. Update this file at the end of each sprint.

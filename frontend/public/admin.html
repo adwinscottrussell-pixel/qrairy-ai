@@ -346,6 +346,61 @@
     .modal-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .modal-btn:hover { border-color: var(--accent); color: var(--accent); }
     .modal-btn.primary:hover { background: #ff7a45; }
+
+    /* ── Stadt Pocket: status badges, tags, detail tabs ── */
+    .status-badge {
+      font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+    }
+    .status-badge.active { background: rgba(34,197,94,0.2); color: var(--green); }
+    .status-badge.paused { background: rgba(245,158,11,0.2); color: var(--yellow); }
+    .status-badge.archived { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .tag-standalone {
+      font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+      background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3);
+    }
+    .sp-back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-dim); font-size: 0.72rem; cursor: pointer;
+      margin-bottom: 14px; background: none; border: none; font-family: var(--font-mono);
+    }
+    .sp-back-link:hover { color: var(--accent); }
+    .sp-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .sp-tab {
+      padding: 9px 16px; font-size: 0.75rem; color: var(--text-mid);
+      cursor: pointer; border: none; background: none; font-family: var(--font-mono);
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .sp-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .sp-tab-panel { display: none; }
+    .sp-tab-panel.active { display: block; }
+    .sp-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .sp-filters select, .sp-filters input {
+      padding: 7px 12px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: var(--font-mono);
+      font-size: 0.72rem; outline: none;
+    }
+    .sp-form-row { margin-bottom: 4px; }
+    .sp-form-input {
+      width: 100%; padding: 10px 12px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text); font-family: var(--font-mono); font-size: 0.82rem;
+      outline: none; margin-top: 6px;
+    }
+    .sp-lang-toggle {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 6px; padding: 5px 10px; font-size: 0.65rem;
+      cursor: pointer; font-family: var(--font-mono); margin-left: 8px;
+    }
+    .sp-lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .sp-empty { font-size: 0.75rem; color: var(--text-dim); padding: 24px 20px; text-align: center; }
+    @media (max-width: 640px) {
+      .sp-filters { flex-direction: column; }
+      .sp-filters select, .sp-filters input { width: 100%; }
+      .sp-tabs { overflow-x: auto; white-space: nowrap; }
+    }
   </style>
   
 </head>
@@ -391,7 +446,7 @@
 
       <div class="sb-section">Users</div>
       <button class="sb-item" onclick="showPage('users')">
-        <span class="sb-icon">👥</span> All Customers
+        <span class="sb-icon">👥</span> <span data-i18n="nav_business_accounts">Business Accounts</span>
       </button>
       <button class="sb-item" onclick="showPage('api-keys')">
         <span class="sb-icon">🔑</span> API Keys
@@ -415,11 +470,26 @@
       <button class="sb-item" onclick="showPage('logs')">
         <span class="sb-icon">📋</span> Error Logs
       </button>
+
+      <div class="sb-section">Stadt Pocket</div>
+      <button class="sb-item" onclick="showPage('sp-networks')">
+        <span class="sb-icon">🌐</span> <span data-i18n="nav_networks">Networks</span>
+      </button>
+      <button class="sb-item" onclick="showPage('sp-locations')">
+        <span class="sb-icon">📍</span> <span data-i18n="nav_locations">Locations</span>
+      </button>
+      <button class="sb-item" onclick="showPage('sp-businesses')">
+        <span class="sb-icon">🏢</span> <span data-i18n="nav_businesses">Businesses</span>
+      </button>
+      <button class="sb-item" onclick="showPage('sp-managers')">
+        <span class="sb-icon">🧑‍💼</span> <span data-i18n="nav_managers">Managers</span>
+      </button>
     </nav>
     <div class="sb-footer">
       <button class="sb-signout" onclick="signOut()">
         <span>→</span> Sign Out
       </button>
+      <button class="sp-lang-toggle" onclick="toggleSpLang()" id="sp-lang-toggle-btn" title="Stadt Pocket section language">EN / DE</button>
     </div>
   </div>
 
@@ -521,7 +591,7 @@
     <!-- USERS -->
     <div class="page" id="page-users">
       <div class="page-header">
-        <div class="page-title">All <span>Customers</span></div>
+        <div class="page-title">Business <span>Accounts</span></div>
         <div style="display:flex;align-items:center;gap:10px">
           <input type="text" class="search-input" id="user-search" placeholder="Search by email..." oninput="filterUsers()" />
           <button class="refresh-btn" onclick="downloadUsersCSV()">⬇ Export CSV</button>
@@ -530,7 +600,7 @@
       </div>
       <div class="table-wrap">
         <div class="table-header">
-          <div class="table-title">Customers</div>
+          <div class="table-title" data-i18n="nav_business_accounts">Business Accounts</div>
           <span class="table-count" id="users-count">—</span>
         </div>
         <table>
@@ -688,7 +758,350 @@
       </div>
     </div>
 
+    <!-- STADT POCKET: NETWORKS -->
+    <div class="page" id="page-sp-networks">
+      <div class="page-header">
+        <div>
+          <div class="page-title" data-i18n="nav_networks">Networks</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" data-i18n="sp_networks_sub">Manage Stadt Pocket and other QRAIVY-operated networks.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openCreateNetworkModal()">+ <span data-i18n="sp_create_network">Create Network</span></button>
+          <button class="refresh-btn" onclick="loadNetworksPage()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="stats-grid" id="sp-networks-stats"><div class="loading">Loading...</div></div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title" data-i18n="nav_networks">Networks</div>
+          <span class="table-count" id="sp-networks-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sp_col_network">Network</th>
+              <th data-i18n="sp_col_type">Type</th>
+              <th data-i18n="nav_locations">Locations</th>
+              <th data-i18n="nav_businesses">Businesses</th>
+              <th data-i18n="nav_managers">Managers</th>
+              <th data-i18n="sp_col_status">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sp-networks-body"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: NETWORK DETAIL -->
+    <div class="page" id="page-sp-network-detail">
+      <button class="sp-back-link" onclick="showPage('sp-networks')">← <span data-i18n="nav_networks">Networks</span></button>
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="sp-nd-title">—</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-nd-sub"></div>
+        </div>
+        <button class="refresh-btn" onclick="loadNetworkDetail(currentNetworkDetailId)">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="sp-nd-stats"></div>
+      <div class="sp-tabs">
+        <button class="sp-tab active" onclick="showNetworkDetailTab('locations')" data-i18n="nav_locations">Locations</button>
+        <button class="sp-tab" onclick="showNetworkDetailTab('businesses')" data-i18n="nav_businesses">Businesses</button>
+        <button class="sp-tab" onclick="showNetworkDetailTab('managers')" data-i18n="nav_managers">Managers</button>
+      </div>
+      <div class="sp-tab-panel active" id="sp-nd-panel-locations">
+        <table>
+          <thead><tr><th data-i18n="sp_col_location">Location</th><th data-i18n="sp_col_type">Type</th><th data-i18n="nav_businesses">Businesses</th><th data-i18n="sp_col_status">Status</th><th></th></tr></thead>
+          <tbody id="sp-nd-locations-body"></tbody>
+        </table>
+      </div>
+      <div class="sp-tab-panel" id="sp-nd-panel-businesses">
+        <table>
+          <thead><tr><th data-i18n="sp_col_business">Business</th><th data-i18n="sp_col_owner">Primary Owner</th><th data-i18n="sp_col_status">Status</th><th></th></tr></thead>
+          <tbody id="sp-nd-businesses-body"></tbody>
+        </table>
+      </div>
+      <div class="sp-tab-panel" id="sp-nd-panel-managers">
+        <table>
+          <thead><tr><th data-i18n="sp_col_manager">Manager</th><th data-i18n="sp_col_role">Role</th><th data-i18n="sp_col_location">Location</th><th></th></tr></thead>
+          <tbody id="sp-nd-managers-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: LOCATIONS -->
+    <div class="page" id="page-sp-locations">
+      <div class="page-header">
+        <div class="page-title" data-i18n="nav_locations">Locations</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openAddLocationModal()">+ <span data-i18n="sp_add_location">Add Location</span></button>
+          <button class="refresh-btn" onclick="loadLocationsPage()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="sp-filters">
+        <select id="sp-loc-filter-network" onchange="loadLocationsPage()"><option value="">All Networks</option></select>
+        <select id="sp-loc-filter-type" onchange="loadLocationsPage()">
+          <option value="">All Types</option>
+          <option value="city" data-i18n="sp_type_city">City</option>
+          <option value="mall" data-i18n="sp_type_mall">Mall</option>
+          <option value="district" data-i18n="sp_type_district">District</option>
+          <option value="generic" data-i18n="sp_type_generic">Generic</option>
+        </select>
+        <select id="sp-loc-filter-status" onchange="loadLocationsPage()">
+          <option value="">All Statuses</option>
+          <option value="active" data-i18n="sp_status_active">Active</option>
+          <option value="paused" data-i18n="sp_status_paused">Paused</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title" data-i18n="nav_locations">Locations</div>
+          <span class="table-count" id="sp-locations-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sp_col_location">Location</th>
+              <th data-i18n="sp_col_network">Network</th>
+              <th data-i18n="sp_col_type">Type</th>
+              <th data-i18n="nav_businesses">Businesses</th>
+              <th data-i18n="nav_managers">Manager(s)</th>
+              <th data-i18n="sp_col_status">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sp-locations-body"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: LOCATION DETAIL -->
+    <div class="page" id="page-sp-location-detail">
+      <button class="sp-back-link" onclick="showPage('sp-locations')">← <span data-i18n="nav_locations">Locations</span></button>
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="sp-ld-title">—</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-ld-sub"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openAssignBusinessModal(null, currentLocationDetailId)">+ <span data-i18n="sp_assign_business">Assign Business</span></button>
+          <button class="refresh-btn" onclick="openAssignManagerModal(currentLocationNetworkId, currentLocationDetailId)">+ <span data-i18n="sp_assign_manager">Assign Manager</span></button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title" data-i18n="sp_businesses_in_location">Businesses in this Location</div></div>
+        <table>
+          <thead><tr><th data-i18n="sp_col_business">Business</th><th data-i18n="sp_col_owner">Primary Owner</th><th data-i18n="sp_col_status">Status</th><th></th></tr></thead>
+          <tbody id="sp-ld-businesses-body"></tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title" data-i18n="sp_col_manager">Manager(s)</div></div>
+        <table>
+          <thead><tr><th data-i18n="sp_col_manager">Manager</th><th data-i18n="sp_col_role">Role</th><th></th></tr></thead>
+          <tbody id="sp-ld-managers-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: BUSINESSES -->
+    <div class="page" id="page-sp-businesses">
+      <div class="page-header">
+        <div class="page-title" data-i18n="nav_businesses">Businesses</div>
+        <button class="refresh-btn" onclick="loadBusinessesPage()">↻ Refresh</button>
+      </div>
+      <div class="sp-filters">
+        <select id="sp-biz-filter-network" onchange="loadBusinessesPage()"><option value="">All Networks</option></select>
+        <select id="sp-biz-filter-location" onchange="loadBusinessesPage()"><option value="">All Locations</option></select>
+        <select id="sp-biz-filter-status" onchange="loadBusinessesPage()">
+          <option value="">All Statuses</option>
+          <option value="active" data-i18n="sp_status_active">Active</option>
+          <option value="paused" data-i18n="sp_status_paused">Paused</option>
+          <option value="archived" data-i18n="sp_status_archived">Archived</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title" data-i18n="nav_businesses">Businesses</div>
+          <span class="table-count" id="sp-businesses-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sp_col_business">Business</th>
+              <th data-i18n="sp_col_owner">Primary Owner</th>
+              <th data-i18n="sp_col_memberships">Network / Location</th>
+              <th data-i18n="sp_col_pages">Landing Pages</th>
+              <th data-i18n="sp_col_status">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sp-businesses-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: BUSINESS DETAIL -->
+    <div class="page" id="page-sp-business-detail">
+      <button class="sp-back-link" onclick="showPage('sp-businesses')">← <span data-i18n="nav_businesses">Businesses</span></button>
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="sp-bd-title">—</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-bd-sub"></div>
+        </div>
+        <button class="refresh-btn" onclick="openAssignBusinessModal(currentBusinessDetailId, null)">+ <span data-i18n="sp_assign_business">Assign to Location</span></button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title" data-i18n="sp_col_memberships">Network / Location Memberships</div></div>
+        <div id="sp-bd-memberships" style="padding:14px 20px"></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title" data-i18n="sp_col_pages">Landing Pages</div></div>
+        <div id="sp-bd-pages" style="padding:14px 20px"></div>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: MANAGERS -->
+    <div class="page" id="page-sp-managers">
+      <div class="page-header">
+        <div class="page-title" data-i18n="nav_managers">Managers</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openAssignManagerModal(null, null)">+ <span data-i18n="sp_assign_manager">Assign Manager</span></button>
+          <button class="refresh-btn" onclick="loadManagersPage()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="sp-filters">
+        <select id="sp-mgr-filter-network" onchange="loadManagersPage()"><option value="">All Networks</option></select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title" data-i18n="nav_managers">Managers</div>
+          <span class="table-count" id="sp-managers-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sp_col_manager">Manager</th>
+              <th data-i18n="sp_col_role">Role</th>
+              <th data-i18n="sp_col_network">Network</th>
+              <th data-i18n="sp_col_location">Location</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sp-managers-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /main -->
+
+  <!-- Create Network Modal -->
+  <div class="modal-overlay" id="sp-network-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_create_network">Create Network</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_network">Network Name</label>
+        <input class="sp-form-input" id="sp-network-name" placeholder="Stadt Pocket" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label">Slug</label>
+        <input class="sp-form-input" id="sp-network-slug" placeholder="stadt-pocket" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_type">Type</label>
+        <input class="sp-form-input" id="sp-network-type" placeholder="city_network" />
+      </div>
+      <div id="sp-network-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-network-modal')">Cancel</button>
+        <button class="modal-btn primary" onclick="submitCreateNetwork()" data-i18n="sp_create_network">Create Network</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Location Modal -->
+  <div class="modal-overlay" id="sp-location-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_add_location">Add Location</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_network">Network</label>
+        <select class="modal-select" id="sp-location-network"></select>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_name">Name</label>
+        <input class="sp-form-input" id="sp-location-name" placeholder="Ulm" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label">Slug</label>
+        <input class="sp-form-input" id="sp-location-slug" placeholder="ulm" />
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_type">Type</label>
+        <select class="modal-select" id="sp-location-type">
+          <option value="city" data-i18n="sp_type_city">City</option>
+          <option value="mall" data-i18n="sp_type_mall">Mall</option>
+          <option value="district" data-i18n="sp_type_district">District</option>
+          <option value="generic" data-i18n="sp_type_generic">Generic</option>
+        </select>
+      </div>
+      <div id="sp-location-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-location-modal')">Cancel</button>
+        <button class="modal-btn primary" onclick="submitAddLocation()" data-i18n="sp_add_location">Add Location</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Business to Location Modal -->
+  <div class="modal-overlay" id="sp-assign-business-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_assign_business">Assign Business</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_business">Business</label>
+        <select class="modal-select" id="sp-assign-business-select"></select>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_location">Location</label>
+        <select class="modal-select" id="sp-assign-location-select"></select>
+      </div>
+      <div id="sp-assign-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-assign-business-modal')">Cancel</button>
+        <button class="modal-btn primary" onclick="submitAssignBusiness()" data-i18n="sp_assign_business">Assign Business</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Manager Modal -->
+  <div class="modal-overlay" id="sp-assign-manager-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_assign_manager">Assign Manager</div>
+      <div class="sp-form-row">
+        <label class="modal-label">Clerk User</label>
+        <select class="modal-select" id="sp-assign-manager-user"></select>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_network">Network</label>
+        <select class="modal-select" id="sp-assign-manager-network" onchange="populateManagerLocationOptions()"></select>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_location">Location (optional — leave blank for network-wide)</label>
+        <select class="modal-select" id="sp-assign-manager-location"><option value="">— Network-wide —</option></select>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_role">Role</label>
+        <select class="modal-select" id="sp-assign-manager-role">
+          <option value="network_admin">network_admin</option>
+          <option value="location_manager">location_manager</option>
+        </select>
+      </div>
+      <div id="sp-assign-manager-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-assign-manager-modal')">Cancel</button>
+        <button class="modal-btn primary" onclick="submitAssignManager()" data-i18n="sp_assign_manager">Assign Manager</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const API_BASE = 'https://api.qraivy.com';
@@ -724,8 +1137,26 @@
         'qr-analytics': loadQRAnalytics,
         health: loadHealth,
         logs: loadLogs,
+        'sp-networks': loadNetworksPage,
+        'sp-locations': loadLocationsPage,
+        'sp-businesses': loadBusinessesPage,
+        'sp-managers': loadManagersPage,
       };
       if (loaders[name]) loaders[name]();
+    }
+
+    // Navigates to a page that has no sidebar button of its own (detail
+    // drill-ins) without relying on the global `event` object showPage()
+    // above uses — safe to call from any JS context, not just onclick.
+    function showSubPage(pageName, sidebarPageName) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+      document.getElementById(`page-${pageName}`).classList.add('active');
+      if (sidebarPageName) {
+        const btn = Array.from(document.querySelectorAll('.sb-item'))
+          .find(b => b.getAttribute('onclick') === `showPage('${sidebarPageName}')`);
+        if (btn) btn.classList.add('active');
+      }
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -1287,7 +1718,7 @@
 
     // ── CSV Export ───────────────────────────────────────────
     function downloadUsersCSV() {
-      if (!allUsers.length) { alert('Load users first — click All Customers then Refresh.'); return; }
+      if (!allUsers.length) { alert('Load accounts first — click Business Accounts then Refresh.'); return; }
       const headers = ['User ID','Email','Plan','QR Codes','Scans','Subscribers','Joined','Stripe Customer ID','Subscription Status'];
       const rows = allUsers.map(u => [
         u.id, u.email || '', u.plan,
@@ -1509,6 +1940,514 @@
       const actions = copyBtn('Copy ID', qr.id);
       return resultCard(title, sub, status, actions);
     }
+
+    // ── STADT POCKET: Networks / Locations / Businesses / Managers ────
+    let spNetworksCache = [];
+    let spLocationsCache = [];
+    let currentNetworkDetailId = null;
+    let currentLocationDetailId = null;
+    let currentLocationNetworkId = null;
+    let currentBusinessDetailId = null;
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function spStatusBadge(status) {
+      return `<span class="status-badge ${escapeHtml(status || '')}">${escapeHtml(status || '—')}</span>`;
+    }
+    function optionsHtml(items, valueFn, labelFn) {
+      return items.map(i => `<option value="${escapeHtml(valueFn(i))}">${escapeHtml(labelFn(i))}</option>`).join('');
+    }
+
+    // Keeps the Network/Location filter <select> elements across all four
+    // Stadt Pocket pages in sync with the real current Network list —
+    // fetched once per page load, not hard-coded.
+    async function refreshNetworkOptionsEverywhere() {
+      const result = await safeFetchAdmin('/admin/networks');
+      spNetworksCache = result.ok ? (result.data.networks || []) : [];
+      const netOptionsHtml = '<option value="">All Networks</option>' +
+        optionsHtml(spNetworksCache, n => n.id, n => n.name);
+      ['sp-loc-filter-network', 'sp-biz-filter-network', 'sp-mgr-filter-network'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const v = el.value; el.innerHTML = netOptionsHtml; el.value = v; }
+      });
+      const plainNetOptions = optionsHtml(spNetworksCache, n => n.id, n => n.name);
+      ['sp-location-network', 'sp-assign-manager-network'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = plainNetOptions;
+      });
+    }
+
+    // ── NETWORKS ──────────────────────────────────────────────
+    async function loadNetworksPage() {
+      await refreshNetworkOptionsEverywhere();
+      const networks = spNetworksCache;
+      document.getElementById('sp-networks-count').textContent = `${networks.length} networks`;
+
+      const totalLocations = networks.reduce((s, n) => s + (n.locationsCount || 0), 0);
+      const totalBusinesses = networks.reduce((s, n) => s + (n.businessesCount || 0), 0);
+      const totalManagers = networks.reduce((s, n) => s + (n.managersCount || 0), 0);
+      document.getElementById('sp-networks-stats').innerHTML = `
+        <div class="stat-card orange"><div class="stat-label">Total Networks</div><div class="stat-value">${networks.length}</div></div>
+        <div class="stat-card blue"><div class="stat-label">Locations</div><div class="stat-value">${totalLocations}</div></div>
+        <div class="stat-card purple"><div class="stat-label">Businesses</div><div class="stat-value">${totalBusinesses}</div></div>
+        <div class="stat-card green"><div class="stat-label">Managers</div><div class="stat-value">${totalManagers}</div></div>
+      `;
+
+      const tbody = document.getElementById('sp-networks-body');
+      tbody.innerHTML = networks.length ? networks.map(n => `
+        <tr>
+          <td class="td-name">${escapeHtml(n.name)}</td>
+          <td>${escapeHtml(n.type)}</td>
+          <td>${n.locationsCount}</td>
+          <td>${n.businessesCount}</td>
+          <td>${n.managersCount}</td>
+          <td>${spStatusBadge(n.status)}</td>
+          <td><button class="action-btn" onclick="loadNetworkDetail('${n.id}')">Open →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="7" class="sp-empty">No networks yet. Create the first one.</td></tr>`;
+    }
+
+    function openCreateNetworkModal() {
+      document.getElementById('sp-network-name').value = '';
+      document.getElementById('sp-network-slug').value = '';
+      document.getElementById('sp-network-type').value = '';
+      document.getElementById('sp-network-modal-error').textContent = '';
+      openModal('sp-network-modal');
+    }
+
+    async function submitCreateNetwork() {
+      const name = document.getElementById('sp-network-name').value.trim();
+      const slug = document.getElementById('sp-network-slug').value.trim();
+      const type = document.getElementById('sp-network-type').value.trim();
+      const errEl = document.getElementById('sp-network-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/networks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ name, slug, type: type || undefined }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to create network.'; return; }
+        closeModal('sp-network-modal');
+        loadNetworksPage();
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // ── NETWORK DETAIL ────────────────────────────────────────
+    async function loadNetworkDetail(id) {
+      currentNetworkDetailId = id;
+      showSubPage('sp-network-detail', 'sp-networks');
+      const result = await safeFetchAdmin(`/admin/networks/${id}`);
+      if (!result.ok) {
+        document.getElementById('sp-nd-title').textContent = adminErrorMessage(result);
+        return;
+      }
+      const n = result.data.network;
+      document.getElementById('sp-nd-title').innerHTML = `${escapeHtml(n.name)} ${spStatusBadge(n.status)}`;
+      document.getElementById('sp-nd-sub').textContent = `${n.type} · ${n.slug}`;
+      document.getElementById('sp-nd-stats').innerHTML = `
+        <div class="stat-card blue"><div class="stat-label">Locations</div><div class="stat-value">${n.locations.length}</div></div>
+        <div class="stat-card purple"><div class="stat-label">Businesses</div><div class="stat-value">${n.businesses.length}</div></div>
+        <div class="stat-card green"><div class="stat-label">Managers</div><div class="stat-value">${n.managers.length}</div></div>
+      `;
+      document.getElementById('sp-nd-locations-body').innerHTML = n.locations.length ? n.locations.map(l => `
+        <tr>
+          <td class="td-name">${escapeHtml(l.name)}</td>
+          <td>${escapeHtml(l.type)}</td>
+          <td>${l.businessesCount}</td>
+          <td>${spStatusBadge(l.status)}</td>
+          <td><button class="action-btn" onclick="loadLocationDetail('${l.id}')">Open →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="sp-empty">No locations yet.</td></tr>`;
+
+      document.getElementById('sp-nd-businesses-body').innerHTML = n.businesses.length ? n.businesses.map(b => `
+        <tr>
+          <td class="td-name">${escapeHtml(b.name)}</td>
+          <td class="td-email">${escapeHtml(b.primaryOwnerUserId)}</td>
+          <td>${spStatusBadge(b.status)}</td>
+          <td><button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses in this network yet.</td></tr>`;
+
+      document.getElementById('sp-nd-managers-body').innerHTML = n.managers.length ? n.managers.map(m => `
+        <tr>
+          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+          <td>${escapeHtml(m.role)}</td>
+          <td>${m.locationId ? escapeHtml(n.locations.find(l => l.id === m.locationId)?.name || m.locationId) : '<span style="color:var(--text-dim)">Network-wide</span>'}</td>
+          <td><button class="action-btn danger" onclick="removeManager('${m.id}', () => loadNetworkDetail('${id}'))">Remove</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="sp-empty">No managers assigned yet.</td></tr>`;
+    }
+
+    function showNetworkDetailTab(tab) {
+      document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.sp-tab-panel').forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById(`sp-nd-panel-${tab}`).classList.add('active');
+    }
+
+    // ── LOCATIONS ─────────────────────────────────────────────
+    async function loadLocationsPage() {
+      await refreshNetworkOptionsEverywhere();
+      const networkId = document.getElementById('sp-loc-filter-network').value;
+      const type = document.getElementById('sp-loc-filter-type').value;
+      const status = document.getElementById('sp-loc-filter-status').value;
+      const params = new URLSearchParams();
+      if (networkId) params.set('networkId', networkId);
+      if (type) params.set('type', type);
+      if (status) params.set('status', status);
+
+      const result = await safeFetchAdmin(`/admin/locations?${params.toString()}`);
+      const tbody = document.getElementById('sp-locations-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        return;
+      }
+      spLocationsCache = result.data.locations || [];
+      document.getElementById('sp-locations-count').textContent = `${spLocationsCache.length} locations`;
+      tbody.innerHTML = spLocationsCache.length ? spLocationsCache.map(l => `
+        <tr>
+          <td class="td-name">${escapeHtml(l.name)}</td>
+          <td>${escapeHtml(l.network?.name || l.networkId)}</td>
+          <td>${escapeHtml(l.type)}</td>
+          <td>${l.businessesCount}</td>
+          <td>${l.managersCount}</td>
+          <td>${spStatusBadge(l.status)}</td>
+          <td><button class="action-btn" onclick="loadLocationDetail('${l.id}')">Open →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="7" class="sp-empty">No locations match these filters.</td></tr>`;
+    }
+
+    async function openAddLocationModal() {
+      await refreshNetworkOptionsEverywhere();
+      document.getElementById('sp-location-name').value = '';
+      document.getElementById('sp-location-slug').value = '';
+      document.getElementById('sp-location-type').value = 'city';
+      document.getElementById('sp-location-modal-error').textContent = '';
+      openModal('sp-location-modal');
+    }
+
+    async function submitAddLocation() {
+      const networkId = document.getElementById('sp-location-network').value;
+      const name = document.getElementById('sp-location-name').value.trim();
+      const slug = document.getElementById('sp-location-slug').value.trim();
+      const type = document.getElementById('sp-location-type').value;
+      const errEl = document.getElementById('sp-location-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/locations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ networkId, name, slug, type }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to add location.'; return; }
+        closeModal('sp-location-modal');
+        loadLocationsPage();
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // ── LOCATION DETAIL ───────────────────────────────────────
+    async function loadLocationDetail(id) {
+      currentLocationDetailId = id;
+      showSubPage('sp-location-detail', 'sp-locations');
+      const result = await safeFetchAdmin(`/admin/locations/${id}`);
+      if (!result.ok) {
+        document.getElementById('sp-ld-title').textContent = adminErrorMessage(result);
+        return;
+      }
+      const l = result.data.location;
+      currentLocationNetworkId = l.networkId;
+      document.getElementById('sp-ld-title').innerHTML = `${escapeHtml(l.name)} ${spStatusBadge(l.status)}`;
+      document.getElementById('sp-ld-sub').textContent = `${escapeHtml(l.network?.name || l.networkId)} · ${escapeHtml(l.type)}`;
+
+      document.getElementById('sp-ld-businesses-body').innerHTML = l.businessLocations.length ? l.businessLocations.map(bl => `
+        <tr>
+          <td class="td-name">${escapeHtml(bl.business.name)}</td>
+          <td class="td-email">${escapeHtml(bl.business.primaryOwnerUserId)}</td>
+          <td>${spStatusBadge(bl.status)}</td>
+          <td>
+            <button class="action-btn" onclick="loadBusinessDetail('${bl.business.id}')">Open →</button>
+            ${bl.status === 'active'
+              ? `<button class="action-btn danger" onclick="toggleBusinessLocation('${bl.id}', 'paused')">Pause</button>`
+              : `<button class="action-btn" onclick="toggleBusinessLocation('${bl.id}', 'active')">Reactivate</button>`}
+          </td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this location yet.</td></tr>`;
+
+      document.getElementById('sp-ld-managers-body').innerHTML = l.managers.length ? l.managers.map(m => `
+        <tr>
+          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+          <td>${escapeHtml(m.role)}</td>
+          <td><button class="action-btn danger" onclick="removeManager('${m.id}', () => loadLocationDetail('${id}'))">Remove</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="3" class="sp-empty">No managers assigned to this location yet.</td></tr>`;
+    }
+
+    async function toggleBusinessLocation(id, status) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/business-locations/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ status }),
+        });
+        if (!res.ok) { alert('Failed to update participation status.'); return; }
+        if (currentLocationDetailId) loadLocationDetail(currentLocationDetailId);
+      } catch (err) { alert('Could not reach server.'); }
+    }
+
+    // ── BUSINESSES ────────────────────────────────────────────
+    async function loadBusinessesPage() {
+      await refreshNetworkOptionsEverywhere();
+      const networkId = document.getElementById('sp-biz-filter-network').value;
+
+      // Location filter options depend on the selected network (or all
+      // locations if no network is chosen) — real data, not hard-coded.
+      const locSelect = document.getElementById('sp-biz-filter-location');
+      const currentLocVal = locSelect.value;
+      const locParams = networkId ? `?networkId=${encodeURIComponent(networkId)}` : '';
+      const locResult = await safeFetchAdmin(`/admin/locations${locParams}`);
+      const locOptions = locResult.ok ? locResult.data.locations : [];
+      locSelect.innerHTML = '<option value="">All Locations</option>' + optionsHtml(locOptions, l => l.id, l => l.name);
+      locSelect.value = locOptions.some(l => l.id === currentLocVal) ? currentLocVal : '';
+
+      const locationId = locSelect.value;
+      const status = document.getElementById('sp-biz-filter-status').value;
+      const params = new URLSearchParams();
+      if (networkId) params.set('networkId', networkId);
+      if (locationId) params.set('locationId', locationId);
+      if (status) params.set('status', status);
+
+      const result = await safeFetchAdmin(`/admin/businesses?${params.toString()}`);
+      const tbody = document.getElementById('sp-businesses-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        return;
+      }
+      const businesses = result.data.businesses || [];
+      document.getElementById('sp-businesses-count').textContent = `${businesses.length} businesses`;
+      tbody.innerHTML = businesses.length ? businesses.map(b => `
+        <tr>
+          <td class="td-name">${escapeHtml(b.name)}</td>
+          <td class="td-email">${escapeHtml(b.owner?.email || b.primaryOwnerUserId)}</td>
+          <td>${b.standalone ? '<span class="tag-standalone">Standalone</span>' : b.businessLocations.map(bl => escapeHtml(bl.location.network.name + ' → ' + bl.location.name)).join(', ')}</td>
+          <td>${b.landingPagesCount}</td>
+          <td>${spStatusBadge(b.status)}</td>
+          <td>
+            <button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button>
+            <button class="action-btn" onclick="openAssignBusinessModal('${b.id}', null)">Assign to Location</button>
+          </td>
+        </tr>
+      `).join('') : `<tr><td colspan="6" class="sp-empty">No businesses match these filters.</td></tr>`;
+    }
+
+    // ── BUSINESS DETAIL ───────────────────────────────────────
+    async function loadBusinessDetail(id) {
+      currentBusinessDetailId = id;
+      showSubPage('sp-business-detail', 'sp-businesses');
+      const result = await safeFetchAdmin(`/admin/businesses/${id}`);
+      if (!result.ok) {
+        document.getElementById('sp-bd-title').textContent = adminErrorMessage(result);
+        return;
+      }
+      const b = result.data.business;
+      document.getElementById('sp-bd-title').innerHTML = `${escapeHtml(b.name)} ${spStatusBadge(b.status)}`;
+      document.getElementById('sp-bd-sub').textContent = `Owner: ${b.owner?.email || b.primaryOwnerUserId}`;
+
+      document.getElementById('sp-bd-memberships').innerHTML = b.businessLocations.length
+        ? b.businessLocations.map(bl => `
+          <div class="health-row">
+            <div class="health-name">${escapeHtml(bl.location.network.name)} → ${escapeHtml(bl.location.name)}</div>
+            <div class="health-status">${spStatusBadge(bl.status)}</div>
+          </div>
+        `).join('')
+        : '<div style="font-size:0.78rem;color:var(--text-dim)">Standalone — not assigned to any Network/Location. This preserves normal QRAIVY account behavior.</div>';
+
+      document.getElementById('sp-bd-pages').innerHTML = b.landingPages.length
+        ? b.landingPages.map(p => `
+          <div class="health-row">
+            <div class="health-name">${escapeHtml(p.businessName || p.slug)}</div>
+            <div class="health-status">${escapeHtml(p.status)}</div>
+          </div>
+        `).join('')
+        : '<div style="font-size:0.78rem;color:var(--text-dim)">No landing pages yet.</div>';
+    }
+
+    // ── ASSIGN BUSINESS TO LOCATION (modal, shared by Businesses/Business Detail/Location Detail) ──
+    async function openAssignBusinessModal(presetBusinessId, presetLocationId) {
+      const [bizResult, locResult] = await Promise.all([
+        safeFetchAdmin('/admin/businesses'),
+        safeFetchAdmin('/admin/locations'),
+      ]);
+      const businesses = bizResult.ok ? bizResult.data.businesses : [];
+      const locations = locResult.ok ? locResult.data.locations : [];
+
+      const bizSelect = document.getElementById('sp-assign-business-select');
+      bizSelect.innerHTML = optionsHtml(businesses, b => b.id, b => b.name);
+      if (presetBusinessId) bizSelect.value = presetBusinessId;
+
+      const locSelect = document.getElementById('sp-assign-location-select');
+      locSelect.innerHTML = optionsHtml(locations, l => l.id, l => `${l.network?.name || ''} → ${l.name}`);
+      if (presetLocationId) locSelect.value = presetLocationId;
+
+      document.getElementById('sp-assign-business-modal-error').textContent = '';
+      openModal('sp-assign-business-modal');
+    }
+
+    async function submitAssignBusiness() {
+      const businessId = document.getElementById('sp-assign-business-select').value;
+      const locationId = document.getElementById('sp-assign-location-select').value;
+      const errEl = document.getElementById('sp-assign-business-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/business-locations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ businessId, locationId }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to assign business.'; return; }
+        closeModal('sp-assign-business-modal');
+        if (document.getElementById('page-sp-business-detail').classList.contains('active')) loadBusinessDetail(currentBusinessDetailId);
+        else if (document.getElementById('page-sp-location-detail').classList.contains('active')) loadLocationDetail(currentLocationDetailId);
+        else if (document.getElementById('page-sp-businesses').classList.contains('active')) loadBusinessesPage();
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // ── MANAGERS ──────────────────────────────────────────────
+    async function loadManagersPage() {
+      await refreshNetworkOptionsEverywhere();
+      const networkId = document.getElementById('sp-mgr-filter-network').value;
+      const params = networkId ? `?networkId=${encodeURIComponent(networkId)}` : '';
+      const result = await safeFetchAdmin(`/admin/managers${params}`);
+      const tbody = document.getElementById('sp-managers-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        return;
+      }
+      const managers = result.data.managers || [];
+      document.getElementById('sp-managers-count').textContent = `${managers.length} managers`;
+      tbody.innerHTML = managers.length ? managers.map(m => `
+        <tr>
+          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+          <td>${escapeHtml(m.role)}</td>
+          <td>${escapeHtml(m.network?.name || m.networkId)}</td>
+          <td>${m.location ? escapeHtml(m.location.name) : '<span style="color:var(--text-dim)">Network-wide</span>'}</td>
+          <td><button class="action-btn danger" onclick="removeManager('${m.id}', loadManagersPage)">Remove</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" class="sp-empty">No manager assignments yet.</td></tr>`;
+    }
+
+    async function removeManager(id, onDone) {
+      if (!confirm('Remove this manager assignment? They will lose the associated Network/Location access once permission enforcement is built.')) return;
+      try {
+        const res = await fetch(`${API_BASE}/admin/managers/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
+        });
+        if (!res.ok) { alert('Failed to remove assignment.'); return; }
+        if (onDone) onDone();
+      } catch (err) { alert('Could not reach server.'); }
+    }
+
+    async function populateManagerLocationOptions() {
+      const networkId = document.getElementById('sp-assign-manager-network').value;
+      const locSelect = document.getElementById('sp-assign-manager-location');
+      if (!networkId) { locSelect.innerHTML = '<option value="">— Network-wide —</option>'; return; }
+      const result = await safeFetchAdmin(`/admin/locations?networkId=${encodeURIComponent(networkId)}`);
+      const locations = result.ok ? result.data.locations : [];
+      locSelect.innerHTML = '<option value="">— Network-wide —</option>' + optionsHtml(locations, l => l.id, l => l.name);
+    }
+
+    // presetNetworkId/presetLocationId let Network Detail / Location Detail
+    // "Assign Manager" actions pre-fill the modal; both are optional.
+    async function openAssignManagerModal(presetNetworkId, presetLocationId) {
+      const usersResult = await safeFetchAdmin('/admin/users');
+      const users = usersResult.ok ? usersResult.data.users : [];
+      document.getElementById('sp-assign-manager-user').innerHTML = optionsHtml(users, u => u.id, u => u.email || u.id);
+
+      const netSelect = document.getElementById('sp-assign-manager-network');
+      netSelect.innerHTML = optionsHtml(spNetworksCache, n => n.id, n => n.name);
+      if (presetNetworkId) netSelect.value = presetNetworkId;
+      await populateManagerLocationOptions();
+      if (presetLocationId) document.getElementById('sp-assign-manager-location').value = presetLocationId;
+
+      document.getElementById('sp-assign-manager-modal-error').textContent = '';
+      openModal('sp-assign-manager-modal');
+    }
+
+    async function submitAssignManager() {
+      const userId = document.getElementById('sp-assign-manager-user').value;
+      const networkId = document.getElementById('sp-assign-manager-network').value;
+      const locationId = document.getElementById('sp-assign-manager-location').value || null;
+      const role = document.getElementById('sp-assign-manager-role').value;
+      const errEl = document.getElementById('sp-assign-manager-modal-error');
+      errEl.textContent = '';
+      try {
+        const res = await fetch(`${API_BASE}/admin/managers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ userId, networkId, locationId, role }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to assign manager.'; return; }
+        closeModal('sp-assign-manager-modal');
+        if (document.getElementById('page-sp-managers').classList.contains('active')) loadManagersPage();
+        else if (document.getElementById('page-sp-network-detail').classList.contains('active')) loadNetworkDetail(currentNetworkDetailId);
+        else if (document.getElementById('page-sp-location-detail').classList.contains('active')) loadLocationDetail(currentLocationDetailId);
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // ── STADT POCKET i18n (scoped to the new section + the renamed
+    // Business Accounts item; the rest of admin.html has no i18n system
+    // to plug into today — see docs) ──
+    const SP_I18N = {
+      en: {
+        nav_business_accounts: 'Business Accounts',
+        nav_networks: 'Networks', nav_locations: 'Locations', nav_businesses: 'Businesses', nav_managers: 'Managers',
+        sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
+        sp_create_network: 'Create Network', sp_add_location: 'Add Location',
+        sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
+        sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
+        sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner',
+        sp_col_manager: 'Manager', sp_col_role: 'Role', sp_col_name: 'Name',
+        sp_col_memberships: 'Network / Location', sp_col_pages: 'Landing Pages',
+        sp_businesses_in_location: 'Businesses in this Location',
+        sp_type_city: 'City', sp_type_mall: 'Mall', sp_type_district: 'District', sp_type_generic: 'Generic',
+        sp_status_active: 'Active', sp_status_paused: 'Paused', sp_status_archived: 'Archived',
+      },
+      de: {
+        nav_business_accounts: 'Geschäftskonten',
+        nav_networks: 'Netzwerke', nav_locations: 'Standorte', nav_businesses: 'Unternehmen', nav_managers: 'Manager',
+        sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
+        sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
+        sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
+        sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
+        sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber',
+        sp_col_manager: 'Manager', sp_col_role: 'Rolle', sp_col_name: 'Name',
+        sp_col_memberships: 'Netzwerk / Standort', sp_col_pages: 'Landing Pages',
+        sp_businesses_in_location: 'Unternehmen an diesem Standort',
+        sp_type_city: 'Stadt', sp_type_mall: 'Einkaufszentrum', sp_type_district: 'Bezirk', sp_type_generic: 'Allgemein',
+        sp_status_active: 'Aktiv', sp_status_paused: 'Pausiert', sp_status_archived: 'Archiviert',
+      },
+    };
+    function applySpLang(lang) {
+      const t = SP_I18N[lang] || SP_I18N.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) el.textContent = t[key];
+      });
+      if (window.setQraivyLang) window.setQraivyLang(lang);
+    }
+    function toggleSpLang() {
+      const current = localStorage.getItem('qraivy_lang') || 'en';
+      applySpLang(current === 'en' ? 'de' : 'en');
+    }
+    (function initSpLang() {
+      const saved = (window.QRAIVY_LANGUAGE) || localStorage.getItem('qraivy_lang') || 'en';
+      applySpLang(saved === 'de' ? 'de' : 'en');
+    })();
 
     async function getAdminToken() {
       await window.Clerk.load();

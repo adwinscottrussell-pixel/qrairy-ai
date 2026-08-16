@@ -1,6 +1,6 @@
 # Network + Location + Business Foundation
 
-**Status**: Phase 1A (schema + backend foundation only) — additive models exist, migration created but **not applied to production**, no application code reads or writes them yet, no UI exists.
+**Status**: Phase 1A **live in production** (2026-08-16) — migration applied, Business compatibility backfill run (3 Businesses / 3 BusinessMembers / 5 LandingPages linked). Phase 1B (Operations Center platform-admin UI) implemented on a preview branch, **pending founder visual approval before production deploy** — see "Phase 1B" section below.
 
 ## Origin
 
@@ -152,17 +152,70 @@ the Customer Foundation backfill's approval gate.
   exactly as they do today; `Business` only becomes load-bearing once a
   future phase starts reading it.
 
+## Phase 1B — Operations Center platform-admin UI (implemented, preview only)
+
+Extends the existing platform-owner Operations Center (`frontend/public/admin.html`,
+`https://www.qraivy.com/admin.html`) with a **STADT POCKET** nav group:
+Networks, Locations, Businesses, Managers. This is the platform owner's view
+only — no City Manager / Location Manager dashboard, no consumer Pocket app,
+no mall-specific UI. The same generic CRUD supports both the Stadt Pocket
+(city) and Mall Group (shopping-center) shapes without any city/mall-specific
+code — `Network.type`/`Location.type` stay free-text.
+
+**Naming collision resolved**: the Operations Center's existing "All
+Customers" (QRAIVY's own paying business accounts — `User` records) is now
+labelled **Business Accounts**, both in the sidebar and page title. This is a
+label-only change — no model, route, or query changed. Canonical end-consumer
+`Customer` records (Customer Foundation) are unaffected and were never
+reachable from that page.
+
+**New service**: `backend/src/services/networkAdminService.js` — the only
+place that writes `Network`/`Location`/`Business`/`BusinessLocation`/
+`NetworkMember` on the platform-admin's behalf. Resolves Clerk `userId`s to
+display info via the existing local `User` table (same source `/admin/users`
+already uses) — never calls Clerk's API directly, never fabricates a user.
+
+**New routes** (all `requireAdmin`-protected, in `backend/src/routes/adminRoutes.js`):
+`GET/POST /admin/networks`, `GET/PATCH /admin/networks/:id`,
+`GET/POST /admin/locations`, `GET/PATCH /admin/locations/:id`,
+`GET /admin/businesses`, `GET/PATCH /admin/businesses/:id`,
+`POST /admin/business-locations`, `PATCH /admin/business-locations/:id`,
+`GET/POST /admin/managers`, `DELETE /admin/managers/:id`.
+
+**Business creation intentionally not exposed** this phase — Phase 1A already
+backfilled every existing owner into a Business; the Operations Center can
+only view/edit/assign existing Businesses, never create an orphan one with no
+legitimate owner. Revisit once a real platform-owned onboarding state exists.
+
+**BusinessLocation** represents participation in a Location's business
+ecosystem, not a postal address — a Business can be assigned to multiple
+Locations (multi-outlet brand), and a Location can hold multiple Businesses.
+
+**Managers** (`NetworkMember`): `location_manager`/`network_admin` role
+assignment only — `locationId = null` means network-wide. Assigning a
+Location that doesn't belong to the given Network is rejected. No permission
+*enforcement* middleware exists yet — see item 3 below; the Operations Center
+can only assign/list/remove the data rows.
+
+**Deployment status**: implemented and tested on a new preview branch
+(`preview/stadt-pocket-phase1b-operations-center`, branched from `main` at
+`217403e`), **not merged to `main`**, **not deployed to production** —
+pending founder visual review of the preview deployment.
+
 ## Future phases (not implemented)
 
 2. Service layer: resolve "which Business/ownerUserId to scope by" above
    Customer Foundation reads, without modifying Customer Foundation itself.
-3. `NetworkMember` permission middleware (`network_admin` /
-   `location_manager`), including the deferred network-wide-membership
-   dedup fix above.
-4. Operations Center navigation: Networks/Locations/Businesses views.
-5. Location Manager admin surface.
-6. Secure business-admin handoff model (Network operator ↔ Business owner).
-7. Customer-privacy/scope model distinguishing Business-customer
+3. `NetworkMember` permission *middleware* (`network_admin` /
+   `location_manager` actually gating access, not just data assignment —
+   Phase 1B built the data/assignment side only), including the deferred
+   network-wide-membership dedup fix above.
+4. Location Manager admin surface (a separate, non-platform-owner dashboard).
+5. Secure business-admin handoff model (Network operator ↔ Business owner) —
+   Phase 1B's Business Detail view is explicitly read-only, no impersonation.
+6. Customer-privacy/scope model distinguishing Business-customer
    relationships from Network/Location-level audience relationships.
-8. Business backfill production write (pending the migration + separate
-   founder approval).
+7. Business creation API (platform-owned onboarding state).
+8. Consumer Pocket app, Network Analytics, Deals/Campaigns, Featured
+   Businesses, location push/audience — all explicitly out of scope through
+   Phase 1B.
