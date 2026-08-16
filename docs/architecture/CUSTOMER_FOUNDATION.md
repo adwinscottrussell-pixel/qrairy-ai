@@ -180,3 +180,12 @@ Re-validated locally (idempotency, cross-tenant collision, already-canonical-Cus
 5. Switch reads to the canonical `Customer` model.
 6. Customers UI consumes the real Customer API (Phase 5).
 7. Legacy identity cleanup (separate future decision).
+
+## Relationship to the Network/Location/Business foundation (Stadt Pocket Phase 1A)
+
+A new `Network → Location → Business` layer was added above the tenant
+boundary (see `docs/architecture/NETWORK_LOCATION_FOUNDATION.md`).
+`Customer.ownerUserId` / `CustomerIdentity.ownerUserId` are unchanged by it —
+still the raw Clerk `User.id`, still the real tenant boundary for every
+Customer Foundation read/write. `Business` is additive and currently
+unreferenced by any Customer Foundation code path.

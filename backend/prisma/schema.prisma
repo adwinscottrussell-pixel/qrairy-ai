@@ -89,7 +89,18 @@ model LandingPage {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
 
+  // Stadt Pocket Phase 1A (2026-08-16) — additive, nullable, optional link
+  // to the new Business entity. NOT a replacement for `userId` above:
+  // `userId` remains the sole ownership field every existing query/route
+  // uses unchanged. `businessId` is populated later by an explicit,
+  // reviewed backfill projection (see
+  // docs/architecture/NETWORK_LOCATION_FOUNDATION.md) — never required,
+  // never read by any current route.
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+
   @@index([businessName])
+  @@index([businessId])
 }
 
 model Pass {
@@ -351,4 +362,146 @@ model CustomerIdentity {
   @@unique([ownerUserId, type, value])
   @@index([customerId])
   @@index([slug])
+}
+
+// ============================================================
+// Network + Location + Business — Stadt Pocket Phase 1A, additive data
+// foundation only (2026-08-16). See
+// docs/architecture/NETWORK_LOCATION_FOUNDATION.md for the full design.
+//
+// This layer sits ABOVE Customer Foundation, not inside it. Nothing above
+// this comment is touched, and Customer.ownerUserId / CustomerIdentity.
+// ownerUserId keep their exact current meaning and scoping — unchanged.
+//
+// Business is the new canonical tenant entity, deliberately separate from
+// the Clerk User (authenticated principal). `Business.primaryOwnerUserId`
+// is the SAME value already used everywhere as ownerUserId/userId — kept
+// as a bare column (not a Prisma relation), matching the existing
+// LandingPage.userId convention: this schema has never modeled `User` as
+// a Prisma relation target, so this doesn't invent a new pattern.
+//
+// Legacy ownerUserId/userId scoping remains authoritative on every
+// existing table during this compatibility period — nothing here is
+// required, nothing here is read by any existing route yet.
+// ============================================================
+
+model Network {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  // "city_network" | "mall_group" | "generic" — free-text by design, same
+  // convention as every other type/status column in this schema (e.g.
+  // LandingPage.qrType, Customer.status) — no enum type exists anywhere
+  // in this schema; not introducing one here.
+  type      String   @default("generic")
+  status    String   @default("active") // active | paused
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  locations      Location[]
+  networkMembers NetworkMember[]
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  networkId String
+  network   Network  @relation(fields: [networkId], references: [id])
+  name      String
+  slug      String   @unique
+  type      String   @default("generic") // "city" | "mall" | "district" | "generic"
+  status    String   @default("active") // active | paused
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  businessLocations BusinessLocation[]
+  networkMembers    NetworkMember[]
+
+  @@index([networkId])
+}
+
+model Business {
+  id   String  @id @default(cuid())
+  name String
+  // Nullable — unlike LandingPage.slug, most Businesses (especially the
+  // compatibility-backfill shim rows for existing accounts) have no
+  // natural public slug to assign; never inventing one.
+  slug String? @unique
+
+  // The canonical scoping anchor for backward compatibility: the exact
+  // same Clerk user id already used as ownerUserId/userId everywhere else
+  // in this schema. Every existing single-owner account maps to exactly
+  // one Business with primaryOwnerUserId = that account's own id.
+  primaryOwnerUserId String
+
+  status    String   @default("active") // active | paused | archived
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  members           BusinessMember[]
+  businessLocations BusinessLocation[]
+  landingPages      LandingPage[]
+
+  @@index([primaryOwnerUserId])
+}
+
+model BusinessMember {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  userId     String // Clerk user id
+  role       String   @default("owner") // "owner" | "staff"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  // The same Clerk user can never accidentally receive duplicate
+  // membership in the same Business.
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+// Join: which Location(s) a Business participates in. A Location has many
+// Businesses; a Business may participate in multiple Locations (this is
+// also how a future multi-outlet brand — ADR-004's Brand -> Locations
+// direction — is represented, without a second competing hierarchy: a
+// Business with several BusinessLocation rows IS a multi-outlet brand).
+// Minimum relationship only — no promotional/billing fields yet.
+model BusinessLocation {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  status     String   @default("active") // active | paused
+  joinedAt   DateTime @default(now())
+
+  @@unique([businessId, locationId])
+  @@index([locationId])
+}
+
+// Future permission relationship (data structure only — no middleware
+// reads this yet, see docs/architecture/NETWORK_LOCATION_FOUNDATION.md).
+// locationId = null means network-wide access (e.g. Stadt Pocket HQ);
+// locationId set means access scoped to exactly that one Location (e.g. a
+// single city manager). Known limitation, documented rather than silently
+// left unhandled: Postgres unique constraints do not deduplicate multiple
+// rows sharing the same (userId, networkId) when locationId is NULL (NULL
+// is never equal to NULL) — enforcing "at most one network-wide grant per
+// user" is deferred to the Phase 3 service layer that actually creates
+// these rows, not solved with a partial index here, to avoid enabling a
+// new Prisma preview feature for a case with no real-world duplicate-
+// grant risk (redundant, not insecure) this early.
+model NetworkMember {
+  id         String    @id @default(cuid())
+  userId     String // Clerk user id
+  networkId  String
+  network    Network   @relation(fields: [networkId], references: [id])
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+  role       String // "network_admin" | "location_manager"
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+
+  @@unique([userId, networkId, locationId])
+  @@index([userId])
+  @@index([networkId])
 }
