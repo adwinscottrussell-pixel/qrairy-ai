@@ -340,9 +340,9 @@ router.get('/businesses/:id', requireAdmin, async (req, res) => {
 router.post('/businesses', requireAdmin, async (req, res) => {
   try {
     const { name, primaryOwnerUserId, status } = req.body || {};
-    const business = await networkAdmin.createBusiness({ name, primaryOwnerUserId, status });
-    console.log(`[admin/businesses] Admin ${req.adminUser.email} created Business ${business.id} for owner ${primaryOwnerUserId}`);
-    return res.status(201).json({ business });
+    const { business, reused } = await networkAdmin.createBusiness({ name, primaryOwnerUserId, status });
+    console.log(`[admin/businesses] Admin ${req.adminUser.email} ${reused ? 'matched existing' : 'created'} Business ${business.id} for owner ${primaryOwnerUserId}`);
+    return res.status(reused ? 200 : 201).json({ business, reused });
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 

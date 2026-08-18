@@ -1163,6 +1163,7 @@
         <label class="modal-label" data-i18n="sp_business_owner_label">Primary Owner / QRAIVY Account</label>
         <select class="modal-select" id="sp-create-business-owner"></select>
         <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_owner_helper">Select the QRAIVY account responsible for this business. Creating a Business does not create a new user account.</div>
+        <div id="sp-create-business-owner-locked-hint" style="display:none;font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_owner_locked_hint">This Business will use the same QRAIVY account that owns the Landing Page.</div>
       </div>
       <div class="sp-form-row">
         <label class="modal-label" data-i18n="sp_col_status">Status</label>
@@ -2737,10 +2738,39 @@
       document.getElementById('sp-create-business-modal-error').textContent = '';
 
       const ownerSelect = document.getElementById('sp-create-business-owner');
-      ownerSelect.innerHTML = '<option value="">Loading owners…</option>';
-      const result = await safeFetchAdmin('/admin/users');
-      const users = result.ok ? (result.data.users || []) : [];
-      ownerSelect.innerHTML = optionsHtml(users, u => u.id, u => u.email || u.id);
+      const lockedHint = document.getElementById('sp-create-business-owner-locked-hint');
+
+      // Owner-safe create-from-Landing-Page fix: when this modal is reached
+      // from the global Unassigned Landing Pages queue's empty-target-state
+      // (not the top-level "+ Create Business" button, and not the legacy
+      // Business-Detail Move-to-Business entry point, both of which keep
+      // today's manual owner picker unchanged), the originating page's owner
+      // is already known via spUnassignedPagesCache -- lock the owner to
+      // that exact account so the founder can never create a Business for a
+      // different owner than the page being assigned, which the backend's
+      // cross-owner check would reject anyway. This is what was actually
+      // producing the "Business was created, but the Landing Page could not
+      // be assigned" failures and the resulting duplicate Businesses.
+      const lockedPage = (createBusinessReturnToMove && moveModalReturnTo === 'unassigned')
+        ? spUnassignedPagesCache.find(p => p.id === currentMoveLandingPageId)
+        : null;
+
+      if (lockedPage) {
+        ownerSelect.innerHTML = optionsHtml(
+          [{ id: lockedPage.userId, label: lockedPage.owner?.email || lockedPage.userId }],
+          u => u.id, u => u.label
+        );
+        ownerSelect.value = lockedPage.userId;
+        ownerSelect.disabled = true;
+        lockedHint.style.display = '';
+      } else {
+        ownerSelect.disabled = false;
+        lockedHint.style.display = 'none';
+        ownerSelect.innerHTML = '<option value="">Loading owners…</option>';
+        const result = await safeFetchAdmin('/admin/users');
+        const users = result.ok ? (result.data.users || []) : [];
+        ownerSelect.innerHTML = optionsHtml(users, u => u.id, u => u.email || u.id);
+      }
 
       openModal('sp-create-business-modal');
     }
@@ -2942,6 +2972,7 @@
         sp_create_business: 'Create Business',
         sp_business_name_label: 'Business Name', sp_business_name_placeholder: 'e.g. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'The customer-facing business name. Add the location when needed.',
         sp_business_owner_label: 'Primary Owner / QRAIVY Account', sp_business_owner_helper: 'Select the QRAIVY account responsible for this business. Creating a Business does not create a new user account.',
+        sp_business_owner_locked_hint: 'This Business will use the same QRAIVY account that owns the Landing Page.',
         sp_msg_business_created_and_assigned: 'Business created and Landing Page assigned successfully.',
         sp_msg_business_created_assignment_failed: 'Business was created, but the Landing Page could not be assigned. Please retry the assignment.',
         sp_msg_business_created_assignment_failed_prefix: 'Business was created, but the Landing Page could not be assigned:',
@@ -2972,6 +3003,7 @@
         sp_create_business: 'Unternehmen erstellen',
         sp_business_name_label: 'Geschäftsname', sp_business_name_placeholder: 'z. B. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'Der kundenorientierte Geschäftsname. Bei Bedarf den Standort hinzufügen.',
         sp_business_owner_label: 'Hauptinhaber / QRAIVY-Konto', sp_business_owner_helper: 'Wähle das QRAIVY-Konto aus, das für dieses Unternehmen verantwortlich ist. Das Erstellen eines Unternehmens erstellt kein neues Benutzerkonto.',
+        sp_business_owner_locked_hint: 'Dieses Unternehmen verwendet dasselbe QRAIVY-Konto wie die Landingpage.',
         sp_msg_business_created_and_assigned: 'Unternehmen erstellt und Landingpage erfolgreich zugewiesen.',
         sp_msg_business_created_assignment_failed: 'Das Unternehmen wurde erstellt, aber die Landingpage konnte nicht zugewiesen werden. Bitte die Zuweisung erneut versuchen.',
         sp_msg_business_created_assignment_failed_prefix: 'Das Unternehmen wurde erstellt, aber die Landingpage konnte nicht zugewiesen werden:',
