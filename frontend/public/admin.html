@@ -1154,13 +1154,14 @@
     <div class="modal-box">
       <div class="modal-title" data-i18n="sp_create_business">Create Business</div>
       <div class="sp-form-row">
-        <label class="modal-label" data-i18n="sp_col_business">Business Name</label>
-        <input class="sp-form-input" id="sp-create-business-name" placeholder="Bäckerei Betz" />
+        <label class="modal-label" data-i18n="sp_business_name_label">Business Name</label>
+        <input class="sp-form-input" id="sp-create-business-name" placeholder="e.g. Bäckerei Betz – Ulm Mitte" data-i18n-placeholder="sp_business_name_placeholder" />
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_name_helper">The customer-facing business name. Add the location when needed.</div>
       </div>
       <div class="sp-form-row">
-        <label class="modal-label" data-i18n="sp_col_owner">Primary Owner</label>
+        <label class="modal-label" data-i18n="sp_business_owner_label">Primary Owner / QRAIVY Account</label>
         <select class="modal-select" id="sp-create-business-owner"></select>
-        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_owner_helper">The owner must already be a known QRAIVY account. A Business never creates a new account.</div>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_business_owner_helper">Select the QRAIVY account responsible for this business. Creating a Business does not create a new user account.</div>
       </div>
       <div class="sp-form-row">
         <label class="modal-label" data-i18n="sp_col_status">Status</label>
@@ -2678,23 +2679,36 @@
       openModal('sp-move-to-business-modal');
     }
 
+    // Shared assignment call (Phase 1B-B2 fix) -- both the manual Move/
+    // Assign modal (submitMoveLandingPage) and the Create-Business
+    // auto-assign step (submitCreateBusiness) call this exact same
+    // endpoint through one function, so the two paths can never diverge
+    // in behavior or response handling.
+    async function assignLandingPageToBusiness(landingPageId, businessId) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/landing-pages/${landingPageId}/business`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ businessId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, error: data.error || 'Failed to move landing page.' };
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: 'Could not reach server.' };
+      }
+    }
+
     async function submitMoveLandingPage() {
       const targetBusinessId = document.getElementById('sp-move-target-business').value;
       const errEl = document.getElementById('sp-move-to-business-modal-error');
       errEl.textContent = '';
       if (!targetBusinessId) { errEl.textContent = 'Select a target Business.'; return; }
-      try {
-        const res = await fetch(`${API_BASE}/admin/landing-pages/${currentMoveLandingPageId}/business`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
-          body: JSON.stringify({ businessId: targetBusinessId }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) { errEl.textContent = data.error || 'Failed to move landing page.'; return; }
-        closeModal('sp-move-to-business-modal');
-        if (moveModalReturnTo === 'unassigned') { loadUnassignedLandingPagesPage(); }
-        else { loadBusinessDetail(currentBusinessDetailId); }
-      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+      const result = await assignLandingPageToBusiness(currentMoveLandingPageId, targetBusinessId);
+      if (!result.ok) { errEl.textContent = result.error; return; }
+      closeModal('sp-move-to-business-modal');
+      if (moveModalReturnTo === 'unassigned') { loadUnassignedLandingPagesPage(); }
+      else { loadBusinessDetail(currentBusinessDetailId); }
     }
 
     // ── CREATE BUSINESS (Phase 1B-B1) ──────────────────────────
@@ -2727,16 +2741,33 @@
         });
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Failed to create business.'; return; }
+        const newBusiness = data.business;
         closeModal('sp-create-business-modal');
-        // Preferred safe behavior (Phase 1B-B2): if Create Business was
-        // launched from the Move/Assign modal's empty-target-state, return
-        // to that modal (refreshed) instead of the Businesses list, so the
-        // admin can explicitly finish assigning the same LandingPage --
-        // never auto-mapped as a side effect of creation.
         if (createBusinessReturnToMove) {
           createBusinessReturnToMove = false;
-          if (moveModalReturnTo === 'unassigned') { await openAssignUnassignedModal(currentMoveLandingPageId); }
-          else { await openMoveToBusinessModal(currentMoveLandingPageId); }
+          // Fix (2026-08-18): Create Business launched from the global
+          // Unassigned Landing Pages queue now finishes the assignment
+          // automatically, via the exact same assignLandingPageToBusiness
+          // call the manual "Move Landing Page" action uses -- no
+          // duplicated write path. If creation succeeded but this
+          // assignment call fails, the Business is NOT rolled back and no
+          // second Business is created here -- silently retrying or
+          // auto-creating another Business would reproduce the duplicate-
+          // Business bug this fix exists to close. The founder is told
+          // exactly what happened and the new Business stays available
+          // for a manual assignment retry from the Unassigned queue.
+          if (moveModalReturnTo === 'unassigned') {
+            const assignResult = await assignLandingPageToBusiness(currentMoveLandingPageId, newBusiness.id);
+            loadBusinessesPage(); // refreshes both the Businesses table and the Unassigned queue
+            showSpBanner(
+              spT(assignResult.ok ? 'sp_msg_business_created_and_assigned' : 'sp_msg_business_created_assignment_failed'),
+              assignResult.ok ? 'success' : 'warning'
+            );
+            return;
+          }
+          // Legacy Business-Detail entry point: unchanged, still requires
+          // an explicit manual confirm on the reopened modal.
+          await openMoveToBusinessModal(currentMoveLandingPageId);
         } else {
           loadBusinessesPage();
         }
@@ -2878,7 +2909,11 @@
         sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
         sp_create_network: 'Create Network', sp_add_location: 'Add Location',
         sp_edit_network: 'Edit Network', sp_save_changes: 'Save Changes', sp_cancel: 'Cancel',
-        sp_create_business: 'Create Business', sp_business_owner_helper: 'The owner must already be a known QRAIVY account. A Business never creates a new account.',
+        sp_create_business: 'Create Business',
+        sp_business_name_label: 'Business Name', sp_business_name_placeholder: 'e.g. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'The customer-facing business name. Add the location when needed.',
+        sp_business_owner_label: 'Primary Owner / QRAIVY Account', sp_business_owner_helper: 'Select the QRAIVY account responsible for this business. Creating a Business does not create a new user account.',
+        sp_msg_business_created_and_assigned: 'Business created and Landing Page assigned successfully.',
+        sp_msg_business_created_assignment_failed: 'Business was created, but the Landing Page could not be assigned. Please retry the assignment.',
         sp_legacy_business: 'Legacy Account Business', sp_unmapped_pages: 'Unmapped Landing Pages (same owner)', sp_attach: 'Attach',
         sp_unmapped_pages_helper: "Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.",
         sp_move_to_business: 'Move to Business', sp_current_business: 'Current Business', sp_target_business: 'Target Business',
@@ -2902,7 +2937,11 @@
         sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
         sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
         sp_edit_network: 'Netzwerk bearbeiten', sp_save_changes: 'Änderungen speichern', sp_cancel: 'Abbrechen',
-        sp_create_business: 'Unternehmen erstellen', sp_business_owner_helper: 'Der Inhaber muss bereits ein bekanntes QRAIVY-Konto sein. Ein Unternehmen erstellt niemals ein neues Konto.',
+        sp_create_business: 'Unternehmen erstellen',
+        sp_business_name_label: 'Geschäftsname', sp_business_name_placeholder: 'z. B. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'Der kundenorientierte Geschäftsname. Bei Bedarf den Standort hinzufügen.',
+        sp_business_owner_label: 'Hauptinhaber / QRAIVY-Konto', sp_business_owner_helper: 'Wähle das QRAIVY-Konto aus, das für dieses Unternehmen verantwortlich ist. Das Erstellen eines Unternehmens erstellt kein neues Benutzerkonto.',
+        sp_msg_business_created_and_assigned: 'Unternehmen erstellt und Landingpage erfolgreich zugewiesen.',
+        sp_msg_business_created_assignment_failed: 'Das Unternehmen wurde erstellt, aber die Landingpage konnte nicht zugewiesen werden. Bitte die Zuweisung erneut versuchen.',
         sp_legacy_business: 'Alt-Konto-Unternehmen', sp_unmapped_pages: 'Nicht zugeordnete Landing Pages (gleicher Inhaber)', sp_attach: 'Zuordnen',
         sp_unmapped_pages_helper: 'Seiten, die noch nie einem Unternehmen zugeordnet wurden. Seiten, die bereits einem Alt-Konto-Unternehmen zugeordnet sind, müssen von der Detailseite dieses Unternehmens aus verschoben werden.',
         sp_move_to_business: 'Zu Unternehmen verschieben', sp_current_business: 'Aktuelles Unternehmen', sp_target_business: 'Ziel-Unternehmen',
@@ -2927,11 +2966,35 @@
         const key = el.getAttribute('data-i18n');
         if (t[key] !== undefined) el.textContent = t[key];
       });
+      // No existing attribute-translation path in this file (only
+      // textContent above) — added narrowly for the Create Business
+      // modal's placeholder, which needs EN/DE text but isn't textContent.
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key] !== undefined) el.placeholder = t[key];
+      });
       if (window.setQraivyLang) window.setQraivyLang(lang);
     }
     function toggleSpLang() {
       const current = localStorage.getItem('qraivy_lang') || 'en';
       applySpLang(current === 'en' ? 'de' : 'en');
+    }
+    // Runtime lookup for messages generated dynamically (e.g. toasts) that
+    // aren't a static [data-i18n] element applySpLang can walk on load.
+    function spT(key) {
+      const lang = localStorage.getItem('qraivy_lang') || 'en';
+      const t = SP_I18N[lang] || SP_I18N.en;
+      return t[key] || key;
+    }
+    // Minimal transient toast -- intentionally not part of any modal, so
+    // this doesn't touch modal markup/design. 'success' | 'warning'.
+    function showSpBanner(text, kind) {
+      const el = document.createElement('div');
+      const color = kind === 'warning' ? 'var(--yellow)' : 'var(--green)';
+      el.textContent = text;
+      el.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:#1a1a1a;border:1px solid ${color};color:${color};padding:12px 18px;border-radius:8px;font-size:0.8rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.3);max-width:360px;`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 5000);
     }
     (function initSpLang() {
       const saved = (window.QRAIVY_LANGUAGE) || localStorage.getItem('qraivy_lang') || 'en';
