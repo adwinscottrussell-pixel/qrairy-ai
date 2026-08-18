@@ -816,6 +816,7 @@
           <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-nd-sub"></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
+          <button class="refresh-btn" onclick="openAddLocationModal(currentNetworkDetailId)">+ <span data-i18n="sp_add_location">Add Location</span></button>
           <button class="refresh-btn" onclick="openEditNetworkModal()">✎ <span data-i18n="sp_edit_network">Edit Network</span></button>
           <button class="refresh-btn" onclick="loadNetworkDetail(currentNetworkDetailId)">↻ Refresh</button>
         </div>
@@ -2119,6 +2120,11 @@
     // modal's empty-target-state CTA -- if so, reopen that modal (refreshed)
     // after a successful create instead of dropping to the Businesses list.
     let createBusinessReturnToMove = false;
+    // Which Network the Add Location modal was launched from (Network
+    // Detail page's "+ Add Location"), if any -- null when launched from
+    // the standalone sidebar Locations page, which keeps its existing
+    // behavior (network picked manually, refreshes the Locations list).
+    let addLocationReturnNetworkId = null;
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2250,7 +2256,10 @@
           <td>${spStatusBadge(l.status)}</td>
           <td><button class="action-btn" onclick="loadLocationDetail('${l.id}')">Open →</button></td>
         </tr>
-      `).join('') : `<tr><td colspan="5" class="sp-empty">No locations yet.</td></tr>`;
+      `).join('') : `<tr><td colspan="5" class="sp-empty">
+          <div data-i18n="sp_no_locations_network">No locations yet. Add the first location to this network.</div>
+          <button class="action-btn" style="margin-top:8px" onclick="openAddLocationModal(currentNetworkDetailId)">+ <span data-i18n="sp_add_location">Add Location</span></button>
+        </td></tr>`;
 
       document.getElementById('sp-nd-businesses-body').innerHTML = n.businesses.length ? n.businesses.map(b => `
         <tr>
@@ -2358,12 +2367,20 @@
       `).join('') : `<tr><td colspan="7" class="sp-empty">No locations match these filters.</td></tr>`;
     }
 
-    async function openAddLocationModal() {
+    // presetNetworkId: when opened from a Network Detail page's own
+    // "+ Add Location" action, pass that Network's id so the founder isn't
+    // asked to pick it again -- the field stays a normal, editable select
+    // (still fully generic), just pre-filled. Omit/undefined for the
+    // standalone sidebar Locations page's existing "+ Add Location"
+    // button, which keeps today's manual-pick behavior unchanged.
+    async function openAddLocationModal(presetNetworkId) {
+      addLocationReturnNetworkId = presetNetworkId || null;
       await refreshNetworkOptionsEverywhere();
       document.getElementById('sp-location-name').value = '';
       document.getElementById('sp-location-slug').value = '';
       document.getElementById('sp-location-type').value = 'city';
       document.getElementById('sp-location-modal-error').textContent = '';
+      if (addLocationReturnNetworkId) document.getElementById('sp-location-network').value = addLocationReturnNetworkId;
       openModal('sp-location-modal');
     }
 
@@ -2383,7 +2400,8 @@
         const data = await res.json();
         if (!res.ok) { errEl.textContent = data.error || 'Failed to add location.'; return; }
         closeModal('sp-location-modal');
-        loadLocationsPage();
+        if (addLocationReturnNetworkId) { loadNetworkDetail(addLocationReturnNetworkId); addLocationReturnNetworkId = null; }
+        else { loadLocationsPage(); }
       } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 
@@ -2908,6 +2926,7 @@
         nav_networks: 'Networks', nav_locations: 'Locations', nav_businesses: 'Businesses', nav_managers: 'Managers',
         sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
         sp_create_network: 'Create Network', sp_add_location: 'Add Location',
+        sp_no_locations_network: 'No locations yet. Add the first location to this network.',
         sp_edit_network: 'Edit Network', sp_save_changes: 'Save Changes', sp_cancel: 'Cancel',
         sp_create_business: 'Create Business',
         sp_business_name_label: 'Business Name', sp_business_name_placeholder: 'e.g. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'The customer-facing business name. Add the location when needed.',
@@ -2936,6 +2955,7 @@
         nav_networks: 'Netzwerke', nav_locations: 'Standorte', nav_businesses: 'Unternehmen', nav_managers: 'Manager',
         sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
         sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
+        sp_no_locations_network: 'Noch keine Standorte vorhanden. Füge den ersten Standort zu diesem Netzwerk hinzu.',
         sp_edit_network: 'Netzwerk bearbeiten', sp_save_changes: 'Änderungen speichern', sp_cancel: 'Abbrechen',
         sp_create_business: 'Unternehmen erstellen',
         sp_business_name_label: 'Geschäftsname', sp_business_name_placeholder: 'z. B. Bäckerei Betz – Ulm Mitte', sp_business_name_helper: 'Der kundenorientierte Geschäftsname. Bei Bedarf den Standort hinzufügen.',
