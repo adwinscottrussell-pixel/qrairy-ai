@@ -2777,10 +2777,21 @@
           if (moveModalReturnTo === 'unassigned') {
             const assignResult = await assignLandingPageToBusiness(currentMoveLandingPageId, newBusiness.id);
             loadBusinessesPage(); // refreshes both the Businesses table and the Unassigned queue
-            showSpBanner(
-              spT(assignResult.ok ? 'sp_msg_business_created_and_assigned' : 'sp_msg_business_created_assignment_failed'),
-              assignResult.ok ? 'success' : 'warning'
-            );
+            if (assignResult.ok) {
+              showSpBanner(spT('sp_msg_business_created_and_assigned'), 'success');
+            } else {
+              // assignResult.error is always one of assignLandingPageToBusiness's
+              // own pre-written safe strings (a curated AdminServiceError message
+              // from the backend, its generic "Internal server error.", or the
+              // client-side "Could not reach server." on a network failure) --
+              // never a raw exception, stack trace, or SQL error -- so it's safe
+              // to show directly. Falls back to the pure generic message only if
+              // that string is ever empty.
+              const message = assignResult.error
+                ? `${spT('sp_msg_business_created_assignment_failed_prefix')} ${assignResult.error}`
+                : spT('sp_msg_business_created_assignment_failed');
+              showSpBanner(message, 'warning');
+            }
             return;
           }
           // Legacy Business-Detail entry point: unchanged, still requires
@@ -2933,6 +2944,7 @@
         sp_business_owner_label: 'Primary Owner / QRAIVY Account', sp_business_owner_helper: 'Select the QRAIVY account responsible for this business. Creating a Business does not create a new user account.',
         sp_msg_business_created_and_assigned: 'Business created and Landing Page assigned successfully.',
         sp_msg_business_created_assignment_failed: 'Business was created, but the Landing Page could not be assigned. Please retry the assignment.',
+        sp_msg_business_created_assignment_failed_prefix: 'Business was created, but the Landing Page could not be assigned:',
         sp_legacy_business: 'Legacy Account Business', sp_unmapped_pages: 'Unmapped Landing Pages (same owner)', sp_attach: 'Attach',
         sp_unmapped_pages_helper: "Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.",
         sp_move_to_business: 'Move to Business', sp_current_business: 'Current Business', sp_target_business: 'Target Business',
@@ -2962,6 +2974,7 @@
         sp_business_owner_label: 'Hauptinhaber / QRAIVY-Konto', sp_business_owner_helper: 'Wähle das QRAIVY-Konto aus, das für dieses Unternehmen verantwortlich ist. Das Erstellen eines Unternehmens erstellt kein neues Benutzerkonto.',
         sp_msg_business_created_and_assigned: 'Unternehmen erstellt und Landingpage erfolgreich zugewiesen.',
         sp_msg_business_created_assignment_failed: 'Das Unternehmen wurde erstellt, aber die Landingpage konnte nicht zugewiesen werden. Bitte die Zuweisung erneut versuchen.',
+        sp_msg_business_created_assignment_failed_prefix: 'Das Unternehmen wurde erstellt, aber die Landingpage konnte nicht zugewiesen werden:',
         sp_legacy_business: 'Alt-Konto-Unternehmen', sp_unmapped_pages: 'Nicht zugeordnete Landing Pages (gleicher Inhaber)', sp_attach: 'Zuordnen',
         sp_unmapped_pages_helper: 'Seiten, die noch nie einem Unternehmen zugeordnet wurden. Seiten, die bereits einem Alt-Konto-Unternehmen zugeordnet sind, müssen von der Detailseite dieses Unternehmens aus verschoben werden.',
         sp_move_to_business: 'Zu Unternehmen verschieben', sp_current_business: 'Aktuelles Unternehmen', sp_target_business: 'Ziel-Unternehmen',
