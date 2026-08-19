@@ -18,6 +18,7 @@ const prisma  = require('../utils/prismaClient');
 const { requireAdmin } = require('../middleware/adminMiddleware');
 const { getHealthChecks } = require('../services/attentionService');
 const networkAdmin = require('../services/networkAdminService');
+const { createSupportAction } = require('../services/supportActionService');
 
 // ── GET /admin/overview ───────────────────────────────────────
 router.get('/overview', requireAdmin, async (req, res) => {
@@ -368,6 +369,29 @@ router.get('/landing-pages/unmapped', requireAdmin, async (req, res) => {
 router.get('/landing-pages/unassigned', requireAdmin, async (req, res) => {
   try {
     return res.json({ landingPages: await networkAdmin.listUnassignedLandingPages() });
+  } catch (err) { return handleAdminServiceError(err, res); }
+});
+
+// Ownerless-LandingPage repair step (LandingPage.userId is nullable — see
+// schema.prisma). Assign-only: rejects if the page already has an owner,
+// and never creates a User — the admin must pick an existing QRAIVY
+// account. This is a prerequisite to /landing-pages/:id/business below,
+// not a replacement for it — mapLandingPageToBusiness's cross-owner check
+// is untouched and still runs on the normal Move-to-Business step.
+router.patch('/landing-pages/:id/owner', requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    const landingPage = await networkAdmin.assignLandingPageOwner(req.params.id, userId);
+    await createSupportAction({
+      actorId: req.adminUser.clerkId,
+      actorType: 'human',
+      actionType: 'landing_page_owner_assigned',
+      targetType: 'LandingPage',
+      targetId: landingPage.id,
+      metadata: { assignedUserId: userId, slug: landingPage.slug, businessName: landingPage.businessName },
+    });
+    console.log(`[admin/landing-pages] Admin ${req.adminUser.email} assigned owner ${userId} to LandingPage ${landingPage.id}`);
+    return res.json({ landingPage });
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 

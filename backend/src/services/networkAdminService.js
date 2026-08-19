@@ -456,6 +456,29 @@ async function listUnassignedLandingPages() {
   return pages.map((p) => ({ ...p, owner: owners.get(p.userId) || null }));
 }
 
+// Assign-only ownership repair for an ownerless LandingPage (userId: null —
+// nullable in schema.prisma). Never overwrites an existing owner, never
+// creates a User. Does not touch businessId -- that stays a separate,
+// later step via mapLandingPageToBusiness below.
+async function assignLandingPageOwner(landingPageId, userId) {
+  if (!userId) throw invalid('userId is required.');
+
+  const landingPage = await prisma.landingPage.findUnique({ where: { id: landingPageId } });
+  if (!landingPage) throw notFound('LandingPage');
+  if (landingPage.userId) {
+    throw duplicate('This LandingPage already has an owner — ownership cannot be reassigned from this endpoint.');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw notFound('User');
+
+  return prisma.landingPage.update({
+    where: { id: landingPageId },
+    data: { userId },
+    select: { id: true, slug: true, businessName: true, userId: true, businessId: true, status: true, createdAt: true },
+  });
+}
+
 async function mapLandingPageToBusiness(landingPageId, businessId) {
   if (!businessId) throw invalid('businessId is required.');
 
@@ -520,5 +543,6 @@ module.exports = {
   removeManager,
   listUnmappedLandingPages,
   listUnassignedLandingPages,
+  assignLandingPageOwner,
   mapLandingPageToBusiness,
 };

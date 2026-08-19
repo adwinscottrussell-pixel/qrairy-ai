@@ -1213,6 +1213,27 @@
     </div>
   </div>
 
+  <!-- Assign QRAIVY Owner Modal (ownerless-LandingPage repair, Phase 1B-B2) -->
+  <div class="modal-overlay" id="sp-assign-owner-modal">
+    <div class="modal-box">
+      <div class="modal-title" data-i18n="sp_assign_owner_first">Assign QRAIVY Owner</div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_col_pages">Landing Page</label>
+        <div id="sp-assign-owner-lp-name" style="font-size:0.85rem;font-weight:600"></div>
+      </div>
+      <div class="sp-form-row">
+        <label class="modal-label" data-i18n="sp_assign_owner_select_label">QRAIVY Account</label>
+        <select class="modal-select" id="sp-assign-owner-select"></select>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px" data-i18n="sp_assign_owner_helper">Assign the existing QRAIVY account that owns this Landing Page. This does not create a new account. Ownership cannot be changed from this screen after assignment.</div>
+      </div>
+      <div id="sp-assign-owner-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-assign-owner-modal')" data-i18n="sp_cancel">Cancel</button>
+        <button class="modal-btn primary" onclick="submitAssignLandingPageOwner()" data-i18n="sp_assign_owner_first">Assign QRAIVY Owner</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Assign Business to Location Modal -->
   <div class="modal-overlay" id="sp-assign-business-modal">
     <div class="modal-box">
@@ -2113,6 +2134,9 @@
     let currentBusinessDetailData = null;
     let currentMoveLandingPageId = null;
     let spUnassignedPagesCache = [];
+    // Landing Page currently targeted by the Assign QRAIVY Owner modal
+    // (ownerless-LandingPage repair step, precedes Assign to Business).
+    let assignOwnerLandingPageId = null;
     // Where the Move/Assign modal should refresh after a successful move:
     // the Business Detail page it was opened from (legacy flow), or the
     // Unassigned Landing Pages tab (Phase 1B-B2 flow).
@@ -2534,13 +2558,59 @@
       tbody.innerHTML = pages.length ? pages.map(p => `
         <tr>
           <td class="td-name">${escapeHtml(p.businessName || p.slug)}</td>
-          <td class="td-email">${escapeHtml(p.owner?.email || p.userId)}</td>
+          <td class="td-email">${p.userId
+            ? escapeHtml(p.owner?.email || p.userId)
+            : `<span data-i18n="sp_no_owner" style="color:var(--text-dim)">No owner</span>`}</td>
           <td>${escapeHtml(p.slug)}</td>
           <td>${spStatusBadge(p.status)}</td>
           <td>${new Date(p.createdAt).toLocaleDateString()}</td>
-          <td><button class="action-btn" onclick="openAssignUnassignedModal('${p.id}')" data-i18n="sp_assign_to_business">Assign to Business</button></td>
+          <td>${p.userId
+            ? `<button class="action-btn" onclick="openAssignUnassignedModal('${p.id}')" data-i18n="sp_assign_to_business">Assign to Business</button>`
+            : `<button class="action-btn" onclick="openAssignLandingPageOwnerModal('${p.id}')" data-i18n="sp_assign_owner_first">Assign QRAIVY Owner</button>`}</td>
         </tr>
       `).join('') : `<tr><td colspan="6" class="sp-empty" data-i18n="sp_no_unassigned_pages">No unassigned Landing Pages.</td></tr>`;
+    }
+
+    // Ownerless-LandingPage repair step (LandingPage.userId is nullable).
+    // Deliberately separate from openAssignUnassignedModal/Create Business --
+    // this only ever sets userId via PATCH /admin/landing-pages/:id/owner,
+    // never businessId, and only offers existing QRAIVY accounts (/admin/
+    // users), never creates one. Runs to completion, then just refreshes
+    // the Unassigned list -- it does not chain into Assign to Business, so
+    // the ownership repair can be verified independently first.
+    async function openAssignLandingPageOwnerModal(landingPageId) {
+      const page = spUnassignedPagesCache.find(p => p.id === landingPageId);
+      if (!page) return;
+      assignOwnerLandingPageId = landingPageId;
+
+      document.getElementById('sp-assign-owner-lp-name').textContent = page.businessName || page.slug;
+      document.getElementById('sp-assign-owner-modal-error').textContent = '';
+
+      const select = document.getElementById('sp-assign-owner-select');
+      select.innerHTML = '<option value="">Loading accounts…</option>';
+      const result = await safeFetchAdmin('/admin/users');
+      const users = result.ok ? (result.data.users || []) : [];
+      select.innerHTML = '<option value="">Select an account…</option>' + optionsHtml(users, u => u.id, u => u.email || u.id);
+
+      openModal('sp-assign-owner-modal');
+    }
+
+    async function submitAssignLandingPageOwner() {
+      const userId = document.getElementById('sp-assign-owner-select').value;
+      const errEl = document.getElementById('sp-assign-owner-modal-error');
+      errEl.textContent = '';
+      if (!userId) { errEl.textContent = 'Select a QRAIVY account.'; return; }
+      try {
+        const res = await fetch(`${API_BASE}/admin/landing-pages/${assignOwnerLandingPageId}/owner`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ userId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to assign owner.'; return; }
+      } catch (err) { errEl.textContent = 'Could not reach server.'; return; }
+      closeModal('sp-assign-owner-modal');
+      loadUnassignedLandingPagesPage();
     }
 
     // ── BUSINESS DETAIL ───────────────────────────────────────
@@ -2982,6 +3052,8 @@
         sp_no_eligible_businesses: 'No eligible real Businesses exist for this owner yet.', sp_move_landing_page: 'Move Landing Page',
         sp_unassigned_pages: 'Unassigned Landing Pages', sp_assign_to_business: 'Assign to Business', sp_no_unassigned_pages: 'No unassigned Landing Pages.',
         sp_unassigned_pages_helper: "Newly created Landing Pages that have never been attached to any Business (Legacy or real). This is separate from the legacy migration — legacy-mapped pages are moved from their Legacy Account Business's own detail page instead.",
+        sp_no_owner: 'No owner', sp_assign_owner_first: 'Assign QRAIVY Owner', sp_assign_owner_select_label: 'QRAIVY Account',
+        sp_assign_owner_helper: 'Assign the existing QRAIVY account that owns this Landing Page. This does not create a new account. Ownership cannot be changed from this screen after assignment.',
         sp_assign_business: 'Assign Business', sp_assign_manager: 'Assign Manager',
         sp_col_network: 'Network', sp_col_location: 'Location', sp_col_business: 'Business',
         sp_col_type: 'Type', sp_col_status: 'Status', sp_col_owner: 'Primary Owner', sp_col_created: 'Created',
@@ -3013,6 +3085,8 @@
         sp_no_eligible_businesses: 'Für diesen Inhaber existieren noch keine geeigneten echten Unternehmen.', sp_move_landing_page: 'Landingpage verschieben',
         sp_unassigned_pages: 'Nicht zugewiesene Landing Pages', sp_assign_to_business: 'Unternehmen zuweisen', sp_no_unassigned_pages: 'Keine nicht zugewiesenen Landing Pages.',
         sp_unassigned_pages_helper: 'Neu erstellte Landing Pages, die noch keinem Unternehmen (weder Alt-Konto noch echt) zugeordnet wurden. Dies ist unabhängig von der Alt-Konto-Migration — dort zugeordnete Seiten werden von der Detailseite dieses Alt-Konto-Unternehmens aus verschoben.',
+        sp_no_owner: 'Kein Inhaber', sp_assign_owner_first: 'QRAIVY-Inhaber zuweisen', sp_assign_owner_select_label: 'QRAIVY-Konto',
+        sp_assign_owner_helper: 'Weise das bestehende QRAIVY-Konto zu, dem diese Landingpage gehört. Dadurch wird kein neues Konto erstellt. Die Inhaberschaft kann nach der Zuweisung über diesen Bildschirm nicht geändert werden.',
         sp_assign_business: 'Unternehmen zuweisen', sp_assign_manager: 'Manager zuweisen',
         sp_col_network: 'Netzwerk', sp_col_location: 'Standort', sp_col_business: 'Unternehmen',
         sp_col_type: 'Typ', sp_col_status: 'Status', sp_col_owner: 'Hauptinhaber', sp_col_created: 'Erstellt',
