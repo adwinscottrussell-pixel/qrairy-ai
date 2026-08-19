@@ -2590,7 +2590,9 @@
       select.innerHTML = '<option value="">Loading accounts…</option>';
       const result = await safeFetchAdmin('/admin/users');
       const users = result.ok ? (result.data.users || []) : [];
-      select.innerHTML = '<option value="">Select an account…</option>' + optionsHtml(users, u => u.id, u => u.email || u.id);
+      // "email — id" so the founder can tell accounts apart -- the raw
+      // Clerk id alone is not human-identifiable. Value stays u.id either way.
+      select.innerHTML = '<option value="">Select an account…</option>' + optionsHtml(users, u => u.id, u => u.email ? `${u.email} — ${u.id}` : u.id);
 
       openModal('sp-assign-owner-modal');
     }
