@@ -331,21 +331,30 @@ async function createBusiness({ name, primaryOwnerUserId, status }) {
   if (!owner) throw invalid('primaryOwnerUserId does not match a known QRAIVY user/account.');
 
   const trimmedName = String(name).trim();
+  // Comparison-only normalization -- the stored name (trimmedName below)
+  // keeps the founder's exact formatting; only the duplicate check
+  // collapses internal whitespace so "Baeckerei   Staib" and "Baeckerei
+  // Staib" are recognized as the same name.
+  const normalizedName = trimmedName.replace(/\s+/g, ' ').toLowerCase();
 
   // Duplicate guard: Business.name has no uniqueness constraint (see the
   // schema comment on Business.slug), and repeated attempts through the
   // Unassigned-Landing-Page "Create Business" shortcut proved this creates
   // true duplicate rows with no recovery path. Scoped narrowly on purpose:
-  // same owner + same case-insensitive name + not a legacy shim + active --
+  // same owner + same normalized name + not a legacy shim + not archived --
   // never blocks two different owners from using the same brand name, and
   // never matches a legacy shim row (whose name is the owner's email/id,
   // not a real merchant name, via the existing isLegacyShimBusiness check).
+  // Paused is treated the same as active (still a real, existing Business);
+  // archived is intentionally excluded so a deliberately-archived duplicate
+  // never blocks a legitimate fresh recreation of the same name (Stadt
+  // Pocket duplicate-guard improvement, 2026-08-21).
   // If a match is found, reuse it instead of creating a second row --
   // callers (e.g. the auto-assign flow) don't need to know whether the
   // returned Business is new or reused, since only its id is used.
-  const sameOwnerActive = await prisma.business.findMany({ where: { primaryOwnerUserId, status: 'active' } });
-  const existingMatch = sameOwnerActive.find((b) =>
-    b.name.trim().toLowerCase() === trimmedName.toLowerCase() && !isLegacyShimBusiness(b, owner)
+  const sameOwnerCandidates = await prisma.business.findMany({ where: { primaryOwnerUserId, status: { not: 'archived' } } });
+  const existingMatch = sameOwnerCandidates.find((b) =>
+    b.name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName && !isLegacyShimBusiness(b, owner)
   );
   if (existingMatch) return { business: existingMatch, reused: true };
 
