@@ -46,8 +46,11 @@ async function listNetworks() {
   const [locationCounts, memberCounts, businessCounts] = await Promise.all([
     prisma.location.groupBy({ by: ['networkId'], where: { networkId: { in: ids } }, _count: { _all: true } }),
     prisma.networkMember.groupBy({ by: ['networkId'], where: { networkId: { in: ids } }, _count: { _all: true } }),
+    // Archived Businesses excluded, consistent with the Location-detail and
+    // default Business-list policy above (Stadt Pocket safety pass,
+    // 2026-08-20) -- BusinessLocation rows are untouched either way.
     prisma.businessLocation.findMany({
-      where: { location: { networkId: { in: ids } } },
+      where: { location: { networkId: { in: ids } }, business: { status: { not: 'archived' } } },
       select: { businessId: true, location: { select: { networkId: true } } },
     }),
   ]);
@@ -76,9 +79,12 @@ async function getNetwork(id) {
   const locations = await prisma.location.findMany({ where: { networkId: id }, orderBy: { name: 'asc' } });
   const locationIds = locations.map((l) => l.id);
 
+  // Archived Businesses excluded from this rollup, same policy as
+  // getLocation() and listBusinesses() (Stadt Pocket safety pass,
+  // 2026-08-20) -- BusinessLocation rows are untouched either way.
   const businessLocations = locationIds.length
     ? await prisma.businessLocation.findMany({
-        where: { locationId: { in: locationIds } },
+        where: { locationId: { in: locationIds }, business: { status: { not: 'archived' } } },
         include: { business: true, location: true },
       })
     : [];
@@ -164,7 +170,14 @@ async function getLocation(id) {
   const location = await prisma.location.findUnique({ where: { id }, include: { network: true } });
   if (!location) throw notFound('Location');
 
-  const businessLocations = await prisma.businessLocation.findMany({ where: { locationId: id }, include: { business: true } });
+  // Archived Businesses are excluded from this normal operational read --
+  // the BusinessLocation row itself is never deleted, so an archived
+  // Business's participation history is preserved, just not surfaced here
+  // (Stadt Pocket safety pass, 2026-08-20).
+  const businessLocations = await prisma.businessLocation.findMany({
+    where: { locationId: id, business: { status: { not: 'archived' } } },
+    include: { business: true },
+  });
   const managers = await prisma.networkMember.findMany({ where: { locationId: id }, orderBy: { createdAt: 'desc' } });
   const managerUsers = await resolveUsers(managers.map((m) => m.userId));
 
@@ -219,7 +232,13 @@ async function updateLocation(id, { name, slug, type, status }) {
 
 async function listBusinesses({ networkId, locationId, status } = {}) {
   const where = {};
-  if (status) where.status = status;
+  // Default view excludes archived Businesses (Stadt Pocket safety pass,
+  // 2026-08-20) -- callers that want them back explicitly pass
+  // ?status=archived. Archived rows are never deleted or hidden from that
+  // explicit query, only from the unfiltered/default read path every
+  // normal operational view (Businesses list, Assign-to-Location dropdown)
+  // shares.
+  where.status = status || { not: 'archived' };
   if (networkId || locationId) {
     where.businessLocations = {
       some: {
@@ -356,6 +375,9 @@ async function assignBusinessToLocation({ businessId, locationId }) {
   ]);
   if (!business) throw notFound('Business');
   if (!location) throw notFound('Location');
+  if (business.status === 'archived') {
+    throw invalid('This Business is archived and cannot be assigned to a Location.');
+  }
 
   const existing = await prisma.businessLocation.findUnique({ where: { businessId_locationId: { businessId, locationId } } });
   if (existing) throw duplicate('This Business is already assigned to this Location.');
@@ -488,6 +510,9 @@ async function mapLandingPageToBusiness(landingPageId, businessId) {
   ]);
   if (!landingPage) throw notFound('LandingPage');
   if (!business) throw notFound('Business');
+  if (business.status === 'archived') {
+    throw invalid('This Business is archived and cannot receive a Landing Page assignment.');
+  }
 
   // Critical tenant-protection rule (Phase 1B-B1): a LandingPage may only
   // be mapped to a Business owned by the same Clerk user that already owns
