@@ -942,7 +942,7 @@
           <select id="sp-biz-filter-network" onchange="loadBusinessesPage()"><option value="">All Networks</option></select>
           <select id="sp-biz-filter-location" onchange="loadBusinessesPage()"><option value="">All Locations</option></select>
           <select id="sp-biz-filter-status" onchange="loadBusinessesPage()">
-            <option value="">All Statuses</option>
+            <option value="" data-i18n="sp_status_active_paused">Active &amp; Paused</option>
             <option value="active" data-i18n="sp_status_active">Active</option>
             <option value="paused" data-i18n="sp_status_paused">Paused</option>
             <option value="archived" data-i18n="sp_status_archived">Archived</option>
@@ -2530,7 +2530,7 @@
           <td>${spStatusBadge(b.status)}</td>
           <td>
             <button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button>
-            <button class="action-btn" onclick="openAssignBusinessModal('${b.id}', null)">Assign to Location</button>
+            ${b.status !== 'archived' ? `<button class="action-btn" onclick="openAssignBusinessModal('${b.id}', null)">Assign to Location</button>` : ''}
           </td>
         </tr>
       `).join('') : `<tr><td colspan="6" class="sp-empty">No businesses match these filters.</td></tr>`;
@@ -2643,12 +2643,22 @@
           <div class="health-row">
             <div class="health-name">${escapeHtml(p.businessName || p.slug)}</div>
             <div class="health-status">${escapeHtml(p.status)}</div>
-            ${b.isLegacyShim ? `<button class="action-btn" onclick="openMoveToBusinessModal('${p.id}')" data-i18n="sp_move_to_business">Move to Business</button>` : ''}
+            ${b.isLegacyShim && b.status !== 'archived' ? `<button class="action-btn" onclick="openMoveToBusinessModal('${p.id}')" data-i18n="sp_move_to_business">Move to Business</button>` : ''}
           </div>
         `).join('')
         : '<div style="font-size:0.78rem;color:var(--text-dim)">No landing pages yet.</div>';
 
-      await loadUnmappedLandingPagesFor(b);
+      // Archived Businesses are viewable for audit/history, but must not
+      // offer any action that would create a new relationship (Stadt
+      // Pocket safety pass, 2026-08-20) -- the backend also rejects this
+      // independently (assignLandingPageOwner/mapLandingPageToBusiness),
+      // this just keeps the UI from offering a button that would fail.
+      if (b.status === 'archived') {
+        document.getElementById('sp-bd-unmapped-pages').innerHTML =
+          '<div style="font-size:0.78rem;color:var(--text-dim)">This Business is archived — no assignment actions available.</div>';
+      } else {
+        await loadUnmappedLandingPagesFor(b);
+      }
     }
 
     // Lists this Business's owner's LandingPages that have no Business yet,
@@ -3065,7 +3075,7 @@
         sp_type_city: 'City', sp_type_mall: 'Mall', sp_type_district: 'District', sp_type_generic: 'Generic',
         sp_type_local_network: 'Local Network', sp_type_brand_network: 'Brand Network', sp_type_enterprise_network: 'Enterprise Network',
         sp_network_type_helper: 'Network type describes the kind of network. Cities such as Ulm are added separately as Locations.',
-        sp_status_active: 'Active', sp_status_paused: 'Paused', sp_status_archived: 'Archived',
+        sp_status_active: 'Active', sp_status_paused: 'Paused', sp_status_archived: 'Archived', sp_status_active_paused: 'Active & Paused',
       },
       de: {
         nav_business_accounts: 'Geschäftskonten',
@@ -3098,7 +3108,7 @@
         sp_type_city: 'Stadt', sp_type_mall: 'Einkaufszentrum', sp_type_district: 'Bezirk', sp_type_generic: 'Allgemein',
         sp_type_local_network: 'Lokales Netzwerk', sp_type_brand_network: 'Marken-Netzwerk', sp_type_enterprise_network: 'Unternehmens-Netzwerk',
         sp_network_type_helper: 'Der Netzwerktyp beschreibt die Art des Netzwerks. Städte wie Ulm werden separat als Standorte hinzugefügt.',
-        sp_status_active: 'Aktiv', sp_status_paused: 'Pausiert', sp_status_archived: 'Archiviert',
+        sp_status_active: 'Aktiv', sp_status_paused: 'Pausiert', sp_status_archived: 'Archiviert', sp_status_active_paused: 'Aktiv & Pausiert',
       },
     };
     function applySpLang(lang) {
