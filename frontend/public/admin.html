@@ -2448,7 +2448,7 @@
         <tr>
           <td class="td-name">${escapeHtml(bl.business.name)}</td>
           <td class="td-email">${escapeHtml(bl.business.primaryOwnerUserId)}</td>
-          <td>${spStatusBadge(bl.status)}</td>
+          <td>${spStatusBadge(bl.business.status)}</td>
           <td>
             <button class="action-btn" onclick="loadBusinessDetail('${bl.business.id}')">Open →</button>
             ${bl.status === 'active'
