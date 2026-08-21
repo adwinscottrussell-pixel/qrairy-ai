@@ -8,17 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id
-  email     String?
-  phone     String?
-  plan      String   @default("free")
-  createdAt        DateTime  @default(now())
-  trialExpiresAt   DateTime?
-  accountType      String?   @default("free")
+  id                   String    @id
+  email                String?
+  phone                String?
+  plan                 String    @default("free")
+  createdAt            DateTime  @default(now())
+  trialExpiresAt       DateTime?
+  accountType          String?   @default("free")
   stripeCustomerId     String?
   stripeSubscriptionId String?
   subscriptionStatus   String?
-  qrs       QR[]
+  qrs                  QR[]
 
   @@index([email])
 }
@@ -106,31 +106,127 @@ model LandingPage {
   @@index([businessName])
 }
 
+// ============================================================
+// Deals (Phase 1A) — schema and CRUD only. No claim/redemption
+// endpoints, no public pages, no push, no analytics yet.
+//
+// Status/redemptionType/claim-status are plain Strings, not Prisma
+// enums. Postgres (this datasource's provider) supports native enums,
+// but every existing status-like field in this schema (LandingPage.status,
+// Subscriber.status, RewardEvent.status, StampSettings.*, etc.) is a
+// plain String — following that established convention rather than
+// introducing the first enum. Allowed values are validated centrally in
+// services/dealValidation.js, not enforced by the database.
+//
+// landingPageSlug is a bare string, not a Prisma relation field — matching
+// the existing convention already used by StampSettings, StampToken, Pass,
+// LoyaltyCustomer, and WebPushSubscription, all of which join to
+// LandingPage by slug rather than a real foreign key.
+// ============================================================
+model Deal {
+  id               String      @id @default(cuid())
+  // Immutable public identifier — generated server-side only (see
+  // dealController.js), never accepted from the client. Intended for
+  // stable hosted URLs, QR codes, push links, and analytics, independent
+  // of title/slug so renaming a deal never breaks a link already handed
+  // out to a customer.
+  publicId         String      @unique
+  landingPageSlug  String
+  slug             String
+  title            String
+  shortDescription String
+  fullDescription  String
+  imageUrl         String?
+  ctaLabel         String      @default("Claim Deal")
+  startAt          DateTime
+  endAt            DateTime?
+  status           String      @default("draft") // draft | scheduled | live | paused | expired
+  redemptionType   String      @default("single_use") // single_use | unlimited
+  redemptionLimit  Int?
+  terms            String?
+  originalPrice    Float?
+  dealPrice        Float?
+  discountText     String?
+  pushMessage      String?
+  featured         Boolean     @default(false)
+  // Reserved placeholder for a future Location model. Must hold a stable
+  // identifier (a future Location.id), never a free-text display name
+  // like "Downtown Store" — no Location/Brand model exists yet, and
+  // nothing in Phase 1A reads or writes this field.
+  locationRef      String?
+  viewCount        Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @default(now()) @updatedAt
+  claims           DealClaim[]
+
+  // Slug uniqueness is scoped per landing page, not global — two different
+  // businesses (or two different pages) may each have their own "summer-sale".
+  @@unique([landingPageSlug, slug])
+  @@index([landingPageSlug])
+}
+
+// The complete lifecycle of one customer's interaction with a Deal — claim
+// and redemption are two states of the same row, not two tables (see
+// docs/API_REFERENCE.md for the full rationale). No DealRedemption model.
+model DealClaim {
+  id                  String    @id @default(cuid())
+  dealId              String
+  deal                Deal      @relation(fields: [dealId], references: [id])
+  // Anonymous customer identity ("cTok"), same convention as
+  // WebPushSubscription.cid / LoyaltyCustomer.customerId. Nullable —
+  // staff-initiated redemptions (a future phase) may have no customer
+  // identity captured at all.
+  cid                 String?
+  // Redemption credential. Generated server-side only, unique, never
+  // accepted from the client. Not used by any Phase 1A code (no
+  // claim/redemption endpoints yet) but included now so the unique
+  // constraint and index exist before that logic is built.
+  token               String    @unique
+  status              String    @default("claimed") // claimed | redeemed | void
+  claimedAt           DateTime  @default(now())
+  redeemedAt          DateTime?
+  // Stable identifier for whoever performed the redemption (e.g. a future
+  // staff-session/PIN-verification id) — never a free-text name. Not
+  // client-writable. Unused by any Phase 1A code.
+  redeemedBy          String?
+  // Same convention as Deal.locationRef — a future Location.id, not a
+  // display name. Unused by any Phase 1A code.
+  redeemedLocationRef String?
+  expiresAt           DateTime?
+
+  // Deliberately NOT @@unique([dealId, cid]) — whether a customer may claim
+  // the same deal more than once depends on redemptionType (a business
+  // rule), not a database invariant. Enforced in application logic when
+  // the claim endpoint is built in a later phase.
+  @@index([dealId])
+  @@index([cid])
+}
+
 model Pass {
-  id              String             @id @default(cuid())
-  serialNumber    String             @unique
+  id            String             @id @default(cuid())
+  serialNumber  String             @unique
   // Set at creation time. serialNumber encodes slug + an optional customer
   // cid as "sqr-{slug}-{cid}", but slugs themselves contain hyphens, so
   // reverse-parsing the slug back out of serialNumber is ambiguous —
   // storing it directly is the only reliable way to look up which
   // landing page a given Pass belongs to.
-  slug            String?
-  passTypeId      String
-  authToken       String?
-  lastMsgTitle    String?
-  lastMsg         String?
-  lastMsgLink     String?
-  stampCount      Int                @default(0)
-  stampGoal       Int                @default(10)
-  rewardReady     Boolean            @default(false)
-  totalStamps     Int                @default(0)
-  rewardsEarned   Int                @default(0)
-  lastStampAt     DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @default(now()) @updatedAt
-  devices         PassDevice[]
-  registrations   PassRegistration[]
-  rewardEvents    RewardEvent[]
+  slug          String?
+  passTypeId    String
+  authToken     String?
+  lastMsgTitle  String?
+  lastMsg       String?
+  lastMsgLink   String?
+  stampCount    Int                @default(0)
+  stampGoal     Int                @default(10)
+  rewardReady   Boolean            @default(false)
+  totalStamps   Int                @default(0)
+  rewardsEarned Int                @default(0)
+  lastStampAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now()) @updatedAt
+  devices       PassDevice[]
+  registrations PassRegistration[]
+  rewardEvents  RewardEvent[]
 
   // Architecture B, Stage A: optional link to the canonical cross-context
   // identity. Nullable and additive — existing rows and every current
@@ -143,33 +239,34 @@ model Pass {
 }
 
 model PassDevice {
-  id                    String   @id @default(cuid())
-  deviceLibraryId       String
-  pushToken             String
-  walletType            String   @default("apple")
-  passId                String
-  pass                  Pass     @relation(fields: [passId], references: [id])
-  createdAt             DateTime @default(now())
+  id              String   @id @default(cuid())
+  deviceLibraryId String
+  pushToken       String
+  walletType      String   @default("apple")
+  passId          String
+  pass            Pass     @relation(fields: [passId], references: [id])
+  createdAt       DateTime @default(now())
+
   @@unique([passId, deviceLibraryId])
 }
 
 model PassRegistration {
-  id                    String   @id @default(cuid())
-  deviceLibraryId       String
-  serialNumber          String
-  passId                String
-  pass                  Pass     @relation(fields: [passId], references: [id])
-  createdAt             DateTime @default(now())
+  id              String   @id @default(cuid())
+  deviceLibraryId String
+  serialNumber    String
+  passId          String
+  pass            Pass     @relation(fields: [passId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model PushCampaign {
-  id           String   @id @default(cuid())
-  slug         String
-  title        String
-  message      String
-  linkUrl      String?
-  sent         Int      @default(0)
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  slug      String
+  title     String
+  message   String
+  linkUrl   String?
+  sent      Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model WebPushSubscription {
@@ -187,15 +284,16 @@ model WebPushSubscription {
 
   @@index([cid])
 }
+
 model StampSettings {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  goal        Int      @default(10)
-  rewardName  String   @default("Free item")
-  enabled     Boolean  @default(false)
-  color       String   @default("#ff5a1f")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  goal       Int      @default(10)
+  rewardName String   @default("Free item")
+  enabled    Boolean  @default(false)
+  color      String   @default("#ff5a1f")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 }
 
 model StampToken {
@@ -215,14 +313,14 @@ model StampEntry {
 }
 
 model RewardEvent {
-  id          String    @id @default(cuid())
-  slug        String
-  passId      String
-  pass        Pass      @relation(fields: [passId], references: [id])
-  rewardText  String
-  status      String    @default("earned")
-  createdAt   DateTime  @default(now())
-  redeemedAt  DateTime?
+  id         String    @id @default(cuid())
+  slug       String
+  passId     String
+  pass       Pass      @relation(fields: [passId], references: [id])
+  rewardText String
+  status     String    @default("earned")
+  createdAt  DateTime  @default(now())
+  redeemedAt DateTime?
 }
 
 model LoyaltyCustomer {

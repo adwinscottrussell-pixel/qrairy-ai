@@ -57,6 +57,121 @@ For third-party/GHL (GoHighLevel) integration, per file header comment.
 
 Same `APIKey`-model-missing caveat applies to every `/keys` endpoint here.
 
+## Deals — `dealRoutes.js` (mount: `/deals`)
+
+**Phase 1A only** — owner-authenticated CRUD for the `Deal` model. No public
+routes, no claim/redemption endpoints, no push integration, and no
+analytics calculations exist yet; those are later phases (see
+`docs/dashboard-design-system.md`'s neighbor documents for the full
+architecture report this was built from).
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/deals` | Clerk (user) | Creates a draft deal. Body: `landingPageSlug` (drives ownership check) + the fields below. Rejects with 404/403 if the landing page doesn't exist / isn't owned by the caller. |
+| GET | `/deals?slug=<landingPageSlug>&status=<optional>` | Clerk (user) | Lists deals for one landing page. 404/403 if the caller doesn't own that landing page. Each result includes `claimsCount` (a plain count via Prisma's `_count` relation aggregation — never the underlying `DealClaim` rows or their `token`s). |
+| GET | `/deals/:id` | Clerk (user) | Single deal, resolved via `Deal.landingPageSlug → LandingPage.userId`. Returns 404 for both "no such deal" and "exists but not yours" — see Ownership note below. |
+| PUT | `/deals/:id` | Clerk (user) | Updates only the fields in the create/update allowlist (below) — anything else in the body is never read, not rejected with an error, so extra/unexpected keys are structurally inert. |
+| DELETE | `/deals/:id` | Clerk (user) | Hard-deletes only if the deal has zero `DealClaim` rows; otherwise 409, instructing the caller to pause/expire instead. |
+
+### Models
+
+**`Deal`** — one promotional offer, associated with a `LandingPage` by
+`landingPageSlug` (a bare string join, matching the existing convention
+already used by `StampSettings`/`StampToken`/`Pass`/`LoyaltyCustomer`/
+`WebPushSubscription` — none of which use a real Prisma relation to
+`LandingPage` either).
+
+**`DealClaim`** — the complete lifecycle of one customer's interaction with
+a deal (claim **and** redemption are two states of the same row, not two
+tables — there is deliberately no `DealRedemption` model). Not yet written
+to by any endpoint in Phase 1A; the model exists so its unique `token`
+constraint and indexes are in place before the claim/redemption phase is
+built.
+
+### Status values
+
+`Deal.status`: `draft` (default) → `scheduled` → `live` → `paused` /
+`expired`. Plain `String`, not a Prisma enum, validated centrally in
+`services/dealValidation.js` — Postgres (this datasource's provider)
+supports native enums, but every existing status-like field in this schema
+is a `String`; this follows that established convention rather than
+introducing the first enum.
+
+`Deal.redemptionType`: `single_use` (default) | `unlimited`.
+
+`DealClaim.status` (unused by any route yet): `claimed` (default) |
+`redeemed` | `void`.
+
+Configured `status` and **effective, time-based availability** are kept
+conceptually separate — `services/dealAvailability.js`'s
+`getDealAvailability(deal, now)` computes `draft | paused | expired |
+not_started | available` by combining `status` with `startAt`/`endAt`,
+without ever rewriting `Deal.status` itself. No cron job. Not called by any
+route yet (no public deal page exists in Phase 1A) — added now so the
+public deal page and dashboard filters share one definition later instead
+of re-deriving this per page.
+
+### Ownership behavior
+
+- `POST /deals` and `GET /deals` are addressed by `landingPageSlug` (in the
+  body/query) — these follow the existing 404-then-403 split already used
+  by `loyaltyAdminController.js` (404 if no such landing page exists at
+  all, 403 if it exists but belongs to someone else).
+- `GET/PUT/DELETE /deals/:id` are addressed by the Deal's own opaque `id` —
+  these uniformly return **404** for both "no such deal" and "found but not
+  yours," since a distinct 403 here would leak the existence of another
+  business's deal id to anyone who can guess/enumerate ids. This is a
+  deliberate asymmetry from the `landingPageSlug`-addressed routes above,
+  not an inconsistency.
+
+### Immutable / system-written fields
+
+Never accepted from the client, on create or update: `id`, `publicId`,
+`viewCount`, `createdAt`, `updatedAt`, `claims`, and every `DealClaim`
+lifecycle field (`token`, `status`, `claimedAt`, `redeemedAt`, `redeemedBy`,
+`redeemedLocationRef`). `landingPageSlug` is additionally immutable
+**after creation** — Phase 1A has no ownership-safe reassignment flow, so
+`PUT /deals/:id` cannot move a deal to a different landing page.
+
+`publicId` is generated server-side only: `'deal_' + crypto.randomBytes(16).toString('hex')`
+— independent of title/slug, so renaming a deal never breaks a link already
+handed to a customer.
+
+### Deletion behavior
+
+`DELETE /deals/:id` hard-deletes only when `DealClaim` count for that deal
+is zero. If any claims exist, the request is rejected (409) rather than
+silently cascade-deleting customer claim history — that behavior isn't
+established elsewhere in this project, so Phase 1A doesn't introduce it
+here either.
+
+### Example request bodies
+
+Create:
+```json
+{
+  "landingPageSlug": "baeckerei-betz-0h6",
+  "slug": "summer-sale",
+  "title": "Summer Sale",
+  "shortDescription": "20% off everything",
+  "fullDescription": "Full terms and details about the summer sale.",
+  "startAt": "2026-06-01T00:00:00.000Z",
+  "endAt": "2026-08-31T00:00:00.000Z"
+}
+```
+
+Update (only approved fields are ever read; anything else here is a no-op,
+not an error):
+```json
+{ "title": "Summer Sale — Extended", "endAt": "2026-09-15T00:00:00.000Z" }
+```
+
+### What Phase 1A deliberately does not include
+
+No dashboard UI, no public `/deal/:dealSlug` page, no claim endpoint, no
+redemption/QR endpoint, no push integration, no analytics endpoint. All
+tracked as later phases.
+
 ## Design — `designRoutes.js`
 
 | Method | Path | Auth | Notes |
