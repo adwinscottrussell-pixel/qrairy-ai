@@ -300,7 +300,7 @@ function buildCustomLayout(prompt, size, style, includeQR) {
   const headline = words.slice(0,4).join(' ').toUpperCase() || 'YOUR DESIGN';
   const subline = prompt.length > 40 ? prompt.substring(0,45) + '...' : prompt;
 
-  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com';
+  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : window.PUBLIC_APP_ORIGIN;
 
   const elements = [
     // Background
@@ -363,7 +363,7 @@ function renderAILayout(layout) {
   document.getElementById('canvas-size-btn').textContent =
     (layout.name || 'AI Design') + ' · ' + S.canvasW + ' × ' + S.canvasH;
 
-  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com';
+  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : window.PUBLIC_APP_ORIGIN;
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrUrl);
 
   // Use Polotno store if available, otherwise use interactive CE system

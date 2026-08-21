@@ -11,6 +11,7 @@
 <script src="js/landing-section-registry.js"></script>
 <script src="js/landing-page-renderer.js"></script>
 <script src="js/smart-block-editor.js"></script>
+<script src="js/url-config.js"></script>
 <style>
 /* ── Smart QR Detail Page ── */
 .sqd-wrap { max-width: 900px; padding: 32px 24px 80px; margin: 0 auto; }
@@ -434,7 +435,7 @@
     function getUrl() {
       var slug = new URLSearchParams(window.location.search).get('slug');
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://qraivy.com/lp/' + slug : window.location.href);
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? PUBLIC_APP_ORIGIN + '/lp/' + slug : window.location.href);
     }
     window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
@@ -1415,7 +1416,7 @@ async function initPage() {
     try {
       let _apiToken = '';
       try { if(window.Clerk && window.Clerk.session) _apiToken = await window.Clerk.session.getToken() || ''; } catch(_){}
-      const res  = await fetch(`https://www.qraivy.com/lp/${slug}`, {
+      const res  = await fetch(`${window.PUBLIC_APP_ORIGIN}/lp/${slug}`, {
         headers: _apiToken ? { Authorization: 'Bearer ' + _apiToken } : {}
       });
       const data = await res.json();
@@ -1423,7 +1424,7 @@ async function initPage() {
         pending = {
           slug:         data.slug,
           businessName: data.businessName,
-          hostedUrl:    `https://qraivy.com/lp/${data.slug}`,
+          hostedUrl:    `${PUBLIC_APP_ORIGIN}/lp/${data.slug}`,
           useCase:      data.useCase,
           brandColor:   data.brandColor,
           sections:     data.sections
@@ -1437,7 +1438,7 @@ async function initPage() {
     pending = {
       slug:         slug,
       businessName: slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
-      hostedUrl:    'https://qraivy.com/lp/' + slug
+      hostedUrl:    PUBLIC_APP_ORIGIN + '/lp/' + slug
     };
   }
   if (!pending) {
@@ -1445,7 +1446,7 @@ async function initPage() {
     return;
   }
 
-  const hostedUrl = (pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`);
+  const hostedUrl = (pending.hostedUrl || `${PUBLIC_APP_ORIGIN}/lp/${pending.slug}`);
   const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
 
   // ── Populate hero ─────────────────────────────────────────────────────
@@ -1520,7 +1521,7 @@ async function initPage() {
   // ── Phone iframe ──────────────────────────────────────────────────────
   var iframeEl = document.getElementById('sqd-iframe');
   var _iframeSlug = (window.QRAIVY_EDITOR_STATE.slug || '');
-  iframeEl.src = _iframeSlug ? ('https://api.qraivy.com/lp/' + _iframeSlug + '?preview=1&t=' + Date.now()) : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
+  iframeEl.src = _iframeSlug ? (window.API_ORIGIN + '/lp/' + _iframeSlug + '?preview=1&t=' + Date.now()) : (hostedUrl + (hostedUrl.indexOf("?") === -1 ? "?preview=1" : "&preview=1"));
   var phoneFrame = document.querySelector('.sqd-phone-frame');
   if (phoneFrame) {
     phoneFrame.addEventListener('wheel', function(e) {
@@ -1564,7 +1565,7 @@ async function initPage() {
   if (pending.slug) {
     try {
       const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;
-      const res = await fetch(`https://www.qraivy.com/lp/${pending.slug}`, {
+      const res = await fetch(`${window.PUBLIC_APP_ORIGIN}/lp/${pending.slug}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
@@ -2204,7 +2205,7 @@ window.QRAIVY_EDITOR_STATE = {
         template: 'premium',
         sections: Object.assign({}, state.sections || {}, { buttons: (state.buttons || []), order: (state.sections && state.sections.order) || ['hero','voice','ai','buttons','loop','footer'], theme: Object.assign({ background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }, (state.sections && state.sections.theme) || {}, state.brandColor ? { accentColor: state.brandColor } : {}) })
       };
-      var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+      var res = await fetch(window.API_ORIGIN + '/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Publish failed');
       saveDraft();
@@ -3413,7 +3414,7 @@ window.QRAIVY_EDITOR_STATE = {
           theme:   Object.assign({ background:'dark', accentColor:'#ff5a1f', buttonStyle:'rounded', fontStyle:'modern', logoMode:'initials' }, (S.sections && S.sections.theme) || {}, S.brandColor ? { accentColor: S.brandColor } : {})
         })
       };
-      var res = await fetch('https://api.qraivy.com/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+      var res = await fetch(window.API_ORIGIN + '/lp', { method: 'POST', headers: headers, body: JSON.stringify(payload) });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed');
       // Save succeeded — update localStorage with confirmed state
@@ -3512,7 +3513,7 @@ window.QRAIVY_EDITOR_STATE = {
 
 // ── QRAIVY MANAGE CONTROLLER ─────────────────────────────────────────────
 (function() {
-  var API_BASE = 'https://api.qraivy.com';
+  var API_BASE = window.API_ORIGIN;
 
   function getSlug() {
     var p = new URLSearchParams(window.location.search);
@@ -3544,10 +3545,10 @@ window.QRAIVY_EDITOR_STATE = {
   function populateOverview() {
     var slug = getSlug();
     if (!slug) return;
-    var lpUrl = 'https://qraivy.com/lp/' + slug + '?src=qr';
+    var lpUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug + '?src=qr';
 
     // Set view button immediately
-    var lpUrl2 = 'https://qraivy.com/lp/' + slug;
+    var lpUrl2 = PUBLIC_APP_ORIGIN + '/lp/' + slug;
     var vb = document.getElementById('sqd-ov-view-btn');
     if (vb) vb.href = lpUrl2;
     var tvb = document.getElementById('sqd-view-btn');
@@ -3569,7 +3570,7 @@ window.QRAIVY_EDITOR_STATE = {
       window.Clerk.session.getToken().then(function(tok) {
         var headers = { 'Content-Type': 'application/json' };
         if (tok) headers['Authorization'] = 'Bearer ' + tok;
-        fetch('https://api.qraivy.com/dashboard', { headers: headers })
+        fetch(window.API_ORIGIN + '/dashboard', { headers: headers })
           .then(function(r) { return r.json(); })
           .then(function(data) {
             var cards = data.dashboard || [];
@@ -3588,9 +3589,9 @@ window.QRAIVY_EDITOR_STATE = {
 
             if (nameEl)  nameEl.textContent  = card.businessName || slug;
             // Trigger QR render now that data is ready
-            window._sqd_hostedUrl = 'https://qraivy.com/lp/' + slug;
+            window._sqd_hostedUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug;
             if (window.QRAIVY_QR_READY) window.QRAIVY_QR_READY(window._sqd_hostedUrl);
-            if (urlEl)   urlEl.textContent   = 'qraivy.com/lp/' + slug;
+            if (urlEl)   urlEl.textContent   = window.PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '') + '/lp/' + slug;
             if (scansEl) scansEl.textContent = scans;
             if (subsEl)  subsEl.textContent  = subs;
             if (cvrEl)   cvrEl.textContent   = cvr + '%';
@@ -3605,14 +3606,14 @@ window.QRAIVY_EDITOR_STATE = {
   }
 
   function fallbackFromLP(slug, lpUrl) {
-    fetch('https://www.qraivy.com/lp/' + slug)
+    fetch(window.PUBLIC_APP_ORIGIN + '/lp/' + slug)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var nameEl  = document.getElementById('sqd-ov-name');
         var urlEl   = document.getElementById('sqd-ov-url');
         var scansEl = document.getElementById('sqd-ov-scans');
         if (nameEl) nameEl.textContent = data.businessName || slug;
-        if (urlEl)  urlEl.textContent  = 'qraivy.com/lp/' + slug;
+        if (urlEl)  urlEl.textContent  = window.PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '') + '/lp/' + slug;
         if (scansEl) scansEl.textContent = data.scanCount || 0;
       }).catch(function() {});
   }
@@ -3651,8 +3652,8 @@ window.QRAIVY_EDITOR_STATE = {
         var headers = { 'Content-Type': 'application/json' };
         var doIt = function(h) {
           var deleteUrl = window._sqd_source === 'lp'
-            ? 'https://api.qraivy.com/lp/' + getSlug()
-            : 'https://api.qraivy.com/qr/' + qrId;
+            ? window.API_ORIGIN + '/lp/' + getSlug()
+            : window.API_ORIGIN + '/qr/' + qrId;
           fetch(deleteUrl, { method: 'DELETE', headers: h })
             .then(function(r) {
               if (r.ok) { window.location.href = 'dashboard.html'; }
@@ -3716,7 +3717,7 @@ function loadPushDeviceCount() {
   if (!slug) return;
   var el = document.getElementById('push-device-count');
   if (el) el.textContent = 'Loading devices...';
-  fetch('https://www.qraivy.com/lp/push/' + slug + '/count')
+  fetch(window.PUBLIC_APP_ORIGIN + '/lp/push/' + slug + '/count')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (el) el.textContent = d.count > 0
@@ -3730,7 +3731,7 @@ function loadPushHistory() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) return;
   var el = document.getElementById('push-history');
-  fetch('https://www.qraivy.com/lp/push/' + slug + '/history')
+  fetch(window.PUBLIC_APP_ORIGIN + '/lp/push/' + slug + '/history')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!el) return;
@@ -3756,7 +3757,7 @@ function sendWalletPush() {
   var linkUrl = (document.getElementById('push-link')||{}).value || '';
   var voiceMsg = (document.getElementById('push-voice')||{}).value || '';
   if (voiceMsg) {
-    var baseUrl = linkUrl || 'https://qraivy.com/lp/' + slug;
+    var baseUrl = linkUrl || PUBLIC_APP_ORIGIN + '/lp/' + slug;
     linkUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'push=1&voice=' + encodeURIComponent(voiceMsg);
   }
   if (!title.trim()) { alert('Please enter a notification title'); return; }
@@ -3766,7 +3767,7 @@ function sendWalletPush() {
   btn.disabled = true;
   btn.textContent = 'Sending...';
   result.style.display = 'none';
-  fetch('https://www.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
+  fetch(window.PUBLIC_APP_ORIGIN + '/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       btn.disabled = false;
@@ -3798,7 +3799,7 @@ function loadLoyaltyTab() {
   var slug = window._sqd_slug || (window.location.search.match(/slug=([^&]+)/) || [])[1];
   if (!slug) return;
   var token = localStorage.getItem('sqd_token');
-  fetch('https://www.qraivy.com/lp/stamp/settings/' + slug, {
+  fetch(window.PUBLIC_APP_ORIGIN + '/lp/stamp/settings/' + slug, {
     headers: token ? { 'Authorization': 'Bearer ' + token } : {}
   }).then(function(r){ return r.json(); }).then(function(d) {
     if (d.settings) {
@@ -3814,7 +3815,7 @@ function loadLoyaltyTab() {
     if (total) total.textContent = d.totalStamps || 0;
     if (current) current.textContent = (d.stampCount || 0) + '/' + ((d.settings && d.settings.goal) || 10);
     if (rewardStatus) { rewardStatus.textContent = d.rewardReady ? 'Ready!' : 'Not yet'; rewardStatus.style.color = d.rewardReady ? '#22c55e' : 'rgba(240,244,248,0.4)'; }
-    fetch('https://www.qraivy.com/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
+    fetch(window.PUBLIC_APP_ORIGIN + '/lp/nfc-token/' + slug, { headers: token ? { 'Authorization': 'Bearer ' + token } : {} }).then(function(r){ return r.json(); }).then(function(nd) {
       if (nd.nfcUrl) {
         _loyaltyStampUrl = nd.nfcUrl;
         var urlEl = document.getElementById('loyalty-stamp-url');
@@ -3838,7 +3839,7 @@ window.saveLoyaltySettings = function() {
   var goal = parseInt(document.getElementById('loyalty-goal').value) || 10;
   var rewardName = document.getElementById('loyalty-reward-name').value || 'Free item';
   var token = localStorage.getItem('sqd_token');
-  fetch('https://www.qraivy.com/lp/stamp/settings/' + slug, {
+  fetch(window.PUBLIC_APP_ORIGIN + '/lp/stamp/settings/' + slug, {
     method: 'POST',
     headers: Object.assign({'Content-Type':'application/json'}, token ? {'Authorization':'Bearer '+token} : {}),
     body: JSON.stringify({ goal: goal, rewardName: rewardName, enabled: _loyaltyEnabled })

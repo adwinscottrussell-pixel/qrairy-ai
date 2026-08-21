@@ -64,6 +64,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
 .export-icon{font-size:1.2rem;margin-bottom:4px}
 .export-label{font-size:0.6rem;color:rgba(240,236,224,0.35)}
 </style>
+<script src="js/url-config.js"></script>
 </head>
 <body>
 
@@ -186,7 +187,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
   // ── QR URL builder ────────────────────────────────────
   function qrURL(size) {
     return 'https://api.qrserver.com/v1/create-qr-code/?size=' + (size||state.size) + 'x' + (size||state.size) +
-      '&data=' + encodeURIComponent('https://qraivy.com/lp/' + state.slug) +
+      '&data=' + encodeURIComponent(window.PUBLIC_APP_ORIGIN + '/lp/' + state.slug) +
       '&color=' + state.fg + '&bgcolor=' + state.bg + '&margin=2&format=' + (state.format === 'svg' ? 'svg' : 'png');
   }
 
@@ -197,7 +198,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:
 
   // ── Load page data ────────────────────────────────────
   function loadPageData() {
-    fetch('https://api.qraivy.com/api/lp/' + state.slug)
+    fetch(window.API_ORIGIN + '/api/lp/' + state.slug)
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (d.scanCount !== undefined && scanCount) scanCount.textContent = d.scanCount + ' visit' + (d.scanCount !== 1 ? 's' : '');

@@ -2,6 +2,7 @@ const prisma = require('../utils/prismaClient');
 const passService = require('../services/passService');
 const apnsService = require('../services/apnsService');
 const analyticsService = require('../services/analyticsService');
+const { PUBLIC_APP_ORIGIN } = require('../config/urls');
 
 // ============================================================
 // APPLE WALLET WEB SERVICE ENDPOINTS
@@ -256,7 +257,7 @@ async function handlePassScan(req, res) {
     if (!pass) return res.status(404).json({ error: 'Pass not found.' });
 
     // Redirect to destination
-    const destination = pass.qrDestination || pass.website || `https://qraivy.com`;
+    const destination = pass.qrDestination || pass.website || PUBLIC_APP_ORIGIN;
     return res.redirect(302, destination);
   } catch (err) {
     console.error('handlePassScan error:', err);

@@ -8,6 +8,7 @@ const { apiKeyAuth } = require('../middleware/apiKeyAuth');
 const prisma = require('../utils/prismaClient');
 const { handleCreateQR } = require('../controllers/qrController');
 const { handleCreatePass } = require('../controllers/passController');
+const { API_ORIGIN } = require('../config/urls');
 
 // ── Manage API keys (dashboard) ───────────────────────────────
 
@@ -98,7 +99,7 @@ router.get('/v1/analytics', apiKeyAuth, async (req, res) => {
         id: qr.id,
         originalUrl: qr.originalUrl,
         businessName: qr.businessName,
-        redirectUrl: `https://api.qraivy.com/r/${qr.id}`,
+        redirectUrl: `${API_ORIGIN}/r/${qr.id}`,
         totalScans: qr.scans.length,
         createdAt: qr.createdAt,
       })),

@@ -211,7 +211,7 @@ function loadTemplate(id) {
   // Get QR URL — use first available QR or placeholder
   const qrUrl = S.qrCodes.length > 0
     ? S.qrCodes[0].redirectUrl
-    : 'https://qraivy.com';
+    : window.PUBLIC_APP_ORIGIN;
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrUrl);
 
   // Resize canvas if needed

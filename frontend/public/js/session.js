@@ -1,6 +1,6 @@
 const QRairySession = (function () {
   'use strict';
-  var API_BASE = 'https://api.qraivy.com';
+  var API_BASE = window.API_ORIGIN;
   var TYPE = { ANONYMOUS:'anonymous', FREE:'free', TRIAL:'trial', PREMIUM:'premium', ADMIN:'admin' };
   var GATES = {
     freeQrGenerator:[TYPE.ANONYMOUS,TYPE.FREE,TYPE.TRIAL,TYPE.PREMIUM,TYPE.ADMIN],

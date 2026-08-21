@@ -6,6 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
 const { buildCampaignPrompt, VALID_CAMPAIGN_TYPES } = require('../services/campaignPromptService');
+const { PUBLIC_APP_ORIGIN } = require('../config/urls');
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -43,8 +44,8 @@ async function buildProgram(landingPage) {
   ]);
 
   const token = await getOrCreateStampToken(landingPage.slug);
-  const stampUrl = 'https://api.qraivy.com/stamp/' + landingPage.slug + '/' + token;
-  const redeemUrl = 'https://api.qraivy.com/redeem/' + landingPage.slug + '/' + token;
+  const stampUrl = PUBLIC_APP_ORIGIN + '/stamp/' + landingPage.slug + '/' + token;
+  const redeemUrl = PUBLIC_APP_ORIGIN + '/redeem/' + landingPage.slug + '/' + token;
 
   // Brand color comes from the Smart Landing Page only — single source of
   // truth shared with the actual Apple/Google Wallet pass. There is no

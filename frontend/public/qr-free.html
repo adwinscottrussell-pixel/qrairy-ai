@@ -162,6 +162,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
 </style>
 <!-- v3 -->
 <!-- v2 -->
+<script src="js/url-config.js"></script>
 </head>
 <body>
 
@@ -353,7 +354,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
 
   // ── QR URL builder ────────────────────────────────────────────────────────
   function buildQRUrl(size) {
-    var url = state.url || 'https://qraivy.com';
+    var url = state.url || window.PUBLIC_APP_ORIGIN;
     var base = 'https://api.qrserver.com/v1/create-qr-code/'
       + '?size=' + size + 'x' + size
       + '&data=' + encodeURIComponent(url)
@@ -437,7 +438,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
       try {
         if (window.Clerk && window.Clerk.user) {
           window.Clerk.session.getToken().then(function(token) {
-            fetch('https://api.qraivy.com/qr', {
+            fetch(window.API_ORIGIN + '/qr', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
               body: JSON.stringify({ originalUrl: val, qrType: 'static' })
@@ -446,7 +447,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
                 // Update localStorage entry with DB id for scan tracking
                 try {
                   var st = JSON.parse(localStorage.getItem('qraivy_free_qrs')||'[]');
-                  if (st[0] && st[0].url === val) { st[0].dbId = d.id; st[0].redirectUrl = 'https://api.qraivy.com/r/' + d.id; }
+                  if (st[0] && st[0].url === val) { st[0].dbId = d.id; st[0].redirectUrl = window.API_ORIGIN + '/r/' + d.id; }
                   localStorage.setItem('qraivy_free_qrs', JSON.stringify(st));
                 } catch(e2) {}
               }

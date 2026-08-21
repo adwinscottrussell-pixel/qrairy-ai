@@ -232,6 +232,7 @@
     }
   </style>
   <link rel="stylesheet" href="sidebar.css?v=3">
+  <script src="js/url-config.js"></script>
 </head>
 <body>
 
@@ -255,11 +256,12 @@
       </div>
     </div>
 
-    <div class="powered-by">Powered by <a href="https://www.qraivy.com" target="_blank">QRAIRY.AI</a></div>
+    <div class="powered-by">Powered by <a id="powered-by-link" href="https://www.qraivy.com" target="_blank">QRAIRY.AI</a></div>
   </div>
 
   <script>
-    const API_BASE = 'https://api.qraivy.com';
+    const API_BASE = window.API_ORIGIN;
+    document.getElementById('powered-by-link').href = window.PUBLIC_APP_ORIGIN;
     const params = new URLSearchParams(window.location.search);
     const qrId = params.get('id');
     let chatHistory = [];

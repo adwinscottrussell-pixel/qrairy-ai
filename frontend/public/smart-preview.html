@@ -493,6 +493,7 @@
       .final-cta { padding:32px 20px; }
     }
   </style>
+  <script src="js/url-config.js"></script>
 </head>
 <body>
 
@@ -794,7 +795,7 @@
     const slug   = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     // Use real hosted LP URL if available, else show demo URL
     const demoUrl = lpSlug ? `qraivy.com/lp/${lpSlug}` : `qraivy.com/demo/${slug}`;
-    const realLpUrl = lpUrl || (lpSlug ? `https://qraivy.com/lp/${lpSlug}` : '');
+    const realLpUrl = lpUrl || (lpSlug ? `${window.PUBLIC_APP_ORIGIN}/lp/${lpSlug}` : '');
 
     // ── Demo limit (localStorage) ──────────────────────────────────────
     const LIMIT_KEY = 'qraivy_demo_ts';
@@ -851,7 +852,7 @@
 
     // ── Real QR code (api.qrserver.com) ───────────────────────────────
     // QR points to real hosted LP if available, else self-referential preview
-    const qrData = realLpUrl || `https://qraivy.com/smart-preview.html?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&style=${encodeURIComponent(style)}`;
+    const qrData = realLpUrl || `${window.PUBLIC_APP_ORIGIN}/smart-preview.html?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}&style=${encodeURIComponent(style)}`;
     const qrImg  = document.getElementById('qrImg');
     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=280x280&color=1a1a1a&bgcolor=ffffff&margin=8`;
     qrImg.onerror = function () {

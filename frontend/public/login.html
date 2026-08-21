@@ -6,6 +6,7 @@
   <title>QRAIRY.AI — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <script src="js/url-config.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -38,7 +39,7 @@
         return;
       }
       const _rp = new URLSearchParams(window.location.search).get('redirect');
-      const _base = 'https://www.qraivy.com/';
+      const _base = window.PUBLIC_APP_ORIGIN + '/';
       const _target = _rp ? _base + _rp : _base + 'dashboard.html';
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,

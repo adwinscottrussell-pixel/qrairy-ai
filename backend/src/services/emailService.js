@@ -56,7 +56,7 @@ async function sendDoubleOptInEmail(email, { bizName, slug, subscriberId, lang }
 }
 
 async function sendWelcomeEmail(email, { bizName, slug }) {
-  const lpUrl = 'https://api.qraivy.com/lp/' + slug;
+  const lpUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug;
   try {
     await resend.emails.send({
       from: getFrom(bizName),
@@ -90,7 +90,7 @@ async function sendWelcomeEmail(email, { bizName, slug }) {
 
 async function sendCampaignEmail(subscribers, { title, message, linkUrl, bizName, slug }) {
   const results = { success: 0, failed: 0, errors: [] };
-  const lpUrl = 'https://api.qraivy.com/lp/' + slug;
+  const lpUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug;
   for (const sub of subscribers) {
     if (!sub.email) continue;
     try {

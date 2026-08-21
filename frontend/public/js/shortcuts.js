@@ -371,7 +371,7 @@ function buildCustomLayout(prompt, size, style, includeQR) {
   const headline = words.slice(0,4).join(' ').toUpperCase() || 'YOUR DESIGN';
   const subline = prompt.length > 40 ? prompt.substring(0,45) + '...' : prompt;
 
-  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com';
+  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : window.PUBLIC_APP_ORIGIN;
 
   const elements = [
     // Background
@@ -431,7 +431,7 @@ function renderAILayout(layout) {
   const c = document.getElementById('polotno-container');
   c.style.width = S.canvasW + 'px'; c.style.height = S.canvasH + 'px';
 
-  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com';
+  const qrUrl = S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : window.PUBLIC_APP_ORIGIN;
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrUrl);
 
   // Use Polotno if available, else fallback

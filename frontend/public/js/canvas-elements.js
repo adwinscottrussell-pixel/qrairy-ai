@@ -1374,7 +1374,7 @@ function addElement(type) {
   else { showToast('Adding: ' + type); }
 }
 function addQR(url) {
-  const qrUrl = url || (S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : 'https://qraivy.com');
+  const qrUrl = url || (S.qrCodes.length > 0 ? S.qrCodes[0].redirectUrl : window.PUBLIC_APP_ORIGIN);
   const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(qrUrl);
   ceAddElement({ type:'image', src:qrSrc, x:100, y:200, width:200, height:200, name:'QR Code', cornerRadius:4 });
   showToast('QR code added');

@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIRY.AI — New Loyalty Program</title>
+  <script src="js/url-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
@@ -202,7 +203,7 @@
   <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript" onload="window.Clerk.load()"></script>
   
   <script>
-    var API = "https://api.qraivy.com";
+    var API = window.API_ORIGIN;
     var wiz = { slug: "", bizName: "", reward: "", stamps: 10 };
 
     function getToken() {

@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>My QR Codes — Qraivy</title>
+<script src="js/url-config.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <style>
@@ -197,7 +198,7 @@ body{background:var(--bg,#0a0a0a);color:#f0f4f8;font-family:'DM Mono',monospace;
 </div>
 
 <script>
-const API_BASE = 'https://api.qraivy.com';
+const API_BASE = window.API_ORIGIN;
 
 // ── localStorage QR store ─────────────────────────────────────────────────
 // Free QRs are stored locally since they bypass the backend

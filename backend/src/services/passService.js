@@ -2,6 +2,7 @@ const JSZip = require('jszip');
 const crypto = require('crypto');
 const prisma = require('../utils/prismaClient');
 const { WALLET_CONFIG } = require('../config/constants');
+const { PUBLIC_APP_ORIGIN } = require('../config/urls');
 const { PKPass } = require('passkit-generator');
 const { getTheme, renderHeroBanner } = require('./walletThemes');
 
@@ -35,7 +36,7 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   const rawName      = hero.title || hero.aiTitle || sections.businessName || 'Smart Pass';
   const brandName    = rawName.replace(/^Welcome to /i, '').replace(/\s+[a-z0-9]{3}$/, '').trim();
   const walletSub    = loop.walletSubtitle || 'Scan to visit';
-  const lpUrl        = `https://api.qraivy.com/lp/${slug}`;
+  const lpUrl        = `${PUBLIC_APP_ORIGIN}/lp/${slug}`;
   // Embed the customer's cid in the barcode URL so staff can scan the
   // customer's pass and recover the exact identity to stamp against —
   // no dependency on the customer's browser localStorage at stamp time.
@@ -205,7 +206,7 @@ async function generatePkpass(pass) {
 function buildPassJson(pass) {
   const qrUrl = pass.qrDestination
     ? `${WALLET_CONFIG.webServiceUrl}/ps/${pass.id}`
-    : 'https://qraivy.com';
+    : PUBLIC_APP_ORIGIN;
 
   const base = {
     formatVersion: 1,

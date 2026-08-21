@@ -272,7 +272,7 @@ function renderLP(page) {
   const content = LP_CONTENT[page.useCase] || LP_CONTENT['restaurant'];
   const bizName = (page.businessName || 'My Business').replace(/\s+[a-z0-9]{3}$/, '').replace(/'/g, '').trim() || (page.businessName || 'My Business');
   const slug    = page.slug;
-  const website = page.websiteUrl || 'https://qraivy.com';
+  const website = page.websiteUrl || PUBLIC_APP_ORIGIN;
   const domain  = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
   function tmpl(s) {
@@ -324,7 +324,7 @@ function renderLP(page) {
 
   const headline = tmpl(content.headline);
   const sub      = tmpl(content.sub);
-  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://www.qraivy.com/lp/' + slug + '?src=qr')}&color=ffffff&bgcolor=111111&margin=2`;
+  const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(PUBLIC_APP_ORIGIN + '/lp/' + slug + '?src=qr')}&color=ffffff&bgcolor=111111&margin=2`;
 
   const sh = storedSections.hero   || {};
   // Use AI-generated hero text if available and hero title is generic
@@ -366,7 +366,7 @@ var _ICON_MAP={globe:'🌐',phone:'📞',email:'📧',location:'📍',booking:'�
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="${brandLogoUrl || 'https://qraivy.com/icon-192.png'}"><link rel="manifest" href="/manifest/${slug}">
+<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${page.businessName||bizName||'Qraivy'}"><link rel="apple-touch-icon" href="${brandLogoUrl || (PUBLIC_APP_ORIGIN + '/icon-192.png')}"><link rel="manifest" href="/manifest/${slug}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${bizName} — Smart Landing Page</title>
@@ -772,8 +772,13 @@ ${(function() {
       <input type="checkbox" id="lp-gdpr-${slug}" style="margin-top:3px;accent-color:${accent};width:16px;height:16px;flex-shrink:0;" />
       <label for="lp-gdpr-${slug}" style="font-size:.82rem;color:rgba(255,255,255,0.75);line-height:1.5;cursor:pointer;">${t.gdpr}${bizName}${t.gdprSuffix}</label>
     </div>
-    <script>function lpSubscribe(s){var e=document.getElementById('lp-email-'+s),g=document.getElementById('lp-gdpr-'+s),r=document.getElementById('lp-sub-result-'+s);if(!r){r=document.createElement('div');r.id='lp-sub-result-'+s;r.style.cssText='margin-top:8px;padding:6px 10px;border-radius:8px;font-size:.78rem;';var _pi=document.getElementById('lp-email-'+s);if(_pi&&_pi.parentNode)_pi.parentNode.appendChild(r);}if(!e||!e.value||!e.value.includes('@')){r.style.display='block';r.style.color='#f87171';r.textContent='Please enter a valid email.';return;}if(!g||!g.checked){r.style.display='block';r.style.color='#f87171';r.textContent='Please tick the consent box first.';return;}fetch('https://api.qraivy.com/lp/subscribe/'+s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e.value,gdprConsent:true})}).then(function(x){return x.json();}).then(function(d){r.style.display='block';r.style.color='#4ade80';r.textContent='✅ '+(d.message||'Subscribed!');e.value='';g.checked=false;}).catch(function(){r.style.display='block';r.style.color='#f87171';r.textContent='Something went wrong.';});}</script>
+    <script>function lpSubscribe(s){var e=document.getElementById('lp-email-'+s),g=document.getElementById('lp-gdpr-'+s),r=document.getElementById('lp-sub-result-'+s);if(!r){r=document.createElement('div');r.id='lp-sub-result-'+s;r.style.cssText='margin-top:8px;padding:6px 10px;border-radius:8px;font-size:.78rem;';var _pi=document.getElementById('lp-email-'+s);if(_pi&&_pi.parentNode)_pi.parentNode.appendChild(r);}if(!e||!e.value||!e.value.includes('@')){r.style.display='block';r.style.color='#f87171';r.textContent='Please enter a valid email.';return;}if(!g||!g.checked){r.style.display='block';r.style.color='#f87171';r.textContent='Please tick the consent box first.';return;}fetch('${API_ORIGIN}/lp/subscribe/'+s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e.value,gdprConsent:true})}).then(function(x){return x.json();}).then(function(d){r.style.display='block';r.style.color='#4ade80';r.textContent='✅ '+(d.message||'Subscribed!');e.value='';g.checked=false;}).catch(function(){r.style.display='block';r.style.color='#f87171';r.textContent='Something went wrong.';});}</script>
     ${(sl.appleEnabled!==false||sl.googleEnabled!==false)?'<div class="lp-wallet-btns">'+(sl.appleEnabled!==false?`<div class="lp-wallet-cta-wrap"><p class="lp-wallet-cta-hint">👇 Tap to save your pass</p><a href="/lp/wallet/apple/${slug}" class="lp-wallet-btn lp-wallet-btn--apple lp-btn-apple-only" style="text-decoration:none;display:block;">&#9679; Add to Apple Wallet</a></div>`:(''))+(sl.googleEnabled!==false?'<a href="/lp/wallet/google/' + slug + '" class="lp-wallet-btn lp-wallet-btn--google lp-btn-google-only" style="text-decoration:none;display:block;">&#9632; Add to Google Wallet</a>':'')+'<button id="lp-notif-btn" onclick="lpEnableNotifications()" style="display:none;width:100%;margin-top:10px;padding:14px;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.3);border-radius:12px;color:#fff;font-size:.92rem;font-weight:600;cursor:pointer;">&#128276; Enable Notifications</button></div>':''}
+    <!-- Read-only cTok check, left as-is on purpose: this is inside the
+         legacy renderLP() template, which handleServeLP never calls
+         (it renders renderPremiumLP() directly — see line ~215). Dead
+         code, out of scope for the Milestone A identity refactor, same
+         as the rest of renderLP()'s duplicated subscription logic. -->
     <script>(function(){try{var c=localStorage.getItem("cTok");if(!c)return;document.querySelectorAll(".lp-wallet-btn--apple, .lp-wallet-btn--google").forEach(function(a){var sep=a.href.indexOf("?")===-1?"?":"&";a.href=a.href+sep+"cid="+encodeURIComponent(c);});}catch(e){}})();</script>
   </div>
 </section>`;
@@ -809,8 +814,8 @@ ${(function() {
   const infoHTML=_ir.length===0?'':'<section class="lp-info-section"><div class="lp-info-card"><div class="lp-info-hdr"><div class="lp-info-hdr-title">Visit &amp; Contact</div><div class="lp-info-hdr-sub">Everything you need to reach us.</div></div><div class="lp-info-rows">'+_ir.join('')+'</div></div></section>';
   const footerBlock = sf.enabled === false ? '' : `<footer class="lp-footer">
   <div class="lp-footer-brand"><div class="lp-footer-Q">Q</div><span class="lp-footer-name">${sf.businessName || bizName}</span></div>
-  <div class="lp-footer-url">${sf.footerText || ('qraivy.com/lp/' + slug)}</div>
-  <div class="lp-footer-powered">Built with <a href="${sf.footerLink || 'https://qraivy.com'}" target="_blank">Qraivy</a><br>AI-powered customer engagement.</div>
+  <div class="lp-footer-url">${sf.footerText || (PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '') + '/lp/' + slug)}</div>
+  <div class="lp-footer-powered">Built with <a href="${sf.footerLink || PUBLIC_APP_ORIGIN}" target="_blank">Qraivy</a><br>AI-powered customer engagement.</div>
 </footer>`;
   const ctaHTML = hasEditorSections ? (sectionsHTML ? `<!-- Business Info -->${sectionsHTML}` : '') : `<section class="lp-cta-section">
   <a href="${website}" target="_blank" class="lp-btn lp-btn-primary">${content.cta} &rarr;</a>
@@ -864,7 +869,7 @@ ${sectionsHTML}`;
       <div class="qrgm-feat">Live hosted landing page</div>
     </div>
     <input class="qrgm-input" id="qrgmName" type="text" placeholder="Your brand, event, or store name" maxlength="48" autocomplete="off"/>
-    <div class="qrgm-url-preview" id="qrgmUrlPreview">qraivy.com/demo-yourbrand</div>
+    <div class="qrgm-url-preview" id="qrgmUrlPreview">${PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '')}/demo-yourbrand</div>
     <button class="qrgm-cta" id="qrgmCta">Generate My Smart QR &rarr;</button>
     <button class="qrgm-skip" id="qrgmSkip">Maybe later</button>
   </div>
@@ -1026,11 +1031,11 @@ ${sectionsHTML}`;
     if(closeBtn)closeBtn.addEventListener("click",closeModal);
     if(skipBtn)skipBtn.addEventListener("click",closeModal);
     if(modal)modal.addEventListener("click",function(e){if(e.target===modal)closeModal();});
-    if(nameIn&&urlPrev){nameIn.addEventListener("input",function(){var sl=slugify(nameIn.value);urlPrev.textContent=nameIn.value.trim()?"qraivy.com/demo-"+sl:"qraivy.com/demo-yourbrand";});}
+    if(nameIn&&urlPrev){var _pubHost="${PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '')}";nameIn.addEventListener("input",function(){var sl=slugify(nameIn.value);urlPrev.textContent=nameIn.value.trim()?_pubHost+"/demo-"+sl:_pubHost+"/demo-yourbrand";});}
     if(ctaBtn){ctaBtn.addEventListener("click",function(){
       var name=nameIn?nameIn.value.trim():"";
       try{localStorage.setItem("qraivy_growth_source",JSON.stringify({sourceSlug:slug,sourceBiz:bizName,referredAt:new Date().toISOString()}));if(name)localStorage.setItem("qraivy_prefill_name",name);}catch(e){}
-      var url="https://qraivy.com/smart-demo.html";
+      var url="${PUBLIC_APP_ORIGIN}/smart-demo.html";
       url+=name?"?name="+encodeURIComponent(name)+"&src=lp":"?src=lp";
       window.location.href=url;
     });}
@@ -1052,13 +1057,13 @@ ${sectionsHTML}`;
     if('Notification' in window&&Notification.permission==='granted'){
       (function tryAS(){
         if(window.__swReg){
-          fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s)
+          fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/vapid-key/'+_s)
             .then(function(x){return x.json();})
             .then(function(d){
               var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
               return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
             })
-            .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+            .then(function(s){var j=s.toJSON();return fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
             .then(function(){localStorage.setItem('wp_sub_'+_s,'1');})
             .catch(function(){});
         }else{setTimeout(tryAS,500);}
@@ -1127,13 +1132,13 @@ ${sectionsHTML}`;
   function doSub(){
     setState('asking');
     function sub(reg){
-      fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s)
+      fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/vapid-key/'+_s)
         .then(function(x){return x.json();})
         .then(function(d){
           var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));
           return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});
         })
-        .then(function(s){var j=s.toJSON();return fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
+        .then(function(s){var j=s.toJSON();return fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys})});})
         .then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');})
         .catch(function(){wrap.style.display='none';});
     }
@@ -1169,8 +1174,8 @@ a{display:inline-block;margin-top:8px;padding:12px 28px;background:#FF4E00;borde
 <div class="logo">Q</div>
 <h1>Page not found</h1>
 <p>This smart landing page doesn't exist yet or may have been removed.</p>
-<div class="slug">qraivy.com/lp/${slug}</div>
-<a href="https://qraivy.com">Create your own AI page &rarr;</a>
+<div class="slug">${PUBLIC_APP_ORIGIN.replace(/^https?:\/\//, '')}/lp/${slug}</div>
+<a href="${PUBLIC_APP_ORIGIN}">Create your own AI page &rarr;</a>
 </div><script>
 (function(){var p=new URLSearchParams(window.location.search);var v=p.get('voice');if(v&&'speechSynthesis'in window){var s=function(){var u=new SpeechSynthesisUtterance(decodeURIComponent(v));u.rate=0.95;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u);};if(document.readyState==='complete'){setTimeout(s,800);}else{window.addEventListener('load',function(){setTimeout(s,800);});}}})();</script></body></html>`;
 }
@@ -1336,7 +1341,7 @@ async function handlePublishLP(req, res) {
         console.log('[Voice] Generated on publish for', slug, audioUrl);
       } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
     });
-    return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id });
+    return res.json({ ok: true, url: PUBLIC_APP_ORIGIN + '/lp/' + slug, slug, id: page.id });
   } catch (err) {
     console.error('[LP] publish error:', err);
     return res.status(500).json({ error: err.message });
@@ -2366,7 +2371,7 @@ async function handleGetNFCToken(req, res) {
   try {
     const { slug } = req.params;
     const token = await getNFCStampToken(slug);
-    const stampUrl = `https://www.qraivy.com/stamp/${slug}/${token}`;
+    const stampUrl = `${PUBLIC_APP_ORIGIN}/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl, nfcUrl: stampUrl });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -2530,11 +2535,11 @@ async function handleStampConfirm(req, res) {
         const body = rewardReady
           ? 'Show your pass to claim your ' + rewardName
           : newCount + ' of ' + goal + ' stamps - tap to see your card';
-        const url = 'https://api.qraivy.com/lp/card/' + slug;
+        const url = PUBLIC_APP_ORIGIN + '/lp/card/' + slug;
         for (const sub of webSubs) {
           await sendWebPush(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            { title, body, url, icon: 'https://qraivy.com/icon-192.png' }
+            { title, body, url, icon: PUBLIC_APP_ORIGIN + '/icon-192.png' }
           );
         }
         console.log('[Stamp] Web push sent to', webSubs.length, 'subscribers for', slug);
@@ -2691,7 +2696,7 @@ async function handleGetStampToken(req, res) {
   try {
     const { slug } = req.params;
     const token = await getOrCreateStampToken(slug);
-    const stampUrl = `https://www.qraivy.com/stamp/${slug}/${token}`;
+    const stampUrl = `${PUBLIC_APP_ORIGIN}/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
@@ -2719,7 +2724,7 @@ async function handleGetStampSettings(req, res) {
     const rewardReady = pass ? pass.rewardReady : false;
     const stampCount = pass ? pass.stampCount : 0;
     const token = await getOrCreateStampToken(slug);
-    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `https://www.qraivy.com/stamp/${slug}/${token}`, token });
+    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `${PUBLIC_APP_ORIGIN}/stamp/${slug}/${token}`, token });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
 
@@ -2788,8 +2793,8 @@ async function handleLPManifest(req, res) {
         { src: manifestLogoUrl, sizes: '192x192', type: 'image/png' },
         { src: manifestLogoUrl, sizes: '512x512', type: 'image/png' }
       ] : [
-        { src: 'https://qraivy.com/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: 'https://qraivy.com/icon-512.png', sizes: '512x512', type: 'image/png' }
+        { src: PUBLIC_APP_ORIGIN + '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: PUBLIC_APP_ORIGIN + '/icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
     };
     res.setHeader('Content-Type', 'application/manifest+json');
@@ -3045,8 +3050,8 @@ function renderPremiumLP(page) {
       </div>
     </div>`;
 
-  const lpUrl = 'https://www.qraivy.com/lp/' + slug;
-  const apiBase = 'https://api.qraivy.com';
+  const lpUrl = PUBLIC_APP_ORIGIN + '/lp/' + slug;
+  const apiBase = API_ORIGIN;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -3055,7 +3060,7 @@ function renderPremiumLP(page) {
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${bizName}">
-<link rel="apple-touch-icon" href="${logoUrl || 'https://qraivy.com/icon-192.png'}">
+<link rel="apple-touch-icon" href="${logoUrl || (PUBLIC_APP_ORIGIN + '/icon-192.png')}">
 <link rel="manifest" href="/manifest/${slug}">
 <title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
@@ -3223,8 +3228,8 @@ ${sa.active !== false ? `
     <span style="font-size:14px;font-weight:600;color:#0a0a0a;">${bizName}</span>
   </div>
   <p style="font-size:12px;color:#aaa;margin-bottom:6px;">${website.replace(/^https?:\/\//, '')}</p>
-  <p style="font-size:11px;color:#bbb;margin-bottom:24px;">Built with <a href="https://qraivy.com" style="color:#888;font-weight:600;text-decoration:none;">Smart Page</a> · AI-powered customer engagement.</p>
-  <a href="https://qraivy.com" style="display:inline-flex;align-items:center;gap:9px;background:#0a0a0a;color:#fff;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:10px;">
+  <p style="font-size:11px;color:#bbb;margin-bottom:24px;">Built with <a href="${PUBLIC_APP_ORIGIN}" style="color:#888;font-weight:600;text-decoration:none;">Smart Page</a> · AI-powered customer engagement.</p>
+  <a href="${PUBLIC_APP_ORIGIN}" style="display:inline-flex;align-items:center;gap:9px;background:#0a0a0a;color:#fff;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:10px;">
     <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;">✦</span>
     Create Your Own Smart QR
   </a>
@@ -3624,7 +3629,7 @@ ${WALLET_URL_HELPER_JS}
         return reg.pushManager.getSubscription();
       }).then(function(existing) {
         if (existing) return existing;
-        return fetch('https://www.qraivy.com/lp/webpush/vapid-key/' + _s)
+        return fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/vapid-key/' + _s)
           .then(function(x) { if (!x.ok) throw new Error('vapid-key HTTP ' + x.status); return x.json(); })
           .then(function(d) {
             if (!d || d.ok !== true || typeof d.publicKey !== 'string' || !d.publicKey) throw new Error('vapid-key invalid response');
@@ -3633,7 +3638,7 @@ ${WALLET_URL_HELPER_JS}
           });
       }).then(function(s) {
         var j = s.toJSON();
-        return fetch('https://www.qraivy.com/lp/webpush/subscribe/' + _s, {
+        return fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/subscribe/' + _s, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: _cid() })
         });

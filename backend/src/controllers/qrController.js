@@ -3,6 +3,7 @@ const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
+const { PUBLIC_APP_ORIGIN, API_ORIGIN } = require('../config/urls');
 
 // ─── Tier definitions ────────────────────────────────────────────────────────
 const PLAN_LIMITS = { free: Infinity, starter: 10, pro: Infinity };
@@ -131,7 +132,7 @@ async function handleCreateQR(req, res) {
       },
     });
 
-    const redirectUrl = `https://api.qraivy.com/r/${qr.id}`;
+    const redirectUrl = `${API_ORIGIN}/r/${qr.id}`;
 
     // Fire-and-forget site scrape for AI landing pages
     if (businessName) {
@@ -200,7 +201,7 @@ async function handleRedirect(req, res) {
     await logScan(qr.id, userAgent);
 
     if (qr.businessName) {
-      return res.redirect(302, `https://www.qraivy.com/visit.html?id=${qr.id}`);
+      return res.redirect(302, `${PUBLIC_APP_ORIGIN}/visit.html?id=${qr.id}`);
     }
 
     // Dynamic QR: redirect to current destinationUrl if set
@@ -329,7 +330,7 @@ async function handleAnalytics(req, res) {
       id: qr.id,
       originalUrl: qr.originalUrl,
       businessName: qr.businessName,
-      redirectUrl: `https://api.qraivy.com/r/${qr.id}`,
+      redirectUrl: `${API_ORIGIN}/r/${qr.id}`,
       totalScans: qr.scans.length,
       createdAt: qr.createdAt,
     }));
@@ -356,7 +357,7 @@ async function handleDashboard(req, res) {
       id: qr.id,
       originalUrl: qr.originalUrl,
       businessName: qr.businessName || null,
-      redirectUrl: `https://api.qraivy.com/r/${qr.id}`,
+      redirectUrl: `${API_ORIGIN}/r/${qr.id}`,
       totalScans: qr.scans.length,
       totalSubscribers: qr.subscribers.length,
       hasSiteContent: !!qr.siteContent,
@@ -384,7 +385,7 @@ async function handleDashboard(req, res) {
       id: lp.id,
       originalUrl: lp.websiteUrl || '',
       businessName: lp.businessName || null,
-      redirectUrl: `https://api.qraivy.com/lp/${lp.slug}`,
+      redirectUrl: `${PUBLIC_APP_ORIGIN}/lp/${lp.slug}`,
       slug: lp.slug,
       // Landing Page visits (GET /lp/:slug page loads), not QR redirect
       // scans — never exposed as totalScans. See docs on Scans vs Visits.

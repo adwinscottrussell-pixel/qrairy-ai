@@ -28,7 +28,7 @@ async function initClerk() {
   if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
   S.authToken = await window.Clerk.session.getToken();
   try {
-    const r = await fetch('https://api.qraivy.com/dashboard', { headers: { 'Authorization': 'Bearer ' + S.authToken } });
+    const r = await fetch(window.API_ORIGIN + '/dashboard', { headers: { 'Authorization': 'Bearer ' + S.authToken } });
     const d = await r.json();
     S.qrCodes = d.qrCodes || [];
   } catch(e) {}

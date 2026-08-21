@@ -2,10 +2,11 @@ const { GoogleAuth } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prismaClient');
 const { getTheme } = require('./walletThemes');
+const { PUBLIC_APP_ORIGIN, API_ORIGIN } = require('../config/urls');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023161108';
 const CLASS_SUFFIX = 'qraivy_loyalty_v1';
-const DEFAULT_LOGO_URL = 'https://www.qraivy.com/icon-192.png';
+const DEFAULT_LOGO_URL = `${PUBLIC_APP_ORIGIN}/icon-192.png`;
 
 function getCredentials() {
   const raw = process.env.GOOGLE_WALLET_KEY;
@@ -79,7 +80,7 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
   const L = theme.labels;
   // Real uploaded photo if the business set one (Google fetches it directly
   // from Cloudinary), otherwise the generated gradient banner.
-  const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
+  const heroUrl = walletHeroUrl || `${API_ORIGIN}/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
 
   return {
     id: objectId,
@@ -107,7 +108,7 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
     ],
     barcode: {
       type: 'QR_CODE',
-      value: `https://www.qraivy.com/lp/${slug}`,
+      value: `${PUBLIC_APP_ORIGIN}/lp/${slug}`,
       alternateText: slug,
     },
   };
@@ -143,7 +144,7 @@ async function createGoogleWalletSaveUrl(slug, sections, cid) {
   const claims = {
     iss: credentials.client_email,
     aud: 'google',
-    origins: ['https://www.qraivy.com'],
+    origins: [PUBLIC_APP_ORIGIN],
     typ: 'savetowallet',
     payload: { loyaltyObjects: [loyaltyObject] },
   };

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIVY — Wallet Pass Studio</title>
+  <script src="js/url-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
@@ -187,7 +188,7 @@
 <script>
 (function(){
   'use strict';
-  var API = 'https://api.qraivy.com';
+  var API = window.API_ORIGIN;
   var PROGRAMS = [];
   var PAGES = {}; // slug -> { brandColor, logoUrl }
   var CURRENT_SLUG = null;
