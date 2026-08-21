@@ -2506,6 +2506,11 @@ async function handleStampConfirm(req, res) {
     const previouslyReady = pass.rewardReady;
     await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now, slug } });
     await prisma.stampEntry.create({ data: { slug, passId: pass.id, source: 'qr' } });
+    // Keep the admin Members list (LoyaltyCustomer) in sync with this Pass
+    // stamp — the staff scanner only calls this endpoint, never the
+    // customer-facing handleCustomerStamp beacon, so without this the
+    // Members list would never reflect stamps issued by staff.
+    try { await upsertLoyaltyCustomerStamp(slug, cid, goal); } catch(e) { console.error('[Stamp] LoyaltyCustomer sync error:', e.message); }
     if (rewardReady && !previouslyReady) {
       try {
         await prisma.rewardEvent.create({ data: { slug, passId: pass.id, rewardText: settings ? settings.rewardName : 'Free item', status: 'earned' } });
@@ -2677,6 +2682,16 @@ async function handleRedeemTapConfirm(req, res) {
     try {
       await prisma.rewardEvent.updateMany({ where: { passId: pass.id, status: 'earned' }, data: { status: 'redeemed', redeemedAt: redeemAt } });
     } catch(e) { console.error('[RedeemTap] RewardEvent update error:', e.message); }
+    // Keep the admin Members/Rewards view (LoyaltyCustomer) in sync with
+    // this exact Pass's redeem result — reusing the values Pass.update
+    // above already computed (stampCount reset to 0, rewardReady false,
+    // rewardsEarned incremented), not recalculating them independently.
+    try {
+      await prisma.loyaltyCustomer.update({
+        where: { slug_customerId: { slug, customerId: cid } },
+        data: { stampCount: 0, rewardReady: false, rewardsEarned: { increment: 1 }, lastStampAt: redeemAt }
+      });
+    } catch(e) { console.error('[RedeemTap] LoyaltyCustomer sync error:', e.message); }
     const devices = await prisma.passDevice.findMany({ where: { passId: pass.id }, select: { pushToken: true } });
     if (devices.length) {
       try { const { pushUpdateToDevices } = require('../services/apnsService'); await pushUpdateToDevices(devices); } catch(e) {}
@@ -2729,6 +2744,37 @@ async function handleGetStampSettings(req, res) {
 }
 
 // POST /stamp/:slug/customer — per-customer stamp recording
+// Shared by handleCustomerStamp (the customer-facing "record my stamp"
+// beacon fired from handleStamp's rendered page) and handleStampConfirm
+// (the staff-scanner / NFC / QR stamp path). Both must keep the
+// LoyaltyCustomer table — the source the admin Members list reads from —
+// in sync with whichever Pass actually got stamped, or stamps recorded
+// through one path silently never show up in the other's view of the
+// same business's customers.
+async function upsertLoyaltyCustomerStamp(slug, cid, goal) {
+  let lc = null;
+  try { lc = await prisma.loyaltyCustomer.findUnique({ where: { slug_customerId: { slug, customerId: cid } } }); } catch(_) {}
+  if (!lc) {
+    lc = await prisma.loyaltyCustomer.create({
+      data: { slug, customerId: cid, stampCount: 1, totalStamps: 1, rewardReady: goal <= 1, lastStampAt: new Date() }
+    });
+  } else if (lc.stampCount < goal) {
+    const nc = lc.stampCount + 1;
+    const rr = nc >= goal;
+    const re = (rr && !lc.rewardReady) ? lc.rewardsEarned + 1 : lc.rewardsEarned;
+    lc = await prisma.loyaltyCustomer.update({
+      where: { slug_customerId: { slug, customerId: cid } },
+      data: { stampCount: nc, totalStamps: { increment: 1 }, rewardReady: rr, rewardsEarned: re, lastStampAt: new Date() }
+    });
+  } else {
+    lc = await prisma.loyaltyCustomer.update({
+      where: { slug_customerId: { slug, customerId: cid } },
+      data: { totalStamps: { increment: 1 }, lastStampAt: new Date() }
+    });
+  }
+  return lc;
+}
+
 async function handleCustomerStamp(req, res) {
   try {
     const { slug } = req.params;
@@ -2737,26 +2783,7 @@ async function handleCustomerStamp(req, res) {
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     if (!settings || !settings.enabled) return res.json({ ok: false, error: 'Loyalty not active' });
     const goal = settings.goal || 10;
-    let lc = null;
-    try { lc = await prisma.loyaltyCustomer.findUnique({ where: { slug_customerId: { slug, customerId: cid } } }); } catch(_) {}
-    if (!lc) {
-      lc = await prisma.loyaltyCustomer.create({
-        data: { slug, customerId: cid, stampCount: 1, totalStamps: 1, rewardReady: goal <= 1, lastStampAt: new Date() }
-      });
-    } else if (lc.stampCount < goal) {
-      const nc = lc.stampCount + 1;
-      const rr = nc >= goal;
-      const re = (rr && !lc.rewardReady) ? lc.rewardsEarned + 1 : lc.rewardsEarned;
-      lc = await prisma.loyaltyCustomer.update({
-        where: { slug_customerId: { slug, customerId: cid } },
-        data: { stampCount: nc, totalStamps: { increment: 1 }, rewardReady: rr, rewardsEarned: re, lastStampAt: new Date() }
-      });
-    } else {
-      lc = await prisma.loyaltyCustomer.update({
-        where: { slug_customerId: { slug, customerId: cid } },
-        data: { totalStamps: { increment: 1 }, lastStampAt: new Date() }
-      });
-    }
+    const lc = await upsertLoyaltyCustomerStamp(slug, cid, goal);
     return res.json({ ok: true, stampCount: lc.stampCount, goal, rewardReady: lc.rewardReady, hasWallet: lc.hasWallet });
   } catch(e) {
     console.error('[CustomerStamp]', e.message);
