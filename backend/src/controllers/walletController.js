@@ -174,6 +174,13 @@ async function handleGetLatestPass(req, res) {
       // next stamp/regenerate.
       slug = pass.serialNumber.replace(/^sqr-/, '');
     }
+    // Phase 1B: this is Apple's own refresh of an already-issued pass,
+    // identified by the serialNumber it was issued with — not a new
+    // enrollment, so no cid requirement applies here. A pass with no
+    // recoverable cid is a legacy shared "sqr-{slug}" row; refresh still
+    // proceeds (an already-issued pass must keep working), just logged so
+    // this path stays visible without needing a fresh code audit each time.
+    if (!cid) console.log('[Wallet] legacy shared-pass refresh for slug', slug, '— no customer id on this pass');
     const { PrismaClient } = require('@prisma/client');
     const _prisma = new PrismaClient();
     const page = await _prisma.landingPage.findUnique({ where: { slug } });
@@ -183,10 +190,10 @@ async function handleGetLatestPass(req, res) {
     // Inject latest push message into sections so it appears on pass back
     if (pass.lastMsg) { sections._lastMsgTitle = pass.lastMsgTitle; sections._lastMsg = pass.lastMsg; sections._lastMsgLink = pass.lastMsgLink; }
     const { generateSmartQRPass } = require('../services/passService');
-    // Must pass this pass's own serialNumber/cid — without it,
-    // generateSmartQRPass defaults to the generic per-slug serial and looks
-    // up a different (or nonexistent) Pass row, showing the wrong stamp
-    // count instead of this specific customer's.
+    // Must pass this pass's own serialNumber/cid explicitly — without it,
+    // generateSmartQRPass now rejects the call (Phase 1B) rather than
+    // silently defaulting to a different Pass row's serial and showing the
+    // wrong stamp count instead of this specific customer's.
     const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid, serialNumber: pass.serialNumber, authToken: pass.authToken });
 
     res.set({

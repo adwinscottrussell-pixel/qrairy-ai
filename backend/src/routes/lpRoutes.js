@@ -62,7 +62,15 @@ router.get('/lp/wallet/google/:slug', async (req, res) => {
     if (!page) return res.status(404).json({ error: 'Page not found' });
     const sections = Object.assign({}, page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {}, { businessName: page.businessName });
     const { createGoogleWalletSaveUrl } = require('../services/googleWalletService');
+    const { getCustomerSerialNumber } = require('../utils/customerSerial');
     const cid = req.query.cid || null;
+    // Phase 1B: new Google Wallet enrollment requires a valid customer id,
+    // same rule as Apple enrollment — never silently fall back to a
+    // shared/anonymous object. Existing update/PATCH logic is unchanged.
+    if (!getCustomerSerialNumber(slug, cid)) {
+      console.error('[Google Wallet] enrollment rejected: missing or invalid cid for slug', slug);
+      return res.status(400).json({ error: 'A valid customer id is required to add this pass.' });
+    }
     if (cid) {
       try {
         await prisma.loyaltyCustomer.upsert({

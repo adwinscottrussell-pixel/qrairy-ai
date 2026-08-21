@@ -41,7 +41,20 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   // customer's pass and recover the exact identity to stamp against —
   // no dependency on the customer's browser localStorage at stamp time.
   const barcodeUrl   = cid ? `${lpUrl}?cid=${encodeURIComponent(cid)}` : lpUrl;
-  const serial       = opts.serialNumber || `sqr-${slug}`;
+  // Phase 1B: serialNumber must always be supplied explicitly by the caller
+  // — this used to silently default to the shared "sqr-{slug}" serial when
+  // omitted. Both current callers (handleGenerateAppleWalletPass for new
+  // enrollment, handleGetLatestPass for Apple's own refresh of an
+  // already-issued pass, customer-specific or legacy shared) already pass
+  // one explicitly, so this changes nothing for them; it only prevents a
+  // future caller from reintroducing the shared-bucket bug by omission.
+  // Does not reject a legacy shared "sqr-{slug}" serial when a caller
+  // passes one on purpose — that's required for refreshing already-issued
+  // shared passes and is not this function's concern to police.
+  if (!opts.serialNumber) {
+    throw new Error('generateSmartQRPass requires an explicit serialNumber.');
+  }
+  const serial       = opts.serialNumber;
   const authTok      = opts.authToken || crypto.createHash('sha256').update(serial + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0, 32);
   const bgRgb        = hexToRgb(accent) || 'rgb(255,90,31)';
   const walletTheme  = getTheme(theme.walletTheme || 'premium');

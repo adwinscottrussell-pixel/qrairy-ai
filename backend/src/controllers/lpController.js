@@ -3517,16 +3517,6 @@ ${WALLET_URL_HELPER_JS}
 (function(){
   var _s = window.location.pathname.split('/').pop();
   console.log('[Push] Premium LP loaded, slug:', _s);
-  // Same universal cTok identity used by wallet/loyalty flows elsewhere on
-  // this page — must CREATE (not just read) so a push-only visitor who
-  // never touches wallet/stamp flows still gets a stable id.
-  function _cid() {
-    try {
-      var c = localStorage.getItem('cTok');
-      if (!c) { c = Date.now() + 'm' + Math.random().toString(36).slice(2); localStorage.setItem('cTok', c); }
-      return c;
-    } catch(e) { return ''; }
-  }
   var isStandalone = (window.navigator.standalone === true || window.matchMedia('(display-mode:standalone)').matches);
   if (!('serviceWorker' in navigator && 'PushManager' in window)) {
     console.log('[Push] Blocked: not PWA or unsupported');
@@ -3640,7 +3630,7 @@ ${WALLET_URL_HELPER_JS}
         var j = s.toJSON();
         return fetch('${PUBLIC_APP_ORIGIN}/lp/webpush/subscribe/' + _s, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: _cid() })
+          body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: getOrCreateCustomerId() })
         });
       }).then(function(x) { if (!x.ok) throw new Error('subscribe HTTP ' + x.status); return x.json(); })
         .then(function(body) {

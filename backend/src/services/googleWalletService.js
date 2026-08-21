@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prismaClient');
 const { getTheme } = require('./walletThemes');
 const { PUBLIC_APP_ORIGIN, API_ORIGIN } = require('../config/urls');
+const { getCustomerSerialNumber, isValidCid } = require('../utils/customerSerial');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023161108';
 const CLASS_SUFFIX = 'qraivy_loyalty_v1';
@@ -106,15 +107,31 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
         body: rewardReady ? 'Show this card to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps collected',
       },
     ],
+    // Parity with the Apple barcode (passService.js): embed the exact same
+    // validated cid this object was built for, so staff scanning either
+    // wallet's QR can recover one exact customer identity the same way.
+    // Uses the cid already passed into this function — never generates a
+    // new one here. createGoogleWalletSaveUrl (this function's only caller)
+    // already requires a valid cid before ever reaching this point, so the
+    // slug-only fallback below is defensive only, not an expected path.
     barcode: {
       type: 'QR_CODE',
-      value: `${PUBLIC_APP_ORIGIN}/lp/${slug}`,
+      value: isValidCid(cid) ? `${PUBLIC_APP_ORIGIN}/lp/${slug}?cid=${encodeURIComponent(cid)}` : `${PUBLIC_APP_ORIGIN}/lp/${slug}`,
       alternateText: slug,
     },
   };
 }
 
 async function createGoogleWalletSaveUrl(slug, sections, cid) {
+  // Phase 1B: new enrollment always requires a valid customer id — defense
+  // in depth alongside the route-level guard in lpRoutes.js, in case this
+  // function is ever called from elsewhere. Never falls back to the shared
+  // "sqr-{slug}" object for a new save. Existing update/PATCH logic in
+  // updateGoogleWalletStamps is unchanged.
+  const enrollmentSerial = getCustomerSerialNumber(slug, cid);
+  if (!enrollmentSerial) {
+    throw new Error('A valid customer id is required to create a Google Wallet save URL.');
+  }
   const credentials = getCredentials();
   const businessName = sections.businessName || slug;
   const accent = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
@@ -126,7 +143,7 @@ async function createGoogleWalletSaveUrl(slug, sections, cid) {
   // If this customer already has stamps (e.g. collected via NFC/QR before
   // ever adding a wallet), the card must open already showing that real
   // progress — never reset to 0 just because this is their first "save".
-  const serial = cid ? `sqr-${slug}-${cid}` : 'sqr-' + slug;
+  const serial = enrollmentSerial;
   const [pass, stampSettings] = await Promise.all([
     prisma.pass.findUnique({ where: { serialNumber: serial } }),
     prisma.stampSettings.findUnique({ where: { slug } }),
@@ -187,6 +204,18 @@ async function updateGoogleWalletStamps(slug, stampCount, cid) {
             body: rewardReady ? 'Show this card to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps collected',
           },
         ],
+        // Backward compatibility: an object saved before the barcode-parity
+        // fix above was deployed still has its old, cid-less barcode baked
+        // in on Google's servers — the barcode is otherwise only set once,
+        // at creation. Including it in every stamp-update PATCH self-heals
+        // any already-installed pass the next time it's stamped, using the
+        // same cid this function already receives — no new cid, no new
+        // object, no change to objectId/save flow.
+        barcode: {
+          type: 'QR_CODE',
+          value: isValidCid(cid) ? `${PUBLIC_APP_ORIGIN}/lp/${slug}?cid=${encodeURIComponent(cid)}` : `${PUBLIC_APP_ORIGIN}/lp/${slug}`,
+          alternateText: slug,
+        },
       }),
     }
   );
