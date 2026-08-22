@@ -4,9 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAivy — AI-Powered QR Codes That Engage</title>
+  <script src="js/url-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/homepage-qds-tokens.css" />
   <style>
     :root {
       --bg: #080b10;
@@ -93,43 +95,152 @@
     }
     .fq-banner-btn:hover { opacity: 0.75; }
     @media(max-width:640px){ .fq-banner { padding: 10px 20px; } }
-    /* ── HERO ── */
-    .hero {
-      position: relative; min-height: 100vh;
-      display: grid; grid-template-columns: 1fr 1fr;
-      align-items: center; gap: 60px;
-      padding: 140px 48px 80px;
-      max-width: 1200px; margin: 0 auto;
+    /* ── APPROVED HOMEPAGE HERO + FIVE-PILLAR STRIP ──
+       Merged from frontend/public/homepage-approved-2026-08-22.html
+       (git tag homepage-approved-2026-08-22, commit 2935ab1). Every
+       class below is scoped with a qh- prefix to avoid colliding with
+       this file's own .hero/.nav-link/.feature-title/etc. rules found
+       during the pre-merge diagnostic. Button/input visuals reproduce
+       qds/components/button.css's .qds-btn--ai.qds-btn--lg and
+       input.css's .qds-input--md as literal, frozen values -- same
+       approach as css/homepage-qds-tokens.css; qds/qds.css itself is
+       NOT loaded. Radius/color values below match this hero's own
+       source-file overrides (--qds-radius-lg, #fff), not the
+       component defaults. */
+    .qh-sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
-    .hero-bg-glow {
-      position: fixed; width: 800px; height: 800px;
+    .qh-container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+    .qh-hero { position: relative; padding: var(--qds-space-8) 0 var(--qds-space-16); }
+    .qh-hero-glow {
+      position: absolute; width: 800px; height: 800px;
       background: radial-gradient(circle, rgba(255,90,31,0.08) 0%, transparent 65%);
-      top: 0; right: -200px; pointer-events: none; z-index: 0;
+      top: -200px; right: -200px; pointer-events: none; z-index: 0;
     }
-    .hero-left { position: relative; z-index: 1; }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.3);
-      color: var(--accent2); font-family: var(--font-mono);
-      font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 6px 14px; border-radius: 999px; margin-bottom: 28px;
+    .qh-hero-grid {
+      display: grid; grid-template-columns: 1.15fr 1fr; align-items: center;
+      gap: var(--qds-space-12); position: relative; z-index: 1;
     }
-    .hero-badge-dot {
-      width: 6px; height: 6px; background: var(--accent);
-      border-radius: 50%; animation: pulse 2s infinite;
+    .qh-hero-left { position: relative; z-index: 1; }
+    .qh-hero-headline {
+      font-family: var(--qds-font-family-primary);
+      font-size: clamp(1.7rem, 3.4vw, var(--qds-text-display-size));
+      font-weight: var(--qds-text-display-weight);
+      line-height: var(--qds-text-display-line-height);
+      letter-spacing: var(--qds-text-display-letter-spacing);
+      margin-bottom: var(--qds-space-4); max-width: 388px;
+      color: var(--qds-color-text-primary);
+      overflow-wrap: break-word;
     }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
-    .hero h1 {
-      font-family: var(--font-display); font-size: clamp(1.6rem, 3.5vw, 2.8rem);
-      font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
-      margin-bottom: 24px;
+    .qh-hero-headline .qh-accent { color: var(--qds-color-brand-primary); white-space: nowrap; }
+    .qh-hero-subcopy {
+      font-family: var(--qds-text-body-sm-family); font-size: var(--qds-text-body-sm-size);
+      line-height: var(--qds-text-body-sm-line-height); color: var(--qds-color-text-secondary);
+      max-width: 380px; margin-bottom: var(--qds-space-5);
     }
-    .hero h1 em { color: var(--accent); font-style: normal; display: block; }
-    .hero p {
-      font-size: 1rem; color: var(--text-mid);
-      max-width: 460px; margin-bottom: 36px; line-height: 1.75;
+    .qh-hero-invite {
+      font-family: var(--qds-text-caption-family); font-size: var(--qds-text-caption-size);
+      line-height: var(--qds-text-caption-line-height); color: var(--qds-color-text-muted);
+      margin-bottom: var(--qds-space-2);
     }
-    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+    .qh-hero-supporting-line {
+      font-family: var(--qds-text-caption-family); font-size: var(--qds-text-caption-size);
+      line-height: var(--qds-text-caption-line-height); color: var(--qds-color-text-muted);
+      max-width: 420px; margin-top: var(--qds-space-4);
+    }
+    .qh-hero-form { max-width: 460px; margin-bottom: var(--qds-space-3); }
+    .qh-input-row { display: flex; align-items: center; gap: var(--qds-space-2); }
+
+    .qh-hero-cta {
+      appearance: none; -webkit-appearance: none; box-sizing: border-box; position: relative;
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--qds-space-2);
+      margin: 0; border: 1px solid transparent; border-radius: var(--qds-radius-lg);
+      background: var(--qds-color-brand-primary); color: #fff;
+      box-shadow: 0 0 18px rgba(255,90,31,0.2);
+      cursor: pointer; user-select: none; white-space: nowrap; text-decoration: none; vertical-align: middle;
+      height: 48px; padding: 0 var(--qds-space-6);
+      font-family: var(--qds-font-family-primary); font-size: 1rem; font-weight: 600;
+      line-height: 1.2; letter-spacing: 0.01em;
+      transition: background-color var(--qds-duration-fast) var(--qds-easing-standard),
+                  transform var(--qds-duration-fast) var(--qds-easing-standard),
+                  box-shadow var(--qds-duration-fast) var(--qds-easing-standard);
+    }
+    .qh-hero-cta:hover { background: #ff7a45; transform: translateY(-1px); }
+    .qh-hero-cta:active { background: #e6490f; transform: scale(0.98); }
+    .qh-hero-cta:focus-visible { outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 3px rgba(255,90,31,0.55); }
+    .qh-hero-cta__content { display: inline-flex; align-items: center; justify-content: center; gap: var(--qds-space-2); }
+    .qh-hero-cta__icon { display: inline-flex; flex: none; width: 24px; height: 24px; }
+    .qh-hero-cta__icon svg { width: 100%; height: 100%; }
+
+    .qh-hero-input-wrap {
+      box-sizing: border-box; display: flex; align-items: center; flex: 1; min-width: 0;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: var(--qds-radius-lg);
+      background: #1a1a1a;
+      height: 44px; gap: var(--qds-space-2); padding: var(--qds-space-2) var(--qds-space-3);
+      transition: border-color var(--qds-duration-fast) var(--qds-easing-standard),
+                  box-shadow var(--qds-duration-fast) var(--qds-easing-standard);
+    }
+    .qh-hero-input-wrap:focus-within { border-color: var(--qds-color-brand-primary); box-shadow: 0 0 0 3px rgba(255,90,31,0.55); }
+    .qh-hero-input-icon { display: inline-flex; flex: none; align-items: center; color: var(--qds-color-text-muted); }
+    .qh-hero-input-icon svg { width: 16px; height: 16px; }
+    .qh-hero-input {
+      flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: none; outline: none; background: transparent;
+      color: var(--qds-color-text-primary); font-family: var(--qds-font-family-primary);
+      font-size: 1rem; line-height: 1.5;
+    }
+    .qh-hero-input::placeholder { color: var(--qds-color-text-muted); }
+
+    .qh-hero-visual { position: relative; display: flex; align-items: center; justify-content: center; }
+    .qh-device-wrap { position: relative; width: 100%; }
+    .qh-hero-device-img {
+      position: relative; z-index: 1; width: 100%; display: block;
+      filter: drop-shadow(0 40px 55px rgba(0,0,0,0.55));
+    }
+    .qh-hero-energy-img {
+      position: absolute; z-index: 0; pointer-events: none;
+      width: 145%; max-width: none; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Desktop composition (>=1440px) -- APPROVED + LOCKED per the
+       source file; do not edit these two values in a later responsive
+       pass, add new rules instead. */
+    @media (min-width: 1440px) {
+      .qh-hero-visual { width: 122%; justify-self: end; }
+      .qh-hero-energy-img { width: 123%; top: 54%; }
+    }
+
+    .qh-feature-bar-wrap { max-width: 1360px; margin: 64px auto 0; padding: 0 24px; position: relative; z-index: 1; }
+    .qh-feature-bar {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 20px;
+      display: grid; grid-template-columns: repeat(5, 1fr);
+    }
+    .qh-feature-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 28px 24px; border-right: 1px solid var(--border);
+    }
+    .qh-feature-item:last-child { border-right: none; }
+    .qh-feature-icon {
+      width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.35);
+      color: var(--accent);
+    }
+    .qh-feature-icon svg { width: 21px; height: 21px; }
+    .qh-feature-text { min-width: 0; }
+    .qh-feature-title {
+      font-family: 'Inter', var(--font-body); font-size: 0.92rem; font-weight: 700;
+      color: var(--text); margin-bottom: 6px; line-height: 1.3;
+    }
+    .qh-feature-desc {
+      font-family: var(--font-body); font-size: 0.78rem; line-height: 1.5;
+      color: var(--text-mid);
+    }
+
+    /* ── SHARED BUTTONS (used outside the Hero — Editor Preview, Analytics,
+       and closing CTA sections all reference these) ── */
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--accent); color: #fff;
@@ -149,106 +260,188 @@
       font-weight: 600; text-decoration: none; transition: all 0.18s;
     }
     .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-    .hero-stats { display: flex; gap: 36px; }
-    .hero-stat-num {
-      font-family: var(--font-display); font-size: 1.7rem;
-      font-weight: 800; color: var(--text); letter-spacing: -0.03em;
-      line-height: 1;
-    }
-    .hero-stat-num span { color: var(--accent); }
-    .hero-stat-label {
-      font-family: var(--font-mono); font-size: 0.6rem;
-      color: var(--text-dim); text-transform: uppercase;
-      letter-spacing: 0.1em; margin-top: 4px;
-    }
-    .hero-stat-icon { font-size: 0.75rem; margin-right: 2px; }
 
-    /* ── HERO RIGHT: PRODUCT MOCKUP ── */
-    .hero-right {
-      position: relative; z-index: 1;
-      display: flex; flex-direction: column; gap: 16px;
+    /* ── APPROVED HOMEPAGE: CREATE-A-DEAL STORY + SIX-CARD CAPABILITIES ──
+       Merged from homepage-approved-2026-08-22.html (git tag
+       homepage-approved-2026-08-22, commit 2935ab1), same section
+       (<section class="story">) in the source. qh- scoped, same
+       frozen-CSS strategy as Phase 1. Local light-theme custom
+       properties (--qh-story-*) are scoped to .qh-story so this
+       section's cream background/dark text cannot leak into the dark
+       hero above or any section below. */
+    .qh-story {
+      position: relative; padding: var(--qds-space-12) 0 var(--qds-space-16);
+      --qh-story-bg: #F3F0EA;
+      --qh-story-card-bg: #FFFFFF;
+      --qh-story-card-bg-alt: #FBF9F4;
+      --qh-story-border: rgba(23,18,12,0.08);
+      --qh-story-text: #1A1512;
+      --qh-story-text-mid: #6B6459;
+      --qh-story-text-dim: #A39C90;
+      background: var(--qh-story-bg);
     }
-    .hero-mockup-top {
-      background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 16px; padding: 20px; position: relative;
-      overflow: hidden;
+    .qh-story-container { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+    .qh-story-grid { display: flex; flex-direction: column; gap: var(--qds-space-12); position: relative; z-index: 1; }
+    .qh-story-copy { max-width: 460px; }
+    .qh-story-headline {
+      font-family: 'Inter', var(--font-body); font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+      font-weight: 800; line-height: 1.25; letter-spacing: -0.01em;
+      color: var(--qh-story-text); margin-bottom: var(--qds-space-4);
     }
-    .hero-mockup-top::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,90,31,0.05) 0%, transparent 60%);
+    .qh-story-headline-line { display: block; }
+    .qh-story-headline .qh-story-accent { color: var(--accent); }
+    .qh-story-subcopy {
+      font-family: var(--font-body); font-size: 1rem; line-height: 1.6;
+      color: var(--qh-story-text-mid); max-width: 420px;
     }
-    .mockup-prompt-label {
-      display: flex; align-items: center; gap: 8px;
-      font-family: var(--font-mono); font-size: 0.65rem;
-      color: var(--accent); letter-spacing: 0.08em;
-      margin-bottom: 12px;
+
+    .qh-story-workflow { display: flex; flex-direction: column; align-items: stretch; gap: var(--qds-space-8); position: relative; }
+    .qh-story-workflow::before {
+      content: ''; position: absolute; z-index: 0;
+      left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%);
+      background: linear-gradient(to bottom, rgba(255,90,31,0.05), rgba(255,90,31,0.35) 20%, rgba(255,90,31,0.35) 80%, rgba(255,90,31,0.05));
     }
-    .mockup-prompt-label svg { width: 14px; height: 14px; }
-    .mockup-prompt-box {
-      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.2);
-      border-radius: 10px; padding: 14px 16px;
-      font-family: var(--font-mono); font-size: 0.75rem;
-      color: var(--text-mid); line-height: 1.5; margin-bottom: 14px;
-    }
-    .mockup-generate-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: #fff;
-      padding: 10px 20px; border-radius: 8px;
-      font-family: var(--font-display); font-size: 0.78rem;
-      font-weight: 700; cursor: pointer; border: none;
-      animation: btnBreath 3s ease-in-out infinite;
-    }
-    @keyframes btnBreath { 0%,100%{box-shadow:0 0 16px rgba(255,90,31,0.4)} 50%{box-shadow:0 0 32px rgba(255,90,31,0.6)} }
-    /* Restaurant card mockup */
-    .mockup-result-card {
-      background: linear-gradient(135deg, #1a0e08 0%, #0d0805 100%);
-      border: 1px solid rgba(255,90,31,0.2); border-radius: 12px;
-      padding: 16px; display: flex; gap: 14px; align-items: flex-start;
-    }
-    .mockup-card-left { flex: 1; }
-    .mockup-restaurant-name {
-      display: flex; align-items: center; gap: 6px;
-      font-family: var(--font-mono); font-size: 0.6rem;
-      color: rgba(255,255,255,0.4); letter-spacing: 0.1em; margin-bottom: 8px;
-    }
-    .mockup-discount {
-      font-family: var(--font-display); font-size: 1.6rem;
-      font-weight: 800; color: var(--accent); line-height: 1.1;
-      letter-spacing: -0.02em;
-    }
-    .mockup-discount-sub {
-      font-family: var(--font-display); font-size: 0.7rem;
-      font-weight: 700; color: var(--text); margin-bottom: 6px;
-    }
-    .mockup-scan-label {
-      font-family: var(--font-mono); font-size: 0.58rem;
-      color: var(--text-dim);
-    }
-    .mockup-qr-placeholder {
-      width: 60px; height: 60px; background: #fff;
-      border-radius: 6px; flex-shrink: 0;
+    .qh-workflow-connector {
       display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; width: 50px; height: 50px; border-radius: 50%;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.28);
+      color: var(--accent); position: relative; z-index: 1;
     }
-    .mockup-qr-placeholder svg { width: 44px; height: 44px; }
+    .qh-workflow-connector svg { width: 21px; height: 21px; transform: rotate(90deg); }
+    .qh-workflow-card {
+      background: var(--qh-story-card-bg); border: 1px solid var(--qh-story-border);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-8);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 16px 32px -20px rgba(23,18,12,0.14);
+      position: relative; z-index: 1;
+    }
+    .qh-workflow-card-label {
+      font-family: var(--font-mono); font-size: 0.74rem; font-weight: 400;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--qh-story-text-dim);
+      margin-bottom: var(--qds-space-3); display: flex; align-items: center; gap: 6px;
+    }
+    .qh-workflow-card-label svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .qh-deal-card { max-width: 340px; margin: 0 auto; width: 100%; }
+    .qh-deal-card-title { font-family: 'Inter', var(--font-body); font-size: 1.3rem; font-weight: 700; color: var(--qh-story-text); margin-bottom: 4px; }
+    .qh-deal-card-desc { font-family: var(--font-body); font-size: 0.95rem; color: var(--qh-story-text-mid); margin-bottom: var(--qds-space-5); }
+    .qh-deal-card-btn {
+      appearance: none; -webkit-appearance: none; box-sizing: border-box; position: relative;
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--qds-space-2);
+      width: 100%; margin: 0; border: 1px solid transparent; border-radius: var(--qds-radius-md);
+      background: var(--qds-color-brand-primary); color: #0a0a0a;
+      cursor: pointer; user-select: none; text-align: center; text-decoration: none; vertical-align: middle;
+      white-space: normal; height: auto; min-height: var(--qds-control-height-sm);
+      padding: 9px var(--qds-space-4); line-height: 1.3;
+      font-family: var(--qds-font-family-primary); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+      transition: background-color var(--qds-duration-fast) var(--qds-easing-standard),
+                  transform var(--qds-duration-fast) var(--qds-easing-standard);
+    }
+    .qh-deal-card-btn:hover { background: #ff7a45; transform: translateY(-1px); }
+    .qh-deal-card-btn:active { background: #e6490f; transform: scale(0.98); }
 
-    /* Bottom row of hero mockup */
-    .hero-mockup-bottom {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 14px; padding: 14px 20px;
-      display: flex; justify-content: space-around; align-items: center;
+    .qh-automation-card {
+      max-width: 380px; margin: 0 auto; width: 100%;
+      border-color: rgba(255,90,31,0.30); border-top: 3px solid var(--accent);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 0 0 1px rgba(255,90,31,0.10), 0 20px 36px -20px rgba(255,90,31,0.22);
     }
-    .mockup-action {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 6px; font-family: var(--font-mono); font-size: 0.6rem;
-      color: var(--text-dim); letter-spacing: 0.06em;
+    .qh-automation-card .qh-workflow-card-label { color: var(--accent); }
+    .qh-automation-card .qh-workflow-card-label svg { width: 14px; height: 14px; }
+    .qh-automation-list { list-style: none; display: flex; flex-direction: column; gap: var(--qds-space-5); }
+    .qh-automation-list li { display: flex; align-items: center; gap: 10px; font-family: var(--font-body); font-size: 0.96rem; color: var(--qh-story-text); }
+    .qh-automation-list svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--accent); }
+
+    .qh-workflow-phone-wrap { display: flex; justify-content: center; position: relative; z-index: 1; }
+    .qh-workflow-phone {
+      position: relative; width: 190px; height: 335px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 30px; padding: 10px; box-shadow: 0 30px 55px -22px rgba(23,18,12,0.35);
     }
-    .mockup-action-icon {
-      width: 36px; height: 36px; background: rgba(255,90,31,0.1);
-      border-radius: 8px; display: flex; align-items: center;
-      justify-content: center; font-size: 16px;
+    .qh-workflow-phone::before {
+      content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 46px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.15);
     }
-    .mockup-action.active .mockup-action-icon { background: rgba(255,90,31,0.2); }
-    .mockup-action.active { color: var(--accent2); }
+    .qh-workflow-phone-screen {
+      width: 100%; height: 100%; border-radius: 20px;
+      background: radial-gradient(circle at 50% 18%, rgba(255,150,95,0.4), rgba(255,90,31,0.10) 42%, var(--bg) 72%);
+      padding: 28px 10px 10px; position: relative; overflow: hidden;
+    }
+    .qh-workflow-phone-time { font-family: 'Inter', var(--font-body); font-weight: 300; color: #fff; font-size: 1.6rem; line-height: 1; letter-spacing: -0.01em; text-align: center; margin-top: 2px; }
+    .qh-workflow-phone-date { font-family: var(--font-body); font-size: 0.6rem; font-weight: 500; color: rgba(255,255,255,0.78); text-align: center; margin-top: 4px; margin-bottom: 16px; }
+    .qh-workflow-notification { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.06); border-radius: 13px; padding: 12px; display: flex; gap: 9px; align-items: flex-start; box-shadow: 0 10px 22px -8px rgba(0,0,0,0.4); }
+    .qh-workflow-notification-icon { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .qh-workflow-notification-icon svg { width: 14px; height: 14px; color: #fff; }
+    .qh-workflow-notification-body { min-width: 0; }
+    .qh-workflow-notification-title { font-family: 'Inter', var(--font-body); font-size: 0.7rem; font-weight: 700; color: #17140F; margin-bottom: 2px; }
+    .qh-workflow-notification-text { font-family: var(--font-body); font-size: 0.64rem; line-height: 1.4; color: #6B6459; }
+
+    .qh-capabilities { margin-top: var(--qds-space-20); position: relative; z-index: 1; }
+    .qh-capabilities-headline {
+      font-family: 'Inter', var(--font-body); font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+      font-weight: 800; text-align: center; color: var(--qh-story-text);
+      max-width: 640px; margin: 0 auto var(--qds-space-10);
+    }
+    .qh-capabilities-grid { display: grid; grid-template-columns: 1fr; gap: var(--qds-space-6); align-items: stretch; }
+    .qh-cap-card {
+      background: var(--qh-story-card-bg); border: 1px solid var(--qh-story-border);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-6);
+      display: flex; flex-direction: column; gap: var(--qds-space-4);
+      box-shadow: 0 1px 2px rgba(23,18,12,0.04), 0 14px 28px -20px rgba(23,18,12,0.12);
+    }
+    .qh-cap-preview {
+      aspect-ratio: 1536 / 758; border-radius: var(--qds-radius-lg);
+      background: var(--qh-story-card-bg-alt); border: 1px solid var(--qh-story-border);
+      position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    }
+    .qh-cap-preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .qh-cap-icon {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.08); border: 1px solid rgba(255,90,31,0.35);
+      color: var(--accent);
+    }
+    .qh-cap-icon svg { width: 18px; height: 18px; }
+    .qh-cap-title { font-family: 'Inter', var(--font-body); font-size: 1.05rem; font-weight: 700; color: var(--qh-story-text); }
+    .qh-cap-desc { font-family: var(--font-body); font-size: 0.85rem; line-height: 1.6; color: var(--qh-story-text-mid); }
+
+    @media (max-width: 767px) { .qh-story-container { padding: 0 20px; } }
+    @media (min-width: 480px) { .qh-capabilities-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 768px) and (max-width: 1023px) { .qh-story-workflow::before { display: none; } }
+    @media (min-width: 768px) {
+      .qh-story-workflow { flex-direction: row; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--qds-space-8); }
+      .qh-workflow-connector svg { transform: rotate(0deg); }
+      .qh-deal-card { flex: 0 1 300px; margin: 0; }
+      .qh-automation-card { flex: 0 1 330px; margin: 0; }
+      .qh-workflow-phone-wrap { flex-shrink: 0; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .qh-story-workflow { gap: var(--qds-space-6); }
+      .qh-deal-card { flex: 0 1 280px; }
+      .qh-automation-card { flex: 0 1 300px; }
+      .qh-workflow-connector { width: 42px; height: 42px; }
+      .qh-workflow-connector svg { width: 19px; height: 19px; }
+    }
+    @media (min-width: 1024px) {
+      .qh-story-grid { display: grid; grid-template-columns: 0.9fr 1.6fr; align-items: center; gap: var(--qds-space-10); }
+      .qh-story-copy { max-width: none; }
+      .qh-story-workflow { flex-wrap: nowrap; justify-content: space-between; gap: var(--qds-space-5); }
+      .qh-story-workflow::before {
+        left: 0; right: 0; top: 50%; bottom: auto; height: 2px; width: auto; transform: translateY(-50%);
+        background: linear-gradient(to right, rgba(255,90,31,0.05), rgba(255,90,31,0.35) 15%, rgba(255,90,31,0.35) 85%, rgba(255,90,31,0.05));
+      }
+      .qh-deal-card { flex: 1 1 0; min-width: 0; max-width: 240px; }
+      .qh-automation-card { flex: 1.2 1 0; min-width: 0; max-width: 280px; }
+      .qh-workflow-phone { width: 150px; height: 335px; }
+      .qh-workflow-connector { width: 40px; height: 40px; }
+      .qh-workflow-connector svg { width: 18px; height: 18px; }
+      .qh-capabilities-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1440px) {
+      .qh-story-workflow { gap: var(--qds-space-5); }
+      .qh-deal-card { flex: 0 0 250px; max-width: 250px; }
+      .qh-automation-card { flex: 1 1 0; min-width: 0; max-width: 340px; }
+      .qh-workflow-phone { width: 170px; height: 300px; }
+      .qh-workflow-connector { width: 42px; height: 42px; }
+      .qh-workflow-connector svg { width: 18px; height: 18px; }
+    }
 
     /* ── TRUSTED BY ── */
     .trusted-section {
@@ -480,31 +673,6 @@
       color: var(--text-dim);
     }
 
-    /* ── FEATURES SECTION ── */
-    .features-section { padding: 100px 0; }
-    .features-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-    }
-    .feature-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 14px; padding: 28px 26px; transition: all 0.2s;
-      position: relative; overflow: hidden;
-    }
-    .feature-card::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at top left, rgba(255,90,31,0.04) 0%, transparent 60%);
-      opacity: 0; transition: opacity 0.3s;
-    }
-    .feature-card:hover { border-color: rgba(255,90,31,0.2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
-    .feature-card:hover::before { opacity: 1; }
-    .feature-icon-wrap {
-      width: 48px; height: 48px; background: rgba(255,90,31,0.1);
-      border-radius: 10px; display: flex; align-items: center;
-      justify-content: center; font-size: 22px; margin-bottom: 16px;
-    }
-    .feature-title { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-    .feature-desc { font-size: 0.85rem; color: var(--text-mid); line-height: 1.65; }
-
     /* ── ANALYTICS SECTION ── */
     .analytics-section {
       padding: 100px 0; background: var(--bg2);
@@ -592,19 +760,187 @@
       font-size: 10px; color: var(--accent);
     }
 
-    /* ── HOW IT WORKS ── */
-    .how-section { padding: 100px 0; }
-    .how-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
-    .how-step { text-align: center; padding: 24px 16px; }
-    .how-step-num {
-      width: 52px; height: 52px; background: var(--surface);
-      border: 1px solid var(--border2); border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-size: 1.2rem;
-      font-weight: 800; color: var(--accent); margin: 0 auto 16px;
+    /* ── APPROVED HOMEPAGE: GIVE US YOUR WEBSITE (s3) + RETENTION LOOP (s4) ──
+       Merged from homepage-approved-2026-08-22.html (git tag
+       homepage-approved-2026-08-22, commit 2935ab1), replacing the old
+       "Up and running in 3 steps" section this same slot used to hold.
+       qh- scoped, same frozen-CSS strategy as Phases 1-2. s4's
+       cream-theme local custom properties (--s4-* in the source) are
+       renamed --qh-s4-* and scoped to .qh-s4, same pattern as Phase 2's
+       .qh-story. The s4 closing panel's button/input reuse Phase 1's
+       .qh-hero-cta/.qh-hero-input-wrap classes directly -- the source
+       itself reuses the identical qds-btn--ai.qds-btn--lg /
+       qds-input--md component variant there (explicit "same URL-field
+       + Generate My Platform concept as the hero" callback per the
+       source's own comment), so no new button/input CSS is needed. */
+    .qh-s3 { position: relative; background: var(--bg); padding: var(--qds-space-20) 0 var(--qds-space-20); overflow: hidden; }
+    .qh-s3-container { max-width: 1560px; margin: 0 auto; padding: 0 24px; }
+    .qh-s3-head { text-align: center; max-width: 720px; margin: 0 auto var(--qds-space-12); }
+    .qh-s3-headline {
+      font-family: 'Inter', var(--font-body); font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+      font-weight: 800; line-height: 1.22; letter-spacing: -0.01em; color: var(--text);
     }
-    .how-step-title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
-    .how-step-desc { font-size: 0.82rem; color: var(--text-mid); line-height: 1.6; }
+    .qh-s3-headline-line { display: block; }
+    .qh-s3-accent { color: var(--accent); }
+    .qh-s3-subcopy { font-family: var(--font-body); font-size: 1.02rem; line-height: 1.6; color: var(--text-mid); margin-top: var(--qds-space-4); }
+
+    .qh-s3-steps { display: flex; flex-direction: column; align-items: stretch; gap: var(--qds-space-8); }
+    .qh-s3-step { display: flex; flex-direction: column; }
+    .qh-s3-step-head { display: flex; align-items: center; gap: 14px; margin-bottom: var(--qds-space-4); }
+    .qh-s3-step-number {
+      width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--accent);
+      color: var(--accent); font-family: var(--font-mono); font-weight: 700; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .qh-s3-step-label { font-family: 'Inter', var(--font-body); font-weight: 800; font-size: 0.95rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text); }
+    .qh-s3-step-card { flex: 1; display: flex; align-items: flex-start; justify-content: center; }
+    .qh-s3-step-card img { width: 100%; height: auto; display: block; object-fit: contain; border-radius: var(--qds-radius-lg); }
+    .qh-s3-connector { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); align-self: center; }
+    .qh-s3-connector svg { width: 27px; height: 27px; transform: rotate(90deg); }
+
+    .qh-s3-closing { text-align: center; margin-top: var(--qds-space-10); }
+    .qh-s3-closing-icon {
+      width: 52px; height: 52px; border-radius: 50%; margin: 0 auto var(--qds-space-5);
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--accent); color: var(--accent); background: rgba(255,90,31,0.08);
+    }
+    .qh-s3-closing-icon svg { width: 24px; height: 24px; }
+    .qh-s3-closing-line { font-family: 'Inter', var(--font-body); font-size: clamp(1.4rem, 2.6vw, 1.9rem); font-weight: 800; color: var(--text); }
+    .qh-s3-closing-sub { font-family: var(--font-body); font-size: 0.95rem; color: var(--text-mid); margin-top: var(--qds-space-3); }
+
+    @media (max-width: 767px) { .qh-s3-container { padding: 0 20px; } }
+    @media (min-width: 768px) {
+      .qh-s3-steps { flex-direction: row; align-items: stretch; gap: var(--qds-space-5); }
+      .qh-s3-connector svg { transform: rotate(0deg); }
+      .qh-s3-step { flex: 1; min-width: 0; }
+      .qh-s3-step--wide { flex: 1.15; }
+    }
+    @media (min-width: 1024px) {
+      .qh-s3-container { padding: 0 16px; }
+      .qh-s3-steps { gap: var(--qds-space-4); }
+    }
+
+    .qh-s4 {
+      position: relative; background: var(--qh-s4-bg); padding: var(--qds-space-20) 0;
+      --qh-s4-bg: #F3F0EA;
+      --qh-s4-card-bg-alt: #FBF9F4;
+      --qh-s4-border: rgba(23,18,12,0.08);
+      --qh-s4-text: #1A1512;
+      --qh-s4-text-mid: #6B6459;
+    }
+    .qh-s4-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .qh-s4-head { text-align: center; max-width: 640px; margin: 0 auto var(--qds-space-10); }
+    .qh-s4-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--qds-space-3); }
+    .qh-s4-headline { font-family: 'Inter', var(--font-body); font-size: clamp(1.7rem, 3.2vw, 2.5rem); font-weight: 800; line-height: 1.18; letter-spacing: -0.01em; color: var(--qh-s4-text); }
+    .qh-s4-accent { color: var(--accent); }
+    .qh-s4-subcopy { font-family: var(--font-body); font-size: 1.02rem; line-height: 1.6; color: var(--qh-s4-text-mid); margin-top: var(--qds-space-3); }
+
+    .qh-s4-journey { display: flex; flex-direction: column; gap: var(--qds-space-10); }
+    .qh-s4-step-head { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; margin-bottom: var(--qds-space-3); }
+    .qh-s4-step-number {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff;
+      font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .qh-s4-step-label { font-family: 'Inter', var(--font-body); font-weight: 800; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--qh-s4-text); }
+    .qh-s4-step-card-wrap { position: relative; }
+    .qh-s4-step-card {
+      aspect-ratio: 3 / 4; border-radius: var(--qds-radius-lg);
+      background: var(--qh-s4-card-bg-alt); border: 1px solid var(--qh-s4-border);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .qh-s4-step-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .qh-s4-step-desc { font-family: var(--font-body); font-size: 0.82rem; line-height: 1.5; color: var(--qh-s4-text-mid); text-align: center; margin-top: var(--qds-space-8); }
+    .qh-s4-arrow {
+      position: absolute; left: 50%; top: 100%; margin-top: 10px; transform: translate(-50%, 0);
+      display: flex; color: var(--accent); z-index: 2; pointer-events: none;
+    }
+    .qh-s4-arrow svg { width: 20px; height: 20px; transform: rotate(90deg); }
+
+    .qh-s4-loop { display: none; }
+
+    .qh-s4-outcome {
+      text-align: center; font-family: 'Inter', var(--font-body); font-weight: 800;
+      font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.45; color: var(--qh-s4-text);
+      max-width: 760px; margin: var(--qds-space-8) auto 0;
+    }
+    .qh-s4-cta-wrap { text-align: center; margin-top: var(--qds-space-8); }
+    .qh-s4-cta-arrow { width: 18px; height: 18px; }
+    /* Literal reproduction of qds-btn--primary.qds-btn--lg (distinct
+       from .qh-deal-card-btn, which is the --sm variant) -- same
+       resolved values as .qh-hero-cta's --ai.--lg base except color
+       (#0a0a0a text-inverse, not white) and no brand-glow box-shadow,
+       matching the source's plain --primary variant exactly. */
+    .qh-s4-cta-btn {
+      appearance: none; -webkit-appearance: none; box-sizing: border-box; position: relative;
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--qds-space-2);
+      margin: 0; border: 1px solid transparent; border-radius: var(--qds-radius-md);
+      background: var(--qds-color-brand-primary); color: #0a0a0a;
+      cursor: pointer; user-select: none; white-space: nowrap; text-decoration: none; vertical-align: middle;
+      height: 48px; padding: 0 var(--qds-space-6);
+      font-family: var(--qds-font-family-primary); font-size: 1rem; font-weight: 600;
+      line-height: 1.2; letter-spacing: 0.01em;
+      transition: background-color var(--qds-duration-fast) var(--qds-easing-standard),
+                  transform var(--qds-duration-fast) var(--qds-easing-standard);
+    }
+    .qh-s4-cta-btn:hover { background: #ff7a45; transform: translateY(-1px); }
+    .qh-s4-cta-btn:active { background: #e6490f; transform: scale(0.98); }
+
+    .qh-s4-panel-wrap { margin-top: var(--qds-space-12); }
+    .qh-s4-panel {
+      background: var(--bg2); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-8);
+      display: flex; flex-direction: column; gap: var(--qds-space-6);
+    }
+    .qh-s4-panel-left { display: flex; align-items: flex-start; gap: var(--qds-space-4); }
+    .qh-s4-panel-icon {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,90,31,0.1); border: 1px solid rgba(255,90,31,0.35); color: var(--accent);
+    }
+    .qh-s4-panel-icon svg { width: 20px; height: 20px; }
+    .qh-s4-panel-headline { font-family: 'Inter', var(--font-body); font-weight: 800; font-size: 1.15rem; color: var(--text); margin-bottom: 6px; }
+    .qh-s4-panel-sub { font-family: var(--font-body); font-size: 0.9rem; color: var(--text-mid); }
+    .qh-s4-panel-right { display: flex; flex-direction: column; gap: var(--qds-space-3); }
+    .qh-s4-panel-form { display: flex; flex-direction: column; gap: var(--qds-space-3); }
+    .qh-s4-panel-note { font-family: var(--font-body); font-size: 0.75rem; color: var(--text-dim); text-align: center; }
+
+    @media (max-width: 767px) { .qh-s4-container { padding: 0 20px; } }
+    @media (min-width: 900px) {
+      .qh-s4-panel { flex-direction: row; align-items: center; justify-content: space-between; }
+      .qh-s4-panel-right { flex-direction: row; align-items: center; gap: var(--qds-space-4); flex-shrink: 0; }
+      .qh-s4-panel-form { flex-direction: row; align-items: center; gap: var(--qds-space-3); }
+      .qh-s4-panel-form .qh-hero-input-wrap { min-width: 220px; }
+      .qh-s4-panel-note { text-align: left; white-space: nowrap; }
+    }
+    @media (min-width: 1024px) {
+      .qh-s4-container { padding: 0 16px; }
+      .qh-s4-journey { flex-direction: row; align-items: flex-start; --qh-s4-gap: 20px; gap: var(--qh-s4-gap); }
+      .qh-s4-step { flex: 1; min-width: 0; }
+      .qh-s4-step-desc { margin-top: var(--qds-space-3); }
+      .qh-s4-arrow {
+        left: 100%; top: 50%; margin-top: 0; margin-left: calc(var(--qh-s4-gap) / 2);
+        transform: translate(-50%, -50%);
+      }
+      .qh-s4-arrow svg { transform: rotate(0deg); }
+      .qh-s4-loop {
+        display: flex; position: relative; align-items: center; justify-content: center;
+        margin-top: var(--qds-space-6); height: 1px;
+      }
+      .qh-s4-loop-line { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed rgba(255,90,31,0.35); }
+      .qh-s4-loop::before, .qh-s4-loop::after {
+        content: ''; position: absolute; top: -14px; width: 0; height: 14px;
+        border-left: 2px dashed rgba(255,90,31,0.35);
+      }
+      .qh-s4-loop::before { left: 0; }
+      .qh-s4-loop::after { right: 0; }
+      .qh-s4-loop-icon {
+        position: relative; z-index: 1; width: 30px; height: 30px; border-radius: 50%;
+        background: var(--qh-s4-bg); border: 1.5px solid var(--accent); color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .qh-s4-loop-icon svg { width: 15px; height: 15px; }
+    }
 
     /* ── GENERATOR SECTION ── */
     .wizard-section { padding: 100px 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -688,53 +1024,6 @@
     .faq-answer { display: none; padding: 0 0 20px; font-size: 0.88rem; color: var(--text-mid); line-height: 1.7; }
     .faq-item.open .faq-answer { display: block; }
 
-    /* ── CTA SECTION ── */
-    .cta-section { padding: 100px 0; }
-    .cta-inner {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 24px; padding: 72px 48px;
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 60px; align-items: center; position: relative; overflow: hidden;
-    }
-    .cta-inner::before {
-      content: ''; position: absolute;
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(255,90,31,0.08) 0%, transparent 70%);
-      top: 50%; left: 30%; transform: translate(-50%,-50%); pointer-events: none;
-    }
-    .cta-left { position: relative; }
-    .cta-ready-label {
-      font-family: var(--font-mono); font-size: 0.62rem;
-      color: var(--accent); letter-spacing: 0.14em;
-      text-transform: uppercase; margin-bottom: 16px;
-    }
-    .cta-inner h2 { font-family: var(--font-display); font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px; line-height: 1.1; }
-    .cta-inner h2 em { color: var(--accent); font-style: normal; }
-    .cta-inner p { color: var(--text-mid); font-size: 0.95rem; margin-bottom: 28px; line-height: 1.6; }
-    .cta-btns { display: flex; gap: 12px; flex-wrap: wrap; }
-    /* Glowing QR orb */
-    .cta-right { display: flex; align-items: center; justify-content: center; position: relative; }
-    .cta-qr-orb {
-      width: 200px; height: 200px;
-      position: relative; z-index: 1;
-    }
-    .cta-qr-orb-glow {
-      position: absolute; inset: -40px;
-      background: radial-gradient(circle, rgba(255,90,31,0.25) 0%, rgba(255,140,0,0.15) 40%, transparent 70%);
-      animation: orbPulse 3s ease-in-out infinite;
-    }
-    @keyframes orbPulse { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.1);opacity:1} }
-    .cta-qr-box {
-      position: relative; z-index: 1;
-      width: 160px; height: 160px; background: linear-gradient(135deg, #ff6b35 0%, #ff8c00 50%, #ff5a1f 100%);
-      border-radius: 24px; padding: 20px;
-      box-shadow: 0 0 60px rgba(255,90,31,0.4), 0 20px 60px rgba(0,0,0,0.6);
-      display: flex; align-items: center; justify-content: center;
-      animation: qrFloat 4s ease-in-out infinite;
-    }
-    @keyframes qrFloat { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-12px) rotate(2deg)} }
-    .cta-qr-svg { width: 110px; height: 110px; }
-
     /* ── FOOTER ── */
     footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
     .footer-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 800; color: var(--text); text-decoration: none; }
@@ -748,14 +1037,8 @@
 
     /* ── RESPONSIVE ── */
     @media(max-width: 1024px) {
-      .hero { grid-template-columns: 1fr; padding: 120px 32px 60px; }
-      .hero-right { display: none; }
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
       .analytics-wrap { grid-template-columns: 1fr; }
       .analytics-mock { display: none; }
-      .cta-inner { grid-template-columns: 1fr; text-align: center; padding: 48px 32px; }
-      .cta-btns { justify-content: center; }
-      .cta-right { display: none; }
       .pricing-grid { grid-template-columns: repeat(2, 1fr); }
       .qr-types-grid { grid-template-columns: repeat(3, 1fr); }
       .qr-type-card.row2-start { grid-column: auto; }
@@ -764,11 +1047,6 @@
       nav { padding: 12px 20px; }
       .nav-links .nav-link:not(.nav-cta) { display: none; }
       .section-wrap { padding: 0 20px; }
-      .hero { padding: 100px 20px 60px; }
-      .hero-stats { gap: 20px; flex-wrap: wrap; }
-      .hero-stat-num { font-size: 1.4rem; }
-      .features-grid { grid-template-columns: 1fr; }
-      .how-steps { grid-template-columns: repeat(2, 1fr); }
       .testimonials-grid { grid-template-columns: 1fr; }
       .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
       .qr-types-grid { grid-template-columns: repeat(2, 1fr); }
@@ -776,21 +1054,60 @@
       .form-row { flex-direction: column; }
       footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
       .trusted-section { padding: 20px; }
-      /* Constrain any wide containers to viewport */
-      .hero-bg-glow { width: 100vw; right: 0; left: 0; }
-      .cta-inner { padding: 36px 20px; }
-      [style*="max-width:1200px"], [style*="max-width: 1200px"] { width: 100%; }
     }
     /* Extra-small phones: 360-480px */
     @media(max-width: 480px) {
-      .how-steps { grid-template-columns: 1fr; }
       .qr-types-grid { grid-template-columns: 1fr; }
-      .hero-btns { flex-direction: column; }
       .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
-      .hero-stats { gap: 16px; }
       .fq-banner { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 16px; }
       .section-title { font-size: clamp(1.4rem, 6vw, 2rem); }
       .nav-cta { padding: 8px 14px; font-size: 0.76rem; }
+    }
+
+    /* ── Responsive: approved hero + five-pillar strip (merged from
+       homepage-approved-2026-08-22.html, breakpoints match that source
+       exactly: 1023/1439/768-1023/767/479px) ── */
+    @media (max-width: 1023px) {
+      .qh-hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--qds-space-8); }
+      .qh-hero-left { width: 100%; max-width: 560px; min-width: 0; margin: 0 auto; text-align: left; }
+      .qh-hero-headline, .qh-hero-subcopy, .qh-hero-supporting-line { max-width: none; }
+      .qh-hero-form { max-width: 100%; }
+      .qh-hero-visual { margin-top: var(--qds-space-10); }
+      .qh-device-wrap { margin: 0 auto; }
+    }
+    @media (min-width: 1024px) and (max-width: 1439px) {
+      .qh-hero-visual { width: 104%; justify-self: end; }
+      .qh-hero-energy-img { width: 120%; top: 52%; }
+      .qh-feature-item { padding: 22px 16px; gap: 10px; }
+      .qh-feature-icon { width: 38px; height: 38px; }
+      .qh-feature-icon svg { width: 18px; height: 18px; }
+      .qh-feature-title { font-size: 0.82rem; }
+      .qh-feature-desc { font-size: 0.72rem; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .qh-device-wrap { width: 78%; }
+      .qh-hero-energy-img { width: 125%; top: 46%; }
+      .qh-feature-bar-wrap { max-width: 700px; margin-top: 48px; }
+      .qh-feature-bar { grid-template-columns: repeat(2, 1fr); border-radius: 16px; }
+      .qh-feature-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .qh-feature-item:nth-last-child(-n+1) { border-bottom: none; }
+    }
+    @media (max-width: 767px) {
+      .qh-hero { padding: var(--qds-space-6) 0 var(--qds-space-10); }
+      .qh-hero-headline { max-width: 100%; }
+      .qh-input-row { flex-wrap: wrap; }
+      .qh-hero-cta { width: 100%; justify-content: center; }
+      .qh-hero-input-wrap { flex-basis: 100%; }
+      .qh-device-wrap { width: 92%; max-width: 420px; }
+      .qh-hero-energy-img { width: 130%; top: 46%; }
+      .qh-feature-bar-wrap { max-width: 480px; margin-top: 40px; padding: 0 20px; }
+      .qh-feature-bar { grid-template-columns: 1fr; border-radius: 16px; }
+      .qh-feature-item { border-right: none; border-bottom: 1px solid var(--border); padding: 22px 20px; }
+      .qh-feature-item:last-child { border-bottom: none; }
+      .qh-container { padding: 0 20px; }
+    }
+    @media (max-width: 479px) {
+      .qh-device-wrap { width: 94%; max-width: 340px; }
     }
   </style>
 </head>
@@ -814,40 +1131,380 @@
     <div class="fq-banner-text"><strong>Need a basic QR code?</strong> Generate a free QR code in seconds — no signup required.</div>
     <a href="qr/free.html" class="fq-banner-btn" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Create Free QR →</a>
   </div>
-  <!-- HERO -->
-  <div class="hero-bg-glow"></div>
-  <div style="max-width:1200px;margin:0 auto;position:relative">
-    <section class="hero">
-      <div class="hero-left">
-        <div class="hero-badge">
-          <div class="hero-badge-dot"></div>
-          AI POWERED QR PLATFORM
-        </div>
-        <h1>Turn every<br/>QR code into an<br/><em>engaging experience.</em></h1>
-        <p>Create beautiful QR codes, optimised landing pages and marketing campaigns in seconds with AI.</p>
-        <div class="hero-btns">
-          <a href="smart-demo.html" class="btn-primary" data-flow="smart">Create Smart QR →</a>
-          <a href="qr/free.html" class="btn-secondary" data-flow="free" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Create Free QR</a>
-        </div>
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <div class="hero-stat-num"><span style="font-size:0.9em">👥</span> 10K<span>+</span></div>
-            <div class="hero-stat-label">Businesses</div>
+  <!-- HERO + FIVE-PILLAR STRIP — merged from
+       homepage-approved-2026-08-22.html (git tag
+       homepage-approved-2026-08-22, commit 2935ab1). URL input / CTA are
+       visual-only, matching the approved source exactly -- no submit
+       handler exists there either; the separate QR-generator widget
+       further down this page (#urlInput/#generateBtn) is unrelated and
+       untouched. -->
+  <section class="qh-hero">
+    <div class="qh-hero-glow"></div>
+    <div class="qh-container qh-hero-grid">
+      <div class="qh-hero-left">
+        <h1 class="qh-hero-headline">Turn your website into an <span class="qh-accent">AI-powered</span> customer engagement platform.</h1>
+        <p class="qh-hero-subcopy">Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.</p>
+        <p class="qh-hero-invite">Curious how it works?</p>
+        <form class="qh-hero-form" onsubmit="return false;">
+          <div class="qh-input-row">
+            <label for="qh-hero-url-input" class="qh-sr-only">Your website URL</label>
+            <div class="qh-hero-input-wrap">
+              <span class="qh-hero-input-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
+              </span>
+              <input type="text" id="qh-hero-url-input" class="qh-hero-input" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+            </div>
+            <button type="button" class="qh-hero-cta">
+              <span class="qh-hero-cta__content">Generate My Platform
+                <span class="qh-hero-cta__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+              </span>
+            </button>
           </div>
-          <div class="hero-stat">
-            <div class="hero-stat-num"><span style="font-size:0.9em">★</span> 98<span>%</span></div>
-            <div class="hero-stat-label">Satisfaction rate</div>
+        </form>
+        <p class="qh-hero-supporting-line">We'll discover your brand, build your platform, and prepare it for launch.</p>
+      </div>
+
+      <div class="qh-hero-visual">
+        <div class="qh-device-wrap">
+          <img class="qh-hero-energy-img" src="img/hero-v3/hero-energy-glow-asset-v1.png" alt="" aria-hidden="true" />
+          <img class="qh-hero-device-img" src="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" alt="" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+
+    <div class="qh-feature-bar-wrap">
+      <div class="qh-feature-bar">
+        <div class="qh-feature-item">
+          <div class="qh-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M19 3v3M17.5 4.5h3"/></svg>
           </div>
-          <div class="hero-stat">
-            <div class="hero-stat-num"><span style="font-size:0.9em">⚡</span> 3<span>x</span></div>
-            <div class="hero-stat-label">More engagement</div>
+          <div class="qh-feature-text">
+            <div class="qh-feature-title">AI Does the Work</div>
+            <div class="qh-feature-desc">We scan your website, understand your business and build everything for you automatically.</div>
+          </div>
+        </div>
+        <div class="qh-feature-item">
+          <div class="qh-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M11 18h2"/></svg>
+          </div>
+          <div class="qh-feature-text">
+            <div class="qh-feature-title">Engage Everywhere</div>
+            <div class="qh-feature-desc">Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.</div>
+          </div>
+        </div>
+        <div class="qh-feature-item">
+          <div class="qh-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>
+          </div>
+          <div class="qh-feature-text">
+            <div class="qh-feature-title">Grow Faster</div>
+            <div class="qh-feature-desc">AI campaigns and smart analytics help you drive more visits and increase customer loyalty.</div>
+          </div>
+        </div>
+        <div class="qh-feature-item">
+          <div class="qh-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M8 15h8v6H8z"/></svg>
+          </div>
+          <div class="qh-feature-text">
+            <div class="qh-feature-title">Print &amp; Ship</div>
+            <div class="qh-feature-desc">AI designs your table tents, posters and more. We print and ship to your door.</div>
+          </div>
+        </div>
+        <div class="qh-feature-item">
+          <div class="qh-feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.6 3.6 5.8 3.6 9s-1.3 6.4-3.6 9c-2.3-2.6-3.6-5.8-3.6-9s1.3-6.4 3.6-9z"/></svg>
+          </div>
+          <div class="qh-feature-text">
+            <div class="qh-feature-title">Built for Scale</div>
+            <div class="qh-feature-desc">Manage one location or hundreds from a powerful dashboard built for enterprises.</div>
           </div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- HERO RIGHT: product mockup -->
-      <div class="hero-right" style="display:flex;align-items:center;justify-content:center;"><img src="img/hero-mockup.png" alt="QRAivy Product Preview" style="width:120%;object-fit:contain;filter:drop-shadow(0 20px 60px rgba(255,90,31,0.15));animation:orbPulse 3s ease-in-out infinite;" /></div></section>
-  </div>
+  <!-- CREATE-A-DEAL STORY + SIX-CARD CAPABILITIES — merged from
+       homepage-approved-2026-08-22.html (git tag
+       homepage-approved-2026-08-22, commit 2935ab1). id="features"
+       moved here from the old Features section below (now removed)
+       so the existing footer anchor (#features) keeps working. -->
+  <section class="qh-story" id="features">
+    <div class="qh-story-container qh-story-grid">
+      <div class="qh-story-copy">
+        <h2 class="qh-story-headline">
+          <span class="qh-story-headline-line">Create a Deal.</span>
+          <span class="qh-story-headline-line">Everything else happens <span class="qh-story-accent">automatically.</span></span>
+        </h2>
+        <p class="qh-story-subcopy">Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.</p>
+      </div>
+
+      <div class="qh-story-workflow">
+        <div class="qh-workflow-card qh-deal-card">
+          <div class="qh-workflow-card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+            <span>Today's Deal</span>
+          </div>
+          <div class="qh-deal-card-title">Free Coffee Friday</div>
+          <div class="qh-deal-card-desc">Buy one coffee, get one free</div>
+          <button type="button" class="qh-deal-card-btn">Publish Deal</button>
+        </div>
+
+        <div class="qh-workflow-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="qh-workflow-card qh-automation-card">
+          <div class="qh-workflow-card-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
+            <span>QRAIVY Automation</span>
+          </div>
+          <ul class="qh-automation-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Landing Page updated</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Wallet updated</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Push Notification ready</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Analytics tracking enabled</span></li>
+          </ul>
+        </div>
+
+        <div class="qh-workflow-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="qh-workflow-phone-wrap">
+          <div class="qh-workflow-phone" aria-hidden="true">
+            <div class="qh-workflow-phone-screen">
+              <div class="qh-workflow-phone-time">9:41</div>
+              <div class="qh-workflow-phone-date">Friday, May 24</div>
+              <div class="qh-workflow-notification">
+                <div class="qh-workflow-notification-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a5 5 0 0 0-5 5v3.5c0 .9-.36 1.77-1 2.4L5 15h14l-1-1.1c-.64-.63-1-1.5-1-2.4V8a5 5 0 0 0-5-5z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
+                </div>
+                <div class="qh-workflow-notification-body">
+                  <div class="qh-workflow-notification-title">Free Coffee Friday</div>
+                  <div class="qh-workflow-notification-text">Buy one coffee, get one free — tap to redeem.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="qh-story-container qh-capabilities">
+      <h3 class="qh-capabilities-headline">Everything you need to keep customers coming back.</h3>
+      <div class="qh-capabilities-grid">
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/smart-landing-pages-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></div>
+          <div class="qh-cap-title">Smart Landing Pages</div>
+          <div class="qh-cap-desc">AI creates a beautiful, mobile-first website that converts.</div>
+        </div>
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/wallet-passes-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.4"/></svg></div>
+          <div class="qh-cap-title">Wallet Passes</div>
+          <div class="qh-cap-desc">One tap access for your customers. Always with them.</div>
+        </div>
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/loyalty-programs-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3-4.8-4.3 6.4-.6L12 3z"/></svg></div>
+          <div class="qh-cap-title">Loyalty Programs</div>
+          <div class="qh-cap-desc">Reward loyalty. Increase repeat visits and lifetime value.</div>
+        </div>
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/deals-promotions-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg></div>
+          <div class="qh-cap-title">Deals &amp; Promotions</div>
+          <div class="qh-cap-desc">Create, schedule and promote deals that drive action.</div>
+        </div>
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/ai-campaigns-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l5 4V6l-5 4H3z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6a8 8 0 0 1 0 12"/></svg></div>
+          <div class="qh-cap-title">AI Campaigns</div>
+          <div class="qh-cap-desc">AI writes, targets and sends campaigns that work.</div>
+        </div>
+        <div class="qh-cap-card">
+          <div class="qh-cap-preview"><img src="images/features/analytics-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.25" y="7" width="3.5" height="13"/><rect x="16.5" y="10" width="3.5" height="10"/></svg></div>
+          <div class="qh-cap-title">Analytics &amp; Insights</div>
+          <div class="qh-cap-desc">Track performance and understand what drives growth.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GIVE US YOUR WEBSITE + RETENTION LOOP — merged from
+       homepage-approved-2026-08-22.html (git tag
+       homepage-approved-2026-08-22, commit 2935ab1). Replaces the old
+       "Up and running in 3 steps" section (now removed further down). -->
+  <section class="qh-s3">
+    <div class="qh-s3-container">
+      <div class="qh-s3-head">
+        <h2 class="qh-s3-headline">
+          <span class="qh-s3-headline-line">Give us your website.</span>
+          <span class="qh-s3-headline-line"><span class="qh-s3-accent">QRAIVY</span> builds the rest.</span>
+        </h2>
+        <p class="qh-s3-subcopy">QRAIVY learns your business and creates your customer engagement platform.</p>
+      </div>
+
+      <div class="qh-s3-steps">
+        <div class="qh-s3-step">
+          <div class="qh-s3-step-head">
+            <div class="qh-s3-step-number">1</div>
+            <div class="qh-s3-step-label">Your Website</div>
+          </div>
+          <div class="qh-s3-step-card"><img src="images/section3/website-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+        </div>
+
+        <div class="qh-s3-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="qh-s3-step">
+          <div class="qh-s3-step-head">
+            <div class="qh-s3-step-number">2</div>
+            <div class="qh-s3-step-label">QRAIVY AI</div>
+          </div>
+          <div class="qh-s3-step-card"><img src="images/section3/qraivy-ai-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+        </div>
+
+        <div class="qh-s3-connector" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+
+        <div class="qh-s3-step qh-s3-step--wide">
+          <div class="qh-s3-step-head">
+            <div class="qh-s3-step-number">3</div>
+            <div class="qh-s3-step-label">Your Platform</div>
+          </div>
+          <div class="qh-s3-step-card"><img src="images/section3/platform-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+        </div>
+      </div>
+
+      <div class="qh-s3-closing">
+        <div class="qh-s3-closing-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 19 4c0 2.5-.5 6.5-4 9a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        </div>
+        <div class="qh-s3-closing-line">
+          <span>Review</span><span class="qh-s3-accent">.</span>
+          <span>Customize</span><span class="qh-s3-accent">.</span>
+          <span>Publish</span><span class="qh-s3-accent">.</span>
+        </div>
+        <p class="qh-s3-closing-sub">You're in control. Make it yours and go live when you're ready.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="qh-s4">
+    <div class="qh-s4-container">
+      <div class="qh-s4-head">
+        <div class="qh-s4-eyebrow">KEEP CUSTOMERS COMING BACK</div>
+        <h2 class="qh-s4-headline">Turn <span class="qh-s4-accent">one visit</span> into the next.</h2>
+        <p class="qh-s4-subcopy">QRAIVY keeps your customers connected after they leave.</p>
+      </div>
+
+      <div class="qh-s4-journey">
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">1</div><div class="qh-s4-step-label">VISIT</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-visit-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <p class="qh-s4-step-desc">A customer visits your business.</p>
+        </div>
+
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">2</div><div class="qh-s4-step-label">JOIN</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-join-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <p class="qh-s4-step-desc">They scan, discover and join in seconds.</p>
+        </div>
+
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">3</div><div class="qh-s4-step-label">WALLET</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-wallet-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <p class="qh-s4-step-desc">They save your loyalty pass to their wallet.</p>
+        </div>
+
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">4</div><div class="qh-s4-step-label">RETURN</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-return-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <p class="qh-s4-step-desc">You send deals and reminders they care about.</p>
+        </div>
+
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">5</div><div class="qh-s4-step-label">REWARD</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-reward-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
+          </div>
+          <p class="qh-s4-step-desc">They return, redeem and feel appreciated.</p>
+        </div>
+
+        <div class="qh-s4-step">
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">6</div><div class="qh-s4-step-label">RETURN AGAIN</div></div>
+          <div class="qh-s4-step-card-wrap">
+            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-return-again-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          </div>
+          <p class="qh-s4-step-desc">They come back again. And again.</p>
+        </div>
+      </div>
+
+      <div class="qh-s4-loop" aria-hidden="true">
+        <span class="qh-s4-loop-line"></span>
+        <span class="qh-s4-loop-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+        </span>
+      </div>
+
+      <p class="qh-s4-outcome">QRAIVY turns a <span class="qh-s4-accent">one-time visitor</span> into a customer you can reach again.</p>
+
+      <div class="qh-s4-cta-wrap">
+        <button type="button" class="qh-s4-cta-btn">
+          Build My Customer Loop
+          <svg class="qh-s4-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <div class="qh-s4-panel-wrap">
+        <div class="qh-s4-panel">
+          <div class="qh-s4-panel-left">
+            <div class="qh-s4-panel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
+            </div>
+            <div>
+              <div class="qh-s4-panel-headline">Ready to build your customer engagement platform?</div>
+              <div class="qh-s4-panel-sub">Enter your website and QRAIVY will handle the rest.</div>
+            </div>
+          </div>
+          <div class="qh-s4-panel-right">
+            <div class="qh-s4-panel-form">
+              <div class="qh-hero-input-wrap">
+                <span class="qh-hero-input-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
+                </span>
+                <input type="text" class="qh-hero-input" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+              </div>
+              <button type="button" class="qh-hero-cta">
+                <span class="qh-hero-cta__content">Generate My Platform
+                  <span class="qh-hero-cta__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </span>
+              </button>
+            </div>
+            <div class="qh-s4-panel-note">No credit card required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- TRUSTED BY -->
   <div class="trusted-section">
@@ -1005,48 +1662,6 @@
     </div>
   </section>
 
-  <!-- FEATURES -->
-  <section class="features-section" id="features">
-    <div class="section-wrap">
-      <div class="section-header">
-        <div class="section-badge">Smart Features</div>
-        <h2 class="section-title">Everything you need <em>to grow</em></h2>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon-wrap">🍽</div>
-          <div class="feature-title">Editable Designs</div>
-          <div class="feature-desc">Use our drag & drop editor to create stunning designs that convert.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">✦</div>
-          <div class="feature-title">AI Content Generation</div>
-          <div class="feature-desc">Let AI write your headlines, descriptions and call-to-actions that get results.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">⬡</div>
-          <div class="feature-title">Dynamic QR Codes</div>
-          <div class="feature-desc">Update content anytime without changing your QR code.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">📊</div>
-          <div class="feature-title">Advanced Analytics</div>
-          <div class="feature-desc">Track scans, locations, devices and user behaviour in real-time.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">📱</div>
-          <div class="feature-title">Custom Landing Pages</div>
-          <div class="feature-desc">Beautiful mobile-optimised pages that turn scans into customers.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon-wrap">👥</div>
-          <div class="feature-title">Team Collaboration</div>
-          <div class="feature-desc">Work together with your team and manage campaigns easily.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- ANALYTICS SECTION -->
   <section class="analytics-section">
     <div class="section-wrap">
@@ -1128,38 +1743,6 @@
             <li><span class="analytics-check">●</span> Export reports anytime</li>
           </ul>
           <a href="/dashboard.html" class="btn-primary" style="display:inline-flex" data-flow="smart">See analytics in action →</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="how-section" id="how-it-works">
-    <div class="section-wrap">
-      <div class="section-header">
-        <div class="section-badge">How it works</div>
-        <h2 class="section-title">Up and running in <em>3 steps</em></h2>
-      </div>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="how-step-num">1</div>
-          <div class="how-step-title">Create your QR</div>
-          <div class="how-step-desc">Enter your URL and business name. We generate a smart QR code and AI landing page in seconds.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">2</div>
-          <div class="how-step-title">Print &amp; share</div>
-          <div class="how-step-desc">Download your QR and put it anywhere — menus, windows, flyers, packaging, receipts.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">3</div>
-          <div class="how-step-title">Engage customers</div>
-          <div class="how-step-desc">Customers scan, subscribe, and you send them AI-generated offers. Watch your engagement grow.</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">4</div>
-          <div class="how-step-title">Track everything</div>
-          <div class="how-step-desc">Monitor scans, subscribers and campaign performance from your dashboard in real time.</div>
         </div>
       </div>
     </div>
@@ -1400,29 +1983,6 @@
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="cta-section">
-    <div class="section-wrap">
-      <div class="cta-inner">
-        <div class="cta-left">
-          <div class="cta-ready-label">READY TO GET STARTED?</div>
-          <h2>Join thousands of businesses<br/>growing with <em>QRAivy</em></h2>
-          <p>Start for free. No credit card required.</p>
-          <div class="cta-btns">
-            <a href="qr/free.html" class="btn-primary" data-flow="free">Get started free →</a>
-            <a href="#pricing" class="btn-secondary">⊙ View pricing</a>
-          </div>
-        </div>
-        <div class="cta-right">
-          <div class="cta-qr-orb">
-            <div class="cta-qr-orb-glow"></div>
-            <div class="cta-qr-box" style="background:transparent;box-shadow:none;padding:0;width:220px;height:220px;"><img src="img/qr-orb.png" style="width:140%;height:140%;object-fit:contain;filter:drop-shadow(0 0 40px rgba(255,90,31,0.7));margin:-20%;" /></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- FOOTER -->
   <footer>
     <a href="index.html" class="footer-logo">QR<span>Aivy</span></a>
@@ -1437,7 +1997,7 @@
   </footer>
 
   <script>
-    const API_BASE = 'https://api.qraivy.com';
+    const API_BASE = window.API_ORIGIN;
     let selectedType = 'website';
     function setType(type) {
       selectedType = type;
