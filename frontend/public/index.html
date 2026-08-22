@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/homepage-qds-tokens.css" />
+  <script src="js/qraivy-lang.js"></script>
   <style>
     :root {
       --bg: #080b10;
@@ -70,6 +71,30 @@
       box-shadow: 0 0 20px rgba(255,90,31,0.3);
     }
     .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 0 30px rgba(255,90,31,0.4); }
+    /* EN/DE toggle -- literal reproduction from homepage-approved-2026-08-22.html,
+       added to the real nav (not the concept nav). Uses the existing shared
+       state module js/qraivy-lang.js; no new detection/storage invented. */
+    .lang-toggle {
+      display: flex; align-items: center; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--qds-color-border-subtle); border-radius: 999px; padding: 3px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .lang-toggle-opt {
+      font-family: var(--qds-font-family-primary); font-size: 0.7rem; font-weight: 700;
+      padding: 5px 10px; border-radius: 999px; color: var(--text-mid);
+      transition: all 0.15s;
+    }
+    .lang-toggle[data-active="en"] .lang-toggle-opt[data-lang-opt="en"],
+    .lang-toggle[data-active="de"] .lang-toggle-opt[data-lang-opt="de"] {
+      background: var(--accent); color: #fff;
+    }
+    @media(max-width: 480px) {
+      .lang-toggle-opt { display: none; }
+      .lang-toggle[data-active="en"] .lang-toggle-opt[data-lang-opt="en"],
+      .lang-toggle[data-active="de"] .lang-toggle-opt[data-lang-opt="de"] {
+        display: block; padding: 5px 7px;
+      }
+    }
 
 
     /* ── Free QR utility banner ── */
@@ -1117,11 +1142,14 @@
   <nav>
     <a href="index.html" class="nav-logo">QR<span>Aivy</span></a>
     <div class="nav-links">
-      <a href="qr/free.html" class="nav-link" data-flow="free" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Free QR</a>
-      <a href="smart-demo.html" class="nav-link" data-flow="smart">Smart QR</a>
-      <a href="#pricing" class="nav-link">Pricing</a>
-      <a href="login.html" class="nav-link" id="nav-auth-link">Log in</a>
-      <a href="smart-demo.html" class="nav-cta" id="nav-cta-btn" data-flow="smart">Create Smart QR</a>
+      <a href="qr/free.html" class="nav-link" data-flow="free" data-i18n="nav_free_qr" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Free QR</a>
+      <a href="smart-demo.html" class="nav-link" data-flow="smart" data-i18n="nav_smart_qr">Smart QR</a>
+      <a href="#pricing" class="nav-link" data-i18n="nav_pricing">Pricing</a>
+      <button type="button" class="lang-toggle" id="langToggle" aria-label="Switch language">
+        <span class="lang-toggle-opt" data-lang-opt="en">EN</span><span class="lang-toggle-opt" data-lang-opt="de">DE</span>
+      </button>
+      <a href="login.html" class="nav-link" id="nav-auth-link" data-i18n="nav_login">Log in</a>
+      <a href="smart-demo.html" class="nav-cta" id="nav-cta-btn" data-flow="smart" data-i18n="nav_cta_smart">Create Smart QR</a>
     </div>
   </nav>
 
@@ -1142,32 +1170,32 @@
     <div class="qh-hero-glow"></div>
     <div class="qh-container qh-hero-grid">
       <div class="qh-hero-left">
-        <h1 class="qh-hero-headline">Turn your website into an <span class="qh-accent">AI-powered</span> customer engagement platform.</h1>
-        <p class="qh-hero-subcopy">Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.</p>
-        <p class="qh-hero-invite">Curious how it works?</p>
+        <h1 class="qh-hero-headline"><span data-i18n="hero_headline_pre">Turn your website into an </span><span class="qh-accent" data-i18n="hero_headline_accent">AI-powered</span><span data-i18n="hero_headline_post"> customer engagement platform.</span></h1>
+        <p class="qh-hero-subcopy" data-i18n="hero_subcopy">Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.</p>
+        <p class="qh-hero-invite" data-i18n="hero_invite">Curious how it works?</p>
         <form class="qh-hero-form" onsubmit="return false;">
           <div class="qh-input-row">
-            <label for="qh-hero-url-input" class="qh-sr-only">Your website URL</label>
+            <label for="qh-hero-url-input" class="qh-sr-only" data-i18n="hero_input_label">Your website URL</label>
             <div class="qh-hero-input-wrap">
               <span class="qh-hero-input-icon" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
               </span>
-              <input type="text" id="qh-hero-url-input" class="qh-hero-input" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+              <input type="text" id="qh-hero-url-input" class="qh-hero-input" data-i18n-placeholder="hero_input_placeholder" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
             </div>
             <button type="button" class="qh-hero-cta">
-              <span class="qh-hero-cta__content">Generate My Platform
+              <span class="qh-hero-cta__content"><span data-i18n="hero_cta">Generate My Platform</span>
                 <span class="qh-hero-cta__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
               </span>
             </button>
           </div>
         </form>
-        <p class="qh-hero-supporting-line">We'll discover your brand, build your platform, and prepare it for launch.</p>
+        <p class="qh-hero-supporting-line" data-i18n="hero_supporting_line">We'll discover your brand, build your platform, and prepare it for launch.</p>
       </div>
 
       <div class="qh-hero-visual">
         <div class="qh-device-wrap">
           <img class="qh-hero-energy-img" src="img/hero-v3/hero-energy-glow-asset-v1.png" alt="" aria-hidden="true" />
-          <img class="qh-hero-device-img" src="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" alt="" aria-hidden="true" />
+          <img class="qh-hero-device-img" id="qhHeroDeviceImg" data-src-en="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" data-src-de="img/hero-v3/hero-laptop-iphone-combined-asset-de-v1.png" src="img/hero-v3/hero-laptop-iphone-combined-asset-v1.png" alt="" aria-hidden="true" />
         </div>
       </div>
     </div>
@@ -1179,8 +1207,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M19 3v3M17.5 4.5h3"/></svg>
           </div>
           <div class="qh-feature-text">
-            <div class="qh-feature-title">AI Does the Work</div>
-            <div class="qh-feature-desc">We scan your website, understand your business and build everything for you automatically.</div>
+            <div class="qh-feature-title" data-i18n="feat1_title">AI Does the Work</div>
+            <div class="qh-feature-desc" data-i18n="feat1_desc">We scan your website, understand your business and build everything for you automatically.</div>
           </div>
         </div>
         <div class="qh-feature-item">
@@ -1188,8 +1216,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M11 18h2"/></svg>
           </div>
           <div class="qh-feature-text">
-            <div class="qh-feature-title">Engage Everywhere</div>
-            <div class="qh-feature-desc">Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.</div>
+            <div class="qh-feature-title" data-i18n="feat2_title">Engage Everywhere</div>
+            <div class="qh-feature-desc" data-i18n="feat2_desc">Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.</div>
           </div>
         </div>
         <div class="qh-feature-item">
@@ -1197,8 +1225,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>
           </div>
           <div class="qh-feature-text">
-            <div class="qh-feature-title">Grow Faster</div>
-            <div class="qh-feature-desc">AI campaigns and smart analytics help you drive more visits and increase customer loyalty.</div>
+            <div class="qh-feature-title" data-i18n="feat3_title">Grow Faster</div>
+            <div class="qh-feature-desc" data-i18n="feat3_desc">AI campaigns and smart analytics help you drive more visits and increase customer loyalty.</div>
           </div>
         </div>
         <div class="qh-feature-item">
@@ -1206,8 +1234,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M8 15h8v6H8z"/></svg>
           </div>
           <div class="qh-feature-text">
-            <div class="qh-feature-title">Print &amp; Ship</div>
-            <div class="qh-feature-desc">AI designs your table tents, posters and more. We print and ship to your door.</div>
+            <div class="qh-feature-title" data-i18n="feat4_title">Print &amp; Ship</div>
+            <div class="qh-feature-desc" data-i18n="feat4_desc">AI designs your table tents, posters and more. We print and ship to your door.</div>
           </div>
         </div>
         <div class="qh-feature-item">
@@ -1215,8 +1243,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.3 2.6 3.6 5.8 3.6 9s-1.3 6.4-3.6 9c-2.3-2.6-3.6-5.8-3.6-9s1.3-6.4 3.6-9z"/></svg>
           </div>
           <div class="qh-feature-text">
-            <div class="qh-feature-title">Built for Scale</div>
-            <div class="qh-feature-desc">Manage one location or hundreds from a powerful dashboard built for enterprises.</div>
+            <div class="qh-feature-title" data-i18n="feat5_title">Built for Scale</div>
+            <div class="qh-feature-desc" data-i18n="feat5_desc">Manage one location or hundreds from a powerful dashboard built for enterprises.</div>
           </div>
         </div>
       </div>
@@ -1232,21 +1260,21 @@
     <div class="qh-story-container qh-story-grid">
       <div class="qh-story-copy">
         <h2 class="qh-story-headline">
-          <span class="qh-story-headline-line">Create a Deal.</span>
-          <span class="qh-story-headline-line">Everything else happens <span class="qh-story-accent">automatically.</span></span>
+          <span class="qh-story-headline-line" data-i18n="story_headline_line1">Create a Deal.</span>
+          <span class="qh-story-headline-line"><span data-i18n="story_headline_line2_pre">Everything else happens </span><span class="qh-story-accent" data-i18n="story_headline_accent">automatically.</span></span>
         </h2>
-        <p class="qh-story-subcopy">Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.</p>
+        <p class="qh-story-subcopy" data-i18n="story_subcopy">Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.</p>
       </div>
 
       <div class="qh-story-workflow">
         <div class="qh-workflow-card qh-deal-card">
           <div class="qh-workflow-card-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
-            <span>Today's Deal</span>
+            <span data-i18n="story_deal_label">Today's Deal</span>
           </div>
-          <div class="qh-deal-card-title">Free Coffee Friday</div>
-          <div class="qh-deal-card-desc">Buy one coffee, get one free</div>
-          <button type="button" class="qh-deal-card-btn">Publish Deal</button>
+          <div class="qh-deal-card-title" data-i18n="story_deal_title">Free Coffee Friday</div>
+          <div class="qh-deal-card-desc" data-i18n="story_deal_desc">Buy one coffee, get one free</div>
+          <button type="button" class="qh-deal-card-btn" data-i18n="story_deal_cta">Publish Deal</button>
         </div>
 
         <div class="qh-workflow-connector" aria-hidden="true">
@@ -1256,13 +1284,13 @@
         <div class="qh-workflow-card qh-automation-card">
           <div class="qh-workflow-card-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
-            <span>QRAIVY Automation</span>
+            <span data-i18n="story_auto_label">QRAIVY Automation</span>
           </div>
           <ul class="qh-automation-list">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Landing Page updated</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Wallet updated</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Push Notification ready</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span>Analytics tracking enabled</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span data-i18n="story_auto_1">Landing Page updated</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span data-i18n="story_auto_2">Wallet updated</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span data-i18n="story_auto_3">Push Notification ready</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/></svg><span data-i18n="story_auto_4">Analytics tracking enabled</span></li>
           </ul>
         </div>
 
@@ -1274,14 +1302,14 @@
           <div class="qh-workflow-phone" aria-hidden="true">
             <div class="qh-workflow-phone-screen">
               <div class="qh-workflow-phone-time">9:41</div>
-              <div class="qh-workflow-phone-date">Friday, May 24</div>
+              <div class="qh-workflow-phone-date" data-i18n="story_phone_date">Friday, May 24</div>
               <div class="qh-workflow-notification">
                 <div class="qh-workflow-notification-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a5 5 0 0 0-5 5v3.5c0 .9-.36 1.77-1 2.4L5 15h14l-1-1.1c-.64-.63-1-1.5-1-2.4V8a5 5 0 0 0-5-5z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
                 </div>
                 <div class="qh-workflow-notification-body">
-                  <div class="qh-workflow-notification-title">Free Coffee Friday</div>
-                  <div class="qh-workflow-notification-text">Buy one coffee, get one free — tap to redeem.</div>
+                  <div class="qh-workflow-notification-title" data-i18n="story_notif_title">Free Coffee Friday</div>
+                  <div class="qh-workflow-notification-text" data-i18n="story_notif_text">Buy one coffee, get one free — tap to redeem.</div>
                 </div>
               </div>
             </div>
@@ -1291,43 +1319,43 @@
     </div>
 
     <div class="qh-story-container qh-capabilities">
-      <h3 class="qh-capabilities-headline">Everything you need to keep customers coming back.</h3>
+      <h3 class="qh-capabilities-headline" data-i18n="cap_headline">Everything you need to keep customers coming back.</h3>
       <div class="qh-capabilities-grid">
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/smart-landing-pages-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/smart-landing-pages-en.png" data-src-de="images/features/smart-landing-pages-de.png" src="images/features/smart-landing-pages-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></div>
-          <div class="qh-cap-title">Smart Landing Pages</div>
-          <div class="qh-cap-desc">AI creates a beautiful, mobile-first website that converts.</div>
+          <div class="qh-cap-title" data-i18n="cap1_title">Smart Landing Pages</div>
+          <div class="qh-cap-desc" data-i18n="cap1_desc">AI creates a beautiful, mobile-first website that converts.</div>
         </div>
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/wallet-passes-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/wallet-passes-en.png" data-src-de="images/features/wallet-passes-de.png" src="images/features/wallet-passes-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.4"/></svg></div>
-          <div class="qh-cap-title">Wallet Passes</div>
-          <div class="qh-cap-desc">One tap access for your customers. Always with them.</div>
+          <div class="qh-cap-title" data-i18n="cap2_title">Wallet Passes</div>
+          <div class="qh-cap-desc" data-i18n="cap2_desc">One tap access for your customers. Always with them.</div>
         </div>
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/loyalty-programs-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/loyalty-programs-en.png" data-src-de="images/features/loyalty-programs-de.png" src="images/features/loyalty-programs-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3-4.8-4.3 6.4-.6L12 3z"/></svg></div>
-          <div class="qh-cap-title">Loyalty Programs</div>
-          <div class="qh-cap-desc">Reward loyalty. Increase repeat visits and lifetime value.</div>
+          <div class="qh-cap-title" data-i18n="cap3_title">Loyalty Programs</div>
+          <div class="qh-cap-desc" data-i18n="cap3_desc">Reward loyalty. Increase repeat visits and lifetime value.</div>
         </div>
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/deals-promotions-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/deals-promotions-en.png" data-src-de="images/features/deals-promotions-de.png" src="images/features/deals-promotions-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg></div>
-          <div class="qh-cap-title">Deals &amp; Promotions</div>
-          <div class="qh-cap-desc">Create, schedule and promote deals that drive action.</div>
+          <div class="qh-cap-title" data-i18n="cap4_title">Deals &amp; Promotions</div>
+          <div class="qh-cap-desc" data-i18n="cap4_desc">Create, schedule and promote deals that drive action.</div>
         </div>
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/ai-campaigns-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/ai-campaigns-en.png" data-src-de="images/features/ai-campaigns-de.png" src="images/features/ai-campaigns-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l5 4V6l-5 4H3z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6a8 8 0 0 1 0 12"/></svg></div>
-          <div class="qh-cap-title">AI Campaigns</div>
-          <div class="qh-cap-desc">AI writes, targets and sends campaigns that work.</div>
+          <div class="qh-cap-title" data-i18n="cap5_title">AI Campaigns</div>
+          <div class="qh-cap-desc" data-i18n="cap5_desc">AI writes, targets and sends campaigns that work.</div>
         </div>
         <div class="qh-cap-card">
-          <div class="qh-cap-preview"><img src="images/features/analytics-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-cap-preview"><img data-src-en="images/features/analytics-en.png" data-src-de="images/features/analytics-de.png" src="images/features/analytics-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           <div class="qh-cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="12" width="3.5" height="8"/><rect x="10.25" y="7" width="3.5" height="13"/><rect x="16.5" y="10" width="3.5" height="10"/></svg></div>
-          <div class="qh-cap-title">Analytics &amp; Insights</div>
-          <div class="qh-cap-desc">Track performance and understand what drives growth.</div>
+          <div class="qh-cap-title" data-i18n="cap6_title">Analytics &amp; Insights</div>
+          <div class="qh-cap-desc" data-i18n="cap6_desc">Track performance and understand what drives growth.</div>
         </div>
       </div>
     </div>
@@ -1341,19 +1369,19 @@
     <div class="qh-s3-container">
       <div class="qh-s3-head">
         <h2 class="qh-s3-headline">
-          <span class="qh-s3-headline-line">Give us your website.</span>
-          <span class="qh-s3-headline-line"><span class="qh-s3-accent">QRAIVY</span> builds the rest.</span>
+          <span class="qh-s3-headline-line" data-i18n="s3_headline_1">Give us your website.</span>
+          <span class="qh-s3-headline-line"><span class="qh-s3-accent" data-i18n="s3_headline_2_accent">QRAIVY</span> <span data-i18n="s3_headline_2_rest">builds the rest.</span></span>
         </h2>
-        <p class="qh-s3-subcopy">QRAIVY learns your business and creates your customer engagement platform.</p>
+        <p class="qh-s3-subcopy" data-i18n="s3_subcopy">QRAIVY learns your business and creates your customer engagement platform.</p>
       </div>
 
       <div class="qh-s3-steps">
         <div class="qh-s3-step">
           <div class="qh-s3-step-head">
             <div class="qh-s3-step-number">1</div>
-            <div class="qh-s3-step-label">Your Website</div>
+            <div class="qh-s3-step-label" data-i18n="s3_step1_label">Your Website</div>
           </div>
-          <div class="qh-s3-step-card"><img src="images/section3/website-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-s3-step-card"><img data-src-en="images/section3/website-en.png" data-src-de="images/section3/website-de.png" src="images/section3/website-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
         </div>
 
         <div class="qh-s3-connector" aria-hidden="true">
@@ -1363,9 +1391,9 @@
         <div class="qh-s3-step">
           <div class="qh-s3-step-head">
             <div class="qh-s3-step-number">2</div>
-            <div class="qh-s3-step-label">QRAIVY AI</div>
+            <div class="qh-s3-step-label" data-i18n="s3_step2_label">QRAIVY AI</div>
           </div>
-          <div class="qh-s3-step-card"><img src="images/section3/qraivy-ai-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-s3-step-card"><img data-src-en="images/section3/qraivy-ai-en.png" data-src-de="images/section3/qraivy-ai-de.png" src="images/section3/qraivy-ai-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
         </div>
 
         <div class="qh-s3-connector" aria-hidden="true">
@@ -1375,9 +1403,9 @@
         <div class="qh-s3-step qh-s3-step--wide">
           <div class="qh-s3-step-head">
             <div class="qh-s3-step-number">3</div>
-            <div class="qh-s3-step-label">Your Platform</div>
+            <div class="qh-s3-step-label" data-i18n="s3_step3_label">Your Platform</div>
           </div>
-          <div class="qh-s3-step-card"><img src="images/section3/platform-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div class="qh-s3-step-card"><img data-src-en="images/section3/platform-en.png" data-src-de="images/section3/platform-de.png" src="images/section3/platform-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
         </div>
       </div>
 
@@ -1386,11 +1414,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 19 4c0 2.5-.5 6.5-4 9a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
         </div>
         <div class="qh-s3-closing-line">
-          <span>Review</span><span class="qh-s3-accent">.</span>
-          <span>Customize</span><span class="qh-s3-accent">.</span>
-          <span>Publish</span><span class="qh-s3-accent">.</span>
+          <span data-i18n="s3_closing_1">Review</span><span class="qh-s3-accent">.</span>
+          <span data-i18n="s3_closing_2">Customize</span><span class="qh-s3-accent">.</span>
+          <span data-i18n="s3_closing_3">Publish</span><span class="qh-s3-accent">.</span>
         </div>
-        <p class="qh-s3-closing-sub">You're in control. Make it yours and go live when you're ready.</p>
+        <p class="qh-s3-closing-sub" data-i18n="s3_closing_sub">You're in control. Make it yours and go live when you're ready.</p>
       </div>
     </div>
   </section>
@@ -1398,63 +1426,63 @@
   <section class="qh-s4">
     <div class="qh-s4-container">
       <div class="qh-s4-head">
-        <div class="qh-s4-eyebrow">KEEP CUSTOMERS COMING BACK</div>
-        <h2 class="qh-s4-headline">Turn <span class="qh-s4-accent">one visit</span> into the next.</h2>
-        <p class="qh-s4-subcopy">QRAIVY keeps your customers connected after they leave.</p>
+        <div class="qh-s4-eyebrow" data-i18n="s4_eyebrow">KEEP CUSTOMERS COMING BACK</div>
+        <h2 class="qh-s4-headline"><span data-i18n="s4_headline_pre">Turn </span><span class="qh-s4-accent" data-i18n="s4_headline_accent">one visit</span><span data-i18n="s4_headline_post"> into the next.</span></h2>
+        <p class="qh-s4-subcopy" data-i18n="s4_subcopy">QRAIVY keeps your customers connected after they leave.</p>
       </div>
 
       <div class="qh-s4-journey">
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">1</div><div class="qh-s4-step-label">VISIT</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">1</div><div class="qh-s4-step-label" data-i18n="s4_step1_label">VISIT</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-visit-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-visit-en.png" data-src-de="images/section4/customer-loop-visit-de.png" src="images/section4/customer-loop-visit-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
-          <p class="qh-s4-step-desc">A customer visits your business.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step1_desc">A customer visits your business.</p>
         </div>
 
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">2</div><div class="qh-s4-step-label">JOIN</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">2</div><div class="qh-s4-step-label" data-i18n="s4_step2_label">JOIN</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-join-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-join-en.png" data-src-de="images/section4/customer-loop-join-de.png" src="images/section4/customer-loop-join-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
-          <p class="qh-s4-step-desc">They scan, discover and join in seconds.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step2_desc">They scan, discover and join in seconds.</p>
         </div>
 
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">3</div><div class="qh-s4-step-label">WALLET</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">3</div><div class="qh-s4-step-label" data-i18n="s4_step3_label">WALLET</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-wallet-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-wallet-en.png" data-src-de="images/section4/customer-loop-wallet-de.png" src="images/section4/customer-loop-wallet-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
-          <p class="qh-s4-step-desc">They save your loyalty pass to their wallet.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step3_desc">They save your loyalty pass to their wallet.</p>
         </div>
 
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">4</div><div class="qh-s4-step-label">RETURN</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">4</div><div class="qh-s4-step-label" data-i18n="s4_step4_label">RETURN</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-return-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-return-en.png" data-src-de="images/section4/customer-loop-return-de.png" src="images/section4/customer-loop-return-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
-          <p class="qh-s4-step-desc">You send deals and reminders they care about.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step4_desc">You send deals and reminders they care about.</p>
         </div>
 
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">5</div><div class="qh-s4-step-label">REWARD</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">5</div><div class="qh-s4-step-label" data-i18n="s4_step5_label">REWARD</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-reward-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-reward-en.png" data-src-de="images/section4/customer-loop-reward-de.png" src="images/section4/customer-loop-reward-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
-          <p class="qh-s4-step-desc">They return, redeem and feel appreciated.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step5_desc">They return, redeem and feel appreciated.</p>
         </div>
 
         <div class="qh-s4-step">
-          <div class="qh-s4-step-head"><div class="qh-s4-step-number">6</div><div class="qh-s4-step-label">RETURN AGAIN</div></div>
+          <div class="qh-s4-step-head"><div class="qh-s4-step-number">6</div><div class="qh-s4-step-label" data-i18n="s4_step6_label">RETURN AGAIN</div></div>
           <div class="qh-s4-step-card-wrap">
-            <div class="qh-s4-step-card"><img src="images/section4/customer-loop-return-again-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-return-again-en.png" data-src-de="images/section4/customer-loop-return-again-de.png" src="images/section4/customer-loop-return-again-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
           </div>
-          <p class="qh-s4-step-desc">They come back again. And again.</p>
+          <p class="qh-s4-step-desc" data-i18n="s4_step6_desc">They come back again. And again.</p>
         </div>
       </div>
 
@@ -1465,11 +1493,11 @@
         </span>
       </div>
 
-      <p class="qh-s4-outcome">QRAIVY turns a <span class="qh-s4-accent">one-time visitor</span> into a customer you can reach again.</p>
+      <p class="qh-s4-outcome"><span data-i18n="s4_outcome_pre">QRAIVY turns a </span><span class="qh-s4-accent" data-i18n="s4_outcome_accent">one-time visitor</span><span data-i18n="s4_outcome_post"> into a customer you can reach again.</span></p>
 
       <div class="qh-s4-cta-wrap">
         <button type="button" class="qh-s4-cta-btn">
-          Build My Customer Loop
+          <span data-i18n="s4_cta">Build My Customer Loop</span>
           <svg class="qh-s4-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
@@ -1481,8 +1509,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
             </div>
             <div>
-              <div class="qh-s4-panel-headline">Ready to build your customer engagement platform?</div>
-              <div class="qh-s4-panel-sub">Enter your website and QRAIVY will handle the rest.</div>
+              <div class="qh-s4-panel-headline" data-i18n="s4_panel_headline">Ready to build your customer engagement platform?</div>
+              <div class="qh-s4-panel-sub" data-i18n="s4_panel_sub">Enter your website and QRAIVY will handle the rest.</div>
             </div>
           </div>
           <div class="qh-s4-panel-right">
@@ -1491,15 +1519,15 @@
                 <span class="qh-hero-input-icon" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>
                 </span>
-                <input type="text" class="qh-hero-input" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
+                <input type="text" class="qh-hero-input" data-i18n-placeholder="hero_input_placeholder" placeholder="yourwebsite.com" autocomplete="off" inputmode="url" />
               </div>
               <button type="button" class="qh-hero-cta">
-                <span class="qh-hero-cta__content">Generate My Platform
+                <span class="qh-hero-cta__content"><span data-i18n="hero_cta">Generate My Platform</span>
                   <span class="qh-hero-cta__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
                 </span>
               </button>
             </div>
-            <div class="qh-s4-panel-note">No credit card required.</div>
+            <div class="qh-s4-panel-note" data-i18n="s4_panel_note">No credit card required.</div>
           </div>
         </div>
       </div>
@@ -1524,40 +1552,40 @@
   <section class="qr-types-section" id="create">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">Built for every use case</div>
-        <h2 class="section-title">Choose your <em>QR solution</em></h2>
-        <p class="section-sub">Powerful QR codes for every industry and goal</p>
+        <div class="section-badge" data-i18n="qrt_badge">Built for every use case</div>
+        <h2 class="section-title"><span data-i18n="qrt_headline_pre">Choose your </span><em data-i18n="qrt_headline_em">QR solution</em></h2>
+        <p class="section-sub" data-i18n="qrt_sub">Powerful QR codes for every industry and goal</p>
       </div>
       <div class="qr-types-grid">
         <a href="#generator" class="qr-type-card featured" onclick="setType('restaurant')">
           <div class="qr-type-icon">🍽</div>
-          <div class="qr-type-name">Restaurant</div>
-          <div class="qr-type-desc">Digital menus, reviews & more</div>
+          <div class="qr-type-name" data-i18n="qrt_restaurant_name">Restaurant</div>
+          <div class="qr-type-desc" data-i18n="qrt_restaurant_desc">Digital menus, reviews & more</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('events')">
           <div class="qr-type-icon">🎵</div>
-          <div class="qr-type-name">Events</div>
-          <div class="qr-type-desc">Tickets, RSVPs & check-ins</div>
+          <div class="qr-type-name" data-i18n="qrt_events_name">Events</div>
+          <div class="qr-type-desc" data-i18n="qrt_events_desc">Tickets, RSVPs & check-ins</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('business')">
           <div class="qr-type-icon">💼</div>
-          <div class="qr-type-name">Business</div>
-          <div class="qr-type-desc">Contact, vCards & presentations</div>
+          <div class="qr-type-name" data-i18n="qrt_business_name">Business</div>
+          <div class="qr-type-desc" data-i18n="qrt_business_desc">Contact, vCards & presentations</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('marketing')">
           <div class="qr-type-icon">📣</div>
-          <div class="qr-type-name">Marketing</div>
-          <div class="qr-type-desc">Campaigns, promotions</div>
+          <div class="qr-type-name" data-i18n="qrt_marketing_name">Marketing</div>
+          <div class="qr-type-desc" data-i18n="qrt_marketing_desc">Campaigns, promotions</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('social')">
           <div class="qr-type-icon">👥</div>
-          <div class="qr-type-name">Social</div>
-          <div class="qr-type-desc">Link in bio, followers</div>
+          <div class="qr-type-name" data-i18n="qrt_social_name">Social</div>
+          <div class="qr-type-desc" data-i18n="qrt_social_desc">Link in bio, followers</div>
         </a>
         <a href="#generator" class="qr-type-card" onclick="setType('wifi')">
           <div class="qr-type-icon">📶</div>
-          <div class="qr-type-name">WiFi</div>
-          <div class="qr-type-desc">Instant WiFi access</div>
+          <div class="qr-type-name" data-i18n="qrt_wifi_name">WiFi</div>
+          <div class="qr-type-desc" data-i18n="qrt_wifi_desc">Instant WiFi access</div>
         </a>
       </div>
     </div>
@@ -1569,19 +1597,19 @@
       <div class="editor-preview-wrap">
         <div class="editor-preview-left">
           <div class="section-header">
-            <div class="section-badge">AI QR CODE GENERATOR</div>
-            <h2 class="section-title">Create. Customise.<br/><em>Convert.</em></h2>
+            <div class="section-badge" data-i18n="editor_badge">AI QR CODE GENERATOR</div>
+            <h2 class="section-title"><span data-i18n="editor_headline_pre">Create. Customise.</span><br/><em data-i18n="editor_headline_em">Convert.</em></h2>
           </div>
-          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:24px;line-height:1.7">
+          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:24px;line-height:1.7" data-i18n="editor_subcopy">
             Generate beautiful QR codes and landing pages in seconds with the power of AI.
           </p>
           <ul class="editor-checklist">
-            <li>AI generates content &amp; design</li>
-            <li>Fully customisable to your brand</li>
-            <li>Dynamic QR codes with analytics</li>
-            <li>Share anywhere, track everything</li>
+            <li data-i18n="editor_check1">AI generates content &amp; design</li>
+            <li data-i18n="editor_check2">Fully customisable to your brand</li>
+            <li data-i18n="editor_check3">Dynamic QR codes with analytics</li>
+            <li data-i18n="editor_check4">Share anywhere, track everything</li>
           </ul>
-          <a href="qr/free.html" class="btn-primary" style="display:inline-flex" data-flow="free">Generate your QR code →</a>
+          <a href="qr/free.html" class="btn-primary" style="display:inline-flex" data-flow="free" data-i18n="editor_cta">Generate your QR code →</a>
         </div>
 
         <div class="editor-preview-right">
@@ -1668,19 +1696,19 @@
       <div class="analytics-wrap">
         <!-- Fake analytics dashboard -->
         <div class="analytics-mock">
-          <div class="analytics-mock-title">Analytics Overview</div>
+          <div class="analytics-mock-title" data-i18n="analytics_mock_title">Analytics Overview</div>
           <div class="analytics-stats-row">
             <div class="analytics-stat-box">
               <div class="analytics-stat-val">24,532</div>
-              <div class="analytics-stat-label">Total Scans</div>
+              <div class="analytics-stat-label" data-i18n="analytics_stat1_label">Total Scans</div>
             </div>
             <div class="analytics-stat-box">
               <div class="analytics-stat-val">18,921</div>
-              <div class="analytics-stat-label">Unique Visitors</div>
+              <div class="analytics-stat-label" data-i18n="analytics_stat2_label">Unique Visitors</div>
             </div>
             <div class="analytics-stat-box">
               <div class="analytics-stat-val">68.2%</div>
-              <div class="analytics-stat-label">Conversion Rate</div>
+              <div class="analytics-stat-label" data-i18n="analytics_stat3_label">Conversion Rate</div>
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-bottom:14px;font-family:var(--font-mono);font-size:0.55rem;color:var(--text-dim)">
@@ -1730,19 +1758,19 @@
 
         <div class="analytics-right">
           <div class="section-header" style="text-align:left;margin-bottom:28px">
-            <div class="section-badge">Real-time analytics</div>
-            <h2 class="section-title">Know your audience.<br/><em>Grow your business.</em></h2>
+            <div class="section-badge" data-i18n="analytics_badge">Real-time analytics</div>
+            <h2 class="section-title"><span data-i18n="analytics_headline_pre">Know your audience.</span><br/><em data-i18n="analytics_headline_em">Grow your business.</em></h2>
           </div>
-          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:28px;line-height:1.7">
+          <p style="color:var(--text-mid);font-size:0.92rem;margin-bottom:28px;line-height:1.7" data-i18n="analytics_subcopy">
             Make data-driven decisions with powerful insights from every scan.
           </p>
           <ul class="analytics-checklist">
-            <li><span class="analytics-check">●</span> Real-time scan tracking</li>
-            <li><span class="analytics-check">●</span> Location &amp; device analytics</li>
-            <li><span class="analytics-check">●</span> UTM &amp; campaign tracking</li>
-            <li><span class="analytics-check">●</span> Export reports anytime</li>
+            <li><span class="analytics-check">●</span> <span data-i18n="analytics_check1">Real-time scan tracking</span></li>
+            <li><span class="analytics-check">●</span> <span data-i18n="analytics_check2">Location &amp; device analytics</span></li>
+            <li><span class="analytics-check">●</span> <span data-i18n="analytics_check3">UTM &amp; campaign tracking</span></li>
+            <li><span class="analytics-check">●</span> <span data-i18n="analytics_check4">Export reports anytime</span></li>
           </ul>
-          <a href="/dashboard.html" class="btn-primary" style="display:inline-flex" data-flow="smart">See analytics in action →</a>
+          <a href="/dashboard.html" class="btn-primary" style="display:inline-flex" data-flow="smart" data-i18n="analytics_cta">See analytics in action →</a>
         </div>
       </div>
     </div>
@@ -1752,70 +1780,70 @@
   <section class="wizard-section" id="generator">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">Free QR Generator</div>
-        <h2 class="section-title">Generate your <em>QR code</em></h2>
-        <p class="section-sub">Generate a free QR code instantly — no account needed.</p>
+        <div class="section-badge" data-i18n="gen_badge">Free QR Generator</div>
+        <h2 class="section-title"><span data-i18n="gen_headline_pre">Generate your </span><em data-i18n="gen_headline_em">QR code</em></h2>
+        <p class="section-sub" data-i18n="gen_sub">Generate a free QR code instantly — no account needed.</p>
       </div>
       <div class="wizard-steps">
-        <div class="wizard-step active"><div class="wizard-step-num">1</div><span>Enter details</span></div>
+        <div class="wizard-step active"><div class="wizard-step-num">1</div><span data-i18n="gen_step1">Enter details</span></div>
         <div class="wizard-step-connector"></div>
-        <div class="wizard-step active"><div class="wizard-step-num">2</div><span>Customise</span></div>
+        <div class="wizard-step active"><div class="wizard-step-num">2</div><span data-i18n="gen_step2">Customise</span></div>
         <div class="wizard-step-connector"></div>
-        <div class="wizard-step"><div class="wizard-step-num">3</div><span>Download &amp; share</span></div>
+        <div class="wizard-step"><div class="wizard-step-num">3</div><span data-i18n="gen_step3">Download &amp; share</span></div>
       </div>
       <div class="wizard-form">
         <div class="form-group">
-          <label class="form-label" for="urlInput">Your URL *</label>
-          <input type="url" id="urlInput" class="form-input" placeholder="https://your-website.com" autocomplete="off" />
+          <label class="form-label" for="urlInput" data-i18n="gen_url_label">Your URL *</label>
+          <input type="url" id="urlInput" class="form-input" data-i18n-placeholder="gen_url_placeholder" placeholder="https://your-website.com" autocomplete="off" />
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">QR Color</label>
+            <label class="form-label" data-i18n="gen_color_label">QR Color</label>
             <div class="color-input-wrap">
               <input type="color" id="qrColor" value="#000000" />
-              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">Foreground</span>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)" data-i18n="gen_foreground">Foreground</span>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Background</label>
+            <label class="form-label" data-i18n="gen_background_label">Background</label>
             <div class="color-input-wrap">
               <input type="color" id="qrBgColor" value="#ffffff" />
-              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">Background</span>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)" data-i18n="gen_background">Background</span>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Size</label>
+            <label class="form-label" data-i18n="gen_size_label">Size</label>
             <select id="qrSize" class="form-select">
-              <option value="150x150">Small (150px)</option>
-              <option value="300x300" selected>Medium (300px)</option>
-              <option value="500x500">Large (500px)</option>
+              <option value="150x150" data-i18n="gen_size_small">Small (150px)</option>
+              <option value="300x300" selected data-i18n="gen_size_medium">Medium (300px)</option>
+              <option value="500x500" data-i18n="gen_size_large">Large (500px)</option>
             </select>
           </div>
         </div>
         <div id="errorMsg"></div>
-        <button class="generate-btn" id="generateBtn">⬡ Generate QR Code</button>
+        <button class="generate-btn" id="generateBtn" data-i18n="gen_generate_btn">⬡ Generate QR Code</button>
 
       </div>
       <div id="qr-result">
         <img id="qrImage" src="" alt="Generated QR Code" />
         <div class="result-url" id="redirectLink"></div>
         <div class="result-actions">
-          <button class="result-btn primary" id="copyBtn">📋 Copy Link</button>
-          <button class="result-btn outline" id="downloadBtn">⬇ Download QR</button>
+          <button class="result-btn primary" id="copyBtn" data-i18n="gen_copy_btn">📋 Copy Link</button>
+          <button class="result-btn outline" id="downloadBtn" data-i18n="gen_download_btn">⬇ Download QR</button>
         </div>
 
         <div id="smart-qr-upgrade" style="display:none;margin-top:24px;background:linear-gradient(135deg,rgba(255,90,31,0.08),rgba(255,90,31,0.04));border:1px solid rgba(255,90,31,0.2);border-radius:14px;padding:20px;text-align:center;">
-          <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;margin-bottom:8px;">Want more than a QR code?</div>
-          <div style="font-size:.78rem;color:#7a8fa8;margin-bottom:14px;line-height:1.6;">Turn it into an AI landing page with voice welcome, AI assistant, wallet passes, push notifications, analytics and subscribers.</div>
+          <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:#f0f4f8;margin-bottom:8px;" data-i18n="gen_upgrade_headline">Want more than a QR code?</div>
+          <div style="font-size:.78rem;color:#7a8fa8;margin-bottom:14px;line-height:1.6;" data-i18n="gen_upgrade_sub">Turn it into an AI landing page with voice welcome, AI assistant, wallet passes, push notifications, analytics and subscribers.</div>
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left;max-width:280px;margin-left:auto;margin-right:auto;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>AI landing page</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>AI assistant</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Wallet pass</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Push notifications</div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span>Analytics &amp; subscribers</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span><span data-i18n="gen_upgrade_item1">AI landing page</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span><span data-i18n="gen_upgrade_item2">AI assistant</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span><span data-i18n="gen_upgrade_item3">Wallet pass</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span><span data-i18n="gen_upgrade_item4">Push notifications</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:#a8b4c0;"><span style="width:5px;height:5px;border-radius:50%;background:#ff5a1f;flex-shrink:0;display:inline-block;"></span><span data-i18n="gen_upgrade_item5">Analytics &amp; subscribers</span></div>
           </div>
-          <a href="smart-demo.html" style="display:inline-block;background:#ff5a1f;color:#fff;padding:11px 24px;border-radius:9px;font-family:var(--font-display);font-size:.85rem;font-weight:700;text-decoration:none;">Try Smart QR Demo</a>
+          <a href="smart-demo.html" style="display:inline-block;background:#ff5a1f;color:#fff;padding:11px 24px;border-radius:9px;font-family:var(--font-display);font-size:.85rem;font-weight:700;text-decoration:none;" data-i18n="gen_upgrade_cta">Try Smart QR Demo</a>
         </div>
       </div>
     </div>
@@ -1825,77 +1853,77 @@
   <section class="pricing-section" id="pricing">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">Simple pricing</div>
-        <h2 class="section-title">Start free, <em>scale when ready</em></h2>
-        <p class="section-sub">No credit card required to get started. Upgrade when you need more.</p>
+        <div class="section-badge" data-i18n="pricing_badge">Simple pricing</div>
+        <h2 class="section-title"><span data-i18n="pricing_headline_pre">Start free, </span><em data-i18n="pricing_headline_em">scale when ready</em></h2>
+        <p class="section-sub" data-i18n="pricing_sub">No credit card required to get started. Upgrade when you need more.</p>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:36px;">
-        <span id="label-monthly" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-mid);">Monthly</span>
+        <span id="label-monthly" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-mid);" data-i18n="pricing_monthly">Monthly</span>
         <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
           <input type="checkbox" id="billing-toggle" style="opacity:0;width:0;height:0;position:absolute;">
           <span id="toggle-track" style="position:absolute;inset:0;background:var(--border2);border-radius:24px;transition:background 0.2s;"></span>
           <span id="toggle-thumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform 0.2s;"></span>
         </label>
-        <span id="label-annual" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-dim);">Annual <span style="background:var(--accent);color:#fff;font-size:0.6rem;padding:2px 7px;border-radius:20px;margin-left:4px;letter-spacing:0.05em;">SAVE 20%</span></span>
+        <span id="label-annual" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-dim);"><span data-i18n="pricing_annual">Annual</span> <span style="background:var(--accent);color:#fff;font-size:0.6rem;padding:2px 7px;border-radius:20px;margin-left:4px;letter-spacing:0.05em;" data-i18n="pricing_save">SAVE 20%</span></span>
       </div>
       <div class="pricing-grid">
         <div class="pricing-card">
-          <div class="pricing-plan">Free</div>
+          <div class="pricing-plan" data-i18n="pricing_free_name">Free</div>
           <div class="pricing-price" id="price-free">&euro;0<span>/mo</span></div>
-          <div class="pricing-desc">The perfect starting point.</div>
+          <div class="pricing-desc" data-i18n="pricing_free_desc">The perfect starting point.</div>
           <ul class="pricing-features">
-            <li>Unlimited basic QR codes</li>
-            <li>Download &amp; share</li>
-            <li>Standard redirect</li>
-            <li class="dim">AI landing pages</li>
-            <li class="dim">Push notifications</li>
-            <li class="dim">Apple Wallet passes</li>
+            <li data-i18n="pricing_free_f1">Unlimited basic QR codes</li>
+            <li data-i18n="pricing_free_f2">Download &amp; share</li>
+            <li data-i18n="pricing_free_f3">Standard redirect</li>
+            <li class="dim" data-i18n="pricing_free_f4">AI landing pages</li>
+            <li class="dim" data-i18n="pricing_free_f5">Push notifications</li>
+            <li class="dim" data-i18n="pricing_free_f6">Apple Wallet passes</li>
           </ul>
-          <a href="login.html" class="pricing-btn outline">Get started free</a>
+          <a href="login.html" class="pricing-btn outline" data-i18n="pricing_free_cta">Get started free</a>
         </div>
         <div class="pricing-card">
-          <div class="pricing-plan">Starter</div>
+          <div class="pricing-plan" data-i18n="pricing_starter_name">Starter</div>
           <div class="pricing-price" id="price-starter">&euro;9<span id="starter-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-starter">For businesses ready to engage with AI-powered QR pages.</div>
+          <div class="pricing-desc" id="desc-starter" data-i18n="pricing_starter_desc">For businesses ready to engage with AI-powered QR pages.</div>
           <ul class="pricing-features">
-            <li>Unlimited basic QR codes</li>
-            <li>10 AI landing pages</li>
-            <li class="dim">Dynamic QR codes</li>
-            <li>Push notifications</li>
-            <li class="dim">Apple Wallet passes</li>
-            <li class="dim">API access</li>
+            <li data-i18n="pricing_starter_f1">Unlimited basic QR codes</li>
+            <li data-i18n="pricing_starter_f2">10 AI landing pages</li>
+            <li class="dim" data-i18n="pricing_starter_f3">Dynamic QR codes</li>
+            <li data-i18n="pricing_starter_f4">Push notifications</li>
+            <li class="dim" data-i18n="pricing_starter_f5">Apple Wallet passes</li>
+            <li class="dim" data-i18n="pricing_starter_f6">API access</li>
           </ul>
-          <a href="pricing.html" class="pricing-btn outline" id="btn-starter">Upgrade to Starter &rarr;</a>
+          <a href="pricing.html" class="pricing-btn outline" id="btn-starter" data-i18n="pricing_starter_cta">Upgrade to Starter &rarr;</a>
         </div>
         <div class="pricing-card featured">
-          <div class="pricing-popular">Most Popular</div>
-          <div class="pricing-plan">Pro</div>
+          <div class="pricing-popular" data-i18n="pricing_popular_badge">Most Popular</div>
+          <div class="pricing-plan" data-i18n="pricing_pro_name">Pro</div>
           <div class="pricing-price" id="price-pro">&euro;29<span id="pro-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-pro">Unlimited AI pages and dynamic QR codes.</div>
+          <div class="pricing-desc" id="desc-pro" data-i18n="pricing_pro_desc">Unlimited AI pages and dynamic QR codes.</div>
           <ul class="pricing-features">
-            <li>Unlimited basic QR codes</li>
-            <li>Unlimited AI landing pages</li>
-            <li>Dynamic QR codes</li>
-            <li>Push notifications</li>
-            <li class="dim">Apple Wallet passes</li>
-            <li class="dim">API access</li>
+            <li data-i18n="pricing_pro_f1">Unlimited basic QR codes</li>
+            <li data-i18n="pricing_pro_f2">Unlimited AI landing pages</li>
+            <li data-i18n="pricing_pro_f3">Dynamic QR codes</li>
+            <li data-i18n="pricing_pro_f4">Push notifications</li>
+            <li class="dim" data-i18n="pricing_pro_f5">Apple Wallet passes</li>
+            <li class="dim" data-i18n="pricing_pro_f6">API access</li>
           </ul>
-          <a href="pricing.html" class="pricing-btn filled" id="btn-pro">Upgrade to Pro &rarr;</a>
+          <a href="pricing.html" class="pricing-btn filled" id="btn-pro" data-i18n="pricing_pro_cta">Upgrade to Pro &rarr;</a>
         </div>
         <div class="pricing-card">
-          <div class="pricing-popular" style="background:var(--text-mid);color:#fff;">Full Platform</div>
-          <div class="pricing-plan">Business</div>
+          <div class="pricing-popular" style="background:var(--text-mid);color:#fff;" data-i18n="pricing_business_badge">Full Platform</div>
+          <div class="pricing-plan" data-i18n="pricing_business_name">Business</div>
           <div class="pricing-price" id="price-business">&euro;49<span id="business-period">/mo</span></div>
-          <div class="pricing-desc" id="desc-business">Apple &amp; Google Wallet. The complete platform.</div>
+          <div class="pricing-desc" id="desc-business" data-i18n="pricing_business_desc">Apple &amp; Google Wallet. The complete platform.</div>
           <ul class="pricing-features">
-            <li>Everything in Pro</li>
-            <li>Apple Wallet passes</li>
-            <li>Google Wallet passes</li>
-            <li>Dynamic pass updates</li>
-            <li>APNs push to Wallet</li>
-            <li>Priority support</li>
+            <li data-i18n="pricing_business_f1">Everything in Pro</li>
+            <li data-i18n="pricing_business_f2">Apple Wallet passes</li>
+            <li data-i18n="pricing_business_f3">Google Wallet passes</li>
+            <li data-i18n="pricing_business_f4">Dynamic pass updates</li>
+            <li data-i18n="pricing_business_f5">APNs push to Wallet</li>
+            <li data-i18n="pricing_business_f6">Priority support</li>
           </ul>
-          <a href="pricing.html" class="pricing-btn outline" id="btn-business">Upgrade to Business &rarr;</a>
+          <a href="pricing.html" class="pricing-btn outline" id="btn-business" data-i18n="pricing_business_cta">Upgrade to Business &rarr;</a>
         </div>
       </div>
     </div>
@@ -1933,8 +1961,8 @@
   <section class="testimonials-section">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">What customers say</div>
-        <h2 class="section-title">Businesses <em>love QRAivy</em></h2>
+        <div class="section-badge" data-i18n="testi_badge">What customers say</div>
+        <h2 class="section-title"><span data-i18n="testi_headline_pre">Businesses </span><em data-i18n="testi_headline_em">love QRAivy</em></h2>
       </div>
       <div class="testimonials-grid">
         <div class="testimonial-card">
@@ -1969,16 +1997,16 @@
   <section class="faq-section" id="faq">
     <div class="section-wrap">
       <div class="section-header">
-        <div class="section-badge">FAQ</div>
-        <h2 class="section-title">Frequently asked <em>questions</em></h2>
+        <div class="section-badge" data-i18n="faq_badge">FAQ</div>
+        <h2 class="section-title"><span data-i18n="faq_headline_pre">Frequently asked </span><em data-i18n="faq_headline_em">questions</em></h2>
       </div>
       <div class="faq-list">
-        <div class="faq-item"><button class="faq-question">What is QRAivy? <div class="faq-icon">+</div></button><div class="faq-answer">QRAivy is an AI-powered QR code platform. Unlike basic QR generators, every QRAivy code comes with an AI landing page, subscriber capture, push notifications and real-time analytics.</div></div>
-        <div class="faq-item"><button class="faq-question">Do I need to install anything? <div class="faq-icon">+</div></button><div class="faq-answer">No. QRAivy is fully web-based. Sign up, create your QR code and you're live in under a minute — nothing to install.</div></div>
-        <div class="faq-item"><button class="faq-question">What happens to free QR codes? <div class="faq-icon">+</div></button><div class="faq-answer">Free plan QR codes are basic static codes with no AI features. They never expire but don't include the AI landing page, analytics or push notifications.</div></div>
-        <div class="faq-item"><button class="faq-question">Can I change the URL after generating? <div class="faq-icon">+</div></button><div class="faq-answer">Yes, on paid plans you can update the destination URL of any QR code from your dashboard without reprinting the code.</div></div>
-        <div class="faq-item"><button class="faq-question">How do push notifications work? <div class="faq-icon">+</div></button><div class="faq-answer">When customers scan your QR and visit your AI landing page, they can subscribe to receive push notifications. You can send them offers and updates directly from your dashboard.</div></div>
-        <div class="faq-item"><button class="faq-question">Can I cancel anytime? <div class="faq-icon">+</div></button><div class="faq-answer">Yes, you can cancel your subscription at any time. Your QR codes will continue to work until the end of your billing period.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q1">What is QRAivy?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a1">QRAivy is an AI-powered QR code platform. Unlike basic QR generators, every QRAivy code comes with an AI landing page, subscriber capture, push notifications and real-time analytics.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q2">Do I need to install anything?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a2">No. QRAivy is fully web-based. Sign up, create your QR code and you're live in under a minute — nothing to install.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q3">What happens to free QR codes?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a3">Free plan QR codes are basic static codes with no AI features. They never expire but don't include the AI landing page, analytics or push notifications.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q4">Can I change the URL after generating?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a4">Yes, on paid plans you can update the destination URL of any QR code from your dashboard without reprinting the code.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q5">How do push notifications work?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a5">When customers scan your QR and visit your AI landing page, they can subscribe to receive push notifications. You can send them offers and updates directly from your dashboard.</div></div>
+        <div class="faq-item"><button class="faq-question"><span data-i18n="faq_q6">Can I cancel anytime?</span> <div class="faq-icon">+</div></button><div class="faq-answer" data-i18n="faq_a6">Yes, you can cancel your subscription at any time. Your QR codes will continue to work until the end of your billing period.</div></div>
       </div>
     </div>
   </section>
@@ -1987,13 +2015,13 @@
   <footer>
     <a href="index.html" class="footer-logo">QR<span>Aivy</span></a>
     <div class="footer-links">
-      <a href="#features" class="footer-link">Features</a>
-      <a href="#pricing" class="footer-link">Pricing</a>
-      <a href="#faq" class="footer-link">FAQ</a>
-      <a href="login.html" class="footer-link">Login</a>
-      <a href="login.html" class="footer-link">Sign Up</a>
+      <a href="#features" class="footer-link" data-i18n="footer_features">Features</a>
+      <a href="#pricing" class="footer-link" data-i18n="nav_pricing">Pricing</a>
+      <a href="#faq" class="footer-link" data-i18n="footer_faq">FAQ</a>
+      <a href="login.html" class="footer-link" data-i18n="footer_login">Login</a>
+      <a href="login.html" class="footer-link" data-i18n="footer_signup">Sign Up</a>
     </div>
-    <div class="footer-copy">© 2026 QRAivy. Built with Node · Express · Prisma · PostgreSQL</div>
+    <div class="footer-copy" data-i18n="footer_copy">© 2026 QRAivy. Built with Node · Express · Prisma · PostgreSQL</div>
   </footer>
 
   <script>
@@ -2040,16 +2068,363 @@
       });
     });
 
-    async function initNav() {
-      await window.Clerk.load();
+    // Re-applies the signed-in nav text in the current language -- called
+    // once Clerk resolves, and again after every language toggle, so a
+    // signed-in visitor's "Dashboard" label stays correct in either
+    // language instead of being permanently set at sign-in time.
+    function updateNavAuthText() {
+      if (!(window.Clerk && window.Clerk.user)) return;
+      const t = (window.QH_I18N || {})[window.QRAIVY_LANGUAGE] || (window.QH_I18N || {}).en || {};
       const authLink = document.getElementById('nav-auth-link');
       const ctaBtn = document.getElementById('nav-cta-btn');
-      if (window.Clerk.user) {
-        authLink.href = 'dashboard.html'; authLink.textContent = 'Dashboard';
-        ctaBtn.href = 'dashboard.html'; ctaBtn.textContent = 'Go to Dashboard →';
-      }
+      authLink.href = 'dashboard.html'; authLink.textContent = t.nav_dashboard || 'Dashboard';
+      ctaBtn.href = 'dashboard.html'; ctaBtn.textContent = t.nav_go_dashboard || 'Go to Dashboard →';
+    }
+    async function initNav() {
+      await window.Clerk.load();
+      updateNavAuthText();
     }
   </script>
+
+  <!-- EN/DE — reuses js/qraivy-lang.js (window.QRAIVY_LANGUAGE /
+       window.setQraivyLang) for state + persistence, the same shared
+       mechanism the approved homepage source uses; page-local
+       dictionary + applyLang(), same pattern as
+       homepage-approved-2026-08-22.html. Approved-section keys are
+       copied verbatim (EN+DE) from that source; legacy-section keys
+       (qrt_/editor_/analytics_/gen_/pricing_/testi_/faq_/footer_) are
+       new, added for sections outside the approved concept file. -->
+  <script>
+    var QH_T = {
+      en: {
+        nav_free_qr: 'Free QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Pricing',
+        nav_login: 'Log in', nav_cta_smart: 'Create Smart QR',
+        nav_dashboard: 'Dashboard', nav_go_dashboard: 'Go to Dashboard →',
+        hero_headline_pre: 'Turn your website into an ',
+        hero_headline_accent: 'AI-powered',
+        hero_headline_post: ' customer engagement platform.',
+        hero_subcopy: 'Build Smart Landing Pages, Wallet Passes, Loyalty Programs, Deals, AI Campaigns and more—all from the website you already have.',
+        hero_invite: 'Curious how it works?',
+        hero_input_label: 'Your website URL',
+        hero_input_placeholder: 'yourwebsite.com',
+        hero_cta: 'Generate My Platform',
+        hero_supporting_line: "We'll discover your brand, build your platform, and prepare it for launch.",
+        feat1_title: 'AI Does the Work',
+        feat1_desc: 'We scan your website, understand your business and build everything for you automatically.',
+        feat2_title: 'Engage Everywhere',
+        feat2_desc: 'Smart landing pages, wallet passes, loyalty, deals and push notifications all in one place.',
+        feat3_title: 'Grow Faster',
+        feat3_desc: 'AI campaigns and smart analytics help you drive more visits and increase customer loyalty.',
+        feat4_title: 'Print & Ship',
+        feat4_desc: 'AI designs your table tents, posters and more. We print and ship to your door.',
+        feat5_title: 'Built for Scale',
+        feat5_desc: 'Manage one location or hundreds from a powerful dashboard built for enterprises.',
+        story_headline_line1: 'Create a Deal.',
+        story_headline_line2_pre: 'Everything else happens ',
+        story_headline_accent: 'automatically.',
+        story_subcopy: 'Publish a Deal once and AI updates your website, Wallet, notifications and analytics instantly.',
+        story_deal_label: "Today's Deal",
+        story_deal_title: 'Free Coffee Friday',
+        story_deal_desc: 'Buy one coffee, get one free',
+        story_deal_cta: 'Publish Deal',
+        story_auto_label: 'QRAIVY Automation',
+        story_auto_1: 'Landing Page updated',
+        story_auto_2: 'Wallet updated',
+        story_auto_3: 'Push Notification ready',
+        story_auto_4: 'Analytics tracking enabled',
+        story_notif_title: 'Free Coffee Friday',
+        story_notif_text: 'Buy one coffee, get one free — tap to redeem.',
+        story_phone_date: 'Friday, May 24',
+        cap_headline: 'Everything you need to keep customers coming back.',
+        cap1_title: 'Smart Landing Pages',
+        cap1_desc: 'AI creates a beautiful, mobile-first website that converts.',
+        cap2_title: 'Wallet Passes',
+        cap2_desc: 'One tap access for your customers. Always with them.',
+        cap3_title: 'Loyalty Programs',
+        cap3_desc: 'Reward loyalty. Increase repeat visits and lifetime value.',
+        cap4_title: 'Deals & Promotions',
+        cap4_desc: 'Create, schedule and promote deals that drive action.',
+        cap5_title: 'AI Campaigns',
+        cap5_desc: 'AI writes, targets and sends campaigns that work.',
+        cap6_title: 'Analytics & Insights',
+        cap6_desc: 'Track performance and understand what drives growth.',
+        s3_headline_1: 'Give us your website.',
+        s3_headline_2_accent: 'QRAIVY',
+        s3_headline_2_rest: 'builds the rest.',
+        s3_subcopy: 'QRAIVY learns your business and creates your customer engagement platform.',
+        s3_step1_label: 'Your Website',
+        s3_step2_label: 'QRAIVY AI',
+        s3_step3_label: 'Your Platform',
+        s3_closing_1: 'Review', s3_closing_2: 'Customize', s3_closing_3: 'Publish',
+        s3_closing_sub: "You're in control. Make it yours and go live when you're ready.",
+        s4_eyebrow: 'KEEP CUSTOMERS COMING BACK',
+        s4_headline_pre: 'Turn ', s4_headline_accent: 'one visit', s4_headline_post: ' into the next.',
+        s4_subcopy: 'QRAIVY keeps your customers connected after they leave.',
+        s4_step1_label: 'VISIT', s4_step1_desc: 'A customer visits your business.',
+        s4_step2_label: 'JOIN', s4_step2_desc: 'They scan, discover and join in seconds.',
+        s4_step3_label: 'WALLET', s4_step3_desc: 'They save your loyalty pass to their wallet.',
+        s4_step4_label: 'RETURN', s4_step4_desc: 'You send deals and reminders they care about.',
+        s4_step5_label: 'REWARD', s4_step5_desc: 'They return, redeem and feel appreciated.',
+        s4_step6_label: 'RETURN AGAIN', s4_step6_desc: 'They come back again. And again.',
+        s4_outcome_pre: 'QRAIVY turns a ', s4_outcome_accent: 'one-time visitor', s4_outcome_post: ' into a customer you can reach again.',
+        s4_cta: 'Build My Customer Loop',
+        s4_panel_headline: 'Ready to build your customer engagement platform?',
+        s4_panel_sub: 'Enter your website and QRAIVY will handle the rest.',
+        s4_panel_note: 'No credit card required.',
+        qrt_badge: 'Built for every use case', qrt_headline_pre: 'Choose your ', qrt_headline_em: 'QR solution',
+        qrt_sub: 'Powerful QR codes for every industry and goal',
+        qrt_restaurant_name: 'Restaurant', qrt_restaurant_desc: 'Digital menus, reviews & more',
+        qrt_events_name: 'Events', qrt_events_desc: 'Tickets, RSVPs & check-ins',
+        qrt_business_name: 'Business', qrt_business_desc: 'Contact, vCards & presentations',
+        qrt_marketing_name: 'Marketing', qrt_marketing_desc: 'Campaigns, promotions',
+        qrt_social_name: 'Social', qrt_social_desc: 'Link in bio, followers',
+        qrt_wifi_name: 'WiFi', qrt_wifi_desc: 'Instant WiFi access',
+        editor_badge: 'AI QR CODE GENERATOR', editor_headline_pre: 'Create. Customise.', editor_headline_em: 'Convert.',
+        editor_subcopy: 'Generate beautiful QR codes and landing pages in seconds with the power of AI.',
+        editor_check1: 'AI generates content & design', editor_check2: 'Fully customisable to your brand',
+        editor_check3: 'Dynamic QR codes with analytics', editor_check4: 'Share anywhere, track everything',
+        editor_cta: 'Generate your QR code →',
+        analytics_mock_title: 'Analytics Overview',
+        analytics_stat1_label: 'Total Scans', analytics_stat2_label: 'Unique Visitors', analytics_stat3_label: 'Conversion Rate',
+        analytics_badge: 'Real-time analytics', analytics_headline_pre: 'Know your audience.', analytics_headline_em: 'Grow your business.',
+        analytics_subcopy: 'Make data-driven decisions with powerful insights from every scan.',
+        analytics_check1: 'Real-time scan tracking', analytics_check2: 'Location & device analytics',
+        analytics_check3: 'UTM & campaign tracking', analytics_check4: 'Export reports anytime',
+        analytics_cta: 'See analytics in action →',
+        gen_badge: 'Free QR Generator', gen_headline_pre: 'Generate your ', gen_headline_em: 'QR code',
+        gen_sub: 'Generate a free QR code instantly — no account needed.',
+        gen_step1: 'Enter details', gen_step2: 'Customise', gen_step3: 'Download & share',
+        gen_url_label: 'Your URL *', gen_url_placeholder: 'https://your-website.com',
+        gen_color_label: 'QR Color', gen_foreground: 'Foreground',
+        gen_background_label: 'Background', gen_background: 'Background',
+        gen_size_label: 'Size', gen_size_small: 'Small (150px)', gen_size_medium: 'Medium (300px)', gen_size_large: 'Large (500px)',
+        gen_generate_btn: '⬡ Generate QR Code', gen_copy_btn: '📋 Copy Link', gen_download_btn: '⬇ Download QR',
+        gen_upgrade_headline: 'Want more than a QR code?',
+        gen_upgrade_sub: 'Turn it into an AI landing page with voice welcome, AI assistant, wallet passes, push notifications, analytics and subscribers.',
+        gen_upgrade_item1: 'AI landing page', gen_upgrade_item2: 'AI assistant', gen_upgrade_item3: 'Wallet pass',
+        gen_upgrade_item4: 'Push notifications', gen_upgrade_item5: 'Analytics & subscribers',
+        gen_upgrade_cta: 'Try Smart QR Demo',
+        pricing_badge: 'Simple pricing', pricing_headline_pre: 'Start free, ', pricing_headline_em: 'scale when ready',
+        pricing_sub: 'No credit card required to get started. Upgrade when you need more.',
+        pricing_monthly: 'Monthly', pricing_annual: 'Annual', pricing_save: 'SAVE 20%',
+        pricing_free_name: 'Free', pricing_free_desc: 'The perfect starting point.',
+        pricing_free_f1: 'Unlimited basic QR codes', pricing_free_f2: 'Download & share', pricing_free_f3: 'Standard redirect',
+        pricing_free_f4: 'AI landing pages', pricing_free_f5: 'Push notifications', pricing_free_f6: 'Apple Wallet passes',
+        pricing_free_cta: 'Get started free',
+        pricing_starter_name: 'Starter', pricing_starter_desc: 'For businesses ready to engage with AI-powered QR pages.',
+        pricing_starter_f1: 'Unlimited basic QR codes', pricing_starter_f2: '10 AI landing pages', pricing_starter_f3: 'Dynamic QR codes',
+        pricing_starter_f4: 'Push notifications', pricing_starter_f5: 'Apple Wallet passes', pricing_starter_f6: 'API access',
+        pricing_starter_cta: 'Upgrade to Starter →',
+        pricing_popular_badge: 'Most Popular',
+        pricing_pro_name: 'Pro', pricing_pro_desc: 'Unlimited AI pages and dynamic QR codes.',
+        pricing_pro_f1: 'Unlimited basic QR codes', pricing_pro_f2: 'Unlimited AI landing pages', pricing_pro_f3: 'Dynamic QR codes',
+        pricing_pro_f4: 'Push notifications', pricing_pro_f5: 'Apple Wallet passes', pricing_pro_f6: 'API access',
+        pricing_pro_cta: 'Upgrade to Pro →',
+        pricing_business_badge: 'Full Platform', pricing_business_name: 'Business', pricing_business_desc: 'Apple & Google Wallet. The complete platform.',
+        pricing_business_f1: 'Everything in Pro', pricing_business_f2: 'Apple Wallet passes', pricing_business_f3: 'Google Wallet passes',
+        pricing_business_f4: 'Dynamic pass updates', pricing_business_f5: 'APNs push to Wallet', pricing_business_f6: 'Priority support',
+        pricing_business_cta: 'Upgrade to Business →',
+        testi_badge: 'What customers say', testi_headline_pre: 'Businesses ', testi_headline_em: 'love QRAivy',
+        faq_badge: 'FAQ', faq_headline_pre: 'Frequently asked ', faq_headline_em: 'questions',
+        faq_q1: 'What is QRAivy?',
+        faq_a1: 'QRAivy is an AI-powered QR code platform. Unlike basic QR generators, every QRAivy code comes with an AI landing page, subscriber capture, push notifications and real-time analytics.',
+        faq_q2: 'Do I need to install anything?',
+        faq_a2: "No. QRAivy is fully web-based. Sign up, create your QR code and you're live in under a minute — nothing to install.",
+        faq_q3: 'What happens to free QR codes?',
+        faq_a3: "Free plan QR codes are basic static codes with no AI features. They never expire but don't include the AI landing page, analytics or push notifications.",
+        faq_q4: 'Can I change the URL after generating?',
+        faq_a4: 'Yes, on paid plans you can update the destination URL of any QR code from your dashboard without reprinting the code.',
+        faq_q5: 'How do push notifications work?',
+        faq_a5: 'When customers scan your QR and visit your AI landing page, they can subscribe to receive push notifications. You can send them offers and updates directly from your dashboard.',
+        faq_q6: 'Can I cancel anytime?',
+        faq_a6: 'Yes, you can cancel your subscription at any time. Your QR codes will continue to work until the end of your billing period.',
+        footer_features: 'Features', footer_faq: 'FAQ', footer_login: 'Login', footer_signup: 'Sign Up',
+        footer_copy: '© 2026 QRAivy. Built with Node · Express · Prisma · PostgreSQL'
+      },
+      de: {
+        nav_free_qr: 'Gratis QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Preise',
+        nav_login: 'Anmelden', nav_cta_smart: 'Smart QR erstellen',
+        nav_dashboard: 'Dashboard', nav_go_dashboard: 'Zum Dashboard →',
+        hero_headline_pre: 'Verwandle deine Website in eine ',
+        hero_headline_accent: 'KI-gestützte',
+        hero_headline_post: ' Kundenbindungsplattform.',
+        hero_subcopy: 'Erstelle intelligente Landingpages, Wallet-Pässe, Treueprogramme, Angebote, KI-Kampagnen und vieles mehr – alles aus der Website, die du bereits hast.',
+        hero_invite: 'Neugierig, wie es funktioniert?',
+        hero_input_label: 'Deine Website-URL',
+        hero_input_placeholder: 'deinewebsite.de',
+        hero_cta: 'Plattform erstellen',
+        hero_supporting_line: 'Wir entdecken deine Marke, erstellen deine Plattform und bereiten sie für den Start vor.',
+        feat1_title: 'KI übernimmt die Arbeit',
+        feat1_desc: 'Wir analysieren deine Website, verstehen dein Unternehmen und erstellen alles automatisch für dich.',
+        feat2_title: 'Überall Kunden binden',
+        feat2_desc: 'Intelligente Landingpages, Wallet-Pässe, Treueprogramme, Angebote und Push-Benachrichtigungen – alles an einem Ort.',
+        feat3_title: 'Schneller wachsen',
+        feat3_desc: 'KI-Kampagnen und smarte Analysen helfen dir, mehr Besuche zu generieren und die Kundentreue zu steigern.',
+        feat4_title: 'Drucken & Versenden',
+        feat4_desc: 'KI erstellt dein Design für Tischaufsteller, Poster und mehr. Wir drucken und versenden direkt zu dir.',
+        feat5_title: 'Für jedes Unternehmen',
+        feat5_desc: 'Verwalte einen Standort oder Hunderte – mit einem leistungsstarken Dashboard für Unternehmen.',
+        story_headline_line1: 'Erstelle ein Angebot.',
+        story_headline_line2_pre: 'Alles andere passiert ',
+        story_headline_accent: 'automatisch.',
+        story_subcopy: 'Veröffentliche ein Angebot einmal, und KI aktualisiert sofort deine Website, Wallet, Benachrichtigungen und Analysen.',
+        story_deal_label: 'Heutiges Angebot',
+        story_deal_title: 'Free Coffee Friday',
+        story_deal_desc: 'Einen Kaffee kaufen, einen gratis erhalten',
+        story_deal_cta: 'Angebot veröffentlichen',
+        story_auto_label: 'QRAIVY Automatisierung',
+        story_auto_1: 'Landingpage aktualisiert',
+        story_auto_2: 'Wallet aktualisiert',
+        story_auto_3: 'Push-Benachrichtigung bereit',
+        story_auto_4: 'Analyse-Tracking aktiviert',
+        story_notif_title: 'Free Coffee Friday',
+        story_notif_text: 'Einen Kaffee kaufen, einen gratis erhalten – zum Einlösen tippen.',
+        story_phone_date: 'Freitag, 24. Mai',
+        cap_headline: 'Alles, was du brauchst, damit Kunden wiederkommen.',
+        cap1_title: 'Intelligente Landingpages',
+        cap1_desc: 'KI erstellt eine schöne, mobile-first Website, die konvertiert.',
+        cap2_title: 'Wallet-Pässe',
+        cap2_desc: 'Ein Fingertipp Zugang für deine Kunden. Immer griffbereit.',
+        cap3_title: 'Treueprogramme',
+        cap3_desc: 'Belohne Treue. Steigere Wiederbesuche und Kundenwert.',
+        cap4_title: 'Angebote & Aktionen',
+        cap4_desc: 'Erstelle, plane und bewirb Angebote, die zum Handeln anregen.',
+        cap5_title: 'KI-Kampagnen',
+        cap5_desc: 'KI schreibt, zielt und versendet Kampagnen, die wirken.',
+        cap6_title: 'Analytik & Insights',
+        cap6_desc: 'Verfolge die Performance und verstehe, was Wachstum antreibt.',
+        s3_headline_1: 'Gib uns deine Website.',
+        s3_headline_2_accent: 'QRAIVY',
+        s3_headline_2_rest: 'baut den Rest.',
+        s3_subcopy: 'QRAIVY lernt dein Unternehmen kennen und erstellt deine Kundenbindungsplattform.',
+        s3_step1_label: 'Deine Website',
+        s3_step2_label: 'QRAIVY KI',
+        s3_step3_label: 'Deine Plattform',
+        s3_closing_1: 'Prüfen', s3_closing_2: 'Anpassen', s3_closing_3: 'Veröffentlichen',
+        s3_closing_sub: 'Du behältst die Kontrolle. Passe alles an und veröffentliche, wenn du bereit bist.',
+        s4_eyebrow: 'KUNDEN ZURÜCKBRINGEN',
+        s4_headline_pre: 'Mach aus ', s4_headline_accent: 'einem Besuch', s4_headline_post: ' den nächsten.',
+        s4_subcopy: 'QRAIVY hält deine Kunden auch nach ihrem Besuch mit deinem Unternehmen verbunden.',
+        s4_step1_label: 'BESUCH', s4_step1_desc: 'Ein Kunde besucht dein Unternehmen.',
+        s4_step2_label: 'BEITRETEN', s4_step2_desc: 'Er scannt, entdeckt dein Angebot und tritt in Sekunden bei.',
+        s4_step3_label: 'WALLET', s4_step3_desc: 'Er speichert deinen Treuepass in seiner Wallet.',
+        s4_step4_label: 'RÜCKKEHR', s4_step4_desc: 'Du sendest relevante Angebote und Erinnerungen.',
+        s4_step5_label: 'BELOHNUNG', s4_step5_desc: 'Er kommt zurück, löst seine Belohnung ein und fühlt sich wertgeschätzt.',
+        s4_step6_label: 'WIEDERKOMMEN', s4_step6_desc: 'Er kommt wieder. Und wieder.',
+        s4_outcome_pre: 'QRAIVY macht aus einem ', s4_outcome_accent: 'einmaligen Besucher', s4_outcome_post: ' einen Kunden, den du wieder erreichen kannst.',
+        s4_cta: 'Meinen Kundenkreislauf erstellen',
+        s4_panel_headline: 'Bereit, deine Kundenbindungsplattform zu erstellen?',
+        s4_panel_sub: 'Gib deine Website ein und QRAIVY übernimmt den Rest.',
+        s4_panel_note: 'Keine Kreditkarte erforderlich.',
+        qrt_badge: 'Für jeden Anwendungsfall gemacht', qrt_headline_pre: 'Wähle deine ', qrt_headline_em: 'QR-Lösung',
+        qrt_sub: 'Leistungsstarke QR-Codes für jede Branche und jedes Ziel',
+        qrt_restaurant_name: 'Restaurant', qrt_restaurant_desc: 'Digitale Speisekarten, Bewertungen & mehr',
+        qrt_events_name: 'Events', qrt_events_desc: 'Tickets, Anmeldungen & Check-ins',
+        qrt_business_name: 'Business', qrt_business_desc: 'Kontakte, vCards & Präsentationen',
+        qrt_marketing_name: 'Marketing', qrt_marketing_desc: 'Kampagnen, Aktionen',
+        qrt_social_name: 'Social Media', qrt_social_desc: 'Link in der Bio, Follower',
+        qrt_wifi_name: 'WLAN', qrt_wifi_desc: 'Sofortiger WLAN-Zugang',
+        editor_badge: 'KI-QR-CODE-GENERATOR', editor_headline_pre: 'Erstellen. Anpassen.', editor_headline_em: 'Konvertieren.',
+        editor_subcopy: 'Erstelle wunderschöne QR-Codes und Landingpages in Sekunden mit der Kraft der KI.',
+        editor_check1: 'KI erstellt Inhalt & Design', editor_check2: 'Vollständig an deine Marke anpassbar',
+        editor_check3: 'Dynamische QR-Codes mit Analysen', editor_check4: 'Überall teilen, alles verfolgen',
+        editor_cta: 'Erstelle deinen QR-Code →',
+        analytics_mock_title: 'Analyse-Übersicht',
+        analytics_stat1_label: 'Scans gesamt', analytics_stat2_label: 'Einzelne Besucher', analytics_stat3_label: 'Konversionsrate',
+        analytics_badge: 'Echtzeit-Analysen', analytics_headline_pre: 'Kenne deine Zielgruppe.', analytics_headline_em: 'Lass dein Unternehmen wachsen.',
+        analytics_subcopy: 'Triff datenbasierte Entscheidungen mit aussagekräftigen Einblicken aus jedem Scan.',
+        analytics_check1: 'Scan-Tracking in Echtzeit', analytics_check2: 'Standort- & Geräteanalysen',
+        analytics_check3: 'UTM- & Kampagnen-Tracking', analytics_check4: 'Berichte jederzeit exportieren',
+        analytics_cta: 'Analysen in Aktion erleben →',
+        gen_badge: 'Kostenloser QR-Generator', gen_headline_pre: 'Erstelle deinen ', gen_headline_em: 'QR-Code',
+        gen_sub: 'Erstelle sofort einen kostenlosen QR-Code – kein Konto nötig.',
+        gen_step1: 'Details eingeben', gen_step2: 'Anpassen', gen_step3: 'Herunterladen & teilen',
+        gen_url_label: 'Deine URL *', gen_url_placeholder: 'https://deine-website.de',
+        gen_color_label: 'QR-Farbe', gen_foreground: 'Vordergrund',
+        gen_background_label: 'Hintergrund', gen_background: 'Hintergrund',
+        gen_size_label: 'Größe', gen_size_small: 'Klein (150px)', gen_size_medium: 'Mittel (300px)', gen_size_large: 'Groß (500px)',
+        gen_generate_btn: '⬡ QR-Code erstellen', gen_copy_btn: '📋 Link kopieren', gen_download_btn: '⬇ QR herunterladen',
+        gen_upgrade_headline: 'Möchtest du mehr als nur einen QR-Code?',
+        gen_upgrade_sub: 'Verwandle ihn in eine KI-Landingpage mit Sprachbegrüßung, KI-Assistent, Wallet-Pässen, Push-Benachrichtigungen, Analysen und Abonnenten.',
+        gen_upgrade_item1: 'KI-Landingpage', gen_upgrade_item2: 'KI-Assistent', gen_upgrade_item3: 'Wallet-Pass',
+        gen_upgrade_item4: 'Push-Benachrichtigungen', gen_upgrade_item5: 'Analysen & Abonnenten',
+        gen_upgrade_cta: 'Smart QR Demo testen',
+        pricing_badge: 'Einfache Preise', pricing_headline_pre: 'Kostenlos starten, ', pricing_headline_em: 'skalieren wenn bereit',
+        pricing_sub: 'Keine Kreditkarte für den Start erforderlich. Upgrade, wenn du mehr brauchst.',
+        pricing_monthly: 'Monatlich', pricing_annual: 'Jährlich', pricing_save: '20% SPAREN',
+        pricing_free_name: 'Free', pricing_free_desc: 'Der perfekte Einstieg.',
+        pricing_free_f1: 'Unbegrenzte einfache QR-Codes', pricing_free_f2: 'Herunterladen & teilen', pricing_free_f3: 'Standard-Weiterleitung',
+        pricing_free_f4: 'KI-Landingpages', pricing_free_f5: 'Push-Benachrichtigungen', pricing_free_f6: 'Apple Wallet-Pässe',
+        pricing_free_cta: 'Kostenlos starten',
+        pricing_starter_name: 'Starter', pricing_starter_desc: 'Für Unternehmen, die mit KI-gestützten QR-Seiten durchstarten wollen.',
+        pricing_starter_f1: 'Unbegrenzte einfache QR-Codes', pricing_starter_f2: '10 KI-Landingpages', pricing_starter_f3: 'Dynamische QR-Codes',
+        pricing_starter_f4: 'Push-Benachrichtigungen', pricing_starter_f5: 'Apple Wallet-Pässe', pricing_starter_f6: 'API-Zugang',
+        pricing_starter_cta: 'Auf Starter upgraden →',
+        pricing_popular_badge: 'Am beliebtesten',
+        pricing_pro_name: 'Pro', pricing_pro_desc: 'Unbegrenzte KI-Seiten und dynamische QR-Codes.',
+        pricing_pro_f1: 'Unbegrenzte einfache QR-Codes', pricing_pro_f2: 'Unbegrenzte KI-Landingpages', pricing_pro_f3: 'Dynamische QR-Codes',
+        pricing_pro_f4: 'Push-Benachrichtigungen', pricing_pro_f5: 'Apple Wallet-Pässe', pricing_pro_f6: 'API-Zugang',
+        pricing_pro_cta: 'Auf Pro upgraden →',
+        pricing_business_badge: 'Komplette Plattform', pricing_business_name: 'Business', pricing_business_desc: 'Apple & Google Wallet. Die komplette Plattform.',
+        pricing_business_f1: 'Alles aus Pro', pricing_business_f2: 'Apple Wallet-Pässe', pricing_business_f3: 'Google Wallet-Pässe',
+        pricing_business_f4: 'Dynamische Pass-Updates', pricing_business_f5: 'APNs-Push zur Wallet', pricing_business_f6: 'Bevorzugter Support',
+        pricing_business_cta: 'Auf Business upgraden →',
+        testi_badge: 'Was Kunden sagen', testi_headline_pre: 'Unternehmen ', testi_headline_em: 'lieben QRAivy',
+        faq_badge: 'FAQ', faq_headline_pre: 'Häufig gestellte ', faq_headline_em: 'Fragen',
+        faq_q1: 'Was ist QRAivy?',
+        faq_a1: 'QRAivy ist eine KI-gestützte QR-Code-Plattform. Im Gegensatz zu einfachen QR-Generatoren kommt jeder QRAivy-Code mit einer KI-Landingpage, Abonnentenerfassung, Push-Benachrichtigungen und Echtzeit-Analysen.',
+        faq_q2: 'Muss ich etwas installieren?',
+        faq_a2: 'Nein. QRAivy ist vollständig webbasiert. Registrieren, QR-Code erstellen und in unter einer Minute live – nichts zu installieren.',
+        faq_q3: 'Was passiert mit kostenlosen QR-Codes?',
+        faq_a3: 'QR-Codes im kostenlosen Plan sind einfache statische Codes ohne KI-Funktionen. Sie laufen nie ab, enthalten aber keine KI-Landingpage, Analysen oder Push-Benachrichtigungen.',
+        faq_q4: 'Kann ich die URL nach der Erstellung ändern?',
+        faq_a4: 'Ja, in kostenpflichtigen Plänen kannst du die Ziel-URL jedes QR-Codes über dein Dashboard ändern, ohne den Code neu zu drucken.',
+        faq_q5: 'Wie funktionieren Push-Benachrichtigungen?',
+        faq_a5: 'Wenn Kunden deinen QR-Code scannen und deine KI-Landingpage besuchen, können sie Push-Benachrichtigungen abonnieren. Du kannst ihnen Angebote und Updates direkt aus deinem Dashboard senden.',
+        faq_q6: 'Kann ich jederzeit kündigen?',
+        faq_a6: 'Ja, du kannst dein Abo jederzeit kündigen. Deine QR-Codes funktionieren weiterhin bis zum Ende deines Abrechnungszeitraums.',
+        footer_features: 'Funktionen', footer_faq: 'FAQ', footer_login: 'Anmelden', footer_signup: 'Registrieren',
+        footer_copy: '© 2026 QRAivy. Entwickelt mit Node · Express · Prisma · PostgreSQL'
+      }
+    };
+    window.QH_I18N = QH_T;
+
+    var qhLangToggle = document.getElementById('langToggle');
+    var qhHeroDeviceImg = document.getElementById('qhHeroDeviceImg');
+
+    function qhApplyLang(lang) {
+      var t = QH_T[lang] || QH_T.en;
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) el.textContent = t[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+        var key = el.getAttribute('data-i18n-placeholder');
+        if (t[key] !== undefined) el.placeholder = t[key];
+      });
+      if (qhHeroDeviceImg) {
+        var src = qhHeroDeviceImg.getAttribute('data-src-' + lang);
+        if (src) qhHeroDeviceImg.src = src;
+      }
+      document.querySelectorAll('.qh-cap-preview img[data-src-en], .qh-s3-step-card img[data-src-en], .qh-s4-step-card img[data-src-en]').forEach(function (el) {
+        var s = el.getAttribute('data-src-' + lang);
+        if (s) el.src = s;
+      });
+      if (qhLangToggle) qhLangToggle.setAttribute('data-active', lang);
+      document.documentElement.setAttribute('lang', lang);
+      window.setQraivyLang(lang);
+      updateNavAuthText();
+    }
+
+    if (qhLangToggle) {
+      qhLangToggle.addEventListener('click', function () {
+        qhApplyLang(window.QRAIVY_LANGUAGE === 'de' ? 'en' : 'de');
+      });
+    }
+
+    qhApplyLang(window.QRAIVY_LANGUAGE || 'en');
+  </script>
+
   <script
     data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
