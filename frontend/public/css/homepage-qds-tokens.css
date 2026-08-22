@@ -1,0 +1,66 @@
+/* homepage-qds-tokens.css — Frozen QDS token snapshot
+   ─────────────────────────────────────────────────────────────
+   Baseline: frontend/public/homepage-approved-2026-08-22.html
+   Snapshot date: 2026-08-22
+   Values sourced from: frontend/public/qds/foundation/*.css
+
+   This file contains only the 34 --qds-* custom properties the
+   approved homepage actually references via var(--qds-*). Each
+   value below is a literal, already-resolved copy of the current
+   QDS foundation value at snapshot time -- it intentionally does
+   NOT @import qds.css and will NOT auto-update if QDS foundation
+   values change later. Re-sync manually if the approved homepage
+   is ever re-approved against a newer QDS baseline.
+   ─────────────────────────────────────────────────────────────
+*/
+
+:root {
+  --qds-color-border-subtle: rgba(255, 255, 255, 0.07);
+  --qds-color-brand-primary: #ff5a1f;
+  --qds-color-text-muted: #9ab0c8;
+  --qds-color-text-primary: #f0f4f8;
+  --qds-color-text-secondary: #a8b4c0;
+
+  --qds-control-height-sm: 32px;
+
+  --qds-duration-fast: 100ms;
+  --qds-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --qds-font-family-primary: 'Inter', sans-serif;
+  --qds-font-weight-bold: 700;
+
+  --qds-radius-lg: 12px;
+  --qds-radius-md: 8px;
+  --qds-radius-xl: 16px;
+
+  --qds-space-1: 4px;
+  --qds-space-2: 8px;
+  --qds-space-3: 12px;
+  --qds-space-4: 16px;
+  --qds-space-5: 20px;
+  --qds-space-6: 24px;
+  --qds-space-8: 32px;
+  --qds-space-10: 40px;
+  --qds-space-12: 48px;
+  --qds-space-16: 64px;
+  --qds-space-20: 80px;
+
+  --qds-text-body-sm-family: 'Inter', sans-serif;
+  --qds-text-body-sm-line-height: 1.5;
+  --qds-text-body-sm-size: 0.875rem;
+
+  --qds-text-caption-family: 'Inter', sans-serif;
+  --qds-text-caption-line-height: 1.4;
+  --qds-text-caption-size: 0.75rem;
+
+  --qds-text-display-letter-spacing: -0.02em;
+  --qds-text-display-line-height: 1.1;
+  --qds-text-display-size: 2.5rem;
+  --qds-text-display-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --qds-duration-fast: 0ms;
+  }
+}
