@@ -1,0 +1,13 @@
+User-agent: *
+
+# Dynamic/record-specific pages with unbounded query-param space
+# (crawl-budget protection; not used as a de-indexing mechanism —
+# static pages we want removed from search get page-level noindex instead)
+Disallow: /visit.html
+Disallow: /push-open.html
+Disallow: /qr-panel.html
+Disallow: /qr-free-dashboard.html
+Disallow: /smart-preview.html
+Disallow: /smart-qr-detail.html
+
+Sitemap: https://www.qraivy.com/sitemap.xml
