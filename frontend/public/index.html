@@ -627,7 +627,10 @@
     .qh-s4-panel-form { display: flex; flex-direction: column; gap: var(--qds-space-3); }
     .qh-s4-panel-note { font-family: var(--font-body); font-size: 0.75rem; color: var(--text-dim); text-align: center; }
 
-    @media (max-width: 767px) { .qh-s4-container { padding: 0 20px; } }
+    @media (max-width: 767px) {
+      .qh-s4-container { padding: 0 20px; }
+      .qh-s4-cta-btn { width: 100%; height: auto; min-height: 48px; white-space: normal; padding: var(--qds-space-3) var(--qds-space-6); }
+    }
     @media (min-width: 900px) {
       .qh-s4-panel { flex-direction: row; align-items: center; justify-content: space-between; }
       .qh-s4-panel-right { flex-direction: row; align-items: center; gap: var(--qds-space-4); flex-shrink: 0; }
@@ -664,6 +667,39 @@
       .qh-s4-loop-icon svg { width: 15px; height: 15px; }
     }
 
+    /* ── LIVE DEMO — isolated preview experiment. Self-contained,
+       not part of .qh-s4, safe to remove as a single block/section.
+       QR + "Open Live Demo" both point to the same fixed URL:
+       https://www.qraivy.com/lp/auchevaldiner-sp2 ── */
+    .qh-demo { padding: var(--qds-space-10) 0 var(--qds-space-12); }
+    .qh-demo-inner { max-width: 640px; margin: 0 auto; padding: 0 48px; }
+    .qh-demo-card {
+      box-sizing: border-box; display: flex; align-items: center; gap: var(--qds-space-6);
+      background: var(--bg2); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--qds-radius-xl); padding: var(--qds-space-6);
+    }
+    .qh-demo-qr-wrap {
+      flex-shrink: 0; box-sizing: border-box; width: 120px; height: 120px;
+      background: #fff; border-radius: var(--qds-radius-md);
+      padding: 10px; display: flex; align-items: center; justify-content: center;
+    }
+    .qh-demo-qr { width: 100%; height: 100%; display: block; object-fit: contain; }
+    .qh-demo-title { font-family: 'Inter', var(--font-body); font-weight: 800; font-size: 1rem; color: var(--text); margin-bottom: 4px; }
+    .qh-demo-sub { font-family: var(--font-body); font-size: 0.82rem; color: var(--text-mid); margin-bottom: var(--qds-space-3); }
+    .qh-demo-cta {
+      display: inline-block; font-family: var(--font-display); font-size: 0.78rem; font-weight: 700;
+      color: var(--accent); text-decoration: none;
+    }
+    .qh-demo-cta:hover { color: #ff7a45; text-decoration: underline; text-underline-offset: 3px; }
+    @media (max-width: 767px) {
+      .qh-demo-inner { padding: 0 20px; }
+      .qh-demo-card { flex-direction: column; align-items: flex-start; gap: var(--qds-space-3); }
+      .qh-demo-qr-wrap { display: none; }
+      .qh-demo-cta {
+        padding: 8px 16px; border: 1px solid rgba(255,90,31,0.4); border-radius: var(--qds-radius-md);
+      }
+      .qh-demo-cta:hover { text-decoration: none; background: rgba(255,90,31,0.08); }
+    }
 
     /* ── FOOTER ── */
     footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
@@ -1132,6 +1168,24 @@
     </div>
   </section>
 
+  <!-- LIVE DEMO — isolated preview experiment, sits between the retention
+       loop and the footer. Not part of .qh-s4; safe to remove as a single
+       block. QR destination: https://www.qraivy.com/lp/auchevaldiner-sp2 -->
+  <section class="qh-demo">
+    <div class="qh-demo-inner">
+      <div class="qh-demo-card">
+        <div class="qh-demo-qr-wrap">
+          <img class="qh-demo-qr" src="images/demo/qr-live-demo.png" alt="QR code linking to a live QRAIVY Smart Landing Page demo" width="250" height="250" loading="lazy" />
+        </div>
+        <div class="qh-demo-text">
+          <div class="qh-demo-title" data-i18n="demo_scan_title">Scan to try QRAIVY</div>
+          <div class="qh-demo-sub" data-i18n="demo_scan_sub">See the customer experience on your phone.</div>
+          <a class="qh-demo-cta" href="https://www.qraivy.com/lp/auchevaldiner-sp2" target="_blank" rel="noopener" data-i18n="demo_open_cta">Open Live Demo →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- FOOTER -->
   <footer>
     <a href="index.html" class="footer-logo">QR<span>Aivy</span></a>
@@ -1254,6 +1308,7 @@
         s4_panel_headline: 'Ready to build your customer engagement platform?',
         s4_panel_sub: 'Enter your website and QRAIVY will handle the rest.',
         s4_panel_note: 'No credit card required.',
+        demo_scan_title: 'Scan to try QRAIVY', demo_scan_sub: 'See the customer experience on your phone.', demo_open_cta: 'Open Live Demo →',
         footer_features: 'Features', footer_faq: 'FAQ', footer_login: 'Login', footer_signup: 'Sign Up',
         footer_copy: '© 2026 QRAivy. Built with Node · Express · Prisma · PostgreSQL'
       },
@@ -1332,6 +1387,7 @@
         s4_panel_headline: 'Bereit, deine Kundenbindungsplattform zu erstellen?',
         s4_panel_sub: 'Gib deine Website ein und QRAIVY übernimmt den Rest.',
         s4_panel_note: 'Keine Kreditkarte erforderlich.',
+        demo_scan_title: 'QRAIVY ausprobieren', demo_scan_sub: 'Erlebe die Kundenerfahrung direkt auf deinem Smartphone.', demo_open_cta: 'Live-Demo öffnen →',
         footer_features: 'Funktionen', footer_faq: 'FAQ', footer_login: 'Anmelden', footer_signup: 'Registrieren',
         footer_copy: '© 2026 QRAivy. Entwickelt mit Node · Express · Prisma · PostgreSQL'
       }
