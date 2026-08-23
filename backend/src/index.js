@@ -10,6 +10,7 @@ const userRoutes      = require('./routes/userRoutes');
 const apiKeyRoutes    = require('./routes/apiKeyRoutes');
 const stripeRoutes    = require('./routes/stripeRoutes');
 const adminRoutes     = require('./routes/adminRoutes');
+const managerRoutes   = require('./routes/managerRoutes');
 const opsRoutes       = require('./routes/opsRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
@@ -94,6 +95,7 @@ app.use('/user',     userRoutes);
 app.use('/api',      apiKeyRoutes);
 app.use('/stripe',   stripeRoutes);
 app.use('/admin',    adminRoutes);
+app.use('/manager',  managerRoutes);
 app.use('/ops',      opsRoutes);
 
 app.use('/', lpRoutes);
