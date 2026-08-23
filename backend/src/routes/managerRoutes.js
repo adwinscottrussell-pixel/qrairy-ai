@@ -31,6 +31,22 @@ const router = express.Router();
 const prisma = require('../utils/prismaClient');
 const { requireManagerScope } = require('../middleware/locationManagerAuth');
 
+// Local, deliberately not imported from networkAdminService.js -- that file
+// is the platform-admin-only write surface (see its own header comment);
+// /manager/* stays fully independent of it. Resolves Clerk userIds to their
+// QRAIVY email via the local User table only (same source /admin/users and
+// networkAdminService's own resolveUsers use) -- never calls Clerk's API,
+// never fabricates a value. A userId with no matching User row, or a User
+// row with no email yet, simply has ownerEmail: null -- callers already
+// fall back to the raw id for display, exactly like every existing Owner
+// dropdown/table in admin.html does.
+async function resolveOwnerEmails(userIds) {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return new Map();
+  const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, email: true } });
+  return new Map(users.map((u) => [u.id, u.email || null]));
+}
+
 async function handleGetManagerBusinesses(req, res) {
   try {
     const scope = req.managerScope;
@@ -61,6 +77,8 @@ async function handleGetManagerBusinesses(req, res) {
       },
     });
 
+    const ownerEmails = await resolveOwnerEmails(businessLocations.map((bl) => bl.business.primaryOwnerUserId));
+
     const businessMap = new Map();
     for (const bl of businessLocations) {
       const existing = businessMap.get(bl.businessId);
@@ -72,6 +90,7 @@ async function handleGetManagerBusinesses(req, res) {
           name: bl.business.name,
           status: bl.business.status,
           primaryOwnerUserId: bl.business.primaryOwnerUserId,
+          ownerEmail: ownerEmails.get(bl.business.primaryOwnerUserId) || null,
           locations: [bl.location],
         });
       }
@@ -83,6 +102,72 @@ async function handleGetManagerBusinesses(req, res) {
     });
   } catch (err) {
     console.error('[manager/businesses]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+// Phase 3A — single-Business read, scoped exactly like the list above. The
+// business id itself is caller-supplied (it's a path param, has to be) but
+// it is NEVER trusted directly: existence is checked via its real
+// BusinessLocation rows, and the request is rejected with 403 unless at
+// least one of those rows' locationId is inside req.managerScope.locationIds.
+// The `locations` field returned is filtered down to ONLY the manager's
+// in-scope Locations -- if this Business also participates in an
+// out-of-scope Location (a multi-outlet brand spanning Ulm and Stuttgart,
+// say), that other Location's name/id/status is never present in the
+// response, mirroring the exact same invariant handleGetManagerBusinesses
+// already documents and tests for the list endpoint.
+async function handleGetManagerBusiness(req, res) {
+  try {
+    const scope = req.managerScope;
+    const { id } = req.params;
+
+    const businessLocations = await prisma.businessLocation.findMany({
+      where: { businessId: id },
+      include: {
+        business: true,
+        location: { select: { id: true, name: true, slug: true, network: { select: { id: true, name: true } } } },
+      },
+    });
+
+    if (businessLocations.length === 0) {
+      return res.status(404).json({ error: 'Business not found.' });
+    }
+
+    const business = businessLocations[0].business;
+    if (business.status === 'archived') {
+      // Excluded from the manager's normal operational view, consistent
+      // with handleGetManagerBusinesses -- treated as not-found, not as a
+      // 403, since this has nothing to do with city scope.
+      return res.status(404).json({ error: 'Business not found.' });
+    }
+
+    const inScope = businessLocations.filter((bl) => scope.locationIds.includes(bl.locationId));
+    if (inScope.length === 0) {
+      return res.status(403).json({ error: 'Forbidden. Business outside manager scope.' });
+    }
+
+    const ownerEmails = await resolveOwnerEmails([business.primaryOwnerUserId]);
+
+    return res.json({
+      business: {
+        id: business.id,
+        name: business.name,
+        status: business.status,
+        primaryOwnerUserId: business.primaryOwnerUserId,
+        ownerEmail: ownerEmails.get(business.primaryOwnerUserId) || null,
+        locations: inScope.map((bl) => ({
+          id: bl.location.id,
+          name: bl.location.name,
+          slug: bl.location.slug,
+          network: bl.location.network,
+          status: bl.status,
+        })),
+      },
+      scope: { locationIds: scope.locationIds },
+    });
+  } catch (err) {
+    console.error('[manager/businesses/:id]', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
@@ -123,8 +208,10 @@ async function handleGetManagerContext(req, res) {
 }
 
 router.get('/businesses', requireManagerScope, handleGetManagerBusinesses);
+router.get('/businesses/:id', requireManagerScope, handleGetManagerBusiness);
 router.get('/context', requireManagerScope, handleGetManagerContext);
 
 module.exports = router;
 module.exports.handleGetManagerBusinesses = handleGetManagerBusinesses; // exported for direct unit testing only
+module.exports.handleGetManagerBusiness = handleGetManagerBusiness; // exported for direct unit testing only
 module.exports.handleGetManagerContext = handleGetManagerContext; // exported for direct unit testing only

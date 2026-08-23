@@ -33,25 +33,30 @@ let locationRows = [
 ];
 let businessLocationRows = [
   {
-    businessId: 'biz_staib', locationId: ULM,
+    businessId: 'biz_staib', locationId: ULM, status: 'active',
     business: { id: 'biz_staib', name: 'Baeckerei Staib', status: 'active', primaryOwnerUserId: 'owner1' },
-    location: { id: ULM, name: 'Ulm', slug: 'ulm' },
+    location: { id: ULM, name: 'Ulm', slug: 'ulm', network: { id: NET1, name: 'Stadt Pocket' } },
   },
   {
-    businessId: 'biz_leadconnector', locationId: ULM,
+    businessId: 'biz_leadconnector', locationId: ULM, status: 'active',
     business: { id: 'biz_leadconnector', name: 'lead connector', status: 'active', primaryOwnerUserId: 'owner1' },
-    location: { id: ULM, name: 'Ulm', slug: 'ulm' },
+    location: { id: ULM, name: 'Ulm', slug: 'ulm', network: { id: NET1, name: 'Stadt Pocket' } },
   },
   {
-    businessId: 'biz_archived_ulm', locationId: ULM,
+    businessId: 'biz_archived_ulm', locationId: ULM, status: 'active',
     business: { id: 'biz_archived_ulm', name: 'Old Ulm Biz', status: 'archived', primaryOwnerUserId: 'owner1' },
-    location: { id: ULM, name: 'Ulm', slug: 'ulm' },
+    location: { id: ULM, name: 'Ulm', slug: 'ulm', network: { id: NET1, name: 'Stadt Pocket' } },
   },
   {
-    businessId: 'biz_stuttgart', locationId: STUTTGART,
+    businessId: 'biz_stuttgart', locationId: STUTTGART, status: 'active',
     business: { id: 'biz_stuttgart', name: 'Stuttgart Biz', status: 'active', primaryOwnerUserId: 'owner2' },
-    location: { id: STUTTGART, name: 'Stuttgart', slug: 'stuttgart' },
+    location: { id: STUTTGART, name: 'Stuttgart', slug: 'stuttgart', network: { id: NET1, name: 'Stadt Pocket' } },
   },
+];
+
+let userRows = [
+  { id: 'owner1', email: 'owner1@example.com' },
+  { id: 'owner2', email: null }, // deliberately no email -- ownerEmail must resolve to null, never fabricated
 ];
 
 const mockPrisma = {
@@ -74,11 +79,31 @@ const mockPrisma = {
     },
   },
   businessLocation: {
+    // Mirrors the two real shapes used in the non-test code:
+    //   handleGetManagerBusinesses:  { locationId: { in: [...] }, business: { status: { not: 'archived' } } }
+    //   handleGetManagerBusiness:    { businessId: id }  -- no archived filter; the
+    //     handler itself decides what an archived Business means for a
+    //     single-record read, so the mock must NOT pre-filter it away.
     findMany: async ({ where }) => {
-      const ids = where.locationId.in;
-      return businessLocationRows.filter(
-        (bl) => ids.includes(bl.locationId) && bl.business.status !== 'archived'
-      );
+      let rows = businessLocationRows;
+      if (where.locationId) {
+        const ids = where.locationId.in;
+        rows = rows.filter((bl) => ids.includes(bl.locationId));
+      }
+      if (where.businessId) {
+        rows = rows.filter((bl) => bl.businessId === where.businessId);
+      }
+      if (where.business && where.business.status && where.business.status.not) {
+        const excluded = where.business.status.not;
+        rows = rows.filter((bl) => bl.business.status !== excluded);
+      }
+      return rows;
+    },
+  },
+  user: {
+    findMany: async ({ where }) => {
+      const ids = where.id.in;
+      return userRows.filter((u) => ids.includes(u.id));
     },
   },
 };
@@ -111,13 +136,14 @@ require.cache[clerkBackendPath] = {
 
 const { requireManagerScope } = require('../src/middleware/locationManagerAuth');
 const managerRoutes = require('../src/routes/managerRoutes');
-const { handleGetManagerBusinesses, handleGetManagerContext } = managerRoutes;
+const { handleGetManagerBusinesses, handleGetManagerBusiness, handleGetManagerContext } = managerRoutes;
 
 // ── Test helpers ──────────────────────────────────────────────
-function fakeReq({ auth = true, query = {} } = {}) {
+function fakeReq({ auth = true, query = {}, params = {} } = {}) {
   return {
     headers: auth ? { authorization: 'Bearer test-token' } : {},
     query,
+    params,
     method: 'GET',
     originalUrl: '/manager/businesses',
     connection: { remoteAddress: '127.0.0.1' },
@@ -148,6 +174,15 @@ async function callManagerContext(req) {
   await requireManagerScope(req, res, () => { nextCalled = true; });
   if (!nextCalled) return res; // middleware short-circuited (401/403/500)
   await handleGetManagerContext(req, res);
+  return res;
+}
+
+async function callManagerBusiness(req) {
+  const res = fakeRes();
+  let nextCalled = false;
+  await requireManagerScope(req, res, () => { nextCalled = true; });
+  if (!nextCalled) return res; // middleware short-circuited (401/403/500)
+  await handleGetManagerBusiness(req, res);
   return res;
 }
 
@@ -380,6 +415,109 @@ test('context: revocation removes the city from context on the very next request
   networkMemberRows = [];
   res = await callManagerContext(fakeReq());
   assert.equal(res.statusCode, 403);
+});
+
+// ── GET /manager/businesses/:id — Phase 3A single-Business read ──
+
+test('business detail: no JWT -> 401', async () => {
+  resetScopeFixtures();
+  const res = await callManagerBusiness(fakeReq({ auth: false, params: { id: 'biz_staib' } }));
+  assert.equal(res.statusCode, 401);
+});
+
+test('business detail: Ulm manager can view a Business assigned to Ulm, with ownerEmail resolved', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_bd';
+  networkMemberRows = [{ id: 'm30', userId: 'user_ulm_bd', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_staib' } }));
+  assert.equal(res.statusCode, undefined); // default 200
+  assert.equal(res.body.business.id, 'biz_staib');
+  assert.equal(res.body.business.ownerEmail, 'owner1@example.com');
+  assert.deepEqual(res.body.business.locations.map((l) => l.id), [ULM]);
+});
+
+test('business detail: Business with no matching User row / no email -> ownerEmail null, never fabricated', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_stuttgart_bd';
+  networkMemberRows = [{ id: 'm31', userId: 'user_stuttgart_bd', networkId: NET1, locationId: STUTTGART, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_stuttgart' } }));
+  assert.equal(res.body.business.ownerEmail, null); // owner2 fixture has email: null
+});
+
+test('business detail: Ulm-only manager requesting a Stuttgart-only Business -> 403, never leaks data', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_bd2';
+  networkMemberRows = [{ id: 'm32', userId: 'user_ulm_bd2', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_stuttgart' } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.business, undefined);
+});
+
+test('business detail: manually editing the id in the URL to another city\'s Business cannot escape scope', async () => {
+  // Same as the previous test in effect, phrased as the literal attack this
+  // guards against: a manager who knows (or guesses) another city's real
+  // Business id and simply changes it in the address bar / a raw fetch().
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_bd3';
+  networkMemberRows = [{ id: 'm33', userId: 'user_ulm_bd3', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  for (const foreignId of ['biz_stuttgart']) {
+    const res = await callManagerBusiness(fakeReq({ params: { id: foreignId } }));
+    assert.equal(res.statusCode, 403, `expected 403 for foreign business id ${foreignId}`);
+  }
+});
+
+test('business detail: nonexistent Business id -> 404', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_bd4';
+  networkMemberRows = [{ id: 'm34', userId: 'user_ulm_bd4', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_does_not_exist' } }));
+  assert.equal(res.statusCode, 404);
+});
+
+test('business detail: archived Business -> 404 (excluded from normal view, not a scope violation)', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_bd5';
+  networkMemberRows = [{ id: 'm35', userId: 'user_ulm_bd5', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_archived_ulm' } }));
+  assert.equal(res.statusCode, 404);
+});
+
+test('business detail: a multi-outlet Business spanning Ulm + Stuttgart never exposes Stuttgart to an Ulm-only manager', async () => {
+  resetScopeFixtures();
+  const originalRows = businessLocationRows;
+  businessLocationRows = [
+    ...originalRows,
+    {
+      businessId: 'biz_staib', locationId: STUTTGART, status: 'active',
+      business: { id: 'biz_staib', name: 'Baeckerei Staib', status: 'active', primaryOwnerUserId: 'owner1' },
+      location: { id: STUTTGART, name: 'Stuttgart', slug: 'stuttgart', network: { id: NET1, name: 'Stadt Pocket' } },
+    },
+  ];
+  currentUserId = 'user_ulm_bd6';
+  networkMemberRows = [{ id: 'm36', userId: 'user_ulm_bd6', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_staib' } }));
+  assert.equal(res.statusCode, undefined);
+  assert.deepEqual(res.body.business.locations.map((l) => l.id), [ULM]);
+  assert.ok(!res.body.business.locations.some((l) => l.id === STUTTGART));
+  businessLocationRows = originalRows;
+});
+
+test('business detail: network_admin can view a Business in any Location within their Network', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_netadmin_bd';
+  networkMemberRows = [{ id: 'm37', userId: 'user_netadmin_bd', networkId: NET1, locationId: null, role: 'network_admin' }];
+  const res = await callManagerBusiness(fakeReq({ params: { id: 'biz_stuttgart' } }));
+  assert.equal(res.statusCode, undefined);
+  assert.equal(res.body.business.id, 'biz_stuttgart');
+});
+
+test('business list: each Business includes ownerEmail resolved from the User table (or null, never fabricated)', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_list_email';
+  networkMemberRows = [{ id: 'm38', userId: 'user_ulm_list_email', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerBusinesses(fakeReq());
+  const staib = res.body.businesses.find((b) => b.id === 'biz_staib');
+  assert.equal(staib.ownerEmail, 'owner1@example.com');
 });
 
 // ── network_admin (locationId=null) resolves to all Locations in that Network ──

@@ -1109,23 +1109,28 @@
 
     <!-- STADT POCKET: BUSINESS DETAIL -->
     <div class="page" id="page-sp-business-detail">
-      <button class="sp-back-link" onclick="showPage('sp-businesses')">← <span data-i18n="nav_businesses">Businesses</span></button>
+      <button class="sp-back-link" onclick="backFromBusinessDetail()">← <span data-i18n="nav_businesses">Businesses</span></button>
       <div class="page-header">
         <div>
           <div class="page-title" id="sp-bd-title">—</div>
           <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-bd-sub"></div>
         </div>
-        <button class="refresh-btn" onclick="openAssignBusinessModal(currentBusinessDetailId, null)">+ <span data-i18n="sp_assign_business">Assign to Location</span></button>
+        <button class="refresh-btn sp-bd-owner-only" onclick="openAssignBusinessModal(currentBusinessDetailId, null)">+ <span data-i18n="sp_assign_business">Assign to Location</span></button>
       </div>
       <div class="table-wrap">
         <div class="table-header"><div class="table-title" data-i18n="sp_col_memberships">Network / Location Memberships</div></div>
         <div id="sp-bd-memberships" style="padding:14px 20px"></div>
       </div>
-      <div class="table-wrap">
+      <!-- Owner-only: Landing Pages / unmapped-page attach mutations are
+           account-management surface unrelated to city operations -- never
+           shown to a City Manager (loadBusinessDetailManagerData never
+           populates these, and enterManagerMode-style hiding keeps the
+           section out of the DOM's visible flow for a manager session). -->
+      <div class="table-wrap sp-bd-owner-only">
         <div class="table-header"><div class="table-title" data-i18n="sp_col_pages">Landing Pages</div></div>
         <div id="sp-bd-pages" style="padding:14px 20px"></div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap sp-bd-owner-only">
         <div class="table-header"><div class="table-title" data-i18n="sp_unmapped_pages">Unmapped Landing Pages (same owner)</div></div>
         <div style="padding:10px 20px 0;font-size:0.68rem;color:var(--text-dim)" data-i18n="sp_unmapped_pages_helper">Pages that have never been attached to any Business. Pages already on a Legacy Account Business must be moved from that Business's own detail page instead.</div>
         <div id="sp-bd-unmapped-pages" style="padding:14px 20px"></div>
@@ -2481,9 +2486,9 @@
       document.getElementById('sp-cd-businesses-body').innerHTML = businesses.length ? businesses.map(b => `
         <tr>
           <td class="td-name">${escapeHtml(b.name)}</td>
-          <td class="td-email">${escapeHtml(b.primaryOwnerUserId)}</td>
+          <td class="td-email">${escapeHtml(b.ownerEmail || b.primaryOwnerUserId)}</td>
           <td>${spStatusBadge(b.status)}</td>
-          <td></td>
+          <td><button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button></td>
         </tr>
       `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
 
@@ -2977,9 +2982,29 @@
     }
 
     // ── BUSINESS DETAIL ───────────────────────────────────────
+    // Shared page, dispatched by mode exactly like City Detail (Phase 2).
+    // Owner: unchanged, full /admin/businesses/:id read + mutations.
+    // Manager: GET /manager/businesses/:id only -- never /admin/*.
+    function backFromBusinessDetail() {
+      if (window.QRAIVY_ADMIN_MODE === 'manager') {
+        loadCityDetail(currentCityDetailId);
+      } else {
+        showPage('sp-businesses');
+      }
+    }
+
     async function loadBusinessDetail(id) {
       currentBusinessDetailId = id;
-      showSubPage('sp-business-detail', 'sp-businesses');
+      if (window.QRAIVY_ADMIN_MODE === 'manager') {
+        showSubPage('sp-business-detail', null);
+        await loadBusinessDetailManagerData(id);
+      } else {
+        showSubPage('sp-business-detail', 'sp-businesses');
+        await loadBusinessDetailOwnerData(id);
+      }
+    }
+
+    async function loadBusinessDetailOwnerData(id) {
       const result = await safeFetchAdmin(`/admin/businesses/${id}`);
       if (!result.ok) {
         document.getElementById('sp-bd-title').textContent = adminErrorMessage(result);
@@ -3020,6 +3045,40 @@
       } else {
         await loadUnmappedLandingPagesFor(b);
       }
+    }
+
+    // Manager path -- Phase 3A. GET /manager/businesses/:id only. Hides the
+    // Landing Pages / Assign-to-Location sections entirely (Owner-only
+    // account-management surface, not city operations) rather than leaving
+    // them empty or pointed at an endpoint the manager's token can't call.
+    // The `locations` field the backend returns is already filtered to only
+    // this manager's in-scope Locations -- rendered as-is, never re-filtered
+    // or trusted beyond what the server sent.
+    async function loadBusinessDetailManagerData(id) {
+      document.querySelectorAll('#page-sp-business-detail .sp-bd-owner-only').forEach(el => { el.style.display = 'none'; });
+
+      const result = await safeFetchAdmin(`/manager/businesses/${id}`);
+      if (!result.ok) {
+        document.getElementById('sp-bd-title').textContent =
+          result.kind === '403' ? 'You do not have access to this business.' : adminErrorMessage(result);
+        document.getElementById('sp-bd-sub').textContent = '';
+        document.getElementById('sp-bd-memberships').innerHTML = '';
+        return;
+      }
+      const b = result.data.business;
+      currentBusinessDetailData = b;
+
+      document.getElementById('sp-bd-title').innerHTML = `${escapeHtml(b.name)} ${spStatusBadge(b.status)}`;
+      document.getElementById('sp-bd-sub').textContent = `Owner: ${b.ownerEmail || b.primaryOwnerUserId}`;
+
+      document.getElementById('sp-bd-memberships').innerHTML = b.locations.length
+        ? b.locations.map(loc => `
+          <div class="health-row">
+            <div class="health-name">${escapeHtml(loc.network?.name || '')} → ${escapeHtml(loc.name)}</div>
+            <div class="health-status">${spStatusBadge(loc.status)}</div>
+          </div>
+        `).join('')
+        : '<div style="font-size:0.78rem;color:var(--text-dim)">Not assigned to your city.</div>';
     }
 
     // Lists this Business's owner's LandingPages that have no Business yet,
