@@ -13,6 +13,21 @@
 <link rel="stylesheet" href="onboarding.css"/>
 
 <style>
+/* StadtPocket City Manager workspace entry -- discoverability only, not
+   authorization. Hidden by default (fail closed); revealed only after
+   GET /manager/context (server-side scoped) confirms >=1 managed city. */
+.sp-manager-pill {
+  display: none; align-items: center; gap: 10px;
+  padding: 12px 14px; margin-bottom: 20px;
+  background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.25);
+  border-radius: 8px; text-decoration: none; color: #f0f4f8;
+  font-family: var(--font-body, 'Inter', sans-serif); font-size: .8rem;
+  transition: background .15s;
+}
+.sp-manager-pill.show { display: flex; }
+.sp-manager-pill:hover { background: rgba(124,58,237,0.14); }
+.sp-manager-pill .sp-manager-icon { font-size: 1.15rem; line-height: 1; }
+.sp-manager-pill strong { font-weight: 700; }
 #claim-banner {
   position: relative; z-index: 50;
   display: none;
@@ -257,6 +272,10 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
         <span class="psb-plan" id="plan-badge">—</span>
         <span class="psb-status" id="psb-status">ACTIVE</span>
       </div>
+      <a href="admin.html" id="sp-manager-link" class="sp-manager-pill">
+        <span class="sp-manager-icon">&#x1F3D9;&#xFE0F;</span>
+        <span><strong>StadtPocket</strong> &middot; <span id="sp-manager-sub">Manage Cities &#x2192;</span></span>
+      </a>
       <div class="dash-header">
         <div>
           <h1 class="dash-title"><span data-i18n="dash_title">Smart QR</span> <em data-i18n="dash_title_em">Dashboard</em></h1>
@@ -493,6 +512,36 @@ function launchOnboarding(){
   if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId||'user');
 }
 
+// StadtPocket City Manager workspace entry -- discoverability only.
+// GET /manager/context is the same server-side-scoped read admin.html's
+// own guard uses; this call grants nothing by itself -- it only decides
+// whether to show a link. Fails closed: any non-200 response, a network
+// error, or an empty locations list all result in the link staying hidden
+// and the rest of the dashboard rendering exactly as it does today. The
+// link itself points to admin.html, which independently re-verifies
+// manager scope via admin-guard.js -- clicking it grants nothing that
+// wasn't already true server-side.
+async function checkStadtPocketManagerAccess(){
+  try {
+    var token = await window.Clerk.session.getToken();
+    var res = await fetch(API_BASE+'/manager/context', { headers: { Authorization: 'Bearer '+token } });
+    if (!res.ok) return; // 401/403/500 -> fail closed, no link
+    var data = await res.json();
+    var cities = (data && data.locations) || [];
+    if (!cities.length) return; // empty manager context -> fail closed, no link
+
+    var link = document.getElementById('sp-manager-link');
+    var sub = document.getElementById('sp-manager-sub');
+    if (!link || !sub) return;
+    sub.textContent = cities.length === 1
+      ? 'Manage ' + cities[0].name + ' →'
+      : 'Manage Cities →';
+    link.classList.add('show');
+  } catch (err) {
+    // Network failure or any unexpected error -> fail closed, no link.
+  }
+}
+
 async function initDashboard(){
   await window.Clerk.load();
   await new Promise(function(r){setTimeout(r,400);});
@@ -503,6 +552,7 @@ async function initDashboard(){
   var nameEl=document.getElementById('sb-username');
   if(avatarEl)avatarEl.textContent=name[0].toUpperCase();
   if(nameEl)nameEl.textContent=name;
+  checkStadtPocketManagerAccess(); // fire-and-forget -- never blocks dashboard init
   document.getElementById('sb-signout').addEventListener('click',async function(e){
     e.preventDefault();await window.Clerk.signOut();window.location.href='login.html';
   });
