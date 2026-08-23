@@ -486,6 +486,9 @@
       </button>
 
       <div class="sb-section">Stadt Pocket</div>
+      <button class="sb-item" onclick="showPage('sp-cities')">
+        <span class="sb-icon">🏙️</span> <span data-i18n="nav_cities">Cities</span>
+      </button>
       <button class="sb-item" onclick="showPage('sp-networks')">
         <span class="sb-icon">🌐</span> <span data-i18n="nav_networks">Networks</span>
       </button>
@@ -769,6 +772,120 @@
             <tr><td colspan="4" class="loading">No error logs available yet.</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: CITIES -->
+    <div class="page" id="page-sp-cities">
+      <div class="page-header">
+        <div>
+          <div class="page-title" data-i18n="nav_cities">Cities</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" data-i18n="sp_cities_sub">Locations operating as Stadt Pocket cities.</div>
+        </div>
+        <button class="refresh-btn" onclick="loadCitiesPage()">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="sp-cities-stats"></div>
+      <div class="sp-filters">
+        <select id="sp-city-filter-network" onchange="loadCitiesPage()"><option value="">All Networks</option></select>
+        <select id="sp-city-filter-status" onchange="loadCitiesPage()">
+          <option value="">All Statuses</option>
+          <option value="active" data-i18n="sp_status_active">Active</option>
+          <option value="paused" data-i18n="sp_status_paused">Paused</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title" data-i18n="nav_cities">Cities</div>
+          <span class="table-count" id="sp-cities-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sp_col_city">City</th>
+              <th data-i18n="sp_col_slug">Slug</th>
+              <th data-i18n="sp_col_network">Network</th>
+              <th data-i18n="nav_businesses">Businesses</th>
+              <th data-i18n="nav_managers">Manager(s)</th>
+              <th data-i18n="sp_col_status">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sp-cities-body"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADT POCKET: CITY DETAIL -->
+    <div class="page" id="page-sp-city-detail">
+      <button class="sp-back-link" onclick="showPage('sp-cities')">← <span data-i18n="nav_cities">Cities</span></button>
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="sp-cd-title">—</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-cd-sub"></div>
+        </div>
+        <button class="refresh-btn" onclick="loadCityDetail(currentCityDetailId)">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="sp-cd-stats"></div>
+      <div class="sp-tabs">
+        <button class="sp-tab active" onclick="showCityDetailTab('overview')" data-i18n="sp_tab_overview">Overview</button>
+        <button class="sp-tab" onclick="showCityDetailTab('businesses')" data-i18n="nav_businesses">Businesses</button>
+        <button class="sp-tab" onclick="showCityDetailTab('deals')">Deals</button>
+        <button class="sp-tab" onclick="showCityDetailTab('weekly-deals')">Weekly Deals</button>
+        <button class="sp-tab" onclick="showCityDetailTab('customers')">Customers</button>
+        <button class="sp-tab" onclick="showCityDetailTab('featured')">Featured</button>
+        <button class="sp-tab" onclick="showCityDetailTab('campaigns')">Campaigns</button>
+        <button class="sp-tab" onclick="showCityDetailTab('city-page')">City Page</button>
+        <button class="sp-tab" onclick="showCityDetailTab('analytics')">Analytics</button>
+        <button class="sp-tab" onclick="showCityDetailTab('settings')" data-i18n="sp_tab_settings">Settings</button>
+      </div>
+
+      <div class="sp-tab-panel active" id="sp-cd-panel-overview">
+        <div class="table-wrap">
+          <div class="table-header"><div class="table-title" data-i18n="sp_city_details">City Details</div></div>
+          <div id="sp-cd-overview-body" style="padding:16px 20px;font-size:0.8rem;color:var(--text-mid);line-height:1.8"></div>
+        </div>
+      </div>
+
+      <div class="sp-tab-panel" id="sp-cd-panel-businesses">
+        <table>
+          <thead><tr><th data-i18n="sp_col_business">Business</th><th data-i18n="sp_col_owner">Primary Owner</th><th data-i18n="sp_col_status">Status</th><th></th></tr></thead>
+          <tbody id="sp-cd-businesses-body"></tbody>
+        </table>
+      </div>
+
+      <div class="sp-tab-panel" id="sp-cd-panel-deals">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-weekly-deals">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-customers">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-featured">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-campaigns">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-city-page">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+      <div class="sp-tab-panel" id="sp-cd-panel-analytics">
+        <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
+      </div>
+
+      <div class="sp-tab-panel" id="sp-cd-panel-settings">
+        <div class="table-wrap">
+          <div class="table-header">
+            <div class="table-title" data-i18n="sp_city_managers">City Managers</div>
+            <button class="refresh-btn" onclick="openAssignManagerModal(currentCityNetworkId, currentCityDetailId)">+ <span data-i18n="sp_assign_manager">Assign Manager</span></button>
+          </div>
+          <table>
+            <thead><tr><th data-i18n="sp_col_manager">Manager</th><th data-i18n="sp_col_role">Role</th><th></th></tr></thead>
+            <tbody id="sp-cd-managers-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1319,6 +1436,7 @@
         'qr-analytics': loadQRAnalytics,
         health: loadHealth,
         logs: loadLogs,
+        'sp-cities': loadCitiesPage,
         'sp-networks': loadNetworksPage,
         'sp-locations': loadLocationsPage,
         'sp-businesses': loadBusinessesPage,
@@ -2126,6 +2244,10 @@
     // ── STADT POCKET: Networks / Locations / Businesses / Managers ────
     let spNetworksCache = [];
     let spLocationsCache = [];
+    let spCitiesCache = [];
+    let currentCityDetailId = null;
+    let currentCityNetworkId = null;
+    let currentCityDetailData = null;
     let currentNetworkDetailId = null;
     let currentNetworkDetailData = null;
     let currentLocationDetailId = null;
@@ -2168,7 +2290,7 @@
       spNetworksCache = result.ok ? (result.data.networks || []) : [];
       const netOptionsHtml = '<option value="">All Networks</option>' +
         optionsHtml(spNetworksCache, n => n.id, n => n.name);
-      ['sp-loc-filter-network', 'sp-biz-filter-network', 'sp-mgr-filter-network'].forEach(id => {
+      ['sp-city-filter-network', 'sp-loc-filter-network', 'sp-biz-filter-network', 'sp-mgr-filter-network'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { const v = el.value; el.innerHTML = netOptionsHtml; el.value = v; }
       });
@@ -2177,6 +2299,122 @@
         const el = document.getElementById(id);
         if (el) el.innerHTML = plainNetOptions;
       });
+    }
+
+    // ── CITIES ────────────────────────────────────────────────
+    // Cities are not a new model -- this is a filtered, relabeled view of
+    // the existing Location data (Location.type === 'city'), reusing
+    // /admin/locations exactly as the Locations page does. No new backend
+    // route. "Manager(s)" in the list is a count only (managersCount, from
+    // the same aggregate the Locations page already shows) -- resolving
+    // actual manager identities for every row in a list would require
+    // additional per-row queries; City Detail's Settings tab shows real
+    // manager identities via the existing single-location /admin/locations/:id
+    // read instead.
+    async function loadCitiesPage() {
+      await refreshNetworkOptionsEverywhere();
+      const networkId = document.getElementById('sp-city-filter-network').value;
+      const status = document.getElementById('sp-city-filter-status').value;
+      const params = new URLSearchParams();
+      params.set('type', 'city');
+      if (networkId) params.set('networkId', networkId);
+      if (status) params.set('status', status);
+
+      const result = await safeFetchAdmin(`/admin/locations?${params.toString()}`);
+      const tbody = document.getElementById('sp-cities-body');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('sp-cities-stats').innerHTML = '';
+        return;
+      }
+      spCitiesCache = result.data.locations || [];
+      document.getElementById('sp-cities-count').textContent = `${spCitiesCache.length} cities`;
+
+      const totalBusinesses = spCitiesCache.reduce((s, c) => s + (c.businessesCount || 0), 0);
+      const totalManagers = spCitiesCache.reduce((s, c) => s + (c.managersCount || 0), 0);
+      document.getElementById('sp-cities-stats').innerHTML = `
+        <div class="stat-card orange"><div class="stat-label" data-i18n="nav_cities">Cities</div><div class="stat-value">${spCitiesCache.length}</div></div>
+        <div class="stat-card purple"><div class="stat-label" data-i18n="nav_businesses">Businesses</div><div class="stat-value">${totalBusinesses}</div></div>
+        <div class="stat-card green"><div class="stat-label" data-i18n="nav_managers">Managers</div><div class="stat-value">${totalManagers}</div></div>
+      `;
+
+      tbody.innerHTML = spCitiesCache.length ? spCitiesCache.map(c => `
+        <tr>
+          <td class="td-name">${escapeHtml(c.name)}</td>
+          <td>${escapeHtml(c.slug)}</td>
+          <td>${escapeHtml(c.network?.name || c.networkId)}</td>
+          <td>${c.businessesCount}</td>
+          <td>${c.managersCount}</td>
+          <td>${spStatusBadge(c.status)}</td>
+          <td><button class="action-btn" onclick="loadCityDetail('${c.id}')" data-i18n="sp_manage_city">Manage City →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="7" class="sp-empty" data-i18n="sp_no_cities">No cities yet. Add a Location with type "city" to see it here.</td></tr>`;
+    }
+
+    // ── CITY DETAIL ───────────────────────────────────────────
+    // Reuses the existing GET /admin/locations/:id read (same one Location
+    // Detail uses) -- no new backend route. Overview/Businesses/Settings
+    // show real data; the remaining tabs (Deals, Weekly Deals, Customers,
+    // Featured, Campaigns, City Page, Analytics) are structural nav for
+    // future City Manager operating areas -- explicitly empty-stated, never
+    // populated with placeholder/fake numbers.
+    async function loadCityDetail(id) {
+      currentCityDetailId = id;
+      showSubPage('sp-city-detail', 'sp-cities');
+      // Reset to the Overview tab every time a City is opened, so a
+      // previously-selected tab from an earlier visit doesn't stay active.
+      document.querySelectorAll('#page-sp-city-detail .sp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('#page-sp-city-detail .sp-tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('#page-sp-city-detail .sp-tab').classList.add('active');
+      document.getElementById('sp-cd-panel-overview').classList.add('active');
+
+      const result = await safeFetchAdmin(`/admin/locations/${id}`);
+      if (!result.ok) {
+        document.getElementById('sp-cd-title').textContent = adminErrorMessage(result);
+        return;
+      }
+      const l = result.data.location;
+      currentCityDetailData = l;
+      currentCityNetworkId = l.networkId;
+
+      document.getElementById('sp-cd-title').innerHTML = `${escapeHtml(l.name)} ${spStatusBadge(l.status)}`;
+      document.getElementById('sp-cd-sub').textContent = `${escapeHtml(l.network?.name || l.networkId)} · ${l.slug}`;
+      document.getElementById('sp-cd-stats').innerHTML = `
+        <div class="stat-card purple"><div class="stat-label" data-i18n="nav_businesses">Businesses</div><div class="stat-value">${l.businessLocations.length}</div></div>
+        <div class="stat-card green"><div class="stat-label" data-i18n="nav_managers">Managers</div><div class="stat-value">${l.managers.length}</div></div>
+      `;
+
+      document.getElementById('sp-cd-overview-body').innerHTML = `
+        <div><strong data-i18n="sp_col_city">City</strong>: ${escapeHtml(l.name)}</div>
+        <div><strong data-i18n="sp_col_slug">Slug</strong>: ${escapeHtml(l.slug)}</div>
+        <div><strong data-i18n="sp_col_network">Network</strong>: ${escapeHtml(l.network?.name || l.networkId)}</div>
+        <div><strong data-i18n="sp_col_status">Status</strong>: ${spStatusBadge(l.status)}</div>
+        <div><strong data-i18n="sp_col_created">Created</strong>: ${fmtDate(l.createdAt)}</div>
+      `;
+
+      document.getElementById('sp-cd-businesses-body').innerHTML = l.businessLocations.length ? l.businessLocations.map(bl => `
+        <tr>
+          <td class="td-name">${escapeHtml(bl.business.name)}</td>
+          <td class="td-email">${escapeHtml(bl.business.primaryOwnerUserId)}</td>
+          <td>${spStatusBadge(bl.business.status)}</td>
+          <td><button class="action-btn" onclick="loadBusinessDetail('${bl.business.id}')">Open →</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+
+      document.getElementById('sp-cd-managers-body').innerHTML = l.managers.length ? l.managers.map(m => `
+        <tr>
+          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+          <td>${escapeHtml(m.role)}</td>
+          <td><button class="action-btn danger" onclick="removeManager('${m.id}', () => loadCityDetail('${id}'))">Remove</button></td>
+        </tr>
+      `).join('') : `<tr><td colspan="3" class="sp-empty">No managers assigned to this city yet.</td></tr>`;
+    }
+
+    function showCityDetailTab(tab) {
+      document.querySelectorAll('#page-sp-city-detail .sp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('#page-sp-city-detail .sp-tab-panel').forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById(`sp-cd-panel-${tab}`).classList.add('active');
     }
 
     // ── NETWORKS ──────────────────────────────────────────────
@@ -3046,7 +3284,13 @@
     const SP_I18N = {
       en: {
         nav_business_accounts: 'Business Accounts',
-        nav_networks: 'Networks', nav_locations: 'Locations', nav_businesses: 'Businesses', nav_managers: 'Managers',
+        nav_cities: 'Cities', nav_networks: 'Networks', nav_locations: 'Locations', nav_businesses: 'Businesses', nav_managers: 'Managers',
+        sp_cities_sub: 'Locations operating as Stadt Pocket cities.',
+        sp_col_city: 'City', sp_col_slug: 'Slug',
+        sp_manage_city: 'Manage City →', sp_no_cities: 'No cities yet. Add a Location with type "city" to see it here.',
+        sp_tab_overview: 'Overview', sp_tab_settings: 'Settings',
+        sp_city_details: 'City Details', sp_city_managers: 'City Managers',
+        sp_not_yet_available: 'Not yet available in this phase.',
         sp_networks_sub: 'Manage Stadt Pocket and other QRAIVY-operated networks.',
         sp_create_network: 'Create Network', sp_add_location: 'Add Location',
         sp_no_locations_network: 'No locations yet. Add the first location to this network.',
@@ -3079,7 +3323,13 @@
       },
       de: {
         nav_business_accounts: 'Geschäftskonten',
-        nav_networks: 'Netzwerke', nav_locations: 'Standorte', nav_businesses: 'Unternehmen', nav_managers: 'Manager',
+        nav_cities: 'Städte', nav_networks: 'Netzwerke', nav_locations: 'Standorte', nav_businesses: 'Unternehmen', nav_managers: 'Manager',
+        sp_cities_sub: 'Standorte, die als Stadt Pocket-Städte betrieben werden.',
+        sp_col_city: 'Stadt', sp_col_slug: 'Slug',
+        sp_manage_city: 'Stadt verwalten →', sp_no_cities: 'Noch keine Städte vorhanden. Füge einen Standort mit Typ „Stadt" hinzu, um ihn hier zu sehen.',
+        sp_tab_overview: 'Übersicht', sp_tab_settings: 'Einstellungen',
+        sp_city_details: 'Stadtdetails', sp_city_managers: 'Stadt-Manager',
+        sp_not_yet_available: 'In dieser Phase noch nicht verfügbar.',
         sp_networks_sub: 'Verwalte Stadt Pocket und andere von QRAIVY betriebene Netzwerke.',
         sp_create_network: 'Netzwerk erstellen', sp_add_location: 'Standort hinzufügen',
         sp_no_locations_network: 'Noch keine Standorte vorhanden. Füge den ersten Standort zu diesem Netzwerk hinzu.',
