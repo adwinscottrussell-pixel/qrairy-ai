@@ -4,6 +4,7 @@ const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
 const prisma = require('../utils/prismaClient');
 const { getCustomerCountsBySlug, getCustomerGrowthSeries, getCustomerSummary } = require('../services/customerQueryService');
+const { fetchPrimaryEmail } = require('../utils/clerkEmailSync');
 
 // ─── Tier definitions ────────────────────────────────────────────────────────
 const PLAN_LIMITS = { free: Infinity, starter: 10, pro: Infinity };
@@ -25,11 +26,27 @@ async function getUserFromToken(authHeader) {
   }
 }
 
+// Only ever fetches from Clerk when this User row doesn't already have an
+// email -- once populated, later calls for the same user never hit Clerk's
+// API again. An existing email is never overwritten, and a failed/empty
+// Clerk lookup never blocks the upsert (email stays null, exactly like
+// before this change) -- create/update of every other field is unchanged.
 async function upsertUser(userId) {
+  const existing = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (existing && existing.email) {
+    return prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+      include: { qrs: true },
+    });
+  }
+
+  const email = await fetchPrimaryEmail(userId);
   return prisma.user.upsert({
     where: { id: userId },
-    update: {},
-    create: { id: userId },
+    update: email ? { email } : {},
+    create: email ? { id: userId, email } : { id: userId },
     include: { qrs: true },
   });
 }
@@ -480,6 +497,7 @@ async function handleDeleteQR(req, res) {
 
 module.exports = {
   getUserFromToken,
+  upsertUser, // exported for direct unit testing only
   handleCreateQR,
   handleDeleteQR,
   handleUpdateDestination,
