@@ -87,7 +87,44 @@ async function handleGetManagerBusinesses(req, res) {
   }
 }
 
+// Returns the real Location (City) identity for exactly the Locations
+// req.managerScope already resolved -- no caller-supplied id, so there is
+// no manipulable input on this route at all. This is what the frontend's
+// City Operations Center uses in place of the Owner-only
+// GET /admin/locations/:id read: same data shape (id/name/slug/type/status/
+// network), scoped server-side, never client-side.
+async function handleGetManagerContext(req, res) {
+  try {
+    const scope = req.managerScope;
+    if (scope.locationIds.length === 0) {
+      return res.json({ locations: [], scope: { locationIds: [] } });
+    }
+
+    const locations = await prisma.location.findMany({
+      where: { id: { in: scope.locationIds } },
+      include: { network: { select: { id: true, name: true } } },
+    });
+
+    return res.json({
+      locations: locations.map((l) => ({
+        id: l.id,
+        name: l.name,
+        slug: l.slug,
+        type: l.type,
+        status: l.status,
+        network: l.network,
+      })),
+      scope: { locationIds: scope.locationIds },
+    });
+  } catch (err) {
+    console.error('[manager/context]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 router.get('/businesses', requireManagerScope, handleGetManagerBusinesses);
+router.get('/context', requireManagerScope, handleGetManagerContext);
 
 module.exports = router;
 module.exports.handleGetManagerBusinesses = handleGetManagerBusinesses; // exported for direct unit testing only
+module.exports.handleGetManagerContext = handleGetManagerContext; // exported for direct unit testing only

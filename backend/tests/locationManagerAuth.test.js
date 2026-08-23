@@ -27,9 +27,9 @@ const MUNICH = 'loc_munich';
 
 let networkMemberRows = [];
 let locationRows = [
-  { id: ULM, networkId: NET1 },
-  { id: STUTTGART, networkId: NET1 },
-  { id: MUNICH, networkId: NET1 },
+  { id: ULM, networkId: NET1, name: 'Ulm', slug: 'ulm', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
+  { id: STUTTGART, networkId: NET1, name: 'Stuttgart', slug: 'stuttgart', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
+  { id: MUNICH, networkId: NET1, name: 'München', slug: 'muenchen', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
 ];
 let businessLocationRows = [
   {
@@ -59,9 +59,18 @@ const mockPrisma = {
     findMany: async ({ where }) => networkMemberRows.filter((r) => r.userId === where.userId),
   },
   location: {
+    // Two distinct callers use this: the middleware resolves network-wide
+    // membership via `where.networkId.in` (id-only projection is all it
+    // needs); handleGetManagerContext resolves real City identity via
+    // `where.id.in` (needs the full row). Same mock, both shapes, matching
+    // the two real Prisma queries in the non-test code.
     findMany: async ({ where }) => {
-      const ids = where.networkId.in;
-      return locationRows.filter((l) => ids.includes(l.networkId)).map((l) => ({ id: l.id }));
+      if (where.networkId) {
+        const ids = where.networkId.in;
+        return locationRows.filter((l) => ids.includes(l.networkId)).map((l) => ({ id: l.id }));
+      }
+      const ids = where.id.in;
+      return locationRows.filter((l) => ids.includes(l.id));
     },
   },
   businessLocation: {
@@ -102,7 +111,7 @@ require.cache[clerkBackendPath] = {
 
 const { requireManagerScope } = require('../src/middleware/locationManagerAuth');
 const managerRoutes = require('../src/routes/managerRoutes');
-const { handleGetManagerBusinesses } = managerRoutes;
+const { handleGetManagerBusinesses, handleGetManagerContext } = managerRoutes;
 
 // ── Test helpers ──────────────────────────────────────────────
 function fakeReq({ auth = true, query = {} } = {}) {
@@ -133,12 +142,21 @@ async function callManagerBusinesses(req) {
   return res;
 }
 
+async function callManagerContext(req) {
+  const res = fakeRes();
+  let nextCalled = false;
+  await requireManagerScope(req, res, () => { nextCalled = true; });
+  if (!nextCalled) return res; // middleware short-circuited (401/403/500)
+  await handleGetManagerContext(req, res);
+  return res;
+}
+
 function resetScopeFixtures() {
   tokenValid = true;
   locationRows = [
-    { id: ULM, networkId: NET1 },
-    { id: STUTTGART, networkId: NET1 },
-    { id: MUNICH, networkId: NET1 },
+    { id: ULM, networkId: NET1, name: 'Ulm', slug: 'ulm', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
+    { id: STUTTGART, networkId: NET1, name: 'Stuttgart', slug: 'stuttgart', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
+    { id: MUNICH, networkId: NET1, name: 'München', slug: 'muenchen', type: 'city', status: 'active', network: { id: NET1, name: 'Stadt Pocket' } },
   ];
 }
 
@@ -293,6 +311,74 @@ test('network_admin with a set locationId is excluded, not treated as network-wi
   currentUserId = 'user_ambiguous2';
   networkMemberRows = [{ id: 'm11', userId: 'user_ambiguous2', networkId: NET1, locationId: ULM, role: 'network_admin' }];
   const res = await callManagerBusinesses(fakeReq());
+  assert.equal(res.statusCode, 403);
+});
+
+// ── GET /manager/context — City identity for the City Operations Center ──
+// (Phase 2: the manager-scoped equivalent of GET /admin/locations/:id, used
+// so the frontend's shared City Operations Center never has to call an
+// Owner-only /admin/* route for a City Manager session.)
+
+test('context: no JWT -> 401', async () => {
+  resetScopeFixtures();
+  const res = await callManagerContext(fakeReq({ auth: false }));
+  assert.equal(res.statusCode, 401);
+});
+
+test('context: authenticated user with no NetworkMember rows -> 403', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_no_membership_ctx';
+  networkMemberRows = [];
+  const res = await callManagerContext(fakeReq());
+  assert.equal(res.statusCode, 403);
+});
+
+test('context: Ulm manager receives exactly Ulm, with real identity fields', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_ctx';
+  networkMemberRows = [{ id: 'm20', userId: 'user_ulm_ctx', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  const res = await callManagerContext(fakeReq());
+  assert.equal(res.statusCode, undefined); // default 200
+  assert.equal(res.body.locations.length, 1);
+  const [ulm] = res.body.locations;
+  assert.equal(ulm.id, ULM);
+  assert.equal(ulm.name, 'Ulm');
+  assert.equal(ulm.slug, 'ulm');
+  assert.equal(ulm.status, 'active');
+  assert.equal(ulm.network.name, 'Stadt Pocket');
+});
+
+test('context: Ulm manager never receives Stuttgart or München -- no client-suppliable id to manipulate', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_ulm_ctx2';
+  networkMemberRows = [{ id: 'm21', userId: 'user_ulm_ctx2', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  // handleGetManagerContext takes no query/body input at all -- there is no
+  // parameter for a caller to tamper with. Proving this by trying anyway:
+  // the extra query field must have zero effect on which Locations come back.
+  const res = await callManagerContext(fakeReq({ query: { locationId: STUTTGART } }));
+  assert.deepEqual(res.body.locations.map((l) => l.id), [ULM]);
+});
+
+test('context: multi-location manager receives every assigned city, never a third', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_multi_ctx';
+  networkMemberRows = [
+    { id: 'm22', userId: 'user_multi_ctx', networkId: NET1, locationId: ULM, role: 'location_manager' },
+    { id: 'm23', userId: 'user_multi_ctx', networkId: NET1, locationId: STUTTGART, role: 'location_manager' },
+  ];
+  const res = await callManagerContext(fakeReq());
+  assert.deepEqual(res.body.locations.map((l) => l.id).sort(), [ULM, STUTTGART].sort());
+  assert.ok(!res.body.locations.some((l) => l.id === MUNICH));
+});
+
+test('context: revocation removes the city from context on the very next request', async () => {
+  resetScopeFixtures();
+  currentUserId = 'user_temp_ctx';
+  networkMemberRows = [{ id: 'm24', userId: 'user_temp_ctx', networkId: NET1, locationId: ULM, role: 'location_manager' }];
+  let res = await callManagerContext(fakeReq());
+  assert.equal(res.body.locations.length, 1);
+  networkMemberRows = [];
+  res = await callManagerContext(fakeReq());
   assert.equal(res.statusCode, 403);
 });
 

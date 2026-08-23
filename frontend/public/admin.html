@@ -447,60 +447,64 @@
       <span class="sb-subtitle">Platform Operations • Support • Intelligence</span>
     </div>
     <nav class="sb-nav">
-      <div class="sb-section">Search</div>
-      <button class="sb-item" id="sb-search-nav-btn" onclick="showPage('search')">
+      <div class="sb-section sb-owner-only">Search</div>
+      <button class="sb-item sb-owner-only" id="sb-search-nav-btn" onclick="showPage('search')">
         <span class="sb-icon">🔍</span> Universal Search
         <span class="sb-shortcut-hint">Ctrl K</span>
       </button>
 
-      <div class="sb-section">Overview</div>
-      <button class="sb-item active" onclick="showPage('overview')">
+      <div class="sb-section sb-owner-only">Overview</div>
+      <button class="sb-item active sb-owner-only" onclick="showPage('overview')">
         <span class="sb-icon">⊞</span> Overview
       </button>
 
-      <div class="sb-section">Users</div>
-      <button class="sb-item" onclick="showPage('users')">
+      <div class="sb-section sb-owner-only">Users</div>
+      <button class="sb-item sb-owner-only" onclick="showPage('users')">
         <span class="sb-icon">👥</span> <span data-i18n="nav_business_accounts">Business Accounts</span>
       </button>
-      <button class="sb-item" onclick="showPage('api-keys')">
+      <button class="sb-item sb-owner-only" onclick="showPage('api-keys')">
         <span class="sb-icon">🔑</span> API Keys
       </button>
 
-      <div class="sb-section">Revenue</div>
-      <button class="sb-item" onclick="showPage('revenue')">
+      <div class="sb-section sb-owner-only">Revenue</div>
+      <button class="sb-item sb-owner-only" onclick="showPage('revenue')">
         <span class="sb-icon">💰</span> Revenue
       </button>
-      <button class="sb-item" onclick="showPage('costs')">
+      <button class="sb-item sb-owner-only" onclick="showPage('costs')">
         <span class="sb-icon">📊</span> Cost Analytics
       </button>
 
-      <div class="sb-section">Platform</div>
-      <button class="sb-item" onclick="showPage('qr-analytics')">
+      <div class="sb-section sb-owner-only">Platform</div>
+      <button class="sb-item sb-owner-only" onclick="showPage('qr-analytics')">
         <span class="sb-icon">⬡</span> QR Analytics
       </button>
-      <button class="sb-item" onclick="showPage('health')">
+      <button class="sb-item sb-owner-only" onclick="showPage('health')">
         <span class="sb-icon">❤</span> System Health
       </button>
-      <button class="sb-item" onclick="showPage('logs')">
+      <button class="sb-item sb-owner-only" onclick="showPage('logs')">
         <span class="sb-icon">📋</span> Error Logs
       </button>
 
       <div class="sb-section">Stadt Pocket</div>
-      <button class="sb-item" onclick="showPage('sp-cities')">
+      <button class="sb-item sb-owner-only" onclick="showPage('sp-cities')">
         <span class="sb-icon">🏙️</span> <span data-i18n="nav_cities">Cities</span>
       </button>
-      <button class="sb-item" onclick="showPage('sp-networks')">
+      <button class="sb-item sb-owner-only" onclick="showPage('sp-networks')">
         <span class="sb-icon">🌐</span> <span data-i18n="nav_networks">Networks</span>
       </button>
-      <button class="sb-item" onclick="showPage('sp-locations')">
+      <button class="sb-item sb-owner-only" onclick="showPage('sp-locations')">
         <span class="sb-icon">📍</span> <span data-i18n="nav_locations">Locations</span>
       </button>
-      <button class="sb-item" onclick="showPage('sp-businesses')">
+      <button class="sb-item sb-owner-only" onclick="showPage('sp-businesses')">
         <span class="sb-icon">🏢</span> <span data-i18n="nav_businesses">Businesses</span>
       </button>
-      <button class="sb-item" onclick="showPage('sp-managers')">
+      <button class="sb-item sb-owner-only" onclick="showPage('sp-managers')">
         <span class="sb-icon">🧑‍💼</span> <span data-i18n="nav_managers">Managers</span>
       </button>
+      <!-- Populated by enterManagerMode() -- one button per city the signed-in
+           City/Location Manager is scoped to (usually exactly one). Never
+           rendered for Owner/Admin sessions. -->
+      <div id="sb-manager-city-nav" style="display:none"></div>
     </nav>
     <div class="sb-footer">
       <button class="sb-signout" onclick="signOut()">
@@ -875,18 +879,12 @@
         <div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>
       </div>
 
-      <div class="sp-tab-panel" id="sp-cd-panel-settings">
-        <div class="table-wrap">
-          <div class="table-header">
-            <div class="table-title" data-i18n="sp_city_managers">City Managers</div>
-            <button class="refresh-btn" onclick="openAssignManagerModal(currentCityNetworkId, currentCityDetailId)">+ <span data-i18n="sp_assign_manager">Assign Manager</span></button>
-          </div>
-          <table>
-            <thead><tr><th data-i18n="sp_col_manager">Manager</th><th data-i18n="sp_col_role">Role</th><th></th></tr></thead>
-            <tbody id="sp-cd-managers-body"></tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Populated entirely by loadCityDetailOwnerData()/loadCityDetailManagerData(),
+           on every City open -- never visible in this empty state. Owner gets
+           the real Assign/Remove Manager table (#sp-cd-managers-body); City
+           Manager gets the same "not yet available" empty-state as the other
+           unbuilt tabs. -->
+      <div class="sp-tab-panel" id="sp-cd-panel-settings"></div>
     </div>
 
     <!-- STADT POCKET: NETWORKS -->
@@ -2352,22 +2350,39 @@
     }
 
     // ── CITY DETAIL ───────────────────────────────────────────
-    // Reuses the existing GET /admin/locations/:id read (same one Location
-    // Detail uses) -- no new backend route. Overview/Businesses/Settings
-    // show real data; the remaining tabs (Deals, Weekly Deals, Customers,
-    // Featured, Campaigns, City Page, Analytics) are structural nav for
-    // future City Manager operating areas -- explicitly empty-stated, never
-    // populated with placeholder/fake numbers.
-    async function loadCityDetail(id) {
-      currentCityDetailId = id;
-      showSubPage('sp-city-detail', 'sp-cities');
+    // One shared City Operations Center workspace for both entry paths:
+    //   Owner:   Cities list -> Manage City -> loadCityDetail (Owner data)
+    //   Manager: login       -> enterManagerMode -> loadCityDetail (Manager data)
+    // The DOM/markup is identical either way -- only which backend calls
+    // populate it differs, dispatched here by window.QRAIVY_ADMIN_MODE
+    // (set once, server-confirmed, by admin-guard.js at load time).
+    function resetCityDetailTabs() {
       // Reset to the Overview tab every time a City is opened, so a
       // previously-selected tab from an earlier visit doesn't stay active.
       document.querySelectorAll('#page-sp-city-detail .sp-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('#page-sp-city-detail .sp-tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelector('#page-sp-city-detail .sp-tab').classList.add('active');
       document.getElementById('sp-cd-panel-overview').classList.add('active');
+    }
 
+    async function loadCityDetail(id) {
+      currentCityDetailId = id;
+      if (window.QRAIVY_ADMIN_MODE === 'manager') {
+        showSubPage('sp-city-detail', null);
+        resetCityDetailTabs();
+        markManagerCityNavActive(id);
+        await loadCityDetailManagerData(id);
+      } else {
+        showSubPage('sp-city-detail', 'sp-cities');
+        resetCityDetailTabs();
+        await loadCityDetailOwnerData(id);
+      }
+    }
+
+    // Owner path -- unchanged from Phase 1: GET /admin/locations/:id
+    // (requireAdmin), full read including Managers, with the Settings tab's
+    // real Assign/Remove Manager actions.
+    async function loadCityDetailOwnerData(id) {
       const result = await safeFetchAdmin(`/admin/locations/${id}`);
       if (!result.ok) {
         document.getElementById('sp-cd-title').textContent = adminErrorMessage(result);
@@ -2401,13 +2416,84 @@
         </tr>
       `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
 
-      document.getElementById('sp-cd-managers-body').innerHTML = l.managers.length ? l.managers.map(m => `
+      document.getElementById('sp-cd-panel-settings').innerHTML = `
+        <div class="table-wrap">
+          <div class="table-header">
+            <div class="table-title" data-i18n="sp_city_managers">City Managers</div>
+            <button class="refresh-btn" onclick="openAssignManagerModal(currentCityNetworkId, currentCityDetailId)">+ <span data-i18n="sp_assign_manager">Assign Manager</span></button>
+          </div>
+          <table>
+            <thead><tr><th data-i18n="sp_col_manager">Manager</th><th data-i18n="sp_col_role">Role</th><th></th></tr></thead>
+            <tbody id="sp-cd-managers-body">${l.managers.length ? l.managers.map(m => `
+              <tr>
+                <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+                <td>${escapeHtml(m.role)}</td>
+                <td><button class="action-btn danger" onclick="removeManager('${m.id}', () => loadCityDetail('${id}'))">Remove</button></td>
+              </tr>
+            `).join('') : `<tr><td colspan="3" class="sp-empty">No managers assigned to this city yet.</td></tr>`}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // Manager path -- City/Location Manager session. Every field here comes
+    // from /manager/* routes only (requireManagerScope), never /admin/*.
+    // The city id itself is never trusted from any client-side state: it's
+    // only ever used to look it up inside the list GET /manager/context just
+    // returned for *this* request, so a manager can never view a city that
+    // isn't in their own server-resolved scope, regardless of what id this
+    // function is called with.
+    async function loadCityDetailManagerData(id) {
+      const ctxResult = await safeFetchAdmin('/manager/context');
+      if (!ctxResult.ok) {
+        document.getElementById('sp-cd-title').textContent = adminErrorMessage(ctxResult);
+        return;
+      }
+      const city = (ctxResult.data.locations || []).find(c => c.id === id);
+      if (!city) {
+        // Not (or no longer) in this manager's scope -- never fall back to
+        // any cached copy of the city.
+        document.getElementById('sp-cd-title').textContent = 'You no longer have access to this city.';
+        document.getElementById('sp-cd-stats').innerHTML = '';
+        document.getElementById('sp-cd-overview-body').innerHTML = '';
+        document.getElementById('sp-cd-businesses-body').innerHTML = '';
+        return;
+      }
+      currentCityDetailData = city;
+
+      document.getElementById('sp-cd-title').innerHTML = `${escapeHtml(city.name)} ${spStatusBadge(city.status)}`;
+      document.getElementById('sp-cd-sub').textContent = `${escapeHtml(city.network?.name || '')} · ${city.slug}`;
+
+      const bizResult = await safeFetchAdmin(`/manager/businesses?locationId=${encodeURIComponent(id)}`);
+      const businesses = bizResult.ok ? (bizResult.data.businesses || []) : [];
+
+      document.getElementById('sp-cd-stats').innerHTML = `
+        <div class="stat-card purple"><div class="stat-label" data-i18n="nav_businesses">Businesses</div><div class="stat-value">${businesses.length}</div></div>
+      `;
+
+      document.getElementById('sp-cd-overview-body').innerHTML = `
+        <div><strong data-i18n="sp_col_city">City</strong>: ${escapeHtml(city.name)}</div>
+        <div><strong data-i18n="sp_col_slug">Slug</strong>: ${escapeHtml(city.slug)}</div>
+        <div><strong data-i18n="sp_col_network">Network</strong>: ${escapeHtml(city.network?.name || '')}</div>
+        <div><strong data-i18n="sp_col_status">Status</strong>: ${spStatusBadge(city.status)}</div>
+      `;
+
+      document.getElementById('sp-cd-businesses-body').innerHTML = businesses.length ? businesses.map(b => `
         <tr>
-          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
-          <td>${escapeHtml(m.role)}</td>
-          <td><button class="action-btn danger" onclick="removeManager('${m.id}', () => loadCityDetail('${id}'))">Remove</button></td>
+          <td class="td-name">${escapeHtml(b.name)}</td>
+          <td class="td-email">${escapeHtml(b.primaryOwnerUserId)}</td>
+          <td>${spStatusBadge(b.status)}</td>
+          <td></td>
         </tr>
-      `).join('') : `<tr><td colspan="3" class="sp-empty">No managers assigned to this city yet.</td></tr>`;
+      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+
+      // Manager assignment is an Owner-only capability -- a City Manager
+      // never sees the real Settings panel, even empty of data. Same
+      // "not yet available" treatment as the other unbuilt tabs, not a
+      // broken/half-wired Assign Manager button pointed at an /admin/*
+      // route the manager's token can't call anyway.
+      document.getElementById('sp-cd-panel-settings').innerHTML =
+        `<div class="sp-empty" data-i18n="sp_not_yet_available">Not yet available in this phase.</div>`;
     }
 
     function showCityDetailTab(tab) {
@@ -2416,6 +2502,43 @@
       event.currentTarget.classList.add('active');
       document.getElementById(`sp-cd-panel-${tab}`).classList.add('active');
     }
+
+    // ── CITY MANAGER MODE ─────────────────────────────────────
+    // Entered only via admin-guard.js, only after a real server-side check
+    // (GET /manager/context, requireManagerScope) confirmed at least one
+    // assigned City -- never based on any client-side assumption. Hides
+    // every Owner-only nav item and replaces the Stadt Pocket group's
+    // Cities/Networks/Locations/Businesses/Managers with one button per
+    // City this manager is actually scoped to (almost always exactly one),
+    // then opens the City Operations Center directly -- no separate
+    // dashboard, the exact same workspace Owner uses via "Manage City".
+    function markManagerCityNavActive(id) {
+      document.querySelectorAll('#sb-manager-city-nav .sb-item').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`sb-manager-city-${id}`);
+      if (btn) btn.classList.add('active');
+    }
+
+    function enterManagerMode(context) {
+      document.querySelectorAll('.sb-owner-only').forEach(el => { el.style.display = 'none'; });
+      const cities = (context && context.locations) || [];
+      const nav = document.getElementById('sb-manager-city-nav');
+      nav.innerHTML = cities.map(c => `
+        <button class="sb-item" id="sb-manager-city-${c.id}" onclick="loadCityDetail('${c.id}')">
+          <span class="sb-icon">🏙️</span> Hello ${escapeHtml(c.name)}
+        </button>
+      `).join('');
+      nav.style.display = cities.length ? '' : 'none';
+
+      if (cities.length) {
+        loadCityDetail(cities[0].id);
+      } else {
+        // Defensive only -- admin-guard.js already redirects to the
+        // customer dashboard when /manager/context returns zero cities.
+        showSubPage('sp-city-detail', null);
+        document.getElementById('sp-cd-title').textContent = 'No assigned city found.';
+      }
+    }
+    window.enterManagerMode = enterManagerMode;
 
     // ── NETWORKS ──────────────────────────────────────────────
     async function loadNetworksPage() {
