@@ -129,6 +129,13 @@ const mockPrisma = {
       return userRows.filter((u) => ids.includes(u.id));
     },
   },
+  // Step 3A addition: GET /manager/businesses now also fetches pending
+  // CityBusinessInvite rows via cityBusinessInviteService. This suite
+  // predates Step 3A and isn't testing that feature, so a no-op stub is
+  // enough to keep handleGetManagerBusinesses from throwing.
+  cityBusinessInvite: {
+    findMany: async () => [],
+  },
   // Deliberately NOT defined. Business ownership/admin permissions live on
   // BusinessMember -- if the invite flow ever touched it (which it must
   // not, per the Phase 3B architecture boundary), calling any method on

@@ -413,8 +413,9 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  businessLocations BusinessLocation[]
-  networkMembers    NetworkMember[]
+  businessLocations   BusinessLocation[]
+  networkMembers      NetworkMember[]
+  cityBusinessInvites CityBusinessInvite[]
 
   @@index([networkId])
 }
@@ -504,4 +505,59 @@ model NetworkMember {
   @@unique([userId, networkId, locationId])
   @@index([userId])
   @@index([networkId])
+}
+
+// ============================================================
+// CityBusinessInvite — Stadt Pocket Phase 3B Step 3A (additive only).
+// See docs from the Phase 3B Step 3 architecture review.
+//
+// A City-Manager-initiated invitation for a merchant with no existing
+// QRAIVY presence. Deliberately NOT a BusinessLocation row: a
+// BusinessLocation requires a real businessId to point at, and no
+// canonical Business exists yet at invite time -- creating one before a
+// real owner has authenticated would either orphan it permanently or
+// require an ownership-transfer mechanism this schema does not have
+// (Business.primaryOwnerUserId is set once, at creation, and never
+// reassigned by any existing code path). This model is upstream of
+// BusinessLocation, never a competing/parallel membership concept: on
+// claim, the existing networkAdminService.createBusiness() is called
+// with the real owner's User.id (never the inviting manager's), and
+// only then is a real BusinessLocation row created.
+//
+// status is free-text, matching every other status column in this
+// schema (Business.status, BusinessLocation.status, Network/Location
+// .status) -- no enum type exists anywhere here, not introducing one:
+// "pending" | "cancelled" | "claimed" | "expired".
+//
+// tokenHash only -- the raw claim token is never persisted, matching
+// standard practice for any credential-bearing secret; only a
+// comparable hash is stored. Verifying a presented token means hashing
+// it the same way and comparing tokenHash, never storing/looking up
+// the raw value.
+//
+// claimedBusinessId is set only once claim actually happens (a later
+// step) -- Step 3A never populates it; included now so the eventual
+// claim step is an additive UPDATE, not a second migration.
+model CityBusinessInvite {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  businessName String
+  email        String
+
+  status String @default("pending") // pending | cancelled | claimed | expired
+
+  tokenHash String @unique
+
+  createdBy String // manager's Clerk userId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  expiresAt DateTime
+
+  claimedBusinessId String? // set only at claim time (future step) -- null throughout Step 3A
+
+  @@index([locationId])
+  @@index([email])
 }

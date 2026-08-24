@@ -364,11 +364,18 @@
     .status-badge.live { background: rgba(34,197,94,0.2); color: var(--green); }
     .status-badge.draft { background: rgba(107,114,128,0.2); color: #9ca3af; }
     .status-badge.invited { background: rgba(59,130,246,0.2); color: var(--blue); }
+    .status-badge.pending { background: rgba(245,158,11,0.2); color: var(--yellow); }
+    .status-badge.cancelled { background: rgba(107,114,128,0.2); color: #9ca3af; }
     .sp-invite-result { padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; }
     .sp-invite-result:hover { background: rgba(255,255,255,0.04); }
     .sp-invite-result.selected { background: rgba(255,90,31,0.12); border: 1px solid var(--accent); }
     .sp-invite-result.disabled { cursor: default; opacity: 0.5; }
     .sp-invite-result.disabled:hover { background: none; }
+    .sp-role-badge {
+      display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+      background: rgba(255,90,31,0.15); color: var(--accent); margin-left: 8px; vertical-align: middle;
+    }
     .tag-standalone {
       font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
@@ -827,11 +834,23 @@
 
     <!-- STADT POCKET: CITY DETAIL -->
     <div class="page" id="page-sp-city-detail">
-      <button class="sp-back-link" onclick="showPage('sp-cities')">← <span data-i18n="nav_cities">Cities</span></button>
+      <!-- Owner mode: "← Cities" (default markup below, restored explicitly
+           by loadCityDetailOwnerData). Manager mode: repointed to
+           "Exit City Manager" -> dashboard by loadCityDetailManagerData,
+           since a City Manager has no legitimate platform-wide Cities list
+           to return to. Same element either way -- never two separate
+           back-links to keep in sync. -->
+      <button class="sp-back-link" id="sp-cd-back-link" onclick="showPage('sp-cities')">← <span data-i18n="nav_cities">Cities</span></button>
       <div class="page-header">
         <div>
           <div class="page-title" id="sp-cd-title">—</div>
           <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px" id="sp-cd-sub"></div>
+          <!-- Manager-mode only, dynamic (never hardcoded to Ulm) --
+               set by loadCityDetailManagerData, hidden by loadCityDetailOwnerData. -->
+          <div style="margin-top:4px;display:none" id="sp-cd-stadtpocket-sub">
+            <span style="font-size:0.68rem;color:var(--accent);font-weight:600">StadtPocket <span id="sp-cd-stadtpocket-city"></span></span>
+            <span class="sp-role-badge">City Manager</span>
+          </div>
         </div>
         <button class="refresh-btn" onclick="loadCityDetail(currentCityDetailId)">↻ Refresh</button>
       </div>
@@ -1403,11 +1422,47 @@
         <input class="sp-form-input" id="sp-invite-business-search" placeholder="Business name or slug…" oninput="onInviteBusinessSearchInput()" autocomplete="off" />
         <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px">This adds an existing Business's StadtPocket membership for your city. It does not create a new Business and does not change who owns it.</div>
       </div>
-      <div id="sp-invite-business-results" style="max-height:220px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:2px"></div>
+      <div id="sp-invite-business-search-section">
+        <div id="sp-invite-business-results" style="max-height:220px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:2px"></div>
+        <!-- Shown only when a search has run and found nothing (Step 3A).
+             Never shown before the manager has actually searched -- a new
+             business should be added only after confirming one doesn't
+             already exist, not as a default shortcut. -->
+        <div id="sp-invite-business-add-new-prompt" style="display:none;margin-top:10px;font-size:0.72rem;color:var(--text-dim)">
+          No QRAIVY Business found.
+          <a href="#" onclick="showAddNewBusinessForm(); return false;" style="color:var(--accent)">+ Add New Business</a>
+        </div>
+      </div>
+
+      <!-- New-business onboarding form (Step 3A: creates a PENDING invite
+           only -- no canonical Business, no ownership, no BusinessLocation
+           yet; see cityBusinessInviteService.js). City is shown, never
+           editable, sourced from the same currentCityDetailData the search
+           side of this modal already uses. -->
+      <div id="sp-invite-business-new-section" style="display:none">
+        <div class="sp-form-row">
+          <label class="modal-label">Business Name</label>
+          <input class="sp-form-input" id="sp-new-business-name" placeholder="e.g. Café Müller" autocomplete="off" />
+        </div>
+        <div class="sp-form-row">
+          <label class="modal-label">Owner Email</label>
+          <input class="sp-form-input" id="sp-new-business-email" type="email" placeholder="owner@example.com" autocomplete="off" />
+        </div>
+        <div class="sp-form-row">
+          <label class="modal-label">City</label>
+          <div style="font-size:0.8rem;color:var(--text-mid)" id="sp-new-business-city-readonly"></div>
+        </div>
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:2px">
+          This sends a pending onboarding invitation. The actual owner will confirm and claim the Business — you will not become its owner.
+        </div>
+        <div id="sp-new-business-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
       <div id="sp-invite-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
       <div class="modal-btns">
         <button class="modal-btn" onclick="closeModal('sp-invite-business-modal')" data-i18n="sp_cancel">Cancel</button>
         <button class="modal-btn primary" id="sp-invite-business-confirm-btn" disabled onclick="submitInviteBusiness()">Invite to StadtPocket</button>
+        <button class="modal-btn primary" id="sp-new-business-submit-btn" style="display:none" onclick="submitNewBusinessInvite()">Invite Business to StadtPocket</button>
       </div>
     </div>
   </div>
@@ -2461,6 +2516,12 @@
       `).join('') : `<tr><td colspan="5" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
       document.getElementById('sp-cd-invite-business-btn').style.display = 'none';
 
+      // Owner mode never shows the manager-only role/back-link chrome.
+      document.getElementById('sp-cd-stadtpocket-sub').style.display = 'none';
+      const ownerBackLink = document.getElementById('sp-cd-back-link');
+      ownerBackLink.innerHTML = '← <span data-i18n="nav_cities">Cities</span>';
+      ownerBackLink.onclick = () => showPage('sp-cities');
+
       document.getElementById('sp-cd-panel-settings').innerHTML = `
         <div class="table-wrap">
           <div class="table-header">
@@ -2509,8 +2570,22 @@
       document.getElementById('sp-cd-title').innerHTML = `${escapeHtml(city.name)} ${spStatusBadge(city.status)}`;
       document.getElementById('sp-cd-sub').textContent = `${escapeHtml(city.network?.name || '')} · ${city.slug}`;
 
+      // Dynamic role/city context -- never hardcoded, works automatically
+      // for Ulm/Stuttgart/Munich/any future StadtPocket city, sourced
+      // entirely from this same /manager/context-derived city object.
+      document.getElementById('sp-cd-stadtpocket-city').textContent = city.name;
+      document.getElementById('sp-cd-stadtpocket-sub').style.display = '';
+
+      // A City Manager has no legitimate platform-wide Cities list to
+      // return to -- repoint the shared back-link to exit to the
+      // customer dashboard instead of showPage('sp-cities').
+      const managerBackLink = document.getElementById('sp-cd-back-link');
+      managerBackLink.innerHTML = '← Exit City Manager';
+      managerBackLink.onclick = () => { window.location.href = 'dashboard.html'; };
+
       const bizResult = await safeFetchAdmin(`/manager/businesses?locationId=${encodeURIComponent(id)}`);
       const businesses = bizResult.ok ? (bizResult.data.businesses || []) : [];
+      const pendingInvites = bizResult.ok ? (bizResult.data.pendingInvites || []) : [];
 
       document.getElementById('sp-cd-stats').innerHTML = `
         <div class="stat-card purple"><div class="stat-label" data-i18n="nav_businesses">Businesses</div><div class="stat-value">${businesses.length}</div></div>
@@ -2523,7 +2598,25 @@
         <div><strong data-i18n="sp_col_status">Status</strong>: ${spStatusBadge(city.status)}</div>
       `;
 
-      document.getElementById('sp-cd-businesses-body').innerHTML = businesses.length ? businesses.map(b => `
+      // Pending onboarding invitations (Phase 3B Step 3A) -- NEVER a fake
+      // Business row. Owner column reads "Invitation Pending" (never a raw
+      // Clerk id -- there is no owner User yet), StadtPocket column reads
+      // "Pending" (a CityBusinessInvite, not a BusinessLocation, so it is
+      // deliberately not the "invited" badge Step 2 uses for a real
+      // membership), and the action column offers Cancel only -- there is
+      // no Business to "Open" yet.
+      const pendingRowsHtml = pendingInvites.map(inv => `
+        <tr>
+          <td class="td-name">${escapeHtml(inv.businessName)}</td>
+          <td class="td-email">Invitation Pending</td>
+          <td>${spStatusBadge('pending')}</td>
+          <td>${spStatusBadge('pending')}</td>
+          <td><button class="action-btn" onclick="cancelPendingBusinessInvite('${inv.id}')">Cancel</button></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('sp-cd-businesses-body').innerHTML = (businesses.length || pendingInvites.length) ? (
+        businesses.map(b => `
         <tr>
           <td class="td-name">${escapeHtml(b.name)}</td>
           <td class="td-email">${escapeHtml(b.ownerEmail || b.primaryOwnerUserId)}</td>
@@ -2531,7 +2624,8 @@
           <td>${spStatusBadge(b.locations && b.locations[0] ? b.locations[0].membershipStatus : '')}</td>
           <td><button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button></td>
         </tr>
-      `).join('') : `<tr><td colspan="5" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+      `).join('') + pendingRowsHtml
+      ) : `<tr><td colspan="5" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
 
       // Invite Business is a City-Manager-only action -- the Owner path
       // above always sets this back to display:none, so it can only ever
@@ -3445,8 +3539,21 @@
       document.getElementById('sp-invite-business-confirm-btn').disabled = true;
       document.getElementById('sp-invite-business-search').value = '';
       document.getElementById('sp-invite-business-results').innerHTML = '<div class="sp-empty">Type at least 2 characters to search.</div>';
+      document.getElementById('sp-invite-business-add-new-prompt').style.display = 'none';
       document.getElementById('sp-invite-business-modal-error').textContent = '';
       inviteBusinessSelectedId = null;
+
+      // Always reopen on the search side -- Add New Business is reachable
+      // only after a search comes back empty, never the default state.
+      document.getElementById('sp-invite-business-search-section').style.display = '';
+      document.getElementById('sp-invite-business-new-section').style.display = 'none';
+      document.getElementById('sp-invite-business-confirm-btn').style.display = '';
+      document.getElementById('sp-new-business-submit-btn').style.display = 'none';
+      document.getElementById('sp-new-business-name').value = '';
+      document.getElementById('sp-new-business-email').value = '';
+      document.getElementById('sp-new-business-error').textContent = '';
+      document.getElementById('sp-new-business-city-readonly').textContent = `StadtPocket ${cityName}`;
+
       openModal('sp-invite-business-modal');
       document.getElementById('sp-invite-business-search').focus();
     }
@@ -3459,8 +3566,10 @@
     async function runInviteBusinessSearch() {
       const q = document.getElementById('sp-invite-business-search').value.trim();
       const resultsEl = document.getElementById('sp-invite-business-results');
+      const addNewPrompt = document.getElementById('sp-invite-business-add-new-prompt');
       inviteBusinessSelectedId = null;
       document.getElementById('sp-invite-business-confirm-btn').disabled = true;
+      addNewPrompt.style.display = 'none';
 
       if (q.length < 2) {
         resultsEl.innerHTML = '<div class="sp-empty">Type at least 2 characters to search.</div>';
@@ -3478,16 +3587,38 @@
           return;
         }
         const businesses = data.businesses || [];
-        resultsEl.innerHTML = businesses.length ? businesses.map(b => `
-          <div class="sp-invite-result${b.isMember ? ' disabled' : ''}" data-id="${escapeHtml(b.id)}"
-               onclick="${b.isMember ? '' : `selectInviteBusiness('${b.id}', this)`}">
-            <span>${escapeHtml(b.name)}${b.slug ? ` <span style="color:var(--text-dim)">(${escapeHtml(b.slug)})</span>` : ''}</span>
-            ${b.isMember ? `<span style="font-size:0.65rem;color:var(--text-dim)">Already ${escapeHtml(b.membershipStatus || 'a member')}</span>` : ''}
-          </div>
-        `).join('') : '<div class="sp-empty">No matching Businesses found.</div>';
+        if (businesses.length) {
+          resultsEl.innerHTML = businesses.map(b => `
+            <div class="sp-invite-result${b.isMember ? ' disabled' : ''}" data-id="${escapeHtml(b.id)}"
+                 onclick="${b.isMember ? '' : `selectInviteBusiness('${b.id}', this)`}">
+              <span>${escapeHtml(b.name)}${b.slug ? ` <span style="color:var(--text-dim)">(${escapeHtml(b.slug)})</span>` : ''}</span>
+              ${b.isMember ? `<span style="font-size:0.65rem;color:var(--text-dim)">Already ${escapeHtml(b.membershipStatus || 'a member')}</span>` : ''}
+            </div>
+          `).join('');
+        } else {
+          resultsEl.innerHTML = '<div class="sp-empty">No matching Businesses found.</div>';
+          // Prefill the new-business name from the search term as a
+          // convenience only -- the manager can still edit it, and this
+          // never runs unless a real search already came back empty.
+          document.getElementById('sp-new-business-name').value = q;
+          addNewPrompt.style.display = '';
+        }
       } catch (err) {
         resultsEl.innerHTML = '<div class="sp-empty" style="color:var(--red)">Could not reach server.</div>';
       }
+    }
+
+    // Switches the modal from "search existing" to "add new" -- reachable
+    // only after a real search found nothing (see runInviteBusinessSearch).
+    function showAddNewBusinessForm() {
+      document.getElementById('sp-invite-business-search-section').style.display = 'none';
+      document.getElementById('sp-invite-business-confirm-btn').style.display = 'none';
+      document.getElementById('sp-invite-business-new-section').style.display = '';
+      const submitBtn = document.getElementById('sp-new-business-submit-btn');
+      submitBtn.style.display = '';
+      const cityName = (currentCityDetailData && currentCityDetailData.name) || 'this city';
+      submitBtn.textContent = `Invite Business to StadtPocket ${cityName}`;
+      document.getElementById('sp-new-business-email').focus();
     }
 
     function selectInviteBusiness(id, el) {
@@ -3512,6 +3643,65 @@
         closeModal('sp-invite-business-modal');
         await loadCityDetailManagerData(currentCityDetailId);
       } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // Phase 3B Step 3A -- creates a PENDING invite for a merchant with no
+    // existing QRAIVY Business. Never creates a Business, never assigns
+    // ownership -- see cityBusinessInviteService.js. City is always
+    // currentCityDetailId (same source as submitInviteBusiness above);
+    // there is no city input anywhere in this form.
+    async function submitNewBusinessInvite() {
+      const errEl = document.getElementById('sp-new-business-error');
+      errEl.textContent = '';
+      const businessName = document.getElementById('sp-new-business-name').value.trim();
+      const email = document.getElementById('sp-new-business-email').value.trim();
+      if (!businessName) { errEl.textContent = 'Business name is required.'; return; }
+      if (!email) { errEl.textContent = 'Owner email is required.'; return; }
+
+      const submitBtn = document.getElementById('sp-new-business-submit-btn');
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/manager/businesses/onboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ businessName, email }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.result === 'existing_business_found') {
+            errEl.textContent = `A QRAIVY Business named "${data.business.name}" already exists — search for it and use Invite Existing Business instead.`;
+          } else {
+            errEl.textContent = data.error || 'Failed to create onboarding invite.';
+          }
+          return;
+        }
+        closeModal('sp-invite-business-modal');
+        await loadCityDetailManagerData(currentCityDetailId);
+      } catch (err) {
+        errEl.textContent = 'Could not reach server.';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Cancels a pending onboarding invite -- manager may only cancel one
+    // in their own city; the server independently re-checks this.
+    async function cancelPendingBusinessInvite(inviteId) {
+      if (!confirm('Cancel this pending business invitation?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/manager/businesses/onboard/${inviteId}/cancel`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || 'Failed to cancel invitation.');
+          return;
+        }
+        await loadCityDetailManagerData(currentCityDetailId);
+      } catch (err) {
+        alert('Could not reach server.');
+      }
     }
 
     // ── MANAGERS ──────────────────────────────────────────────

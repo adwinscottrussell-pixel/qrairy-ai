@@ -45,6 +45,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../utils/prismaClient');
 const { requireManagerScope } = require('../middleware/locationManagerAuth');
+const cityBusinessInviteService = require('../services/cityBusinessInviteService');
 
 // Local, deliberately not imported from networkAdminService.js -- that file
 // is the platform-admin-only write surface (see its own header comment);
@@ -117,8 +118,29 @@ async function handleGetManagerBusinesses(req, res) {
       }
     }
 
+    // Phase 3B Step 3A — pending new-business invitations, scoped to the
+    // exact same targetLocationIds as the real Businesses above. Returned
+    // as a SEPARATE array, never merged into `businesses` or mapped onto
+    // a fake Business object -- there is no canonical Business behind
+    // one of these yet (see the CityBusinessInvite schema comment), and
+    // pretending otherwise would be exactly the "fake Business record"
+    // the Step 3A spec says never to create.
+    const pendingInviteRows = await cityBusinessInviteService.listInvitesForLocations(targetLocationIds);
+    const pendingInvites = pendingInviteRows.map((inv) => ({
+      type: 'pending_invite',
+      id: inv.id,
+      businessName: inv.businessName,
+      email: inv.email,
+      ownerStatus: 'invitation_pending',
+      stadtpocketStatus: 'pending',
+      locationId: inv.locationId,
+      createdAt: inv.createdAt,
+      expiresAt: inv.expiresAt,
+    }));
+
     return res.json({
       businesses: [...businessMap.values()],
+      pendingInvites,
       scope: { locationIds: scope.locationIds },
     });
   } catch (err) {
@@ -377,10 +399,133 @@ async function handleInviteBusiness(req, res) {
   }
 }
 
+// ── Phase 3B Step 3A — Pending New-Business Onboarding ───────────────
+//
+// A manager-initiated invite for a merchant with NO existing QRAIVY
+// Business. Creates only a CityBusinessInvite row -- never a Business,
+// never a BusinessMember, never a BusinessLocation, never touches
+// Clerk or Stripe. See cityBusinessInviteService.js and the
+// CityBusinessInvite schema comment for the full reasoning. The owner
+// claim step that would eventually call createBusiness() is explicitly
+// NOT part of Step 3A.
+//
+// The request body is validated against an explicit allow-list
+// (businessName, email only) -- any other field (cityId, locationId,
+// ownerUserId, businessId, role, or anything billing-shaped) is
+// rejected outright with 400, not silently ignored. Silently ignoring
+// an unexpected field is how a client-supplied authorization field
+// quietly stops mattering today and starts mattering again after some
+// future refactor reads it without anyone noticing; rejecting it is
+// louder and safer.
+const ONBOARD_ALLOWED_FIELDS = ['businessName', 'email'];
+
+function rejectUnexpectedFields(body) {
+  const extra = Object.keys(body || {}).filter((k) => !ONBOARD_ALLOWED_FIELDS.includes(k));
+  return extra.length ? extra : null;
+}
+
+async function handleOnboardBusiness(req, res) {
+  try {
+    const scope = req.managerScope;
+    const body = req.body || {};
+
+    const extraFields = rejectUnexpectedFields(body);
+    if (extraFields) {
+      return res.status(400).json({ error: `Unexpected field(s): ${extraFields.join(', ')}.` });
+    }
+
+    // City is NEVER read from the request body -- derived entirely from
+    // the authenticated manager's own scope, exactly like every other
+    // write in this file. A manager with exactly one assigned city (the
+    // overwhelmingly common case) has that city used automatically; a
+    // multi-city network_admin would need a locationId, but since
+    // accepting one from the client is explicitly disallowed by this
+    // endpoint's payload contract, onboarding is scoped to single-city
+    // managers for Step 3A -- a network_admin onboarding a new business
+    // is deferred, not silently mishandled (see risks in the final report).
+    if (scope.locationIds.length !== 1) {
+      return res.status(400).json({
+        error: scope.locationIds.length === 0
+          ? 'No assigned city found for this manager.'
+          : 'This manager has multiple assigned cities; onboarding a new business requires a single-city scope in this phase.',
+      });
+    }
+    const locationId = scope.locationIds[0];
+
+    const { businessName, email } = body;
+
+    let result;
+    try {
+      result = await cityBusinessInviteService.createInvite({ locationId, businessName, email, createdBy: scope.userId });
+    } catch (err) {
+      if (err instanceof cityBusinessInviteService.InviteError) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      throw err;
+    }
+
+    if (result.result === 'existing_business_found') {
+      return res.status(409).json({
+        result: 'existing_business_found',
+        business: result.business,
+        error: 'A QRAIVY Business with this name already exists. Use Invite Existing Business instead.',
+      });
+    }
+
+    return res.status(201).json({
+      result: 'created',
+      invite: {
+        id: result.invite.id,
+        businessName: result.invite.businessName,
+        email: result.invite.email,
+        status: result.invite.status,
+        locationId: result.invite.locationId,
+        createdAt: result.invite.createdAt,
+        expiresAt: result.invite.expiresAt,
+      },
+    });
+  } catch (err) {
+    console.error('[manager/businesses/onboard]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+async function handleCancelOnboardInvite(req, res) {
+  try {
+    const scope = req.managerScope;
+    const { inviteId } = req.params;
+
+    const invite = await prisma.cityBusinessInvite.findUnique({ where: { id: inviteId } });
+    if (!invite) {
+      return res.status(404).json({ error: 'Invitation not found.' });
+    }
+    if (!scope.locationIds.includes(invite.locationId)) {
+      return res.status(403).json({ error: 'Forbidden. Invitation outside manager scope.' });
+    }
+
+    let cancelled;
+    try {
+      cancelled = await cityBusinessInviteService.cancelInvite(inviteId);
+    } catch (err) {
+      if (err instanceof cityBusinessInviteService.InviteError) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      throw err;
+    }
+
+    return res.json({ invite: { id: cancelled.id, status: cancelled.status } });
+  } catch (err) {
+    console.error('[manager/businesses/onboard/:inviteId/cancel]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 router.get('/businesses/search', requireManagerScope, handleSearchBusinesses); // must precede /businesses/:id
+router.post('/businesses/onboard', requireManagerScope, handleOnboardBusiness); // must precede /businesses/:id
 router.get('/businesses', requireManagerScope, handleGetManagerBusinesses);
 router.get('/businesses/:id', requireManagerScope, handleGetManagerBusiness);
 router.post('/businesses/:businessId/invite', requireManagerScope, handleInviteBusiness);
+router.post('/businesses/onboard/:inviteId/cancel', requireManagerScope, handleCancelOnboardInvite);
 router.get('/context', requireManagerScope, handleGetManagerContext);
 
 module.exports = router;
@@ -389,3 +534,5 @@ module.exports.handleGetManagerBusiness = handleGetManagerBusiness; // exported 
 module.exports.handleGetManagerContext = handleGetManagerContext; // exported for direct unit testing only
 module.exports.handleSearchBusinesses = handleSearchBusinesses; // exported for direct unit testing only
 module.exports.handleInviteBusiness = handleInviteBusiness; // exported for direct unit testing only
+module.exports.handleOnboardBusiness = handleOnboardBusiness; // exported for direct unit testing only
+module.exports.handleCancelOnboardInvite = handleCancelOnboardInvite; // exported for direct unit testing only
