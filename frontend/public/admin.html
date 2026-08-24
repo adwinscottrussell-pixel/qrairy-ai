@@ -363,6 +363,12 @@
     .status-badge.archived { background: rgba(107,114,128,0.2); color: #9ca3af; }
     .status-badge.live { background: rgba(34,197,94,0.2); color: var(--green); }
     .status-badge.draft { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .status-badge.invited { background: rgba(59,130,246,0.2); color: var(--blue); }
+    .sp-invite-result { padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; }
+    .sp-invite-result:hover { background: rgba(255,255,255,0.04); }
+    .sp-invite-result.selected { background: rgba(255,90,31,0.12); border: 1px solid var(--accent); }
+    .sp-invite-result.disabled { cursor: default; opacity: 0.5; }
+    .sp-invite-result.disabled:hover { background: none; }
     .tag-standalone {
       font-size: 0.55rem; font-weight: 600; letter-spacing: 0.06em;
       text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
@@ -851,8 +857,16 @@
       </div>
 
       <div class="sp-tab-panel" id="sp-cd-panel-businesses">
+        <div class="table-header" style="padding:0 0 12px 0">
+          <div class="table-title" data-i18n="nav_businesses">Businesses</div>
+          <!-- Manager-only. Hidden by default; loadCityDetailManagerData()
+               is the only code path that reveals it -- the Owner path
+               (loadCityDetailOwnerData) never touches this element, so it
+               stays hidden for the entire duration of an Owner session. -->
+          <button class="refresh-btn" id="sp-cd-invite-business-btn" style="display:none" onclick="openInviteBusinessModal()">+ Invite Business</button>
+        </div>
         <table>
-          <thead><tr><th data-i18n="sp_col_business">Business</th><th data-i18n="sp_col_owner">Primary Owner</th><th data-i18n="sp_col_status">Status</th><th></th></tr></thead>
+          <thead><tr><th data-i18n="sp_col_business">Business</th><th data-i18n="sp_col_owner">Primary Owner</th><th data-i18n="sp_col_status">Status</th><th>StadtPocket</th><th></th></tr></thead>
           <tbody id="sp-cd-businesses-body"></tbody>
         </table>
       </div>
@@ -1370,6 +1384,30 @@
       <div class="modal-btns">
         <button class="modal-btn" onclick="closeModal('sp-assign-business-modal')">Cancel</button>
         <button class="modal-btn primary" onclick="submitAssignBusiness()" data-i18n="sp_assign_business">Assign Business</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invite Existing Business into StadtPocket City Modal (Phase 3B, City Manager only).
+       Finds and links an EXISTING canonical QRAIVY Business into the current
+       manager's own city -- never creates a Business, never touches
+       ownership/billing. City comes from currentCityDetailId, which is only
+       ever set from a city already present in this manager's own
+       GET /manager/context result (see loadCityDetailManagerData) -- this
+       modal has no field for picking an arbitrary city. -->
+  <div class="modal-overlay" id="sp-invite-business-modal">
+    <div class="modal-box">
+      <div class="modal-title" id="sp-invite-business-title">Invite Business</div>
+      <div class="sp-form-row">
+        <label class="modal-label">Find an existing QRAIVY Business</label>
+        <input class="sp-form-input" id="sp-invite-business-search" placeholder="Business name or slug…" oninput="onInviteBusinessSearchInput()" autocomplete="off" />
+        <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px">This adds an existing Business's StadtPocket membership for your city. It does not create a new Business and does not change who owns it.</div>
+      </div>
+      <div id="sp-invite-business-results" style="max-height:220px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:2px"></div>
+      <div id="sp-invite-business-modal-error" style="font-size:0.7rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-btns">
+        <button class="modal-btn" onclick="closeModal('sp-invite-business-modal')" data-i18n="sp_cancel">Cancel</button>
+        <button class="modal-btn primary" id="sp-invite-business-confirm-btn" disabled onclick="submitInviteBusiness()">Invite to StadtPocket</button>
       </div>
     </div>
   </div>
@@ -2417,9 +2455,11 @@
           <td class="td-name">${escapeHtml(bl.business.name)}</td>
           <td class="td-email">${escapeHtml(bl.business.primaryOwnerUserId)}</td>
           <td>${spStatusBadge(bl.business.status)}</td>
+          <td>${spStatusBadge(bl.status)}</td>
           <td><button class="action-btn" onclick="loadBusinessDetail('${bl.business.id}')">Open →</button></td>
         </tr>
-      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+      `).join('') : `<tr><td colspan="5" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+      document.getElementById('sp-cd-invite-business-btn').style.display = 'none';
 
       document.getElementById('sp-cd-panel-settings').innerHTML = `
         <div class="table-wrap">
@@ -2488,9 +2528,17 @@
           <td class="td-name">${escapeHtml(b.name)}</td>
           <td class="td-email">${escapeHtml(b.ownerEmail || b.primaryOwnerUserId)}</td>
           <td>${spStatusBadge(b.status)}</td>
+          <td>${spStatusBadge(b.locations && b.locations[0] ? b.locations[0].membershipStatus : '')}</td>
           <td><button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button></td>
         </tr>
-      `).join('') : `<tr><td colspan="4" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+      `).join('') : `<tr><td colspan="5" class="sp-empty">No businesses assigned to this city yet.</td></tr>`;
+
+      // Invite Business is a City-Manager-only action -- the Owner path
+      // above always sets this back to display:none, so it can only ever
+      // be visible while a real manager session's data is on screen.
+      const inviteBtn = document.getElementById('sp-cd-invite-business-btn');
+      inviteBtn.style.display = '';
+      inviteBtn.textContent = `+ Invite Business`;
 
       // Manager assignment is an Owner-only capability -- a City Manager
       // never sees the real Settings panel, even empty of data. Same
@@ -3373,6 +3421,96 @@
         if (document.getElementById('page-sp-business-detail').classList.contains('active')) loadBusinessDetail(currentBusinessDetailId);
         else if (document.getElementById('page-sp-location-detail').classList.contains('active')) loadLocationDetail(currentLocationDetailId);
         else if (document.getElementById('page-sp-businesses').classList.contains('active')) loadBusinessesPage();
+      } catch (err) { errEl.textContent = 'Could not reach server.'; }
+    }
+
+    // ── PHASE 3B — CITY MANAGER: INVITE EXISTING BUSINESS ──────
+    // City-Manager-only flow. Finds an EXISTING canonical QRAIVY Business
+    // and creates its StadtPocket city-membership -- never creates a
+    // Business, never touches BusinessMember/ownership, never touches
+    // Clerk or Stripe. Both calls below hit /manager/* (requireManagerScope)
+    // only, never /admin/*. The city is always currentCityDetailId, which
+    // loadCityDetailManagerData only ever sets from a city already present
+    // in this manager's own GET /manager/context result -- there is no
+    // input anywhere in this modal for picking a different city, and the
+    // server independently re-checks the id against the manager's scope
+    // regardless.
+    let inviteBusinessSelectedId = null;
+    let inviteBusinessSearchDebounce = null;
+
+    function openInviteBusinessModal() {
+      const cityName = (currentCityDetailData && currentCityDetailData.name) || 'this city';
+      document.getElementById('sp-invite-business-title').textContent = `Invite to StadtPocket ${cityName}`;
+      document.getElementById('sp-invite-business-confirm-btn').textContent = `Add to StadtPocket ${cityName}`;
+      document.getElementById('sp-invite-business-confirm-btn').disabled = true;
+      document.getElementById('sp-invite-business-search').value = '';
+      document.getElementById('sp-invite-business-results').innerHTML = '<div class="sp-empty">Type at least 2 characters to search.</div>';
+      document.getElementById('sp-invite-business-modal-error').textContent = '';
+      inviteBusinessSelectedId = null;
+      openModal('sp-invite-business-modal');
+      document.getElementById('sp-invite-business-search').focus();
+    }
+
+    function onInviteBusinessSearchInput() {
+      clearTimeout(inviteBusinessSearchDebounce);
+      inviteBusinessSearchDebounce = setTimeout(runInviteBusinessSearch, 250);
+    }
+
+    async function runInviteBusinessSearch() {
+      const q = document.getElementById('sp-invite-business-search').value.trim();
+      const resultsEl = document.getElementById('sp-invite-business-results');
+      inviteBusinessSelectedId = null;
+      document.getElementById('sp-invite-business-confirm-btn').disabled = true;
+
+      if (q.length < 2) {
+        resultsEl.innerHTML = '<div class="sp-empty">Type at least 2 characters to search.</div>';
+        return;
+      }
+      resultsEl.innerHTML = '<div class="loading">Searching…</div>';
+      try {
+        const res = await fetch(
+          `${API_BASE}/manager/businesses/search?q=${encodeURIComponent(q)}&locationId=${encodeURIComponent(currentCityDetailId)}`,
+          { headers: { 'Authorization': 'Bearer ' + await getAdminToken() } }
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          resultsEl.innerHTML = `<div class="sp-empty" style="color:var(--red)">${escapeHtml(data.error || 'Search failed.')}</div>`;
+          return;
+        }
+        const businesses = data.businesses || [];
+        resultsEl.innerHTML = businesses.length ? businesses.map(b => `
+          <div class="sp-invite-result${b.isMember ? ' disabled' : ''}" data-id="${escapeHtml(b.id)}"
+               onclick="${b.isMember ? '' : `selectInviteBusiness('${b.id}', this)`}">
+            <span>${escapeHtml(b.name)}${b.slug ? ` <span style="color:var(--text-dim)">(${escapeHtml(b.slug)})</span>` : ''}</span>
+            ${b.isMember ? `<span style="font-size:0.65rem;color:var(--text-dim)">Already ${escapeHtml(b.membershipStatus || 'a member')}</span>` : ''}
+          </div>
+        `).join('') : '<div class="sp-empty">No matching Businesses found.</div>';
+      } catch (err) {
+        resultsEl.innerHTML = '<div class="sp-empty" style="color:var(--red)">Could not reach server.</div>';
+      }
+    }
+
+    function selectInviteBusiness(id, el) {
+      inviteBusinessSelectedId = id;
+      document.querySelectorAll('#sp-invite-business-results .sp-invite-result').forEach(n => n.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('sp-invite-business-confirm-btn').disabled = false;
+    }
+
+    async function submitInviteBusiness() {
+      const errEl = document.getElementById('sp-invite-business-modal-error');
+      errEl.textContent = '';
+      if (!inviteBusinessSelectedId) { errEl.textContent = 'Select a Business first.'; return; }
+      try {
+        const res = await fetch(`${API_BASE}/manager/businesses/${inviteBusinessSelectedId}/invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ locationId: currentCityDetailId }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed to invite business.'; return; }
+        closeModal('sp-invite-business-modal');
+        await loadCityDetailManagerData(currentCityDetailId);
       } catch (err) { errEl.textContent = 'Could not reach server.'; }
     }
 

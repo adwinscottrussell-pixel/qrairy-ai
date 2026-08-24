@@ -1,28 +1,43 @@
 /**
- * managerRoutes.js — City/Location Manager scoped API (Phase 1, read-only).
+ * managerRoutes.js — City/Location Manager scoped API.
  * ─────────────────────────────────────────────────────────────
  * Entirely separate from adminRoutes.js — mounted at /manager, not
  * /admin, and every route here uses requireManagerScope, never
  * requireAdmin. See middleware/locationManagerAuth.js.
  *
  * A caller-supplied locationId is always checked against
- * req.managerScope.locationIds before being used to query. An
+ * req.managerScope.locationIds before being used to query OR write. An
  * out-of-scope id gets an explicit 403, never a silently empty result —
  * an empty result would be indistinguishable from "this Location
  * genuinely has no Businesses" and would hide the scope boundary
- * instead of enforcing it.
+ * instead of enforcing it. This applies equally to the Phase 3B invite
+ * write below: the request body's locationId is never trusted on its
+ * own, only ever used after being checked against the server-derived
+ * scope — the same pattern already proven by the read endpoints' own
+ * ?locationId= filter.
  *
  * Businesses are resolved through BusinessLocation only (never a direct
- * Business.findMany by caller-supplied id), and each Business's
- * `locations` field in the response is filtered down to the manager's
- * own in-scope Locations — never the Business's full, unfiltered
- * BusinessLocation list — so a Business that also participates in an
- * out-of-scope Location never leaks that Location's name/id here.
+ * Business.findMany by caller-supplied id for scoped reads), and each
+ * Business's `locations` field in the response is filtered down to the
+ * manager's own in-scope Locations — never the Business's full,
+ * unfiltered BusinessLocation list — so a Business that also
+ * participates in an out-of-scope Location never leaks that Location's
+ * name/id here.
  *
  * Archived Businesses are excluded, consistent with the existing
  * default-view policy in networkAdminService.listBusinesses.
  *
- * Read-only this phase: GET only, no writes.
+ * Phase 3B — City Manager Invite Existing Business: adds the first
+ * write this namespace has ever had (POST /businesses/:businessId/invite)
+ * plus a manager-scoped Business search (GET /businesses/search). Both
+ * strictly preserve the ownership boundary: neither ever creates or
+ * touches a BusinessMember row, never writes Business.primaryOwnerUserId,
+ * never touches Clerk or Stripe. Inviting a Business into a city is
+ * purely a BusinessLocation row with status:'invited' — the exact same
+ * model the read endpoints already use, extended with one new,
+ * additive status value (BusinessLocation.status is untyped free text
+ * everywhere else in this schema, so no migration is required to add
+ * "invited" alongside the existing "active"/"paused").
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -81,9 +96,15 @@ async function handleGetManagerBusinesses(req, res) {
 
     const businessMap = new Map();
     for (const bl of businessLocations) {
+      // membershipStatus is the BusinessLocation row's own status
+      // (invited/active/paused -- Phase 3B onward) for THIS Location,
+      // kept separate from the Business's own status field above it
+      // never confuse "is this Business active on QRAIVY" with "is this
+      // Business's StadtPocket membership in this city active".
+      const locationWithMembership = { ...bl.location, membershipStatus: bl.status };
       const existing = businessMap.get(bl.businessId);
       if (existing) {
-        existing.locations.push(bl.location);
+        existing.locations.push(locationWithMembership);
       } else {
         businessMap.set(bl.businessId, {
           id: bl.business.id,
@@ -91,7 +112,7 @@ async function handleGetManagerBusinesses(req, res) {
           status: bl.business.status,
           primaryOwnerUserId: bl.business.primaryOwnerUserId,
           ownerEmail: ownerEmails.get(bl.business.primaryOwnerUserId) || null,
-          locations: [bl.location],
+          locations: [locationWithMembership],
         });
       }
     }
@@ -207,11 +228,164 @@ async function handleGetManagerContext(req, res) {
   }
 }
 
+// ── Phase 3B — City Manager Invite Existing Business ────────────────
+//
+// MIN_QUERY_LEN/RESULT_LIMIT mirror searchService.js's own
+// MIN_FUZZY_LEN=2 / DEFAULT_LIMIT=10 conventions -- small, fixed bounds
+// deliberately chosen over a caller-configurable limit, since this
+// endpoint only backs one small "pick a Business to invite" UI, not a
+// general search surface.
+const MIN_QUERY_LEN = 2;
+const RESULT_LIMIT = 20;
+
+// Manager-scoped Business lookup, for the "Invite Business" search UI
+// only. `locationId` is required and checked against
+// req.managerScope.locationIds exactly like the existing ?locationId=
+// filter on GET /businesses -- never trusted on its own. Returns the
+// minimum fields the UI needs to let a manager pick the right Business
+// (id/name/slug/isMember) -- never primaryOwnerUserId, ownerEmail, or
+// any Stripe/billing field, since this is a lookup surface, not a
+// Business-detail read.
+async function handleSearchBusinesses(req, res) {
+  try {
+    const scope = req.managerScope;
+    const { q, locationId } = req.query;
+
+    if (!locationId) {
+      return res.status(400).json({ error: 'locationId is required.' });
+    }
+    if (!scope.locationIds.includes(locationId)) {
+      return res.status(403).json({ error: 'Forbidden. Location outside manager scope.' });
+    }
+
+    const query = String(q || '').trim();
+    if (query.length < MIN_QUERY_LEN) {
+      return res.status(400).json({ error: `Query must be at least ${MIN_QUERY_LEN} characters.` });
+    }
+
+    const businesses = await prisma.business.findMany({
+      where: {
+        status: { not: 'archived' },
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: 'asc' },
+      take: RESULT_LIMIT,
+    });
+
+    const ids = businesses.map((b) => b.id);
+    const existingMemberships = ids.length
+      ? await prisma.businessLocation.findMany({
+          where: { businessId: { in: ids }, locationId },
+          select: { businessId: true, status: true },
+        })
+      : [];
+    const membershipByBusiness = new Map(existingMemberships.map((m) => [m.businessId, m.status]));
+
+    return res.json({
+      businesses: businesses.map((b) => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        isMember: membershipByBusiness.has(b.id),
+        membershipStatus: membershipByBusiness.get(b.id) || null,
+      })),
+    });
+  } catch (err) {
+    console.error('[manager/businesses/search]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+// Creates the StadtPocket city-membership relationship for an EXISTING
+// canonical Business -- never creates or modifies a Business row, never
+// touches BusinessMember (Business ownership/admin), never touches
+// Clerk or Stripe. locationId comes from the request body but is
+// checked against req.managerScope.locationIds before being used for
+// anything -- a manager can only ever invite into one of their own
+// assigned cities, never an arbitrary one. Initial status is
+// "invited", per the Phase 3B Step 1 architecture inspection §8/§10 --
+// deliberately distinct from "active" so the UI/UX never implies the
+// manager has granted themselves or the business immediate full
+// membership.
+async function handleInviteBusiness(req, res) {
+  try {
+    const scope = req.managerScope;
+    const { businessId } = req.params;
+    const { locationId } = req.body || {};
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'businessId is required.' });
+    }
+    if (!locationId) {
+      return res.status(400).json({ error: 'locationId is required.' });
+    }
+    if (!scope.locationIds.includes(locationId)) {
+      return res.status(403).json({ error: 'Forbidden. Location outside manager scope.' });
+    }
+
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business || business.status === 'archived') {
+      return res.status(404).json({ error: 'Business not found.' });
+    }
+
+    const existing = await prisma.businessLocation.findUnique({
+      where: { businessId_locationId: { businessId, locationId } },
+    });
+    if (existing) {
+      return res.status(409).json({
+        error: 'This Business is already a member of this city.',
+        membership: { id: existing.id, status: existing.status },
+      });
+    }
+
+    let membership;
+    try {
+      membership = await prisma.businessLocation.create({
+        data: { businessId, locationId, status: 'invited' },
+        include: { location: { select: { id: true, name: true, slug: true } } },
+      });
+    } catch (err) {
+      // Race-condition fallback: two requests could both pass the
+      // findUnique check above before either create() lands. The
+      // @@unique([businessId, locationId]) constraint is the real
+      // guarantee against a duplicate membership; this just turns the
+      // resulting Prisma P2002 into the same clean 409 the pre-check
+      // above already returns for the non-racing case.
+      if (err.code === 'P2002') {
+        return res.status(409).json({ error: 'This Business is already a member of this city.' });
+      }
+      throw err;
+    }
+
+    return res.status(201).json({
+      membership: {
+        id: membership.id,
+        businessId: membership.businessId,
+        locationId: membership.locationId,
+        status: membership.status,
+        joinedAt: membership.joinedAt,
+        location: membership.location,
+      },
+    });
+  } catch (err) {
+    console.error('[manager/businesses/:businessId/invite]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+router.get('/businesses/search', requireManagerScope, handleSearchBusinesses); // must precede /businesses/:id
 router.get('/businesses', requireManagerScope, handleGetManagerBusinesses);
 router.get('/businesses/:id', requireManagerScope, handleGetManagerBusiness);
+router.post('/businesses/:businessId/invite', requireManagerScope, handleInviteBusiness);
 router.get('/context', requireManagerScope, handleGetManagerContext);
 
 module.exports = router;
 module.exports.handleGetManagerBusinesses = handleGetManagerBusinesses; // exported for direct unit testing only
 module.exports.handleGetManagerBusiness = handleGetManagerBusiness; // exported for direct unit testing only
 module.exports.handleGetManagerContext = handleGetManagerContext; // exported for direct unit testing only
+module.exports.handleSearchBusinesses = handleSearchBusinesses; // exported for direct unit testing only
+module.exports.handleInviteBusiness = handleInviteBusiness; // exported for direct unit testing only
