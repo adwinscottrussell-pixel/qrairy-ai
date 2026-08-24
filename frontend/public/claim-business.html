@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRAIVY — Claim Your Business</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; background: #0d1117; color: #e6edf3;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter', sans-serif; padding: 24px;
+    }
+    .claim-wrap {
+      width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; gap: 24px;
+    }
+    .logo { font-size: 1.6rem; font-weight: 900; color: #fff; letter-spacing: -0.03em; }
+    .logo span { color: #ff5a1f; font-style: italic; }
+    .card {
+      width: 100%; background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+      padding: 32px; text-align: center;
+    }
+    .card h1 { font-size: 1.15rem; margin: 0 0 8px; color: #fff; }
+    .card .sub { font-size: 0.85rem; color: #8b949e; margin: 0 0 20px; }
+    .field { text-align: left; margin-bottom: 14px; font-size: 0.82rem; }
+    .field .k { color: #8b949e; }
+    .field .v { color: #e6edf3; font-weight: 600; }
+    .btn {
+      display: inline-block; width: 100%; background: #ff5a1f; color: #fff; border: none;
+      padding: 13px 20px; border-radius: 8px; font-weight: 700; font-size: 0.9rem;
+      cursor: pointer; margin-top: 10px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn.secondary { background: transparent; border: 1px solid #30363d; color: #e6edf3; }
+    .msg { font-size: 0.8rem; margin-top: 14px; }
+    .msg.error { color: #f85149; }
+    .msg.success { color: #3fb950; }
+    .loading { font-size: 0.85rem; color: #8b949e; }
+  </style>
+</head>
+<body>
+  <div class="claim-wrap">
+    <div class="logo">QR<span>Aivy</span></div>
+    <div class="card" id="claim-card">
+      <div class="loading" id="claim-loading">Loading invitation…</div>
+    </div>
+  </div>
+
+  <script>
+    // Same open-redirect guard as login.html -- only a same-origin relative
+    // path is ever used as a redirect target.
+    function safeRedirectPath(raw) {
+      if (!raw) return null;
+      if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('://')) return null;
+      return raw;
+    }
+
+    var API_BASE = 'https://api.qraivy.com';
+    var token = new URLSearchParams(window.location.search).get('token');
+    var cardEl = document.getElementById('claim-card');
+
+    function renderLoading(text) {
+      cardEl.innerHTML = '<div class="loading">' + text + '</div>';
+    }
+    function renderError(text) {
+      cardEl.innerHTML = '<h1>Invitation unavailable</h1><div class="msg error">' + escapeHtml(text) + '</div>';
+    }
+    function escapeHtml(s) {
+      var d = document.createElement('div');
+      d.textContent = String(s == null ? '' : s);
+      return d.innerHTML;
+    }
+
+    async function getToken() {
+      return window.Clerk.session.getToken();
+    }
+
+    async function loadPreview() {
+      if (!token) { renderError('This invitation link is missing its token.'); return; }
+      renderLoading('Loading invitation…');
+      try {
+        var authToken = await getToken();
+        var res = await fetch(API_BASE + '/businesses/claim/preview?token=' + encodeURIComponent(token), {
+          headers: { 'Authorization': 'Bearer ' + authToken },
+        });
+        var data = await res.json();
+        if (!res.ok) {
+          renderError(data.error || 'This invitation could not be loaded.');
+          return;
+        }
+        renderConfirm(data.invite);
+      } catch (err) {
+        renderError('Could not reach the server. Please try again.');
+      }
+    }
+
+    function renderConfirm(invite) {
+      cardEl.innerHTML =
+        '<h1>You\'ve been invited to StadtPocket</h1>' +
+        '<div class="sub">Accept to create your own QRAIVY Business account. You will be the owner.</div>' +
+        '<div class="field"><span class="k">Business</span><br><span class="v" id="cf-biz"></span></div>' +
+        '<div class="field"><span class="k">StadtPocket City</span><br><span class="v" id="cf-city"></span></div>' +
+        '<button class="btn" id="cf-accept-btn">Accept & Create Business</button>' +
+        '<div class="msg error" id="cf-error"></div>';
+      document.getElementById('cf-biz').textContent = invite.businessName;
+      document.getElementById('cf-city').textContent = invite.city.name;
+      document.getElementById('cf-accept-btn').addEventListener('click', submitClaim);
+    }
+
+    async function submitClaim() {
+      var btn = document.getElementById('cf-accept-btn');
+      var errEl = document.getElementById('cf-error');
+      errEl.textContent = '';
+      btn.disabled = true;
+      try {
+        var authToken = await getToken();
+        var res = await fetch(API_BASE + '/businesses/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ token: token }),
+        });
+        var data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Failed to accept invitation.';
+          btn.disabled = false;
+          return;
+        }
+        cardEl.innerHTML =
+          '<h1>You\'re all set!</h1>' +
+          '<div class="msg success">Your QRAIVY Business has been created and joined to StadtPocket.</div>' +
+          '<button class="btn" id="cf-dashboard-btn">Go to your dashboard</button>';
+        document.getElementById('cf-dashboard-btn').addEventListener('click', function () {
+          window.location.href = 'dashboard.html';
+        });
+      } catch (err) {
+        errEl.textContent = 'Could not reach the server. Please try again.';
+        btn.disabled = false;
+      }
+    }
+
+    async function initClerk() {
+      if (!window.Clerk) { renderError('Could not load the sign-in system. Please refresh.'); return; }
+      await window.Clerk.load();
+      if (!window.Clerk.user) {
+        // Not authenticated -- send through the existing Clerk login/signup
+        // flow, preserving this exact page + token as the return target.
+        var target = window.location.pathname + window.location.search;
+        window.location.replace('/login.html?redirect=' + encodeURIComponent(target));
+        return;
+      }
+      loadPreview();
+    }
+  </script>
+  <script
+    data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"
+    onload="initClerk()"
+  ></script>
+</body>
+</html>

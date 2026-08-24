@@ -2611,15 +2611,27 @@
           <td class="td-email">Invitation Pending</td>
           <td>${spStatusBadge('pending')}</td>
           <td>${spStatusBadge('pending')}</td>
-          <td><button class="action-btn" onclick="cancelPendingBusinessInvite('${inv.id}')">Cancel</button></td>
+          <td>
+            <button class="action-btn" onclick="resendPendingBusinessInvite('${inv.id}')">Resend</button>
+            <button class="action-btn" onclick="cancelPendingBusinessInvite('${inv.id}')">Cancel</button>
+          </td>
         </tr>
       `).join('');
+
+      // Owner display for a City Manager: prefer the resolved email; where
+      // it's null (e.g. the owner's email was never backfilled -- see
+      // clerkEmailSync.js), never fall back to the raw Clerk user_... id --
+      // a neutral "Owner Active" reads as real information without leaking
+      // an internal identifier a manager has no legitimate use for.
+      function managerOwnerDisplay(b) {
+        return b.ownerEmail ? escapeHtml(b.ownerEmail) : 'Owner Active';
+      }
 
       document.getElementById('sp-cd-businesses-body').innerHTML = (businesses.length || pendingInvites.length) ? (
         businesses.map(b => `
         <tr>
           <td class="td-name">${escapeHtml(b.name)}</td>
-          <td class="td-email">${escapeHtml(b.ownerEmail || b.primaryOwnerUserId)}</td>
+          <td class="td-email">${managerOwnerDisplay(b)}</td>
           <td>${spStatusBadge(b.status)}</td>
           <td>${spStatusBadge(b.locations && b.locations[0] ? b.locations[0].membershipStatus : '')}</td>
           <td><button class="action-btn" onclick="loadBusinessDetail('${b.id}')">Open →</button></td>
@@ -3211,7 +3223,9 @@
       currentBusinessDetailData = b;
 
       document.getElementById('sp-bd-title').innerHTML = `${escapeHtml(b.name)} ${spStatusBadge(b.status)}`;
-      document.getElementById('sp-bd-sub').textContent = `Owner: ${b.ownerEmail || b.primaryOwnerUserId}`;
+      // Never a raw Clerk user_... id here either -- same reasoning as
+      // managerOwnerDisplay() in loadCityDetailManagerData.
+      document.getElementById('sp-bd-sub').textContent = `Owner: ${b.ownerEmail || 'Owner Active'}`;
 
       document.getElementById('sp-bd-memberships').innerHTML = b.locations.length
         ? b.locations.map(loc => `
@@ -3681,6 +3695,27 @@
         errEl.textContent = 'Could not reach server.';
       } finally {
         submitBtn.disabled = false;
+      }
+    }
+
+    // Resends a pending onboarding invite -- generates a fresh token/expiry
+    // and a new email server-side; the old claim link stops working the
+    // moment this succeeds. Manager may only resend one in their own city;
+    // the server independently re-checks this.
+    async function resendPendingBusinessInvite(inviteId) {
+      try {
+        const res = await fetch(`${API_BASE}/manager/businesses/onboard/${inviteId}/resend`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data.error || 'Failed to resend invitation.');
+          return;
+        }
+        await loadCityDetailManagerData(currentCityDetailId);
+      } catch (err) {
+        alert('Could not reach server.');
       }
     }
 

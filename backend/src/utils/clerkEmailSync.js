@@ -53,4 +53,32 @@ async function fetchPrimaryEmail(clerkUserId) {
   }
 }
 
-module.exports = { resolvePrimaryEmail, fetchPrimaryEmail };
+// Given a full Clerk user object, returns the primary email's verification
+// status. Clerk's EmailAddress objects carry their own `verification.status`
+// field (e.g. 'verified' | 'unverified' | null) independent of whether the
+// address is merely set as primary -- an address can be primary without
+// being verified (e.g. certain SSO/passwordless flows). This is a real,
+// live-fetched signal from Clerk's own API, not a guess.
+function isPrimaryEmailVerified(clerkUser) {
+  if (!clerkUser) return false;
+  const addresses = clerkUser.emailAddresses || [];
+  const primary = addresses.find((e) => e.id === clerkUser.primaryEmailAddressId);
+  return primary?.verification?.status === 'verified';
+}
+
+// Live, server-side Clerk lookup returning both the primary email and
+// whether it is verified, in one call -- used where a stored/possibly-stale
+// User.email row is not a strong enough signal on its own (e.g. the Step 3B
+// invite-claim email-match check), since this always reflects Clerk's
+// current state at the moment of the check, not whatever was last synced.
+async function fetchPrimaryEmailVerified(clerkUserId) {
+  try {
+    const user = await getClerkClient().users.getUser(clerkUserId);
+    return { email: resolvePrimaryEmail(user), verified: isPrimaryEmailVerified(user) };
+  } catch (err) {
+    console.error('[clerkEmailSync] Failed to fetch Clerk user', clerkUserId, '-', err.message);
+    return { email: null, verified: false };
+  }
+}
+
+module.exports = { resolvePrimaryEmail, fetchPrimaryEmail, isPrimaryEmailVerified, fetchPrimaryEmailVerified };
