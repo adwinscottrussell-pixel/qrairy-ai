@@ -38,13 +38,10 @@ function normalizeName(name) {
 // hash-at-rest/compare-at-lookup convention already used for PIN/pass
 // auth tokens elsewhere in this codebase (see loyaltyAdminController.js,
 // passService.js).
-function hashToken(rawToken) {
-  return crypto.createHash('sha256').update(String(rawToken)).digest('hex');
-}
-
 function generateToken() {
   const rawToken = crypto.randomBytes(32).toString('hex');
-  return { rawToken, tokenHash: hashToken(rawToken) };
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  return { rawToken, tokenHash };
 }
 
 // Conservative, exact-normalized-name match only -- deliberately NOT the
@@ -140,39 +137,11 @@ async function cancelInvite(inviteId) {
   return prisma.cityBusinessInvite.update({ where: { id: inviteId }, data: { status: 'cancelled' } });
 }
 
-// Manager-initiated resend (Phase 3B Step 3B). Scope (does this invite
-// belong to one of the manager's own locations) must already be checked by
-// the route before calling this -- same division of responsibility as
-// createInvite/cancelInvite above. Issues a brand-new token and expiry;
-// the OLD raw token (wherever it still exists -- an old email, a browser
-// tab) stops working immediately, since only the new hash is persisted and
-// claim-lookup is by exact tokenHash match. Only a `pending` invite may be
-// resent -- a cancelled/claimed/expired invite must not be silently
-// resurrected by a resend call.
-async function regenerateToken(inviteId) {
-  const invite = await prisma.cityBusinessInvite.findUnique({ where: { id: inviteId } });
-  if (!invite) throw new InviteError(404, 'Invitation not found.');
-  if (invite.status !== 'pending') {
-    throw invalid(`Only a pending invitation can be resent (current status: ${invite.status}).`);
-  }
-  const { rawToken, tokenHash } = generateToken();
-  const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
-  const updated = await prisma.cityBusinessInvite.update({
-    where: { id: inviteId },
-    data: { tokenHash, expiresAt },
-  });
-  // rawToken returned only in-process for the route to build a fresh email
-  // -- never stored, logged, or included in any JSON response.
-  return { invite: updated, rawToken };
-}
-
 module.exports = {
   InviteError,
   INVITE_STATUSES,
-  hashToken,
   createInvite,
   listInvitesForLocations,
   cancelInvite,
-  regenerateToken,
   findLikelyExistingBusiness,
 };

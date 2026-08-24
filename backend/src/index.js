@@ -11,7 +11,6 @@ const apiKeyRoutes    = require('./routes/apiKeyRoutes');
 const stripeRoutes    = require('./routes/stripeRoutes');
 const adminRoutes     = require('./routes/adminRoutes');
 const managerRoutes   = require('./routes/managerRoutes');
-const businessClaimRoutes = require('./routes/businessClaimRoutes');
 const opsRoutes       = require('./routes/opsRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
@@ -24,16 +23,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
-
-// CORS is transport-origin permission only — it decides whose responses a
-// browser is allowed to read, never who is authenticated. Every admin route
-// still requires a valid Clerk token + publicMetadata.role === 'admin' via
-// requireAdmin regardless of origin (see middleware/adminMiddleware.js).
-// Matching logic lives in utils/corsOriginPolicy.js so it can be unit-tested
-// without booting the full app.
-const { isAllowedOrigin } = require('./utils/corsOriginPolicy');
 app.use(cors({
-  origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
+  origin: ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com', 'https://preview.qraivy.com'],
   credentials: true
 }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
@@ -105,7 +96,6 @@ app.use('/api',      apiKeyRoutes);
 app.use('/stripe',   stripeRoutes);
 app.use('/admin',    adminRoutes);
 app.use('/manager',  managerRoutes);
-app.use('/businesses', businessClaimRoutes);
 app.use('/ops',      opsRoutes);
 
 app.use('/', lpRoutes);
