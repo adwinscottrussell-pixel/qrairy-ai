@@ -106,6 +106,13 @@ const mockPrisma = {
       return userRows.filter((u) => ids.includes(u.id));
     },
   },
+  // Step 3A addition: GET /manager/businesses now also fetches pending
+  // CityBusinessInvite rows via cityBusinessInviteService. This suite
+  // predates Step 3A and isn't testing that feature, so a no-op stub is
+  // enough to keep handleGetManagerBusinesses from throwing.
+  cityBusinessInvite: {
+    findMany: async () => [],
+  },
 };
 
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
