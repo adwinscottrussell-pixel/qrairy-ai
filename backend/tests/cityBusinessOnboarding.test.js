@@ -45,6 +45,7 @@ function resetFixtures() {
   networkMemberRows = [];
   inviteSeq = 0;
   tokenValid = true;
+  sentEmails = [];
 }
 
 const mockPrisma = {
@@ -60,6 +61,7 @@ const mockPrisma = {
       const ids = where.id.in;
       return locationRows.filter((l) => ids.includes(l.id));
     },
+    findUnique: async ({ where }) => locationRows.find((l) => l.id === where.id) || null,
   },
   business: {
     findMany: async ({ where }) => {
@@ -144,9 +146,28 @@ require.cache[clerkBackendPath] = {
   },
 };
 
+// ── Email mock (Phase 3B Step 3B) ─────────────────────────────
+// handleOnboardBusiness/handleResendOnboardInvite now send a real
+// invitation email -- mocked here so no live Resend/network call is ever
+// made in tests, and so tests can assert an email was (or wasn't) sent
+// without depending on external delivery.
+const emailServicePath = resolve('src', 'services', 'emailService.js');
+let sentEmails = [];
+require.cache[emailServicePath] = {
+  id: emailServicePath, filename: emailServicePath, loaded: true,
+  exports: {
+    sendCampaignEmail: async () => ({ success: 0, failed: 0, errors: [] }),
+    sendWelcomeEmail: async () => ({ ok: true }),
+    sendBusinessInviteEmail: async (email, opts) => {
+      sentEmails.push({ email, ...opts });
+      return { ok: true };
+    },
+  },
+};
+
 const managerRoutes = require('../src/routes/managerRoutes');
 const { requireManagerScope } = require('../src/middleware/locationManagerAuth');
-const { handleOnboardBusiness, handleCancelOnboardInvite, handleGetManagerBusinesses } = managerRoutes;
+const { handleOnboardBusiness, handleCancelOnboardInvite, handleResendOnboardInvite, handleGetManagerBusinesses } = managerRoutes;
 
 // ── Test helpers ──────────────────────────────────────────────
 function fakeReq({ auth = true, query = {}, params = {}, body = {} } = {}) {
@@ -329,6 +350,63 @@ test('11c. A cancelled invite cannot be cancelled again', async () => {
   const inviteId = created.body.invite.id;
   await call(handleCancelOnboardInvite, ulmManagerReq({ params: { inviteId } }));
   const res = await call(handleCancelOnboardInvite, ulmManagerReq({ params: { inviteId } }));
+  assert.equal(res.statusCode, 400);
+});
+
+// ── Phase 3B Step 3B — invitation email on create ──
+
+test('onboard sends an invitation email to the invited owner', async () => {
+  resetFixtures();
+  await call(handleOnboardBusiness, ulmManagerReq({ body: { businessName: 'Cafe Muller', email: 'owner@example.com' } }));
+  assert.equal(sentEmails.length, 1);
+  assert.equal(sentEmails[0].email, 'owner@example.com');
+  assert.equal(sentEmails[0].businessName, 'Cafe Muller');
+  assert.ok(sentEmails[0].claimUrl.includes('/claim-business.html?token='));
+});
+
+// ── 14/15/16. Resend ──
+
+test('14. Resend generates a new tokenHash', async () => {
+  resetFixtures();
+  const created = await call(handleOnboardBusiness, ulmManagerReq({ body: { businessName: 'Cafe Muller', email: 'owner@example.com' } }));
+  const inviteId = created.body.invite.id;
+  const before = inviteRows[0].tokenHash;
+  const res = await call(handleResendOnboardInvite, ulmManagerReq({ params: { inviteId } }));
+  assert.equal(res.statusCode, undefined); // default 200
+  assert.notEqual(inviteRows[0].tokenHash, before);
+  assert.equal(sentEmails.length, 2, 'resend must send a fresh email');
+});
+
+test('15. Old token no longer matches after resend (claim-side behavior proven in businessClaim.test.js; here we prove the stored hash actually changes and the old one is gone)', async () => {
+  resetFixtures();
+  const created = await call(handleOnboardBusiness, ulmManagerReq({ body: { businessName: 'Cafe Muller', email: 'owner@example.com' } }));
+  const inviteId = created.body.invite.id;
+  const oldHash = inviteRows[0].tokenHash;
+  await call(handleResendOnboardInvite, ulmManagerReq({ params: { inviteId } }));
+  assert.notEqual(inviteRows[0].tokenHash, oldHash);
+  // Only one row exists, and it now only matches the NEW hash -- a lookup
+  // by the old hash (exactly what claim-by-token does) would find nothing.
+  assert.equal(inviteRows.filter((inv) => inv.tokenHash === oldHash).length, 0);
+});
+
+test('16. Ulm manager cannot resend a Stuttgart invite', async () => {
+  resetFixtures();
+  inviteRows = [{
+    id: 'inv_stuttgart_1', locationId: STUTTGART, businessName: 'Foo', email: 'foo@example.com',
+    status: 'pending', tokenHash: 'x', createdBy: 'someone', createdAt: new Date(), updatedAt: new Date(), expiresAt: new Date(),
+  }];
+  const res = await call(handleResendOnboardInvite, ulmManagerReq({ params: { inviteId: 'inv_stuttgart_1' } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(inviteRows[0].tokenHash, 'x', "the Stuttgart invite's token must be untouched");
+  assert.equal(sentEmails.length, 0);
+});
+
+test('resend: only a pending invite can be resent', async () => {
+  resetFixtures();
+  const created = await call(handleOnboardBusiness, ulmManagerReq({ body: { businessName: 'Cafe Muller', email: 'owner@example.com' } }));
+  const inviteId = created.body.invite.id;
+  await call(handleCancelOnboardInvite, ulmManagerReq({ params: { inviteId } }));
+  const res = await call(handleResendOnboardInvite, ulmManagerReq({ params: { inviteId } }));
   assert.equal(res.statusCode, 400);
 });
 
