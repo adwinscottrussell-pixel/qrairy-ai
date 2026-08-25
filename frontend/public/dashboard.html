@@ -43,6 +43,14 @@
 .claim-banner-btn:hover { opacity: .85; }
 .claim-banner-close { background: none; border: none; color: rgba(240,244,248,0.4); cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0 4px; }
 
+/* StadtPocket post-claim activation card (Phase 3C.2) */
+.sp-activation-card { position: relative; margin-bottom: 20px; }
+.sp-activation-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: rgba(240,244,248,0.4); cursor: pointer; font-size: 1rem; padding: 4px; }
+.sp-activation-close:hover { color: rgba(240,244,248,0.8); }
+.sp-activation-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.15rem; font-weight: 700; color: #f0f4f8; margin-bottom: 6px; padding-right: 28px; }
+.sp-activation-sub { font-size: .86rem; color: rgba(240,244,248,0.72); line-height: 1.55; margin-bottom: 10px; max-width: 640px; }
+.sp-activation-note { font-size: .74rem; color: rgba(240,244,248,0.5); margin-bottom: 16px; }
+
 /* Claimed QR card */
 .sqr-claimed-card {
   background: #13151a;
@@ -264,6 +272,18 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
           <div class="dash-sub" data-i18n="dash_sub">Your AI-powered business engagement system</div>
         </div>
         <button class="btn-create" id="btn-create-sqr" data-i18n="btn_create">&#xFF0B; Create New Smart QR</button>
+      </div>
+      <!-- StadtPocket post-claim activation card (Phase 3C.2). Hidden by
+           default; shown only after a server-verified ?claimed= Business
+           is resolved (see initStadtPocketActivation below). Purely
+           additive -- the normal Smart QR grid below is always rendered
+           the same way regardless of this card's presence. -->
+      <div class="qds-surface qds-surface--feature qds-surface--padding-lg qds-surface--elevation-raised sp-activation-card" id="sp-activation-card" style="display:none">
+        <button class="sp-activation-close" id="sp-activation-close" aria-label="Dismiss">&#x2715;</button>
+        <div class="sp-activation-title" id="sp-activation-title"></div>
+        <div class="sp-activation-sub" id="sp-activation-sub"></div>
+        <div class="sp-activation-note" id="sp-activation-note"></div>
+        <button class="qds-btn qds-btn--primary qds-btn--md" id="sp-setup-btn"></button>
       </div>
       <div class="kpi-row">
         <div class="qds-surface qds-surface--kpi qds-surface--padding-sm qds-surface--elevation-raised"><div class="kpi-val orange qds-surface__kpi-value" id="kpi-pages">&#x2014;</div><div class="qds-surface__kpi-label" data-i18n="kpi_pages">Smart QR Pages</div></div>
@@ -494,6 +514,58 @@ function launchOnboarding(){
   if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId||'user');
 }
 
+// ── StadtPocket post-claim activation card (Phase 3C.2) ──────────────
+// Additive only: never hides or replaces the normal Smart QR dashboard
+// below it, and does nothing at all for an account with no ?claimed=
+// param (existing users, normal sign-ins, direct dashboard visits).
+//
+// Intended future activation pipeline (not implemented yet -- see Phase
+// 3C.3+): Claim Business -> Business Setup -> AI Business Generation ->
+// Smart Landing Page -> DEFAULT Business Wallet Card -> Publish to
+// StadtPocket. The Business Wallet Card is the default Wallet product
+// for every StadtPocket business and must never depend on Loyalty &
+// Rewards being enabled -- Loyalty/Deals/push campaigns are optional
+// enhancements layered on afterward, not prerequisites.
+function showSpActivationCard(business,location){
+  window._spClaim={businessName:(business&&business.name)||'',cityName:(location&&location.name)||''};
+  if(window.renderSpActivationCard)window.renderSpActivationCard();
+  var card=document.getElementById('sp-activation-card');
+  if(card)card.style.display='block';
+}
+
+// The ?claimed=<businessId> query param is navigation context only, NEVER
+// authorization. It is sent to GET /businesses/:id/summary, which
+// independently re-verifies server-side that the authenticated caller
+// owns exactly this Business before returning anything (identical 404 for
+// "doesn't exist" and "exists but isn't yours" -- see
+// businessClaimService.getOwnedBusinessSummary). Any non-2xx response or
+// network failure fails silently: no card, no error surfaced -- an
+// invalid id or another owner's id must never be distinguishable to the
+// visitor.
+async function initStadtPocketActivation(){
+  var params=new URLSearchParams(window.location.search);
+  var claimedId=params.get('claimed');
+  if(!claimedId)return;
+  try{
+    var token=await window.Clerk.session.getToken();
+    var res=await fetch(API_BASE+'/businesses/'+encodeURIComponent(claimedId)+'/summary',{
+      headers:{Authorization:'Bearer '+token},
+    });
+    if(res.ok){
+      var data=await res.json();
+      showSpActivationCard(data.business,data.location);
+    }
+  }catch(e){
+    // Network/auth failure -- safe no-op, same as a non-2xx response.
+  }finally{
+    // Consumed (successfully or not) -- strip the transient param so a
+    // bookmarked or refreshed link never re-triggers this flow.
+    params.delete('claimed');
+    var qs=params.toString();
+    history.replaceState(null,'',window.location.pathname+(qs?'?'+qs:''));
+  }
+}
+
 async function initDashboard(){
   await window.Clerk.load();
   await new Promise(function(r){setTimeout(r,400);});
@@ -577,6 +649,14 @@ async function initDashboard(){
   }else{
     if(window.qrairyOnboarding)window.qrairyOnboarding.init(window._userId);
   }
+
+  var spClose=document.getElementById('sp-activation-close');
+  if(spClose)spClose.addEventListener('click',function(){var c=document.getElementById('sp-activation-card');if(c)c.style.display='none';});
+  var spBtn=document.getElementById('sp-setup-btn');
+  if(spBtn)spBtn.addEventListener('click',function(){
+    if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId||'user',{businessName:window._spClaim&&window._spClaim.businessName});
+  });
+  initStadtPocketActivation();
   loadDashboard();
   // Handle ?section= param for cross-page navigation
   var sectionP = new URLSearchParams(window.location.search).get('section');
@@ -1801,6 +1881,14 @@ window.loadCustList = function(btn) {
       banner_title: '✓ Your Smart QR has been claimed',
       banner_sub: 'You can now manage your landing page, analytics, subscribers, and Smart QR tools from this dashboard.',
       banner_btn: 'Manage Smart QR',
+      // Phase 3C.2 -- StadtPocket post-claim activation card. {city}/
+      // {business} are replaced with server-verified values at render
+      // time (see renderSpActivationCard), never with raw query-param
+      // input.
+      sp_title: 'Welcome to StadtPocket{city} 👋',
+      sp_sub: '{business} is now part of StadtPocket. Let’s get your business ready — QRAIVY can use your website to build your business page and prepare your Business Wallet Card.',
+      sp_note: 'Your Business Wallet Card is included. Loyalty & Rewards can be enabled later.',
+      sp_btn: 'Set Up My Business →',
       nav_main: 'Main',
       nav_dashboard: 'Dashboard',
       nav_analytics: 'Analytics',
@@ -1882,6 +1970,10 @@ window.loadCustList = function(btn) {
       banner_title: '✓ Ihr Smart QR wurde beansprucht',
       banner_sub: 'Sie können jetzt Ihre Landingpage, Analytics, Abonnenten und Smart QR-Tools in diesem Dashboard verwalten.',
       banner_btn: 'Smart QR verwalten',
+      sp_title: 'Willkommen bei StadtPocket{city} 👋',
+      sp_sub: '{business} ist jetzt Teil von StadtPocket. Richten wir Ihr Unternehmen ein — QRAIVY kann Ihre Website nutzen, um Ihre Unternehmensseite zu erstellen und Ihre Business Wallet Card vorzubereiten.',
+      sp_note: 'Ihre Business Wallet Card ist inbegriffen. Treue & Prämien können später aktiviert werden.',
+      sp_btn: 'Unternehmen einrichten →',
       nav_main: 'Hauptmenü',
       nav_dashboard: 'Dashboard',
       nav_analytics: 'Analytics',
@@ -1972,7 +2064,28 @@ window.loadCustList = function(btn) {
     if (emptySub) emptySub.textContent = t.empty_sub;
     var emptyBtn = document.querySelector('.sqr-empty .btn-create');
     if (emptyBtn) emptyBtn.textContent = t.empty_btn;
+    if (window.renderSpActivationCard) window.renderSpActivationCard();
   }
+
+  // Phase 3C.2 -- exposed so the StadtPocket activation card (defined in
+  // the main dashboard script, outside this i18n closure) can render/
+  // re-render its dynamic text using the current _t/_lang. window._spClaim
+  // holds only server-verified display fields (business name, city name),
+  // never anything read directly from the URL.
+  window.renderSpActivationCard = function() {
+    var claim = window._spClaim;
+    if (!claim) return;
+    var t = _t[_lang] || _t.en;
+    var titleEl = document.getElementById('sp-activation-title');
+    var subEl = document.getElementById('sp-activation-sub');
+    var noteEl = document.getElementById('sp-activation-note');
+    var btnEl = document.getElementById('sp-setup-btn');
+    var cityPart = claim.cityName ? ' ' + claim.cityName : '';
+    if (titleEl) titleEl.textContent = (t.sp_title || '').replace('{city}', cityPart);
+    if (subEl) subEl.textContent = (t.sp_sub || '').replace('{business}', claim.businessName || '');
+    if (noteEl) noteEl.textContent = t.sp_note || '';
+    if (btnEl) btnEl.textContent = t.sp_btn || '';
+  };
 
   window.toggleLang = function() {
     applyLang(_lang === 'en' ? 'de' : 'en');
