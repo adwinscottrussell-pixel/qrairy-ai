@@ -133,7 +133,13 @@
           '<div class="msg success">Your QRAIVY Business has been created and joined to StadtPocket.</div>' +
           '<button class="btn" id="cf-dashboard-btn">Go to your dashboard</button>';
         document.getElementById('cf-dashboard-btn').addEventListener('click', function () {
-          window.location.href = 'dashboard.html';
+          // Navigation context only, never authorization -- the backend
+          // independently re-verifies ownership on every request. Carries
+          // only the stable Business id; no name/city, no trust implied.
+          var newBusinessId = data && data.business && data.business.id;
+          window.location.href = newBusinessId
+            ? 'dashboard.html?claimed=' + encodeURIComponent(newBusinessId)
+            : 'dashboard.html';
         });
       } catch (err) {
         errEl.textContent = 'Could not reach the server. Please try again.';
