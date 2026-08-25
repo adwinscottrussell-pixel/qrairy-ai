@@ -46,6 +46,15 @@ const router = express.Router();
 const prisma = require('../utils/prismaClient');
 const { requireManagerScope } = require('../middleware/locationManagerAuth');
 const cityBusinessInviteService = require('../services/cityBusinessInviteService');
+const { sendBusinessInviteEmail } = require('../services/emailService');
+
+// Phase 3B Step 3B — builds the claim link an invited owner clicks. Never
+// logged, never persisted beyond this in-process call -- the raw token
+// only ever exists long enough to build this URL and hand it to Resend.
+function buildClaimUrl(rawToken) {
+  const base = process.env.FRONTEND_URL || 'https://www.qraivy.com';
+  return `${base}/claim-business.html?token=${encodeURIComponent(rawToken)}`;
+}
 
 // Local, deliberately not imported from networkAdminService.js -- that file
 // is the platform-admin-only write surface (see its own header comment);
@@ -472,6 +481,22 @@ async function handleOnboardBusiness(req, res) {
       });
     }
 
+    // Send the invitation email (Phase 3B Step 3B). result.rawToken exists
+    // only in-process (cityBusinessInviteService never persists or logs
+    // it) -- it is used here to build the claim URL and then discarded.
+    // Email failure is logged but never fails the request: the invite row
+    // itself is the source of truth, and Resend can be used to retry
+    // delivery without losing the invite.
+    const location = await prisma.location.findUnique({ where: { id: locationId }, select: { name: true } });
+    const emailResult = await sendBusinessInviteEmail(result.invite.email, {
+      businessName: result.invite.businessName,
+      cityName: location?.name || 'your city',
+      claimUrl: buildClaimUrl(result.rawToken),
+    });
+    if (!emailResult.ok) {
+      console.error('[manager/businesses/onboard] invite email failed for invite', result.invite.id, '-', emailResult.error);
+    }
+
     return res.status(201).json({
       result: 'created',
       invite: {
@@ -486,6 +511,52 @@ async function handleOnboardBusiness(req, res) {
     });
   } catch (err) {
     console.error('[manager/businesses/onboard]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
+// Phase 3B Step 3B — City-Manager-initiated resend. Scope-checked exactly
+// like cancel: the invite must belong to one of the manager's own
+// locations, and only a `pending` invite may be resent. Reuses
+// cityBusinessInviteService.regenerateToken, which invalidates the old
+// token by construction (only the new hash is ever persisted; claim
+// lookup is by exact tokenHash match).
+async function handleResendOnboardInvite(req, res) {
+  try {
+    const scope = req.managerScope;
+    const { inviteId } = req.params;
+
+    const invite = await prisma.cityBusinessInvite.findUnique({ where: { id: inviteId } });
+    if (!invite) {
+      return res.status(404).json({ error: 'Invitation not found.' });
+    }
+    if (!scope.locationIds.includes(invite.locationId)) {
+      return res.status(403).json({ error: 'Forbidden. Invitation outside manager scope.' });
+    }
+
+    let result;
+    try {
+      result = await cityBusinessInviteService.regenerateToken(inviteId);
+    } catch (err) {
+      if (err instanceof cityBusinessInviteService.InviteError) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      throw err;
+    }
+
+    const location = await prisma.location.findUnique({ where: { id: invite.locationId }, select: { name: true } });
+    const emailResult = await sendBusinessInviteEmail(result.invite.email, {
+      businessName: result.invite.businessName,
+      cityName: location?.name || 'your city',
+      claimUrl: buildClaimUrl(result.rawToken),
+    });
+    if (!emailResult.ok) {
+      console.error('[manager/businesses/onboard/resend] invite email failed for invite', inviteId, '-', emailResult.error);
+    }
+
+    return res.json({ invite: { id: result.invite.id, status: result.invite.status, expiresAt: result.invite.expiresAt } });
+  } catch (err) {
+    console.error('[manager/businesses/onboard/:inviteId/resend]', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
@@ -526,6 +597,7 @@ router.get('/businesses', requireManagerScope, handleGetManagerBusinesses);
 router.get('/businesses/:id', requireManagerScope, handleGetManagerBusiness);
 router.post('/businesses/:businessId/invite', requireManagerScope, handleInviteBusiness);
 router.post('/businesses/onboard/:inviteId/cancel', requireManagerScope, handleCancelOnboardInvite);
+router.post('/businesses/onboard/:inviteId/resend', requireManagerScope, handleResendOnboardInvite);
 router.get('/context', requireManagerScope, handleGetManagerContext);
 
 module.exports = router;
@@ -536,3 +608,4 @@ module.exports.handleSearchBusinesses = handleSearchBusinesses; // exported for 
 module.exports.handleInviteBusiness = handleInviteBusiness; // exported for direct unit testing only
 module.exports.handleOnboardBusiness = handleOnboardBusiness; // exported for direct unit testing only
 module.exports.handleCancelOnboardInvite = handleCancelOnboardInvite; // exported for direct unit testing only
+module.exports.handleResendOnboardInvite = handleResendOnboardInvite; // exported for direct unit testing only
