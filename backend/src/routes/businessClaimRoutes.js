@@ -101,9 +101,36 @@ async function handleClaimBusiness(req, res) {
   }
 }
 
+// GET /businesses/:id/summary — Phase 3C.2. Minimal, owner-only read used
+// solely by the post-claim dashboard activation card. :id is navigation
+// context only (the dashboard's own ?claimed= query param supplies it) --
+// never trusted as proof of ownership. getOwnedBusinessSummary
+// independently re-verifies req.userId against Business.primaryOwnerUserId
+// on every call and returns an identical 404 whether the id doesn't exist
+// or simply isn't this caller's, so this can never disclose another
+// owner's Business. Registered after /claim/preview and /claim so those
+// literal paths are never shadowed by this param route.
+async function handleGetBusinessSummary(req, res) {
+  try {
+    const summary = await businessClaimService.getOwnedBusinessSummary({
+      businessId: req.params.id,
+      ownerUserId: req.userId,
+    });
+    return res.json(summary);
+  } catch (err) {
+    if (err instanceof businessClaimService.ClaimError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('[businesses/:id/summary]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 router.get('/claim/preview', requireAuth, handleGetClaimPreview);
 router.post('/claim', requireAuth, handleClaimBusiness);
+router.get('/:id/summary', requireAuth, handleGetBusinessSummary);
 
 module.exports = router;
 module.exports.handleGetClaimPreview = handleGetClaimPreview; // exported for direct unit testing only
 module.exports.handleClaimBusiness = handleClaimBusiness; // exported for direct unit testing only
+module.exports.handleGetBusinessSummary = handleGetBusinessSummary; // exported for direct unit testing only

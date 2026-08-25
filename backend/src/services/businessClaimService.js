@@ -184,4 +184,37 @@ async function claimInvite({ rawToken, claimantUserId, claimantEmail, claimantEm
   }
 }
 
-module.exports = { ClaimError, getInvitePreviewByToken, claimInvite };
+// Phase 3C.2 — the ONLY thing the post-claim dashboard activation card is
+// allowed to know about a Business. businessId here is navigation context
+// supplied by the client (the dashboard's own ?claimed= query param) and
+// is NEVER trusted as proof of ownership -- ownership is independently
+// re-verified against ownerUserId (the authenticated caller) on every
+// call, exactly like claimInvite() above never trusts a client-supplied
+// identity. "Doesn't exist" and "exists but isn't yours" return the
+// identical 404, so this can never be used to probe for another owner's
+// Business. Returns only display-safe fields: name and the Business's
+// most recent StadtPocket city membership -- never primaryOwnerUserId,
+// never status, never anything else.
+async function getOwnedBusinessSummary({ businessId, ownerUserId }) {
+  if (!businessId || !ownerUserId) throw notFound('Business not found.');
+
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business || business.primaryOwnerUserId !== ownerUserId) {
+    throw notFound('Business not found.');
+  }
+
+  const membership = await prisma.businessLocation.findFirst({
+    where: { businessId: business.id },
+    orderBy: { joinedAt: 'desc' },
+    include: { location: { select: { id: true, name: true, slug: true } } },
+  });
+
+  return {
+    business: { id: business.id, name: business.name },
+    location: membership
+      ? { id: membership.location.id, name: membership.location.name, slug: membership.location.slug }
+      : null,
+  };
+}
+
+module.exports = { ClaimError, getInvitePreviewByToken, claimInvite, getOwnedBusinessSummary };

@@ -142,6 +142,16 @@ const mockPrisma = {
       const key = where.businessId_locationId;
       return businessLocationRows.find((bl) => bl.businessId === key.businessId && bl.locationId === key.locationId) || null;
     },
+    // Used by getOwnedBusinessSummary (Phase 3C.2): most recent membership
+    // for a single Business, with its Location attached.
+    findFirst: async ({ where }) => {
+      const rows = businessLocationRows
+        .filter((bl) => bl.businessId === where.businessId)
+        .sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt));
+      const row = rows[0];
+      if (!row) return null;
+      return { ...row, location: locationRows.find((l) => l.id === row.locationId) };
+    },
     // Mirrors handleGetManagerBusinesses's real shape:
     // { locationId: { in: [...] }, business: { status: { not } } },
     // include: { business: true, location: { select } }
@@ -238,7 +248,7 @@ require.cache[emailServicePath] = {
 };
 
 const businessClaimRoutes = require('../src/routes/businessClaimRoutes');
-const { handleGetClaimPreview, handleClaimBusiness } = businessClaimRoutes;
+const { handleGetClaimPreview, handleClaimBusiness, handleGetBusinessSummary } = businessClaimRoutes;
 const { requireAuth } = require('../src/middleware/auth');
 const managerRoutes = require('../src/routes/managerRoutes');
 const { handleGetManagerBusinesses } = managerRoutes;
@@ -498,6 +508,72 @@ test('20. After claim, GET /manager/businesses stops listing it as pending and s
   assert.equal(after.body.businesses.length, 1, 'the real Business must now appear');
   assert.equal(after.body.businesses[0].name, 'Cafe Muller');
   assert.equal(after.body.businesses[0].locations[0].membershipStatus, 'active');
+});
+
+// ── Phase 3C.2 — GET /businesses/:id/summary ────────────────────
+// The post-claim dashboard activation card's ONLY data source. Proves the
+// ?claimed=<businessId> query param can never be used as anything but
+// navigation context: ownership is independently re-verified server-side
+// on every call, and "doesn't exist" vs "exists but isn't yours" are
+// indistinguishable to the caller.
+
+test('summary: owner of the claimed Business gets name + city', async () => {
+  resetFixtures();
+  const { rawToken } = makeInvite({ locationId: ULM, businessName: 'Rick Ross Marketing' });
+  const claimRes = await call(handleClaimBusiness, fakeReq({ body: { token: rawToken } }));
+  const businessId = claimRes.body.business.id;
+
+  const res = await call(handleGetBusinessSummary, fakeReq({ params: { id: businessId } }));
+  assert.equal(res.statusCode, undefined); // default 200
+  assert.equal(res.body.business.id, businessId);
+  assert.equal(res.body.business.name, 'Rick Ross Marketing');
+  assert.equal(res.body.location.name, 'Ulm');
+  assert.equal(res.body.location.slug, 'ulm');
+});
+
+test('summary: never exposes primaryOwnerUserId, status, or any field beyond id/name and location', async () => {
+  resetFixtures();
+  const { rawToken } = makeInvite();
+  const claimRes = await call(handleClaimBusiness, fakeReq({ body: { token: rawToken } }));
+  const res = await call(handleGetBusinessSummary, fakeReq({ params: { id: claimRes.body.business.id } }));
+  assert.deepEqual(Object.keys(res.body).sort(), ['business', 'location']);
+  assert.deepEqual(Object.keys(res.body.business).sort(), ['id', 'name']);
+  assert.deepEqual(Object.keys(res.body.location).sort(), ['id', 'name', 'slug']);
+});
+
+test('summary: a different authenticated user requesting the same Business id gets a generic 404, no data disclosed', async () => {
+  resetFixtures();
+  const { rawToken } = makeInvite();
+  const claimRes = await call(handleClaimBusiness, fakeReq({ body: { token: rawToken } }));
+  const businessId = claimRes.body.business.id;
+
+  currentUserId = 'user_other';
+  const res = await call(handleGetBusinessSummary, fakeReq({ params: { id: businessId } }));
+  assert.equal(res.statusCode, 404);
+  assert.equal(Object.keys(res.body).length, 1, 'error only -- no business/location leaked');
+  assert.equal(res.body.error, 'Business not found.');
+});
+
+test('summary: a nonexistent Business id returns the SAME 404 body as an unowned one -- no existence signal', async () => {
+  resetFixtures();
+  const res = await call(handleGetBusinessSummary, fakeReq({ params: { id: 'biz_does_not_exist' } }));
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.body.error, 'Business not found.');
+});
+
+test('summary: no JWT -> 401', async () => {
+  resetFixtures();
+  const res = await call(handleGetBusinessSummary, fakeReq({ auth: false, params: { id: 'biz_1' } }));
+  assert.equal(res.statusCode, 401);
+});
+
+test('summary: a Business with no BusinessLocation membership yet returns location: null, never throws', async () => {
+  resetFixtures();
+  businessRows.push({ id: 'biz_orphan', name: 'No City Yet', primaryOwnerUserId: 'user_claimant', status: 'active' });
+  const res = await call(handleGetBusinessSummary, fakeReq({ params: { id: 'biz_orphan' } }));
+  assert.equal(res.statusCode, undefined); // default 200
+  assert.equal(res.body.business.name, 'No City Yet');
+  assert.equal(res.body.location, null);
 });
 
 // ── runner ────────────────────────────────────────────────────
