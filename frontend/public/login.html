@@ -31,16 +31,32 @@
   </div>
 
   <script>
+    // Same open-redirect guard as claim-business.html -- only a same-origin
+    // relative path is ever used as a redirect target. auth-guard.js (used
+    // by every protected page) builds the ?redirect= value this page reads
+    // below from that page's own pathname+search, but this is the actual
+    // safety boundary: it is never trusted just because it came from our
+    // own auth-guard.js, exactly as if it had come from an arbitrary link.
+    function safeRedirectPath(raw) {
+      if (!raw) return null;
+      if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('://')) return null;
+      return raw;
+    }
+
     async function initClerk() {
       await window.Clerk.load();
       if (window.Clerk.user) {
         const _r = new URLSearchParams(window.location.search).get('redirect');
-        window.location.href = _r || 'dashboard.html';
+        window.location.href = safeRedirectPath(_r) || 'dashboard.html';
         return;
       }
       const _rp = new URLSearchParams(window.location.search).get('redirect');
       const _base = 'https://www.qraivy.com/';
-      const _target = _rp ? _base + _rp : _base + 'dashboard.html';
+      const _safe = safeRedirectPath(_rp);
+      // _safe is guaranteed to start with exactly one '/' (never '//') by
+      // safeRedirectPath, so slice(1) drops it cleanly instead of producing
+      // a double slash against _base's own trailing '/'.
+      const _target = _safe ? _base + _safe.slice(1) : _base + 'dashboard.html';
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,
         afterSignUpUrl: _target,

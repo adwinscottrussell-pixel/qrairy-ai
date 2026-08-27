@@ -25,11 +25,17 @@
 
   var LOGIN_URL = '/login.html';
 
-  // Resolve the login redirect path relative to current page
+  // Resolve the login redirect path relative to current page. Includes
+  // search (query string) as well as pathname -- e.g. dashboard.html's own
+  // ?claimed=<businessId> StadtPocket activation context (Phase 3C.2) was
+  // previously dropped here, silently losing it across the login round-trip.
+  // Still root-relative only; login.html independently re-validates this
+  // value with its own safeRedirectPath() before ever using it as a
+  // redirect target, so this file constructing it is never itself the
+  // safety boundary.
   function getLoginUrl() {
-    var path = window.location.pathname;
-    // Normalise to root-relative
-    return LOGIN_URL + '?redirect=' + encodeURIComponent(path);
+    var target = window.location.pathname + window.location.search;
+    return LOGIN_URL + '?redirect=' + encodeURIComponent(target);
   }
 
   function reveal() {
