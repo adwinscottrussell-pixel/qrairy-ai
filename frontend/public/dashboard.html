@@ -527,7 +527,12 @@ function launchOnboarding(){
 // Rewards being enabled -- Loyalty/Deals/push campaigns are optional
 // enhancements layered on afterward, not prerequisites.
 function showSpActivationCard(business,location){
-  window._spClaim={businessName:(business&&business.name)||'',cityName:(location&&location.name)||''};
+  // businessId/cityName here are already server-verified (this function is
+  // only ever called from initStadtPocketActivation() after a 2xx from
+  // GET /businesses/:id/summary) -- Phase 3C.3 threads businessId through
+  // to onboarding.js as in-memory session context only, never as
+  // authorization; nothing downstream sends it to any write endpoint.
+  window._spClaim={businessId:(business&&business.id)||null,businessName:(business&&business.name)||'',cityName:(location&&location.name)||''};
   if(window.renderSpActivationCard)window.renderSpActivationCard();
   var card=document.getElementById('sp-activation-card');
   if(card)card.style.display='block';
@@ -654,7 +659,25 @@ async function initDashboard(){
   if(spClose)spClose.addEventListener('click',function(){var c=document.getElementById('sp-activation-card');if(c)c.style.display='none';});
   var spBtn=document.getElementById('sp-setup-btn');
   if(spBtn)spBtn.addEventListener('click',function(){
-    if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId||'user',{businessName:window._spClaim&&window._spClaim.businessName});
+    // Phase 3C.3: launches directly into the AI business-setup path
+    // (skips the generic Free/AI QR-type question -- already implicitly
+    // answered by clicking "Set Up My Business") via a dedicated entry
+    // point, openBusinessSetup(), separate from reopen() -- normal
+    // "Create New Smart QR" (launchOnboarding() above) still calls
+    // reopen() unchanged and still opens the generic step1 QR-type
+    // choice. businessId/city are server-verified context carried
+    // through for a later phase to use when linking the resulting
+    // LandingPage -- never authorization, never sent anywhere by this
+    // click itself.
+    if(window.qrairyOnboarding&&window.qrairyOnboarding.openBusinessSetup){
+      window.qrairyOnboarding.openBusinessSetup(window._userId||'user',{
+        businessId:window._spClaim&&window._spClaim.businessId,
+        businessName:window._spClaim&&window._spClaim.businessName,
+        city:window._spClaim&&window._spClaim.cityName
+      });
+    }else if(window.qrairyOnboarding){
+      window.qrairyOnboarding.reopen(window._userId||'user',{businessName:window._spClaim&&window._spClaim.businessName});
+    }
   });
   initStadtPocketActivation();
   loadDashboard();
