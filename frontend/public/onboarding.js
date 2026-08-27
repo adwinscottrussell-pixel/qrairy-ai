@@ -107,6 +107,13 @@
             logoUrl:S.logo,
             qrType:S.qrType||'ai',
             template:'premium',
+            // Phase 3C.4: sent ONLY when this session was launched via
+            // openBusinessSetup() (S.stadtPocketContext is set only
+            // there, never by init()/reopen()) -- navigation context, not
+            // authorization; the backend independently re-verifies
+            // ownership/membership before ever acting on it. Never sends
+            // city/business name as any form of proof.
+            businessId:      S.stadtPocketContext?S.stadtPocketContext.businessId:undefined,
             categorySlug:    S.selectedUseCase,
             categoryLabel:   catCfg?catCfg.label:S.selectedUseCase,
             defaultCTA:      catCfg?catCfg.defaultCTA:'Learn More',
