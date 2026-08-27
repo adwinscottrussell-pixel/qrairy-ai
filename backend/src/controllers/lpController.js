@@ -1190,7 +1190,7 @@ async function handleChatLP(req, res) {
 
 async function handlePublishLP(req, res) {
   try {
-    const { slug, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template } = req.body;
+    const { slug, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template, businessId } = req.body;
     const businessName = ((req.body.businessName||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/\.(de|com|net|org|io)$/i,'').replace(/\s+[a-z0-9]{3}$/,'').trim())||req.body.businessName||'';
     let userId = req.body.userId || null;
     if (!userId && req.headers.authorization) {
@@ -1198,7 +1198,54 @@ async function handlePublishLP(req, res) {
     }
     if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
 
-    // ── Plan limit check ──────────────────────────────────────────
+    // ── StadtPocket included-page entitlement (Phase 3C.4) ──────────
+    // businessId is navigation context only, exactly like everywhere else
+    // in this project -- never trusted as authorization by itself. Every
+    // fact needed to grant the one-included-page entitlement is
+    // independently re-verified here on every request:
+    //   1. a real, TOKEN-VERIFIED user (never req.body.userId, which the
+    //      rest of this handler still trusts -- see the pre-existing gap
+    //      noted below; this path does not inherit that leniency)
+    //   2. Business exists
+    //   3. Business.primaryOwnerUserId === that verified user
+    //   4. Business has at least one StadtPocket BusinessLocation
+    //   5. no LandingPage is already linked to this Business (the
+    //      entitlement is per-Business, one-time, not per-request)
+    // Any failure below other than "not authenticated" silently denies
+    // only the GRANT, never the whole request -- normal plan-limit rules
+    // still apply exactly as if businessId had never been sent, and the
+    // response never discloses which specific check failed (same
+    // identical-outcome pattern as getOwnedBusinessSummary, so a
+    // wrong/foreign/nonexistent businessId can't be used to probe
+    // anything).
+    let stadtPocketGrant = false;
+    if (businessId) {
+      const verifiedUserId = req.headers.authorization
+        ? await getUserFromToken(req.headers.authorization).catch(() => null)
+        : null;
+      if (!verifiedUserId) {
+        return res.status(401).json({ error: 'Authentication is required to link a StadtPocket business page.' });
+      }
+      const business = await prisma.business.findUnique({ where: { id: businessId } });
+      if (business && business.primaryOwnerUserId === verifiedUserId) {
+        const hasMembership = await prisma.businessLocation.findFirst({ where: { businessId: business.id } });
+        const alreadyLinked = await prisma.landingPage.findFirst({ where: { businessId: business.id } });
+        if (hasMembership && !alreadyLinked) {
+          stadtPocketGrant = true;
+          // The verified identity is authoritative for this creation --
+          // overrides whatever userId (possibly client-supplied) was
+          // resolved above, for this StadtPocket-linked creation only.
+          userId = verifiedUserId;
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    // ── Plan limit check (bypassed only when the verified StadtPocket
+    // grant above applies -- this computation still always runs so a
+    // grant that's lost to a concurrent request, below, has a normal
+    // limit outcome to fall back to instead of silently succeeding) ──
+    let planLimitResponse = null;
     if (userId) {
       const existingPage = await prisma.landingPage.findUnique({ where: { slug } });
       if (!existingPage) {
@@ -1209,15 +1256,18 @@ async function handlePublishLP(req, res) {
         const limit = LIMITS[plan] ?? 1;
         const pageCount = await prisma.landingPage.count({ where: { userId } });
         if (pageCount >= limit) {
-          return res.status(402).json({
+          planLimitResponse = {
             error: 'plan_limit',
             message: `Your ${plan} plan allows ${limit} Smart QR page${limit === 1 ? '' : 's'}. Upgrade to create more.`,
             limit,
             current: pageCount,
             upgrade: true
-          });
+          };
         }
       }
+    }
+    if (planLimitResponse && !stadtPocketGrant) {
+      return res.status(402).json(planLimitResponse);
     }
     // ─────────────────────────────────────────────────────────────
 
@@ -1247,11 +1297,50 @@ async function handlePublishLP(req, res) {
     if (!mergedSections.language) mergedSections.language = 'en';
     pageCache.delByPrefix('lp:' + slug);
     pageCache.delByPrefix('stamp:' + slug);
-    const page = await prisma.landingPage.upsert({
+    const baseUpsertArgs = {
       where: { slug },
       update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ...(logoUrl ? { logoUrl } : {}), userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live', template: template || null },
-    });
+    };
+
+    let page;
+    if (stadtPocketGrant) {
+      // Re-verify "not already linked" a second time, atomically together
+      // with the write, under Serializable isolation -- this is the
+      // authoritative, race-safe check. Without it, two near-simultaneous
+      // requests for the same Business could both pass the earlier check
+      // above and both link a page (LandingPage.businessId has no unique
+      // constraint at the DB level to catch this for free -- no schema
+      // change in this phase). If the transaction loses that race, it
+      // throws SP_RACE_LOST (or Prisma reports P2034, its own
+      // serialization-conflict code) and the entitlement was genuinely
+      // already consumed by the other request -- fall back to the normal
+      // plan-limit outcome computed above, exactly as if businessId had
+      // never been sent.
+      try {
+        page = await prisma.$transaction(async (tx) => {
+          const stillUnlinked = !(await tx.landingPage.findFirst({ where: { businessId } }));
+          if (!stillUnlinked) {
+            throw Object.assign(new Error('StadtPocket entitlement already consumed by a concurrent request'), { code: 'SP_RACE_LOST' });
+          }
+          return tx.landingPage.upsert({
+            ...baseUpsertArgs,
+            create: { ...baseUpsertArgs.create, businessId },
+          });
+        }, { isolationLevel: 'Serializable' });
+      } catch (err) {
+        if (err.code === 'SP_RACE_LOST' || err.code === 'P2034') {
+          if (planLimitResponse) return res.status(402).json(planLimitResponse);
+          // Otherwise fall through to the normal, non-grant upsert below --
+          // the user has room under their own normal plan limit anyway.
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!page) {
+      page = await prisma.landingPage.upsert(baseUpsertArgs);
+    }
     if (websiteUrl && websiteUrl.startsWith('http')) {
 
 
