@@ -71,7 +71,7 @@ router.get('/lp/wallet/google/:slug', async (req, res) => {
         });
       } catch (_we) { console.error('[Google Wallet] LoyaltyCustomer upsert error:', _we.message); }
     }
-    const saveUrl = await createGoogleWalletSaveUrl(slug, sections, cid);
+    const saveUrl = await createGoogleWalletSaveUrl(slug, sections, cid, page.businessId || null);
     return res.redirect(302, saveUrl);
   } catch (err) {
     console.error('[Google Wallet]', err.message);

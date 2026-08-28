@@ -2,6 +2,17 @@ const { GoogleAuth } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prismaClient');
 const { getTheme } = require('./walletThemes');
+const { resolveStadtPocketContext } = require('./stadtPocketContext');
+
+// Guards free-text (AI-generated hero.badge) before it goes into a Wallet
+// field — mirrors passService.js's safeTagline; Apple/Google both have
+// practical field-length limits.
+function safeTagline(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  return trimmed.length > 40 ? trimmed.slice(0, 40).trim() : trimmed;
+}
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023161108';
 const CLASS_SUFFIX = 'qraivy_loyalty_v1';
@@ -73,7 +84,7 @@ async function ensureClass(credentials, businessName, logoUrl) {
   return classId;
 }
 
-function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl }) {
+function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city, tagline }) {
   const classId = getClassId();
   const objectId = getObjectId(slug, cid);
   const L = theme.labels;
@@ -81,22 +92,42 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
   // from Cloudinary), otherwise the generated gradient banner.
   const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
 
-  return {
+  const headerValue = isBusinessWalletCard
+    ? (city ? `StadtPocket · ${city}` : 'StadtPocket')
+    : (rewardReady ? '🎁 ' + L.rewardReadyHeader : L.cardKicker);
+
+  const base = {
     id: objectId,
     classId,
     state: 'ACTIVE',
     accountName: businessName,
     accountId: cid ? `${slug}-${cid}` : slug,
-    loyaltyPoints: {
-      label: rewardReady ? L.rewardReadyLabel : L.stampsLabel,
-      balance: { int: stampCount },
-    },
     hexBackgroundColor: accent,
     cardTitle: { defaultValue: { language: 'en-US', value: businessName } },
-    header: { defaultValue: { language: 'en-US', value: rewardReady ? '🎁 ' + L.rewardReadyHeader : L.cardKicker } },
+    header: { defaultValue: { language: 'en-US', value: headerValue } },
     heroImage: {
       sourceUri: { uri: heroUrl },
       contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' banner' } },
+    },
+    barcode: {
+      type: 'QR_CODE',
+      value: `https://www.qraivy.com/lp/${slug}`,
+      alternateText: slug,
+    },
+  };
+
+  // Business Wallet Card (Phase 3C.5) — StadtPocket-linked, loyalty off: no
+  // loyaltyPoints/stamp/reward messaging at all, just an optional tagline.
+  if (isBusinessWalletCard) {
+    return Object.assign(base, {
+      textModulesData: tagline ? [{ id: 'tagline', header: 'SMART PAGE', body: tagline }] : [],
+    });
+  }
+
+  return Object.assign(base, {
+    loyaltyPoints: {
+      label: rewardReady ? L.rewardReadyLabel : L.stampsLabel,
+      balance: { int: stampCount },
     },
     textModulesData: [
       {
@@ -105,15 +136,10 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
         body: rewardReady ? 'Show this card to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps collected',
       },
     ],
-    barcode: {
-      type: 'QR_CODE',
-      value: `https://www.qraivy.com/lp/${slug}`,
-      alternateText: slug,
-    },
-  };
+  });
 }
 
-async function createGoogleWalletSaveUrl(slug, sections, cid) {
+async function createGoogleWalletSaveUrl(slug, sections, cid, businessId) {
   const credentials = getCredentials();
   const businessName = sections.businessName || slug;
   const accent = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
@@ -135,9 +161,17 @@ async function createGoogleWalletSaveUrl(slug, sections, cid) {
   const stampCount = pass ? (pass.stampCount || 0) : 0;
   const rewardReady = pass ? !!pass.rewardReady : false;
 
+  // Phase 3C.5 — Business Wallet Card: only for a genuinely StadtPocket-linked
+  // page (businessId, resolved server-side, never client-supplied) whose
+  // loyalty program is off. Non-StadtPocket pages keep today's loyalty object
+  // exactly as-is, loyalty enabled or not.
+  const stadtPocket = await resolveStadtPocketContext(businessId || null);
+  const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampSettings && stampSettings.enabled);
+  const tagline = safeTagline(sections.hero && sections.hero.badge);
+
   const loyaltyObject = Object.assign(
     { classId },
-    buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl })
+    buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city: stadtPocket.city, tagline })
   );
 
   const claims = {
