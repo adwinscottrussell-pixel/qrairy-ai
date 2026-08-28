@@ -6,6 +6,7 @@ const { sendWelcomeEmail } = require('../services/emailService');
 // Customer Foundation Phase 2: canonical dual-write, additive only. Never
 // blocks or fails the legacy writes below it — see service header comment.
 const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
+const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -1859,7 +1860,7 @@ async function handleGenerateAppleWalletPass(req, res) {
     const crypto = require('crypto');
     const authToken = crypto.createHash('sha256').update(serialNumber + (process.env.PASS_AUTH_SECRET || 'qraivy-fallback-change-me')).digest('hex').slice(0,32);
 
-    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid: _cid, serialNumber, authToken });
+    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid: _cid, serialNumber, authToken, businessId: page.businessId || null });
 
     // Ensure Pass record exists in DB for device registration
     await _prisma.pass.upsert({
@@ -3056,9 +3057,25 @@ async function handleLoyaltyWelcome(req, res) {
       ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>'
       : '<div class="logo">' + bizName.charAt(0) + '</div>';
     const isDE = lang === 'de';
-    const t = {
+
+    // Phase 3C.5 — Business Wallet Card copy: only for a genuinely
+    // StadtPocket-linked page (page.businessId, resolved server-side) whose
+    // loyalty program is off. Non-StadtPocket pages, and StadtPocket pages
+    // with loyalty on, keep today's Loyalty Rewards copy exactly as-is.
+    const stadtPocket = await resolveStadtPocketContext(page.businessId || null);
+    const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampCfg && stampCfg.enabled);
+
+    const t = isBusinessWalletCard ? {
+      badge: isDE ? '&#128241; Diesen Betrieb speichern' : '&#128241; Save this business',
+      reward: isDE ? ('Behalte ' + bizName + ' in deinem Wallet') : ('Keep ' + bizName + ' in your Wallet'),
+      explain: isDE ? 'Kehre schnell zu dieser Smart Page zurück und bleib mit diesem Betrieb verbunden.' : 'Quickly return to this Smart Page and stay connected with this business.',
+      apple: isDE ? '&#127822; Zu Apple Wallet hinzufügen' : '&#127822; Add to Apple Wallet',
+      google: isDE ? '&#128241; Zu Google Wallet hinzufügen' : '&#128241; Add to Google Wallet',
+      skip: isDE ? 'Ohne Wallet fortfahren' : 'Continue without wallet',
+      powered: isDE ? 'Unterstützt von' : 'Powered by',
+    } : {
       badge: isDE ? '&#127873; Treueprämien' : '&#127873; Loyalty Rewards',
-      reward: isDE ? ('Sammle ' + goal + ' Stempel \u2014 erhalte ' + rewardName) : ('Sammle ' + goal + ' Stempel \u2014 get ' + rewardName),
+      reward: isDE ? ('Sammle ' + goal + ' Stempel — erhalte ' + rewardName) : ('Sammle ' + goal + ' Stempel — get ' + rewardName),
       explain: isDE ? 'Keine App erforderlich. Füge deine Treuekarte zu deinem Wallet hinzu und sammle Prämien automatisch.' : 'No app required. Add your loyalty card to your wallet and collect rewards automatically.',
       apple: isDE ? '&#127822; Zu Apple Wallet hinzufügen' : '&#127822; Add to Apple Wallet',
       google: isDE ? '&#128241; Zu Google Wallet hinzufügen' : '&#128241; Add to Google Wallet',

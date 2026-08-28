@@ -186,7 +186,7 @@ async function handleGetLatestPass(req, res) {
     // generateSmartQRPass defaults to the generic per-slug serial and looks
     // up a different (or nonexistent) Pass row, showing the wrong stamp
     // count instead of this specific customer's.
-    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid, serialNumber: pass.serialNumber, authToken: pass.authToken });
+    const pkpassBuffer = await generateSmartQRPass(slug, sections, { cid, serialNumber: pass.serialNumber, authToken: pass.authToken, businessId: page.businessId || null });
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',

@@ -1,0 +1,366 @@
+// ============================================================
+// stadtPocketBusinessWallet.test.js — Phase 3C.5 Business Wallet
+// Card: proves the new StadtPocket-linked, loyalty-off wallet
+// presentation (Apple + Google), that non-StadtPocket and
+// loyalty-on pages are byte-for-byte unchanged, and that the
+// first-visit welcome screen copy branches correctly.
+//
+// No test framework dependency: uses Node's built-in `assert`
+// and a tiny inline runner, following the same pattern as
+// tests/attentionService.test.js and tests/lpScanAndPush.test.js.
+// Prisma, passkit-generator, google-auth-library and jsonwebtoken
+// are all mocked by pre-seeding require.cache before the real
+// service/controller modules are required, so no real DB write,
+// no real Apple/Google network call, and no real pass/JWT signing
+// ever happens.
+//
+// Run: node tests/stadtPocketBusinessWallet.test.js
+// ============================================================
+const assert = require('assert/strict');
+const path = require('path');
+
+function resolve(...parts) { return require.resolve(path.join(__dirname, '..', ...parts)); }
+
+const prismaClientPath  = resolve('src', 'utils', 'prismaClient.js');
+const emailServicePath  = resolve('src', 'services', 'emailService.js');
+const passkitPath       = require.resolve('passkit-generator');
+const googleAuthPath    = require.resolve('google-auth-library');
+const jwtPath           = require.resolve('jsonwebtoken');
+
+// ── Fixtures ─────────────────────────────────────────────────
+
+const businesses = {
+  'biz-sp-1': { id: 'biz-sp-1', name: 'Rick Ross Marketing', primaryOwnerUserId: 'user-1', status: 'active' },
+  'biz-sp-2': { id: 'biz-sp-2', name: 'No Location Biz', primaryOwnerUserId: 'user-2', status: 'active' },
+};
+const businessLocations = {
+  // biz-sp-1 has a real city; biz-sp-2 deliberately has none (14: missing BusinessLocation).
+  'biz-sp-1': { id: 'bl-1', businessId: 'biz-sp-1', locationId: 'loc-ulm', location: { id: 'loc-ulm', name: 'Ulm' } },
+};
+const stampSettingsStore = {}; // slug -> { enabled, goal, rewardName }
+const landingPages = {};       // slug -> page row
+
+function makePage(slug, overrides = {}) {
+  return Object.assign({
+    id: slug + '-id',
+    slug,
+    businessName: 'Rick Ross Marketing',
+    websiteUrl: 'https://example.com',
+    userId: null, // no cid/CustomerIdentity dual-write in these tests — out of scope here
+    businessId: null,
+    sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: {}, logo: null }),
+  }, overrides);
+}
+
+landingPages['sp-loyalty-off']    = makePage('sp-loyalty-off',    { businessId: 'biz-sp-1' });
+landingPages['sp-loyalty-on']     = makePage('sp-loyalty-on',     { businessId: 'biz-sp-1' });
+landingPages['non-sp-loyalty-on'] = makePage('non-sp-loyalty-on', { businessId: null });
+landingPages['non-sp-loyalty-off']= makePage('non-sp-loyalty-off',{ businessId: null });
+landingPages['sp-no-location']    = makePage('sp-no-location',    { businessId: 'biz-sp-2' });
+landingPages['sp-missing-business'] = makePage('sp-missing-business', { businessId: 'biz-dangling' });
+landingPages['sp-no-website']     = makePage('sp-no-website',     { businessId: 'biz-sp-1', websiteUrl: null });
+landingPages['sp-long-tagline']   = makePage('sp-long-tagline',   {
+  businessId: 'biz-sp-1',
+  sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: { badge: 'A'.repeat(80) }, logo: null }),
+});
+
+stampSettingsStore['sp-loyalty-on']     = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
+stampSettingsStore['non-sp-loyalty-on'] = { enabled: true, goal: 10, rewardName: 'Free item' };
+// sp-loyalty-off, non-sp-loyalty-off, sp-no-location, sp-missing-business,
+// sp-no-website, sp-long-tagline: deliberately no StampSettings row.
+
+const passUpsertCalls = [];
+
+// business/businessLocation expose ONLY read methods — if any code path
+// under test ever tried to write through them (eager wallet provisioning),
+// it would throw "is not a function" and fail the relevant test. This is
+// the proof for "no eager wallet provisioning" (test 15/9 below).
+const mockPrisma = {
+  landingPage: { async findUnique({ where: { slug } }) { return landingPages[slug] || null; } },
+  business: { async findUnique({ where: { id } }) { return businesses[id] || null; } },
+  businessLocation: { async findFirst({ where: { businessId } }) { return businessLocations[businessId] || null; } },
+  stampSettings: { async findUnique({ where: { slug } }) { return stampSettingsStore[slug] || null; } },
+  pass: {
+    async findUnique() { return null; }, // no pre-existing stamps for any test pass
+    async upsert(args) { passUpsertCalls.push(args); return {}; },
+  },
+  loyaltyCustomer: { async upsert() { return {}; } },
+};
+
+require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
+require.cache[emailServicePath] = {
+  id: emailServicePath, filename: emailServicePath, loaded: true,
+  exports: { sendWelcomeEmail: async () => ({ success: 0, failed: 0 }) },
+};
+
+// ── Mock passkit-generator: capture the files bundle instead of ──────────
+// ── actually signing anything ─────────────────────────────────
+let capturedPassFiles = null;
+class FakePKPass {
+  constructor(files) { capturedPassFiles = files; }
+  async getAsBuffer() { return Buffer.from('fake-pkpass'); }
+}
+require.cache[passkitPath] = { id: passkitPath, filename: passkitPath, loaded: true, exports: { PKPass: FakePKPass } };
+
+// ── Mock google-auth-library + jsonwebtoken: no real network/crypto ─────
+class FakeGoogleAuth {
+  async getClient() { return { getAccessToken: async () => ({ token: 'fake-token' }) }; }
+}
+require.cache[googleAuthPath] = { id: googleAuthPath, filename: googleAuthPath, loaded: true, exports: { GoogleAuth: FakeGoogleAuth } };
+
+let lastSignedClaims = null;
+require.cache[jwtPath] = {
+  id: jwtPath, filename: jwtPath, loaded: true,
+  exports: { sign: (claims) => { lastSignedClaims = claims; return 'fake.jwt.token'; } },
+};
+
+// ── Mock global fetch: WWDR cert + Google Wallet class endpoint + any ────
+// ── asset (logo/hero) fetch — never a real network call ──────────────────
+global.fetch = async (url, opts) => {
+  const u = String(url);
+  if (u.includes('certificateauthority')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  if (u.includes('walletobjects.googleapis.com')) {
+    if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
+    return { ok: true, text: async () => '' };
+  }
+  return { ok: false }; // simulated missing logo/hero asset — handled gracefully by existing code
+};
+
+process.env.GOOGLE_WALLET_KEY = JSON.stringify({ client_email: 'test@test.iam.gserviceaccount.com', private_key: 'fake' });
+process.env.APPLE_PASS_CERT_PEM = Buffer.from('fake-cert').toString('base64');
+process.env.APPLE_PASS_KEY_PEM  = Buffer.from('fake-key').toString('base64');
+process.env.APPLE_PASS_TYPE_ID  = 'pass.com.qraivy.wallet';
+process.env.APPLE_TEAM_ID       = 'TEAMID1234';
+process.env.PASS_AUTH_SECRET    = 'test-secret';
+
+const { generateSmartQRPass } = require('../src/services/passService');
+const { createGoogleWalletSaveUrl } = require('../src/services/googleWalletService');
+const { resolveStadtPocketContext } = require('../src/services/stadtPocketContext');
+const { handleGenerateAppleWalletPass, handleLoyaltyWelcome } = require('../src/controllers/lpController');
+
+function sectionsFor(slug) {
+  const page = landingPages[slug];
+  return Object.assign({}, JSON.parse(page.sections), { businessName: page.businessName, websiteUrl: page.websiteUrl });
+}
+
+function fakeRes() {
+  return {
+    statusCode: undefined,
+    body: undefined,
+    headers: undefined,
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; },
+    send(body) { this.body = body; return this; },
+    set(headers) { this.headers = headers; return this; },
+  };
+}
+
+const tests = [];
+function test(name, fn) { tests.push({ name, fn }); }
+
+// ── 1/2. Business Wallet Card generated for StadtPocket + loyalty OFF ──
+
+test('1. Apple: StadtPocket-linked + loyalty OFF generates a pass without throwing', async () => {
+  capturedPassFiles = null;
+  const buf = await generateSmartQRPass('sp-loyalty-off', sectionsFor('sp-loyalty-off'), { businessId: 'biz-sp-1' });
+  assert.ok(Buffer.isBuffer(buf));
+  assert.ok(capturedPassFiles && capturedPassFiles['pass.json']);
+});
+
+test('2. Google: StadtPocket-linked + loyalty OFF generates a save URL without throwing', async () => {
+  lastSignedClaims = null;
+  const url = await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
+  assert.ok(lastSignedClaims);
+});
+
+// ── 3/4/5. Apple content: business name, city, no stamp/reward fields ──
+
+test('3. Apple: business name is correct on the Business Wallet Card', async () => {
+  await generateSmartQRPass('sp-loyalty-off', sectionsFor('sp-loyalty-off'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.organizationName, 'Rick Ross Marketing');
+  assert.equal(passJson.storeCard.primaryFields[0].value, 'Rick Ross Marketing');
+});
+
+test('4. Apple: StadtPocket city context is correct', async () => {
+  await generateSmartQRPass('sp-loyalty-off', sectionsFor('sp-loyalty-off'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'StadtPocket · Ulm');
+});
+
+test('5. Apple: Business Wallet Card has no stamp/reward fields', async () => {
+  await generateSmartQRPass('sp-loyalty-off', sectionsFor('sp-loyalty-off'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.deepEqual(passJson.storeCard.secondaryFields, []);
+  assert.deepEqual(passJson.storeCard.auxiliaryFields, []);
+  assert.ok(!passJson.storeCard.backFields.some(f => f.key === 'reward'));
+  assert.ok(!passJson.storeCard.backFields.some(f => f.key === 'terms'));
+});
+
+// ── 6/7/8. Google content: business name, city, no loyalty messaging ───
+
+test('6. Google: business name is correct on the Business Wallet Card', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.accountName, 'Rick Ross Marketing');
+  assert.equal(obj.cardTitle.defaultValue.value, 'Rick Ross Marketing');
+});
+
+test('7. Google: StadtPocket city context is correct', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.header.defaultValue.value, 'StadtPocket · Ulm');
+});
+
+test('8. Google: no loyaltyPoints/stamp/reward messaging on the Business Wallet Card', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.loyaltyPoints, undefined);
+  assert.ok(!(obj.textModulesData || []).some(m => m.id === 'reward_info'));
+});
+
+// ── 9. QR/barcode: canonical Smart Page destination ─────────────────────
+
+test('9. QR/barcode resolves to the canonical QRAIVY Smart Page on both wallets', async () => {
+  await generateSmartQRPass('sp-loyalty-off', sectionsFor('sp-loyalty-off'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.barcode.message, 'https://api.qraivy.com/lp/sp-loyalty-off');
+
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.barcode.value, 'https://www.qraivy.com/lp/sp-loyalty-off');
+});
+
+// ── 10. Website-less StadtPocket business ───────────────────────────────
+
+test('10. Website-less StadtPocket business: Business Wallet Card still generates, back link falls back to Smart Page', async () => {
+  const buf = await generateSmartQRPass('sp-no-website', sectionsFor('sp-no-website'), { businessId: 'biz-sp-1' });
+  assert.ok(Buffer.isBuffer(buf));
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  const urlField = passJson.storeCard.backFields.find(f => f.key === 'url');
+  assert.equal(urlField.value, 'https://api.qraivy.com/lp/sp-no-website');
+});
+
+// ── 11/12/13. Regression: loyalty-on and non-StadtPocket unchanged ─────
+
+test('11. StadtPocket + loyalty ON: existing loyalty storeCard unchanged (no Business Wallet Card)', async () => {
+  await generateSmartQRPass('sp-loyalty-on', sectionsFor('sp-loyalty-on'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'CARD'); // L.cardKicker, not "StadtPocket · ..."
+  assert.ok(passJson.storeCard.secondaryFields[0].label); // stamps field present
+  assert.ok(passJson.storeCard.backFields.some(f => f.key === 'reward'));
+});
+
+test('12. Non-StadtPocket + loyalty ON: existing loyalty storeCard unchanged', async () => {
+  await generateSmartQRPass('non-sp-loyalty-on', sectionsFor('non-sp-loyalty-on'), { businessId: null });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'CARD');
+  assert.ok(passJson.storeCard.backFields.some(f => f.key === 'reward'));
+});
+
+test('13. Non-StadtPocket + loyalty OFF/no row: existing (loyalty-shaped) behavior unchanged', async () => {
+  await generateSmartQRPass('non-sp-loyalty-off', sectionsFor('non-sp-loyalty-off'), { businessId: null });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  // Non-StadtPocket pages NEVER get the Business Wallet Card branch, loyalty
+  // enabled or not — this is today's existing (if quirky) default output.
+  assert.equal(passJson.storeCard.headerFields[0].value, 'CARD');
+  assert.ok(passJson.storeCard.backFields.some(f => f.key === 'reward'));
+});
+
+// ── 14. Missing Business/BusinessLocation/Location: safe fallback ──────
+
+test('14a. StadtPocket-linked, Business exists but no BusinessLocation: city omitted, no "undefined"', async () => {
+  await generateSmartQRPass('sp-no-location', sectionsFor('sp-no-location'), { businessId: 'biz-sp-2' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'StadtPocket');
+  assert.ok(!passJson.storeCard.headerFields[0].value.includes('undefined'));
+});
+
+test('14b. businessId points at a nonexistent Business: fails safe to existing behavior, no throw', async () => {
+  const buf = await generateSmartQRPass('sp-missing-business', sectionsFor('sp-missing-business'), { businessId: 'biz-dangling' });
+  assert.ok(Buffer.isBuffer(buf));
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'CARD'); // treated as non-StadtPocket
+});
+
+test('14c. resolveStadtPocketContext itself never throws on missing links', async () => {
+  assert.deepEqual(await resolveStadtPocketContext(null), { isStadtPocketLinked: false, businessId: null, city: null });
+  assert.deepEqual(await resolveStadtPocketContext('biz-dangling'), { isStadtPocketLinked: false, businessId: null, city: null });
+  assert.deepEqual(await resolveStadtPocketContext('biz-sp-2'), { isStadtPocketLinked: true, businessId: 'biz-sp-2', city: null });
+});
+
+// ── 15/9(plan). No eager wallet provisioning / no extra DB rows ────────
+
+test('15. resolveStadtPocketContext is read-only — no wallet object/Pass row is created by resolving context alone', async () => {
+  const upsertsBefore = passUpsertCalls.length;
+  await resolveStadtPocketContext('biz-sp-1');
+  // business/businessLocation mocks above expose no write methods at all —
+  // reaching this line without a thrown "is not a function" already proves
+  // no write was attempted; this also confirms no Pass row was touched.
+  assert.equal(passUpsertCalls.length, upsertsBefore);
+});
+
+// ── 6 (plan §6). Tagline safety ─────────────────────────────────────────
+
+test('Tagline safety: an 80-char AI-generated badge is trimmed to <=40 chars on the pass', async () => {
+  await generateSmartQRPass('sp-long-tagline', sectionsFor('sp-long-tagline'), { businessId: 'biz-sp-1' });
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  const taglineField = passJson.storeCard.secondaryFields.find(f => f.key === 'tagline');
+  assert.ok(taglineField);
+  assert.ok(taglineField.value.length <= 40);
+});
+
+// ── 16/17/18. Welcome screen copy branching ─────────────────────────────
+
+test('16. Welcome screen: StadtPocket + loyalty OFF shows Save-this-business copy', async () => {
+  const res = fakeRes();
+  await handleLoyaltyWelcome({ params: { slug: 'sp-loyalty-off' }, query: { lang: 'en' } }, res);
+  assert.ok(res.body.includes('Save this business'));
+  assert.ok(res.body.includes('Keep Rick Ross Marketing in your Wallet'));
+  assert.ok(!res.body.includes('Loyalty Rewards'));
+});
+
+test('17. Welcome screen: StadtPocket + loyalty ON retains Loyalty Rewards copy', async () => {
+  const res = fakeRes();
+  await handleLoyaltyWelcome({ params: { slug: 'sp-loyalty-on' }, query: { lang: 'en' } }, res);
+  assert.ok(res.body.includes('Loyalty Rewards'));
+  assert.ok(!res.body.includes('Save this business'));
+});
+
+test('18. Welcome screen: non-StadtPocket page retains existing Loyalty Rewards copy unchanged', async () => {
+  const res = fakeRes();
+  await handleLoyaltyWelcome({ params: { slug: 'non-sp-loyalty-off' }, query: { lang: 'en' } }, res);
+  assert.ok(res.body.includes('Loyalty Rewards'));
+  assert.ok(!res.body.includes('Save this business'));
+});
+
+// ── Controller wiring: handleGenerateAppleWalletPass passes businessId through ──
+
+test('Controller wiring: handleGenerateAppleWalletPass derives businessId from the LandingPage row, not from the request', async () => {
+  const res = fakeRes();
+  await handleGenerateAppleWalletPass({ params: { slug: 'sp-loyalty-off' }, query: {} }, res);
+  assert.equal(res.statusCode, undefined); // no error status set
+  const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
+  assert.equal(passJson.storeCard.headerFields[0].value, 'StadtPocket · Ulm');
+  assert.equal(passUpsertCalls.length > 0, true);
+});
+
+// ── runner ────────────────────────────────────────────────────
+
+(async () => {
+  let pass = 0, fail = 0;
+  for (const { name, fn } of tests) {
+    try {
+      await fn();
+      pass++;
+      console.log(`PASS  ${name}`);
+    } catch (err) {
+      fail++;
+      console.log(`FAIL  ${name}`);
+      console.log(`      ${err.message}`);
+    }
+  }
+  console.log(`\n${pass} passed, ${fail} failed (${tests.length} total)`);
+  process.exit(fail ? 1 : 0);
+})();

@@ -4,6 +4,17 @@ const prisma = require('../utils/prismaClient');
 const { WALLET_CONFIG } = require('../config/constants');
 const { PKPass } = require('passkit-generator');
 const { getTheme, renderHeroBanner } = require('./walletThemes');
+const { resolveStadtPocketContext } = require('./stadtPocketContext');
+
+// Guards free-text (AI-generated hero.badge) before it goes into a Wallet
+// field — Apple/Google both have practical field-length limits, and this is
+// the only unbounded string reaching pass content today.
+function safeTagline(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  return trimmed.length > 40 ? trimmed.slice(0, 40).trim() : trimmed;
+}
 
 // Cache WWDR cert so we only fetch once per process
 let _wwdrCache = null;
@@ -55,19 +66,34 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
   const rewardName = stampSettings ? stampSettings.rewardName : 'Free item';
   const rewardReady = passRecord ? passRecord.rewardReady : false;
 
+  // Phase 3C.5 — Business Wallet Card: only for a genuinely StadtPocket-linked
+  // page (opts.businessId, resolved server-side, never client-supplied) whose
+  // loyalty program is off. Every non-StadtPocket page keeps today's loyalty
+  // storeCard exactly as-is, loyalty enabled or not — this branch must never
+  // change output for a page that isn't StadtPocket-linked.
+  const stadtPocket = await resolveStadtPocketContext(opts.businessId || null);
+  const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampSettings && stampSettings.enabled);
+  const tagline = safeTagline(hero.badge);
+
   const passTypeId = process.env.APPLE_PASS_TYPE_ID || WALLET_CONFIG.passTypeId;
   const teamId     = process.env.APPLE_TEAM_ID      || WALLET_CONFIG.teamId;
   const wsUrl      = `${WALLET_CONFIG.webServiceUrl}/wallet`;
 
   const backFields = [
-    { key: 'reward', label: L.backRewardLabel, value: rewardName + ' after ' + stampGoal + ' stamps' },
     { key: 'url', label: L.backWebsiteLabel, value: sections.websiteUrl || lpUrl, attributedValue: '<a href="' + (sections.websiteUrl || lpUrl) + '">Open page</a>' },
   ];
+  if (!isBusinessWalletCard) {
+    backFields.unshift({ key: 'reward', label: L.backRewardLabel, value: rewardName + ' after ' + stampGoal + ' stamps' });
+  }
   if (business.address) backFields.push({ key: 'address', label: L.backAddressLabel, value: business.address });
   if (business.phone)   backFields.push({ key: 'phone', label: L.backPhoneLabel, value: business.phone, attributedValue: '<a href="tel:' + business.phone + '">' + business.phone + '</a>' });
   if (business.hours)   backFields.push({ key: 'hours', label: L.backHoursLabel, value: business.hours });
-  backFields.push({ key: 'howto', label: L.backHowToLabel, value: 'Tap the staff NFC tag or scan the QR code to collect your stamps.' });
-  backFields.push({ key: 'terms', label: L.backTermsLabel, value: L.termsText });
+  if (isBusinessWalletCard) {
+    backFields.push({ key: 'howto', label: 'HOW TO USE', value: 'Scan the QR code or visit the link above to open the Smart Page.' });
+  } else {
+    backFields.push({ key: 'howto', label: L.backHowToLabel, value: 'Tap the staff NFC tag or scan the QR code to collect your stamps.' });
+    backFields.push({ key: 'terms', label: L.backTermsLabel, value: L.termsText });
+  }
 
   // logoText duplicates the primaryField (brandName) on the same header row
   // — with a real logo image already showing the brand, the extra text only
@@ -92,7 +118,15 @@ async function generateSmartQRPass(slug, sections, opts = {}) {
     authenticationToken: authTok,
     barcode:  { message: barcodeUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' },
     barcodes: [{ message: barcodeUrl, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' }],
-    storeCard: {
+    storeCard: isBusinessWalletCard ? {
+      // Business Wallet Card (Phase 3C.5) — StadtPocket-linked, loyalty off:
+      // a plain "save this business" card, no stamp/reward content at all.
+      headerFields: [{ key: 'kicker', label: '', value: stadtPocket.city ? `StadtPocket · ${stadtPocket.city}` : 'StadtPocket' }],
+      primaryFields: [{ key: 'brand', label: '', value: brandName }],
+      secondaryFields: tagline ? [{ key: 'tagline', label: '', value: tagline }] : [],
+      auxiliaryFields: [],
+      backFields,
+    } : {
       headerFields: [{ key: 'kicker', label: '', value: rewardReady ? L.rewardReadyHeader : L.cardKicker }],
       primaryFields: [{ key: 'brand', label: '', value: brandName }],
       secondaryFields: [{ key: 'stamps', label: L.stampsLabel, value: Array.from({length: stampGoal}, (_, i) => i < stampCount ? (rewardReady ? '🟢' : '●') : '○').join(' '), changeMessage: 'New stamp added! %@' }],
