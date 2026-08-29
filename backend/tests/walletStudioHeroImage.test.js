@@ -283,6 +283,80 @@ test('14. Existing business name/color/category editing remains intact', async (
   assert.equal(getElementById('wce-category').value, 'Family Bakery');
 });
 
+// ── Phase 3C.6B.2 — Apple Business Wallet name/hero spacing fix ─────────
+// Static checks against the real markup: the fake DOM used above doesn't
+// parse inline-style CSS (only what JS sets at runtime), so verifying an
+// inline style value must read the actual HTML source directly.
+
+function appleHeroStyle() {
+  const m = html.match(/<img id="apw-hero"[^>]*style="([^"]*)"/);
+  assert.ok(m, 'apw-hero element must exist with an inline style');
+  return m[1];
+}
+function googleHeroStyle() {
+  const m = html.match(/<img id="gow-hero"[^>]*style="([^"]*)"/);
+  assert.ok(m, 'gow-hero element must exist with an inline style');
+  return m[1];
+}
+function styleValue(style, prop) {
+  const m = style.match(new RegExp(prop + '\\s*:\\s*([^;]+)'));
+  return m ? m[1].trim() : undefined;
+}
+
+test('15. Apple Business Wallet name/hero separation: apw-hero has an 8-12px margin-top', () => {
+  const marginTop = styleValue(appleHeroStyle(), 'margin-top');
+  assert.ok(marginTop, 'apw-hero must declare margin-top');
+  const px = parseInt(marginTop, 10);
+  assert.ok(px >= 8 && px <= 12, 'margin-top must be within the 8-12px target, got: ' + marginTop);
+});
+
+test('16. Hero-present layout preserved: dimensions/aspect-ratio/rounding unchanged alongside the new spacing', () => {
+  const style = appleHeroStyle();
+  assert.equal(styleValue(style, 'width'), '100%');
+  assert.equal(styleValue(style, 'aspect-ratio'), '1032/336');
+  assert.equal(styleValue(style, 'object-fit'), 'cover');
+  assert.equal(styleValue(style, 'border-radius'), '8px');
+  assert.equal(styleValue(style, 'margin-bottom'), '10px');
+});
+
+test('17. Hero-absent layout preserved: margin-top only affects layout while the hero is displayed (display:none contributes no box)', async () => {
+  wps.setPrograms([bizProgram()]);
+  wps.setPages({ 'sp-off': { logoUrl: '', brandColor: '#ff5a1f', tagline: 'Category text', walletHeroUrl: '' } });
+  await wps.render('sp-off');
+  // display:none is the CSS mechanism that guarantees zero layout impact
+  // (no box, no margin rendered) when there's no hero — this is what makes
+  // the fix safe for the no-hero case without a separate JS branch.
+  assert.equal(getElementById('apw-hero').style.display, 'none');
+  // Category content is unaffected by the margin change.
+  assert.equal(getElementById('apw-category').textContent, 'Category text');
+});
+
+test('18. Google Business Wallet hero style is completely unchanged by this fix', () => {
+  const style = googleHeroStyle();
+  assert.equal(styleValue(style, 'margin-top'), undefined, 'gow-hero must not gain a margin-top');
+  assert.equal(styleValue(style, 'width'), '100%');
+  assert.equal(styleValue(style, 'aspect-ratio'), '1032/336');
+  assert.equal(styleValue(style, 'object-fit'), 'cover');
+  assert.equal(styleValue(style, 'margin-bottom'), '10px');
+});
+
+test('19. Loyalty preview is unaffected: the shared .apw-biz class gained no margin', () => {
+  const m = html.match(/\.apw-biz\{([^}]*)\}/);
+  assert.ok(m, '.apw-biz rule must exist');
+  assert.ok(!/margin/i.test(m[1]), '.apw-biz must not have gained a margin (would also affect the Loyalty preview)');
+});
+
+test('20. Two-line business name: hero sits below the full name regardless of wrap (pure CSS margin-top on the hero, not a fixed offset from a single-line assumption)', () => {
+  // Proven structurally: apw-hero is a normal block-level sibling that
+  // follows .apw-biz in document flow with its own margin-top — this
+  // naturally sits below however many lines .apw-biz wraps to, with no
+  // hardcoded height/offset anywhere in the markup or styles.
+  assert.ok(!/apw-biz[^}]*height/i.test(html.match(/\.apw-biz\{([^}]*)\}/)[1]));
+  const heroIndex = html.indexOf('id="apw-hero"');
+  const bizIndex = html.indexOf('id="apw-biz"');
+  assert.ok(bizIndex > 0 && heroIndex > bizIndex, 'apw-hero must appear after apw-biz in the markup (normal flow, no absolute positioning)');
+});
+
 // ── runner ────────────────────────────────────────────────────
 
 (async () => {
