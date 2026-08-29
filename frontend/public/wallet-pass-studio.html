@@ -84,7 +84,8 @@
     .wps-theme-chip.active{border-color:#ff5a1f;background:rgba(255,90,31,0.08);color:#ff8c55;font-weight:600}
     .wps-theme-soon{font-size:.55rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(255,255,255,0.06);border-radius:10px;padding:2px 7px;color:#555}
 
-    #wps-empty,#wps-loading{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
+    #wps-empty,#wps-loading,#wps-auth-error,#wps-api-error{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
+    #wps-retry{font:inherit;color:#ff5a1f;border:none;text-decoration:none}
   </style>
 </head>
 <body>
@@ -137,8 +138,20 @@
 
     <div id="wps-loading" data-i18n="wps_loading">Loading your pages&#x2026;</div>
 
+    <!-- True empty account: request succeeded, zero pages. Wallet Pass
+         Studio must never imply loyalty is required to use it. -->
     <div id="wps-empty" style="display:none">
-      <span data-i18n="wps_empty">No loyalty programs yet.</span> <a href="loyalty-setup.html" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_empty_link">Set one up &rarr;</a>
+      <span data-i18n="wps_empty">No wallet-ready Smart Pages yet.</span> <a href="dashboard.html?launch=onboarding" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_empty_link">Create a Smart Page &rarr;</a>
+    </div>
+
+    <!-- Session/auth failure (e.g. 401) — must never render as "no programs". -->
+    <div id="wps-auth-error" style="display:none">
+      <span data-i18n="wps_auth_error">Your session could not be verified. Please sign in again.</span> <a href="login.html" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_signin_link">Sign in again &rarr;</a>
+    </div>
+
+    <!-- Any other API/network failure — a neutral retry state, not "no programs". -->
+    <div id="wps-api-error" style="display:none">
+      <span data-i18n="wps_api_error">Something went wrong loading your pages.</span> <button id="wps-retry" class="wps-link" style="cursor:pointer;background:none;" data-i18n="wps_retry">Try again</button>
     </div>
 
     <div id="wps-body" style="display:none">
@@ -251,8 +264,12 @@
       wps_title: 'Preview & test your wallet pass',
       wps_sub: 'See exactly what customers see when they add your loyalty card to Apple or Google Wallet — no install required.',
       wps_loading: 'Loading your pages…',
-      wps_empty: 'No loyalty programs yet.',
-      wps_empty_link: 'Set one up →',
+      wps_empty: 'No wallet-ready Smart Pages yet.',
+      wps_empty_link: 'Create a Smart Page →',
+      wps_auth_error: 'Your session could not be verified. Please sign in again.',
+      wps_signin_link: 'Sign in again →',
+      wps_api_error: 'Something went wrong loading your pages.',
+      wps_retry: 'Try again',
       wps_notice_b: 'Wallet branding is controlled from Brand Settings.',
       wps_notice_rest: "Loyalty rewards are controlled from Loyalty Settings. This studio is a preview only — it doesn't add new branding controls.",
       wps_card_kind: 'LOYALTY<br/>CARD',
@@ -283,8 +300,12 @@
       wps_title: 'Vorschau & Test deines Wallet-Passes',
       wps_sub: 'Sieh genau, was Kunden sehen, wenn sie deine Treuekarte zu Apple oder Google Wallet hinzufügen — keine Installation nötig.',
       wps_loading: 'Deine Seiten werden geladen…',
-      wps_empty: 'Noch keine Treueprogramme.',
-      wps_empty_link: 'Jetzt einrichten →',
+      wps_empty: 'Noch keine Wallet-fähigen Smart Pages.',
+      wps_empty_link: 'Smart Page erstellen →',
+      wps_auth_error: 'Deine Sitzung konnte nicht bestätigt werden. Bitte melde dich erneut an.',
+      wps_signin_link: 'Erneut anmelden →',
+      wps_api_error: 'Beim Laden deiner Seiten ist etwas schiefgelaufen.',
+      wps_retry: 'Erneut versuchen',
       wps_notice_b: 'Das Wallet-Branding wird in den Markeneinstellungen festgelegt.',
       wps_notice_rest: 'Treuebelohnungen werden in den Treue-Einstellungen festgelegt. Dieses Studio ist nur eine Vorschau — es fügt keine neuen Branding-Optionen hinzu.',
       wps_card_kind: 'TREUE-<br/>KARTE',
@@ -348,12 +369,27 @@
     return 'rgba('+r+','+g+','+b+','+a+')';
   }
 
+  // Phase 3C.6A.1 — must never let an auth/API failure silently look like a
+  // genuinely empty account. Returns { status: 'auth'|'error'|'ok', programs }
+  // instead of a bare array so the caller can render the correct state.
   async function fetchPrograms(){
     var tok = await getToken();
     var h = tok ? {'Authorization':'Bearer '+tok} : {};
-    var res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
-    var data = await res.json();
-    return (data && data.programs) || [];
+    var res;
+    try {
+      res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
+    } catch(e) {
+      return { status: 'error', programs: [] };
+    }
+    if (res.status === 401) return { status: 'auth', programs: [] };
+    if (!res.ok) return { status: 'error', programs: [] };
+    var data;
+    try {
+      data = await res.json();
+    } catch(e) {
+      return { status: 'error', programs: [] };
+    }
+    return { status: 'ok', programs: (data && data.programs) || [] };
   }
 
   async function fetchPage(slug){
@@ -472,13 +508,32 @@
     };
   }
 
+  function hideAllStates(){
+    ['wps-loading','wps-empty','wps-auth-error','wps-api-error','wps-body'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+  }
+
   async function init(){
+    document.getElementById('wps-loading').style.display = 'block';
+    var result;
     try{
-      PROGRAMS = await fetchPrograms();
+      result = await fetchPrograms();
     }catch(e){
-      PROGRAMS = [];
+      result = { status: 'error', programs: [] };
     }
-    document.getElementById('wps-loading').style.display = 'none';
+    PROGRAMS = result.programs;
+    hideAllStates();
+
+    if (result.status === 'auth') {
+      document.getElementById('wps-auth-error').style.display = 'block';
+      return;
+    }
+    if (result.status === 'error') {
+      document.getElementById('wps-api-error').style.display = 'block';
+      return;
+    }
     if(!PROGRAMS.length){
       document.getElementById('wps-empty').style.display = 'block';
       return;
@@ -494,6 +549,11 @@
       render(this.value);
     });
   }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var retryBtn = document.getElementById('wps-retry');
+    if(retryBtn) retryBtn.addEventListener('click', function(){ init(); });
+  });
 
   function waitForClerk(n){
     if(window.Clerk && window.Clerk.session){ init(); }
