@@ -72,6 +72,47 @@ function getBusinessObjectId(slug, cid) {
   return `${ISSUER_ID}.stadtpocket_biz_${base}${suffix}`;
 }
 
+function smartPageUrl(slug) {
+  return `https://www.qraivy.com/lp/${slug}`;
+}
+
+function smartPageBarcode(slug) {
+  return { type: 'QR_CODE', value: smartPageUrl(slug), alternateText: slug };
+}
+
+// Phase 3C.6C — Business Wallet Card, take two. The 3C.5A class/object
+// functions above (getBusinessClassId/getBusinessObjectId) put the
+// Business Wallet Card on Google's LoyaltyClass/LoyaltyObject, which is
+// what forces Google's own member-name/member-ID/"use this loyalty card
+// across Google" UI onto a card that was never a membership — it's just
+// "save this business." Old cards already saved under that namespace are
+// left exactly as they are (see Step 9 in the phase plan: no destructive
+// migration); every NEW Business Wallet Card save now goes through
+// GenericClass/GenericObject instead, via the functions below.
+//
+// GenericClass carries no branding fields at all (no programName,
+// programLogo, reviewStatus — confirmed against the installed googleapis
+// walletobjects v1 type definitions), so unlike the old per-business
+// LoyaltyClass there is no collision risk in every StadtPocket business
+// sharing ONE class; every business-specific value lives on the
+// GenericObject instead.
+function getBusinessGenericClassId() {
+  return `${ISSUER_ID}.stadtpocket_business`;
+}
+
+// Distinct from both the shared loyalty object namespace ("qraivy_") and
+// the old per-business namespace above ("stadtpocket_biz_") so Google
+// always issues a genuinely new object here instead of reopening an old
+// LoyaltyObject a test user may have already saved. Keyed by businessId,
+// not slug: a Business Wallet Card belongs to the Business, and the
+// StadtPocket one-included-page entitlement (Phase 3C.4) already
+// guarantees at most one LandingPage per Business.
+function getBusinessGenericObjectId(businessId, cid) {
+  const bizPart = String(businessId).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const suffix = cid ? '_' + cid.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
+  return `${ISSUER_ID}.stadtpocket_business_${bizPart}${suffix}`;
+}
+
 // Phase 3C.5B — fail-closed class ensure. Production QA (Phase 3C.5A) found
 // Google's Save-to-Wallet flow rejecting a Business Wallet Card with
 // "Could not find necessary class" — root-caused to this function returning
@@ -161,44 +202,74 @@ async function ensureClass(credentials, classId, businessName, logoUrl) {
   return classId;
 }
 
-function buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city, tagline }) {
+// Phase 3C.6C — fail-closed Generic-class ensure, the same GET→404→CREATE
+// pattern as ensureClass()/Phase 3C.5B above: a classId is never handed
+// back unless it was confirmed to exist (GET 200) or was just
+// successfully created (CREATE 2xx) — any other outcome throws, so
+// createGoogleWalletSaveUrl's caller (lpRoutes.js) surfaces the real
+// error instead of issuing a JWT referencing a class Google doesn't
+// actually have. Unlike ensureClass(), there is no branding body to send
+// and no PATCH-to-sync-branding step on the already-exists path —
+// GenericClass has no branding fields at all, so there is nothing to
+// keep in sync at the class level.
+async function ensureGenericClass(credentials, classId) {
+  const auth = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
+  });
+  const client = await auth.getClient();
+  const token = await client.getAccessToken();
+
+  console.log(`[GoogleWalletGenericClass] lookup started classId=${classId}`);
+  const getRes = await fetch(
+    `https://walletobjects.googleapis.com/walletobjects/v1/genericClass/${classId}`,
+    { headers: { Authorization: `Bearer ${token.token}` } }
+  );
+
+  if (getRes.status === 200) {
+    console.log(`[GoogleWalletGenericClass] class found classId=${classId}`);
+    return classId;
+  }
+
+  if (getRes.status !== 404) {
+    const errText = await getRes.text().catch(() => '');
+    console.error(`[GoogleWalletGenericClass] lookup failed classId=${classId} status=${getRes.status} body=${errText}`);
+    throw new Error(`Google Wallet generic class lookup failed: ${getRes.status} ${errText}`);
+  }
+
+  console.log(`[GoogleWalletGenericClass] class missing, creating classId=${classId}`);
+  const createRes = await fetch('https://walletobjects.googleapis.com/walletobjects/v1/genericClass', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: classId }),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text().catch(() => '');
+    console.error(`[GoogleWalletGenericClass] creation failed classId=${classId} status=${createRes.status} body=${errText}`);
+    throw new Error(`Google Wallet generic class creation failed: ${createRes.status} ${errText}`);
+  }
+
+  console.log(`[GoogleWalletGenericClass] creation confirmed classId=${classId}`);
+  return classId;
+}
+
+function buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl }) {
   const L = theme.labels;
   // Real uploaded photo if the business set one (Google fetches it directly
   // from Cloudinary), otherwise the generated gradient banner.
   const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
-  const barcode = {
-    type: 'QR_CODE',
-    value: `https://www.qraivy.com/lp/${slug}`,
-    alternateText: slug,
-  };
   const heroImage = {
     sourceUri: { uri: heroUrl },
     contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' banner' } },
   };
 
-  // Business Wallet Card (Phase 3C.5A) — dedicated per-business class, so
-  // the visible title/issuer comes from LoyaltyClass.programName/issuerName
-  // instead of the nonexistent LoyaltyObject.cardTitle/header fields used
-  // below for the (unchanged) loyalty path. No loyaltyPoints/stamp/reward
-  // messaging at all — just an optional StadtPocket/city + tagline module.
-  if (isBusinessWalletCard) {
-    const cityLabel = city ? `StadtPocket · ${city}` : 'StadtPocket';
-    return {
-      id: objectId,
-      classId,
-      state: 'ACTIVE',
-      accountName: businessName,
-      accountId: cid ? `${slug}-${cid}` : slug,
-      hexBackgroundColor: accent,
-      heroImage,
-      textModulesData: [{ id: 'context', header: cityLabel, body: tagline || 'Tap to open the Smart Page.' }],
-      barcode,
-    };
-  }
-
-  // Existing loyalty path — EXACTLY unchanged (same fields, same values,
-  // same nonexistent-on-the-real-API cardTitle/header quirk untouched;
-  // fixing that for loyalty cards is a separate, later phase).
+  // Loyalty path — EXACTLY unchanged (same fields, same values, same
+  // nonexistent-on-the-real-API cardTitle/header quirk untouched; fixing
+  // that for loyalty cards is a separate, later phase). As of Phase
+  // 3C.6C this function is only ever called for the loyalty path — the
+  // Business Wallet Card path now builds a GenericObject instead, see
+  // buildGenericBusinessObject() below.
   const headerValue = rewardReady ? '🎁 ' + L.rewardReadyHeader : L.cardKicker;
   return {
     id: objectId,
@@ -221,7 +292,42 @@ function buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent
         body: rewardReady ? 'Show this card to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps collected',
       },
     ],
-    barcode,
+    barcode: smartPageBarcode(slug),
+  };
+}
+
+// Phase 3C.6C — Business Wallet Card content on Google's GENERIC pass
+// model. Mirrors the Wallet Studio Business Wallet preview as closely as
+// GenericObject's fields allow, one field per concern: cardTitle is the
+// business name (Google's own doc: "usually the Business name"), header
+// carries the category/tagline, subheader carries the StadtPocket city
+// label. No loyaltyPoints/accountName/accountId anywhere — GenericObject
+// doesn't even define those fields — so Google has nothing to render as
+// a member name, member ID, or "use across Google" loyalty affordance.
+function buildGenericBusinessObject({ objectId, classId, slug, businessName, accent, logoUrl, walletHeroUrl, city, tagline }) {
+  const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
+  const cityLabel = city ? `StadtPocket · ${city}` : 'StadtPocket';
+  return {
+    id: objectId,
+    classId,
+    state: 'ACTIVE',
+    cardTitle: { defaultValue: { language: 'en-US', value: businessName } },
+    header: { defaultValue: { language: 'en-US', value: tagline || 'Saved Business' } },
+    subheader: { defaultValue: { language: 'en-US', value: cityLabel } },
+    hexBackgroundColor: accent,
+    logo: {
+      sourceUri: { uri: logoUrl || DEFAULT_LOGO_URL },
+      contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' logo' } },
+    },
+    heroImage: {
+      sourceUri: { uri: heroUrl },
+      contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' banner' } },
+    },
+    textModulesData: [
+      { id: 'context', header: 'Business Card', body: 'This is your saved business card, not a loyalty membership.' },
+    ],
+    linksModuleData: { uris: [{ id: 'smart_page', uri: smartPageUrl(slug), description: 'Open Smart Page' }] },
+    barcode: smartPageBarcode(slug),
   };
 }
 
@@ -254,22 +360,32 @@ async function createGoogleWalletSaveUrl(slug, sections, cid, businessId) {
   const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampSettings && stampSettings.enabled);
   const tagline = safeTagline(sections.hero && sections.hero.badge);
 
-  // Phase 3C.5A — Business Wallet Card mode gets its own class (per
-  // business) and object-ID namespace; every other page (loyalty-enabled
-  // StadtPocket pages, and all non-StadtPocket pages) keeps the exact
-  // pre-existing shared class + "qraivy_" object namespace, unchanged.
-  const classId = isBusinessWalletCard ? getBusinessClassId(stadtPocket.businessId) : getClassId();
-  const objectId = isBusinessWalletCard ? getBusinessObjectId(slug, cid) : getObjectId(slug, cid);
-  await ensureClass(credentials, classId, businessName, logoUrl);
-
-  const loyaltyObject = buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city: stadtPocket.city, tagline });
+  // Phase 3C.6C — Business Wallet Card mode now issues a Google GENERIC
+  // pass (own shared class, own object namespace, keyed by businessId);
+  // every other page (loyalty-enabled StadtPocket pages, and all
+  // non-StadtPocket pages) keeps the exact pre-existing shared
+  // LoyaltyClass + "qraivy_" LoyaltyObject namespace, unchanged.
+  let passObject, payloadKey;
+  if (isBusinessWalletCard) {
+    const classId = getBusinessGenericClassId();
+    const objectId = getBusinessGenericObjectId(stadtPocket.businessId, cid);
+    await ensureGenericClass(credentials, classId);
+    passObject = buildGenericBusinessObject({ objectId, classId, slug, businessName, accent, logoUrl, walletHeroUrl, city: stadtPocket.city, tagline });
+    payloadKey = 'genericObjects';
+  } else {
+    const classId = getClassId();
+    const objectId = getObjectId(slug, cid);
+    await ensureClass(credentials, classId, businessName, logoUrl);
+    passObject = buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl });
+    payloadKey = 'loyaltyObjects';
+  }
 
   const claims = {
     iss: credentials.client_email,
     aud: 'google',
     origins: ['https://www.qraivy.com'],
     typ: 'savetowallet',
-    payload: { loyaltyObjects: [loyaltyObject] },
+    payload: { [payloadKey]: [passObject] },
   };
 
   const token = jwt.sign(claims, credentials.private_key, { algorithm: 'RS256' });
@@ -321,4 +437,4 @@ async function updateGoogleWalletStamps(slug, stampCount, cid) {
   return res.ok;
 }
 
-module.exports = { createGoogleWalletSaveUrl, updateGoogleWalletStamps, getObjectId, getClassId, getBusinessClassId, getBusinessObjectId };
+module.exports = { createGoogleWalletSaveUrl, updateGoogleWalletStamps, getObjectId, getClassId, getBusinessClassId, getBusinessObjectId, getBusinessGenericClassId, getBusinessGenericObjectId };

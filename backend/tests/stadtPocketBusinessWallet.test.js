@@ -76,6 +76,17 @@ landingPages['sp-with-logo'] = makePage('sp-with-logo', {
   businessId: 'biz-sp-1',
   sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: {}, logo: { url: 'https://res.cloudinary.com/fake/logo.png' } }),
 });
+// Phase 3C.6C fixtures — walletHero and category/tagline mapping onto the
+// Google GenericObject (neither was previously exercised for the Google
+// Business Wallet Card path).
+landingPages['sp-with-hero'] = makePage('sp-with-hero', {
+  businessId: 'biz-sp-1',
+  sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: {}, logo: null, walletHero: { url: 'https://res.cloudinary.com/fake/hero.jpg' } }),
+});
+landingPages['sp-with-badge'] = makePage('sp-with-badge', {
+  businessId: 'biz-sp-1',
+  sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: { badge: 'Cafe & Bakery' }, logo: null }),
+});
 
 stampSettingsStore['sp-loyalty-on']     = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
 stampSettingsStore['non-sp-loyalty-on'] = { enabled: true, goal: 10, rewardName: 'Free item' };
@@ -140,6 +151,21 @@ require.cache[jwtPath] = {
 const classRequestsById = {}; // classId -> last POST/PATCH body sent
 const classGetOverrides = {};    // classId -> { status, body? }
 const classCreateOverrides = {}; // classId -> { ok, status, body? }
+
+// Phase 3C.6C — genericClass mock. Unlike the per-business loyaltyClass
+// above, the Business Wallet Card's GenericClass is a single SHARED class
+// (no branding fields exist on GenericClass at all), so "already exists"
+// state must be tracked explicitly (genericClassCreatedIds) rather than
+// inferred from a fresh classId that's never been requested before — the
+// same shared classId is legitimately requested by every business-wallet
+// test in this file. genericClassCreatedIds is only ever set true on an
+// actual (non-overridden) successful CREATE, so a simulated failure never
+// poisons later tests into wrongly seeing the class as already-created.
+const genericClassRequestsById = {};  // classId -> last POST body sent
+const genericClassCreatedIds = {};    // classId -> true once confirmed created
+const genericClassGetOverrides = {};    // classId -> { status, body? }
+const genericClassCreateOverrides = {}; // classId -> { ok, status, body? }
+
 global.fetch = async (url, opts) => {
   const u = String(url);
   if (u.includes('certificateauthority')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
@@ -160,6 +186,21 @@ global.fetch = async (url, opts) => {
     }
     return { ok: true, status: 200, text: async () => '' }; // PATCH (branding sync) — always best-effort ok in tests
   }
+  if (u.includes('walletobjects.googleapis.com/walletobjects/v1/genericClass')) {
+    const isGet = !opts || !opts.method || opts.method === 'GET';
+    if (isGet) {
+      const classId = u.split('/genericClass/')[1];
+      const override = classId && genericClassGetOverrides[classId];
+      if (override) return { status: override.status, text: async () => override.body || '' };
+      return genericClassCreatedIds[classId] ? { status: 200 } : { status: 404 };
+    }
+    const body = JSON.parse(opts.body);
+    genericClassRequestsById[body.id] = body;
+    const override = genericClassCreateOverrides[body.id];
+    if (override) return { ok: override.ok, status: override.status, text: async () => override.body || '' };
+    genericClassCreatedIds[body.id] = true; // only real, non-overridden successes mark it created
+    return { ok: true, status: 200, text: async () => '' };
+  }
   if (u.includes('walletobjects.googleapis.com')) {
     if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
     return { ok: true, text: async () => '' };
@@ -175,7 +216,7 @@ process.env.APPLE_TEAM_ID       = 'TEAMID1234';
 process.env.PASS_AUTH_SECRET    = 'test-secret';
 
 const { generateSmartQRPass } = require('../src/services/passService');
-const { createGoogleWalletSaveUrl, getClassId, getObjectId, getBusinessClassId, getBusinessObjectId } = require('../src/services/googleWalletService');
+const { createGoogleWalletSaveUrl, getClassId, getObjectId, getBusinessClassId, getBusinessObjectId, getBusinessGenericClassId, getBusinessGenericObjectId } = require('../src/services/googleWalletService');
 const { resolveStadtPocketContext } = require('../src/services/stadtPocketContext');
 const { handleGenerateAppleWalletPass, handleLoyaltyWelcome } = require('../src/controllers/lpController');
 
@@ -208,11 +249,13 @@ test('1. Apple: StadtPocket-linked + loyalty OFF generates a pass without throwi
   assert.ok(capturedPassFiles && capturedPassFiles['pass.json']);
 });
 
-test('2. Google: StadtPocket-linked + loyalty OFF generates a save URL without throwing', async () => {
+test('2. Google: StadtPocket-linked + loyalty OFF generates a save URL without throwing, on the GenericObject path (Phase 3C.6C)', async () => {
   lastSignedClaims = null;
   const url = await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
   assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
   assert.ok(lastSignedClaims);
+  assert.ok(lastSignedClaims.payload.genericObjects && lastSignedClaims.payload.genericObjects.length === 1);
+  assert.equal(lastSignedClaims.payload.loyaltyObjects, undefined);
 });
 
 // ── 3/4/5. Apple content: business name, city, no stamp/reward fields ──
@@ -240,154 +283,204 @@ test('5. Apple: Business Wallet Card has no stamp/reward fields', async () => {
 });
 
 // ── 6/7/8. Google content: business name, city, no loyalty messaging ───
+// (Phase 3C.6C: all business-specific content now lives on the
+// GenericObject — GenericClass carries no branding fields at all — so
+// there is no separate class-body assertion here the way 3C.5A needed.)
 
-test('6. Google: business name is correct on the Business Wallet Card', async () => {
+test('6. Google: business name is correct on the Business Wallet Card (GenericObject.cardTitle)', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.accountName, 'Rick Ross Marketing');
-  // 3C.5A: the visible title comes from the per-business LoyaltyClass's
-  // programName, not a (nonexistent) LoyaltyObject.cardTitle field.
-  const classBody = classRequestsById[getBusinessClassId('biz-sp-1')];
-  assert.ok(classBody);
-  assert.equal(classBody.programName, 'Rick Ross Marketing');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.cardTitle.defaultValue.value, 'Rick Ross Marketing');
 });
 
-test('7. Google: StadtPocket city context is correct', async () => {
+test('7. Google: StadtPocket city context is correct (GenericObject.subheader)', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  const contextModule = obj.textModulesData.find(m => m.id === 'context');
-  assert.ok(contextModule);
-  assert.equal(contextModule.header, 'StadtPocket · Ulm');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.subheader.defaultValue.value, 'StadtPocket · Ulm');
 });
 
-test('8. Google: no loyaltyPoints/stamp/reward messaging, and no invalid cardTitle/header fields, on the Business Wallet Card', async () => {
+test('8. Google: no loyalty-specific member fields (loyaltyPoints/accountName/accountId) on the Business Wallet GenericObject', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  const obj = lastSignedClaims.payload.genericObjects[0];
   assert.equal(obj.loyaltyPoints, undefined);
-  assert.equal(obj.cardTitle, undefined);
-  assert.equal(obj.header, undefined);
+  assert.equal(obj.accountName, undefined);
+  assert.equal(obj.accountId, undefined);
   assert.ok(!(obj.textModulesData || []).some(m => m.id === 'reward_info'));
+  // cardTitle/header ARE valid, expected GenericObject fields (unlike the
+  // old LoyaltyObject-shaped business card, which deliberately omitted
+  // them because they didn't exist on that resource type) — confirm they
+  // are actually populated, not just absent-and-forgotten.
+  assert.ok(obj.cardTitle && obj.cardTitle.defaultValue.value);
+  assert.ok(obj.header && obj.header.defaultValue.value);
 });
 
-// ── Google class/object ID namespace isolation (Phase 3C.5A) ───────────
+// ── Google class/object ID namespace isolation (Phase 3C.6C) ───────────
+// The old per-business functions (getBusinessClassId/getBusinessObjectId,
+// Phase 3C.5A) are untouched below and still exported — old test cards
+// saved under that namespace keep working exactly as before (Step 9: no
+// destructive migration). These tests cover the NEW shared-class,
+// businessId-keyed-object namespace that every new Business Wallet Card
+// save now actually uses.
 
-test('Google: per-business class ID is deterministic for the same business', () => {
-  assert.equal(getBusinessClassId('biz-sp-1'), getBusinessClassId('biz-sp-1'));
+test('Google: Business Wallet GenericClass is a single SHARED class across businesses', () => {
+  assert.equal(getBusinessGenericClassId(), getBusinessGenericClassId());
+  // No businessId parameter at all — unlike the old per-business
+  // LoyaltyClass, there is nothing business-specific to key it by.
 });
 
-test('Google: different businesses receive different class IDs', () => {
-  assert.notEqual(getBusinessClassId('biz-sp-1'), getBusinessClassId('biz-sp-3'));
+test('Google: Business Wallet GenericObject ID is deterministic for the same business', () => {
+  assert.equal(getBusinessGenericObjectId('biz-sp-1', null), getBusinessGenericObjectId('biz-sp-1', null));
+  assert.equal(getBusinessGenericObjectId('biz-sp-1', 'cid1'), getBusinessGenericObjectId('biz-sp-1', 'cid1'));
 });
 
-test('Google: Business Wallet class ID never equals the existing shared loyalty class ID', () => {
-  assert.notEqual(getBusinessClassId('biz-sp-1'), getClassId());
+test('Google: different businesses receive different GenericObject IDs', () => {
+  assert.notEqual(getBusinessGenericObjectId('biz-sp-1', null), getBusinessGenericObjectId('biz-sp-3', null));
 });
 
-test('Google: Business Wallet object namespace never equals the existing loyalty object namespace', () => {
-  assert.notEqual(getBusinessObjectId('sp-loyalty-off', null), getObjectId('sp-loyalty-off', null));
-  assert.notEqual(getBusinessObjectId('sp-loyalty-off', 'cid1'), getObjectId('sp-loyalty-off', 'cid1'));
+test('Google: Business Wallet GenericClass ID never equals the existing shared loyalty class ID', () => {
+  assert.notEqual(getBusinessGenericClassId(), getClassId());
 });
 
-test('Google: same slug/cid produces a stable Business Wallet object ID', () => {
-  assert.equal(getBusinessObjectId('sp-loyalty-off', null), getBusinessObjectId('sp-loyalty-off', null));
-  assert.equal(getBusinessObjectId('sp-loyalty-off', 'cid1'), getBusinessObjectId('sp-loyalty-off', 'cid1'));
+test('Google: Business Wallet GenericObject namespace never equals the loyalty or old per-business-loyalty object namespaces', () => {
+  assert.notEqual(getBusinessGenericObjectId('biz-sp-1', null), getObjectId('sp-loyalty-off', null));
+  assert.notEqual(getBusinessGenericObjectId('biz-sp-1', 'cid1'), getObjectId('sp-loyalty-off', 'cid1'));
+  assert.notEqual(getBusinessGenericObjectId('biz-sp-1', null), getBusinessObjectId('sp-loyalty-off', null));
 });
 
-test('Google: the actual save-URL flow uses the new class/object IDs for a Business Wallet Card', async () => {
+test('Google: the actual save-URL flow uses the new Generic class/object IDs for a Business Wallet Card', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.classId, getBusinessClassId('biz-sp-1'));
-  assert.equal(obj.id, getBusinessObjectId('sp-loyalty-off', null));
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.classId, getBusinessGenericClassId());
+  assert.equal(obj.id, getBusinessGenericObjectId('biz-sp-1', null));
 });
 
-test('Google: two different StadtPocket businesses each get their own class and correct programName', async () => {
+test('Google: two different StadtPocket businesses share the same GenericClass but get distinct GenericObjects', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off-2', sectionsFor('sp-loyalty-off-2'), null, 'biz-sp-3');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.classId, getBusinessClassId('biz-sp-3'));
-  assert.notEqual(obj.classId, getBusinessClassId('biz-sp-1'));
-  const classBody = classRequestsById[getBusinessClassId('biz-sp-3')];
-  assert.equal(classBody.programName, 'Second Business');
-  const contextModule = obj.textModulesData.find(m => m.id === 'context');
-  assert.equal(contextModule.header, 'StadtPocket · Köln');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.classId, getBusinessGenericClassId());
+  assert.equal(obj.classId, getBusinessGenericClassId()); // same shared class as biz-sp-1's card
+  assert.equal(obj.id, getBusinessGenericObjectId('biz-sp-3', null));
+  assert.notEqual(obj.id, getBusinessGenericObjectId('biz-sp-1', null));
+  assert.equal(obj.cardTitle.defaultValue.value, 'Second Business');
+  assert.equal(obj.subheader.defaultValue.value, 'StadtPocket · Köln');
 });
 
 test('Google: missing city falls back safely to plain "StadtPocket", never "undefined"', async () => {
   await createGoogleWalletSaveUrl('sp-no-location', sectionsFor('sp-no-location'), null, 'biz-sp-2');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  const contextModule = obj.textModulesData.find(m => m.id === 'context');
-  assert.equal(contextModule.header, 'StadtPocket');
-  assert.ok(!contextModule.header.includes('undefined'));
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.subheader.defaultValue.value, 'StadtPocket');
+  assert.ok(!obj.subheader.defaultValue.value.includes('undefined'));
 });
 
-// ── Phase 3C.5B — fail-closed Google Wallet class ensure ────────────────
+// ── Phase 3C.6C — Google GenericObject content mapping ──────────────────
 
-test('3C.5B: GET 404 triggers CREATE, and a successful create allows JWT generation', async () => {
+test('Google: brand color maps to GenericObject.hexBackgroundColor', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.hexBackgroundColor, '#112233');
+});
+
+test('Google: category/tagline (sections.hero.badge) maps to GenericObject.header when present', async () => {
+  await createGoogleWalletSaveUrl('sp-with-badge', sectionsFor('sp-with-badge'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.header.defaultValue.value, 'Cafe & Bakery');
+});
+
+test('Google: walletHero maps to GenericObject.heroImage when present', async () => {
+  await createGoogleWalletSaveUrl('sp-with-hero', sectionsFor('sp-with-hero'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.heroImage.sourceUri.uri, 'https://res.cloudinary.com/fake/hero.jpg');
+});
+
+test('Google: GenericObject includes a direct Smart Page link (linksModuleData)', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.ok(obj.linksModuleData && obj.linksModuleData.uris && obj.linksModuleData.uris.length >= 1);
+  assert.equal(obj.linksModuleData.uris[0].uri, 'https://www.qraivy.com/lp/sp-loyalty-off');
+});
+
+// ── Phase 3C.6C — fail-closed GenericClass ensure (mirrors 3C.5B) ──────
+// The GenericClass is a single SHARED class (see above), so — unlike
+// 3C.5B's per-business classes, which were always fresh/never-requested
+// — these tests explicitly force the GET/CREATE outcome they need via
+// overrides rather than relying on a classId nobody has asked for yet,
+// and clean their overrides up afterward so later tests see the normal
+// (by-then-already-created) shared-class path.
+
+test('3C.6C: GenericClass GET 404 triggers CREATE, and a successful create allows JWT generation', async () => {
+  const classId = getBusinessGenericClassId();
+  delete genericClassCreatedIds[classId];
+  delete genericClassGetOverrides[classId];
+  delete genericClassCreateOverrides[classId];
   lastSignedClaims = null;
   const url = await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
   assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
   assert.ok(lastSignedClaims); // JWT WAS produced
-  assert.ok(classRequestsById[getBusinessClassId('biz-sp-1')]); // CREATE (POST) was actually sent
+  assert.ok(genericClassRequestsById[classId]); // CREATE (POST) was actually sent
 });
 
-test('3C.5B: GET 200 means the class already exists — no throw, JWT still generated', async () => {
-  const classId = getBusinessClassId('biz-class-exists');
-  classGetOverrides[classId] = { status: 200 };
+test('3C.6C: GenericClass GET 200 means the class already exists — no throw, JWT still generated', async () => {
+  // By this point the shared class was already created by the previous
+  // test — no override needed, this exercises the natural "exists" path.
   lastSignedClaims = null;
-  const url = await createGoogleWalletSaveUrl('sp-class-exists', sectionsFor('sp-class-exists'), null, 'biz-class-exists');
+  const url = await createGoogleWalletSaveUrl('sp-loyalty-off-2', sectionsFor('sp-loyalty-off-2'), null, 'biz-sp-3');
   assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
   assert.ok(lastSignedClaims);
-  // Existing-class path PATCHes to sync branding — request body was still captured.
-  assert.ok(classRequestsById[classId]);
 });
 
-test('3C.5B: a non-404 GET failure throws, and no JWT is produced', async () => {
-  const classId = getBusinessClassId('biz-class-lookup-fails');
-  classGetOverrides[classId] = { status: 500, body: 'Internal error' };
+test('3C.6C: a non-404 GenericClass GET failure throws, and no JWT is produced', async () => {
+  const classId = getBusinessGenericClassId();
+  genericClassGetOverrides[classId] = { status: 500, body: 'Internal error' };
   lastSignedClaims = null;
   await assert.rejects(
-    () => createGoogleWalletSaveUrl('sp-class-lookup-fails', sectionsFor('sp-class-lookup-fails'), null, 'biz-class-lookup-fails'),
-    /Google Wallet class lookup failed: 500/
+    () => createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1'),
+    /Google Wallet generic class lookup failed: 500/
   );
   assert.equal(lastSignedClaims, null); // JWT was NEVER produced
-  assert.equal(classRequestsById[classId], undefined); // no CREATE/PATCH was ever attempted
+  delete genericClassGetOverrides[classId]; // restore normal (already-exists) path for later tests
 });
 
-test('3C.5B: a failed CREATE throws, and no JWT is produced referencing the missing class', async () => {
-  const classId = getBusinessClassId('biz-class-create-fails');
-  classCreateOverrides[classId] = { ok: false, status: 400, body: 'Bad Request: invalid issuer' };
+test('3C.6C: a failed GenericClass CREATE throws, and no JWT is produced referencing the missing class', async () => {
+  const classId = getBusinessGenericClassId();
+  genericClassGetOverrides[classId] = { status: 404 }; // force CREATE to actually be attempted
+  genericClassCreateOverrides[classId] = { ok: false, status: 400, body: 'Bad Request: invalid issuer' };
   lastSignedClaims = null;
   await assert.rejects(
-    () => createGoogleWalletSaveUrl('sp-class-create-fails', sectionsFor('sp-class-create-fails'), null, 'biz-class-create-fails'),
-    /Google Wallet class creation failed: 400/
+    () => createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1'),
+    /Google Wallet generic class creation failed: 400/
   );
-  assert.equal(lastSignedClaims, null); // JWT was NEVER produced — this is the exact production bug being fixed
+  assert.equal(lastSignedClaims, null); // JWT was NEVER produced — the exact production bug this phase fixes
+  delete genericClassGetOverrides[classId];
+  delete genericClassCreateOverrides[classId];
+  // The failed CREATE never marked the shared class as created — restore
+  // that for later tests via one clean successful call.
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
 });
 
-test('3C.5B: class ID and object ID namespaces are unchanged by the reliability fix', async () => {
+test('3C.6C: GenericClass and GenericObject namespaces are unchanged by the reliability fix', async () => {
   lastSignedClaims = null;
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.classId, getBusinessClassId('biz-sp-1'));
-  assert.equal(obj.id, getBusinessObjectId('sp-loyalty-off', null));
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.classId, getBusinessGenericClassId());
+  assert.equal(obj.id, getBusinessGenericObjectId('biz-sp-1', null));
 });
 
-// ── Phase 3C.5C — Google Wallet class logo URL fix ──────────────────────
+// ── Phase 3C.6C — Google Wallet logo URL fix, carried onto GenericObject ─
+// Logo now lives on the OBJECT, not a per-business class (3C.5C fixed the
+// same bug for the old per-business LoyaltyClass; GenericClass has no
+// logo field at all, so there is nothing class-level left to get wrong).
 
-test('3C.5C: no business-uploaded logo -> class programLogo uses the corrected favicon.png URL, not the nonexistent icon-192.png', async () => {
+test('3C.6C: no business-uploaded logo -> GenericObject.logo uses the corrected favicon.png URL, not the nonexistent icon-192.png', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const classBody = classRequestsById[getBusinessClassId('biz-sp-1')];
-  assert.ok(classBody);
-  assert.equal(classBody.programLogo.sourceUri.uri, 'https://www.qraivy.com/favicon.png');
-  assert.notEqual(classBody.programLogo.sourceUri.uri, 'https://www.qraivy.com/icon-192.png');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.logo.sourceUri.uri, 'https://www.qraivy.com/favicon.png');
+  assert.notEqual(obj.logo.sourceUri.uri, 'https://www.qraivy.com/icon-192.png');
 });
 
-test('3C.5C: a business-uploaded logo still overrides the fallback', async () => {
-  const classId = getBusinessClassId('biz-sp-1');
-  delete classRequestsById[classId]; // isolate from the prior test's capture
+test('3C.6C: a business-uploaded logo still overrides the fallback on the GenericObject', async () => {
   await createGoogleWalletSaveUrl('sp-with-logo', sectionsFor('sp-with-logo'), null, 'biz-sp-1');
-  const classBody = classRequestsById[classId];
-  assert.ok(classBody);
-  assert.equal(classBody.programLogo.sourceUri.uri, 'https://res.cloudinary.com/fake/logo.png');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.logo.sourceUri.uri, 'https://res.cloudinary.com/fake/logo.png');
 });
 
 // ── 9. QR/barcode: canonical Smart Page destination ─────────────────────
@@ -398,7 +491,7 @@ test('9. QR/barcode resolves to the canonical QRAIVY Smart Page on both wallets'
   assert.equal(passJson.barcode.message, 'https://api.qraivy.com/lp/sp-loyalty-off');
 
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  const obj = lastSignedClaims.payload.genericObjects[0];
   assert.equal(obj.barcode.value, 'https://www.qraivy.com/lp/sp-loyalty-off');
 });
 
@@ -415,8 +508,8 @@ test('10. Website-less StadtPocket business: Business Wallet Card still generate
 test('Google: website-less StadtPocket business still generates a Business Wallet Card save URL', async () => {
   const url = await createGoogleWalletSaveUrl('sp-no-website', sectionsFor('sp-no-website'), null, 'biz-sp-1');
   assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
-  const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.accountName, 'Rick Ross Marketing');
+  const obj = lastSignedClaims.payload.genericObjects[0];
+  assert.equal(obj.cardTitle.defaultValue.value, 'Rick Ross Marketing');
 });
 
 // ── 11/12/13. Regression: loyalty-on and non-StadtPocket unchanged ─────
