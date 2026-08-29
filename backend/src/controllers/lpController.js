@@ -1193,20 +1193,52 @@ async function handlePublishLP(req, res) {
   try {
     const { slug, websiteUrl, useCase, brandColor, logoUrl, sections, qrType, template, businessId } = req.body;
     const businessName = ((req.body.businessName||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/\.(de|com|net|org|io)$/i,'').replace(/\s+[a-z0-9]{3}$/,'').trim())||req.body.businessName||'';
-    let userId = req.body.userId || null;
-    if (!userId && req.headers.authorization) {
+    if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
+
+    // ── Security fix — never trust req.body.userId as identity ─────
+    // Authenticated identity comes ONLY from a cryptographically verified
+    // Clerk bearer token. A JSON body field is not proof of anything --
+    // req.body.userId used to be checked first and trusted outright with
+    // no verification at all, which is what made the ownership gate below
+    // bypassable by simply guessing/forging a userId string.
+    let userId = null;
+    if (req.headers.authorization) {
       try { userId = await getUserFromToken(req.headers.authorization); } catch(_) {}
     }
-    if (!slug || !businessName) return res.status(400).json({ error: 'slug and businessName are required' });
+
+    // ── Existing-page ownership gate ────────────────────────────────
+    // Runs before every other branch (StadtPocket entitlement, plan-limit,
+    // section merge, upsert) so nothing downstream can mutate someone
+    // else's page no matter what else the request contains. A brand-new
+    // slug (existing === null) is unaffected -- anonymous CREATE (e.g.
+    // smart-demo.html) and authenticated CREATE both continue exactly as
+    // before, past this gate.
+    const existing = await prisma.landingPage.findUnique({ where: { slug } });
+    if (existing) {
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication is required to update an existing page.' });
+      }
+      if (existing.userId && existing.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      // existing.userId === null is a legacy/ownerless page (e.g. an
+      // anonymous smart-demo.html page nobody has claimed). No established
+      // claim flow exists anywhere in this codebase today, so we do not
+      // invent one here: a verified user may edit it (required above),
+      // but ownership is never assigned as a side effect -- see the
+      // removal of `userId` from baseUpsertArgs.update below. If ownerless
+      // pages should have a real claim flow, that's a separate product
+      // decision, not something this fix should decide unilaterally.
+    }
+    // ─────────────────────────────────────────────────────────────
 
     // ── StadtPocket included-page entitlement (Phase 3C.4) ──────────
     // businessId is navigation context only, exactly like everywhere else
     // in this project -- never trusted as authorization by itself. Every
     // fact needed to grant the one-included-page entitlement is
     // independently re-verified here on every request:
-    //   1. a real, TOKEN-VERIFIED user (never req.body.userId, which the
-    //      rest of this handler still trusts -- see the pre-existing gap
-    //      noted below; this path does not inherit that leniency)
+    //   1. a real, TOKEN-VERIFIED user (req.body.userId is never trusted
+    //      anywhere in this handler as of the security fix above)
     //   2. Business exists
     //   3. Business.primaryOwnerUserId === that verified user
     //   4. Business has at least one StadtPocket BusinessLocation
@@ -1248,8 +1280,7 @@ async function handlePublishLP(req, res) {
     // limit outcome to fall back to instead of silently succeeding) ──
     let planLimitResponse = null;
     if (userId) {
-      const existingPage = await prisma.landingPage.findUnique({ where: { slug } });
-      if (!existingPage) {
+      if (!existing) {
         // This is a NEW page — check plan limits
         const user = await prisma.user.findUnique({ where: { id: userId } });
         const plan = user ? user.plan : 'free';
@@ -1273,8 +1304,9 @@ async function handlePublishLP(req, res) {
     // ─────────────────────────────────────────────────────────────
 
     // Merge incoming sections with existing DB sections to preserve AI-generated fields
+    // (reuses `existing`, already fetched above for the ownership gate --
+    // no second lookup needed).
     let mergedSections = sections || {};
-    const existing = await prisma.landingPage.findUnique({ where: { slug } });
     if (existing && existing.sections) {
       try {
         const existingS = JSON.parse(existing.sections);
@@ -1300,7 +1332,11 @@ async function handlePublishLP(req, res) {
     pageCache.delByPrefix('stamp:' + slug);
     const baseUpsertArgs = {
       where: { slug },
-      update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ...(logoUrl ? { logoUrl } : {}), userId, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
+      // Security fix — userId is intentionally NOT in `update`: ownership
+      // is authorization state, not an editable branding field, and must
+      // never be transferable/rewritable through this request. It's only
+      // ever set on `create`, using the verified identity resolved above.
+      update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ...(logoUrl ? { logoUrl } : {}), sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live', template: template || null },
     };
 
