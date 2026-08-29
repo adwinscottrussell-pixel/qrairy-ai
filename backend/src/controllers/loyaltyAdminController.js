@@ -5,6 +5,11 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
+// Phase 3C.6A — the Wallet Pass Studio needs to know whether a page should
+// preview as a Business Wallet Card vs. a Loyalty Card. Reuse the exact same
+// canonical resolver the real Apple/Google pass generators use (passService.js,
+// googleWalletService.js) rather than re-deriving StadtPocket linkage here.
+const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -33,13 +38,20 @@ async function getOrCreateStampToken(slug) {
 
 // Build the program response object from a LandingPage + (optional) StampSettings.
 async function buildProgram(landingPage) {
-  const [settings, pass, stampCount, rewardsEarned, rewardsRedeemed] = await Promise.all([
+  const [settings, pass, stampCount, rewardsEarned, rewardsRedeemed, stadtPocket] = await Promise.all([
     prisma.stampSettings.findUnique({ where: { slug: landingPage.slug } }),
     prisma.pass.findUnique({ where: { serialNumber: 'sqr-' + landingPage.slug } }),
     prisma.stampEntry.count({ where: { slug: landingPage.slug } }),
     prisma.rewardEvent.count({ where: { slug: landingPage.slug, status: 'earned' } }),
-    prisma.rewardEvent.count({ where: { slug: landingPage.slug, status: 'redeemed' } })
+    prisma.rewardEvent.count({ where: { slug: landingPage.slug, status: 'redeemed' } }),
+    resolveStadtPocketContext(landingPage.businessId || null)
   ]);
+
+  // Same definition the real wallet generators use: StadtPocket-linked AND
+  // loyalty not enabled. Non-StadtPocket pages are never Business Wallet
+  // Cards, loyalty on or off — matches passService.js/googleWalletService.js.
+  const loyaltyEnabled = !!(settings && settings.enabled);
+  const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !loyaltyEnabled;
 
   const token = await getOrCreateStampToken(landingPage.slug);
   const stampUrl = 'https://api.qraivy.com/stamp/' + landingPage.slug + '/' + token;
@@ -61,6 +73,11 @@ async function buildProgram(landingPage) {
     stampGoal: settings ? settings.goal : null,
     status: settings && settings.enabled ? 'active' : 'paused',
     hasLoyaltyConfig: !!settings,
+    loyaltyEnabled,
+    businessId: landingPage.businessId || null,
+    isStadtPocketLinked: stadtPocket.isStadtPocketLinked,
+    isBusinessWalletCard,
+    city: stadtPocket.city,
     currentStamps: pass ? pass.stampCount : 0,
     customerCount: pass ? 1 : 0,
     totalStampsIssued: stampCount,
@@ -512,6 +529,7 @@ async function getSubscriberDetail(req, res) {
 }
 
 module.exports = {
+  buildProgram,
   listPrograms,
   getProgram,
   createProgram,
