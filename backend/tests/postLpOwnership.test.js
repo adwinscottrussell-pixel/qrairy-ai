@@ -10,6 +10,10 @@
 //   - updating an EXISTING page requires the verified user to match its
 //     owner (403 on mismatch), even with a forged body.userId
 //   - the owner successfully updating their own page still works
+//   - an ownerless (legacy) existing page fails closed on update: no
+//     authenticated ownership relationship exists to check against, so
+//     no user -- however validly authenticated -- may edit it (403),
+//     and it can never silently acquire a userId as a side effect
 //   - LandingPage.userId can never be rewritten/transferred by an update
 //   - the StadtPocket businessId entitlement path is unaffected, and the
 //     general ownership gate still applies even when businessId is sent
@@ -207,17 +211,29 @@ test('8. LandingPage.userId cannot be transferred by the owner submitting a diff
   assert.equal(landingPages['sp6'].businessName, 'Still Mine');
 });
 
-test('8b. ownerless (legacy) existing page requires a verified user but never silently assigns ownership', async () => {
+test('8b. ownerless (legacy) existing page + no token -> 401', async () => {
   landingPages['sp-orphan'] = makePage({ slug: 'sp-orphan', userId: null, businessName: 'Orphan' });
-  const resNoAuth = fakeRes();
-  await handlePublishLP(fakeReq({ slug: 'sp-orphan', businessName: 'Try' }), resNoAuth);
-  assert.equal(resNoAuth.statusCode, 401); // still requires authentication
+  const res = fakeRes();
+  await handlePublishLP(fakeReq({ slug: 'sp-orphan', businessName: 'Try' }), res);
+  assert.equal(res.statusCode, 401);
+  assert.equal(landingPages['sp-orphan'].businessName, 'Orphan');
+});
 
-  const resAuthed = fakeRes();
-  await handlePublishLP(fakeReq({ slug: 'sp-orphan', businessName: 'Edited' }, 'Bearer user-c'), resAuthed);
-  assert.equal(resAuthed.statusCode, 200);
-  assert.equal(landingPages['sp-orphan'].userId, null); // ownership NOT silently claimed
-  assert.equal(landingPages['sp-orphan'].businessName, 'Edited');
+test('8c. ownerless (legacy) existing page + a valid but arbitrary authenticated user -> 403 (fail closed)', async () => {
+  landingPages['sp-orphan2'] = makePage({ slug: 'sp-orphan2', userId: null, businessName: 'Orphan' });
+  const res = fakeRes();
+  await handlePublishLP(fakeReq({ slug: 'sp-orphan2', businessName: 'Edited' }, 'Bearer user-c'), res);
+  assert.equal(res.statusCode, 403);
+  assert.equal(landingPages['sp-orphan2'].businessName, 'Orphan'); // unchanged
+});
+
+test('8d. ownerless existing page can never acquire a userId through a rejected update attempt', async () => {
+  landingPages['sp-orphan3'] = makePage({ slug: 'sp-orphan3', userId: null, businessName: 'Orphan' });
+  const res = fakeRes();
+  await handlePublishLP(fakeReq({ slug: 'sp-orphan3', businessName: 'Claimed', userId: 'user-c' }, 'Bearer user-c'), res);
+  assert.equal(res.statusCode, 403);
+  assert.equal(landingPages['sp-orphan3'].userId, null); // still ownerless, no side-effect claim
+  assert.equal(landingPages['sp-orphan3'].businessName, 'Orphan');
 });
 
 // ── 9. StadtPocket businessId creation path still passes ────────────────

@@ -1218,17 +1218,24 @@ async function handlePublishLP(req, res) {
       if (!userId) {
         return res.status(401).json({ error: 'Authentication is required to update an existing page.' });
       }
-      if (existing.userId && existing.userId !== userId) {
+      if (existing.userId == null) {
+        // Ownerless (legacy) page: no authenticated ownership relationship
+        // exists to check a verified user against, so there is no identity
+        // that can be authorized to edit it. Confirmed via trace of every
+        // production /lp caller (smart-demo.html, onboarding.js,
+        // smart-editor.js, smart-qr-detail.html) that nothing ever updates
+        // an already-published page by re-targeting its slug anonymously --
+        // every UPDATE path acts on a page the caller already owns, and
+        // every anonymous path only ever CREATEs a fresh, randomly-suffixed
+        // slug. Fail closed rather than let any authenticated user who
+        // merely knows the public slug edit it. Ownership is never
+        // silently assigned here -- no claim mechanism, no mutation of
+        // existing.userId.
         return res.status(403).json({ error: 'Forbidden' });
       }
-      // existing.userId === null is a legacy/ownerless page (e.g. an
-      // anonymous smart-demo.html page nobody has claimed). No established
-      // claim flow exists anywhere in this codebase today, so we do not
-      // invent one here: a verified user may edit it (required above),
-      // but ownership is never assigned as a side effect -- see the
-      // removal of `userId` from baseUpsertArgs.update below. If ownerless
-      // pages should have a real claim flow, that's a separate product
-      // decision, not something this fix should decide unilaterally.
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
     }
     // ─────────────────────────────────────────────────────────────
 
