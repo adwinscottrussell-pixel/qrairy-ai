@@ -37,14 +37,39 @@ function getObjectId(slug, cid) {
   return `${ISSUER_ID}.qraivy_${base}${suffix}`;
 }
 
-async function ensureClass(credentials, businessName, logoUrl) {
+// Phase 3C.5A — Business Wallet Card: a dedicated Google Wallet class per
+// business, isolated from the shared multi-tenant loyalty class above.
+// programName/programLogo are CLASS-level fields — on the shared loyalty
+// class they race every other business's request and Google withholds
+// unapproved branding changes from end users anyway, which is why the
+// production QA saw generic "Qraivy Loyalty" branding instead of the real
+// business name. A dedicated class per business removes the collision;
+// getting it Google-approved is a separate, later, manual step.
+function getBusinessClassId(businessId) {
+  const normalized = String(businessId).replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `${ISSUER_ID}.stadtpocket_business_${normalized}`;
+}
+
+// Separate object-ID namespace ("stadtpocket_biz_" vs. the existing
+// "qraivy_" loyalty namespace above) so a Business Wallet Card object can
+// never collide with a loyalty-shaped object that may already exist under
+// the same slug (e.g. from before this business went StadtPocket, or from
+// before loyalty was disabled) — the Google "save" JWT flow only creates a
+// NEW object when the ID doesn't already exist; reusing an existing ID
+// would have Google silently ignore this request's content entirely.
+function getBusinessObjectId(slug, cid) {
+  const base = slug.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const suffix = cid ? '_' + cid.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
+  return `${ISSUER_ID}.stadtpocket_biz_${base}${suffix}`;
+}
+
+async function ensureClass(credentials, classId, businessName, logoUrl) {
   const auth = new GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
   });
   const client = await auth.getClient();
   const token = await client.getAccessToken();
-  const classId = getClassId();
 
   // Business branding — never the generic QRaivy logo unless the business
   // hasn't uploaded their own.
@@ -84,51 +109,59 @@ async function ensureClass(credentials, businessName, logoUrl) {
   return classId;
 }
 
-function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city, tagline }) {
-  const classId = getClassId();
-  const objectId = getObjectId(slug, cid);
+function buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city, tagline }) {
   const L = theme.labels;
   // Real uploaded photo if the business set one (Google fetches it directly
   // from Cloudinary), otherwise the generated gradient banner.
   const heroUrl = walletHeroUrl || `https://api.qraivy.com/lp/wallet-hero/${slug}?c=${encodeURIComponent(accent)}`;
+  const barcode = {
+    type: 'QR_CODE',
+    value: `https://www.qraivy.com/lp/${slug}`,
+    alternateText: slug,
+  };
+  const heroImage = {
+    sourceUri: { uri: heroUrl },
+    contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' banner' } },
+  };
 
-  const headerValue = isBusinessWalletCard
-    ? (city ? `StadtPocket · ${city}` : 'StadtPocket')
-    : (rewardReady ? '🎁 ' + L.rewardReadyHeader : L.cardKicker);
+  // Business Wallet Card (Phase 3C.5A) — dedicated per-business class, so
+  // the visible title/issuer comes from LoyaltyClass.programName/issuerName
+  // instead of the nonexistent LoyaltyObject.cardTitle/header fields used
+  // below for the (unchanged) loyalty path. No loyaltyPoints/stamp/reward
+  // messaging at all — just an optional StadtPocket/city + tagline module.
+  if (isBusinessWalletCard) {
+    const cityLabel = city ? `StadtPocket · ${city}` : 'StadtPocket';
+    return {
+      id: objectId,
+      classId,
+      state: 'ACTIVE',
+      accountName: businessName,
+      accountId: cid ? `${slug}-${cid}` : slug,
+      hexBackgroundColor: accent,
+      heroImage,
+      textModulesData: [{ id: 'context', header: cityLabel, body: tagline || 'Tap to open the Smart Page.' }],
+      barcode,
+    };
+  }
 
-  const base = {
+  // Existing loyalty path — EXACTLY unchanged (same fields, same values,
+  // same nonexistent-on-the-real-API cardTitle/header quirk untouched;
+  // fixing that for loyalty cards is a separate, later phase).
+  const headerValue = rewardReady ? '🎁 ' + L.rewardReadyHeader : L.cardKicker;
+  return {
     id: objectId,
     classId,
     state: 'ACTIVE',
     accountName: businessName,
     accountId: cid ? `${slug}-${cid}` : slug,
-    hexBackgroundColor: accent,
-    cardTitle: { defaultValue: { language: 'en-US', value: businessName } },
-    header: { defaultValue: { language: 'en-US', value: headerValue } },
-    heroImage: {
-      sourceUri: { uri: heroUrl },
-      contentDescription: { defaultValue: { language: 'en-US', value: businessName + ' banner' } },
-    },
-    barcode: {
-      type: 'QR_CODE',
-      value: `https://www.qraivy.com/lp/${slug}`,
-      alternateText: slug,
-    },
-  };
-
-  // Business Wallet Card (Phase 3C.5) — StadtPocket-linked, loyalty off: no
-  // loyaltyPoints/stamp/reward messaging at all, just an optional tagline.
-  if (isBusinessWalletCard) {
-    return Object.assign(base, {
-      textModulesData: tagline ? [{ id: 'tagline', header: 'SMART PAGE', body: tagline }] : [],
-    });
-  }
-
-  return Object.assign(base, {
     loyaltyPoints: {
       label: rewardReady ? L.rewardReadyLabel : L.stampsLabel,
       balance: { int: stampCount },
     },
+    hexBackgroundColor: accent,
+    cardTitle: { defaultValue: { language: 'en-US', value: businessName } },
+    header: { defaultValue: { language: 'en-US', value: headerValue } },
+    heroImage,
     textModulesData: [
       {
         id: 'reward_info',
@@ -136,7 +169,8 @@ function buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, s
         body: rewardReady ? 'Show this card to staff for your ' + rewardName : stampCount + ' of ' + stampGoal + ' stamps collected',
       },
     ],
-  });
+    barcode,
+  };
 }
 
 async function createGoogleWalletSaveUrl(slug, sections, cid, businessId) {
@@ -146,7 +180,6 @@ async function createGoogleWalletSaveUrl(slug, sections, cid, businessId) {
   const logoUrl = sections.logo && sections.logo.url;
   const walletHeroUrl = sections.walletHero && sections.walletHero.url;
   const theme = getTheme(sections.theme && sections.theme.walletTheme);
-  const classId = await ensureClass(credentials, businessName, logoUrl);
 
   // If this customer already has stamps (e.g. collected via NFC/QR before
   // ever adding a wallet), the card must open already showing that real
@@ -169,10 +202,15 @@ async function createGoogleWalletSaveUrl(slug, sections, cid, businessId) {
   const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampSettings && stampSettings.enabled);
   const tagline = safeTagline(sections.hero && sections.hero.badge);
 
-  const loyaltyObject = Object.assign(
-    { classId },
-    buildLoyaltyObject({ slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city: stadtPocket.city, tagline })
-  );
+  // Phase 3C.5A — Business Wallet Card mode gets its own class (per
+  // business) and object-ID namespace; every other page (loyalty-enabled
+  // StadtPocket pages, and all non-StadtPocket pages) keeps the exact
+  // pre-existing shared class + "qraivy_" object namespace, unchanged.
+  const classId = isBusinessWalletCard ? getBusinessClassId(stadtPocket.businessId) : getClassId();
+  const objectId = isBusinessWalletCard ? getBusinessObjectId(slug, cid) : getObjectId(slug, cid);
+  await ensureClass(credentials, classId, businessName, logoUrl);
+
+  const loyaltyObject = buildLoyaltyObject({ objectId, classId, slug, cid, businessName, accent, logoUrl, theme, stampCount, stampGoal, rewardName, rewardReady, walletHeroUrl, isBusinessWalletCard, city: stadtPocket.city, tagline });
 
   const claims = {
     iss: credentials.client_email,
@@ -231,4 +269,4 @@ async function updateGoogleWalletStamps(slug, stampCount, cid) {
   return res.ok;
 }
 
-module.exports = { createGoogleWalletSaveUrl, updateGoogleWalletStamps, getObjectId };
+module.exports = { createGoogleWalletSaveUrl, updateGoogleWalletStamps, getObjectId, getClassId, getBusinessClassId, getBusinessObjectId };
