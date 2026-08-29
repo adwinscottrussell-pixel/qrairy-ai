@@ -157,14 +157,21 @@
           <div class="apw-card" id="apw-card">
             <div class="apw-top">
               <div class="apw-logo" id="apw-logo">Q</div>
-              <div class="apw-kind" data-i18n="wps_card_kind">LOYALTY<br/>CARD</div>
+              <div class="apw-kind" id="apw-kind" data-i18n="wps_card_kind">LOYALTY<br/>CARD</div>
             </div>
             <div class="apw-mid">
               <div class="apw-biz" id="apw-biz">Business Name</div>
-              <div class="apw-reward-label" data-i18n="wps_reward_label">Reward</div>
-              <div class="apw-reward" id="apw-reward">Free item</div>
-              <div class="apw-stamps" id="apw-stamps"></div>
-              <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
+              <div id="apw-loyalty-block">
+                <div class="apw-reward-label" data-i18n="wps_reward_label">Reward</div>
+                <div class="apw-reward" id="apw-reward">Free item</div>
+                <div class="apw-stamps" id="apw-stamps"></div>
+                <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
+              </div>
+              <div id="apw-business-block" style="display:none">
+                <div class="apw-reward-label" id="apw-category-label">Category</div>
+                <div class="apw-reward" id="apw-category">&mdash;</div>
+                <div class="apw-progress-text" id="apw-city">StadtPocket</div>
+              </div>
             </div>
           </div>
         </div>
@@ -177,10 +184,17 @@
               <div class="gow-biz" id="gow-biz">Business Name</div>
             </div>
             <div class="gow-body">
-              <div class="gow-reward-label" data-i18n="wps_reward_label">Reward</div>
-              <div class="gow-reward" id="gow-reward">Free item</div>
-              <div class="gow-bar-track"><div class="gow-bar-fill" id="gow-bar"></div></div>
-              <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
+              <div id="gow-loyalty-block">
+                <div class="gow-reward-label" data-i18n="wps_reward_label">Reward</div>
+                <div class="gow-reward" id="gow-reward">Free item</div>
+                <div class="gow-bar-track"><div class="gow-bar-fill" id="gow-bar"></div></div>
+                <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
+              </div>
+              <div id="gow-business-block" style="display:none">
+                <div class="gow-reward-label" id="gow-category-label">Category</div>
+                <div class="gow-reward" id="gow-category">&mdash;</div>
+                <div class="gow-progress-text" id="gow-city">StadtPocket</div>
+              </div>
             </div>
           </div>
         </div>
@@ -242,7 +256,9 @@
       wps_notice_b: 'Wallet branding is controlled from Brand Settings.',
       wps_notice_rest: "Loyalty rewards are controlled from Loyalty Settings. This studio is a preview only — it doesn't add new branding controls.",
       wps_card_kind: 'LOYALTY<br/>CARD',
+      wps_card_kind_business: 'BUSINESS<br/>CARD',
       wps_reward_label: 'Reward',
+      wps_category_label: 'Category',
       wps_test_actions: 'Test actions',
       wps_apple_dl: 'Download Apple Wallet pass',
       wps_google_save: 'Open Google Wallet save link',
@@ -272,7 +288,9 @@
       wps_notice_b: 'Das Wallet-Branding wird in den Markeneinstellungen festgelegt.',
       wps_notice_rest: 'Treuebelohnungen werden in den Treue-Einstellungen festgelegt. Dieses Studio ist nur eine Vorschau — es fügt keine neuen Branding-Optionen hinzu.',
       wps_card_kind: 'TREUE-<br/>KARTE',
+      wps_card_kind_business: 'BETRIEBS-<br/>KARTE',
       wps_reward_label: 'Belohnung',
+      wps_category_label: 'Kategorie',
       wps_test_actions: 'Testaktionen',
       wps_apple_dl: 'Apple Wallet-Pass herunterladen',
       wps_google_save: 'Google Wallet-Speicherlink öffnen',
@@ -349,7 +367,11 @@
     sec = sec || {};
     var logoUrl = (sec.logo && sec.logo.url) || page.logoUrl || '';
     var brandColor = page.brandColor || (sec.theme && sec.theme.accentColor) || '#ff5a1f';
-    return { logoUrl: logoUrl, brandColor: brandColor };
+    // Category/descriptor for the Business Wallet Card preview — the exact
+    // same field (sections.hero.badge) the real Apple/Google pass generators
+    // use as the card's tagline, so this preview never drifts from reality.
+    var tagline = (sec.hero && sec.hero.badge) || '';
+    return { logoUrl: logoUrl, brandColor: brandColor, tagline: tagline };
   }
 
   function populateSelect(){
@@ -371,36 +393,65 @@
     var color = brand.brandColor || p.color || '#ff5a1f';
     var logo = brand.logoUrl || '';
     var bizName = p.businessName || p.slug;
-    var rewardName = p.rewardText || wpsT('wps_default_reward');
-    var goal = p.stampGoal || 10;
-    var sample = Math.min(4, goal);
-    var progressText = wpsT('wps_stamps_progress').replace('{n}', sample).replace('{goal}', goal);
+    // Same definition the real Apple/Google generators use — resolved
+    // server-side in loyaltyAdminController.js via resolveStadtPocketContext,
+    // never re-derived here.
+    var isBiz = !!p.isBusinessWalletCard;
 
     var logoHtml = logo
       ? '<img src="'+esc(logo)+'" alt="logo">'
       : esc(bizName.charAt(0).toUpperCase());
 
-    // Apple card
+    // Apple card — shared fields
     var apwCard = document.getElementById('apw-card');
     apwCard.style.background = 'linear-gradient(135deg,'+color+','+color+'cc)';
     document.getElementById('apw-logo').innerHTML = logoHtml;
     document.getElementById('apw-biz').textContent = bizName;
-    document.getElementById('apw-reward').textContent = rewardName;
-    document.getElementById('apw-progress').textContent = progressText;
-    var dots = '';
-    for(var i=0;i<goal;i++){
-      dots += '<div class="apw-dot'+(i<sample?' filled':'')+'">'+(i<sample?'&#10003;':'')+'</div>';
-    }
-    document.getElementById('apw-stamps').innerHTML = dots;
+    document.getElementById('apw-kind').innerHTML = isBiz ? wpsT('wps_card_kind_business') : wpsT('wps_card_kind');
+    document.getElementById('apw-loyalty-block').style.display = isBiz ? 'none' : '';
+    document.getElementById('apw-business-block').style.display = isBiz ? '' : 'none';
 
-    // Google card
+    // Google card — shared fields
     document.getElementById('gow-header').style.background = color;
     document.getElementById('gow-logo').innerHTML = logoHtml;
     document.getElementById('gow-biz').textContent = bizName;
-    document.getElementById('gow-reward').textContent = rewardName;
-    document.getElementById('gow-bar').style.width = Math.round(sample/goal*100)+'%';
-    document.getElementById('gow-bar').style.background = color;
-    document.getElementById('gow-progress').textContent = progressText;
+    document.getElementById('gow-loyalty-block').style.display = isBiz ? 'none' : '';
+    document.getElementById('gow-business-block').style.display = isBiz ? '' : 'none';
+
+    if (isBiz) {
+      // Business Wallet Card: business name, logo, brand color (all above),
+      // category/descriptor, and system-controlled StadtPocket · city — no
+      // reward, no stamps, no fabricated loyalty fallback data.
+      var cityLabel = p.city ? ('StadtPocket · ' + p.city) : 'StadtPocket';
+      var category = brand.tagline || '—';
+
+      document.getElementById('apw-category-label').textContent = wpsT('wps_category_label');
+      document.getElementById('apw-category').textContent = category;
+      document.getElementById('apw-city').textContent = cityLabel;
+
+      document.getElementById('gow-category-label').textContent = wpsT('wps_category_label');
+      document.getElementById('gow-category').textContent = category;
+      document.getElementById('gow-city').textContent = cityLabel;
+    } else {
+      // Loyalty Card — unchanged behavior.
+      var rewardName = p.rewardText || wpsT('wps_default_reward');
+      var goal = p.stampGoal || 10;
+      var sample = Math.min(4, goal);
+      var progressText = wpsT('wps_stamps_progress').replace('{n}', sample).replace('{goal}', goal);
+
+      document.getElementById('apw-reward').textContent = rewardName;
+      document.getElementById('apw-progress').textContent = progressText;
+      var dots = '';
+      for(var i=0;i<goal;i++){
+        dots += '<div class="apw-dot'+(i<sample?' filled':'')+'">'+(i<sample?'&#10003;':'')+'</div>';
+      }
+      document.getElementById('apw-stamps').innerHTML = dots;
+
+      document.getElementById('gow-reward').textContent = rewardName;
+      document.getElementById('gow-bar').style.width = Math.round(sample/goal*100)+'%';
+      document.getElementById('gow-bar').style.background = color;
+      document.getElementById('gow-progress').textContent = progressText;
+    }
 
     // Actions
     document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
