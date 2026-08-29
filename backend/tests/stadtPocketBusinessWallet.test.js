@@ -72,6 +72,10 @@ landingPages['sp-long-tagline']   = makePage('sp-long-tagline',   {
 landingPages['sp-class-exists']       = makePage('sp-class-exists',       { businessId: 'biz-class-exists',       businessName: 'Class Exists Biz' });
 landingPages['sp-class-create-fails'] = makePage('sp-class-create-fails', { businessId: 'biz-class-create-fails', businessName: 'Create Fails Biz' });
 landingPages['sp-class-lookup-fails'] = makePage('sp-class-lookup-fails', { businessId: 'biz-class-lookup-fails', businessName: 'Lookup Fails Biz' });
+landingPages['sp-with-logo'] = makePage('sp-with-logo', {
+  businessId: 'biz-sp-1',
+  sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: {}, logo: { url: 'https://res.cloudinary.com/fake/logo.png' } }),
+});
 
 stampSettingsStore['sp-loyalty-on']     = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
 stampSettingsStore['non-sp-loyalty-on'] = { enabled: true, goal: 10, rewardName: 'Free item' };
@@ -365,6 +369,25 @@ test('3C.5B: class ID and object ID namespaces are unchanged by the reliability 
   const obj = lastSignedClaims.payload.loyaltyObjects[0];
   assert.equal(obj.classId, getBusinessClassId('biz-sp-1'));
   assert.equal(obj.id, getBusinessObjectId('sp-loyalty-off', null));
+});
+
+// ── Phase 3C.5C — Google Wallet class logo URL fix ──────────────────────
+
+test('3C.5C: no business-uploaded logo -> class programLogo uses the corrected favicon.png URL, not the nonexistent icon-192.png', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const classBody = classRequestsById[getBusinessClassId('biz-sp-1')];
+  assert.ok(classBody);
+  assert.equal(classBody.programLogo.sourceUri.uri, 'https://www.qraivy.com/favicon.png');
+  assert.notEqual(classBody.programLogo.sourceUri.uri, 'https://www.qraivy.com/icon-192.png');
+});
+
+test('3C.5C: a business-uploaded logo still overrides the fallback', async () => {
+  const classId = getBusinessClassId('biz-sp-1');
+  delete classRequestsById[classId]; // isolate from the prior test's capture
+  await createGoogleWalletSaveUrl('sp-with-logo', sectionsFor('sp-with-logo'), null, 'biz-sp-1');
+  const classBody = classRequestsById[classId];
+  assert.ok(classBody);
+  assert.equal(classBody.programLogo.sourceUri.uri, 'https://res.cloudinary.com/fake/logo.png');
 });
 
 // ── 9. QR/barcode: canonical Smart Page destination ─────────────────────

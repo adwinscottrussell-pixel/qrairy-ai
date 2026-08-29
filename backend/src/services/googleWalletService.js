@@ -16,7 +16,16 @@ function safeTagline(text) {
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023161108';
 const CLASS_SUFFIX = 'qraivy_loyalty_v1';
-const DEFAULT_LOGO_URL = 'https://www.qraivy.com/icon-192.png';
+// Phase 3C.5C — icon-192.png has never actually existed as a static asset
+// anywhere in this repo (frontend/public/ only has apple-touch-icon.png,
+// favicon.png, favicon-16x16.png, favicon-32x32.png, favicon.ico) despite
+// being referenced as a fallback in several places; every other consumer
+// (PWA manifest, apple-touch-icon link, web-push icon) degrades silently on
+// a missing icon, but Google Wallet's class creation validates the image
+// URL and hard-rejects it with a 400. favicon.png is the closest-to-Google's
+// recommended (~660x660) program-logo size of the icons that actually exist
+// and resolve — confirmed live (curl) 200 image/png, 1254x1254.
+const DEFAULT_LOGO_URL = 'https://www.qraivy.com/favicon.png';
 
 function getCredentials() {
   const raw = process.env.GOOGLE_WALLET_KEY;
