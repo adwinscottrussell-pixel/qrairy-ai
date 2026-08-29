@@ -32,10 +32,12 @@ const jwtPath           = require.resolve('jsonwebtoken');
 const businesses = {
   'biz-sp-1': { id: 'biz-sp-1', name: 'Rick Ross Marketing', primaryOwnerUserId: 'user-1', status: 'active' },
   'biz-sp-2': { id: 'biz-sp-2', name: 'No Location Biz', primaryOwnerUserId: 'user-2', status: 'active' },
+  'biz-sp-3': { id: 'biz-sp-3', name: 'Second Business', primaryOwnerUserId: 'user-3', status: 'active' },
 };
 const businessLocations = {
   // biz-sp-1 has a real city; biz-sp-2 deliberately has none (14: missing BusinessLocation).
   'biz-sp-1': { id: 'bl-1', businessId: 'biz-sp-1', locationId: 'loc-ulm', location: { id: 'loc-ulm', name: 'Ulm' } },
+  'biz-sp-3': { id: 'bl-3', businessId: 'biz-sp-3', locationId: 'loc-koeln', location: { id: 'loc-koeln', name: 'Köln' } },
 };
 const stampSettingsStore = {}; // slug -> { enabled, goal, rewardName }
 const landingPages = {};       // slug -> page row
@@ -53,6 +55,7 @@ function makePage(slug, overrides = {}) {
 }
 
 landingPages['sp-loyalty-off']    = makePage('sp-loyalty-off',    { businessId: 'biz-sp-1' });
+landingPages['sp-loyalty-off-2']  = makePage('sp-loyalty-off-2',  { businessId: 'biz-sp-3', businessName: 'Second Business' });
 landingPages['sp-loyalty-on']     = makePage('sp-loyalty-on',     { businessId: 'biz-sp-1' });
 landingPages['non-sp-loyalty-on'] = makePage('non-sp-loyalty-on', { businessId: null });
 landingPages['non-sp-loyalty-off']= makePage('non-sp-loyalty-off',{ businessId: null });
@@ -116,9 +119,19 @@ require.cache[jwtPath] = {
 
 // ── Mock global fetch: WWDR cert + Google Wallet class endpoint + any ────
 // ── asset (logo/hero) fetch — never a real network call ──────────────────
+// Captures every loyaltyClass POST/PATCH body, keyed by the classId inside
+// the body itself, so tests can assert what was actually sent to Google for
+// a given class (e.g. programName), without ever making a real request.
+const classRequestsById = {}; // classId -> last request body sent
 global.fetch = async (url, opts) => {
   const u = String(url);
   if (u.includes('certificateauthority')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  if (u.includes('walletobjects.googleapis.com/walletobjects/v1/loyaltyClass')) {
+    if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
+    const body = JSON.parse(opts.body);
+    classRequestsById[body.id] = body;
+    return { ok: true, text: async () => '' };
+  }
   if (u.includes('walletobjects.googleapis.com')) {
     if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
     return { ok: true, text: async () => '' };
@@ -134,7 +147,7 @@ process.env.APPLE_TEAM_ID       = 'TEAMID1234';
 process.env.PASS_AUTH_SECRET    = 'test-secret';
 
 const { generateSmartQRPass } = require('../src/services/passService');
-const { createGoogleWalletSaveUrl } = require('../src/services/googleWalletService');
+const { createGoogleWalletSaveUrl, getClassId, getObjectId, getBusinessClassId, getBusinessObjectId } = require('../src/services/googleWalletService');
 const { resolveStadtPocketContext } = require('../src/services/stadtPocketContext');
 const { handleGenerateAppleWalletPass, handleLoyaltyWelcome } = require('../src/controllers/lpController');
 
@@ -204,20 +217,78 @@ test('6. Google: business name is correct on the Business Wallet Card', async ()
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
   const obj = lastSignedClaims.payload.loyaltyObjects[0];
   assert.equal(obj.accountName, 'Rick Ross Marketing');
-  assert.equal(obj.cardTitle.defaultValue.value, 'Rick Ross Marketing');
+  // 3C.5A: the visible title comes from the per-business LoyaltyClass's
+  // programName, not a (nonexistent) LoyaltyObject.cardTitle field.
+  const classBody = classRequestsById[getBusinessClassId('biz-sp-1')];
+  assert.ok(classBody);
+  assert.equal(classBody.programName, 'Rick Ross Marketing');
 });
 
 test('7. Google: StadtPocket city context is correct', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
   const obj = lastSignedClaims.payload.loyaltyObjects[0];
-  assert.equal(obj.header.defaultValue.value, 'StadtPocket · Ulm');
+  const contextModule = obj.textModulesData.find(m => m.id === 'context');
+  assert.ok(contextModule);
+  assert.equal(contextModule.header, 'StadtPocket · Ulm');
 });
 
-test('8. Google: no loyaltyPoints/stamp/reward messaging on the Business Wallet Card', async () => {
+test('8. Google: no loyaltyPoints/stamp/reward messaging, and no invalid cardTitle/header fields, on the Business Wallet Card', async () => {
   await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
   const obj = lastSignedClaims.payload.loyaltyObjects[0];
   assert.equal(obj.loyaltyPoints, undefined);
+  assert.equal(obj.cardTitle, undefined);
+  assert.equal(obj.header, undefined);
   assert.ok(!(obj.textModulesData || []).some(m => m.id === 'reward_info'));
+});
+
+// ── Google class/object ID namespace isolation (Phase 3C.5A) ───────────
+
+test('Google: per-business class ID is deterministic for the same business', () => {
+  assert.equal(getBusinessClassId('biz-sp-1'), getBusinessClassId('biz-sp-1'));
+});
+
+test('Google: different businesses receive different class IDs', () => {
+  assert.notEqual(getBusinessClassId('biz-sp-1'), getBusinessClassId('biz-sp-3'));
+});
+
+test('Google: Business Wallet class ID never equals the existing shared loyalty class ID', () => {
+  assert.notEqual(getBusinessClassId('biz-sp-1'), getClassId());
+});
+
+test('Google: Business Wallet object namespace never equals the existing loyalty object namespace', () => {
+  assert.notEqual(getBusinessObjectId('sp-loyalty-off', null), getObjectId('sp-loyalty-off', null));
+  assert.notEqual(getBusinessObjectId('sp-loyalty-off', 'cid1'), getObjectId('sp-loyalty-off', 'cid1'));
+});
+
+test('Google: same slug/cid produces a stable Business Wallet object ID', () => {
+  assert.equal(getBusinessObjectId('sp-loyalty-off', null), getBusinessObjectId('sp-loyalty-off', null));
+  assert.equal(getBusinessObjectId('sp-loyalty-off', 'cid1'), getBusinessObjectId('sp-loyalty-off', 'cid1'));
+});
+
+test('Google: the actual save-URL flow uses the new class/object IDs for a Business Wallet Card', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.classId, getBusinessClassId('biz-sp-1'));
+  assert.equal(obj.id, getBusinessObjectId('sp-loyalty-off', null));
+});
+
+test('Google: two different StadtPocket businesses each get their own class and correct programName', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-off-2', sectionsFor('sp-loyalty-off-2'), null, 'biz-sp-3');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.classId, getBusinessClassId('biz-sp-3'));
+  assert.notEqual(obj.classId, getBusinessClassId('biz-sp-1'));
+  const classBody = classRequestsById[getBusinessClassId('biz-sp-3')];
+  assert.equal(classBody.programName, 'Second Business');
+  const contextModule = obj.textModulesData.find(m => m.id === 'context');
+  assert.equal(contextModule.header, 'StadtPocket · Köln');
+});
+
+test('Google: missing city falls back safely to plain "StadtPocket", never "undefined"', async () => {
+  await createGoogleWalletSaveUrl('sp-no-location', sectionsFor('sp-no-location'), null, 'biz-sp-2');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  const contextModule = obj.textModulesData.find(m => m.id === 'context');
+  assert.equal(contextModule.header, 'StadtPocket');
+  assert.ok(!contextModule.header.includes('undefined'));
 });
 
 // ── 9. QR/barcode: canonical Smart Page destination ─────────────────────
@@ -240,6 +311,13 @@ test('10. Website-less StadtPocket business: Business Wallet Card still generate
   const passJson = JSON.parse(capturedPassFiles['pass.json'].toString('utf8'));
   const urlField = passJson.storeCard.backFields.find(f => f.key === 'url');
   assert.equal(urlField.value, 'https://api.qraivy.com/lp/sp-no-website');
+});
+
+test('Google: website-less StadtPocket business still generates a Business Wallet Card save URL', async () => {
+  const url = await createGoogleWalletSaveUrl('sp-no-website', sectionsFor('sp-no-website'), null, 'biz-sp-1');
+  assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.accountName, 'Rick Ross Marketing');
 });
 
 // ── 11/12/13. Regression: loyalty-on and non-StadtPocket unchanged ─────
@@ -266,6 +344,28 @@ test('13. Non-StadtPocket + loyalty OFF/no row: existing (loyalty-shaped) behavi
   // enabled or not — this is today's existing (if quirky) default output.
   assert.equal(passJson.storeCard.headerFields[0].value, 'CARD');
   assert.ok(passJson.storeCard.backFields.some(f => f.key === 'reward'));
+});
+
+// ── Google regression: loyalty-on and non-StadtPocket unchanged (3C.5A) ─
+
+test('Google: StadtPocket + loyalty ON keeps the shared loyalty class/object + cardTitle/header/loyaltyPoints unchanged', async () => {
+  await createGoogleWalletSaveUrl('sp-loyalty-on', sectionsFor('sp-loyalty-on'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.classId, getClassId());
+  assert.equal(obj.id, getObjectId('sp-loyalty-on', null));
+  assert.ok(obj.cardTitle);
+  assert.ok(obj.header);
+  assert.ok(obj.loyaltyPoints);
+});
+
+test('Google: non-StadtPocket page keeps the shared loyalty class/object unchanged regardless of loyalty state', async () => {
+  await createGoogleWalletSaveUrl('non-sp-loyalty-off', sectionsFor('non-sp-loyalty-off'), null, null);
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.classId, getClassId());
+  assert.equal(obj.id, getObjectId('non-sp-loyalty-off', null));
+  assert.ok(obj.cardTitle);
+  assert.ok(obj.header);
+  assert.ok(obj.loyaltyPoints);
 });
 
 // ── 14. Missing Business/BusinessLocation/Location: safe fallback ──────
