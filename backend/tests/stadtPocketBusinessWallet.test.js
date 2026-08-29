@@ -33,6 +33,9 @@ const businesses = {
   'biz-sp-1': { id: 'biz-sp-1', name: 'Rick Ross Marketing', primaryOwnerUserId: 'user-1', status: 'active' },
   'biz-sp-2': { id: 'biz-sp-2', name: 'No Location Biz', primaryOwnerUserId: 'user-2', status: 'active' },
   'biz-sp-3': { id: 'biz-sp-3', name: 'Second Business', primaryOwnerUserId: 'user-3', status: 'active' },
+  'biz-class-exists':        { id: 'biz-class-exists',        name: 'Class Exists Biz',   primaryOwnerUserId: 'user-4', status: 'active' },
+  'biz-class-create-fails':  { id: 'biz-class-create-fails',  name: 'Create Fails Biz',   primaryOwnerUserId: 'user-5', status: 'active' },
+  'biz-class-lookup-fails':  { id: 'biz-class-lookup-fails',  name: 'Lookup Fails Biz',   primaryOwnerUserId: 'user-6', status: 'active' },
 };
 const businessLocations = {
   // biz-sp-1 has a real city; biz-sp-2 deliberately has none (14: missing BusinessLocation).
@@ -66,6 +69,9 @@ landingPages['sp-long-tagline']   = makePage('sp-long-tagline',   {
   businessId: 'biz-sp-1',
   sections: JSON.stringify({ theme: { accentColor: '#112233' }, hero: { badge: 'A'.repeat(80) }, logo: null }),
 });
+landingPages['sp-class-exists']       = makePage('sp-class-exists',       { businessId: 'biz-class-exists',       businessName: 'Class Exists Biz' });
+landingPages['sp-class-create-fails'] = makePage('sp-class-create-fails', { businessId: 'biz-class-create-fails', businessName: 'Create Fails Biz' });
+landingPages['sp-class-lookup-fails'] = makePage('sp-class-lookup-fails', { businessId: 'biz-class-lookup-fails', businessName: 'Lookup Fails Biz' });
 
 stampSettingsStore['sp-loyalty-on']     = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
 stampSettingsStore['non-sp-loyalty-on'] = { enabled: true, goal: 10, rewardName: 'Free item' };
@@ -122,15 +128,33 @@ require.cache[jwtPath] = {
 // Captures every loyaltyClass POST/PATCH body, keyed by the classId inside
 // the body itself, so tests can assert what was actually sent to Google for
 // a given class (e.g. programName), without ever making a real request.
-const classRequestsById = {}; // classId -> last request body sent
+//
+// Per-classId overrides let Phase 3C.5B tests simulate GET 200 (class
+// already exists), a non-404 GET failure, or a failed CREATE — every other
+// classId keeps the pre-3C.5B default (GET 404, CREATE succeeds) so every
+// prior test's happy path is unaffected.
+const classRequestsById = {}; // classId -> last POST/PATCH body sent
+const classGetOverrides = {};    // classId -> { status, body? }
+const classCreateOverrides = {}; // classId -> { ok, status, body? }
 global.fetch = async (url, opts) => {
   const u = String(url);
   if (u.includes('certificateauthority')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   if (u.includes('walletobjects.googleapis.com/walletobjects/v1/loyaltyClass')) {
-    if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
+    const isGet = !opts || !opts.method || opts.method === 'GET';
+    if (isGet) {
+      const classId = u.split('/loyaltyClass/')[1];
+      const override = classId && classGetOverrides[classId];
+      if (override) return { status: override.status, text: async () => override.body || '' };
+      return { status: 404 }; // default: class has never existed
+    }
     const body = JSON.parse(opts.body);
     classRequestsById[body.id] = body;
-    return { ok: true, text: async () => '' };
+    if (opts.method === 'POST') {
+      const override = classCreateOverrides[body.id];
+      if (override) return { ok: override.ok, status: override.status, text: async () => override.body || '' };
+      return { ok: true, status: 200, text: async () => '' }; // default: create succeeds
+    }
+    return { ok: true, status: 200, text: async () => '' }; // PATCH (branding sync) — always best-effort ok in tests
   }
   if (u.includes('walletobjects.googleapis.com')) {
     if (!opts || !opts.method || opts.method === 'GET') return { status: 404 };
@@ -289,6 +313,58 @@ test('Google: missing city falls back safely to plain "StadtPocket", never "unde
   const contextModule = obj.textModulesData.find(m => m.id === 'context');
   assert.equal(contextModule.header, 'StadtPocket');
   assert.ok(!contextModule.header.includes('undefined'));
+});
+
+// ── Phase 3C.5B — fail-closed Google Wallet class ensure ────────────────
+
+test('3C.5B: GET 404 triggers CREATE, and a successful create allows JWT generation', async () => {
+  lastSignedClaims = null;
+  const url = await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
+  assert.ok(lastSignedClaims); // JWT WAS produced
+  assert.ok(classRequestsById[getBusinessClassId('biz-sp-1')]); // CREATE (POST) was actually sent
+});
+
+test('3C.5B: GET 200 means the class already exists — no throw, JWT still generated', async () => {
+  const classId = getBusinessClassId('biz-class-exists');
+  classGetOverrides[classId] = { status: 200 };
+  lastSignedClaims = null;
+  const url = await createGoogleWalletSaveUrl('sp-class-exists', sectionsFor('sp-class-exists'), null, 'biz-class-exists');
+  assert.equal(url, 'https://pay.google.com/gp/v/save/fake.jwt.token');
+  assert.ok(lastSignedClaims);
+  // Existing-class path PATCHes to sync branding — request body was still captured.
+  assert.ok(classRequestsById[classId]);
+});
+
+test('3C.5B: a non-404 GET failure throws, and no JWT is produced', async () => {
+  const classId = getBusinessClassId('biz-class-lookup-fails');
+  classGetOverrides[classId] = { status: 500, body: 'Internal error' };
+  lastSignedClaims = null;
+  await assert.rejects(
+    () => createGoogleWalletSaveUrl('sp-class-lookup-fails', sectionsFor('sp-class-lookup-fails'), null, 'biz-class-lookup-fails'),
+    /Google Wallet class lookup failed: 500/
+  );
+  assert.equal(lastSignedClaims, null); // JWT was NEVER produced
+  assert.equal(classRequestsById[classId], undefined); // no CREATE/PATCH was ever attempted
+});
+
+test('3C.5B: a failed CREATE throws, and no JWT is produced referencing the missing class', async () => {
+  const classId = getBusinessClassId('biz-class-create-fails');
+  classCreateOverrides[classId] = { ok: false, status: 400, body: 'Bad Request: invalid issuer' };
+  lastSignedClaims = null;
+  await assert.rejects(
+    () => createGoogleWalletSaveUrl('sp-class-create-fails', sectionsFor('sp-class-create-fails'), null, 'biz-class-create-fails'),
+    /Google Wallet class creation failed: 400/
+  );
+  assert.equal(lastSignedClaims, null); // JWT was NEVER produced — this is the exact production bug being fixed
+});
+
+test('3C.5B: class ID and object ID namespaces are unchanged by the reliability fix', async () => {
+  lastSignedClaims = null;
+  await createGoogleWalletSaveUrl('sp-loyalty-off', sectionsFor('sp-loyalty-off'), null, 'biz-sp-1');
+  const obj = lastSignedClaims.payload.loyaltyObjects[0];
+  assert.equal(obj.classId, getBusinessClassId('biz-sp-1'));
+  assert.equal(obj.id, getBusinessObjectId('sp-loyalty-off', null));
 });
 
 // ── 9. QR/barcode: canonical Smart Page destination ─────────────────────
