@@ -63,6 +63,29 @@ function getBusinessObjectId(slug, cid) {
   return `${ISSUER_ID}.stadtpocket_biz_${base}${suffix}`;
 }
 
+// Phase 3C.5B — fail-closed class ensure. Production QA (Phase 3C.5A) found
+// Google's Save-to-Wallet flow rejecting a Business Wallet Card with
+// "Could not find necessary class" — root-caused to this function returning
+// classId unconditionally, even when the GET/CREATE/PATCH calls above never
+// actually confirmed the class exists. A classId must now never be returned
+// to createGoogleWalletSaveUrl() unless the class was confirmed to already
+// exist (GET 200) or was just successfully created (CREATE 2xx) — any other
+// outcome throws, which createGoogleWalletSaveUrl does not catch, so the
+// caller's own try/catch (lpRoutes.js's '/lp/wallet/google/:slug' handler)
+// surfaces the real error and no JWT referencing a nonexistent class is ever
+// issued.
+//
+// No post-create read-back GET: Google's loyaltyClass insert is a standard
+// synchronous REST create — a successful response already IS Google's
+// confirmation that the resource exists, the same guarantee any other
+// Google Cloud REST API gives on a 2xx insert. A second GET immediately
+// after, with no retry/backoff, wouldn't add a real guarantee against
+// eventual-consistency lag (it would just race the same window once more)
+// — it would only add latency and a way to falsely fail-close a request
+// that actually succeeded. If Google's Save-to-Wallet flow specifically
+// needs a moment to catch up after a genuine create, that's a distinct,
+// separately-diagnosable condition (see the Phase 3C.5A trace) that a
+// bare re-GET here cannot reliably rule out anyway.
 async function ensureClass(credentials, classId, businessName, logoUrl) {
   const auth = new GoogleAuth({
     credentials,
@@ -85,27 +108,47 @@ async function ensureClass(credentials, classId, businessName, logoUrl) {
     reviewStatus: 'UNDER_REVIEW',
   };
 
-  // Try to get existing class first
+  console.log(`[GoogleWalletClass] lookup started classId=${classId}`);
   const getRes = await fetch(
     `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass/${classId}`,
     { headers: { Authorization: `Bearer ${token.token}` } }
   );
 
-  if (getRes.status === 404) {
-    await fetch('https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(classBody),
-    });
-  } else {
-    // Keep an existing class's branding in sync (e.g. business uploads a logo later)
+  if (getRes.status === 200) {
+    console.log(`[GoogleWalletClass] class found classId=${classId}`);
+    // Keep an existing class's branding in sync (e.g. business uploads a
+    // logo later). Best-effort only, matching pre-3C.5B behavior — the
+    // class is already confirmed to exist, so a failed branding sync here
+    // degrades cosmetics, not correctness, and must not block a customer
+    // from saving a card they can already save.
     await fetch(`https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass/${classId}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(classBody),
     }).catch(() => {});
+    return classId;
   }
 
+  if (getRes.status !== 404) {
+    const errText = await getRes.text().catch(() => '');
+    console.error(`[GoogleWalletClass] lookup failed classId=${classId} status=${getRes.status} body=${errText}`);
+    throw new Error(`Google Wallet class lookup failed: ${getRes.status} ${errText}`);
+  }
+
+  console.log(`[GoogleWalletClass] class missing, creating classId=${classId}`);
+  const createRes = await fetch('https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(classBody),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text().catch(() => '');
+    console.error(`[GoogleWalletClass] creation failed classId=${classId} status=${createRes.status} body=${errText}`);
+    throw new Error(`Google Wallet class creation failed: ${createRes.status} ${errText}`);
+  }
+
+  console.log(`[GoogleWalletClass] creation confirmed classId=${classId}`);
   return classId;
 }
 
