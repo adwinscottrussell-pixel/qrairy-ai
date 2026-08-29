@@ -56,6 +56,7 @@ function makeElement() {
     href: '', value: '',
     addEventListener() {},
     appendChild() {},
+    removeAttribute() {},
     querySelectorAll() { return []; },
   };
 }

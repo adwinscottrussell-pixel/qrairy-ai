@@ -94,6 +94,9 @@
     .wce-color-input{width:56px;height:34px;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:2px;cursor:pointer}
     .wce-hint{font-size:.7rem;color:#666;line-height:1.6;margin-top:16px}
     .wce-hint a{color:#ff8c55;text-decoration:none;margin-left:4px}
+    .wce-hero-row{width:100%;max-width:340px;aspect-ratio:1032/336;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .wce-hero-row img{width:100%;height:100%;object-fit:cover}
+    .wce-hero-empty{font-size:.7rem;color:#555}
   </style>
 </head>
 <body>
@@ -189,6 +192,7 @@
                 <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
               </div>
               <div id="apw-business-block" style="display:none">
+                <img id="apw-hero" src="" alt="" style="display:none;width:100%;aspect-ratio:1032/336;object-fit:cover;border-radius:8px;margin-bottom:10px;">
                 <div class="apw-reward-label" id="apw-category-label">Category</div>
                 <div class="apw-reward" id="apw-category">&mdash;</div>
                 <div class="apw-progress-text" id="apw-city">StadtPocket</div>
@@ -212,6 +216,7 @@
                 <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
               </div>
               <div id="gow-business-block" style="display:none">
+                <img id="gow-hero" src="" alt="" style="display:none;width:100%;aspect-ratio:1032/336;object-fit:cover;border-radius:6px;margin-bottom:10px;">
                 <div class="gow-reward-label" id="gow-category-label">Category</div>
                 <div class="gow-reward" id="gow-category">&mdash;</div>
                 <div class="gow-progress-text" id="gow-city">StadtPocket</div>
@@ -255,8 +260,28 @@
         <input id="wce-color" type="color" class="wce-color-input">
         <label class="wce-label" for="wce-category" data-i18n="wce_category_label">Category / descriptor</label>
         <input id="wce-category" type="text" class="wce-input" maxlength="40">
+
+        <!-- Phase 3C.6B.1 — hero image. Canonical field: sections.walletHero.url
+             (already consumed unconditionally by both passService.js and
+             googleWalletService.js). Upload reuses the existing
+             POST /lp/upload-strip/:slug endpoint; the returned URL is then
+             persisted via the same safe full read-modify-write POST /lp
+             save path used above — never a second upload mechanism. -->
+        <label class="wce-label" data-i18n="wce_hero_label">Hero image</label>
+        <div class="wce-hero-row">
+          <img id="wce-hero-preview" src="" alt="" style="display:none;">
+          <div id="wce-hero-empty" class="wce-hero-empty" data-i18n="wce_hero_none">No hero image yet</div>
+        </div>
+        <div class="wce-hint" data-i18n="wce_hero_hint">Recommended: 1032 × 336 px · JPG or PNG · Keep important content near the center.</div>
+        <input type="file" id="wce-hero-file" accept="image/png,image/jpeg,image/webp" style="display:none;">
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button id="wce-hero-upload" class="wps-btn" style="width:auto;padding:9px 18px;">&#x1F4F7; <span id="wce-hero-upload-label" data-i18n="wce_hero_upload">Upload hero image</span></button>
+          <button id="wce-hero-remove" class="wps-btn" style="width:auto;padding:9px 18px;display:none;">&#x1F5D1; <span data-i18n="wce_hero_remove">Remove hero image</span></button>
+        </div>
+        <div class="wps-copy-status" id="wce-hero-status"></div>
+
         <div class="wce-hint">
-          <span data-i18n="wce_logo_hint">To change your logo or wallet hero image, use Brand Settings.</span>
+          <span data-i18n="wce_logo_hint">To change your logo, use Brand Settings.</span>
           <a id="wce-brand-link" href="#" data-i18n="wps_edit_brand">Edit Brand Settings</a>
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;">
@@ -325,12 +350,22 @@
       wce_name_label: 'Business name',
       wce_color_label: 'Card color',
       wce_category_label: 'Category / descriptor',
-      wce_logo_hint: 'To change your logo or wallet hero image, use Brand Settings.',
+      wce_logo_hint: 'To change your logo, use Brand Settings.',
       wce_save: 'Save',
       wce_cancel: 'Cancel',
       wce_saved: 'Saved!',
       wce_save_error: 'Could not save — please try again.',
       wce_name_required: 'Business name is required.',
+      wce_hero_label: 'Hero image',
+      wce_hero_hint: 'Recommended: 1032 × 336 px · JPG or PNG · Keep important content near the center.',
+      wce_hero_none: 'No hero image yet',
+      wce_hero_upload: 'Upload hero image',
+      wce_hero_replace: 'Replace hero image',
+      wce_hero_remove: 'Remove hero image',
+      wce_hero_uploading: 'Uploading…',
+      wce_hero_saved: 'Hero image saved!',
+      wce_hero_removed: 'Hero image removed.',
+      wce_hero_error: 'Could not save the hero image — please try again.',
       wps_theme_title: 'Wallet theme',
       wps_theme_premium: 'Premium',
       wps_theme_classic: 'Classic',
@@ -374,12 +409,22 @@
       wce_name_label: 'Firmenname',
       wce_color_label: 'Kartenfarbe',
       wce_category_label: 'Kategorie / Kurzbeschreibung',
-      wce_logo_hint: 'Um dein Logo oder Wallet-Hero-Bild zu ändern, nutze die Markeneinstellungen.',
+      wce_logo_hint: 'Um dein Logo zu ändern, nutze die Markeneinstellungen.',
       wce_save: 'Speichern',
       wce_cancel: 'Abbrechen',
       wce_saved: 'Gespeichert!',
       wce_save_error: 'Speichern fehlgeschlagen — bitte erneut versuchen.',
       wce_name_required: 'Firmenname ist erforderlich.',
+      wce_hero_label: 'Hero-Bild',
+      wce_hero_hint: 'Empfohlen: 1032 × 336 px · JPG oder PNG · Wichtige Inhalte möglichst mittig platzieren.',
+      wce_hero_none: 'Noch kein Hero-Bild',
+      wce_hero_upload: 'Hero-Bild hochladen',
+      wce_hero_replace: 'Hero-Bild ersetzen',
+      wce_hero_remove: 'Hero-Bild entfernen',
+      wce_hero_uploading: 'Wird hochgeladen…',
+      wce_hero_saved: 'Hero-Bild gespeichert!',
+      wce_hero_removed: 'Hero-Bild entfernt.',
+      wce_hero_error: 'Hero-Bild konnte nicht gespeichert werden — bitte erneut versuchen.',
       wps_theme_title: 'Wallet-Design',
       wps_theme_premium: 'Premium',
       wps_theme_classic: 'Klassisch',
@@ -467,7 +512,11 @@
     // same field (sections.hero.badge) the real Apple/Google pass generators
     // use as the card's tagline, so this preview never drifts from reality.
     var tagline = (sec.hero && sec.hero.badge) || '';
-    return { logoUrl: logoUrl, brandColor: brandColor, tagline: tagline };
+    // Phase 3C.6B.1 — the exact canonical field (sections.walletHero.url)
+    // already consumed unconditionally by both passService.js and
+    // googleWalletService.js.
+    var walletHeroUrl = (sec.walletHero && sec.walletHero.url) || '';
+    return { logoUrl: logoUrl, brandColor: brandColor, tagline: tagline, walletHeroUrl: walletHeroUrl };
   }
 
   function populateSelect(){
@@ -528,6 +577,20 @@
       document.getElementById('gow-category-label').textContent = wpsT('wps_category_label');
       document.getElementById('gow-category').textContent = category;
       document.getElementById('gow-city').textContent = cityLabel;
+
+      // Phase 3C.6B.1 — optional hero image. Never leave a broken/empty
+      // <img> visible: fully hidden and src cleared when absent, exactly
+      // the same canonical value both real wallet generators already use.
+      var heroUrl = brand.walletHeroUrl || '';
+      var apwHero = document.getElementById('apw-hero');
+      var gowHero = document.getElementById('gow-hero');
+      if (heroUrl) {
+        apwHero.src = heroUrl; apwHero.style.display = 'block';
+        gowHero.src = heroUrl; gowHero.style.display = 'block';
+      } else {
+        apwHero.style.display = 'none'; apwHero.removeAttribute('src');
+        gowHero.style.display = 'none'; gowHero.removeAttribute('src');
+      }
     } else {
       // Loyalty Card — unchanged behavior.
       var rewardName = p.rewardText || wpsT('wps_default_reward');
@@ -603,7 +666,30 @@
     document.getElementById('wce-color').value = brand.brandColor || (p && p.color) || '#ff5a1f';
     document.getElementById('wce-category').value = brand.tagline || '';
     document.getElementById('wce-status').textContent = '';
+    updateHeroEditorUI(brand.walletHeroUrl || '');
+    document.getElementById('wce-hero-status').textContent = '';
     document.getElementById('wps-edit-panel').style.display = 'block';
+  }
+
+  // Phase 3C.6B.1 — syncs the editor's hero preview/buttons to the current
+  // canonical value. Never shows a broken/empty preview: the empty state
+  // and the <img> are mutually exclusive.
+  function updateHeroEditorUI(heroUrl){
+    var img = document.getElementById('wce-hero-preview');
+    var empty = document.getElementById('wce-hero-empty');
+    var uploadLabel = document.getElementById('wce-hero-upload-label');
+    var removeBtn = document.getElementById('wce-hero-remove');
+    if (heroUrl) {
+      img.src = heroUrl; img.style.display = 'block';
+      empty.style.display = 'none';
+      uploadLabel.textContent = wpsT('wce_hero_replace');
+      removeBtn.style.display = '';
+    } else {
+      img.style.display = 'none'; img.removeAttribute('src');
+      empty.style.display = 'block';
+      uploadLabel.textContent = wpsT('wce_hero_upload');
+      removeBtn.style.display = 'none';
+    }
   }
 
   function closeEditPanel(){
@@ -674,7 +760,7 @@
 
       var prog = PROGRAMS.find(function(x){return x.slug===slug;});
       if(prog){ prog.businessName = newName; prog.color = newColor; }
-      PAGES[slug] = { logoUrl: (PAGES[slug]&&PAGES[slug].logoUrl)||'', brandColor: newColor, tagline: newCategory };
+      PAGES[slug] = { logoUrl: (PAGES[slug]&&PAGES[slug].logoUrl)||'', brandColor: newColor, tagline: newCategory, walletHeroUrl: (PAGES[slug]&&PAGES[slug].walletHeroUrl)||'' };
       populateSelect();
       document.getElementById('wps-select').value = slug;
       await render(slug);
@@ -685,6 +771,92 @@
       statusEl.textContent = wpsT('wce_save_error');
     } finally {
       saveBtn.disabled = false;
+    }
+  }
+
+  // Phase 3C.6B.1 — persists the canonical sections.walletHero.url via the
+  // exact same safe full read-modify-write POST /lp path saveWalletCard()
+  // uses. heroUrl === null removes the field; every other section (logo,
+  // hero.badge/title, theme, businessInfo, AI content, etc.) is preserved
+  // exactly as fetched, never touched.
+  async function saveHeroUrl(slug, heroUrl){
+    var tok = await getToken();
+    if(!tok) throw new Error('no-auth');
+    var full = await fetchFullPageForSave(slug);
+    var updatedSections = Object.assign({}, full.sections);
+    if (heroUrl) {
+      updatedSections.walletHero = Object.assign({}, full.sections.walletHero || {}, { url: heroUrl });
+    } else {
+      delete updatedSections.walletHero;
+    }
+    var res = await fetch(API+'/lp', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: slug,
+        businessName: full.businessName,
+        brandColor: full.brandColor,
+        sections: updatedSections,
+        template: full.template || null
+      })
+    });
+    if(!res.ok) throw new Error('save failed');
+  }
+
+  async function uploadHeroImage(file){
+    var slug = CURRENT_SLUG;
+    if(!slug || !file) return;
+    var statusEl = document.getElementById('wce-hero-status');
+    var uploadBtn = document.getElementById('wce-hero-upload');
+    statusEl.textContent = wpsT('wce_hero_uploading');
+
+    var tok = await getToken();
+    if(!tok){ statusEl.textContent = wpsT('wps_auth_error'); return; }
+
+    uploadBtn.disabled = true;
+    try {
+      var fd = new FormData();
+      fd.append('strip', file); // matches stripUpload.single('strip') on the existing endpoint
+      var upRes = await fetch(API+'/lp/upload-strip/'+encodeURIComponent(slug), {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+tok },
+        body: fd
+      });
+      if(!upRes.ok) throw new Error('upload failed');
+      var upData = await upRes.json();
+
+      await saveHeroUrl(slug, upData.url);
+
+      PAGES[slug] = Object.assign({}, PAGES[slug], { walletHeroUrl: upData.url });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_hero_saved');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_hero_error');
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  }
+
+  async function removeHeroImage(){
+    var slug = CURRENT_SLUG;
+    if(!slug) return;
+    var statusEl = document.getElementById('wce-hero-status');
+    var removeBtn = document.getElementById('wce-hero-remove');
+    statusEl.textContent = '';
+    removeBtn.disabled = true;
+    try {
+      await saveHeroUrl(slug, null);
+      PAGES[slug] = Object.assign({}, PAGES[slug], { walletHeroUrl: '' });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_hero_removed');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_hero_error');
+    } finally {
+      removeBtn.disabled = false;
     }
   }
 
@@ -740,6 +912,16 @@
     if(saveBtn) saveBtn.addEventListener('click', saveWalletCard);
     var cancelBtn = document.getElementById('wce-cancel');
     if(cancelBtn) cancelBtn.addEventListener('click', closeEditPanel);
+
+    var heroUploadBtn = document.getElementById('wce-hero-upload');
+    var heroFileInput = document.getElementById('wce-hero-file');
+    if(heroUploadBtn && heroFileInput) heroUploadBtn.addEventListener('click', function(){ heroFileInput.click(); });
+    if(heroFileInput) heroFileInput.addEventListener('change', function(){
+      if(this.files && this.files[0]) uploadHeroImage(this.files[0]);
+      this.value = ''; // allow re-selecting the same file later
+    });
+    var heroRemoveBtn = document.getElementById('wce-hero-remove');
+    if(heroRemoveBtn) heroRemoveBtn.addEventListener('click', removeHeroImage);
   });
 
   function waitForClerk(n){

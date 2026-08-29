@@ -46,6 +46,7 @@ function makeElement() {
     _listeners: {},
     addEventListener(evt, fn) { this._listeners[evt] = fn; },
     appendChild() {},
+    removeAttribute() {},
     querySelectorAll() { return []; },
   };
 }
