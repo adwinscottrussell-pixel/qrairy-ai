@@ -1337,13 +1337,36 @@ async function handlePublishLP(req, res) {
     if (!mergedSections.language) mergedSections.language = 'en';
     pageCache.delByPrefix('lp:' + slug);
     pageCache.delByPrefix('stamp:' + slug);
+
+    // Bug fix — legacy `logoUrl` column normalization on update. Every
+    // current caller that sends a `sections` object (smart-editor.js,
+    // wallet-pass-studio.html, smart-demo.html, onboarding.js) already
+    // treats sections.logo.url as canonical and self-preserves it across
+    // unrelated saves, so it's safe to keep this column in sync with it
+    // whenever a full sections payload is present. Previously this used
+    // `...(logoUrl ? { logoUrl } : {})`, which silently OMITTED the
+    // column from the update whenever the caller sent an empty/falsy
+    // logoUrl -- indistinguishable from "not sent" -- so an explicit
+    // clear (Wallet Pass Studio's Remove Logo, which deletes
+    // sections.logo and sends logoUrl:'') left the stale value sitting in
+    // this column. Every other read path in the app
+    // (sections.logo.url || page.logoUrl, e.g. lpController.js:337-338,
+    // 1872-1873, 2512-2513) then fell through to that stale value and
+    // resurrected the removed logo. When no `sections` object is sent at
+    // all, fall back to the previous truthy-only behavior unchanged, for
+    // backward compatibility with any caller that only ever sets the
+    // top-level field.
+    const _logoUpdate = sections !== undefined
+      ? { logoUrl: (mergedSections.logo && mergedSections.logo.url) || logoUrl || null }
+      : (logoUrl ? { logoUrl } : {});
+
     const baseUpsertArgs = {
       where: { slug },
       // Security fix — userId is intentionally NOT in `update`: ownership
       // is authorization state, not an editable branding field, and must
       // never be transferable/rewritable through this request. It's only
       // ever set on `create`, using the verified identity resolved above.
-      update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ...(logoUrl ? { logoUrl } : {}), sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
+      update: { businessName, websiteUrl, useCase, ...(brandColor ? { brandColor } : {}), ..._logoUpdate, sections: JSON.stringify(mergedSections), status: 'live', updatedAt: new Date(), template: template || null },
       create: { slug, businessName, websiteUrl, useCase, brandColor, logoUrl, userId, qrType, sections: JSON.stringify(mergedSections), status: 'live', template: template || null },
     };
 
