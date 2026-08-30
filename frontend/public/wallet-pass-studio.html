@@ -367,6 +367,22 @@
     var p = PROGRAMS.find(function(x){return x.slug===slug;});
     if(!p) return;
     CURRENT_SLUG = slug;
+
+    // Navigation links only need `slug` — never the brand/color/logo data
+    // fetched below — so set them immediately, before the await. Fixes a
+    // real click-before-ready race: init() calls render() without awaiting
+    // it, so on a cold load (e.g. a returning user whose saved language
+    // preference is already German, so the page loads straight into German
+    // copy) these hrefs stayed at their placeholder "#" until fetchPage()
+    // resolved; clicking "Edit Brand Settings"/"Markeneinstellungen
+    // bearbeiten" in that window did nothing. Same slug-only computation,
+    // same handler, for both languages — no separate German path.
+    document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
+    document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
+    var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
+    document.getElementById('wps-welcome').href = welcomeUrl;
+    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug);
+
     var brand = PAGES[slug] || (PAGES[slug] = await fetchPage(slug));
     var color = brand.brandColor || p.color || '#ff5a1f';
     var logo = brand.logoUrl || '';
@@ -402,13 +418,7 @@
     document.getElementById('gow-bar').style.background = color;
     document.getElementById('gow-progress').textContent = progressText;
 
-    // Actions
-    document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
-    document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
-    var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
-    document.getElementById('wps-welcome').href = welcomeUrl;
-    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug);
-
+    // Install-link copy button (navigation hrefs above are already set)
     var copyBtn = document.getElementById('wps-copy');
     var copyStatus = document.getElementById('wps-copy-status');
     copyBtn.onclick = function(){
