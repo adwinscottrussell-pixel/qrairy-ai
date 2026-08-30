@@ -84,7 +84,21 @@
     .wps-theme-chip.active{border-color:#ff5a1f;background:rgba(255,90,31,0.08);color:#ff8c55;font-weight:600}
     .wps-theme-soon{font-size:.55rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(255,255,255,0.06);border-radius:10px;padding:2px 7px;color:#555}
 
-    #wps-empty,#wps-loading{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
+    #wps-empty,#wps-loading,#wps-auth-error,#wps-api-error{text-align:center;padding:60px 0;color:#666;font-size:.85rem}
+    #wps-retry{font:inherit;color:#ff5a1f;border:none;text-decoration:none}
+
+    .wce-label{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:14px 0 6px}
+    .wce-label:first-of-type{margin-top:0}
+    .wce-input{width:100%;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f0ece0;font-family:inherit;font-size:.82rem;outline:none}
+    .wce-input:focus{border-color:#ff5a1f}
+    .wce-color-input{width:56px;height:34px;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:2px;cursor:pointer}
+    .wce-hint{font-size:.7rem;color:#666;line-height:1.6;margin-top:16px}
+    .wce-hero-row{width:100%;max-width:340px;aspect-ratio:1032/336;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .wce-hero-row img{width:100%;height:100%;object-fit:cover}
+    .wce-hero-empty{font-size:.7rem;color:#555}
+    .wce-logo-row{width:72px;height:72px;background:#0a0a0a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .wce-logo-row img{width:100%;height:100%;object-fit:contain}
+    .wce-logo-empty{font-size:.55rem;color:#555;text-align:center;padding:4px}
   </style>
 </head>
 <body>
@@ -132,13 +146,25 @@
     <div class="wps-head">
       <div class="wps-tag" data-i18n="wps_tag">Wallet Pass Studio</div>
       <div class="wps-title" data-i18n="wps_title">Preview &amp; test your wallet pass</div>
-      <div class="wps-sub" data-i18n="wps_sub">See exactly what customers see when they add your loyalty card to Apple or Google Wallet — no install required.</div>
+      <div class="wps-sub" id="wps-sub" data-i18n="wps_sub">See exactly what customers see when they add your loyalty card to Apple or Google Wallet — no install required.</div>
     </div>
 
     <div id="wps-loading" data-i18n="wps_loading">Loading your pages&#x2026;</div>
 
+    <!-- True empty account: request succeeded, zero pages. Wallet Pass
+         Studio must never imply loyalty is required to use it. -->
     <div id="wps-empty" style="display:none">
-      <span data-i18n="wps_empty">No loyalty programs yet.</span> <a href="loyalty-setup.html" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_empty_link">Set one up &rarr;</a>
+      <span data-i18n="wps_empty">No wallet-ready Smart Pages yet.</span> <a href="dashboard.html?launch=onboarding" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_empty_link">Create a Smart Page &rarr;</a>
+    </div>
+
+    <!-- Session/auth failure (e.g. 401) — must never render as "no programs". -->
+    <div id="wps-auth-error" style="display:none">
+      <span data-i18n="wps_auth_error">Your session could not be verified. Please sign in again.</span> <a href="login.html" style="color:#ff5a1f;text-decoration:none;" data-i18n="wps_signin_link">Sign in again &rarr;</a>
+    </div>
+
+    <!-- Any other API/network failure — a neutral retry state, not "no programs". -->
+    <div id="wps-api-error" style="display:none">
+      <span data-i18n="wps_api_error">Something went wrong loading your pages.</span> <button id="wps-retry" class="wps-link" style="cursor:pointer;background:none;" data-i18n="wps_retry">Try again</button>
     </div>
 
     <div id="wps-body" style="display:none">
@@ -148,7 +174,7 @@
 
       <div class="wps-notice">
         <span>&#x1F512;</span>
-        <span><b data-i18n="wps_notice_b">Wallet branding is controlled from Brand Settings.</b> <span data-i18n="wps_notice_rest">Loyalty rewards are controlled from Loyalty Settings. This studio is a preview only — it doesn't add new branding controls.</span></span>
+        <span><b id="wps-notice-b" data-i18n="wps_notice_b">Wallet branding is controlled from Brand Settings.</b> <span id="wps-notice-rest" data-i18n="wps_notice_rest">Loyalty rewards are controlled separately from Loyalty Settings.</span></span>
       </div>
 
       <div class="wps-cards">
@@ -157,14 +183,22 @@
           <div class="apw-card" id="apw-card">
             <div class="apw-top">
               <div class="apw-logo" id="apw-logo">Q</div>
-              <div class="apw-kind" data-i18n="wps_card_kind">LOYALTY<br/>CARD</div>
+              <div class="apw-kind" id="apw-kind" data-i18n="wps_card_kind">LOYALTY<br/>CARD</div>
             </div>
             <div class="apw-mid">
               <div class="apw-biz" id="apw-biz">Business Name</div>
-              <div class="apw-reward-label" data-i18n="wps_reward_label">Reward</div>
-              <div class="apw-reward" id="apw-reward">Free item</div>
-              <div class="apw-stamps" id="apw-stamps"></div>
-              <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
+              <div id="apw-loyalty-block">
+                <div class="apw-reward-label" data-i18n="wps_reward_label">Reward</div>
+                <div class="apw-reward" id="apw-reward">Free item</div>
+                <div class="apw-stamps" id="apw-stamps"></div>
+                <div class="apw-progress-text" id="apw-progress">4 of 10 stamps</div>
+              </div>
+              <div id="apw-business-block" style="display:none">
+                <img id="apw-hero" src="" alt="" style="display:none;width:100%;aspect-ratio:1032/336;object-fit:cover;border-radius:8px;margin-top:10px;margin-bottom:10px;">
+                <div class="apw-reward-label" id="apw-category-label">Category</div>
+                <div class="apw-reward" id="apw-category">&mdash;</div>
+                <div class="apw-progress-text" id="apw-city">StadtPocket</div>
+              </div>
             </div>
           </div>
         </div>
@@ -177,10 +211,18 @@
               <div class="gow-biz" id="gow-biz">Business Name</div>
             </div>
             <div class="gow-body">
-              <div class="gow-reward-label" data-i18n="wps_reward_label">Reward</div>
-              <div class="gow-reward" id="gow-reward">Free item</div>
-              <div class="gow-bar-track"><div class="gow-bar-fill" id="gow-bar"></div></div>
-              <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
+              <div id="gow-loyalty-block">
+                <div class="gow-reward-label" data-i18n="wps_reward_label">Reward</div>
+                <div class="gow-reward" id="gow-reward">Free item</div>
+                <div class="gow-bar-track"><div class="gow-bar-fill" id="gow-bar"></div></div>
+                <div class="gow-progress-text" id="gow-progress">4 of 10 stamps</div>
+              </div>
+              <div id="gow-business-block" style="display:none">
+                <img id="gow-hero" src="" alt="" style="display:none;width:100%;aspect-ratio:1032/336;object-fit:cover;border-radius:6px;margin-bottom:10px;">
+                <div class="gow-reward-label" id="gow-category-label">Category</div>
+                <div class="gow-reward" id="gow-category">&mdash;</div>
+                <div class="gow-progress-text" id="gow-city">StadtPocket</div>
+              </div>
             </div>
           </div>
         </div>
@@ -202,7 +244,67 @@
 
       <div class="wps-links">
         <a class="wps-link" id="wps-edit-brand" href="#">&#x1F3A8; <span data-i18n="wps_edit_brand">Edit Brand Settings</span></a>
-        <a class="wps-link" id="wps-edit-loyalty" href="dashboard.html?section=loyalty">&#x1F3AB; <span data-i18n="wps_edit_loyalty">Edit Loyalty Settings</span></a>
+        <button class="wps-link" id="wps-edit-wallet-card" style="display:none;cursor:pointer;background:none;">&#x1F3A8; <span data-i18n="wps_edit_wallet_card">Edit Wallet Card</span></button>
+        <a class="wps-link" id="wps-loyalty-action" href="dashboard.html?section=loyalty">&#x1F3AB; <span id="wps-loyalty-action-label" data-i18n="wps_edit_loyalty">Edit Loyalty Settings</span></a>
+      </div>
+
+      <!-- Business Wallet Card branding editor. Reuses the exact canonical
+           LandingPage/sections fields and the existing POST /lp save path
+           already used by Brand Settings — never a new data model, never
+           routes into the Loyalty setup flow. Category/descriptor
+           (sections.hero.badge) is intentionally NOT editable here — it's
+           the same field the Smart Page Hero "Badge Text" uses, and Wallet
+           Card editing must never silently change Smart Page content. The
+           preview below still displays it read-only, sourced from the
+           existing canonical value. -->
+      <div id="wps-edit-panel" class="wps-action-card" style="display:none;margin-bottom:28px;">
+        <div class="wps-action-title" data-i18n="wce_title">Edit Wallet Card</div>
+        <label class="wce-label" for="wce-name" data-i18n="wce_name_label">Business name</label>
+        <input id="wce-name" type="text" class="wce-input">
+        <label class="wce-label" for="wce-color" data-i18n="wce_color_label">Card color</label>
+        <input id="wce-color" type="color" class="wce-color-input">
+
+        <!-- Business logo. Canonical field: sections.logo.url / page.logoUrl
+             (already consumed unconditionally by the real Apple/Google
+             wallet generators and the Smart Page itself). Upload reuses the
+             existing POST /lp/upload-logo/:slug endpoint — the exact one
+             Brand Settings already uses — same pattern as the hero image
+             below, no second upload mechanism. -->
+        <label class="wce-label" data-i18n="wce_logo_label">Business logo</label>
+        <div class="wce-logo-row">
+          <img id="wce-logo-preview" src="" alt="" style="display:none;">
+          <div id="wce-logo-empty" class="wce-logo-empty" data-i18n="wce_logo_none">No logo yet</div>
+        </div>
+        <input type="file" id="wce-logo-file" accept="image/png,image/jpeg,image/webp" style="display:none;">
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button id="wce-logo-upload" class="wps-btn" style="width:auto;padding:9px 18px;">&#x1F4F7; <span id="wce-logo-upload-label" data-i18n="wce_logo_upload">Upload logo</span></button>
+          <button id="wce-logo-remove" class="wps-btn" style="width:auto;padding:9px 18px;display:none;">&#x1F5D1; <span data-i18n="wce_logo_remove">Remove logo</span></button>
+        </div>
+        <div class="wps-copy-status" id="wce-logo-status"></div>
+
+        <!-- Wallet hero/banner image. Canonical field: sections.walletHero.url
+             (already confirmed consumed unconditionally by both
+             passService.js and googleWalletService.js — neither generator
+             touched). Upload reuses the existing POST /lp/upload-strip/:slug
+             endpoint. -->
+        <label class="wce-label" data-i18n="wce_hero_label">Hero image</label>
+        <div class="wce-hero-row">
+          <img id="wce-hero-preview" src="" alt="" style="display:none;">
+          <div id="wce-hero-empty" class="wce-hero-empty" data-i18n="wce_hero_none">No hero image yet</div>
+        </div>
+        <div class="wce-hint" data-i18n="wce_hero_hint">Recommended: 1032 × 336 px · JPG or PNG · Keep important content near the center.</div>
+        <input type="file" id="wce-hero-file" accept="image/png,image/jpeg,image/webp" style="display:none;">
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button id="wce-hero-upload" class="wps-btn" style="width:auto;padding:9px 18px;">&#x1F4F7; <span id="wce-hero-upload-label" data-i18n="wce_hero_upload">Upload hero image</span></button>
+          <button id="wce-hero-remove" class="wps-btn" style="width:auto;padding:9px 18px;display:none;">&#x1F5D1; <span data-i18n="wce_hero_remove">Remove hero image</span></button>
+        </div>
+        <div class="wps-copy-status" id="wce-hero-status"></div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button id="wce-save" class="wps-btn primary" style="width:auto;padding:9px 18px;" data-i18n="wce_save">Save</button>
+          <button id="wce-cancel" class="wps-btn" style="width:auto;padding:9px 18px;" data-i18n="wce_cancel">Cancel</button>
+        </div>
+        <div class="wps-copy-status" id="wce-status"></div>
       </div>
 
       <div class="wps-themes">
@@ -223,7 +325,7 @@
   'use strict';
   var API = 'https://api.qraivy.com';
   var PROGRAMS = [];
-  var PAGES = {}; // slug -> { brandColor, logoUrl }
+  var PAGES = {}; // slug -> { brandColor, logoUrl, tagline, walletHeroUrl }
   var CURRENT_SLUG = null;
 
   var NAV_T = {
@@ -236,13 +338,22 @@
       wps_tag: 'Wallet Pass Studio',
       wps_title: 'Preview & test your wallet pass',
       wps_sub: 'See exactly what customers see when they add your loyalty card to Apple or Google Wallet — no install required.',
+      wps_sub_business: 'See exactly what customers see when they add your business card to Apple or Google Wallet.',
       wps_loading: 'Loading your pages…',
-      wps_empty: 'No loyalty programs yet.',
-      wps_empty_link: 'Set one up →',
+      wps_empty: 'No wallet-ready Smart Pages yet.',
+      wps_empty_link: 'Create a Smart Page →',
+      wps_auth_error: 'Your session could not be verified. Please sign in again.',
+      wps_signin_link: 'Sign in again →',
+      wps_api_error: 'Something went wrong loading your pages.',
+      wps_retry: 'Try again',
       wps_notice_b: 'Wallet branding is controlled from Brand Settings.',
-      wps_notice_rest: "Loyalty rewards are controlled from Loyalty Settings. This studio is a preview only — it doesn't add new branding controls.",
+      wps_notice_rest: 'Loyalty rewards are controlled separately from Loyalty Settings.',
+      wps_notice_b_business: 'Customize your Business Wallet Card here.',
+      wps_notice_rest_business: 'Changes to the card color, logo and hero image are reflected in Apple and Google Wallet. Loyalty settings are managed separately.',
       wps_card_kind: 'LOYALTY<br/>CARD',
+      wps_card_kind_business: 'BUSINESS<br/>CARD',
       wps_reward_label: 'Reward',
+      wps_category_label: 'Category',
       wps_test_actions: 'Test actions',
       wps_apple_dl: 'Download Apple Wallet pass',
       wps_google_save: 'Open Google Wallet save link',
@@ -250,7 +361,36 @@
       wps_install_link: 'Install link',
       wps_copy: 'Copy wallet install URL',
       wps_edit_brand: 'Edit Brand Settings',
+      wps_edit_wallet_card: 'Edit Wallet Card',
       wps_edit_loyalty: 'Edit Loyalty Settings',
+      wps_enable_loyalty: 'Enable Loyalty (Optional)',
+      wce_title: 'Edit Wallet Card',
+      wce_name_label: 'Business name',
+      wce_color_label: 'Card color',
+      wce_save: 'Save',
+      wce_cancel: 'Cancel',
+      wce_saved: 'Saved!',
+      wce_save_error: 'Could not save — please try again.',
+      wce_name_required: 'Business name is required.',
+      wce_logo_label: 'Business logo',
+      wce_logo_none: 'No logo yet',
+      wce_logo_upload: 'Upload logo',
+      wce_logo_replace: 'Replace logo',
+      wce_logo_remove: 'Remove logo',
+      wce_logo_uploading: 'Uploading…',
+      wce_logo_saved: 'Logo saved!',
+      wce_logo_removed: 'Logo removed.',
+      wce_logo_error: 'Could not save the logo — please try again.',
+      wce_hero_label: 'Hero image',
+      wce_hero_hint: 'Recommended: 1032 × 336 px · JPG or PNG · Keep important content near the center.',
+      wce_hero_none: 'No hero image yet',
+      wce_hero_upload: 'Upload hero image',
+      wce_hero_replace: 'Replace hero image',
+      wce_hero_remove: 'Remove hero image',
+      wce_hero_uploading: 'Uploading…',
+      wce_hero_saved: 'Hero image saved!',
+      wce_hero_removed: 'Hero image removed.',
+      wce_hero_error: 'Could not save the hero image — please try again.',
       wps_theme_title: 'Wallet theme',
       wps_theme_premium: 'Premium',
       wps_theme_classic: 'Classic',
@@ -266,13 +406,22 @@
       wps_tag: 'Wallet Pass Studio',
       wps_title: 'Vorschau & Test deines Wallet-Passes',
       wps_sub: 'Sieh genau, was Kunden sehen, wenn sie deine Treuekarte zu Apple oder Google Wallet hinzufügen — keine Installation nötig.',
+      wps_sub_business: 'Sieh genau, was Kunden sehen, wenn sie deine Business-Karte zu Apple oder Google Wallet hinzufügen.',
       wps_loading: 'Deine Seiten werden geladen…',
-      wps_empty: 'Noch keine Treueprogramme.',
-      wps_empty_link: 'Jetzt einrichten →',
+      wps_empty: 'Noch keine Wallet-fähigen Smart Pages.',
+      wps_empty_link: 'Smart Page erstellen →',
+      wps_auth_error: 'Deine Sitzung konnte nicht bestätigt werden. Bitte melde dich erneut an.',
+      wps_signin_link: 'Erneut anmelden →',
+      wps_api_error: 'Beim Laden deiner Seiten ist etwas schiefgelaufen.',
+      wps_retry: 'Erneut versuchen',
       wps_notice_b: 'Das Wallet-Branding wird in den Markeneinstellungen festgelegt.',
-      wps_notice_rest: 'Treuebelohnungen werden in den Treue-Einstellungen festgelegt. Dieses Studio ist nur eine Vorschau — es fügt keine neuen Branding-Optionen hinzu.',
+      wps_notice_rest: 'Treuebelohnungen werden separat in den Treue-Einstellungen festgelegt.',
+      wps_notice_b_business: 'Passe deine Business Wallet-Karte hier an.',
+      wps_notice_rest_business: 'Änderungen an Kartenfarbe, Logo und Hero-Bild werden in Apple und Google Wallet übernommen. Treue-Einstellungen werden separat verwaltet.',
       wps_card_kind: 'TREUE-<br/>KARTE',
+      wps_card_kind_business: 'BETRIEBS-<br/>KARTE',
       wps_reward_label: 'Belohnung',
+      wps_category_label: 'Kategorie',
       wps_test_actions: 'Testaktionen',
       wps_apple_dl: 'Apple Wallet-Pass herunterladen',
       wps_google_save: 'Google Wallet-Speicherlink öffnen',
@@ -280,7 +429,36 @@
       wps_install_link: 'Installationslink',
       wps_copy: 'Wallet-Installationslink kopieren',
       wps_edit_brand: 'Markeneinstellungen bearbeiten',
+      wps_edit_wallet_card: 'Wallet-Karte bearbeiten',
       wps_edit_loyalty: 'Treue-Einstellungen bearbeiten',
+      wps_enable_loyalty: 'Treueprogramm aktivieren (optional)',
+      wce_title: 'Wallet-Karte bearbeiten',
+      wce_name_label: 'Firmenname',
+      wce_color_label: 'Kartenfarbe',
+      wce_save: 'Speichern',
+      wce_cancel: 'Abbrechen',
+      wce_saved: 'Gespeichert!',
+      wce_save_error: 'Speichern fehlgeschlagen — bitte erneut versuchen.',
+      wce_name_required: 'Firmenname ist erforderlich.',
+      wce_logo_label: 'Firmenlogo',
+      wce_logo_none: 'Noch kein Logo',
+      wce_logo_upload: 'Logo hochladen',
+      wce_logo_replace: 'Logo ersetzen',
+      wce_logo_remove: 'Logo entfernen',
+      wce_logo_uploading: 'Wird hochgeladen…',
+      wce_logo_saved: 'Logo gespeichert!',
+      wce_logo_removed: 'Logo entfernt.',
+      wce_logo_error: 'Logo konnte nicht gespeichert werden — bitte erneut versuchen.',
+      wce_hero_label: 'Hero-Bild',
+      wce_hero_hint: 'Empfohlen: 1032 × 336 px · JPG oder PNG · Wichtige Inhalte möglichst mittig platzieren.',
+      wce_hero_none: 'Noch kein Hero-Bild',
+      wce_hero_upload: 'Hero-Bild hochladen',
+      wce_hero_replace: 'Hero-Bild ersetzen',
+      wce_hero_remove: 'Hero-Bild entfernen',
+      wce_hero_uploading: 'Wird hochgeladen…',
+      wce_hero_saved: 'Hero-Bild gespeichert!',
+      wce_hero_removed: 'Hero-Bild entfernt.',
+      wce_hero_error: 'Hero-Bild konnte nicht gespeichert werden — bitte erneut versuchen.',
       wps_theme_title: 'Wallet-Design',
       wps_theme_premium: 'Premium',
       wps_theme_classic: 'Klassisch',
@@ -330,12 +508,27 @@
     return 'rgba('+r+','+g+','+b+','+a+')';
   }
 
+  // Must never let an auth/API failure silently look like a genuinely empty
+  // account. Returns { status: 'auth'|'error'|'ok', programs } instead of a
+  // bare array so the caller can render the correct state.
   async function fetchPrograms(){
     var tok = await getToken();
     var h = tok ? {'Authorization':'Bearer '+tok} : {};
-    var res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
-    var data = await res.json();
-    return (data && data.programs) || [];
+    var res;
+    try {
+      res = await fetch(API+'/loyalty/programs?_='+Date.now(), {headers:h});
+    } catch(e) {
+      return { status: 'error', programs: [] };
+    }
+    if (res.status === 401) return { status: 'auth', programs: [] };
+    if (!res.ok) return { status: 'error', programs: [] };
+    var data;
+    try {
+      data = await res.json();
+    } catch(e) {
+      return { status: 'error', programs: [] };
+    }
+    return { status: 'ok', programs: (data && data.programs) || [] };
   }
 
   async function fetchPage(slug){
@@ -349,7 +542,17 @@
     sec = sec || {};
     var logoUrl = (sec.logo && sec.logo.url) || page.logoUrl || '';
     var brandColor = page.brandColor || (sec.theme && sec.theme.accentColor) || '#ff5a1f';
-    return { logoUrl: logoUrl, brandColor: brandColor };
+    // Category/descriptor for the Business Wallet Card preview — DISPLAY
+    // ONLY. Same field (sections.hero.badge) the real Apple/Google pass
+    // generators already use as the card's tagline, so this preview never
+    // drifts from reality — but Wallet Pass Studio never writes to it (see
+    // saveWalletCard() below): that's Smart Page Hero "Badge Text", owned
+    // by the Smart QR editor, not the Wallet Card editor.
+    var tagline = (sec.hero && sec.hero.badge) || '';
+    // Canonical field: sections.walletHero.url, already consumed
+    // unconditionally by both passService.js and googleWalletService.js.
+    var walletHeroUrl = (sec.walletHero && sec.walletHero.url) || '';
+    return { logoUrl: logoUrl, brandColor: brandColor, tagline: tagline, walletHeroUrl: walletHeroUrl };
   }
 
   function populateSelect(){
@@ -367,48 +570,136 @@
     var p = PROGRAMS.find(function(x){return x.slug===slug;});
     if(!p) return;
     CURRENT_SLUG = slug;
+
+    // Navigation links only need `slug` — never the brand/color/logo data
+    // fetched below — so set them immediately, before the await. Fixes a
+    // real click-before-ready race: init() calls render() without awaiting
+    // it, so on a cold load (e.g. a returning user whose saved language
+    // preference is already German, so the page loads straight into German
+    // copy) these hrefs stayed at their placeholder "#" until fetchPage()
+    // resolved. Same slug-only computation, same handler, for both
+    // languages — no separate German path.
+    document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
+    document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
+    var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
+    document.getElementById('wps-welcome').href = welcomeUrl;
+    // &section=style opens the Loyalty/non-StadtPocket fallback destination
+    // (smart-qr-detail.html's editor) directly on its Style tab — brand
+    // color, logo, wallet banner upload — instead of the Hero tab it
+    // defaults to otherwise. Business Wallet mode never uses this link at
+    // all (see the isBiz branch below); it edits inline instead.
+    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&section=style';
+
     var brand = PAGES[slug] || (PAGES[slug] = await fetchPage(slug));
     var color = brand.brandColor || p.color || '#ff5a1f';
     var logo = brand.logoUrl || '';
     var bizName = p.businessName || p.slug;
-    var rewardName = p.rewardText || wpsT('wps_default_reward');
-    var goal = p.stampGoal || 10;
-    var sample = Math.min(4, goal);
-    var progressText = wpsT('wps_stamps_progress').replace('{n}', sample).replace('{goal}', goal);
+    // Same definition the real Apple/Google generators use — resolved
+    // server-side in loyaltyAdminController.js via resolveStadtPocketContext,
+    // never re-derived here.
+    var isBiz = !!p.isBusinessWalletCard;
 
     var logoHtml = logo
       ? '<img src="'+esc(logo)+'" alt="logo">'
       : esc(bizName.charAt(0).toUpperCase());
 
-    // Apple card
+    // Apple card — shared fields
     var apwCard = document.getElementById('apw-card');
     apwCard.style.background = 'linear-gradient(135deg,'+color+','+color+'cc)';
     document.getElementById('apw-logo').innerHTML = logoHtml;
     document.getElementById('apw-biz').textContent = bizName;
-    document.getElementById('apw-reward').textContent = rewardName;
-    document.getElementById('apw-progress').textContent = progressText;
-    var dots = '';
-    for(var i=0;i<goal;i++){
-      dots += '<div class="apw-dot'+(i<sample?' filled':'')+'">'+(i<sample?'&#10003;':'')+'</div>';
-    }
-    document.getElementById('apw-stamps').innerHTML = dots;
+    document.getElementById('apw-kind').innerHTML = isBiz ? wpsT('wps_card_kind_business') : wpsT('wps_card_kind');
+    document.getElementById('apw-loyalty-block').style.display = isBiz ? 'none' : '';
+    document.getElementById('apw-business-block').style.display = isBiz ? '' : 'none';
 
-    // Google card
+    // Google card — shared fields
     document.getElementById('gow-header').style.background = color;
     document.getElementById('gow-logo').innerHTML = logoHtml;
     document.getElementById('gow-biz').textContent = bizName;
-    document.getElementById('gow-reward').textContent = rewardName;
-    document.getElementById('gow-bar').style.width = Math.round(sample/goal*100)+'%';
-    document.getElementById('gow-bar').style.background = color;
-    document.getElementById('gow-progress').textContent = progressText;
+    document.getElementById('gow-loyalty-block').style.display = isBiz ? 'none' : '';
+    document.getElementById('gow-business-block').style.display = isBiz ? '' : 'none';
 
-    // Actions
-    document.getElementById('wps-apple-dl').href = API+'/lp/wallet/apple/'+encodeURIComponent(slug);
-    document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
-    var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
-    document.getElementById('wps-welcome').href = welcomeUrl;
-    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug);
+    if (isBiz) {
+      // Business Wallet Card: business name, logo, brand color (all above),
+      // category/descriptor (read-only display), and system-controlled
+      // StadtPocket · city — no reward, no stamps, no fabricated loyalty
+      // fallback data.
+      var cityLabel = p.city ? ('StadtPocket · ' + p.city) : 'StadtPocket';
+      var category = brand.tagline || '—';
 
+      document.getElementById('apw-category-label').textContent = wpsT('wps_category_label');
+      document.getElementById('apw-category').textContent = category;
+      document.getElementById('apw-city').textContent = cityLabel;
+
+      document.getElementById('gow-category-label').textContent = wpsT('wps_category_label');
+      document.getElementById('gow-category').textContent = category;
+      document.getElementById('gow-city').textContent = cityLabel;
+
+      // Optional hero image. Never leave a broken/empty <img> visible: fully
+      // hidden and src cleared when absent, exactly the same canonical
+      // value both real wallet generators already use.
+      var heroUrl = brand.walletHeroUrl || '';
+      var apwHero = document.getElementById('apw-hero');
+      var gowHero = document.getElementById('gow-hero');
+      if (heroUrl) {
+        apwHero.src = heroUrl; apwHero.style.display = 'block';
+        gowHero.src = heroUrl; gowHero.style.display = 'block';
+      } else {
+        apwHero.style.display = 'none'; apwHero.removeAttribute('src');
+        gowHero.style.display = 'none'; gowHero.removeAttribute('src');
+      }
+    } else {
+      // Loyalty Card — unchanged behavior.
+      var rewardName = p.rewardText || wpsT('wps_default_reward');
+      var goal = p.stampGoal || 10;
+      var sample = Math.min(4, goal);
+      var progressText = wpsT('wps_stamps_progress').replace('{n}', sample).replace('{goal}', goal);
+
+      document.getElementById('apw-reward').textContent = rewardName;
+      document.getElementById('apw-progress').textContent = progressText;
+      var dots = '';
+      for(var i=0;i<goal;i++){
+        dots += '<div class="apw-dot'+(i<sample?' filled':'')+'">'+(i<sample?'&#10003;':'')+'</div>';
+      }
+      document.getElementById('apw-stamps').innerHTML = dots;
+
+      document.getElementById('gow-reward').textContent = rewardName;
+      document.getElementById('gow-bar').style.width = Math.round(sample/goal*100)+'%';
+      document.getElementById('gow-bar').style.background = color;
+      document.getElementById('gow-progress').textContent = progressText;
+    }
+
+    // Mode-aware heading, so a Business Wallet Card is never described as a
+    // loyalty card.
+    document.getElementById('wps-sub').textContent = isBiz ? wpsT('wps_sub_business') : wpsT('wps_sub');
+
+    // Mode-aware notice, same pattern. Business Wallet Card branding is now
+    // edited directly in this studio (Card Color/Business Logo/Hero Image
+    // below), so the old "controlled from Brand Settings" copy would be
+    // factually wrong for this mode. Loyalty/non-StadtPocket keeps the
+    // original notice unchanged.
+    document.getElementById('wps-notice-b').textContent = isBiz ? wpsT('wps_notice_b_business') : wpsT('wps_notice_b');
+    document.getElementById('wps-notice-rest').textContent = isBiz ? wpsT('wps_notice_rest_business') : wpsT('wps_notice_rest');
+
+    // Business Wallet editing must never route through the Loyalty setup
+    // flow, and never through the Smart QR editor either — it edits inline,
+    // right here. "Edit Brand Settings" (Loyalty/non-StadtPocket mode) and
+    // "Edit Wallet Card" (Business Wallet mode) are mutually exclusive; the
+    // edit panel always closes on slug/mode change so a stale in-progress
+    // edit for a different page is never shown.
+    closeEditPanel();
+    document.getElementById('wps-edit-brand').style.display = isBiz ? 'none' : '';
+    document.getElementById('wps-edit-wallet-card').style.display = isBiz ? '' : 'none';
+
+    // Loyalty action is fully separate from branding editing, and only ever
+    // offered as "Enable Loyalty (Optional)" when loyalty is off — never
+    // phrased as though it were required for the Business Wallet Card.
+    var loyaltyOn = !!p.loyaltyEnabled;
+    var loyaltyLink = document.getElementById('wps-loyalty-action');
+    document.getElementById('wps-loyalty-action-label').textContent = loyaltyOn ? wpsT('wps_edit_loyalty') : wpsT('wps_enable_loyalty');
+    loyaltyLink.href = loyaltyOn ? 'dashboard.html?section=loyalty' : 'loyalty-setup.html?lang='+wpsLang();
+
+    // Install-link copy button (navigation hrefs above are already set)
     var copyBtn = document.getElementById('wps-copy');
     var copyStatus = document.getElementById('wps-copy-status');
     copyBtn.onclick = function(){
@@ -421,13 +712,350 @@
     };
   }
 
-  async function init(){
-    try{
-      PROGRAMS = await fetchPrograms();
-    }catch(e){
-      PROGRAMS = [];
+  // Business Wallet Card branding editor. Opens/closes the inline panel and
+  // saves via the exact same canonical fields/endpoints Brand Settings
+  // already uses (POST /lp, POST /lp/upload-logo/:slug,
+  // POST /lp/upload-strip/:slug) — no new data model, no new endpoint,
+  // never routes through Loyalty setup or the Smart QR editor.
+
+  function openEditPanel(){
+    if(!CURRENT_SLUG) return;
+    var p = PROGRAMS.find(function(x){return x.slug===CURRENT_SLUG;});
+    var brand = PAGES[CURRENT_SLUG] || {};
+    document.getElementById('wce-name').value = (p && p.businessName) || '';
+    document.getElementById('wce-color').value = brand.brandColor || (p && p.color) || '#ff5a1f';
+    document.getElementById('wce-status').textContent = '';
+    updateLogoEditorUI(brand.logoUrl || '');
+    document.getElementById('wce-logo-status').textContent = '';
+    updateHeroEditorUI(brand.walletHeroUrl || '');
+    document.getElementById('wce-hero-status').textContent = '';
+    document.getElementById('wps-edit-panel').style.display = 'block';
+  }
+
+  // Syncs the editor's logo preview/buttons to the current canonical value.
+  // Never shows a broken/empty preview: the empty state and the <img> are
+  // mutually exclusive.
+  function updateLogoEditorUI(logoUrl){
+    var img = document.getElementById('wce-logo-preview');
+    var empty = document.getElementById('wce-logo-empty');
+    var uploadLabel = document.getElementById('wce-logo-upload-label');
+    var removeBtn = document.getElementById('wce-logo-remove');
+    if (logoUrl) {
+      img.src = logoUrl; img.style.display = 'block';
+      empty.style.display = 'none';
+      uploadLabel.textContent = wpsT('wce_logo_replace');
+      removeBtn.style.display = '';
+    } else {
+      img.style.display = 'none'; img.removeAttribute('src');
+      empty.style.display = 'block';
+      uploadLabel.textContent = wpsT('wce_logo_upload');
+      removeBtn.style.display = 'none';
     }
-    document.getElementById('wps-loading').style.display = 'none';
+  }
+
+  // Syncs the editor's hero preview/buttons to the current canonical value.
+  // Same mutually-exclusive empty/<img> pattern as the logo editor above.
+  function updateHeroEditorUI(heroUrl){
+    var img = document.getElementById('wce-hero-preview');
+    var empty = document.getElementById('wce-hero-empty');
+    var uploadLabel = document.getElementById('wce-hero-upload-label');
+    var removeBtn = document.getElementById('wce-hero-remove');
+    if (heroUrl) {
+      img.src = heroUrl; img.style.display = 'block';
+      empty.style.display = 'none';
+      uploadLabel.textContent = wpsT('wce_hero_replace');
+      removeBtn.style.display = '';
+    } else {
+      img.style.display = 'none'; img.removeAttribute('src');
+      empty.style.display = 'block';
+      uploadLabel.textContent = wpsT('wce_hero_upload');
+      removeBtn.style.display = 'none';
+    }
+  }
+
+  function closeEditPanel(){
+    var panel = document.getElementById('wps-edit-panel');
+    if(panel) panel.style.display = 'none';
+  }
+
+  // Fetches the FULL current LandingPage row fresh (not the trimmed preview
+  // cache) immediately before saving, so every save below is a complete
+  // read-modify-write of `sections` — never a partial payload that could
+  // silently drop unrelated fields (logo, walletHero, hero.title/badge,
+  // businessInfo, AI content, etc.) the server's own merge logic doesn't
+  // fully protect.
+  async function fetchFullPageForSave(slug){
+    var tok = await getToken();
+    var h = tok ? {'Authorization':'Bearer '+tok} : {};
+    var res = await fetch(API+'/api/lp/'+encodeURIComponent(slug), {headers:h});
+    if(!res.ok) throw new Error('load failed');
+    var page = await res.json();
+    var sec = page.sections;
+    if(typeof sec === 'string'){ try{ sec = JSON.parse(sec); }catch(_){ sec = {}; } }
+    page.sections = sec || {};
+    return page;
+  }
+
+  async function saveWalletCard(){
+    var slug = CURRENT_SLUG;
+    if(!slug) return;
+    var statusEl = document.getElementById('wce-status');
+    statusEl.textContent = '';
+
+    var newName = document.getElementById('wce-name').value.trim();
+    var newColor = document.getElementById('wce-color').value;
+    if(!newName){ statusEl.textContent = wpsT('wce_name_required'); return; }
+
+    var tok = await getToken();
+    if(!tok){ statusEl.textContent = wpsT('wps_auth_error'); return; }
+
+    var saveBtn = document.getElementById('wce-save');
+    saveBtn.disabled = true;
+    try {
+      var full = await fetchFullPageForSave(slug);
+      // Full clone of the existing sections — only theme.accentColor
+      // (color) changes here. sections.hero (Page Title/Subtitle/Badge
+      // Text — Smart Page content) is never touched by this save: Wallet
+      // Card editing must not silently modify Smart Page content.
+      var updatedSections = Object.assign({}, full.sections);
+      updatedSections.theme = Object.assign({}, full.sections.theme || {}, { accentColor: newColor });
+
+      var body = {
+        slug: slug,
+        businessName: newName,
+        brandColor: newColor,
+        sections: updatedSections,
+        // The save endpoint defaults `template` to null when omitted —
+        // always pass the existing value through explicitly to avoid
+        // clearing it as an unintended side effect of this edit.
+        template: full.template || null
+      };
+
+      var saveRes = await fetch(API+'/lp', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if(!saveRes.ok) throw new Error('save failed');
+
+      var prog = PROGRAMS.find(function(x){return x.slug===slug;});
+      if(prog){ prog.businessName = newName; prog.color = newColor; }
+      PAGES[slug] = Object.assign({}, PAGES[slug], { brandColor: newColor });
+      populateSelect();
+      document.getElementById('wps-select').value = slug;
+      await render(slug);
+      openEditPanel(); // re-render() closes the panel; reopen with the saved values
+      statusEl.textContent = wpsT('wce_saved');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_save_error');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  // Persists the canonical sections.logo.url / page.logoUrl via the exact
+  // same safe full read-modify-write POST /lp path saveWalletCard() uses.
+  // logoUrl === null removes the field; every other section (walletHero,
+  // hero.badge/title, theme, businessInfo, AI content, etc.) is preserved
+  // exactly as fetched, never touched. Mirrors the top-level `logoUrl` +
+  // `sections.logo.url` pair the way the existing Brand Settings editor
+  // (smart-editor.js) already writes it, so the legacy column and the
+  // canonical sections field never drift apart.
+  async function saveLogoUrl(slug, logoUrl){
+    var tok = await getToken();
+    if(!tok) throw new Error('no-auth');
+    var full = await fetchFullPageForSave(slug);
+    var updatedSections = Object.assign({}, full.sections);
+    if (logoUrl) {
+      updatedSections.logo = Object.assign({}, full.sections.logo || {}, { url: logoUrl });
+    } else {
+      delete updatedSections.logo;
+    }
+    var res = await fetch(API+'/lp', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: slug,
+        businessName: full.businessName,
+        brandColor: full.brandColor,
+        logoUrl: logoUrl || '',
+        sections: updatedSections,
+        template: full.template || null
+      })
+    });
+    if(!res.ok) throw new Error('save failed');
+  }
+
+  async function uploadLogoImage(file){
+    var slug = CURRENT_SLUG;
+    if(!slug || !file) return;
+    var statusEl = document.getElementById('wce-logo-status');
+    var uploadBtn = document.getElementById('wce-logo-upload');
+    statusEl.textContent = wpsT('wce_logo_uploading');
+
+    var tok = await getToken();
+    if(!tok){ statusEl.textContent = wpsT('wps_auth_error'); return; }
+
+    uploadBtn.disabled = true;
+    try {
+      var fd = new FormData();
+      fd.append('logo', file); // matches logoUpload.single('logo') on the existing endpoint
+      var upRes = await fetch(API+'/lp/upload-logo/'+encodeURIComponent(slug), {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+tok },
+        body: fd
+      });
+      if(!upRes.ok) throw new Error('upload failed');
+      var upData = await upRes.json();
+
+      await saveLogoUrl(slug, upData.url);
+
+      PAGES[slug] = Object.assign({}, PAGES[slug], { logoUrl: upData.url });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_logo_saved');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_logo_error');
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  }
+
+  async function removeLogoImage(){
+    var slug = CURRENT_SLUG;
+    if(!slug) return;
+    var statusEl = document.getElementById('wce-logo-status');
+    var removeBtn = document.getElementById('wce-logo-remove');
+    statusEl.textContent = '';
+    removeBtn.disabled = true;
+    try {
+      await saveLogoUrl(slug, null);
+      PAGES[slug] = Object.assign({}, PAGES[slug], { logoUrl: '' });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_logo_removed');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_logo_error');
+    } finally {
+      removeBtn.disabled = false;
+    }
+  }
+
+  // Persists the canonical sections.walletHero.url via the exact same safe
+  // full read-modify-write POST /lp path saveWalletCard() uses. heroUrl ===
+  // null removes the field; every other section (logo, hero.badge/title,
+  // theme, businessInfo, AI content, etc.) is preserved exactly as fetched,
+  // never touched.
+  async function saveHeroUrl(slug, heroUrl){
+    var tok = await getToken();
+    if(!tok) throw new Error('no-auth');
+    var full = await fetchFullPageForSave(slug);
+    var updatedSections = Object.assign({}, full.sections);
+    if (heroUrl) {
+      updatedSections.walletHero = Object.assign({}, full.sections.walletHero || {}, { url: heroUrl });
+    } else {
+      delete updatedSections.walletHero;
+    }
+    var res = await fetch(API+'/lp', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: slug,
+        businessName: full.businessName,
+        brandColor: full.brandColor,
+        sections: updatedSections,
+        template: full.template || null
+      })
+    });
+    if(!res.ok) throw new Error('save failed');
+  }
+
+  async function uploadHeroImage(file){
+    var slug = CURRENT_SLUG;
+    if(!slug || !file) return;
+    var statusEl = document.getElementById('wce-hero-status');
+    var uploadBtn = document.getElementById('wce-hero-upload');
+    statusEl.textContent = wpsT('wce_hero_uploading');
+
+    var tok = await getToken();
+    if(!tok){ statusEl.textContent = wpsT('wps_auth_error'); return; }
+
+    uploadBtn.disabled = true;
+    try {
+      var fd = new FormData();
+      fd.append('strip', file); // matches stripUpload.single('strip') on the existing endpoint
+      var upRes = await fetch(API+'/lp/upload-strip/'+encodeURIComponent(slug), {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+tok },
+        body: fd
+      });
+      if(!upRes.ok) throw new Error('upload failed');
+      var upData = await upRes.json();
+
+      await saveHeroUrl(slug, upData.url);
+
+      PAGES[slug] = Object.assign({}, PAGES[slug], { walletHeroUrl: upData.url });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_hero_saved');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_hero_error');
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  }
+
+  async function removeHeroImage(){
+    var slug = CURRENT_SLUG;
+    if(!slug) return;
+    var statusEl = document.getElementById('wce-hero-status');
+    var removeBtn = document.getElementById('wce-hero-remove');
+    statusEl.textContent = '';
+    removeBtn.disabled = true;
+    try {
+      await saveHeroUrl(slug, null);
+      PAGES[slug] = Object.assign({}, PAGES[slug], { walletHeroUrl: '' });
+      await render(slug);
+      openEditPanel();
+      statusEl.textContent = wpsT('wce_hero_removed');
+      setTimeout(function(){ statusEl.textContent=''; }, 2500);
+    } catch(e) {
+      statusEl.textContent = wpsT('wce_hero_error');
+    } finally {
+      removeBtn.disabled = false;
+    }
+  }
+
+  function hideAllStates(){
+    ['wps-loading','wps-empty','wps-auth-error','wps-api-error','wps-body'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+  }
+
+  async function init(){
+    document.getElementById('wps-loading').style.display = 'block';
+    var result;
+    try{
+      result = await fetchPrograms();
+    }catch(e){
+      result = { status: 'error', programs: [] };
+    }
+    PROGRAMS = result.programs;
+    hideAllStates();
+
+    if (result.status === 'auth') {
+      document.getElementById('wps-auth-error').style.display = 'block';
+      return;
+    }
+    if (result.status === 'error') {
+      document.getElementById('wps-api-error').style.display = 'block';
+      return;
+    }
     if(!PROGRAMS.length){
       document.getElementById('wps-empty').style.display = 'block';
       return;
@@ -443,6 +1071,38 @@
       render(this.value);
     });
   }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var retryBtn = document.getElementById('wps-retry');
+    if(retryBtn) retryBtn.addEventListener('click', function(){ init(); });
+
+    var editWalletBtn = document.getElementById('wps-edit-wallet-card');
+    if(editWalletBtn) editWalletBtn.addEventListener('click', openEditPanel);
+    var saveBtn = document.getElementById('wce-save');
+    if(saveBtn) saveBtn.addEventListener('click', saveWalletCard);
+    var cancelBtn = document.getElementById('wce-cancel');
+    if(cancelBtn) cancelBtn.addEventListener('click', closeEditPanel);
+
+    var logoUploadBtn = document.getElementById('wce-logo-upload');
+    var logoFileInput = document.getElementById('wce-logo-file');
+    if(logoUploadBtn && logoFileInput) logoUploadBtn.addEventListener('click', function(){ logoFileInput.click(); });
+    if(logoFileInput) logoFileInput.addEventListener('change', function(){
+      if(this.files && this.files[0]) uploadLogoImage(this.files[0]);
+      this.value = '';
+    });
+    var logoRemoveBtn = document.getElementById('wce-logo-remove');
+    if(logoRemoveBtn) logoRemoveBtn.addEventListener('click', removeLogoImage);
+
+    var heroUploadBtn = document.getElementById('wce-hero-upload');
+    var heroFileInput = document.getElementById('wce-hero-file');
+    if(heroUploadBtn && heroFileInput) heroUploadBtn.addEventListener('click', function(){ heroFileInput.click(); });
+    if(heroFileInput) heroFileInput.addEventListener('change', function(){
+      if(this.files && this.files[0]) uploadHeroImage(this.files[0]);
+      this.value = ''; // allow re-selecting the same file later
+    });
+    var heroRemoveBtn = document.getElementById('wce-hero-remove');
+    if(heroRemoveBtn) heroRemoveBtn.addEventListener('click', removeHeroImage);
+  });
 
   function waitForClerk(n){
     if(window.Clerk && window.Clerk.session){ init(); }
