@@ -1773,7 +1773,24 @@ async function handleServeLP(req, res) {
           pageCache.set(_stampKey, _lset || false); // cache null as false
         }
         if (_lset === false) _lset = null;
-        if (_lset && _lset.enabled) {
+        let _shouldWelcome = !!(_lset && _lset.enabled);
+        // Phase 3C.7A — a StadtPocket-linked business with loyalty off
+        // (Business Wallet Card mode) also gets routed through the
+        // first-visit welcome/Add-to-Home-Screen page; previously this
+        // gate was loyalty-only, so these businesses never reached
+        // /lp/welcome/:slug on their own. businessId comes only from the
+        // already-loaded `page` row (never the client); result is cached
+        // the same way stamp settings are above.
+        if (!_shouldWelcome && page.businessId) {
+          const _spKey = 'sp:' + slug;
+          let _spCtx = pageCache.get(_spKey);
+          if (_spCtx === null) {
+            _spCtx = await resolveStadtPocketContext(page.businessId);
+            pageCache.set(_spKey, _spCtx);
+          }
+          _shouldWelcome = !!(_spCtx && _spCtx.isStadtPocketLinked);
+        }
+        if (_shouldWelcome) {
           const _es = '<scr' + 'ipt>' + SLUG_CID_HELPER_JS + '(function(){try{var s="' + slug + '";var c=resolveSlugCid(s);if(!localStorage.getItem("wEnr_"+s)){var u=new URL("/lp/welcome/"+s,window.location.origin);if(c)u.searchParams.set("cid",c);window.location.replace(u.toString());}}catch(_e){}})();<\/scr' + 'ipt>';
           return res.send(_lpHtml.replace('<head>', '<head>' + _es));
         }
@@ -3077,6 +3094,160 @@ ${SLUG_CID_HELPER_JS}
 </html>`;
 }
 
+// ── Phase 3C.7A — StadtPocket Smart Welcome (Add to Home Screen primary) ──
+// Rendered only when handleLoyaltyWelcome below has already resolved
+// isBusinessWalletCard server-side (StadtPocket-linked business, loyalty
+// off). Every value here (slug, name, logo, color, city) is already
+// resolved server-side before this function is called — nothing reads
+// req.query for anything other than the existing ?lang toggle already
+// applied by the caller. No manifest/service-worker wiring here by design
+// (deferred to 3C.7B) — this step is welcome UX + device-guidance only.
+function renderStadtPocketSmartWelcome(opts) {
+  const { slug, isDE, bizName, logoUrl, color, city } = opts;
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const name = esc(bizName);
+  const lang = isDE ? 'de' : 'en';
+  const t = isDE ? {
+    save: name + ' auf deinem Handy speichern',
+    keep: 'Behalte ' + name + ' immer griffbereit.',
+    addHome: 'Auf dem Home-Bildschirm speichern',
+    recommended: 'Empfohlen',
+    addHomeDesc: 'Öffne diesen Betrieb direkt von deinem Handy.',
+    showMe: 'Zeig mir wie',
+    walletLabel: 'Business Card zum Wallet hinzufügen',
+    apple: 'Apple Wallet',
+    google: 'Google Wallet',
+    skip: 'Ohne Speichern fortfahren',
+    powered: 'Unterstützt von',
+    ready: name + ' ist bereit.',
+    openSmart: 'Smart Page öffnen',
+    close: 'Verstanden',
+    guidanceTitle: 'Zum Home-Bildschirm hinzufügen',
+    iosSafariSteps: ['Tippe in Safari auf das Teilen-Symbol.', '„Zum Home-Bildschirm“ auswählen.', 'Bestätige den Namen des Betriebs.', 'Tippe auf „Hinzufügen“.', 'Öffne ' + name + ' vom Home-Bildschirm aus.'],
+    iosNonSafari: 'Öffne diese Seite in Safari, um ' + name + ' zum Home-Bildschirm hinzuzufügen.',
+    androidSteps: ['Öffne das Browser-Menü.', '„Zum Home-Bildschirm“ oder „App installieren“ auswählen.', 'Bestätigen.', 'Öffne ' + name + ' vom Home-Bildschirm aus.'],
+    desktopMsg: 'Öffne diese Seite auf deinem Handy, um ' + name + ' auf dem Home-Bildschirm zu speichern.',
+  } : {
+    save: 'Save ' + name + ' to your phone',
+    keep: 'Keep ' + name + ' one tap away.',
+    addHome: 'Add to Home Screen',
+    recommended: 'Recommended',
+    addHomeDesc: 'Open this business directly from your phone and keep it one tap away.',
+    showMe: 'Show me how',
+    walletLabel: 'Add Business Card to Wallet',
+    apple: 'Apple Wallet',
+    google: 'Google Wallet',
+    skip: 'Continue without saving',
+    powered: 'Powered by',
+    ready: name + ' is ready.',
+    openSmart: 'Open Smart Page',
+    close: 'Got it',
+    guidanceTitle: 'Add to Home Screen',
+    iosSafariSteps: ['Tap the Share button in Safari.', 'Choose “Add to Home Screen”.', 'Confirm the business name.', 'Tap “Add”.', 'Open ' + name + ' from your Home Screen.'],
+    iosNonSafari: 'Open this page in Safari to add ' + name + ' to your Home Screen.',
+    androidSteps: ['Open the browser menu.', 'Choose “Add to Home screen” or “Install app”.', 'Confirm.', 'Open ' + name + ' from your Home Screen.'],
+    desktopMsg: 'Open this page on your phone to save ' + name + ' to your Home Screen.',
+  };
+  const logoInner = logoUrl ? ('<img src="' + logoUrl + '" alt="' + name + '">') : esc(bizName.charAt(0));
+  const footerCity = city ? ('<div class="sw-city">StadtPocket &middot; ' + esc(city) + '</div>') : '';
+
+  return '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><title>' + t.save + '</title><style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 18px;color:#fff}'
+    + '.wrap{max-width:380px;width:100%;margin:0 auto}'
+    + '.logo{width:64px;height:64px;border-radius:20px;background:rgba(255,255,255,0.08);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;font-weight:800;overflow:hidden}'
+    + '.logo img{width:100%;height:100%;object-fit:cover}'
+    + 'h1{font-size:1.35rem;font-weight:800;text-align:center;line-height:1.3;margin-bottom:8px}'
+    + '.sub{font-size:.9rem;color:rgba(255,255,255,0.65);text-align:center;line-height:1.5;margin-bottom:24px}'
+    + '.card{border-radius:20px;padding:22px 20px;margin-bottom:14px}'
+    + '.card-primary{background:' + color + ';box-shadow:0 20px 50px rgba(0,0,0,0.5)}'
+    + '.badge{display:inline-block;background:rgba(255,255,255,0.22);color:#fff;font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px;border-radius:999px;margin-bottom:10px}'
+    + '.card-title{font-size:1.08rem;font-weight:800;color:#fff;margin-bottom:6px}'
+    + '.card-desc{font-size:.84rem;color:rgba(255,255,255,0.92);line-height:1.55;margin-bottom:18px}'
+    + '.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:13px 16px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}'
+    + '.btn-onhero{background:#fff;color:#111}'
+    + '.card-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}'
+    + '.sec-label{font-size:.78rem;font-weight:700;color:rgba(255,255,255,0.75);margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}'
+    + '.wallet-row{display:flex;gap:10px}'
+    + '.btn-wallet{flex:1;min-height:46px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.16);border-radius:12px;font-size:.82rem;font-weight:700}'
+    + '.btn-skip{display:block;width:100%;min-height:44px;padding:12px;background:transparent;color:rgba(255,255,255,0.6);border:1.5px solid rgba(255,255,255,0.22);border-radius:14px;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:6px}'
+    + '.footer{margin-top:20px;text-align:center}'
+    + '.sw-city{font-size:.7rem;color:rgba(255,255,255,0.35);margin-bottom:4px}'
+    + '.powered{font-size:.62rem;color:rgba(255,255,255,0.22)}'
+    + '.powered a{color:rgba(255,255,255,0.28);text-decoration:none}'
+    + '.ready-wrap{display:none;text-align:center;padding:60px 0 20px}'
+    + '.ready-check{width:56px;height:56px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:1.6rem}'
+    + '.ready-title{font-size:1.2rem;font-weight:800;margin-bottom:22px}'
+    + '.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:flex-end;justify-content:center}'
+    + '.sheet{background:#141414;border-radius:20px 20px 0 0;padding:24px 22px 30px;width:100%;max-width:420px;color:#fff}'
+    + '.sheet-title{font-size:1.05rem;font-weight:800;margin-bottom:14px}'
+    + '.sw-steps{list-style:none;counter-reset:sw;margin-bottom:18px}'
+    + '.sw-steps li{counter-increment:sw;position:relative;padding:0 0 14px 34px;font-size:.88rem;line-height:1.5;color:rgba(255,255,255,0.9)}'
+    + '.sw-steps li:before{content:counter(sw);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:' + color + ';color:#fff;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center}'
+    + '.plain-msg{font-size:.9rem;line-height:1.6;color:rgba(255,255,255,0.9);margin-bottom:18px}'
+    + '.btn-close{width:100%;min-height:46px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:12px;font-size:.86rem;font-weight:700;cursor:pointer}'
+    + '@media (max-width:340px){.wrap{max-width:100%}}'
+    + '</style></head><body><div class="wrap">'
+    + '<div id="onboarding">'
+    + '<div class="logo">' + logoInner + '</div>'
+    + '<h1>' + t.save + '</h1>'
+    + '<div class="sub">' + t.keep + '</div>'
+    + '<div class="card card-primary" id="primaryCard">'
+    + '<div class="badge">' + t.recommended + '</div>'
+    + '<div class="card-title">' + t.addHome + '</div>'
+    + '<div class="card-desc" id="primaryDesc">' + t.addHomeDesc + '</div>'
+    + '<button class="btn btn-onhero" id="showMeBtn">' + t.showMe + '</button>'
+    + '</div>'
+    + '<div class="card card-secondary">'
+    + '<div class="sec-label">' + t.walletLabel + '</div>'
+    + '<div class="wallet-row">'
+    + '<button class="btn btn-wallet" onclick="addAppleWallet()">' + t.apple + '</button>'
+    + '<button class="btn btn-wallet" onclick="addGoogleWallet()">' + t.google + '</button>'
+    + '</div></div>'
+    + '<button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button>'
+    + '</div>'
+    + '<div class="ready-wrap" id="readyState">'
+    + '<div class="ready-check">&#10003;</div>'
+    + '<div class="ready-title">' + t.ready + '</div>'
+    + '<button class="btn btn-wallet" style="max-width:260px;margin:0 auto" onclick="continueWithout()">' + t.openSmart + '</button>'
+    + '</div>'
+    + '<div class="footer">' + footerCity + '<div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div>'
+    + '</div>'
+    + '<div class="overlay" id="guidancePanel"><div class="sheet"><div class="sheet-title">' + t.guidanceTitle + '</div><div id="guidanceBody"></div><button class="btn-close" id="guidanceClose">' + t.close + '</button></div></div>'
+    + '<script>' + SLUG_CID_HELPER_JS + '(function(){'
+    + 'var s="' + slug + '";'
+    + 'var RESOLVED_CID=null;try{RESOLVED_CID=resolveSlugCid(s);}catch(ex){}'
+    + 'function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}'
+    + 'function backToLP(){return "/lp/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");}'
+    + 'window.continueWithout=function(){mE();window.location.href=backToLP();};'
+    + 'window.addAppleWallet=function(){mE();window.location.href="/lp/wallet/apple/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);};'
+    + 'window.addGoogleWallet=function(){mE();window.location.href="/lp/wallet/google/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);};'
+    + 'var ua=navigator.userAgent;'
+    + 'var isIOS=/iPhone|iPad|iPod/i.test(ua);'
+    + 'var isAndroid=/Android/i.test(ua);'
+    + 'var isSafari=/^((?!chrome|android).)*safari/i.test(ua);'
+    + 'var isStandalone=(window.navigator.standalone===true)||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);'
+    + 'var onboarding=document.getElementById("onboarding");'
+    + 'var ready=document.getElementById("readyState");'
+    + 'if(isStandalone){onboarding.style.display="none";ready.style.display="block";}else{'
+    + 'if(!isIOS&&!isAndroid){'
+    + 'var pd=document.getElementById("primaryDesc");if(pd)pd.textContent=' + JSON.stringify(t.desktopMsg) + ';'
+    + 'var sb=document.getElementById("showMeBtn");if(sb)sb.style.display="none";'
+    + '}'
+    + 'var showBtn=document.getElementById("showMeBtn");'
+    + 'if(showBtn){showBtn.onclick=function(){'
+    + 'var body=document.getElementById("guidanceBody");'
+    + 'if(isIOS&&isSafari){body.innerHTML=\'<ol class="sw-steps">\'+' + JSON.stringify(t.iosSafariSteps) + '.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ol>";}'
+    + 'else if(isIOS&&!isSafari){body.innerHTML=\'<div class="plain-msg">\'+' + JSON.stringify(t.iosNonSafari) + '+"</div>";}'
+    + 'else if(isAndroid){body.innerHTML=\'<ol class="sw-steps">\'+' + JSON.stringify(t.androidSteps) + '.map(function(x){return "<li>"+x+"</li>";}).join("")+"</ol>";}'
+    + 'document.getElementById("guidancePanel").style.display="flex";'
+    + '};}'
+    + '}'
+    + 'var closeBtn=document.getElementById("guidanceClose");'
+    + 'if(closeBtn)closeBtn.onclick=function(){document.getElementById("guidancePanel").style.display="none";};'
+    + '})();</script></body></html>';
+}
+
 // ── GET /lp/welcome/:slug — First-visit wallet enrollment page ──
 async function handleLoyaltyWelcome(req, res) {
   try {
@@ -3108,15 +3279,18 @@ async function handleLoyaltyWelcome(req, res) {
     const stadtPocket = await resolveStadtPocketContext(page.businessId || null);
     const isBusinessWalletCard = stadtPocket.isStadtPocketLinked && !(stampCfg && stampCfg.enabled);
 
-    const t = isBusinessWalletCard ? {
-      badge: isDE ? '&#128241; Diesen Betrieb speichern' : '&#128241; Save this business',
-      reward: isDE ? ('Behalte ' + bizName + ' in deinem Wallet') : ('Keep ' + bizName + ' in your Wallet'),
-      explain: isDE ? 'Kehre schnell zu dieser Smart Page zurück und bleib mit diesem Betrieb verbunden.' : 'Quickly return to this Smart Page and stay connected with this business.',
-      apple: isDE ? '&#127822; Zu Apple Wallet hinzufügen' : '&#127822; Add to Apple Wallet',
-      google: isDE ? '&#128241; Zu Google Wallet hinzufügen' : '&#128241; Add to Google Wallet',
-      skip: isDE ? 'Ohne Wallet fortfahren' : 'Continue without wallet',
-      powered: isDE ? 'Unterstützt von' : 'Powered by',
-    } : {
+    // Phase 3C.7A — StadtPocket Business Wallet pages (loyalty off) get the
+    // new Smart Welcome UX (Add to Home Screen as primary action). This is
+    // the only branch that changes output; loyalty-enabled StadtPocket
+    // pages and non-StadtPocket pages fall through unchanged below.
+    if (isBusinessWalletCard) {
+      const smColor = page.brandColor || color;
+      return res.send(renderStadtPocketSmartWelcome({
+        slug, isDE, bizName, logoUrl, color: smColor, city: stadtPocket.city,
+      }));
+    }
+
+    const t = {
       badge: isDE ? '&#127873; Treueprämien' : '&#127873; Loyalty Rewards',
       reward: isDE ? ('Sammle ' + goal + ' Stempel — erhalte ' + rewardName) : ('Sammle ' + goal + ' Stempel — get ' + rewardName),
       explain: isDE ? 'Keine App erforderlich. Füge deine Treuekarte zu deinem Wallet hinzu und sammle Prämien automatisch.' : 'No app required. Add your loyalty card to your wallet and collect rewards automatically.',

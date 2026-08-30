@@ -605,11 +605,14 @@ test('Tagline safety: an 80-char AI-generated badge is trimmed to <=40 chars on 
 
 // ── 16/17/18. Welcome screen copy branching ─────────────────────────────
 
-test('16. Welcome screen: StadtPocket + loyalty OFF shows Save-this-business copy', async () => {
+// 16 (superseded by Phase 3C.7A — see tests/stadtPocketSmartWelcome.test.js
+// for full coverage of the new Add-to-Home-Screen welcome UX). This page
+// still isn't the Loyalty Rewards copy — that's what stays proven here.
+test('16. Welcome screen: StadtPocket + loyalty OFF no longer shows Loyalty Rewards copy (Phase 3C.7A Smart Welcome)', async () => {
   const res = fakeRes();
   await handleLoyaltyWelcome({ params: { slug: 'sp-loyalty-off' }, query: { lang: 'en' } }, res);
-  assert.ok(res.body.includes('Save this business'));
-  assert.ok(res.body.includes('Keep Rick Ross Marketing in your Wallet'));
+  assert.ok(res.body.includes('Save Rick Ross Marketing to your phone'));
+  assert.ok(res.body.includes('Add to Home Screen'));
   assert.ok(!res.body.includes('Loyalty Rewards'));
 });
 
