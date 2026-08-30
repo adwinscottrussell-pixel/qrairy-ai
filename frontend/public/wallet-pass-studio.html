@@ -381,7 +381,12 @@
     document.getElementById('wps-google-save').href = API+'/lp/wallet/google/'+encodeURIComponent(slug);
     var welcomeUrl = API+'/lp/welcome/'+encodeURIComponent(slug);
     document.getElementById('wps-welcome').href = welcomeUrl;
-    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug);
+    // The right-hand tab editor (#sqd-tab-content) is always visible on
+    // smart-qr-detail.html — no separate toggle needed. &section=style
+    // just makes it default to its Style tab (brand color, logo, wallet
+    // banner upload) instead of the Hero tab it defaults to otherwise —
+    // see smart-editor.js initTabs().
+    document.getElementById('wps-edit-brand').href = 'smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&section=style';
 
     var brand = PAGES[slug] || (PAGES[slug] = await fetchPage(slug));
     var color = brand.brandColor || p.color || '#ff5a1f';
