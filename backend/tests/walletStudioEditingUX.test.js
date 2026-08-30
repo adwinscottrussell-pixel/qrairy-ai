@@ -122,7 +122,7 @@ test('1. Business Wallet edit action is a <button>, never a link, and never refe
   const btnMatch = html.match(/<button[^>]*id="wps-edit-wallet-card"[^>]*>/);
   assert.ok(btnMatch, 'wps-edit-wallet-card must exist');
   assert.ok(!/href/i.test(btnMatch[0]), 'must not be a navigable link');
-  const panelMatch = html.match(/<div id="wps-edit-panel"[\s\S]*?<div class="wps-themes">/);
+  const panelMatch = html.match(/<div id="wps-edit-panel"[\s\S]*?<script>/);
   assert.ok(panelMatch);
   assert.ok(!panelMatch[0].includes('loyalty-setup.html'));
   assert.ok(!panelMatch[0].includes('smart-qr-detail.html'), 'Business Wallet editing must never route into the Smart QR editor');
