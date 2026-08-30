@@ -129,6 +129,44 @@ test('3. Wallet is secondary, in its own card, after the primary card', async ()
   assert.ok(!/>rewards</i.test(body));
 });
 
+// ── 3b. Device-aware Wallet button visibility (reuses existing isIOS/ ──
+// ── isAndroid detection, no second device-detection system) ────────────
+
+test('3b. Both wallet buttons are always server-rendered with stable ids (visibility decided client-side)', async () => {
+  const body = await renderWelcome('sw-off', { lang: 'en' });
+  assert.ok(body.includes('id="btnAppleWallet"'));
+  assert.ok(body.includes('id="btnGoogleWallet"'));
+});
+
+test('3c. iOS hides Google Wallet (Apple Wallet only), Android hides Apple Wallet (Google Wallet only), and desktop/unknown hides neither — using the existing isIOS/isAndroid detection, not a new one', async () => {
+  const body = await renderWelcome('sw-off', { lang: 'en' });
+  // Exact structural check: iOS branch hides #btnGoogleWallet, the Android
+  // branch hides #btnAppleWallet, and there is no further `else` clause
+  // hiding both on desktop/unknown — the next statement (`var onboarding=`)
+  // follows immediately, so desktop/unknown falls through with both buttons
+  // still visible.
+  assert.ok(body.includes(
+    'if(isIOS){if(btnGoogle)btnGoogle.style.display="none";}' +
+    'else if(isAndroid){if(btnApple)btnApple.style.display="none";}' +
+    'var onboarding='
+  ));
+});
+
+test('3d. Wallet visibility logic reuses the same isIOS/isAndroid variables already used for install guidance (single detection system)', async () => {
+  const body = await renderWelcome('sw-off', { lang: 'en' });
+  const uaBlockStart = body.indexOf('var isIOS=');
+  const walletHideIdx = body.indexOf('if(isIOS){if(btnGoogle)');
+  const guidanceIdx = body.indexOf('isIOS&&isSafari');
+  assert.ok(uaBlockStart > -1 && walletHideIdx > -1 && guidanceIdx > -1);
+  // Both the wallet-hide logic and the guidance-panel logic sit after the
+  // single UA-sniffing block — proving there's exactly one isIOS/isAndroid
+  // declaration shared by both features, not a second competing check.
+  assert.ok(uaBlockStart < walletHideIdx);
+  assert.ok(uaBlockStart < guidanceIdx);
+  assert.equal((body.match(/var isIOS=/g) || []).length, 1);
+  assert.equal((body.match(/var isAndroid=/g) || []).length, 1);
+});
+
 // ── 4/5/6/7. Canonical branding ─────────────────────────────────────────
 
 test('4. Business name is canonical (from LandingPage.businessName)', async () => {
@@ -255,6 +293,13 @@ test('18. StadtPocket + loyalty ON keeps the legacy loyalty welcome screen, unch
   assert.ok(body.includes('Loyalty Rewards'));
   assert.ok(!body.includes('Add to Home Screen'));
   assert.ok(!body.includes('id="onboarding"'));
+  // Device-aware wallet visibility (this phase) never touches the legacy
+  // welcome screen — it keeps its own unmodified btn-apple/btn-google
+  // classes, no new ids, no hide-logic.
+  assert.ok(!body.includes('id="btnAppleWallet"'));
+  assert.ok(!body.includes('id="btnGoogleWallet"'));
+  assert.ok(body.includes('class="btn btn-apple"'));
+  assert.ok(body.includes('class="btn btn-google"'));
 });
 
 test('19. Non-StadtPocket page keeps the legacy loyalty welcome screen, unchanged', async () => {
@@ -262,6 +307,8 @@ test('19. Non-StadtPocket page keeps the legacy loyalty welcome screen, unchange
   assert.ok(body.includes('Loyalty Rewards'));
   assert.ok(!body.includes('Add to Home Screen'));
   assert.ok(!body.includes('id="onboarding"'));
+  assert.ok(!body.includes('id="btnAppleWallet"'));
+  assert.ok(!body.includes('id="btnGoogleWallet"'));
 });
 
 // ── 20/21. Wallet URLs unchanged ────────────────────────────────────────
