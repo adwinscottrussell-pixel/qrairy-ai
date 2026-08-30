@@ -371,6 +371,56 @@ test('17. Logo upload/remove never targets any endpoint other than /api/lp/:slug
   }
 });
 
+// ── Mode-aware informational notice ─────────────────────────────────────
+// Business Wallet Card branding is now edited directly in this studio, so
+// the old "controlled from Brand Settings" copy is factually wrong for
+// that mode — the notice must switch per mode, in both languages, without
+// touching the Loyalty/non-StadtPocket notice at all.
+
+test('18. Business Wallet mode shows the corrected notice (EN), not the old Brand-Settings copy', async () => {
+  sandbox.window.localStorage.setItem('qraivy_lang', 'en');
+  wps.setPrograms([bizProgram()]);
+  wps.setPages({ 'sp-off': { logoUrl: '', brandColor: '#ff5a1f', tagline: '' } });
+  await wps.render('sp-off');
+  assert.equal(getElementById('wps-notice-b').textContent, 'Customize your Business Wallet Card here.');
+  assert.equal(
+    getElementById('wps-notice-rest').textContent,
+    'Changes to the card color, logo and hero image are reflected in Apple and Google Wallet. Loyalty settings are managed separately.'
+  );
+  assert.ok(!/controlled from Brand Settings/i.test(getElementById('wps-notice-b').textContent));
+});
+
+test('19. Business Wallet mode shows the corrected notice (DE), no English leakage', async () => {
+  sandbox.window.localStorage.setItem('qraivy_lang', 'de');
+  wps.setPrograms([bizProgram()]);
+  wps.setPages({ 'sp-off': { logoUrl: '', brandColor: '#ff5a1f', tagline: '' } });
+  await wps.render('sp-off');
+  assert.equal(getElementById('wps-notice-b').textContent, 'Passe deine Business Wallet-Karte hier an.');
+  assert.equal(
+    getElementById('wps-notice-rest').textContent,
+    'Änderungen an Kartenfarbe, Logo und Hero-Bild werden in Apple und Google Wallet übernommen. Treue-Einstellungen werden separat verwaltet.'
+  );
+  assert.ok(!/Business Wallet Card|Loyalty/i.test(getElementById('wps-notice-b').textContent + getElementById('wps-notice-rest').textContent));
+  sandbox.window.localStorage.setItem('qraivy_lang', 'en'); // reset for subsequent tests
+});
+
+test('20. Loyalty mode keeps the original notice unchanged (EN)', async () => {
+  sandbox.window.localStorage.setItem('qraivy_lang', 'en');
+  wps.setPrograms([loyaltyProgram()]);
+  wps.setPages({ 'sp-on': { logoUrl: '', brandColor: '#ff5a1f', tagline: '' } });
+  await wps.render('sp-on');
+  assert.equal(getElementById('wps-notice-b').textContent, 'Wallet branding is controlled from Brand Settings.');
+  assert.equal(getElementById('wps-notice-rest').textContent, 'Loyalty rewards are controlled separately from Loyalty Settings.');
+});
+
+test('21. Non-StadtPocket mode keeps the original notice unchanged (EN)', async () => {
+  sandbox.window.localStorage.setItem('qraivy_lang', 'en');
+  wps.setPrograms([loyaltyProgram({ slug: 'non-sp', isStadtPocketLinked: false, isBusinessWalletCard: false, loyaltyEnabled: false })]);
+  wps.setPages({ 'non-sp': { logoUrl: '', brandColor: '#ff5a1f', tagline: '' } });
+  await wps.render('non-sp');
+  assert.equal(getElementById('wps-notice-b').textContent, 'Wallet branding is controlled from Brand Settings.');
+});
+
 // ── runner ────────────────────────────────────────────────────
 
 (async () => {

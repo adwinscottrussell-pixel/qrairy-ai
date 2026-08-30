@@ -174,7 +174,7 @@
 
       <div class="wps-notice">
         <span>&#x1F512;</span>
-        <span><b data-i18n="wps_notice_b">Wallet branding is controlled from Brand Settings.</b> <span data-i18n="wps_notice_rest">Loyalty rewards are controlled separately from Loyalty Settings.</span></span>
+        <span><b id="wps-notice-b" data-i18n="wps_notice_b">Wallet branding is controlled from Brand Settings.</b> <span id="wps-notice-rest" data-i18n="wps_notice_rest">Loyalty rewards are controlled separately from Loyalty Settings.</span></span>
       </div>
 
       <div class="wps-cards">
@@ -348,6 +348,8 @@
       wps_retry: 'Try again',
       wps_notice_b: 'Wallet branding is controlled from Brand Settings.',
       wps_notice_rest: 'Loyalty rewards are controlled separately from Loyalty Settings.',
+      wps_notice_b_business: 'Customize your Business Wallet Card here.',
+      wps_notice_rest_business: 'Changes to the card color, logo and hero image are reflected in Apple and Google Wallet. Loyalty settings are managed separately.',
       wps_card_kind: 'LOYALTY<br/>CARD',
       wps_card_kind_business: 'BUSINESS<br/>CARD',
       wps_reward_label: 'Reward',
@@ -414,6 +416,8 @@
       wps_retry: 'Erneut versuchen',
       wps_notice_b: 'Das Wallet-Branding wird in den Markeneinstellungen festgelegt.',
       wps_notice_rest: 'Treuebelohnungen werden separat in den Treue-Einstellungen festgelegt.',
+      wps_notice_b_business: 'Passe deine Business Wallet-Karte hier an.',
+      wps_notice_rest_business: 'Änderungen an Kartenfarbe, Logo und Hero-Bild werden in Apple und Google Wallet übernommen. Treue-Einstellungen werden separat verwaltet.',
       wps_card_kind: 'TREUE-<br/>KARTE',
       wps_card_kind_business: 'BETRIEBS-<br/>KARTE',
       wps_reward_label: 'Belohnung',
@@ -668,6 +672,14 @@
     // Mode-aware heading, so a Business Wallet Card is never described as a
     // loyalty card.
     document.getElementById('wps-sub').textContent = isBiz ? wpsT('wps_sub_business') : wpsT('wps_sub');
+
+    // Mode-aware notice, same pattern. Business Wallet Card branding is now
+    // edited directly in this studio (Card Color/Business Logo/Hero Image
+    // below), so the old "controlled from Brand Settings" copy would be
+    // factually wrong for this mode. Loyalty/non-StadtPocket keeps the
+    // original notice unchanged.
+    document.getElementById('wps-notice-b').textContent = isBiz ? wpsT('wps_notice_b_business') : wpsT('wps_notice_b');
+    document.getElementById('wps-notice-rest').textContent = isBiz ? wpsT('wps_notice_rest_business') : wpsT('wps_notice_rest');
 
     // Business Wallet editing must never route through the Loyalty setup
     // flow, and never through the Smart QR editor either — it edits inline,
