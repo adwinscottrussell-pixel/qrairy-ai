@@ -413,9 +413,10 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  businessLocations   BusinessLocation[]
-  networkMembers      NetworkMember[]
-  cityBusinessInvites CityBusinessInvite[]
+  businessLocations           BusinessLocation[]
+  networkMembers              NetworkMember[]
+  cityBusinessInvites         CityBusinessInvite[]
+  stadtPocketListingLocations StadtPocketListingLocation[]
 
   @@index([networkId])
 }
@@ -441,6 +442,14 @@ model Business {
   members           BusinessMember[]
   businessLocations BusinessLocation[]
   landingPages      LandingPage[]
+
+  // Reverse side of StadtPocketListing.businessId — additive, optional.
+  // A StadtPocketListing exists and is independently publishable with NO
+  // Business at all; this relation is only ever populated by a future
+  // claim/link step (not part of this phase). Business itself carries no
+  // awareness of StadtPocket beyond this one optional pointer — no
+  // ownership/identity field above is touched by this relation.
+  stadtPocketListing StadtPocketListing?
 
   @@index([primaryOwnerUserId])
 }
@@ -474,6 +483,13 @@ model BusinessLocation {
   location   Location @relation(fields: [locationId], references: [id])
   status     String   @default("active") // active | paused
   joinedAt   DateTime @default(now())
+
+  // Reverse side of StadtPocketListingLocation.businessLocationId —
+  // additive, optional. A StadtPocketListingLocation (physical storefront)
+  // exists and is independently publishable with NO BusinessLocation at
+  // all; this relation is only ever populated by a future claim/link step
+  // (not part of this phase).
+  stadtPocketListingLocation StadtPocketListingLocation?
 
   @@unique([businessId, locationId])
   @@index([locationId])
@@ -560,4 +576,160 @@ model CityBusinessInvite {
 
   @@index([locationId])
   @@index([email])
+}
+
+// ============================================================
+// StadtPocketListing — Independent StadtPocket Listing Foundation, Phase 1
+// (additive only). Replaces the earlier, never-deployed
+// StadtPocketBusinessProfile design (see the "Independent StadtPocket
+// Listing architecture" review this migration implements).
+//
+// Root entity, NOT a satellite of Business. A StadtPocketListing exists
+// and is independently publishable with no Business at all -- this is
+// the direct fix for the "pre-owner import" problem: a real local
+// business can be entered and published on StadtPocket before its owner
+// has ever joined QRAIVY, and without fabricating any ownership to make
+// that possible. businessId is nullable and is only ever populated by a
+// future claim/link step (explicitly not part of this phase) -- claiming
+// CONNECTS this row to a real Business, it never copies this row's
+// content into a second source of truth, and it never changes this row's
+// own id/slug, so the public URL is stable before and after claim.
+//
+// slug lives HERE (not derived from Business.slug) precisely so it
+// remains stable regardless of whether/when a claim ever happens --
+// Business.slug is a separate, unrelated QRAIVY-internal concern.
+//
+// website is intentionally NOT here (see StadtPocketListingLocation) --
+// a multi-location brand may have different booking/menu/store URLs per
+// storefront.
+//
+// Not included in this phase: logoUrl, coverImage, gallery, rating,
+// reviews, deals, loyalty, qraivyLandingUrl. Every one is either
+// unpopulated in the real source dataset today, honesty-gated pending a
+// genuine data source, or derivable at read-time from an existing
+// canonical model instead of being duplicated here. No public "verified"
+// field/badge is derived from the provenance columns below -- see their
+// own comment.
+model StadtPocketListing {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  name             String
+  category         String
+  subCategory      String?
+  tags             String[] @default([])
+  shortDescription String
+  longDescription  String?
+
+  // Optional QRAIVY connection -- see the model header comment. Never
+  // required for this row to exist, be edited, or be published.
+  businessId String?   @unique
+  business   Business? @relation(fields: [businessId], references: [id])
+
+  // Internal provenance only -- see the standalone comment on
+  // StadtPocketListingLocation's own provenance columns for the full
+  // reasoning (identical here). Never read by the public API, never
+  // surfaced as an automatic "verified" badge.
+  sourceProvider String?
+  sourceUrl      String?
+  sourceType     String?
+  verifiedAt     DateTime?
+  verifiedBy     String? // Clerk userId of whoever verified this listing's brand-level facts
+
+  createdBy String // Clerk userId of the Central Control admin / City Manager who created this listing
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  locations StadtPocketListingLocation[]
+}
+
+// ============================================================
+// StadtPocketListingLocation — Independent StadtPocket Listing
+// Foundation, Phase 1 (additive only). Companion to StadtPocketListing
+// above; represents ONE physical storefront.
+//
+// Deliberately NOT unique on (listingId, locationId): a single brand may
+// have multiple physical storefronts in the SAME city (e.g. two Ulm
+// branches of the same bakery chain on different streets) -- see the
+// architecture review's multi-storefront-per-city correction. Duplicate
+// prevention for storefronts is an application-level concern (normalized
+// address + listing + city + coordinates where available), not a
+// database constraint, since no field or combination of fields on this
+// row is a genuinely stable, source-verifiable storefront identifier.
+//
+// locationId is required and direct (not derived through
+// businessLocationId) precisely because this row must exist, belong to
+// a real city, and be published with NO BusinessLocation at all --
+// businessLocationId is nullable and only ever populated by a future
+// claim/link step (not part of this phase), at which point it points at
+// the real BusinessLocation for this same Business + this same city.
+//
+// publicationStatus is the ONLY thing that gates public visibility (see
+// stadtpocketPublicService.js) -- deliberately independent of
+// businessLocationId/ownership state, per the architecture review's
+// "publication and ownership are independent" rule. Stored as free-text
+// with an application-enforced value set (draft | published | paused |
+// archived), matching the exact convention already used by every other
+// status column in this schema (Business.status, BusinessLocation.status,
+// Network/Location.status, CityBusinessInvite.status) -- no enum type
+// exists anywhere in this schema, not introducing one here.
+//
+// hours is stored as Json rather than a fixed per-day single-range
+// shape, specifically so the backend is never constrained to the
+// stadtpocket-web renderer's single-range-per-day limitation. Shape: an
+// array of one entry per day that has real source-confirmed data (an
+// unconfirmed day is simply absent from the array, never invented as
+// either open or closed) --
+//   { "day": "Mo" | "Di" | "Mi" | "Do" | "Fr" | "Sa" | "So",
+//     "closed": true }                                   -- closed day
+//   { "day": "...", "intervals": [{ "open": "11:00", "close": "23:00" }] }
+//                                                          -- one range
+//   { "day": "...", "intervals": [{ "open": "09:30", "close": "14:00" },
+//                                  { "open": "17:00", "close": "23:00" }] }
+//                                                          -- split shift
+//
+// Provenance (sourceProvider/sourceUrl/sourceType/verifiedAt/verifiedBy)
+// is tracked separately from StadtPocketListing's own copy because
+// storefront-level facts (address, hours) are often confirmed from a
+// different source, or at a different time, than brand-level facts
+// (category, description) -- e.g. address from an official Google
+// listing, hours confirmed by phone. Internal only: never read by the
+// public API, never surfaced as an automatic "verified" badge.
+//
+// Not included in this phase: coverImage, gallery (see
+// StadtPocketListing's header comment for the full list and reasoning --
+// applies equally here).
+model StadtPocketListingLocation {
+  id         String             @id @default(cuid())
+  listingId  String
+  listing    StadtPocketListing @relation(fields: [listingId], references: [id])
+  locationId String
+  location   Location           @relation(fields: [locationId], references: [id])
+
+  address   String
+  latitude  Float?
+  longitude Float?
+  phone     String?
+  website   String?
+  hours     Json?
+
+  publicationStatus String @default("draft") // draft | published | paused | archived
+
+  // Optional QRAIVY connection -- see the model header comment. Never
+  // required for this row to exist, be edited, or be published.
+  businessLocationId String?           @unique
+  businessLocation   BusinessLocation? @relation(fields: [businessLocationId], references: [id])
+
+  sourceProvider String?
+  sourceUrl      String?
+  sourceType     String?
+  verifiedAt     DateTime?
+  verifiedBy     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([listingId])
+  @@index([locationId])
 }
