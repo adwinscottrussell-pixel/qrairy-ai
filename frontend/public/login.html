@@ -31,16 +31,47 @@
   </div>
 
   <script>
+    // Same-origin-only local-path validator for the `redirect` query
+    // param. Existing call sites in this codebase pass it two ways --
+    // with a leading slash (admin-guard.js, stadtpocket-admin-guard.js,
+    // claim-business.html's window.location.pathname) and without one
+    // (smart-preview.html's 'dashboard.html?claimDemo=...', upgrade.html's
+    // 'dashboard.html?launch=onboarding') -- both are accepted. Rejected:
+    // any scheme (http:, https:, javascript:, data:, ...), a
+    // protocol-relative "//host" prefix, and anything containing a
+    // backslash (blocks backslash-based host tricks some browsers still
+    // normalize as "/"). Nothing here can ever produce a cross-origin
+    // navigation -- see initClerk()'s two use sites below.
+    function isSafeLocalPath(p) {
+      if (typeof p !== 'string' || !p) return false;
+      if (p.indexOf('\\') !== -1) return false;
+      if (p.indexOf('//') === 0) return false;
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return false;
+      if (p.indexOf('://') !== -1) return false;
+      return true;
+    }
+
     async function initClerk() {
       await window.Clerk.load();
+      const _rp = new URLSearchParams(window.location.search).get('redirect');
+      const _safePath = isSafeLocalPath(_rp) ? _rp : null;
+
       if (window.Clerk.user) {
-        const _r = new URLSearchParams(window.location.search).get('redirect');
-        window.location.href = _r || 'dashboard.html';
+        // Unvalidated `_r` previously reached window.location.href
+        // directly here -- an open-redirect exposure independent of the
+        // Preview-origin bug this fix targets, closed here using the
+        // same validator rather than left half-fixed.
+        window.location.href = _safePath || 'dashboard.html';
         return;
       }
-      const _rp = new URLSearchParams(window.location.search).get('redirect');
-      const _base = 'https://www.qraivy.com/';
-      const _target = _rp ? _base + _rp : _base + 'dashboard.html';
+      // The real current origin the page is actually running on --
+      // never a hardcoded hostname, so this is correct on both
+      // production and any Vercel Preview deployment with no
+      // per-environment configuration. Strips a leading slash from
+      // _safePath (if present) before joining, so a path passed either
+      // convention above never produces a doubled "//" in _target.
+      const _base = window.location.origin + '/';
+      const _target = _base + (_safePath ? _safePath.replace(/^\/+/, '') : 'dashboard.html');
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,
         afterSignUpUrl: _target,
