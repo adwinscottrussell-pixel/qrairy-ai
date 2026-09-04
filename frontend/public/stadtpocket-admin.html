@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>StadtPocket Admin</title>
+<style>
+  :root {
+    --coral: #ff6b5e;
+    --coral-dark: #f2564a;
+    --coral-pale: #fff1ef;
+    --ink: #1b1b2f;
+    --gray-500: #6b7280;
+    --gray-200: #e5e7eb;
+    --gray-100: #f3f4f6;
+    --bg: #f7f5f1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header .brand { font-weight: 800; font-size: 17px; }
+  header .brand span { color: var(--coral); }
+  header .role-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--coral);
+    background: var(--coral-pale);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  h1 { font-size: 20px; margin: 4px 0 4px; }
+  h2 { font-size: 16px; margin: 24px 0 10px; }
+  .muted { color: var(--gray-500); font-size: 13px; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .city-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .city-row:hover { background: var(--gray-100); }
+  .status-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .status-pill.published { background: #e6f4ec; color: #2f6b4f; }
+  .status-pill.draft { background: var(--coral-pale); color: var(--coral-dark); }
+  .status-pill.none { background: var(--gray-100); color: var(--gray-500); }
+  .empty-state { text-align: center; padding: 40px 16px; color: var(--gray-500); }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-500); margin: 14px 0 4px; }
+  input[type="text"], input[type="number"], input[type="url"], textarea, input[type="time"] {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--gray-200);
+    border-radius: 9px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 10px;
+    border: none;
+    padding: 10px 16px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--coral); color: #fff; }
+  button.primary:hover { background: var(--coral-dark); }
+  button.primary:disabled { background: var(--gray-200); color: var(--gray-500); cursor: not-allowed; }
+  button.secondary { background: var(--coral-pale); color: var(--coral-dark); }
+  button.ghost { background: transparent; color: var(--gray-500); border: 1px solid var(--gray-200); }
+  button.small { padding: 5px 10px; font-size: 12px; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .back-link { color: var(--coral); font-weight: 600; font-size: 13px; text-decoration: none; cursor: pointer; }
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin: 12px 0; }
+  .banner.error { background: #fdeeee; color: #b3261e; }
+  .banner.success { background: #e6f4ec; color: #2f6b4f; }
+  .banner.info { background: var(--coral-pale); color: var(--coral-dark); }
+  .hours-day { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+  .hours-day .day-label { width: 40px; font-weight: 700; font-size: 13px; padding-top: 7px; }
+  .hours-day .day-body { flex: 1; }
+  .interval-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .interval-row input[type="time"] { width: 100px; }
+  .closed-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .compare-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  @media (max-width: 520px) { .compare-block { grid-template-columns: 1fr; } }
+  .compare-col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gray-500); margin: 0 0 6px; }
+  .compare-col.draft h3 { color: var(--coral-dark); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Stadt<span>Pocket</span> Admin</div>
+  <div class="role-badge" id="role-badge">…</div>
+</header>
+
+<main>
+
+  <section class="page active" id="page-loading">
+    <p class="muted">Laden…</p>
+  </section>
+
+  <section class="page" id="page-cities">
+    <h1>Städte</h1>
+    <p class="muted" id="cities-sub"></p>
+    <div id="cities-list"></div>
+  </section>
+
+  <section class="page" id="page-init">
+    <a class="back-link" onclick="showPage('page-cities')">&larr; Städte</a>
+    <h1>Neuer StadtPocket-Eintrag</h1>
+    <p class="muted">Für <span id="init-city-name"></span>. Diese Felder sind zum Erstellen erforderlich.</p>
+    <div id="init-banner"></div>
+    <label>Name</label>
+    <input type="text" id="init-name" />
+    <label>Kategorie</label>
+    <input type="text" id="init-category" placeholder="z. B. Essen &amp; Trinken" />
+    <label>Kurzbeschreibung</label>
+    <textarea id="init-shortDescription"></textarea>
+    <label>Adresse</label>
+    <input type="text" id="init-address" />
+    <div class="actions">
+      <button class="primary" id="init-submit-btn" onclick="submitInitialize()">Eintrag anlegen</button>
+    </div>
+  </section>
+
+  <section class="page" id="page-editor">
+    <a class="back-link" onclick="showPage('page-cities')">&larr; Städte</a>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+      <h1 id="editor-title" style="margin:0"></h1>
+      <span class="status-pill" id="editor-status-pill"></span>
+    </div>
+    <p class="muted" id="editor-sub"></p>
+    <div id="editor-banner"></div>
+
+    <h2>Profil</h2>
+    <div class="card">
+      <label>Name</label>
+      <input type="text" id="f-name" />
+      <label>Kategorie</label>
+      <input type="text" id="f-category" />
+      <label>Unterkategorie</label>
+      <input type="text" id="f-subCategory" />
+      <label>Tags (kommagetrennt)</label>
+      <input type="text" id="f-tags" />
+      <label>Kurzbeschreibung</label>
+      <textarea id="f-shortDescription"></textarea>
+      <label>Langbeschreibung</label>
+      <textarea id="f-longDescription"></textarea>
+    </div>
+
+    <h2>Kontakt &amp; Adresse</h2>
+    <div class="card">
+      <label>Adresse</label>
+      <input type="text" id="f-address" />
+      <label>Breitengrad (latitude)</label>
+      <input type="number" step="any" id="f-latitude" />
+      <label>Längengrad (longitude)</label>
+      <input type="number" step="any" id="f-longitude" />
+      <label>Telefon</label>
+      <input type="text" id="f-phone" />
+      <label>Website</label>
+      <input type="url" id="f-website" placeholder="https://…" />
+    </div>
+
+    <h2>Öffnungszeiten</h2>
+    <div class="card" id="hours-editor"></div>
+
+    <div id="publish-compare"></div>
+
+    <div class="actions">
+      <button class="primary" id="save-draft-btn" onclick="saveDraft()">Entwurf speichern</button>
+      <button class="secondary" id="preview-btn" onclick="loadPreview()">Vorschau</button>
+      <button class="primary" id="publish-btn" onclick="publishListing()" style="background:#2f6b4f">Veröffentlichen</button>
+    </div>
+  </section>
+
+</main>
+
+<script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
+<script src="js/stadtpocket-admin-guard.js"></script>
+<script>
+  // ============================================================
+  // stadtpocket-admin.html — StadtPocket Admin, Phase 6D.
+  //
+  // No new backend endpoints -- every read/write here calls EXISTING
+  // endpoints only:
+  //   GET  /manager/context                     (pre-6C, City Manager scope)
+  //   GET  /admin/locations?type=city            (pre-6C, Global Admin city list)
+  //   GET  /manager/stadtpocket/listings/:locationId            (Phase 6C)
+  //   POST /manager/stadtpocket/listings/:locationId            (Phase 6C, init)
+  //   PUT  /manager/stadtpocket/listings/:locationId/draft       (Phase 6C)
+  //   GET  /manager/stadtpocket/listings/:locationId/preview     (Phase 6C)
+  //   POST /manager/stadtpocket/listings/:locationId/publish     (Phase 6C)
+  //   GET  /public/stadtpocket/cities/:citySlug/businesses/:slug (Phase 6B, for the Published-state comparison column)
+  //
+  // The backend is the sole authority on access: this file never grants
+  // a read/write based on which buttons are visible -- every fetch call
+  // below carries a real Clerk bearer token, and a 401/403 response is
+  // always shown to the user, never silently swallowed or bypassed.
+  // ============================================================
+
+  const API_BASE = 'https://api.qraivy.com';
+  const DAY_KEYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const DAY_LABELS = { Mo: 'Mo', Di: 'Di', Mi: 'Mi', Do: 'Do', Fr: 'Fr', Sa: 'Sa', So: 'So' };
+
+  let cities = [];
+  let currentLocationId = null;
+  let currentListing = null; // last-loaded editable state
+  let hoursState = {}; // { Mo: { closed:false, intervals:[{open,close}] } | undefined, ... }
+  let publishInFlight = false;
+
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  async function getToken() {
+    await window.Clerk.load();
+    return window.Clerk.session.getToken();
+  }
+
+  async function api(path, options = {}) {
+    const token = await getToken();
+    const res = await fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+        ...(options.headers || {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no body */ }
+    return { ok: res.ok, status: res.status, body };
+  }
+
+  function banner(elId, type, message) {
+    const el = document.getElementById(elId);
+    el.innerHTML = message ? `<div class="banner ${type}">${escapeHtml(message)}</div>` : '';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ── Boot: role already resolved by stadtpocket-admin-guard.js ──────
+  async function boot() {
+    const role = window.__stadtpocketRole;
+    document.getElementById('role-badge').textContent = role === 'global_admin' ? 'Global Admin' : 'City Manager';
+
+    if (role === 'global_admin') {
+      const res = await api('/admin/locations?type=city');
+      if (!res.ok) {
+        showPage('page-cities');
+        document.getElementById('cities-sub').textContent = 'Fehler beim Laden der Städte.';
+        return;
+      }
+      cities = res.body.locations || [];
+    } else {
+      cities = window.__stadtpocketManagerLocations || [];
+    }
+
+    await renderCityList();
+    showPage('page-cities');
+  }
+
+  // ── City / business list ────────────────────────────────────────
+  async function renderCityList() {
+    const listEl = document.getElementById('cities-list');
+    const subEl = document.getElementById('cities-sub');
+    if (cities.length === 0) {
+      subEl.textContent = '';
+      listEl.innerHTML = '<div class="empty-state">Keine Städte in deinem Zugriffsbereich.</div>';
+      return;
+    }
+    subEl.textContent = `${cities.length} ${cities.length === 1 ? 'Stadt' : 'Städte'} in deinem Zugriffsbereich.`;
+    listEl.innerHTML = cities.map((c) => `
+      <div class="card city-row" data-location-id="${c.id}" onclick="openCity('${c.id}')">
+        <div>
+          <div style="font-weight:700">${escapeHtml(c.name)}</div>
+          <div class="muted" id="city-status-${c.id}">Prüfe…</div>
+        </div>
+        <span class="status-pill none" id="city-pill-${c.id}">…</span>
+      </div>
+    `).join('');
+
+    // Real backend check per city -- never assumed. Small, bounded N
+    // (one call per scoped city), matching the real-world scope this
+    // phase targets.
+    await Promise.all(cities.map(async (c) => {
+      const res = await api(`/manager/stadtpocket/listings/${c.id}`);
+      const pillEl = document.getElementById(`city-pill-${c.id}`);
+      const statusEl = document.getElementById(`city-status-${c.id}`);
+      if (res.status === 404) {
+        pillEl.textContent = 'Kein Eintrag';
+        pillEl.className = 'status-pill none';
+        statusEl.textContent = 'Noch kein StadtPocket-Eintrag';
+      } else if (res.ok) {
+        const l = res.body.listing;
+        pillEl.textContent = l.publicationStatus === 'published' ? 'Live' : l.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf';
+        pillEl.className = 'status-pill ' + (l.publicationStatus === 'published' ? 'published' : 'draft');
+        statusEl.textContent = l.name;
+      } else {
+        pillEl.textContent = 'Fehler';
+        statusEl.textContent = 'Konnte nicht geladen werden';
+      }
+    }));
+  }
+
+  async function openCity(locationId) {
+    currentLocationId = locationId;
+    const res = await api(`/manager/stadtpocket/listings/${locationId}`);
+    if (res.status === 404) {
+      const city = cities.find((c) => c.id === locationId);
+      document.getElementById('init-city-name').textContent = city ? city.name : locationId;
+      document.getElementById('init-name').value = '';
+      document.getElementById('init-category').value = '';
+      document.getElementById('init-shortDescription').value = '';
+      document.getElementById('init-address').value = '';
+      banner('init-banner', 'error', '');
+      showPage('page-init');
+      return;
+    }
+    if (!res.ok) {
+      alert('Fehler beim Laden: ' + (res.body && res.body.error ? res.body.error : res.status));
+      return;
+    }
+    loadListingIntoEditor(res.body.listing);
+    showPage('page-editor');
+  }
+
+  // ── Initialize (create) ─────────────────────────────────────────
+  async function submitInitialize() {
+    const btn = document.getElementById('init-submit-btn');
+    btn.disabled = true;
+    const payload = {
+      name: document.getElementById('init-name').value.trim(),
+      category: document.getElementById('init-category').value.trim(),
+      shortDescription: document.getElementById('init-shortDescription').value.trim(),
+      address: document.getElementById('init-address').value.trim(),
+    };
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}`, { method: 'POST', body: payload });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('init-banner', 'error', (res.body && res.body.error) || 'Fehler beim Anlegen.');
+      return;
+    }
+    loadListingIntoEditor(res.body.listing);
+    banner('publish-compare', 'success', '');
+    showPage('page-editor');
+    await renderCityList();
+  }
+
+  // ── Editor ────────────────────────────────────────────────────────
+  function loadListingIntoEditor(listing) {
+    currentListing = listing;
+    document.getElementById('editor-title').textContent = listing.name || '(ohne Namen)';
+    const pill = document.getElementById('editor-status-pill');
+    pill.textContent = listing.publicationStatus === 'published' ? 'Live' : listing.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf';
+    pill.className = 'status-pill ' + (listing.publicationStatus === 'published' ? 'published' : 'draft');
+    document.getElementById('editor-sub').textContent = listing.publishedAt
+      ? `Zuletzt veröffentlicht: ${new Date(listing.publishedAt).toLocaleString('de-DE')}`
+      : 'Noch nie veröffentlicht.';
+    banner('editor-banner', 'info', '');
+    banner('publish-compare', 'info', '');
+
+    document.getElementById('f-name').value = listing.name || '';
+    document.getElementById('f-category').value = listing.category || '';
+    document.getElementById('f-subCategory').value = listing.subCategory || '';
+    document.getElementById('f-tags').value = (listing.tags || []).join(', ');
+    document.getElementById('f-shortDescription').value = listing.shortDescription || '';
+    document.getElementById('f-longDescription').value = listing.longDescription || '';
+    document.getElementById('f-address').value = listing.address || '';
+    document.getElementById('f-latitude').value = listing.latitude != null ? listing.latitude : '';
+    document.getElementById('f-longitude').value = listing.longitude != null ? listing.longitude : '';
+    document.getElementById('f-phone').value = listing.phone || '';
+    document.getElementById('f-website').value = listing.website || '';
+
+    hoursState = {};
+    (listing.hours || []).forEach((entry) => {
+      hoursState[entry.day] = entry.closed ? { closed: true } : { intervals: (entry.intervals || []).map((iv) => ({ ...iv })) };
+    });
+    renderHoursEditor();
+  }
+
+  // ── Opening hours editor ─────────────────────────────────────────
+  // Days absent from hoursState stay absent from the saved payload --
+  // "unknown" is never invented as open or closed.
+  function renderHoursEditor() {
+    const el = document.getElementById('hours-editor');
+    el.innerHTML = DAY_KEYS.map((day) => {
+      const entry = hoursState[day];
+      const closed = !!(entry && entry.closed);
+      const intervals = (entry && entry.intervals) || [];
+      const intervalsHtml = intervals.map((iv, i) => `
+        <div class="interval-row">
+          <input type="time" value="${iv.open || ''}" onchange="setIntervalTime('${day}',${i},'open',this.value)" />
+          <span>–</span>
+          <input type="time" value="${iv.close || ''}" onchange="setIntervalTime('${day}',${i},'close',this.value)" />
+          <button class="ghost small" onclick="removeInterval('${day}',${i})" type="button">Entfernen</button>
+        </div>
+      `).join('');
+      return `
+        <div class="hours-day">
+          <div class="day-label">${DAY_LABELS[day]}</div>
+          <div class="day-body">
+            <label class="closed-toggle">
+              <input type="checkbox" ${closed ? 'checked' : ''} onchange="toggleClosed('${day}', this.checked)" />
+              Geschlossen
+            </label>
+            ${!closed ? intervalsHtml + `<button class="ghost small" type="button" onclick="addInterval('${day}')">+ Zeitspanne</button>` : ''}
+            ${!closed && intervals.length === 0 ? '<div class="muted" style="font-size:12px">Keine Zeiten hinterlegt (unbekannt).</div>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function toggleClosed(day, checked) {
+    if (checked) {
+      hoursState[day] = { closed: true };
+    } else {
+      delete hoursState[day]; // back to "unknown" until an interval is added -- never fabricated as open
+    }
+    renderHoursEditor();
+  }
+
+  function addInterval(day) {
+    if (!hoursState[day] || hoursState[day].closed) hoursState[day] = { intervals: [] };
+    hoursState[day].intervals.push({ open: '', close: '' });
+    renderHoursEditor();
+  }
+
+  function removeInterval(day, index) {
+    hoursState[day].intervals.splice(index, 1);
+    if (hoursState[day].intervals.length === 0) delete hoursState[day];
+    renderHoursEditor();
+  }
+
+  function setIntervalTime(day, index, key, value) {
+    hoursState[day].intervals[index][key] = value;
+  }
+
+  function serializeHours() {
+    const out = [];
+    for (const day of DAY_KEYS) {
+      const entry = hoursState[day];
+      if (!entry) continue; // unknown day -- omitted, never invented
+      if (entry.closed) { out.push({ day, closed: true }); continue; }
+      const validIntervals = (entry.intervals || []).filter((iv) => iv.open && iv.close);
+      if (validIntervals.length === 0) continue; // no real time entered yet -- still unknown
+      out.push({ day, intervals: validIntervals });
+    }
+    return out.length ? out : null;
+  }
+
+  function collectFormPayload() {
+    const tags = document.getElementById('f-tags').value.split(',').map((t) => t.trim()).filter(Boolean);
+    const latRaw = document.getElementById('f-latitude').value;
+    const lngRaw = document.getElementById('f-longitude').value;
+    const payload = {
+      name: document.getElementById('f-name').value.trim(),
+      category: document.getElementById('f-category').value.trim(),
+      subCategory: document.getElementById('f-subCategory').value.trim() || null,
+      tags,
+      shortDescription: document.getElementById('f-shortDescription').value.trim(),
+      longDescription: document.getElementById('f-longDescription').value.trim() || null,
+      address: document.getElementById('f-address').value.trim(),
+      phone: document.getElementById('f-phone').value.trim() || null,
+      website: document.getElementById('f-website').value.trim() || null,
+      hours: serializeHours(),
+    };
+    if (latRaw !== '' && lngRaw !== '') {
+      payload.latitude = parseFloat(latRaw);
+      payload.longitude = parseFloat(lngRaw);
+    } else {
+      payload.latitude = null;
+      payload.longitude = null;
+    }
+    return payload;
+  }
+
+  // ── Save draft ────────────────────────────────────────────────────
+  async function saveDraft() {
+    const btn = document.getElementById('save-draft-btn');
+    btn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/draft`, { method: 'PUT', body: collectFormPayload() });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('editor-banner', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+      return;
+    }
+    loadListingIntoEditor(res.body.listing);
+    banner('editor-banner', 'success', 'Entwurf gespeichert. Die live StadtPocket-Seite wurde NICHT verändert.');
+    await renderCityList();
+  }
+
+  // ── Preview ───────────────────────────────────────────────────────
+  async function loadPreview() {
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/preview`);
+    if (!res.ok) {
+      banner('editor-banner', 'error', (res.body && res.body.error) || 'Vorschau konnte nicht geladen werden.');
+      return;
+    }
+    const p = res.body.preview;
+    let publishedHtml = '<p class="muted">Noch nie veröffentlicht.</p>';
+    if (p.publicationStatus === 'published' || p.publishedAt) {
+      const citySlug = (cities.find((c) => c.id === currentLocationId) || {}).slug;
+      if (citySlug) {
+        const pubRes = await fetch(`${API_BASE}/public/stadtpocket/cities/${citySlug}/businesses/${p.slug}`);
+        if (pubRes.ok) {
+          const pub = await pubRes.json();
+          publishedHtml = renderCompareCard(pub, pub.locations && pub.locations[0]);
+        } else {
+          publishedHtml = '<p class="muted">Aktuell nicht öffentlich sichtbar (pausiert/entwurf).</p>';
+        }
+      }
+    }
+    document.getElementById('publish-compare').innerHTML = `
+      <div class="banner info">Dies ist eine VORSCHAU des Entwurfs — NICHT live. Nur "Veröffentlichen" macht diese Werte öffentlich sichtbar.</div>
+      <div class="compare-block">
+        <div class="compare-col">
+          <h3>Aktuell veröffentlicht</h3>
+          ${publishedHtml}
+        </div>
+        <div class="compare-col draft">
+          <h3>Entwurf (Vorschau)</h3>
+          ${renderCompareCard(p, p)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompareCard(listing, location) {
+    if (!listing) return '<p class="muted">–</p>';
+    return `
+      <div class="card">
+        <div style="font-weight:700">${escapeHtml(listing.name || '–')}</div>
+        <div class="muted">${escapeHtml(listing.category || '')}${listing.subCategory ? ' · ' + escapeHtml(listing.subCategory) : ''}</div>
+        <p style="font-size:13px">${escapeHtml(listing.shortDescription || '')}</p>
+        ${location ? `<div class="muted" style="font-size:12px">${escapeHtml(location.address || '')}</div>` : ''}
+        ${location && location.phone ? `<div class="muted" style="font-size:12px">${escapeHtml(location.phone)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  // ── Publish ───────────────────────────────────────────────────────
+  async function publishListing() {
+    if (publishInFlight) return; // guards against accidental double-submit
+    if (!confirm('Diesen Entwurf jetzt veröffentlichen? Die Änderungen werden sofort öffentlich sichtbar.')) return;
+    publishInFlight = true;
+    const btn = document.getElementById('publish-btn');
+    btn.disabled = true;
+    try {
+      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/publish`, { method: 'POST' });
+      if (!res.ok) {
+        banner('editor-banner', 'error', (res.body && res.body.error) || 'Veröffentlichung fehlgeschlagen.');
+        return;
+      }
+      banner('editor-banner', 'success', `Veröffentlicht am ${new Date(res.body.published.publishedAt).toLocaleString('de-DE')}.`);
+      const refreshed = await api(`/manager/stadtpocket/listings/${currentLocationId}`);
+      if (refreshed.ok) loadListingIntoEditor(refreshed.body.listing);
+      await renderCityList();
+    } finally {
+      publishInFlight = false;
+      btn.disabled = false;
+    }
+  }
+
+  boot();
+</script>
+</body>
+</html>
