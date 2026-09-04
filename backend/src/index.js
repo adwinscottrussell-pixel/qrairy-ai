@@ -13,6 +13,7 @@ const adminRoutes     = require('./routes/adminRoutes');
 const managerRoutes   = require('./routes/managerRoutes');
 const businessClaimRoutes = require('./routes/businessClaimRoutes');
 const stadtpocketPublicRoutes = require('./routes/stadtpocketPublicRoutes');
+const managerStadtpocketListingRoutes = require('./routes/managerStadtpocketListingRoutes');
 const opsRoutes       = require('./routes/opsRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
@@ -108,6 +109,7 @@ app.use('/admin',    adminRoutes);
 app.use('/manager',  managerRoutes);
 app.use('/businesses', businessClaimRoutes);
 app.use('/public/stadtpocket', stadtpocketPublicRoutes);
+app.use('/manager/stadtpocket', managerStadtpocketListingRoutes);
 app.use('/ops',      opsRoutes);
 
 app.use('/', lpRoutes);

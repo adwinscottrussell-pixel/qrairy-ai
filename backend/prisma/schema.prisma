@@ -638,6 +638,20 @@ model StadtPocketListing {
 
   createdBy String // Clerk userId of the Central Control admin / City Manager who created this listing
 
+  // Phase 6C — Secure Draft -> Preview -> Publish write path (additive).
+  // Pending brand-level edits (name/category/subCategory/tags/
+  // shortDescription/longDescription), stored SEPARATELY from the live
+  // columns above so an in-progress edit can never leak through the
+  // public API -- stadtpocketPublicService.js never reads this field
+  // (it only ever reads the live scalar columns via an explicit
+  // field-picking function, never a raw row spread), so this is
+  // structurally unreachable from GET /public/stadtpocket/*, not just
+  // unreachable by convention. Publishing copies this data onto the
+  // live columns above; it is never cleared after publish, so editing
+  // continues from the same working copy rather than snapping back to
+  // whatever was just published.
+  draftData Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -714,7 +728,15 @@ model StadtPocketListingLocation {
   website   String?
   hours     Json?
 
-  publicationStatus String @default("draft") // draft | published | paused | archived
+  publicationStatus String    @default("draft") // draft | published | paused | archived
+  publishedAt       DateTime? // set on first publish; never cleared by pause -- an honest "was ever published" record, not a "currently published" flag (publicationStatus alone is that)
+
+  // Phase 6C — Secure Draft -> Preview -> Publish write path (additive).
+  // Pending storefront-level edits (address/latitude/longitude/phone/
+  // website/hours), same isolation guarantee as StadtPocketListing's own
+  // draftData field above -- see that field's comment for the full
+  // reasoning, identical here.
+  draftData Json?
 
   // Optional QRAIVY connection -- see the model header comment. Never
   // required for this row to exist, be edited, or be published.
