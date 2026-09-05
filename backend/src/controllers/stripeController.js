@@ -1,7 +1,22 @@
 const prisma = require('../utils/prismaClient');
 const { PLANS } = require('../config/constants');
 const normalizePlan = (p) => p ? p.replace('_annual','') : 'free';
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Constructed lazily, on first actual use, rather than at module load --
+// requiring this controller (part of the unconditional route-require
+// chain in index.js) must never crash the whole process just because
+// STRIPE_SECRET_KEY isn't set in an environment that doesn't need Stripe
+// (e.g. a StadtPocket-only staging backend). The `stripe` npm package
+// itself has no such requirement; only calling it as a constructor does.
+const Stripe = require('stripe');
+let stripeClient = null;
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('Stripe is not configured on this environment (STRIPE_SECRET_KEY missing).');
+  }
+  if (!stripeClient) stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
+  return stripeClient;
+}
 
 // ─── Plan map: Stripe Price ID → internal plan name ──────────
 const PRICE_TO_PLAN = {
@@ -40,7 +55,7 @@ async function handleCreateCheckout(req, res) {
     let customerId = user?.stripeCustomerId;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user?.email || undefined,
         metadata: { userId },
       });
@@ -51,7 +66,7 @@ async function handleCreateCheckout(req, res) {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -82,7 +97,7 @@ async function handleCustomerPortal(req, res) {
       return res.status(400).json({ error: 'No active subscription found.' });
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${process.env.FRONTEND_URL}/dashboard.html`,
     });
@@ -127,7 +142,7 @@ async function handleWebhook(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       req.body, // raw body required
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
