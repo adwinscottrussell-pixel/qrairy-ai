@@ -139,9 +139,20 @@
     <div id="cities-list"></div>
   </section>
 
-  <section class="page" id="page-init">
+  <section class="page" id="page-businesses">
     <a class="back-link" onclick="showPage('page-cities')">&larr; Städte</a>
-    <h1>Neuer StadtPocket-Eintrag</h1>
+    <h1 id="businesses-title"></h1>
+    <p class="muted" id="businesses-sub"></p>
+    <div id="businesses-banner"></div>
+    <div id="businesses-list"></div>
+    <div class="actions">
+      <button class="primary" onclick="openInitForCurrentCity()">+ Neues Geschäft</button>
+    </div>
+  </section>
+
+  <section class="page" id="page-init">
+    <a class="back-link" onclick="backToBusinesses()">&larr; Geschäfte</a>
+    <h1>Neues Geschäft</h1>
     <p class="muted">Für <span id="init-city-name"></span>. Diese Felder sind zum Erstellen erforderlich.</p>
     <div id="init-banner"></div>
     <label>Name</label>
@@ -158,7 +169,7 @@
   </section>
 
   <section class="page" id="page-editor">
-    <a class="back-link" onclick="showPage('page-cities')">&larr; Städte</a>
+    <a class="back-link" onclick="backToBusinesses()">&larr; Geschäfte</a>
     <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
       <h1 id="editor-title" style="margin:0"></h1>
       <span class="status-pill" id="editor-status-pill"></span>
@@ -220,12 +231,18 @@
   // endpoints only:
   //   GET  /manager/context                     (pre-6C, City Manager scope)
   //   GET  /admin/locations?type=city            (pre-6C, Global Admin city list)
-  //   GET  /manager/stadtpocket/listings/:locationId            (Phase 6C)
-  //   POST /manager/stadtpocket/listings/:locationId            (Phase 6C, init)
-  //   PUT  /manager/stadtpocket/listings/:locationId/draft       (Phase 6C)
-  //   GET  /manager/stadtpocket/listings/:locationId/preview     (Phase 6C)
-  //   POST /manager/stadtpocket/listings/:locationId/publish     (Phase 6C)
+  //   GET  /manager/stadtpocket/listings/:locationId                          (Phase 6C, extended 6D: now returns { listings: [...] } -- a city holds zero, one, or many businesses)
+  //   POST /manager/stadtpocket/listings/:locationId                          (Phase 6C, init a new business in this city)
+  //   GET  /manager/stadtpocket/listings/:locationId/:listingLocationId            (Phase 6D, one specific business)
+  //   PUT  /manager/stadtpocket/listings/:locationId/:listingLocationId/draft       (Phase 6D)
+  //   GET  /manager/stadtpocket/listings/:locationId/:listingLocationId/preview     (Phase 6D)
+  //   POST /manager/stadtpocket/listings/:locationId/:listingLocationId/publish     (Phase 6D)
   //   GET  /public/stadtpocket/cities/:citySlug/businesses/:slug (Phase 6B, for the Published-state comparison column)
+  //
+  // A city (locationId) is only ever the authorization boundary here, never
+  // a business itself -- every editor action is addressed by the pair
+  // (currentLocationId, currentListingLocationId), matching the backend's
+  // own re-check of that pairing.
   //
   // The backend is the sole authority on access: this file never grants
   // a read/write based on which buttons are visible -- every fetch call
@@ -239,6 +256,8 @@
 
   let cities = [];
   let currentLocationId = null;
+  let currentListingLocationId = null;
+  let businesses = []; // last-loaded list of businesses for currentLocationId
   let currentListing = null; // last-loaded editable state
   let hoursState = {}; // { Mo: { closed:false, intervals:[{open,close}] } | undefined, ... }
   let publishInFlight = false;
@@ -321,41 +340,91 @@
 
     // Real backend check per city -- never assumed. Small, bounded N
     // (one call per scoped city), matching the real-world scope this
-    // phase targets.
+    // phase targets. A city's pill/status summarizes however many
+    // businesses it holds -- a city is never itself treated as a
+    // business, so this is a count, not a single listing's status.
     await Promise.all(cities.map(async (c) => {
       const res = await api(`/manager/stadtpocket/listings/${c.id}`);
       const pillEl = document.getElementById(`city-pill-${c.id}`);
       const statusEl = document.getElementById(`city-status-${c.id}`);
-      if (res.status === 404) {
-        pillEl.textContent = 'Kein Eintrag';
-        pillEl.className = 'status-pill none';
-        statusEl.textContent = 'Noch kein StadtPocket-Eintrag';
-      } else if (res.ok) {
-        const l = res.body.listing;
-        pillEl.textContent = l.publicationStatus === 'published' ? 'Live' : l.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf';
-        pillEl.className = 'status-pill ' + (l.publicationStatus === 'published' ? 'published' : 'draft');
-        statusEl.textContent = l.name;
-      } else {
+      if (!res.ok) {
         pillEl.textContent = 'Fehler';
         statusEl.textContent = 'Konnte nicht geladen werden';
+        return;
       }
+      const listings = res.body.listings || [];
+      if (listings.length === 0) {
+        pillEl.textContent = 'Keine';
+        pillEl.className = 'status-pill none';
+        statusEl.textContent = 'Noch keine StadtPocket-Geschäfte';
+        return;
+      }
+      const liveCount = listings.filter((l) => l.publicationStatus === 'published').length;
+      pillEl.textContent = `${listings.length} ${listings.length === 1 ? 'Geschäft' : 'Geschäfte'}`;
+      pillEl.className = 'status-pill ' + (liveCount > 0 ? 'published' : 'draft');
+      statusEl.textContent = liveCount > 0 ? `${liveCount} live` : 'Alle im Entwurf';
     }));
   }
 
   async function openCity(locationId) {
     currentLocationId = locationId;
-    const res = await api(`/manager/stadtpocket/listings/${locationId}`);
-    if (res.status === 404) {
-      const city = cities.find((c) => c.id === locationId);
-      document.getElementById('init-city-name').textContent = city ? city.name : locationId;
-      document.getElementById('init-name').value = '';
-      document.getElementById('init-category').value = '';
-      document.getElementById('init-shortDescription').value = '';
-      document.getElementById('init-address').value = '';
-      banner('init-banner', 'error', '');
-      showPage('page-init');
+    const city = cities.find((c) => c.id === locationId);
+    document.getElementById('businesses-title').textContent = `Geschäfte in ${city ? city.name : locationId}`;
+    document.getElementById('init-city-name').textContent = city ? city.name : locationId;
+    banner('businesses-banner', 'info', '');
+    showPage('page-businesses');
+    await renderBusinessList();
+  }
+
+  // ── Business list for the currently open city ───────────────────
+  async function renderBusinessList() {
+    const listEl = document.getElementById('businesses-list');
+    const subEl = document.getElementById('businesses-sub');
+    listEl.innerHTML = '<p class="muted">Laden…</p>';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}`);
+    if (!res.ok) {
+      listEl.innerHTML = '';
+      banner('businesses-banner', 'error', (res.body && res.body.error) || 'Fehler beim Laden.');
       return;
     }
+    businesses = res.body.listings || [];
+    const city = cities.find((c) => c.id === currentLocationId);
+    const cityName = city ? city.name : currentLocationId;
+    if (businesses.length === 0) {
+      subEl.textContent = '';
+      listEl.innerHTML = `<div class="empty-state">Noch keine StadtPocket-Geschäfte in ${escapeHtml(cityName)}.</div>`;
+      return;
+    }
+    subEl.textContent = `${businesses.length} ${businesses.length === 1 ? 'Geschäft' : 'Geschäfte'} in ${cityName}.`;
+    listEl.innerHTML = businesses.map((l) => `
+      <div class="card city-row" onclick="openBusiness('${currentLocationId}','${l.listingLocationId}')">
+        <div>
+          <div style="font-weight:700">${escapeHtml(l.name)}</div>
+          <div class="muted">${escapeHtml(l.category || '')}</div>
+        </div>
+        <span class="status-pill ${l.publicationStatus === 'published' ? 'published' : 'draft'}">${l.publicationStatus === 'published' ? 'Live' : l.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf'}</span>
+      </div>
+    `).join('');
+  }
+
+  async function backToBusinesses() {
+    showPage('page-businesses');
+    await renderBusinessList();
+  }
+
+  function openInitForCurrentCity() {
+    document.getElementById('init-name').value = '';
+    document.getElementById('init-category').value = '';
+    document.getElementById('init-shortDescription').value = '';
+    document.getElementById('init-address').value = '';
+    banner('init-banner', 'error', '');
+    showPage('page-init');
+  }
+
+  async function openBusiness(locationId, listingLocationId) {
+    currentLocationId = locationId;
+    currentListingLocationId = listingLocationId;
+    const res = await api(`/manager/stadtpocket/listings/${locationId}/${listingLocationId}`);
     if (!res.ok) {
       alert('Fehler beim Laden: ' + (res.body && res.body.error ? res.body.error : res.status));
       return;
@@ -380,6 +449,7 @@
       banner('init-banner', 'error', (res.body && res.body.error) || 'Fehler beim Anlegen.');
       return;
     }
+    currentListingLocationId = res.body.listing.listingLocationId;
     loadListingIntoEditor(res.body.listing);
     banner('publish-compare', 'success', '');
     showPage('page-editor');
@@ -519,7 +589,7 @@
   async function saveDraft() {
     const btn = document.getElementById('save-draft-btn');
     btn.disabled = true;
-    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/draft`, { method: 'PUT', body: collectFormPayload() });
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/draft`, { method: 'PUT', body: collectFormPayload() });
     btn.disabled = false;
     if (!res.ok) {
       banner('editor-banner', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht gespeichert werden.');
@@ -532,7 +602,7 @@
 
   // ── Preview ───────────────────────────────────────────────────────
   async function loadPreview() {
-    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/preview`);
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/preview`);
     if (!res.ok) {
       banner('editor-banner', 'error', (res.body && res.body.error) || 'Vorschau konnte nicht geladen werden.');
       return;
@@ -587,13 +657,13 @@
     const btn = document.getElementById('publish-btn');
     btn.disabled = true;
     try {
-      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/publish`, { method: 'POST' });
+      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/publish`, { method: 'POST' });
       if (!res.ok) {
         banner('editor-banner', 'error', (res.body && res.body.error) || 'Veröffentlichung fehlgeschlagen.');
         return;
       }
       banner('editor-banner', 'success', `Veröffentlicht am ${new Date(res.body.published.publishedAt).toLocaleString('de-DE')}.`);
-      const refreshed = await api(`/manager/stadtpocket/listings/${currentLocationId}`);
+      const refreshed = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}`);
       if (refreshed.ok) loadListingIntoEditor(refreshed.body.listing);
       await renderCityList();
     } finally {

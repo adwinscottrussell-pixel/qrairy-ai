@@ -273,21 +273,40 @@ function mergeState(listing, listingLocation) {
   };
 }
 
-async function findListingLocationOrThrow(locationId, scope) {
+// A city (locationId) can hold zero, one, or many StadtPocketListingLocation
+// rows -- see the schema comment on StadtPocketListingLocation. A specific
+// business is therefore identified by (locationId, listingLocationId)
+// together, never by locationId alone: locationId is only the authorization
+// boundary (which city is this manager scoped to), listingLocationId is the
+// actual row identity. The listingLocationId is never trusted to belong to
+// the claimed city merely because the caller supplied both -- it is always
+// re-checked against the loaded row's own locationId.
+async function findListingLocationInCityOrThrow(locationId, listingLocationId, scope) {
   authorizeLocationAccess(locationId, scope);
-  const listingLocation = await prisma.stadtPocketListingLocation.findFirst({
-    where: { locationId },
+  const listingLocation = await prisma.stadtPocketListingLocation.findUnique({
+    where: { id: listingLocationId },
     include: { listing: true },
   });
-  if (!listingLocation) {
-    throw new StadtpocketManagerError('No StadtPocket listing exists yet for this location.', 404);
+  if (!listingLocation || listingLocation.locationId !== locationId) {
+    throw new StadtpocketManagerError('StadtPocket listing not found for this location.', 404);
   }
   return listingLocation;
 }
 
-async function getEditableState(locationId, scope) {
-  const listingLocation = await findListingLocationOrThrow(locationId, scope);
+async function getEditableState(locationId, listingLocationId, scope) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
   return mergeState(listingLocation.listing, listingLocation);
+}
+
+// ── List: every StadtPocket business in a city ─────────────────
+async function listListingsForLocation(locationId, scope) {
+  authorizeLocationAccess(locationId, scope);
+  const rows = await prisma.stadtPocketListingLocation.findMany({
+    where: { locationId },
+    include: { listing: true },
+    orderBy: { id: 'asc' },
+  });
+  return rows.map((row) => mergeState(row.listing, row));
 }
 
 // ── Create / initialize ────────────────────────────────────────
@@ -297,13 +316,12 @@ async function getEditableState(locationId, scope) {
 // publicationStatus starts 'draft' regardless, so nothing here is ever
 // publicly visible until an explicit publish. Every other field is
 // left unset and filled in later via saveDraft.
+// A city may already contain other StadtPocketListingLocation rows --
+// that is not a conflict, since a city holds many businesses. Duplicate
+// protection for the SAME business is enforced by generateUniqueSlug's
+// DB-level slug collision handling below, not by a city-level guard here.
 async function initializeDraft(locationId, scope, body) {
   authorizeLocationAccess(locationId, scope);
-
-  const existing = await prisma.stadtPocketListingLocation.findFirst({ where: { locationId } });
-  if (existing) {
-    throw new StadtpocketManagerError('A StadtPocket listing already exists for this location.', 409);
-  }
 
   const src = body || {};
   const required = ['name', 'category', 'shortDescription', 'address'];
@@ -342,8 +360,8 @@ async function initializeDraft(locationId, scope, body) {
 }
 
 // ── Save draft ──────────────────────────────────────────────────
-async function saveDraft(locationId, scope, body) {
-  const listingLocation = await findListingLocationOrThrow(locationId, scope);
+async function saveDraft(locationId, listingLocationId, scope, body) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
   const { listingFields, locationFields } = validateDraftPayload(body);
 
   const nextListingDraft = { ...(listingLocation.listing.draftData || {}), ...listingFields };
@@ -364,13 +382,13 @@ async function saveDraft(locationId, scope, body) {
 }
 
 // ── Preview ─────────────────────────────────────────────────────
-async function previewDraft(locationId, scope) {
+async function previewDraft(locationId, listingLocationId, scope) {
   // Identical to getEditableState today -- kept as its own exported
   // function (rather than an alias) because "what does the manager see
   // when reviewing before publish" and "what does the edit form load"
   // are conceptually different callers, even though they compute the
   // same thing from the same isolation model.
-  return getEditableState(locationId, scope);
+  return getEditableState(locationId, listingLocationId, scope);
 }
 
 // ── Publish (atomic) ────────────────────────────────────────────
@@ -451,15 +469,19 @@ async function publishListingLocation(listingLocationId, scope) {
   });
 }
 
-async function publishForLocation(locationId, scope) {
-  const listingLocation = await findListingLocationOrThrow(locationId, scope);
-  return publishListingLocation(listingLocation.id, scope);
+async function publishForLocation(locationId, listingLocationId, scope) {
+  // Confirms (locationId, listingLocationId) actually pair up before
+  // handing off to the atomic transaction below, which re-authorizes
+  // independently against the row's own locationId -- this check exists
+  // for a correct 404 on a mismatched pair, not as the only guard.
+  await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+  return publishListingLocation(listingLocationId, scope);
 }
 
 // ── Pause (published -> paused only; straightforward given
 // publicationStatus already models this value) ──────────────────
-async function pauseForLocation(locationId, scope) {
-  const listingLocation = await findListingLocationOrThrow(locationId, scope);
+async function pauseForLocation(locationId, listingLocationId, scope) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
   if (listingLocation.publicationStatus !== 'published') {
     throw new StadtpocketManagerError('Only a published listing can be paused.', 400);
   }
@@ -473,6 +495,7 @@ async function pauseForLocation(locationId, scope) {
 module.exports = {
   StadtpocketManagerError,
   getEditableState,
+  listListingsForLocation,
   initializeDraft,
   saveDraft,
   previewDraft,
