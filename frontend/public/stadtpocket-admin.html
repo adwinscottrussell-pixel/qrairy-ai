@@ -250,7 +250,9 @@
   // always shown to the user, never silently swallowed or bypassed.
   // ============================================================
 
-  const API_BASE = 'https://api.qraivy.com';
+  const API_BASE = window.location.hostname === 'preview.qraivy.com'
+    ? 'https://pacific-youth-staging.up.railway.app'
+    : 'https://api.qraivy.com';
   const DAY_KEYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   const DAY_LABELS = { Mo: 'Mo', Di: 'Di', Mi: 'Mi', Do: 'Do', Fr: 'Fr', Sa: 'Sa', So: 'So' };
 

@@ -33,7 +33,9 @@
 (function () {
   document.documentElement.style.visibility = 'hidden';
 
-  var API_BASE = 'https://api.qraivy.com';
+  var API_BASE = window.location.hostname === 'preview.qraivy.com'
+    ? 'https://pacific-youth-staging.up.railway.app'
+    : 'https://api.qraivy.com';
   var REDIRECT = {
     login: '/login.html',
     dashboard: '/dashboard.html',
