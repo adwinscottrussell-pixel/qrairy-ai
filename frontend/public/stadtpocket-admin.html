@@ -602,7 +602,12 @@
     }
   }
 
-  boot();
+  // Wait for stadtpocket-admin-guard.js's own async chain (Clerk.load(),
+  // then the admin-role check or the /manager/context call) to actually
+  // finish before reading window.__stadtpocketRole /
+  // window.__stadtpocketManagerLocations -- calling boot() directly here
+  // raced the guard and always read both globals while still undefined.
+  window.__stadtpocketGuardReady.then(boot);
 </script>
 </body>
 </html>

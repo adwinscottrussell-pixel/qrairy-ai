@@ -103,9 +103,23 @@
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', runGuard);
-  } else {
-    runGuard();
-  }
+  // Exposes the guard's own completion as a promise so
+  // stadtpocket-admin.html's boot() can wait for window.__stadtpocketRole
+  // / window.__stadtpocketManagerLocations to actually be set before
+  // reading them, instead of racing this async chain. Previously
+  // runGuard() was fired-and-forgotten here, so boot() (called
+  // synchronously, immediately, at the bottom of the page's own inline
+  // script) always read both globals while they were still undefined --
+  // producing a "City Manager" / empty-cities render regardless of the
+  // real role, for every account, every time. Same
+  // readyState-driven trigger timing as before, just with its promise
+  // captured instead of discarded.
+  window.__stadtpocketGuardReady = new Promise(function (resolve) {
+    function start() { resolve(runGuard()); }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  });
 })();
