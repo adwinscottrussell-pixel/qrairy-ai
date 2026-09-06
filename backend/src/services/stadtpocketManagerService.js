@@ -219,9 +219,38 @@ function authorizeLocationAccess(locationId, scope) {
 // ── Slug generation (creation-time only; slug is never part of the
 // manager-editable field set above, so it can never be hijacked via a
 // draft-save payload). Mirrors lpController.js's own inline slugify
-// convention (lowercase, strip to [a-z0-9-], collapse separators). ──
+// convention (lowercase, strip to [a-z0-9-], collapse separators), with
+// one addition specific to this service: German characters are
+// transliterated to their standard ASCII spelling BEFORE that strip
+// step, so "Bäckerei Staib" becomes "baeckerei-staib" (the real,
+// expected public slug) instead of silently losing the "ä" and becoming
+// "bckerei-staib". lpController.js has its own separate, unexported
+// inline slugify (embedded in a client-side demo-widget script) and is
+// not touched by this change -- this function has no other caller in
+// this file besides generateUniqueSlug() below, and is exported (like
+// mergeState/checkHours/etc. above) for direct unit testing only, never
+// consumed by an HTTP route. ──
+const GERMAN_TRANSLITERATIONS = [
+  [/ä/g, 'ae'], [/ö/g, 'oe'], [/ü/g, 'ue'],
+  [/Ä/g, 'Ae'], [/Ö/g, 'Oe'], [/Ü/g, 'Ue'],
+  [/ß/g, 'ss'],
+];
+
+function transliterateGerman(s) {
+  let out = String(s || '');
+  for (const [pattern, replacement] of GERMAN_TRANSLITERATIONS) {
+    out = out.replace(pattern, replacement);
+  }
+  // Any other accented Latin character (e.g. the "é" in "Café") is folded
+  // to its unaccented base letter via Unicode decomposition -- applied
+  // AFTER the German-specific rules above so "ä"/"ö"/"ü"/"ß" keep their
+  // deliberate two-letter spelling instead of being reduced by this more
+  // generic step to plain "a"/"o"/"u"/"ss"-minus-one-s.
+  return out.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function slugify(s) {
-  return String(s || '')
+  return transliterateGerman(s)
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
@@ -508,4 +537,5 @@ module.exports = {
   checkLatitude,
   checkLongitude,
   checkWebsite,
+  slugify,
 };
