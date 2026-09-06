@@ -9,53 +9,75 @@
   :root {
     --coral: #ff6b5e;
     --coral-dark: #f2564a;
-    --coral-pale: #fff1ef;
-    --ink: #1b1b2f;
-    --gray-500: #6b7280;
-    --gray-200: #e5e7eb;
-    --gray-100: #f3f4f6;
-    --bg: #f7f5f1;
+    --coral-soft: rgba(255, 107, 94, 0.16);
+    --success: #33c48c;
+    --success-dark: #219767;
+    --success-soft: rgba(51, 196, 140, 0.16);
+    --danger: #ff7a70;
+    --danger-soft: rgba(255, 90, 80, 0.16);
+    --bg: #0a0f1e;
+    --surface-header: #0d1428;
+    --surface-card: #131c33;
+    --surface-card-alt: #1a2542;
+    --surface-input: #17213c;
+    --border: #2a3757;
+    --border-soft: #1c2542;
+    --text-primary: #eef1f9;
+    --text-secondary: #97a3c4;
+    --text-tertiary: #6b7695;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
     background: var(--bg);
-    color: var(--ink);
+    color: var(--text-primary);
   }
   header {
-    background: #fff;
-    border-bottom: 1px solid var(--gray-200);
-    padding: 14px 20px;
+    background: var(--surface-header);
+    border-bottom: 1px solid var(--border-soft);
+    padding: 16px 28px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 20;
   }
-  header .brand { font-weight: 800; font-size: 17px; }
+  header .brand-lockup { display: flex; flex-direction: column; gap: 2px; }
+  header .brand { font-weight: 800; font-size: 18px; letter-spacing: -0.01em; color: var(--text-primary); }
   header .brand span { color: var(--coral); }
+  header .brand-sub { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
   header .role-badge {
     font-size: 12px;
-    font-weight: 600;
-    color: var(--coral);
-    background: var(--coral-pale);
-    padding: 4px 10px;
+    font-weight: 700;
+    color: #1a0e0c;
+    background: var(--coral);
+    padding: 6px 14px;
     border-radius: 999px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
-  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; }
+  main { max-width: 900px; margin: 0 auto; padding: 28px 24px 96px; }
+  @media (max-width: 720px) { main { padding: 20px 16px 96px; } header { padding: 14px 16px; } }
   .page { display: none; }
   .page.active { display: block; }
-  h1 { font-size: 20px; margin: 4px 0 4px; }
-  h2 { font-size: 16px; margin: 24px 0 10px; }
-  .muted { color: var(--gray-500); font-size: 13px; }
-  .card {
-    background: #fff;
-    border: 1px solid var(--gray-200);
+  h1 { font-size: 22px; margin: 4px 0; color: var(--text-primary); letter-spacing: -0.01em; }
+  h2 { font-size: 13px; margin: 28px 0 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; padding-left: 12px; position: relative; }
+  h2::before { content: ''; position: absolute; left: 0; top: 2px; bottom: 2px; width: 3px; border-radius: 2px; background: var(--coral); }
+  .muted { color: var(--text-secondary); font-size: 13px; }
+  .breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--text-tertiary); margin-bottom: 16px; }
+  .breadcrumb .crumb { color: var(--text-tertiary); }
+  .breadcrumb .crumb-link { color: var(--coral); cursor: pointer; font-weight: 600; }
+  .breadcrumb .crumb-link:hover { color: var(--coral-dark); text-decoration: underline; }
+  .breadcrumb .crumb-current { color: var(--text-primary); font-weight: 700; }
+  .breadcrumb .crumb-sep { color: var(--border); }
+  .card, .section-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-soft);
     border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
   }
   .city-row {
     display: flex;
@@ -63,67 +85,87 @@
     justify-content: space-between;
     gap: 12px;
     cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
   }
-  .city-row:hover { background: var(--gray-100); }
+  .city-row:hover { background: var(--surface-card-alt); border-color: var(--border); }
   .status-pill {
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 999px;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
   }
-  .status-pill.published { background: #e6f4ec; color: #2f6b4f; }
-  .status-pill.draft { background: var(--coral-pale); color: var(--coral-dark); }
-  .status-pill.none { background: var(--gray-100); color: var(--gray-500); }
-  .empty-state { text-align: center; padding: 40px 16px; color: var(--gray-500); }
-  label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-500); margin: 14px 0 4px; }
+  .status-pill.published { background: var(--success-soft); color: var(--success); }
+  .status-pill.draft { background: var(--coral-soft); color: var(--coral); }
+  .status-pill.none { background: var(--surface-card-alt); color: var(--text-tertiary); }
+  .empty-state { text-align: center; padding: 48px 16px; color: var(--text-secondary); }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 16px 0 6px; }
   input[type="text"], input[type="number"], input[type="url"], textarea, input[type="time"] {
     width: 100%;
-    padding: 9px 11px;
-    border: 1px solid var(--gray-200);
+    padding: 10px 12px;
+    border: 1px solid var(--border);
     border-radius: 9px;
     font-size: 14px;
     font-family: inherit;
+    background: var(--surface-input);
+    color: var(--text-primary);
   }
-  textarea { resize: vertical; min-height: 60px; }
+  input::placeholder, textarea::placeholder { color: var(--text-tertiary); }
+  input:focus-visible, textarea:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; border-color: var(--coral); }
+  textarea { resize: vertical; min-height: 70px; }
   button {
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
     border-radius: 10px;
     border: none;
-    padding: 10px 16px;
+    padding: 11px 18px;
     cursor: pointer;
+    transition: background .15s ease, opacity .15s ease;
   }
-  button.primary { background: var(--coral); color: #fff; }
+  button.primary { background: var(--coral); color: #1a0e0c; }
   button.primary:hover { background: var(--coral-dark); }
-  button.primary:disabled { background: var(--gray-200); color: var(--gray-500); cursor: not-allowed; }
-  button.secondary { background: var(--coral-pale); color: var(--coral-dark); }
-  button.ghost { background: transparent; color: var(--gray-500); border: 1px solid var(--gray-200); }
-  button.small { padding: 5px 10px; font-size: 12px; }
-  .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
-  .back-link { color: var(--coral); font-weight: 600; font-size: 13px; text-decoration: none; cursor: pointer; }
-  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin: 12px 0; }
-  .banner.error { background: #fdeeee; color: #b3261e; }
-  .banner.success { background: #e6f4ec; color: #2f6b4f; }
-  .banner.info { background: var(--coral-pale); color: var(--coral-dark); }
-  .hours-day { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
-  .hours-day .day-label { width: 40px; font-weight: 700; font-size: 13px; padding-top: 7px; }
-  .hours-day .day-body { flex: 1; }
-  .interval-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .interval-row input[type="time"] { width: 100px; }
-  .closed-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
-  .compare-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
-  @media (max-width: 520px) { .compare-block { grid-template-columns: 1fr; } }
-  .compare-col h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gray-500); margin: 0 0 6px; }
-  .compare-col.draft h3 { color: var(--coral-dark); }
+  button.primary:disabled { background: var(--surface-card-alt); color: var(--text-tertiary); cursor: not-allowed; }
+  button.secondary { background: var(--surface-card-alt); color: var(--text-primary); border: 1px solid var(--border); }
+  button.secondary:hover { background: var(--surface-input); border-color: var(--coral); }
+  button.publish { background: var(--success); color: #062016; }
+  button.publish:hover { background: var(--success-dark); }
+  button.publish:disabled { background: var(--surface-card-alt); color: var(--text-tertiary); cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  button.ghost:hover { color: var(--text-primary); border-color: var(--coral); }
+  button.small { padding: 6px 11px; font-size: 12px; }
+  button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+  .actions { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; padding-top: 20px; border-top: 1px solid var(--border-soft); }
+  @media (max-width: 520px) { .actions { flex-direction: column; } .actions button { width: 100%; } }
+  .banner { border-radius: 10px; padding: 13px 16px; font-size: 13px; margin: 14px 0; border: 1px solid transparent; }
+  .banner.error { background: var(--danger-soft); color: var(--danger); border-color: rgba(255, 90, 80, 0.3); }
+  .banner.success { background: var(--success-soft); color: var(--success); border-color: rgba(51, 196, 140, 0.3); }
+  .banner.info { background: var(--coral-soft); color: var(--coral); border-color: rgba(255, 107, 94, 0.3); }
+  .business-header { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; }
+  .business-header .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .business-header h1 { margin: 0; }
+  .hours-day { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
+  .hours-day:last-child { border-bottom: none; }
+  .hours-day .day-label { width: 38px; font-weight: 700; font-size: 13px; padding-top: 8px; color: var(--text-secondary); flex-shrink: 0; }
+  .hours-day .day-body { flex: 1; min-width: 0; }
+  .interval-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .interval-row input[type="time"] { width: 110px; flex-shrink: 0; }
+  .closed-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+  .closed-toggle input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--coral); }
+  .compare-block { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+  @media (max-width: 640px) { .compare-block { grid-template-columns: 1fr; } }
+  .compare-col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 8px; font-weight: 700; }
+  .compare-col.draft h3 { color: var(--coral); }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">Stadt<span>Pocket</span> Admin</div>
+  <div class="brand-lockup">
+    <div class="brand">Stadt<span>Pocket</span> Admin</div>
+    <div class="brand-sub">Operations Console</div>
+  </div>
   <div class="role-badge" id="role-badge">…</div>
 </header>
 
@@ -140,7 +182,13 @@
   </section>
 
   <section class="page" id="page-businesses">
-    <a class="back-link" onclick="showPage('page-cities')">&larr; Städte</a>
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="showPage('page-cities')">Städte</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current" id="businesses-crumb-city"></span>
+    </nav>
     <h1 id="businesses-title"></h1>
     <p class="muted" id="businesses-sub"></p>
     <div id="businesses-banner"></div>
@@ -151,7 +199,13 @@
   </section>
 
   <section class="page" id="page-init">
-    <a class="back-link" onclick="backToBusinesses()">&larr; Geschäfte</a>
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current">Neues Geschäft</span>
+    </nav>
     <h1>Neues Geschäft</h1>
     <p class="muted">Für <span id="init-city-name"></span>. Diese Felder sind zum Erstellen erforderlich.</p>
     <div id="init-banner"></div>
@@ -169,16 +223,28 @@
   </section>
 
   <section class="page" id="page-editor">
-    <a class="back-link" onclick="backToBusinesses()">&larr; Geschäfte</a>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
-      <h1 id="editor-title" style="margin:0"></h1>
-      <span class="status-pill" id="editor-status-pill"></span>
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <span class="crumb" id="editor-crumb-city"></span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current" id="editor-crumb-business"></span>
+    </nav>
+
+    <div class="business-header">
+      <div class="row">
+        <h1 id="editor-title" style="margin:0"></h1>
+        <span class="status-pill" id="editor-status-pill"></span>
+      </div>
+      <p class="muted" id="editor-sub" style="margin:8px 0 0"></p>
     </div>
-    <p class="muted" id="editor-sub"></p>
+
     <div id="editor-banner"></div>
 
     <h2>Profil</h2>
-    <div class="card">
+    <div class="card section-card">
       <label>Name</label>
       <input type="text" id="f-name" />
       <label>Kategorie</label>
@@ -194,7 +260,7 @@
     </div>
 
     <h2>Kontakt &amp; Adresse</h2>
-    <div class="card">
+    <div class="card section-card">
       <label>Adresse</label>
       <input type="text" id="f-address" />
       <label>Breitengrad (latitude)</label>
@@ -208,14 +274,14 @@
     </div>
 
     <h2>Öffnungszeiten</h2>
-    <div class="card" id="hours-editor"></div>
+    <div class="card section-card" id="hours-editor"></div>
 
     <div id="publish-compare"></div>
 
     <div class="actions">
       <button class="primary" id="save-draft-btn" onclick="saveDraft()">Entwurf speichern</button>
       <button class="secondary" id="preview-btn" onclick="loadPreview()">Vorschau</button>
-      <button class="primary" id="publish-btn" onclick="publishListing()" style="background:#2f6b4f">Veröffentlichen</button>
+      <button class="publish" id="publish-btn" onclick="publishListing()">Veröffentlichen</button>
     </div>
   </section>
 
@@ -372,6 +438,8 @@
     currentLocationId = locationId;
     const city = cities.find((c) => c.id === locationId);
     document.getElementById('businesses-title').textContent = `Geschäfte in ${city ? city.name : locationId}`;
+    document.getElementById('businesses-crumb-city').textContent = city ? city.name : locationId;
+    document.getElementById('editor-crumb-city').textContent = city ? city.name : locationId;
     document.getElementById('init-city-name').textContent = city ? city.name : locationId;
     banner('businesses-banner', 'info', '');
     showPage('page-businesses');
@@ -462,6 +530,7 @@
   function loadListingIntoEditor(listing) {
     currentListing = listing;
     document.getElementById('editor-title').textContent = listing.name || '(ohne Namen)';
+    document.getElementById('editor-crumb-business').textContent = listing.name || '(ohne Namen)';
     const pill = document.getElementById('editor-status-pill');
     pill.textContent = listing.publicationStatus === 'published' ? 'Live' : listing.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf';
     pill.className = 'status-pill ' + (listing.publicationStatus === 'published' ? 'published' : 'draft');
