@@ -29,6 +29,7 @@
  */
 
 const prisma = require('../utils/prismaClient');
+const { isTrustedStadtPocketHeaderImage } = require('./stadtPocketHeaderImageService');
 
 class StadtpocketManagerError extends Error {
   constructor(message, status = 400) {
@@ -38,7 +39,10 @@ class StadtpocketManagerError extends Error {
 }
 
 // ── Field allow-lists ─────────────────────────────────────────
-const LISTING_FIELDS = ['name', 'category', 'subCategory', 'tags', 'shortDescription', 'longDescription'];
+// headerImage (Phase 6D.2) lives here, not in LOCATION_FIELDS -- it is
+// brand-level (StadtPocketListing.headerImage), one hero image per
+// business, not per storefront, same grouping as name/category/tags.
+const LISTING_FIELDS = ['name', 'category', 'subCategory', 'tags', 'shortDescription', 'longDescription', 'headerImage'];
 const LOCATION_FIELDS = ['address', 'latitude', 'longitude', 'phone', 'website', 'hours'];
 const ALL_EDITABLE_FIELDS = [...LISTING_FIELDS, ...LOCATION_FIELDS];
 
@@ -165,6 +169,40 @@ function validateDraftPayload(body) {
       throw new StadtpocketManagerError('longDescription must be a non-empty string, or null to clear it.');
     }
     listingFields.longDescription = src.longDescription === null ? null : src.longDescription.trim();
+  }
+  // Phase 6D.2 — header/hero image. null clears it (participates safely
+  // in draft/publish exactly like any other clearable field: the
+  // published image is untouched until an explicit Publish). Any
+  // non-null value must be a genuine upload from THIS system's own
+  // Cloudinary account/folder (isTrustedStadtPocketHeaderImage) --
+  // never an arbitrary externally-supplied URL injected through this
+  // generic field path.
+  if ('headerImage' in src) {
+    if (src.headerImage !== null) {
+      const hi = src.headerImage;
+      if (!hi || typeof hi !== 'object' || Array.isArray(hi)) {
+        throw new StadtpocketManagerError('headerImage must be an object, or null to remove it.');
+      }
+      if (typeof hi.url !== 'string' || !hi.url.trim() || typeof hi.publicId !== 'string' || !hi.publicId.trim()) {
+        throw new StadtpocketManagerError('headerImage.url and headerImage.publicId are required.');
+      }
+      if (!isTrustedStadtPocketHeaderImage(hi.url, hi.publicId)) {
+        throw new StadtpocketManagerError('headerImage is not a recognized StadtPocket-uploaded image.');
+      }
+      let width = null;
+      let height = null;
+      if (hi.width != null) {
+        width = Number(hi.width);
+        if (!Number.isFinite(width) || width <= 0) throw new StadtpocketManagerError('headerImage.width must be a positive number.');
+      }
+      if (hi.height != null) {
+        height = Number(hi.height);
+        if (!Number.isFinite(height) || height <= 0) throw new StadtpocketManagerError('headerImage.height must be a positive number.');
+      }
+      listingFields.headerImage = { url: hi.url.trim(), publicId: hi.publicId.trim(), width, height };
+    } else {
+      listingFields.headerImage = null;
+    }
   }
 
   if ('address' in src) {
@@ -293,6 +331,7 @@ function mergeState(listing, listingLocation) {
     tags: pick(draftListing, 'tags', listing.tags),
     shortDescription: pick(draftListing, 'shortDescription', listing.shortDescription),
     longDescription: pick(draftListing, 'longDescription', listing.longDescription),
+    headerImage: pick(draftListing, 'headerImage', listing.headerImage),
     address: pick(draftLocation, 'address', listingLocation.address),
     latitude: pick(draftLocation, 'latitude', listingLocation.latitude),
     longitude: pick(draftLocation, 'longitude', listingLocation.longitude),
@@ -476,6 +515,7 @@ async function publishListingLocation(listingLocationId, scope) {
         tags: merged.tags,
         shortDescription: merged.shortDescription,
         longDescription: merged.longDescription,
+        headerImage: merged.headerImage,
       },
     });
 

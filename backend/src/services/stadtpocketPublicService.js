@@ -43,6 +43,17 @@
 // level fields (address, phone, hours, etc. were NEVER brand-level to
 // begin with) are never picked from one arbitrary storefront and
 // presented as if they represent the whole brand.
+//
+// Phase 6D.2 addition: headerImage, when the listing has one, is
+// included as { url, width, height } only -- publicId is Cloudinary's
+// own internal asset identifier and has no public purpose, so it is
+// never included here, matching this file's existing "no
+// internal/admin/provenance data" rule. Read directly from the LIVE
+// StadtPocketListing.headerImage column, never from draftData -- an
+// in-progress draft image is exactly as unreachable from this file as
+// any other in-progress draft edit (see that column's own schema
+// comment). Absent entirely (not null) when no header image has ever
+// been published, per this file's own "omit when absent" convention.
 // ============================================================
 
 const prisma = require('../utils/prismaClient');
@@ -65,6 +76,13 @@ async function findCityLocation(citySlug) {
 // physical/storefront-level fields (address/phone/hours are a detail-page
 // concern, and picking one storefront's values to represent the whole
 // brand on the card would misrepresent a multi-storefront listing).
+// Shared by toListItem/toDetailItem -- see this file's Phase 6D.2
+// header comment for what is and isn't included.
+function pickPublicHeaderImage(listing) {
+  if (!listing.headerImage || !listing.headerImage.url) return undefined;
+  return { url: listing.headerImage.url, width: listing.headerImage.width, height: listing.headerImage.height };
+}
+
 function toListItem(listing) {
   const item = {
     slug: listing.slug,
@@ -72,6 +90,8 @@ function toListItem(listing) {
     category: listing.category,
   };
   if (listing.subCategory) item.subCategory = listing.subCategory;
+  const headerImage = pickPublicHeaderImage(listing);
+  if (headerImage) item.headerImage = headerImage;
   return item;
 }
 
@@ -101,6 +121,8 @@ function toDetailItem(listing, listingLocations) {
   if (listing.tags && listing.tags.length) item.tags = listing.tags;
   if (listing.shortDescription) item.shortDescription = listing.shortDescription;
   if (listing.longDescription) item.longDescription = listing.longDescription;
+  const headerImage = pickPublicHeaderImage(listing);
+  if (headerImage) item.headerImage = headerImage;
   item.locations = listingLocations.map(toLocationItem);
   return item;
 }

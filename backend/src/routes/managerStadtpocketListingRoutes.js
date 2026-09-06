@@ -21,9 +21,11 @@
  */
 
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManagerAuth');
 const service = require('../services/stadtpocketManagerService');
+const { uploadStadtPocketHeaderImage } = require('../services/stadtPocketHeaderImageService');
 
 function handleServiceError(err, res, route) {
   if (err instanceof service.StadtpocketManagerError) {
@@ -32,6 +34,29 @@ function handleServiceError(err, res, route) {
   console.error(`[${route}]`, err);
   return res.status(500).json({ error: 'Internal server error.' });
 }
+
+// Same convention as the existing /lp/upload-logo and /lp/upload-strip
+// uploads (lpRoutes.js): memory storage (buffer straight to Cloudinary,
+// no temp file on disk), 5MB cap, PNG/JPEG/JPG/WebP only -- no SVG (SVG
+// can carry embedded scripts/XSS, this codebase's existing image
+// uploads never allow it, not introducing an exception here). Validated
+// server-side by this fileFilter/limits config regardless of whatever
+// the frontend already checked. Constants and the filter function are
+// named + exported (unlike lpRoutes.js's inline equivalents) so the
+// actual rejection rule can be unit-tested directly.
+const HEADER_IMAGE_ALLOWED_MIMETYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+const HEADER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+function headerImageFileFilter(req, file, cb) {
+  if (HEADER_IMAGE_ALLOWED_MIMETYPES.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Only PNG, JPG, JPEG, and WebP images are allowed.'));
+}
+
+const headerImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: HEADER_IMAGE_MAX_BYTES },
+  fileFilter: headerImageFileFilter,
+});
 
 async function handleListListings(req, res) {
   try {
@@ -96,6 +121,43 @@ async function handlePause(req, res) {
   }
 }
 
+// Phase 6D.2 — header/hero image upload. Upload-only: this route never
+// writes to the database at all (mirrors /lp/upload-logo's exact
+// posture) -- it only proves authorization, uploads to Cloudinary, and
+// returns the resulting metadata. The frontend then calls the EXISTING
+// PUT .../draft (handleSaveDraft above) with { headerImage: {...} } to
+// actually commit it to the draft -- no separate/parallel persistence
+// path, no separate "publish image" mechanism; headerImage travels
+// through the exact same Draft -> Preview -> Publish machinery as every
+// other field.
+//
+// Authorization is re-derived server-side via getEditableState() --
+// the SAME function handleGetEditableState above uses, which internally
+// re-checks (locationId, listingLocationId) against req.stadtpocketScope
+// before returning anything. A caller-supplied locationId/
+// listingLocationId pair is never trusted just because it parses --
+// this call throws 403/404 exactly like every other route here if it
+// doesn't hold up.
+async function handleUploadHeaderImage(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file received.' });
+    }
+    const state = await service.getEditableState(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    const result = await uploadStadtPocketHeaderImage(req.file.buffer, state.listingId);
+    return res.json({
+      headerImage: {
+        url: result.secure_url,
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height,
+      },
+    });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/header-image POST');
+  }
+}
+
 // City-scoped list + create.
 router.get('/listings/:locationId', requireStadtpocketWriteScope, handleListListings);
 router.post('/listings/:locationId', requireStadtpocketWriteScope, handleInitializeDraft);
@@ -106,6 +168,15 @@ router.put('/listings/:locationId/:listingLocationId/draft', requireStadtpocketW
 router.get('/listings/:locationId/:listingLocationId/preview', requireStadtpocketWriteScope, handlePreviewDraft);
 router.post('/listings/:locationId/:listingLocationId/publish', requireStadtpocketWriteScope, handlePublish);
 router.post('/listings/:locationId/:listingLocationId/pause', requireStadtpocketWriteScope, handlePause);
+// requireStadtpocketWriteScope runs BEFORE multer parses the upload --
+// an unauthenticated/unauthorized request never gets its file buffered
+// at all, same ordering as /lp/upload-logo in lpRoutes.js.
+router.post('/listings/:locationId/:listingLocationId/header-image', requireStadtpocketWriteScope, (req, res, next) => {
+  headerImageUpload.single('image')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    next();
+  });
+}, handleUploadHeaderImage);
 
 module.exports = router;
 module.exports.handleListListings = handleListListings; // exported for direct unit testing only
@@ -115,3 +186,7 @@ module.exports.handleSaveDraft = handleSaveDraft; // exported for direct unit te
 module.exports.handlePreviewDraft = handlePreviewDraft; // exported for direct unit testing only
 module.exports.handlePublish = handlePublish; // exported for direct unit testing only
 module.exports.handlePause = handlePause; // exported for direct unit testing only
+module.exports.handleUploadHeaderImage = handleUploadHeaderImage; // exported for direct unit testing only
+module.exports.headerImageFileFilter = headerImageFileFilter; // exported for direct unit testing only
+module.exports.HEADER_IMAGE_ALLOWED_MIMETYPES = HEADER_IMAGE_ALLOWED_MIMETYPES; // exported for direct unit testing only
+module.exports.HEADER_IMAGE_MAX_BYTES = HEADER_IMAGE_MAX_BYTES; // exported for direct unit testing only

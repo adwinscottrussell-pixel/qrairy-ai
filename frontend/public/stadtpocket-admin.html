@@ -145,6 +145,20 @@
   .business-header { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; }
   .business-header .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .business-header h1 { margin: 0; }
+  .header-image-preview {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface-input);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .header-image-preview.empty { color: var(--text-tertiary); font-size: 13px; text-align: center; padding: 16px; }
+  .header-image-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .header-image-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   .hours-day { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
   .hours-day:last-child { border-bottom: none; }
   .hours-day .day-label { width: 38px; font-weight: 700; font-size: 13px; padding-top: 8px; color: var(--text-secondary); flex-shrink: 0; }
@@ -276,6 +290,18 @@
 
     <div id="editor-banner"></div>
 
+    <h2>Headerbild</h2>
+    <div class="card section-card">
+      <div id="header-image-preview" class="header-image-preview empty">Noch kein Headerbild hinterlegt.</div>
+      <span class="status-pill draft" id="header-image-status-pill" style="display:none;margin-top:10px">Entwurf – noch nicht veröffentlicht</span>
+      <div id="header-image-banner"></div>
+      <input type="file" id="header-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleHeaderImageSelected(event)" />
+      <div class="header-image-actions">
+        <button class="secondary" id="header-image-upload-btn" type="button" onclick="document.getElementById('header-image-file-input').click()">Bild hochladen</button>
+        <button class="ghost" id="header-image-remove-btn" type="button" onclick="removeHeaderImage()" style="display:none">Bild entfernen</button>
+      </div>
+    </div>
+
     <h2>Profil</h2>
     <div class="card section-card">
       <label>Name</label>
@@ -343,6 +369,10 @@
   //   POST /manager-invites/accept                (Phase 6D.1, called by stadtpocket-admin-guard.js before this
   //                                                 file boots, not from here directly -- see that guard's
   //                                                 maybeAcceptPendingInvite)
+  //   POST /manager/stadtpocket/listings/:locationId/:listingLocationId/header-image
+  //                                                (Phase 6D.2, upload-only -- never writes the draft itself;
+  //                                                 the returned headerImage is committed via the existing
+  //                                                 PUT .../draft call right after, same as every other field)
   //
   // A city (locationId) is only ever the authorization boundary here, never
   // a business itself -- every editor action is addressed by the pair
@@ -368,6 +398,20 @@
   let currentListing = null; // last-loaded editable state
   let hoursState = {}; // { Mo: { closed:false, intervals:[{open,close}] } | undefined, ... }
   let publishInFlight = false;
+  // Session-only, per-editor-visit indicator ("this header image was
+  // just changed and is not live yet") -- reset on navigating to a
+  // (possibly different) business and cleared after a successful
+  // publish. Deliberately NOT cleared by every generic re-render (e.g.
+  // the main "Entwurf speichern" button saving unrelated text fields)
+  // -- doing so would misleadingly hide the fact that the header image
+  // itself is still unpublished. Whether the header image is *actually*
+  // unpublished is always still correct without this flag too (an
+  // unpublished listing's publicationStatus already says so); this only
+  // adds the same honest signal for a business that HAS been published
+  // before but just received a new, not-yet-published header image.
+  const HEADER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+  const HEADER_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  let headerImageJustUploaded = false;
 
   function showPage(id) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
@@ -658,6 +702,7 @@
   async function openBusiness(locationId, listingLocationId) {
     currentLocationId = locationId;
     currentListingLocationId = listingLocationId;
+    headerImageJustUploaded = false; // fresh navigation -- never leak this session flag from a previously open business
     const res = await api(`/manager/stadtpocket/listings/${locationId}/${listingLocationId}`);
     if (!res.ok) {
       alert('Fehler beim Laden: ' + (res.body && res.body.error ? res.body.error : res.status));
@@ -703,6 +748,7 @@
       : 'Noch nie veröffentlicht.';
     banner('editor-banner', 'info', '');
     banner('publish-compare', 'info', '');
+    banner('header-image-banner', 'info', '');
 
     document.getElementById('f-name').value = listing.name || '';
     document.getElementById('f-category').value = listing.category || '';
@@ -721,6 +767,118 @@
       hoursState[entry.day] = entry.closed ? { closed: true } : { intervals: (entry.intervals || []).map((iv) => ({ ...iv })) };
     });
     renderHoursEditor();
+    renderHeaderImagePreview();
+  }
+
+  // ── Header/hero image (Phase 6D.2) ────────────────────────────────
+  // Non-destructive Cloudinary delivery-time transformation, matching
+  // backend/src/services/stadtPocketHeaderImageService.js's
+  // buildHeaderImageDisplayUrl exactly -- one shared crop rule for
+  // admin preview and (later) public consumption, never a second
+  // competing crop behavior. The ORIGINAL uploaded asset is never
+  // modified by this -- it only requests a landscape, content-aware-
+  // cropped, auto-format/auto-quality rendition of the same asset.
+  function headerImageDisplayUrl(url) {
+    if (!url) return url;
+    return url.replace('/upload/', '/upload/c_fill,g_auto,ar_16:9,q_auto,f_auto/');
+  }
+
+  function renderHeaderImagePreview() {
+    const box = document.getElementById('header-image-preview');
+    const statusPill = document.getElementById('header-image-status-pill');
+    const uploadBtn = document.getElementById('header-image-upload-btn');
+    const removeBtn = document.getElementById('header-image-remove-btn');
+    const hi = currentListing && currentListing.headerImage;
+
+    if (hi && hi.url) {
+      box.className = 'header-image-preview';
+      box.innerHTML = `<img src="${escapeHtml(headerImageDisplayUrl(hi.url))}" alt="" />`;
+      uploadBtn.textContent = 'Bild ersetzen';
+      removeBtn.style.display = '';
+    } else {
+      box.className = 'header-image-preview empty';
+      box.textContent = 'Noch kein Headerbild hinterlegt.';
+      uploadBtn.textContent = 'Bild hochladen';
+      removeBtn.style.display = 'none';
+    }
+
+    statusPill.style.display = headerImageJustUploaded ? '' : 'none';
+  }
+
+  async function handleHeaderImageSelected(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow re-selecting the exact same file again later
+    if (!file) return;
+
+    if (!HEADER_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+      banner('header-image-banner', 'error', 'Nur PNG, JPG oder WebP Bilder sind erlaubt.');
+      return;
+    }
+    if (file.size > HEADER_IMAGE_MAX_BYTES) {
+      banner('header-image-banner', 'error', 'Die Datei ist zu groß (maximal 5 MB).');
+      return;
+    }
+
+    const uploadBtn = document.getElementById('header-image-upload-btn');
+    uploadBtn.disabled = true;
+    banner('header-image-banner', 'info', 'Bild wird hochgeladen…');
+
+    try {
+      // Raw fetch, not the api() helper -- this is a multipart upload,
+      // not a JSON body, so api()'s always-JSON Content-Type/JSON.stringify
+      // would be wrong here.
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadRes = await fetch(`${API_BASE}/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/header-image`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: formData,
+      });
+      let uploadBody = null;
+      try { uploadBody = await uploadRes.json(); } catch (e) { /* no body */ }
+      if (!uploadRes.ok) {
+        banner('header-image-banner', 'error', (uploadBody && uploadBody.error) || 'Upload fehlgeschlagen.');
+        return;
+      }
+
+      // Upload itself never writes to the draft (see the backend route's
+      // own comment) -- this save is what actually commits it, through
+      // the EXACT same PUT .../draft every other field already uses.
+      // Only headerImage is sent, so no other in-progress unsaved field
+      // edit in this form is touched.
+      const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/draft`, {
+        method: 'PUT',
+        body: { headerImage: uploadBody.headerImage },
+      });
+      if (!saveRes.ok) {
+        banner('header-image-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+        return;
+      }
+      currentListing = saveRes.body.listing;
+      headerImageJustUploaded = true;
+      banner('header-image-banner', 'success', 'Bild hochgeladen und im Entwurf gespeichert. Die live StadtPocket-Seite wurde NICHT verändert.');
+      renderHeaderImagePreview();
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  }
+
+  async function removeHeaderImage() {
+    if (!confirm('Headerbild aus dem Entwurf entfernen? Ein bereits veröffentlichtes Bild bleibt bis zur nächsten Veröffentlichung live sichtbar.')) return;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/draft`, {
+      method: 'PUT',
+      body: { headerImage: null },
+    });
+    if (!res.ok) {
+      banner('header-image-banner', 'error', (res.body && res.body.error) || 'Fehler beim Entfernen.');
+      return;
+    }
+    currentListing = res.body.listing;
+    headerImageJustUploaded = true;
+    banner('header-image-banner', 'success', 'Bild aus dem Entwurf entfernt.');
+    renderHeaderImagePreview();
   }
 
   // ── Opening hours editor ─────────────────────────────────────────
@@ -873,8 +1031,12 @@
 
   function renderCompareCard(listing, location) {
     if (!listing) return '<p class="muted">–</p>';
+    const headerImageHtml = listing.headerImage && listing.headerImage.url
+      ? `<div class="header-image-preview" style="margin-bottom:10px"><img src="${escapeHtml(headerImageDisplayUrl(listing.headerImage.url))}" alt="" /></div>`
+      : '';
     return `
       <div class="card">
+        ${headerImageHtml}
         <div style="font-weight:700">${escapeHtml(listing.name || '–')}</div>
         <div class="muted">${escapeHtml(listing.category || '')}${listing.subCategory ? ' · ' + escapeHtml(listing.subCategory) : ''}</div>
         <p style="font-size:13px">${escapeHtml(listing.shortDescription || '')}</p>
@@ -898,6 +1060,7 @@
         return;
       }
       banner('editor-banner', 'success', `Veröffentlicht am ${new Date(res.body.published.publishedAt).toLocaleString('de-DE')}.`);
+      headerImageJustUploaded = false; // whatever was drafted is now live -- the "not published yet" indicator no longer applies
       const refreshed = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}`);
       if (refreshed.ok) loadListingIntoEditor(refreshed.body.listing);
       await renderCityList();

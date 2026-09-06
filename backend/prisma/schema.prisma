@@ -682,6 +682,27 @@ model StadtPocketListing {
   shortDescription String
   longDescription  String?
 
+  // Phase 6D.2 — header/hero image (additive). Brand-level, like the
+  // fields above, not per-storefront -- one hero image per business, not
+  // per StadtPocketListingLocation. Deliberately a live column, not a
+  // draftData-only value: this is the PUBLISHED image, exactly as
+  // authoritative as name/category/etc. above, and participates in the
+  // exact same generic draft-merge/publish machinery
+  // (stadtpocketManagerService.js's LISTING_FIELDS/mergeState/
+  // publishListingLocation) -- no separate "publish image" mechanism.
+  // Shape: { url, publicId, width, height } (Cloudinary secure_url +
+  // public_id + pixel dimensions from the upload response) or null (no
+  // image uploaded yet -- never fabricated, never a placeholder).
+  // publicId is kept for a future safe-cleanup pass (deleting an
+  // orphaned Cloudinary asset once nothing references it) -- not acted
+  // on yet in this phase; see stadtPocketHeaderImageService.js's header
+  // comment. Every upload gets its own unique Cloudinary public_id
+  // (never overwritten), specifically so the currently-published image
+  // is never destroyed or replaced at the CDN level just because a new
+  // draft image was uploaded -- only Publish promotes draftData's
+  // headerImage onto this column.
+  headerImage Json?
+
   // Optional QRAIVY connection -- see the model header comment. Never
   // required for this row to exist, be edited, or be published.
   businessId String?   @unique
