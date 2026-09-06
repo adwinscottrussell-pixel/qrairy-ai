@@ -510,7 +510,10 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="status-pill ${STATUS_CLASS[inv.status] || 'none'}">${STATUS_LABEL[inv.status] || inv.status}</span>
-          ${inv.status === 'pending' ? `<button class="ghost small" onclick="revokeManagerInvite('${inv.id}')">Widerrufen</button>` : ''}
+          ${inv.status === 'pending' ? `
+            <button class="ghost small" onclick="resendManagerInvite('${inv.id}', this)">Erneut senden</button>
+            <button class="ghost small" onclick="revokeManagerInvite('${inv.id}')">Widerrufen</button>
+          ` : ''}
         </div>
       </div>
     `).join('');
@@ -523,6 +526,27 @@
       alert((res.body && res.body.error) || 'Fehler beim Widerrufen.');
       return;
     }
+    await loadManagerInvites();
+  }
+
+  // btn is the exact clicked <button> element (passed via inline
+  // onclick's `this`) so it can be disabled for the duration of this
+  // one request, independent of any other row's button -- prevents an
+  // accidental double-click from firing two overlapping resends for the
+  // same invite. loadManagerInvites() re-renders the whole list on
+  // success, which naturally recreates a fresh, enabled button; on
+  // failure the button is explicitly re-enabled below since no re-render
+  // happens in that path.
+  async function resendManagerInvite(id, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const res = await api(`/admin/manager-invites/${id}/resend`, { method: 'POST' });
+    if (!res.ok) {
+      btn.disabled = false;
+      banner('invite-banner', 'error', (res.body && res.body.error) || 'E-Mail-Versand fehlgeschlagen.');
+      return;
+    }
+    banner('invite-banner', 'success', 'Einladung wurde erneut gesendet.');
     await loadManagerInvites();
   }
 

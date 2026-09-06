@@ -159,6 +159,71 @@ async function revokeInvite(inviteId) {
   return prisma.managerInvite.update({ where: { id: inviteId }, data: { status: 'cancelled' } });
 }
 
+// ── Resend (Global Admin only, enforced by the route) ───────────
+// Rotates ONLY the tokenHash on the same ManagerInvite row -- id, email,
+// name, networkId, locationId, role, createdBy, and status are all
+// preserved untouched. Never creates a second ManagerInvite, never
+// touches NetworkMember (that only ever happens in acceptInvite(), via
+// assignManager(), unchanged by this function).
+//
+// The raw token generated here is returned to the caller (the route's
+// email step) only in-process -- same discipline as createInvite -- and
+// is never itself persisted; only its hash replaces the stored
+// tokenHash. The OLD raw token cannot be recovered (only its hash was
+// ever stored, by design), so after a successful resend the old link is
+// permanently dead -- "only the newest token is valid" is therefore not
+// an extra check anywhere, it falls directly out of tokenHash being a
+// single column that just got overwritten.
+//
+// Deliberately does NOT send the email itself -- email orchestration
+// (building the URL, calling sendManagerInviteEmail, deciding what a
+// failure means) lives in the route layer, exactly like
+// createInvite's own caller in adminRoutes.js. What this function adds
+// beyond a plain "generate + update" is returning previousTokenHash
+// alongside the rotated invite, so the route can call
+// restoreTokenHashAfterFailedResend() below if the email attempt fails
+// -- the invitation is never left pointing at a token nobody received.
+async function resendInvite(inviteId) {
+  const invite = await prisma.managerInvite.findUnique({ where: { id: inviteId } });
+  if (!invite) throw notFound('Invitation not found.');
+  if (invite.status !== 'pending') {
+    throw invalid(`Only a pending invitation can be resent (current status: ${invite.status}).`);
+  }
+  if (invite.expiresAt < new Date()) {
+    // Lazily transition to 'expired' on first touch past expiry, same
+    // convention as acceptInvite()'s own lazy-expiry handling.
+    await prisma.managerInvite.update({ where: { id: invite.id }, data: { status: 'expired' } }).catch(() => {});
+    throw gone('This invitation has expired.');
+  }
+
+  const previousTokenHash = invite.tokenHash;
+  const { rawToken, tokenHash } = generateToken();
+
+  const rotated = await prisma.managerInvite.update({
+    where: { id: invite.id },
+    data: { tokenHash },
+  });
+
+  return { invite: rotated, rawToken, previousTokenHash };
+}
+
+// Called ONLY by the route, ONLY when sendManagerInviteEmail failed
+// immediately after resendInvite() rotated the token -- reverts
+// tokenHash back to the value it had before this resend attempt, so a
+// failed email never strands the invitation on a token nobody has.
+// Conditional on tokenHash still being exactly the value THIS resend
+// just wrote (updateMany, not update): if it has since changed again
+// (e.g. a second resend, or a concurrent request already reverted it),
+// this intentionally does nothing rather than clobber that newer,
+// unrelated state -- the same "only revert what you know you broke"
+// discipline as businessClaimService's revert-on-failure.
+async function restoreTokenHashAfterFailedResend(inviteId, currentTokenHash, previousTokenHash) {
+  await prisma.managerInvite.updateMany({
+    where: { id: inviteId, tokenHash: currentTokenHash },
+    data: { tokenHash: previousTokenHash },
+  });
+}
+
 // ── Read-only preview by token (any authenticated user; the token itself
 // is the only thing that authorizes seeing this much, matching
 // businessClaimService.getInvitePreviewByToken's exact posture) ──
@@ -293,6 +358,8 @@ module.exports = {
   createInvite,
   listInvites,
   revokeInvite,
+  resendInvite,
+  restoreTokenHashAfterFailedResend,
   getInvitePreviewByToken,
   acceptInvite,
 };

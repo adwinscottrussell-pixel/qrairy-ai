@@ -48,6 +48,7 @@ let tokenValid = true;
 let currentUserId = 'user_admin';
 let clerkUserFixture = null; // { id, publicMetadata, primaryEmailAddressId, emailAddresses }
 let sentEmails = [];
+let emailShouldFail = false;
 
 function hashToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -63,6 +64,7 @@ function resetFixtures() {
   networkMemberRows = [];
   idSeq = 0;
   sentEmails = [];
+  emailShouldFail = false;
   tokenValid = true;
   currentUserId = 'user_admin';
   clerkUserFixture = {
@@ -148,8 +150,13 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return row;
     },
+    // Matches on every field present in `where` -- real Prisma
+    // semantics for updateMany's conditional-update pattern -- so this
+    // one mock serves both acceptInvite's status-guarded lock
+    // ({id, status}) and resendInvite's tokenHash-guarded rollback
+    // ({id, tokenHash}) without needing a second mock method.
     updateMany: async ({ where, data }) => {
-      const row = managerInviteRows.find((i) => i.id === where.id && i.status === where.status);
+      const row = managerInviteRows.find((i) => Object.keys(where).every((k) => i[k] === where[k]));
       if (!row) return { count: 0 };
       Object.assign(row, data, { updatedAt: new Date() });
       return { count: 1 };
@@ -200,12 +207,16 @@ require.cache[emailServicePath] = {
     sendCampaignEmail: async () => ({ success: 0, failed: 0, errors: [] }),
     sendWelcomeEmail: async () => ({ ok: true }),
     sendBusinessInviteEmail: async () => ({ ok: true }),
-    sendManagerInviteEmail: async (email, opts) => { sentEmails.push({ email, ...opts }); return { ok: true }; },
+    sendManagerInviteEmail: async (email, opts) => {
+      if (emailShouldFail) return { ok: false, error: 'simulated Resend failure' };
+      sentEmails.push({ email, ...opts });
+      return { ok: true };
+    },
   },
 };
 
 const adminRoutes = require('../src/routes/adminRoutes');
-const { handleListManagerInvites, handleCreateManagerInvite, handleRevokeManagerInvite } = adminRoutes;
+const { handleListManagerInvites, handleCreateManagerInvite, handleRevokeManagerInvite, handleResendManagerInvite } = adminRoutes;
 const { requireAdmin } = require('../src/middleware/adminMiddleware');
 const managerInviteAcceptRoutes = require('../src/routes/managerInviteAcceptRoutes');
 const { handleGetInvitePreview, handleAcceptInvite } = managerInviteAcceptRoutes;
@@ -529,6 +540,213 @@ test('Creating a duplicate pending invite for the same email + exact assignment 
     body: { email: 'christopher@example.com', networkId: NET1, locationId: MUNICH, role: 'location_manager' },
   }));
   assert.equal(res.statusCode, 409);
+});
+
+// ── RESEND ────────────────────────────────────────────────────────
+
+test('1. Global Admin can resend a pending invite', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', locationId: MUNICH });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, undefined); // 200 default (bare res.json())
+  assert.equal(res.body.invite.id, row.id);
+  assert.equal(res.body.emailSent, true);
+  assert.equal(sentEmails.length, 1);
+});
+
+test('2. City Manager cannot resend', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  const oldHash = row.tokenHash;
+  currentUserId = 'user_city_manager';
+  clerkUserFixture = { id: 'user_city_manager', publicMetadata: { role: 'staff' }, primaryEmailAddressId: null, emailAddresses: [] };
+  networkMemberRows.push({ id: 'nm_1', userId: 'user_city_manager', networkId: NET1, locationId: ULM, role: 'location_manager' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(managerInviteRows.find((i) => i.id === row.id).tokenHash, oldHash, 'token must not rotate');
+  assert.equal(sentEmails.length, 0);
+});
+
+test('3. Ordinary authenticated user cannot resend', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  currentUserId = 'user_ordinary';
+  clerkUserFixture = { id: 'user_ordinary', publicMetadata: {}, primaryEmailAddressId: null, emailAddresses: [] };
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(sentEmails.length, 0);
+});
+
+test('4. Unauthenticated user cannot resend', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ auth: false, params: { id: row.id } }));
+  assert.equal(res.statusCode, 401);
+  assert.equal(sentEmails.length, 0);
+});
+
+test('5. Resend uses the same ManagerInvite id', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.body.invite.id, row.id);
+});
+
+test('6. Resend never creates a second ManagerInvite row', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(managerInviteRows.length, 1);
+});
+
+test('7. New tokenHash differs from the old tokenHash after a successful resend', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  const oldHash = row.tokenHash;
+  await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  const updated = managerInviteRows.find((i) => i.id === row.id);
+  assert.notEqual(updated.tokenHash, oldHash);
+});
+
+test('8. Old token becomes invalid after a successful resend', async () => {
+  resetFixtures();
+  const { row, rawToken: oldRawToken } = makeInvite({ email: 'christopher@example.com' });
+  await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+
+  currentUserId = 'user_christopher';
+  clerkUserFixture = {
+    id: 'user_christopher', publicMetadata: {}, primaryEmailAddressId: 'ea_1',
+    emailAddresses: [{ id: 'ea_1', emailAddress: 'christopher@example.com', verification: { status: 'verified' } }],
+  };
+  const res = await callAuth(handleAcceptInvite, fakeReq({ body: { token: oldRawToken } }));
+  assert.equal(res.statusCode, 404, 'the old raw token must no longer resolve to any invite');
+});
+
+test('9. New token is accepted by the normal acceptance flow', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', locationId: MUNICH, role: 'location_manager' });
+  const resendRes = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(sentEmails.length, 1);
+  const newRawToken = sentEmails[0].inviteUrl.match(/inviteToken=([^&]+)/)[1];
+
+  currentUserId = 'user_christopher';
+  clerkUserFixture = {
+    id: 'user_christopher', publicMetadata: {}, primaryEmailAddressId: 'ea_1',
+    emailAddresses: [{ id: 'ea_1', emailAddress: 'christopher@example.com', verification: { status: 'verified' } }],
+  };
+  const acceptRes = await callAuth(handleAcceptInvite, fakeReq({ body: { token: newRawToken } }));
+  assert.equal(acceptRes.statusCode, 201);
+  assert.equal(acceptRes.body.networkMember.locationId, MUNICH);
+});
+
+test('10. Resend email recipient/scope comes from the stored invite, not the request', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', locationId: MUNICH, role: 'location_manager' });
+  await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id }, body: { email: 'attacker@example.com', locationId: ULM } }));
+  assert.equal(sentEmails.length, 1);
+  assert.equal(sentEmails[0].email, 'christopher@example.com');
+  assert.equal(sentEmails[0].cityName, 'München');
+});
+
+test('11. tokenHash and raw token are never present in the resend response body', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  const serialized = JSON.stringify(res.body);
+  assert.equal(res.body.invite.tokenHash, undefined);
+  assert.ok(!/rawtoken_/.test(serialized), 'raw token must never appear in the response');
+});
+
+test('12. Accepted invite cannot be resent', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', status: 'accepted', acceptedByUserId: 'user_christopher' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(sentEmails.length, 0);
+});
+
+test('13. Cancelled invite cannot be resent', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', status: 'cancelled' });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(sentEmails.length, 0);
+});
+
+test('14. Expired invite cannot be resent', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com', expiresAt: new Date(Date.now() - 1000) });
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 410);
+  assert.equal(managerInviteRows.find((i) => i.id === row.id).status, 'expired');
+});
+
+test('15. Email failure restores the previous tokenHash and reports failure -- invite stays pending and usable', async () => {
+  resetFixtures();
+  const { row, rawToken: originalRawToken } = makeInvite({ email: 'christopher@example.com' });
+  const originalHash = row.tokenHash;
+  emailShouldFail = true;
+
+  const res = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(res.statusCode, 502);
+  assert.ok(res.body.error);
+
+  const afterFailure = managerInviteRows.find((i) => i.id === row.id);
+  assert.equal(afterFailure.status, 'pending', 'invite must remain pending');
+  assert.equal(afterFailure.tokenHash, originalHash, 'tokenHash must be restored to its pre-resend value');
+
+  // Prove the restoration is functionally real, not just a matching
+  // field: the ORIGINAL raw token (from before this failed resend
+  // attempt) must still work.
+  emailShouldFail = false;
+  currentUserId = 'user_christopher';
+  clerkUserFixture = {
+    id: 'user_christopher', publicMetadata: {}, primaryEmailAddressId: 'ea_1',
+    emailAddresses: [{ id: 'ea_1', emailAddress: 'christopher@example.com', verification: { status: 'verified' } }],
+  };
+  const acceptRes = await callAuth(handleAcceptInvite, fakeReq({ body: { token: originalRawToken } }));
+  assert.equal(acceptRes.statusCode, 201, 'the pre-existing token must still be valid after a failed resend');
+});
+
+test('16. Resend never creates a NetworkMember', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+  await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(networkMemberRows.length, 0);
+});
+
+test('17. Two rapid resend requests (simulated double-click) leave the invite in one consistent, safe state', async () => {
+  resetFixtures();
+  const { row } = makeInvite({ email: 'christopher@example.com' });
+
+  const first = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  const second = await callAdmin(handleResendManagerInvite, fakeReq({ params: { id: row.id } }));
+  assert.equal(first.statusCode, undefined);
+  assert.equal(second.statusCode, undefined);
+
+  // No duplicate row, still the same single invite, still pending.
+  assert.equal(managerInviteRows.length, 1);
+  assert.equal(managerInviteRows[0].status, 'pending');
+  assert.equal(sentEmails.length, 2, 'both attempts do send an email -- disabling the button to prevent this is a frontend concern');
+
+  // Only the token from the SECOND (final) resend is valid -- the
+  // first email's link is a dead link, but that is a UX question for
+  // the frontend button-disable, not data corruption: exactly one
+  // consistent tokenHash exists server-side.
+  const firstRawToken = sentEmails[0].inviteUrl.match(/inviteToken=([^&]+)/)[1];
+  const secondRawToken = sentEmails[1].inviteUrl.match(/inviteToken=([^&]+)/)[1];
+  assert.notEqual(firstRawToken, secondRawToken);
+
+  currentUserId = 'user_christopher';
+  clerkUserFixture = {
+    id: 'user_christopher', publicMetadata: {}, primaryEmailAddressId: 'ea_1',
+    emailAddresses: [{ id: 'ea_1', emailAddress: 'christopher@example.com', verification: { status: 'verified' } }],
+  };
+  const acceptWithFirst = await callAuth(handleAcceptInvite, fakeReq({ body: { token: firstRawToken } }));
+  assert.equal(acceptWithFirst.statusCode, 404, 'the first (superseded) token must no longer work');
+
+  const acceptWithSecond = await callAuth(handleAcceptInvite, fakeReq({ body: { token: secondRawToken } }));
+  assert.equal(acceptWithSecond.statusCode, 201, 'the second (final) token must work');
 });
 
 // ── runner ──────────────────────────────────────────────────────

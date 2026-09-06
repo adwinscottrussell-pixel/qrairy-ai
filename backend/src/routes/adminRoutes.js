@@ -516,11 +516,53 @@ async function handleRevokeManagerInvite(req, res) {
   } catch (err) { return handleManagerInviteError(err, res, 'admin/manager-invites/:id/revoke POST'); }
 }
 
+// Rotates the token and re-sends the invitation email for an existing
+// PENDING ManagerInvite -- never creates a second row, never touches
+// NetworkMember. req.params.id is the only client input; email/name/
+// networkId/locationId/role are all read back from the stored invite
+// inside managerInviteService.resendInvite(), never from the request
+// body (there is no body this route reads at all).
+//
+// Failure-safety: resendInvite() has already rotated tokenHash in the
+// DB by the time sendManagerInviteEmail() is called below. If that send
+// fails, restoreTokenHashAfterFailedResend() reverts tokenHash back to
+// its pre-rotation value before this handler returns an error -- the
+// invitation is never left pointing at a token that was never
+// delivered. A resend failure is reported as a real error (not a
+// 201-with-emailSent:false like initial creation), since resending
+// exists FOR the email -- if it didn't go out, nothing useful happened.
+async function handleResendManagerInvite(req, res) {
+  try {
+    const { invite, rawToken, previousTokenHash } = await managerInviteService.resendInvite(req.params.id);
+
+    let cityName = null;
+    if (invite.locationId) {
+      const location = await prisma.location.findUnique({ where: { id: invite.locationId }, select: { name: true } });
+      cityName = location ? location.name : null;
+    }
+    const inviteUrl = buildManagerInviteUrl(rawToken);
+    const emailResult = await sendManagerInviteEmail(invite.email, { name: invite.name, cityName, role: invite.role, inviteUrl });
+    if (!emailResult.ok) {
+      await managerInviteService.restoreTokenHashAfterFailedResend(invite.id, invite.tokenHash, previousTokenHash);
+      console.error(`[admin/manager-invites] Resend for invite ${invite.id} failed, previous token restored:`, emailResult.error);
+      return res.status(502).json({ error: 'E-Mail-Versand fehlgeschlagen. Die bestehende Einladung bleibt unverändert gültig.' });
+    }
+
+    console.log(`[admin/manager-invites] Admin ${req.adminUser.email} resent invitation ${invite.id}`);
+    return res.json({
+      invite: { id: invite.id, email: invite.email, name: invite.name, role: invite.role, status: invite.status, networkId: invite.networkId, locationId: invite.locationId, expiresAt: invite.expiresAt },
+      emailSent: true,
+    });
+  } catch (err) { return handleManagerInviteError(err, res, 'admin/manager-invites/:id/resend POST'); }
+}
+
 router.get('/manager-invites', requireAdmin, handleListManagerInvites);
 router.post('/manager-invites', requireAdmin, handleCreateManagerInvite);
 router.post('/manager-invites/:id/revoke', requireAdmin, handleRevokeManagerInvite);
+router.post('/manager-invites/:id/resend', requireAdmin, handleResendManagerInvite);
 
 module.exports = router;
 module.exports.handleListManagerInvites = handleListManagerInvites; // exported for direct unit testing only
 module.exports.handleCreateManagerInvite = handleCreateManagerInvite; // exported for direct unit testing only
 module.exports.handleRevokeManagerInvite = handleRevokeManagerInvite; // exported for direct unit testing only
+module.exports.handleResendManagerInvite = handleResendManagerInvite; // exported for direct unit testing only
