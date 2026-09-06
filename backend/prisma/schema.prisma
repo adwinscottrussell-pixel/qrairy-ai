@@ -400,6 +400,7 @@ model Network {
 
   locations      Location[]
   networkMembers NetworkMember[]
+  managerInvites ManagerInvite[]
 }
 
 model Location {
@@ -417,6 +418,7 @@ model Location {
   networkMembers              NetworkMember[]
   cityBusinessInvites         CityBusinessInvite[]
   stadtPocketListingLocations StadtPocketListingLocation[]
+  managerInvites              ManagerInvite[]
 
   @@index([networkId])
 }
@@ -576,6 +578,65 @@ model CityBusinessInvite {
 
   @@index([locationId])
   @@index([email])
+}
+
+// ============================================================
+// ManagerInvite — Phase 6D.1 (additive only).
+//
+// A Global-Admin-initiated invitation for a prospective StadtPocket City
+// Manager (or network-wide manager), mirroring CityBusinessInvite's exact
+// pattern above (own header comment applies equally here): tokenHash only
+// -- the raw invite token is never persisted, only a comparable hash;
+// status is free-text matching every other status column in this schema
+// ("pending" | "cancelled" | "accepted" | "expired"); no enum type
+// introduced.
+//
+// Deliberately NOT itself a NetworkMember row: authorization must never
+// be granted merely because an invite exists or a token is known --
+// accepting an invite is a separate, explicit, server-verified step
+// (managerInviteService.acceptInvite) that creates the real NetworkMember
+// row via the existing networkAdminService.assignManager(), the same
+// function /admin/managers already uses for a manually-assigned manager.
+// This table is upstream of NetworkMember, never a competing/parallel
+// role source -- NetworkMember remains the sole authority
+// requireManagerScope/requireStadtpocketWriteScope actually read.
+//
+// locationId is nullable: null means a network-wide ("network_admin")
+// invite, non-null means a single-city ("location_manager") invite --
+// same shape networkAdminService.assignManager()/NetworkMember already
+// use, not a new convention.
+//
+// acceptedByUserId/acceptedNetworkMemberId are set only once, at accept
+// time -- an audit trail of who accepted and which real membership row
+// resulted, never used to grant access by themselves (status +
+// tokenHash + the atomic pending->accepted transition are what actually
+// gate the accept -- see managerInviteService.js).
+model ManagerInvite {
+  id         String    @id @default(cuid())
+  email      String
+  name       String?
+  networkId  String
+  network    Network   @relation(fields: [networkId], references: [id])
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+  role       String // "network_admin" | "location_manager" -- same MANAGER_ROLES set as NetworkMember.role
+
+  status String @default("pending") // pending | cancelled | accepted | expired
+
+  tokenHash String @unique
+
+  createdBy String // inviting Global Admin's Clerk userId
+
+  acceptedByUserId        String? // set only at accept time
+  acceptedNetworkMemberId String? // set only at accept time -- points at the resulting NetworkMember row
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  expiresAt DateTime
+
+  @@index([email])
+  @@index([networkId])
+  @@index([locationId])
 }
 
 // ============================================================

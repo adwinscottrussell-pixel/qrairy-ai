@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>StadtPocket Admin — Anmeldung</title>
+<style>
+  :root {
+    --coral: #ff6b5e;
+    --coral-dark: #f2564a;
+    --bg: #0a0f1e;
+    --surface-header: #0d1428;
+    --surface-card: #131c33;
+    --text-primary: #eef1f9;
+    --text-secondary: #97a3c4;
+    --text-tertiary: #6b7695;
+    --border-soft: #1c2542;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .brand-lockup { text-align: center; margin-bottom: 28px; }
+  .brand { font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
+  .brand span { color: var(--coral); }
+  .brand-sub { font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+  .card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 28px 24px;
+  }
+  .intro { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 20px; text-align: center; }
+  #clerk-sign-in { width: 100%; min-height: 60px; }
+  .loading-hint { text-align: center; color: var(--text-tertiary); font-size: 13px; padding: 20px 0; }
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin: 0 0 16px; }
+  .banner.info { background: rgba(255, 107, 94, 0.16); color: var(--coral); border: 1px solid rgba(255, 107, 94, 0.3); }
+  .footer-note { margin-top: 20px; color: var(--text-tertiary); font-size: 11px; text-align: center; max-width: 400px; }
+</style>
+</head>
+<body>
+
+<div class="brand-lockup">
+  <div class="brand">Stadt<span>Pocket</span></div>
+  <div class="brand-sub">Operations Console</div>
+</div>
+
+<div class="card">
+  <p class="intro">Dieses Portal ist für autorisierte StadtPocket City Manager und Administratoren. Melde dich mit deinem Google- oder E-Mail-Konto an.</p>
+  <div id="invite-banner"></div>
+  <div id="clerk-sign-in"><div class="loading-hint">Anmeldung wird geladen…</div></div>
+</div>
+
+<p class="footer-note">Kein öffentliches Konto-Registrierungsformular. Zugriff wird ausschließlich serverseitig über eine bestehende StadtPocket-Rolle oder eine gültige Einladung vergeben.</p>
+
+<script>
+  // Same-origin-only local-path validator, byte-identical to
+  // login.html's own isSafeLocalPath -- reused, not reimplemented, so
+  // this page's redirect safety is exactly as proven as the one already
+  // shipped in production. See login.html's own comment for the full
+  // reasoning (rejects any scheme, "//host", or backslash).
+  function isSafeLocalPath(p) {
+    if (typeof p !== 'string' || !p) return false;
+    if (p.indexOf('\\') !== -1) return false;
+    if (p.indexOf('//') === 0) return false;
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return false;
+    if (p.indexOf('://') !== -1) return false;
+    return true;
+  }
+
+  async function initClerk() {
+    await window.Clerk.load();
+
+    const params = new URLSearchParams(window.location.search);
+    const _rp = params.get('redirect');
+    const _inviteToken = params.get('inviteToken');
+    const _safePath = isSafeLocalPath(_rp) ? _rp : null;
+
+    // The default landing target is the StadtPocket Admin itself, never
+    // the general QRAIVY dashboard -- this is a dedicated front door.
+    // An inviteToken (if present) is carried through as part of the
+    // target path's own query string, so it reaches
+    // stadtpocket-admin-guard.js after sign-in without inventing a
+    // second redirect mechanism.
+    let defaultTarget = 'stadtpocket-admin.html';
+    if (_inviteToken) {
+      defaultTarget += '?inviteToken=' + encodeURIComponent(_inviteToken);
+      document.getElementById('invite-banner').innerHTML =
+        '<div class="banner info">Du hast eine StadtPocket-Einladung erhalten. Melde dich mit der eingeladenen E-Mail-Adresse an, um sie anzunehmen.</div>';
+    }
+
+    if (window.Clerk.user) {
+      window.location.href = _safePath || defaultTarget;
+      return;
+    }
+
+    const _base = window.location.origin + '/';
+    const _target = _base + (_safePath ? _safePath.replace(/^\/+/, '') : defaultTarget);
+    window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+      afterSignInUrl: _target,
+      afterSignUpUrl: _target,
+      redirectUrl: _target
+    });
+  }
+</script>
+<script
+  data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+  onload="initClerk()"
+></script>
+</body>
+</html>

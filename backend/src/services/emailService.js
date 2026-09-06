@@ -128,4 +128,47 @@ async function sendBusinessInviteEmail(email, { businessName, cityName, claimUrl
   }
 }
 
-module.exports = { sendCampaignEmail, sendWelcomeEmail, sendBusinessInviteEmail };
+// Phase 6D.1 — StadtPocket Global-Admin-initiated manager (City Manager /
+// network admin) invitation. inviteUrl is the ONLY place the raw invite
+// token appears -- it is passed in by the caller (managerInviteService's
+// createInvite already returns the raw token in-process, never
+// persisted) and is never logged here, matching
+// sendBusinessInviteEmail's exact discipline above.
+async function sendManagerInviteEmail(email, { name, cityName, role, inviteUrl }) {
+  const scopeLabel = cityName ? `StadtPocket ${cityName}` : 'StadtPocket (alle Städte)';
+  const roleLabel = role === 'network_admin' ? 'Netzwerk-Administrator' : 'City Manager';
+  const greeting = name ? `Hallo ${name},` : 'Hallo,';
+  try {
+    await getResendClient().emails.send({
+      from: getFrom('StadtPocket'),
+      to: email,
+      subject: `Du wurdest als StadtPocket ${roleLabel} eingeladen`,
+      html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#0a0f1e;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#131c33;border-radius:8px;overflow:hidden;margin-top:20px;">
+    <div style="background:#ff6b5e;padding:24px;text-align:center;">
+      <h1 style="color:#1a0e0c;margin:0;font-size:22px;">StadtPocket</h1>
+    </div>
+    <div style="padding:32px;">
+      <p style="color:#eef1f9;font-size:16px;line-height:1.6;margin:0 0 16px;">${greeting}</p>
+      <h2 style="color:#eef1f9;margin:0 0 16px;">Du wurdest als ${roleLabel} für ${scopeLabel} eingeladen</h2>
+      <p style="color:#97a3c4;font-size:15px;line-height:1.6;margin:0 0 24px;">Melde dich mit genau dieser E-Mail-Adresse (${email}) über Google oder E-Mail an, um die Einladung anzunehmen. Nach der Anmeldung erhältst du automatisch Zugriff auf ${scopeLabel} im StadtPocket Admin.</p>
+      <a href="${inviteUrl}" style="display:inline-block;background:#ff6b5e;color:#1a0e0c;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Einladung annehmen</a>
+      <p style="color:#6b7695;font-size:12px;line-height:1.6;margin:24px 0 0;">Falls du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>
+    </div>
+    <div style="background:#0d1428;padding:16px;text-align:center;font-size:12px;color:#6b7695;">
+      Gesendet von StadtPocket über QRAIVY.
+    </div>
+  </div>
+</body>
+</html>`
+    });
+    return { ok: true };
+  } catch(e) {
+    console.error('[Email] Manager invite email failed:', e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+module.exports = { sendCampaignEmail, sendWelcomeEmail, sendBusinessInviteEmail, sendManagerInviteEmail };

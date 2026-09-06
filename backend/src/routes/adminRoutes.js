@@ -19,6 +19,8 @@ const { requireAdmin } = require('../middleware/adminMiddleware');
 const { getHealthChecks } = require('../services/attentionService');
 const networkAdmin = require('../services/networkAdminService');
 const { createSupportAction } = require('../services/supportActionService');
+const managerInviteService = require('../services/managerInviteService');
+const { sendManagerInviteEmail } = require('../services/emailService');
 
 // ── GET /admin/overview ───────────────────────────────────────
 router.get('/overview', requireAdmin, async (req, res) => {
@@ -447,4 +449,78 @@ router.delete('/managers/:id', requireAdmin, async (req, res) => {
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 
+// ── Manager Invites (Phase 6D.1) ────────────────────────────────────────
+// Global Admin only (requireAdmin, same as every other /admin route in
+// this file). The actual grant of access never happens here -- see
+// managerInviteAcceptRoutes.js's POST /manager-invites/accept, which is
+// the only place a NetworkMember row is ever created from one of these.
+function handleManagerInviteError(err, res, route) {
+  if (err instanceof managerInviteService.ManagerInviteError) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  console.error(`[${route}]`, err);
+  return res.status(500).json({ error: 'Internal server error.' });
+}
+
+// Not FRONTEND_URL (that defaults to production www.qraivy.com, which
+// does not carry this Phase 6D.1 admin surface yet, being unmerged to
+// main) -- defaults to the actual preview frontend this phase is staged
+// on, override-able once this ships to production.
+function buildManagerInviteUrl(rawToken) {
+  const base = process.env.STADTPOCKET_FRONTEND_URL || 'https://preview.qraivy.com';
+  return `${base}/stadtpocket-login.html?inviteToken=${encodeURIComponent(rawToken)}`;
+}
+
+// Named + exported (unlike this file's older routes) so authorization
+// behavior (requireAdmin rejecting a City Manager/ordinary user/
+// unauthenticated caller) can be exercised directly in tests, matching
+// the convention already used by managerStadtpocketListingRoutes.js and
+// businessClaimRoutes.js.
+async function handleListManagerInvites(req, res) {
+  try {
+    return res.json({ invites: await managerInviteService.listInvites() });
+  } catch (err) { return handleManagerInviteError(err, res, 'admin/manager-invites GET'); }
+}
+
+async function handleCreateManagerInvite(req, res) {
+  try {
+    const { email, name, networkId, locationId, role } = req.body || {};
+    const { invite, rawToken } = await managerInviteService.createInvite({
+      email, name, networkId, locationId, role, createdBy: req.adminUser.clerkId,
+    });
+
+    let cityName = null;
+    if (invite.locationId) {
+      const location = await prisma.location.findUnique({ where: { id: invite.locationId }, select: { name: true } });
+      cityName = location ? location.name : null;
+    }
+    const inviteUrl = buildManagerInviteUrl(rawToken);
+    const emailResult = await sendManagerInviteEmail(invite.email, { name: invite.name, cityName, role: invite.role, inviteUrl });
+    if (!emailResult.ok) {
+      console.error(`[admin/manager-invites] Invite ${invite.id} created but email delivery failed:`, emailResult.error);
+    }
+
+    console.log(`[admin/manager-invites] Admin ${req.adminUser.email} invited ${invite.email} as ${invite.role} on Network ${invite.networkId}`);
+    return res.status(201).json({
+      invite: { id: invite.id, email: invite.email, name: invite.name, role: invite.role, status: invite.status, networkId: invite.networkId, locationId: invite.locationId, expiresAt: invite.expiresAt },
+      emailSent: emailResult.ok,
+    });
+  } catch (err) { return handleManagerInviteError(err, res, 'admin/manager-invites POST'); }
+}
+
+async function handleRevokeManagerInvite(req, res) {
+  try {
+    const invite = await managerInviteService.revokeInvite(req.params.id);
+    console.log(`[admin/manager-invites] Admin ${req.adminUser.email} revoked invitation ${invite.id}`);
+    return res.json({ invite: { id: invite.id, status: invite.status } });
+  } catch (err) { return handleManagerInviteError(err, res, 'admin/manager-invites/:id/revoke POST'); }
+}
+
+router.get('/manager-invites', requireAdmin, handleListManagerInvites);
+router.post('/manager-invites', requireAdmin, handleCreateManagerInvite);
+router.post('/manager-invites/:id/revoke', requireAdmin, handleRevokeManagerInvite);
+
 module.exports = router;
+module.exports.handleListManagerInvites = handleListManagerInvites; // exported for direct unit testing only
+module.exports.handleCreateManagerInvite = handleCreateManagerInvite; // exported for direct unit testing only
+module.exports.handleRevokeManagerInvite = handleRevokeManagerInvite; // exported for direct unit testing only
