@@ -43,7 +43,22 @@
     padding: 28px 24px;
   }
   .intro { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 20px; text-align: center; }
-  #clerk-sign-in { width: 100%; min-height: 60px; }
+  /* Clerk's mounted widget only ever receives this element as its mount
+     target -- it does not necessarily render at exactly this element's
+     width, and if its own natural/rendered width differs, plain block
+     layout has no reason to center that difference symmetrically. Making
+     this a centering flex container (rather than trying to guess/target
+     Clerk's own internal class names, which are not a stable public API)
+     centers whatever Clerk actually renders on the same axis as the
+     StadtPocket card around it, and the `> *` max-width keeps it from
+     ever forcing this container wider than the card's own content box. */
+  #clerk-sign-in {
+    width: 100%;
+    min-height: 60px;
+    display: flex;
+    justify-content: center;
+  }
+  #clerk-sign-in > * { max-width: 100%; }
   .loading-hint { text-align: center; color: var(--text-tertiary); font-size: 13px; padding: 20px 0; }
   .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin: 0 0 16px; }
   .banner.info { background: rgba(255, 107, 94, 0.16); color: var(--coral); border: 1px solid rgba(255, 107, 94, 0.3); }
