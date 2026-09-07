@@ -58,6 +58,20 @@
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
+  header .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+  header .logout-link {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 2px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  header .logout-link:hover { color: var(--text-primary); }
+  header .logout-link:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+  @media (max-width: 380px) { header .header-actions { gap: 8px; } }
   main { max-width: 900px; margin: 0 auto; padding: 28px 24px 96px; }
   @media (max-width: 720px) { main { padding: 20px 16px 96px; } header { padding: 14px 16px; } }
   .page { display: none; }
@@ -180,7 +194,10 @@
     <div class="brand">Stadt<span>Pocket</span> Admin</div>
     <div class="brand-sub">Operations Console</div>
   </div>
-  <div class="role-badge" id="role-badge">…</div>
+  <div class="header-actions">
+    <div class="role-badge" id="role-badge">…</div>
+    <button class="logout-link" type="button" onclick="signOutOfStadtPocket()">Abmelden</button>
+  </div>
 </header>
 
 <main>
