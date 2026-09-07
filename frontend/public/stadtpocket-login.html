@@ -95,8 +95,27 @@
     return true;
   }
 
+  // Shown in place of the initial "Anmeldung wird geladen…" placeholder
+  // if Clerk genuinely fails to initialize -- either the CDN script
+  // itself fails to load (see the script tag's onerror below) or the
+  // loaded SDK's own load() call rejects (see the catch below). Without
+  // this, a failure would leave the user staring at "wird geladen…"
+  // forever with no indication anything went wrong, which is not the
+  // same as a blank card but is still misleading.
+  function showClerkLoadError() {
+    const target = document.getElementById('clerk-sign-in');
+    if (target) {
+      target.innerHTML = '<div class="loading-hint">Anmeldung konnte nicht geladen werden. Bitte lade die Seite neu.</div>';
+    }
+  }
+
   async function initClerk() {
-    await window.Clerk.load();
+    try {
+      await window.Clerk.load();
+    } catch (e) {
+      showClerkLoadError();
+      return;
+    }
 
     const params = new URLSearchParams(window.location.search);
     const _rp = params.get('redirect');
@@ -123,7 +142,14 @@
 
     const _base = window.location.origin + '/';
     const _target = _base + (_safePath ? _safePath.replace(/^\/+/, '') : defaultTarget);
-    window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
+    const _mountTarget = document.getElementById('clerk-sign-in');
+    // mountSignIn appends Clerk's UI into this element rather than
+    // replacing its existing content -- clear the initial "Anmeldung
+    // wird geladen…" placeholder right before mounting so it disappears
+    // completely once the real sign-in UI takes over, instead of
+    // persisting forever as a stray sibling next to it.
+    _mountTarget.innerHTML = '';
+    window.Clerk.mountSignIn(_mountTarget, {
       afterSignInUrl: _target,
       afterSignUpUrl: _target,
       redirectUrl: _target
@@ -135,6 +161,7 @@
   src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
   type="text/javascript"
   onload="initClerk()"
+  onerror="showClerkLoadError()"
 ></script>
 </body>
 </html>
