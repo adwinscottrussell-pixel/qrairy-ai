@@ -834,6 +834,70 @@ model StadtPocketListingLocation {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  offers StadtPocketOffer[]
+
   @@index([listingId])
   @@index([locationId])
+}
+
+// ============================================================
+// StadtPocketOffer — Angebote Foundation, Phase A (additive only).
+//
+// Attached to StadtPocketListingLocation (the storefront), not
+// StadtPocketListing (the brand) -- same reasoning as address/phone/
+// website/hours above: a multi-storefront brand may run different
+// offers per physical location, so the offer belongs to the storefront
+// that runs it, not the brand as a whole.
+//
+// Reuses the exact draftData isolation pattern from StadtPocketListing/
+// StadtPocketListingLocation (see those models' own comments for the
+// full reasoning): live scalar columns are the published source of
+// truth, draftData holds pending edits, and is never cleared on
+// publish. status is free-text ("draft" | "published" | "archived"),
+// matching this schema's no-enum convention -- deliberately a NARROWER
+// set than StadtPocketListingLocation.publicationStatus's four values:
+// an Offer has no "paused" concept of its own in this phase (a
+// time-boxed promotion is either being worked on, live, or pulled --
+// "archived" already covers "no longer active" for a dated offer).
+//
+// No stored "expired" status: whether an offer has passed its own
+// endsAt is always computed from startsAt/endsAt at read time by the
+// service layer, never persisted -- avoids a second, potentially-stale
+// source of truth for the same fact a timestamp already carries.
+//
+// image reuses the exact {url, publicId, width, height} shape as
+// StadtPocketListing.headerImage (same Cloudinary account, same
+// trusted-origin validation in the service layer) -- no second media
+// system introduced. No upload endpoint exists yet for this field in
+// Phase A; it is validated and storable now so a later phase's upload
+// route needs no schema change.
+model StadtPocketOffer {
+  id                String                     @id @default(cuid())
+  listingLocationId String
+  listingLocation   StadtPocketListingLocation @relation(fields: [listingLocationId], references: [id])
+
+  title       String
+  description String?
+  offerText   String
+
+  image Json?
+
+  status String @default("draft") // draft | published | archived
+
+  startsAt    DateTime?
+  endsAt      DateTime?
+  publishedAt DateTime? // set on every successful publish call, same convention as StadtPocketListingLocation.publishedAt
+
+  // Phase A — Draft isolation, identical guarantee to StadtPocketListing/
+  // StadtPocketListingLocation.draftData: never read by any public-
+  // facing code path (none exists yet for offers in this phase).
+  draftData Json?
+
+  createdBy String // Clerk userId of the manager/admin who created this offer
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([listingLocationId])
+  @@index([status])
 }
