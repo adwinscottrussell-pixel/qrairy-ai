@@ -185,10 +185,193 @@
   @media (max-width: 640px) { .compare-block { grid-template-columns: 1fr; } }
   .compare-col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 8px; font-weight: 700; }
   .compare-col.draft h3 { color: var(--coral); }
+
+  /* ── Angebote (Phase B) ──────────────────────────────────────── */
+  .offer-card { display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .offer-card:hover { background: var(--surface-card-alt); border-color: var(--border); }
+  .offer-thumb {
+    width: 72px; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+    background: var(--surface-input); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary); font-size: 10px; text-align: center;
+  }
+  .offer-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .offer-card-body { flex: 1; min-width: 0; }
+  .offer-card-title { font-weight: 700; }
+  .offer-card-value { color: var(--coral); font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .offer-card-schedule { color: var(--text-tertiary); font-size: 12px; margin-top: 2px; }
+  .status-pill.archived { background: var(--surface-card-alt); color: var(--text-tertiary); }
+  .status-pill.expired { background: var(--danger-soft); color: var(--danger); }
+
+  .offer-step { display: none; }
+  .offer-step.active { display: block; }
+
+  .helper-text { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }
+
+  .image-choice-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .image-choice-row button { flex: 1; min-width: 160px; }
+  .crop-stage { margin-top: 14px; }
+  .crop-stage canvas { width: 100%; max-width: 420px; aspect-ratio: 4 / 3; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-input); display: block; }
+  .template-bg-row { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+  .template-bg-choice {
+    border: 2px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600;
+    color: var(--text-secondary); background: var(--surface-card-alt); cursor: pointer;
+  }
+  .template-bg-choice.selected { border-color: var(--coral); color: var(--coral); }
+
+  /* ── ✨ Mit KI erstellen -- honest inert scaffold ─────────────── */
+  .ai-badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--coral); background: var(--coral-soft); border-radius: 999px; padding: 5px 12px; }
+  .ai-style-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .ai-style-chip { background: var(--surface-card-alt); border: 1px solid var(--border); color: var(--text-secondary); border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .ai-style-chip:hover { border-color: var(--coral); color: var(--text-primary); }
+  .ai-style-chip.selected { background: var(--coral-soft); border-color: var(--coral); color: var(--coral); }
+  #ai-stage textarea:disabled { opacity: 0.6; cursor: not-allowed; }
+  #ai-stage button.primary:disabled { background: var(--surface-card-alt); color: var(--text-tertiary); cursor: not-allowed; }
+
+  .offer-image-preview {
+    width: 100%; max-width: 420px; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden;
+    background: var(--surface-input); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 13px; text-align: center; padding: 16px;
+  }
+  .offer-image-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .deal-preview-card { max-width: 420px; margin: 0 auto; }
+  .deal-preview-card .deal-preview-image { width: 100%; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: var(--surface-input); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 13px; }
+  .deal-preview-card .deal-preview-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .deal-preview-card .deal-preview-value { color: var(--coral); font-weight: 800; font-size: 15px; margin-top: 12px; }
+  .deal-preview-card .deal-preview-title { font-weight: 700; font-size: 17px; margin-top: 4px; }
+  .deal-preview-card .deal-preview-desc { color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+  .deal-preview-card .deal-preview-dates { color: var(--text-tertiary); font-size: 12px; margin-top: 10px; }
+  .preview-honesty-note { text-align: center; font-size: 12px; color: var(--text-tertiary); margin-top: 10px; }
+
+  /* ── Business Portal shell (sidebar + content), approved direction ── */
+  #pre-shell { display: block; }
+  #business-shell { display: none; }
+  .shell-layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 260px; flex-shrink: 0; background: var(--surface-header); border-right: 1px solid var(--border-soft);
+    display: flex; flex-direction: column; padding: 20px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-brand { padding: 4px 6px 18px; }
+  .sidebar-brand .brand { font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+  .sidebar-brand .brand span { color: var(--coral); }
+  .sidebar-brand .brand-sub { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+
+  .sidebar-business-card { display: flex; gap: 10px; align-items: center; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px; margin-bottom: 18px; }
+  .sidebar-business-card .thumb { width: 44px; height: 44px; border-radius: 9px; overflow: hidden; background: var(--surface-input); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 9px; text-align: center; }
+  .sidebar-business-card .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sidebar-business-card .info { min-width: 0; }
+  .sidebar-business-card .biz-name { font-weight: 700; font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-business-card .biz-city { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+  .sidebar-business-card .biz-status { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--success); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .sidebar-business-card .biz-status .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--success); }
+  .sidebar-business-card .biz-status.is-draft { color: var(--coral); } .sidebar-business-card .biz-status.is-draft .dot { background: var(--coral); }
+  .sidebar-business-card .biz-status.is-paused { color: var(--text-tertiary); } .sidebar-business-card .biz-status.is-paused .dot { background: var(--text-tertiary); }
+
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; cursor: pointer;
+    color: var(--text-secondary); font-size: 13px; font-weight: 600; border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface-card-alt); color: var(--text-primary); }
+  .nav-item.active { background: var(--coral-soft); border-color: var(--coral); color: var(--coral); }
+  .nav-item .nav-icon { width: 18px; text-align: center; flex-shrink: 0; }
+  .nav-item.disabled { color: var(--text-tertiary); opacity: 0.42; cursor: not-allowed; }
+  .nav-item.disabled:hover { background: transparent; color: var(--text-tertiary); }
+  .nav-item .soon-badge { margin-left: auto; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); }
+
+  .sidebar-support { margin-top: 16px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; }
+  .sidebar-support .q { font-weight: 700; font-size: 13px; }
+  .sidebar-support .a { font-size: 12px; color: var(--text-tertiary); margin: 3px 0 10px; }
+  .sidebar-support button { width: 100%; }
+  .sidebar-back { display: flex; align-items: center; gap: 8px; padding: 12px 10px 4px; color: var(--text-tertiary); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .sidebar-back:hover { color: var(--text-primary); }
+
+  .sidebar-mobile-toggle { display: none; }
+  .sidebar-scrim { display: none; }
+
+  .shell-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .shell-topbar {
+    background: var(--surface-header); border-bottom: 1px solid var(--border-soft); padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 15;
+  }
+  .shell-content { max-width: 1120px; width: 100%; margin: 0 auto; padding: 28px 28px 96px; }
+  @media (max-width: 720px) { .shell-content { padding: 20px 16px 96px; } .shell-topbar { padding: 12px 16px; } }
+
+  .page-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .page-heading-row h1 { margin: 4px 0 6px; }
+  .page-heading-row .subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
+  @media (max-width: 900px) {
+    .sidebar { position: fixed; left: 0; top: 0; z-index: 40; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 0 0 100vmax rgba(0,0,0,0); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-mobile-toggle {
+      display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9px;
+      background: var(--surface-card-alt); border: 1px solid var(--border); color: var(--text-primary); font-size: 16px; cursor: pointer;
+    }
+    .sidebar-scrim.open { display: block; position: fixed; inset: 0; background: rgba(5,8,16,0.6); z-index: 35; }
+  }
+
+  /* ── Deal Builder step cards (approved direction) ─────────────── */
+  .step-nav { display: flex; gap: 10px; margin: 0 0 20px; flex-wrap: wrap; }
+  .step-nav .step {
+    flex: 1; min-width: 160px; display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 14px 16px; border-radius: 12px; background: var(--surface-card); border: 1px solid var(--border-soft); cursor: pointer;
+  }
+  .step-nav .step .step-num {
+    width: 30px; height: 30px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; background: var(--surface-card-alt); color: var(--text-tertiary); font-size: 14px; font-weight: 800;
+  }
+  /* True two-line hierarchy: title and subtitle are separate flex
+     items stacked in a column, never inline siblings -- this is what
+     was missing before and caused "InhaltWas möchtest du anbieten?"
+     to run together on one line. */
+  .step-nav .step .step-labels { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .step-nav .step .step-title { font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+  .step-nav .step .step-sub { font-size: 11px; font-weight: 500; color: var(--text-secondary); line-height: 1.35; white-space: normal; }
+  .step-nav .step.active { border-color: var(--coral); background: var(--coral-soft); }
+  .step-nav .step.active .step-num { background: var(--coral); color: #1a0e0c; }
+  .step-nav .step.done .step-num { background: var(--success); color: #062016; }
+  @media (max-width: 720px) {
+    .step-nav .step { padding: 12px; gap: 10px; min-width: 140px; }
+    .step-nav .step .step-num { width: 26px; height: 26px; font-size: 13px; }
+    .step-nav .step .step-title { font-size: 12px; }
+    .step-nav .step .step-sub { font-size: 10px; }
+  }
+
+  /* ── Deal-type selection cards (approved direction) ───────────── */
+  .deal-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 12px 0 4px; }
+  .deal-type-card {
+    background: var(--surface-card-alt); border: 1px solid var(--border); border-radius: 12px; padding: 14px 12px;
+    text-align: left; cursor: pointer; color: var(--text-secondary);
+  }
+  .deal-type-card:hover { border-color: var(--coral); }
+  .deal-type-card .icon { font-size: 20px; color: var(--coral); margin-bottom: 8px; display: block; }
+  .deal-type-card .label { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+  .deal-type-card .example { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .deal-type-card.selected { border-color: var(--coral); background: var(--coral-soft); }
+  .deal-type-card.selected .label { color: var(--coral); }
+
+  /* ── Wizard two-column layout with live preview (approved direction) */
+  .wizard-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .wizard-grid { grid-template-columns: 1fr; } }
+  .wizard-main { min-width: 0; }
+  .live-preview-panel { position: sticky; top: 84px; }
+  @media (max-width: 900px) { .live-preview-panel { position: static; } }
+  .live-preview-panel h2 { margin-top: 0; }
+  .live-preview-note { display: flex; gap: 8px; align-items: flex-start; background: var(--surface-card-alt); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-secondary); margin-top: 12px; line-height: 1.4; }
+  /* Deal Builder explanatory copy under headings reads too dark against
+     navy at the default tertiary token -- bumped to secondary, scoped
+     to this page only (the rest of the app keeps .muted as-is). */
+  #page-offer-editor .muted { color: var(--text-secondary); }
+  .deal-preview-image.placeholder, .offer-image-preview.placeholder { color: var(--text-tertiary); font-size: 12px; }
+  .deal-preview-dates.placeholder { color: var(--text-tertiary); font-style: italic; }
+  .deal-preview-value.placeholder, .deal-preview-title.placeholder { color: var(--text-tertiary); font-style: italic; font-weight: 500; }
 </style>
 </head>
 <body>
 
+<div id="pre-shell">
 <header>
   <div class="brand-lockup">
     <div class="brand">Stadt<span>Pocket</span> Admin</div>
@@ -286,23 +469,69 @@
     </div>
   </section>
 
-  <section class="page" id="page-editor">
-    <nav class="breadcrumb">
-      <span class="crumb">StadtPocket Admin</span>
-      <span class="crumb-sep">/</span>
-      <span class="crumb" id="editor-crumb-city"></span>
-      <span class="crumb-sep">/</span>
-      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
-      <span class="crumb-sep">/</span>
-      <span class="crumb crumb-current" id="editor-crumb-business"></span>
-    </nav>
 
-    <div class="business-header">
-      <div class="row">
-        <h1 id="editor-title" style="margin:0"></h1>
-        <span class="status-pill" id="editor-status-pill"></span>
+</main>
+</div><!-- /pre-shell -->
+
+<div id="business-shell">
+<div class="sidebar-scrim" id="sidebar-scrim" onclick="closeMobileSidebar()"></div>
+<div class="shell-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand">Stadt<span>Pocket</span> Admin</div>
+    <div class="brand-sub">Business Portal</div>
+  </div>
+
+  <div class="sidebar-business-card">
+    <div class="thumb" id="sidebar-biz-thumb">…</div>
+    <div class="info">
+      <div class="biz-name" id="sidebar-biz-name"></div>
+      <div class="biz-city" id="sidebar-biz-city"></div>
+      <div class="biz-status" id="sidebar-biz-status"><span class="dot"></span><span id="sidebar-biz-status-text"></span></div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-item disabled"><span class="nav-icon">⌂</span>Dashboard<span class="soon-badge">Bald</span></div>
+    <div class="nav-item" id="nav-profil" onclick="goToProfil()"><span class="nav-icon">◎</span>Profil</div>
+    <div class="nav-item disabled"><span class="nav-icon">⚲</span>Standorte<span class="soon-badge">Bald</span></div>
+    <div class="nav-item" id="nav-angebote" onclick="goToOffersList()"><span class="nav-icon">◆</span>Angebote</div>
+    <div class="nav-item disabled"><span class="nav-icon">▤</span>Aktuelles<span class="soon-badge">Bald</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">▦</span>Stempelkarte<span class="soon-badge">Bald</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">▧</span>Galerie / Medien<span class="soon-badge">Bald</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">▥</span>Statistiken<span class="soon-badge">Bald</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">◐</span>Kunden<span class="soon-badge">Bald</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">⚙</span>Einstellungen<span class="soon-badge">Bald</span></div>
+  </nav>
+
+  <div class="sidebar-support">
+    <div class="q">Fragen?</div>
+    <div class="a">Unser Team ist für dich da.</div>
+    <button class="secondary" type="button">Support kontaktieren</button>
+  </div>
+  <div class="sidebar-back" onclick="backToBusinesses()">← Zurück zu StadtPocket</div>
+</aside>
+
+<div class="shell-main">
+  <header class="shell-topbar">
+    <button class="sidebar-mobile-toggle" type="button" onclick="openMobileSidebar()">☰</button>
+    <div style="flex:1"></div>
+    <div class="header-actions">
+      <div class="role-badge" id="shell-role-badge">…</div>
+      <button class="logout-link" type="button" onclick="signOutOfStadtPocket()">Abmelden</button>
+    </div>
+  </header>
+
+  <main class="shell-content">
+
+  <!-- PROFIL (existing business editor, unchanged apart from Angebote moving to its own destination) -->
+  <section class="page" id="page-editor">
+    <div class="page-heading-row">
+      <div>
+        <h1 id="editor-title" style="margin:4px 0 6px"></h1>
+        <p class="subtitle" id="editor-sub"></p>
       </div>
-      <p class="muted" id="editor-sub" style="margin:8px 0 0"></p>
+      <span class="status-pill" id="editor-status-pill"></span>
     </div>
 
     <div id="editor-banner"></div>
@@ -361,7 +590,187 @@
     </div>
   </section>
 
-</main>
+  <!-- ANGEBOTE — dedicated destination (approved direction) -->
+  <section class="page" id="page-offers">
+    <div class="page-heading-row">
+      <div>
+        <h1>Angebote</h1>
+        <p class="subtitle">Erstelle und verwalte deine Angebote.</p>
+      </div>
+      <button class="primary" onclick="openNewOffer()">+ Angebot erstellen</button>
+    </div>
+    <div id="offers-banner"></div>
+    <div id="offers-list"></div>
+  </section>
+
+  <!-- DEAL BUILDER (offer editor) -->
+  <section class="page" id="page-offer-editor">
+    <nav class="breadcrumb">
+      <a class="crumb crumb-link" onclick="backToOffersList()">Angebote</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current" id="offer-crumb-title">Neues Angebot erstellen</span>
+    </nav>
+
+    <div class="page-heading-row">
+      <div>
+        <h1 id="offer-editor-title" style="margin:4px 0 6px">Neues Angebot erstellen</h1>
+        <p class="subtitle">Erstelle in wenigen Schritten ein professionelles Angebot für deine Kunden.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="status-pill" id="offer-status-pill" style="display:none"></span>
+        <button class="secondary" id="offer-topbar-save-btn" onclick="saveOfferDraftFromEditor()" style="display:none">Als Entwurf speichern</button>
+      </div>
+    </div>
+
+    <div id="offer-editor-banner"></div>
+
+    <div class="step-nav">
+      <div class="step" id="step-nav-1" onclick="goToOfferStep(1)"><span class="step-num">1</span><span class="step-labels"><span class="step-title">Inhalt</span><span class="step-sub">Was möchtest du anbieten?</span></span></div>
+      <div class="step" id="step-nav-2" onclick="goToOfferStep(2)"><span class="step-num">2</span><span class="step-labels"><span class="step-title">Bild</span><span class="step-sub">Angebotsbild auswählen oder erstellen</span></span></div>
+      <div class="step" id="step-nav-3" onclick="goToOfferStep(3)"><span class="step-num">3</span><span class="step-labels"><span class="step-title">Zeitraum</span><span class="step-sub">Gültigkeit festlegen</span></span></div>
+      <div class="step" id="step-nav-4" onclick="goToOfferStep(4)"><span class="step-num">4</span><span class="step-labels"><span class="step-title">Überprüfen</span><span class="step-sub">Vorschau &amp; veröffentlichen</span></span></div>
+    </div>
+
+    <div class="wizard-grid">
+      <div class="wizard-main">
+
+        <!-- STEP 1 — INHALT -->
+        <div class="offer-step" id="offer-step-1">
+          <div class="card section-card">
+            <h2 style="margin-top:0">Was für ein Angebot möchtest du erstellen?</h2>
+            <p class="muted" style="margin:0 0 4px">Wähle eine Vorlage als Startpunkt. Du kannst alles danach noch ändern.</p>
+            <div class="deal-type-grid" id="deal-type-chips"></div>
+
+            <label>Titel des Angebots</label>
+            <input type="text" id="offer-f-title" placeholder="z. B. 20% auf ausgewählte Artikel" oninput="renderDealPreview()" />
+
+            <label>Angebotswert</label>
+            <input type="text" id="offer-f-offerText" placeholder="z. B. „20% Rabatt“, „2 für 1“, „Nur 19,90 €“" oninput="renderDealPreview()" />
+            <p class="helper-text">Das ist der kurze, prägnante Wert, den Kunden sofort sehen.</p>
+
+            <label>Beschreibung (optional)</label>
+            <textarea id="offer-f-description" placeholder="Details, Bedingungen, was ist enthalten…" oninput="renderDealPreview()"></textarea>
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="backToOffersList()">Abbrechen</button>
+            <button class="primary" onclick="offerStepNext(1)">Weiter: Bild</button>
+          </div>
+        </div>
+
+        <!-- STEP 2 — BILD -->
+        <div class="offer-step" id="offer-step-2">
+          <div class="card section-card">
+            <h2 style="margin-top:0">Bild für dein Angebot</h2>
+            <p class="muted" style="margin:0 0 4px">Wähle, wie dein Bild entstehen soll.</p>
+            <div class="offer-image-preview" id="offer-image-preview">Noch kein Bild ausgewählt.</div>
+            <p class="helper-text">Für StadtPocket automatisch optimiert.</p>
+            <div class="image-choice-row">
+              <input type="file" id="offer-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleOfferImageSelected(event)" />
+              <button class="secondary" type="button" onclick="openAiImageStage()">✨ Mit KI erstellen</button>
+              <button class="secondary" type="button" onclick="openTemplatePicker()">🖼 Beispiel auswählen</button>
+              <button class="secondary" type="button" onclick="document.getElementById('offer-image-file-input').click()">↑ Eigenes Bild hochladen</button>
+            </div>
+            <div id="offer-image-banner"></div>
+
+            <!-- ✨ Mit KI erstellen -- scaffold only, honestly inert.
+                 Actual generation is out of scope for this phase; this
+                 shows the intended future shape (business/Angebot
+                 context understood automatically, optional owner
+                 direction, style choice) without pretending to work. -->
+            <div class="crop-stage ai-stage" id="ai-stage" style="display:none">
+              <span class="ai-badge">✨ KI-Bilderstellung</span>
+              <p class="muted" id="ai-stage-context" style="margin:8px 0 4px"></p>
+              <label style="margin-top:10px">Bildidee beschreiben (optional)</label>
+              <textarea id="ai-stage-prompt" placeholder="z. B. „warmes Licht“, „Produkt im Fokus“…" disabled></textarea>
+              <label style="margin-top:14px">Stil</label>
+              <div class="ai-style-row" id="ai-style-row"></div>
+              <p class="helper-text" style="margin-top:14px">KI-Bilderstellung ist in dieser Version noch nicht verfügbar. Sobald sie live ist, nutzt StadtPocket automatisch den Geschäfts- und Angebotskontext, um passende Bilder vorzuschlagen — für jede Branche.</p>
+              <div class="actions" style="margin-top:12px">
+                <button class="secondary" type="button" onclick="cancelImageStaging()">Schließen</button>
+                <button class="primary" type="button" disabled title="Bald verfügbar">✨ Bild erstellen (bald verfügbar)</button>
+              </div>
+            </div>
+
+            <div class="crop-stage" id="crop-stage" style="display:none">
+              <p class="muted" style="margin:0 0 8px">Automatischer 4:3-Ausschnitt (mittig zugeschnitten):</p>
+              <canvas id="crop-canvas" width="1200" height="900"></canvas>
+              <div class="actions" style="margin-top:12px">
+                <button class="secondary" type="button" onclick="cancelImageStaging()">Verwerfen</button>
+                <button class="primary" type="button" onclick="confirmStagedImage()">Bild verwenden</button>
+              </div>
+            </div>
+
+            <!-- 🖼 Beispiel auswählen -- today this is one deterministic
+                 generated starter image (brand color or the business's
+                 own real photo, plus the real offer text/business name).
+                 Framed as an early, category-neutral version of the
+                 eventual category-aware starter-image system, never a
+                 fixed gallery for one industry. -->
+            <div class="crop-stage" id="template-stage" style="display:none">
+              <p class="muted" style="margin:0 0 8px">Automatisch erzeugtes Beispielbild auf Basis deines Angebots — eine einfache Startvorlage, bis echte Bildvorschläge verfügbar sind.</p>
+              <label style="margin-top:0">Hintergrund</label>
+              <div class="template-bg-row" id="template-bg-row"></div>
+              <canvas id="template-canvas" width="1200" height="900"></canvas>
+              <p class="helper-text">Das Beispielbild zeigt nur den Angebotswert — Beschreibung und Details bleiben Text auf der Seite, nicht im Bild.</p>
+              <div class="actions" style="margin-top:12px">
+                <button class="secondary" type="button" onclick="cancelImageStaging()">Verwerfen</button>
+                <button class="primary" type="button" onclick="confirmStagedImage()">Beispielbild übernehmen</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="goToOfferStep(1)">Zurück</button>
+            <button class="primary" onclick="offerStepNext(2)">Weiter: Zeitraum</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 — ZEITRAUM -->
+        <div class="offer-step" id="offer-step-3">
+          <div class="card section-card">
+            <h2 style="margin-top:0">Wie lange gilt das Angebot?</h2>
+            <p class="muted" style="margin:0 0 4px">Optional. Ohne Enddatum läuft das Angebot, bis du es archivierst.</p>
+            <label>Startdatum (optional)</label>
+            <input type="text" id="offer-f-startsAt" placeholder="TT.MM.JJJJ" oninput="renderDealPreview()" />
+            <label>Enddatum (optional)</label>
+            <input type="text" id="offer-f-endsAt" placeholder="TT.MM.JJJJ" oninput="renderDealPreview()" />
+            <div id="offer-dates-banner"></div>
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="goToOfferStep(2)">Zurück</button>
+            <button class="primary" onclick="offerStepNext(3)">Weiter: Überprüfen</button>
+          </div>
+        </div>
+
+        <!-- STEP 4 — ÜBERPRÜFEN -->
+        <div class="offer-step" id="offer-step-4">
+          <div class="card section-card">
+            <h2 style="margin-top:0">Bereit zum Veröffentlichen?</h2>
+            <p class="muted" style="margin:0">Prüfe die Vorschau rechts — sie zeigt genau deine aktuellen Eingaben, keine erfundenen Werte.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="goToOfferStep(3)">Zurück</button>
+            <button class="primary" id="offer-save-draft-btn" onclick="saveOfferDraftFromEditor()">Als Entwurf speichern</button>
+            <button class="publish" id="offer-publish-btn" onclick="publishOfferFromEditor()">Veröffentlichen</button>
+            <button class="ghost" id="offer-archive-btn" onclick="archiveOfferFromEditor()" style="display:none">Archivieren / Veröffentlichung beenden</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT-SIDE LIVE PREVIEW (persistent across all 4 steps) -->
+      <aside class="live-preview-panel card section-card">
+        <h2>Vorschau</h2>
+        <p class="muted" style="margin:0 0 12px">So könnte dein Angebot später für Kunden aussehen.</p>
+        <div class="deal-preview-card" id="deal-preview-card"></div>
+        <div class="live-preview-note">ℹ️ Dies ist nur eine Beispielvorschau auf Basis deiner aktuellen Eingaben. Noch nichts wird veröffentlicht.</div>
+      </aside>
+    </div>
+  </section>
+
+  </main>
+</div>
+</div>
+</div><!-- /business-shell -->
 
 <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/stadtpocket-admin-guard.js"></script>
@@ -430,10 +839,63 @@
   const HEADER_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
   let headerImageJustUploaded = false;
 
+  // Business Portal shell pages live in a separate wrapper from the
+  // pre-selection pages (Städte/Geschäfte/Neues Geschäft/Unauthorized/
+  // Loading) -- showPage() toggles both which .page is visible AND
+  // which of the two top-level wrappers is shown, since a City Manager
+  // is only ever "inside" the sidebar-driven Business Portal once a
+  // specific business is open.
+  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor'];
+  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote' };
+
   function showPage(id) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+
+    const isShellPage = SHELL_PAGES.includes(id);
+    document.getElementById('pre-shell').style.display = isShellPage ? 'none' : '';
+    document.getElementById('business-shell').style.display = isShellPage ? '' : 'none';
+    if (isShellPage) {
+      document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+      const activeNavId = NAV_FOR_PAGE[id];
+      if (activeNavId) document.getElementById(activeNavId).classList.add('active');
+      closeMobileSidebar();
+    }
   }
+
+  function openMobileSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-scrim').classList.add('open');
+  }
+  function closeMobileSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-scrim').classList.remove('open');
+  }
+
+  // Populates the sidebar's business-identity card from the same
+  // currentListing state the Profil page itself reads -- no separate
+  // fetch, no separate source of truth.
+  function renderSidebarBusinessCard() {
+    if (!currentListing) return;
+    const city = cities.find((c) => c.id === currentLocationId);
+    document.getElementById('sidebar-biz-name').textContent = currentListing.name || '(ohne Namen)';
+    document.getElementById('sidebar-biz-city').textContent = city ? city.name : '';
+    const thumb = document.getElementById('sidebar-biz-thumb');
+    if (currentListing.headerImage && currentListing.headerImage.url) {
+      thumb.innerHTML = `<img src="${escapeHtml(headerImageDisplayUrl(currentListing.headerImage.url))}" alt="" />`;
+    } else {
+      thumb.textContent = '';
+    }
+    const statusEl = document.getElementById('sidebar-biz-status');
+    const statusTextEl = document.getElementById('sidebar-biz-status-text');
+    const status = currentListing.publicationStatus;
+    statusEl.className = 'biz-status' + (status === 'published' ? '' : status === 'paused' ? ' is-paused' : ' is-draft');
+    statusTextEl.textContent = status === 'published' ? 'Live' : status === 'paused' ? 'Pausiert' : 'Entwurf';
+    document.getElementById('shell-role-badge').textContent = document.getElementById('role-badge').textContent;
+  }
+
+  function goToProfil() { showPage('page-editor'); }
+  function goToOffersList() { showPage('page-offers'); renderOffersSection(); }
 
   async function getToken() {
     await window.Clerk.load();
@@ -664,7 +1126,6 @@
     const city = cities.find((c) => c.id === locationId);
     document.getElementById('businesses-title').textContent = `Geschäfte in ${city ? city.name : locationId}`;
     document.getElementById('businesses-crumb-city').textContent = city ? city.name : locationId;
-    document.getElementById('editor-crumb-city').textContent = city ? city.name : locationId;
     document.getElementById('init-city-name').textContent = city ? city.name : locationId;
     banner('businesses-banner', 'info', '');
     showPage('page-businesses');
@@ -726,6 +1187,7 @@
       return;
     }
     loadListingIntoEditor(res.body.listing);
+    renderSidebarBusinessCard();
     showPage('page-editor');
   }
 
@@ -747,6 +1209,7 @@
     }
     currentListingLocationId = res.body.listing.listingLocationId;
     loadListingIntoEditor(res.body.listing);
+    renderSidebarBusinessCard();
     banner('publish-compare', 'success', '');
     showPage('page-editor');
     await renderCityList();
@@ -756,7 +1219,6 @@
   function loadListingIntoEditor(listing) {
     currentListing = listing;
     document.getElementById('editor-title').textContent = listing.name || '(ohne Namen)';
-    document.getElementById('editor-crumb-business').textContent = listing.name || '(ohne Namen)';
     const pill = document.getElementById('editor-status-pill');
     pill.textContent = listing.publicationStatus === 'published' ? 'Live' : listing.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf';
     pill.className = 'status-pill ' + (listing.publicationStatus === 'published' ? 'published' : 'draft');
@@ -1085,6 +1547,675 @@
       publishInFlight = false;
       btn.disabled = false;
     }
+  }
+
+  // ============================================================
+  // Angebote — StadtPocket Deal Builder, Phase B.
+  //
+  // No new backend endpoints beyond Phase B's own additions -- every
+  // call below hits /manager/stadtpocket/listings/:locationId/
+  // :listingLocationId/offers... (managerStadtpocketOfferRoutes.js).
+  // Same authorization posture as the listing editor above: the backend
+  // is the sole authority, this file never grants a read/write based on
+  // which buttons happen to be visible.
+  //
+  // Image standard: every StadtPocket Deal Image is 4:3, 1200x900px,
+  // "one Angebot -> one master asset." Both paths below (upload+crop,
+  // template) always render to a 1200x900 <canvas> client-side before
+  // upload -- the backend never receives, and never needs to validate,
+  // an arbitrary aspect ratio. Both reuse the EXACT SAME upload
+  // endpoint/commit flow as the listing header image (upload -> returns
+  // Cloudinary metadata only -> committed via the existing draft PUT),
+  // no second media system.
+  //
+  // Deal-type chips (Step 1) are a pure UX helper: they only pre-fill
+  // the existing offerText/title fields with a suggested starting
+  // string. No new field, no new concept -- the Phase A model has
+  // exactly title/description/offerText/image/startsAt/endsAt, and
+  // that's all this editor ever sends.
+  // ============================================================
+
+  const DEAL_TYPES = [
+    { label: '% Prozent-Rabatt', value: '20% Rabatt', example: 'z. B. 20% Rabatt', icon: '%' },
+    { label: '2 für 1', value: '2 für 1', example: 'z. B. 2 für 1', icon: '🎁' },
+    { label: 'Festpreis', value: 'Nur 5,90 €', example: 'z. B. 5,90 €', icon: '€' },
+    { label: 'Kostenlos / Zugabe', value: 'Gratis dazu', example: 'z. B. 1 Artikel gratis', icon: '🎁' },
+    { label: 'Upgrade', value: 'Kostenloses Upgrade', example: 'z. B. Größe gratis', icon: '↗' },
+    { label: 'Eigenes Angebot', value: '', example: 'Freie Gestaltung', icon: '✎' },
+  ];
+  const OFFER_STATUS_LABEL = { draft: 'Entwurf', published: 'Live', archived: 'Archiviert' };
+  const OFFER_STATUS_CLASS = { draft: 'draft', published: 'published', archived: 'archived' };
+  const OFFER_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  const OFFER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+  let currentOffers = [];
+  let currentOfferId = null;
+  let currentOffer = null;
+  let offerImageStageMode = null; // 'upload' | 'template' | null
+  let selectedTemplateBg = 'coral';
+
+  // ── Offers list (business editor page) ─────────────────────────
+  async function renderOffersSection() {
+    const listEl = document.getElementById('offers-list');
+    listEl.innerHTML = '<p class="muted">Laden…</p>';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers`);
+    if (!res.ok) {
+      listEl.innerHTML = '<p class="muted">Fehler beim Laden der Angebote.</p>';
+      return;
+    }
+    currentOffers = res.body.offers || [];
+    if (currentOffers.length === 0) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">Noch keine Angebote</p>
+          <p class="muted" style="margin:0">Erstelle dein erstes Angebot und erreiche deine Kunden direkt über StadtPocket.</p>
+        </div>
+      `;
+      return;
+    }
+    listEl.innerHTML = currentOffers.map((o) => offerCardHtml(o)).join('');
+  }
+
+  function offerCardHtml(o) {
+    const statusKey = o.status === 'published' && o.isExpired ? 'expired' : o.status;
+    const statusLabel = o.status === 'published' && o.isExpired ? 'Abgelaufen' : OFFER_STATUS_LABEL[o.status] || o.status;
+    const thumb = o.image && o.image.url
+      ? `<img src="${escapeHtml(headerImageDisplayUrl4x3(o.image.url))}" alt="" />`
+      : 'Kein Bild';
+    return `
+      <div class="card offer-card" onclick="openEditOffer('${o.offerId}')">
+        <div class="offer-thumb">${thumb}</div>
+        <div class="offer-card-body">
+          <div class="offer-card-title">${escapeHtml(o.title || '(ohne Titel)')}</div>
+          <div class="offer-card-value">${escapeHtml(o.offerText || '')}</div>
+          <div class="offer-card-schedule">${offerScheduleText(o)}</div>
+        </div>
+        <span class="status-pill ${OFFER_STATUS_CLASS[statusKey] || 'none'}">${statusLabel}</span>
+      </div>
+    `;
+  }
+
+  function offerScheduleText(o) {
+    if (!o.startsAt && !o.endsAt) return 'Kein Zeitraum festgelegt';
+    const s = o.startsAt ? formatGermanDate(o.startsAt) : '…';
+    const e = o.endsAt ? formatGermanDate(o.endsAt) : '…';
+    return `${s} – ${e}`;
+  }
+
+  // Reuses the exact same 4:3-ish delivery transform pattern as the
+  // listing header image (buildHeaderImageDisplayUrl on the backend) --
+  // here requesting a true ar_4:3 crop, matching the StadtPocket Deal
+  // Image standard, applied only at display time; the original upload
+  // is untouched.
+  function headerImageDisplayUrl4x3(url) {
+    if (!url) return url;
+    return url.replace('/upload/', '/upload/c_fill,g_auto,ar_4:3,q_auto,f_auto/');
+  }
+
+  // ── Date helpers (DD.MM.YYYY <-> ISO, UTC-anchored so no timezone
+  // drift ever shifts the displayed day) ──────────────────────────
+  function parseGermanDateToISO(str) {
+    if (!str || !str.trim()) return null;
+    const m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!m) return undefined; // undefined = invalid, distinct from null = empty/cleared
+    const day = parseInt(m[1], 10), month = parseInt(m[2], 10), year = parseInt(m[3], 10);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+    return date.toISOString();
+  }
+
+  function isoToGermanDateInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${d.getUTCFullYear()}`;
+  }
+
+  function formatGermanDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('de-DE', { timeZone: 'UTC' });
+  }
+
+  // ── Deal-type chips (Step 1 UX helper only) ─────────────────────
+  function renderDealTypeChips() {
+    const el = document.getElementById('deal-type-chips');
+    el.innerHTML = DEAL_TYPES.map((t, i) => `
+      <button type="button" class="deal-type-card" id="chip-${i}" onclick="selectDealType(${i})">
+        <span class="icon">${t.icon}</span>
+        <div class="label">${escapeHtml(t.label)}</div>
+        ${t.example ? `<div class="example">${escapeHtml(t.example)}</div>` : ''}
+      </button>
+    `).join('');
+  }
+
+  function selectDealType(i) {
+    document.querySelectorAll('.deal-type-card').forEach((c) => c.classList.remove('selected'));
+    document.getElementById(`chip-${i}`).classList.add('selected');
+    const offerTextInput = document.getElementById('offer-f-offerText');
+    if (!offerTextInput.value.trim() && DEAL_TYPES[i].value) {
+      offerTextInput.value = DEAL_TYPES[i].value;
+      renderDealPreview();
+    }
+  }
+
+  // ── Offer editor: open / reset ──────────────────────────────────
+  function resetOfferEditorFields() {
+    document.getElementById('offer-f-title').value = '';
+    document.getElementById('offer-f-offerText').value = '';
+    document.getElementById('offer-f-description').value = '';
+    document.getElementById('offer-f-startsAt').value = '';
+    document.getElementById('offer-f-endsAt').value = '';
+    document.querySelectorAll('.deal-type-card').forEach((c) => c.classList.remove('selected'));
+    cancelImageStaging();
+    banner('offer-editor-banner', 'info', '');
+    banner('offer-image-banner', 'info', '');
+    banner('offer-dates-banner', 'info', '');
+  }
+
+  function openNewOffer() {
+    currentOfferId = null;
+    currentOffer = null;
+    renderDealTypeChips();
+    resetOfferEditorFields();
+    document.getElementById('offer-editor-title').textContent = 'Neues Angebot erstellen';
+    document.getElementById('offer-crumb-title').textContent = 'Neues Angebot erstellen';
+    document.getElementById('offer-status-pill').style.display = 'none';
+    renderOfferImagePreview();
+    setOfferActionButtons('draft');
+    showPage('page-offer-editor');
+    goToOfferStep(1);
+  }
+
+  async function openEditOffer(offerId) {
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${offerId}`);
+    if (!res.ok) {
+      alert('Fehler beim Laden: ' + (res.body && res.body.error ? res.body.error : res.status));
+      return;
+    }
+    currentOfferId = offerId;
+    currentOffer = res.body.offer;
+    renderDealTypeChips();
+    document.getElementById('offer-f-title').value = currentOffer.title || '';
+    document.getElementById('offer-f-offerText').value = currentOffer.offerText || '';
+    document.getElementById('offer-f-description').value = currentOffer.description || '';
+    document.getElementById('offer-f-startsAt').value = isoToGermanDateInput(currentOffer.startsAt);
+    document.getElementById('offer-f-endsAt').value = isoToGermanDateInput(currentOffer.endsAt);
+    cancelImageStaging();
+    banner('offer-editor-banner', 'info', '');
+    document.getElementById('offer-editor-title').textContent = currentOffer.title || '(ohne Titel)';
+    document.getElementById('offer-crumb-title').textContent = currentOffer.title || '(ohne Titel)';
+    updateOfferStatusPill();
+    renderOfferImagePreview();
+    setOfferActionButtons(currentOffer.status);
+    showPage('page-offer-editor');
+    goToOfferStep(1);
+  }
+
+  function updateOfferStatusPill() {
+    const pill = document.getElementById('offer-status-pill');
+    if (!currentOffer) { pill.style.display = 'none'; return; }
+    const statusKey = currentOffer.status === 'published' && currentOffer.isExpired ? 'expired' : currentOffer.status;
+    pill.textContent = currentOffer.status === 'published' && currentOffer.isExpired ? 'Abgelaufen' : (OFFER_STATUS_LABEL[currentOffer.status] || currentOffer.status);
+    pill.className = 'status-pill ' + (OFFER_STATUS_CLASS[statusKey] || 'none');
+    pill.style.display = '';
+  }
+
+  function setOfferActionButtons(status) {
+    const publishBtn = document.getElementById('offer-publish-btn');
+    const archiveBtn = document.getElementById('offer-archive-btn');
+    const saveDraftBtn = document.getElementById('offer-save-draft-btn');
+    const topbarSaveBtn = document.getElementById('offer-topbar-save-btn');
+    // The persistent top-right "Als Entwurf speichern" only makes sense
+    // once the offer actually exists (Step 1 must have run at least
+    // once) -- there is nothing to PUT .../draft against before that.
+    topbarSaveBtn.style.display = currentOfferId && status !== 'archived' ? '' : 'none';
+    if (status === 'archived') {
+      // Terminal state -- Phase A rejects re-publishing an archived
+      // offer, so no action here pretends otherwise.
+      saveDraftBtn.style.display = 'none';
+      publishBtn.style.display = 'none';
+      archiveBtn.style.display = 'none';
+    } else {
+      saveDraftBtn.style.display = '';
+      publishBtn.style.display = '';
+      archiveBtn.style.display = currentOfferId ? '' : 'none'; // nothing to archive before it's ever been created
+      publishBtn.textContent = 'Veröffentlichen';
+      archiveBtn.textContent = status === 'published' ? 'Veröffentlichung beenden' : 'Archivieren';
+    }
+  }
+
+  function backToOffersList() {
+    showPage('page-offers');
+    renderOffersSection();
+  }
+
+  // ── Step navigation ──────────────────────────────────────────────
+  function goToOfferStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById(`offer-step-${i}`).classList.toggle('active', i === n);
+      const nav = document.getElementById(`step-nav-${i}`);
+      nav.classList.toggle('active', i === n);
+      nav.classList.toggle('done', i < n);
+    }
+    renderDealPreview(); // persistent live preview panel, updated on every step
+  }
+
+  async function offerStepNext(fromStep) {
+    if (fromStep === 1) {
+      const title = document.getElementById('offer-f-title').value.trim();
+      const offerText = document.getElementById('offer-f-offerText').value.trim();
+      if (!title || !offerText) {
+        banner('offer-editor-banner', 'error', 'Titel und Angebotswert sind erforderlich.');
+        return;
+      }
+      const description = document.getElementById('offer-f-description').value.trim();
+      const payload = { title, offerText, description: description || null };
+      let res;
+      if (!currentOfferId) {
+        res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers`, {
+          method: 'POST', body: { title, offerText },
+        });
+      } else {
+        res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+          method: 'PUT', body: payload,
+        });
+      }
+      if (!res.ok) {
+        banner('offer-editor-banner', 'error', (res.body && res.body.error) || 'Speichern fehlgeschlagen.');
+        return;
+      }
+      currentOffer = res.body.offer;
+      currentOfferId = currentOffer.offerId;
+      // description isn't part of the create-only payload above -- if
+      // this was a brand-new offer with a description already typed in
+      // step 1, commit it now via the same draft PUT every edit uses.
+      if (!currentOffer.offerId) return;
+      if (description) {
+        const descRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+          method: 'PUT', body: { description },
+        });
+        if (descRes.ok) currentOffer = descRes.body.offer;
+      }
+      document.getElementById('offer-editor-title').textContent = currentOffer.title;
+      document.getElementById('offer-crumb-title').textContent = currentOffer.title;
+      updateOfferStatusPill();
+      setOfferActionButtons(currentOffer.status);
+      banner('offer-editor-banner', 'info', '');
+      goToOfferStep(2);
+      return;
+    }
+    if (fromStep === 2) {
+      goToOfferStep(3);
+      return;
+    }
+    if (fromStep === 3) {
+      const startsRaw = parseGermanDateToISO(document.getElementById('offer-f-startsAt').value);
+      const endsRaw = parseGermanDateToISO(document.getElementById('offer-f-endsAt').value);
+      if (startsRaw === undefined || endsRaw === undefined) {
+        banner('offer-dates-banner', 'error', 'Bitte Datum im Format TT.MM.JJJJ eingeben.');
+        return;
+      }
+      if (startsRaw && endsRaw && new Date(endsRaw).getTime() <= new Date(startsRaw).getTime()) {
+        banner('offer-dates-banner', 'error', 'Das Enddatum muss nach dem Startdatum liegen.');
+        return;
+      }
+      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+        method: 'PUT', body: { startsAt: startsRaw, endsAt: endsRaw },
+      });
+      if (!res.ok) {
+        banner('offer-dates-banner', 'error', (res.body && res.body.error) || 'Speichern fehlgeschlagen.');
+        return;
+      }
+      currentOffer = res.body.offer;
+      banner('offer-dates-banner', 'info', '');
+      goToOfferStep(4);
+      return;
+    }
+  }
+
+  // ── Step 2: image — upload + deterministic 4:3 center-crop ───────
+  // No image-editing library: the crop is a single deterministic
+  // center-crop rendered with the browser's native Canvas API, matching
+  // the explicit instruction not to introduce a new dependency for
+  // this. Not repositionable/draggable -- see the file header comment.
+  function renderOfferImagePreview() {
+    const box = document.getElementById('offer-image-preview');
+    const img = currentOffer && currentOffer.image;
+    if (img && img.url) {
+      box.innerHTML = `<img src="${escapeHtml(headerImageDisplayUrl4x3(img.url))}" alt="" />`;
+    } else {
+      box.textContent = 'Noch kein Bild ausgewählt.';
+    }
+  }
+
+  function drawCenterCropCover(ctx, img, canvasW, canvasH) {
+    const targetRatio = canvasW / canvasH;
+    const srcRatio = img.width / img.height;
+    let sx, sy, sw, sh;
+    if (srcRatio > targetRatio) {
+      sh = img.height;
+      sw = sh * targetRatio;
+      sx = (img.width - sw) / 2;
+      sy = 0;
+    } else {
+      sw = img.width;
+      sh = sw / targetRatio;
+      sx = 0;
+      sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvasW, canvasH);
+  }
+
+  function handleOfferImageSelected(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (!OFFER_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+      banner('offer-image-banner', 'error', 'Nur PNG, JPG oder WebP Bilder sind erlaubt.');
+      return;
+    }
+    if (file.size > OFFER_IMAGE_MAX_BYTES) {
+      banner('offer-image-banner', 'error', 'Die Datei ist zu groß (maximal 5 MB).');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('crop-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCenterCropCover(ctx, img, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      document.getElementById('template-stage').style.display = 'none';
+      document.getElementById('ai-stage').style.display = 'none';
+      document.getElementById('crop-stage').style.display = '';
+      offerImageStageMode = 'upload';
+      banner('offer-image-banner', 'info', '');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      banner('offer-image-banner', 'error', 'Bild konnte nicht gelesen werden.');
+    };
+    img.src = objectUrl;
+  }
+
+  function cancelImageStaging() {
+    document.getElementById('crop-stage').style.display = 'none';
+    document.getElementById('template-stage').style.display = 'none';
+    document.getElementById('ai-stage').style.display = 'none';
+    offerImageStageMode = null;
+  }
+
+  // ── Step 2: "✨ Mit KI erstellen" — honest inert scaffold only.
+  // Shows the intended future shape (business/Angebot context
+  // understood automatically, an optional owner-supplied idea, a style
+  // choice) without pretending generation works -- the "Bild erstellen"
+  // button is disabled in the HTML itself, not just visually dimmed.
+  // The context line is genuinely derived from the current form values
+  // (never a fabricated example), matching how the rest of the Deal
+  // Builder never invents content that wasn't actually entered.
+  const AI_STYLES = ['Natürlich', 'Modern', 'Elegant', 'Dynamisch'];
+  let selectedAiStyle = null;
+
+  function openAiImageStage() {
+    document.getElementById('crop-stage').style.display = 'none';
+    document.getElementById('template-stage').style.display = 'none';
+    document.getElementById('ai-stage').style.display = '';
+    offerImageStageMode = 'ai';
+    const offerText = document.getElementById('offer-f-offerText').value.trim();
+    const title = document.getElementById('offer-f-title').value.trim();
+    const subject = offerText || title || 'dein Angebot';
+    document.getElementById('ai-stage-context').textContent = `StadtPocket hat dein Angebot „${subject}“ verstanden.`;
+    renderAiStyleChips();
+  }
+
+  function renderAiStyleChips() {
+    const el = document.getElementById('ai-style-row');
+    el.innerHTML = AI_STYLES.map((s) => `<button type="button" class="ai-style-chip${selectedAiStyle === s ? ' selected' : ''}" onclick="selectAiStyle('${s}')">${escapeHtml(s)}</button>`).join('');
+  }
+
+  function selectAiStyle(style) {
+    selectedAiStyle = selectedAiStyle === style ? null : style;
+    renderAiStyleChips();
+  }
+
+  // ── Step 2: "🖼 Beispiel auswählen" — minimal deterministic template
+  // generator. Functional, not scaffolded: renders a real 1200x900
+  // canvas (solid brand background OR the business's own published
+  // header image, center-cropped, with a dark overlay for legibility)
+  // plus the offer's own value text and the business name, using native
+  // Canvas 2D text rendering. Deliberately ONE fixed layout, no
+  // drag/drop positioning, no AI generation -- see the file header
+  // comment for the product boundary this stays inside.
+  function openTemplatePicker() {
+    document.getElementById('crop-stage').style.display = 'none';
+    document.getElementById('ai-stage').style.display = 'none';
+    document.getElementById('template-stage').style.display = '';
+    offerImageStageMode = 'template';
+    selectedTemplateBg = 'coral';
+    renderTemplateBgChoices();
+    renderTemplateCanvas();
+  }
+
+  function renderTemplateBgChoices() {
+    const hasHeaderImage = !!(currentListing && currentListing.headerImage && currentListing.headerImage.url);
+    const el = document.getElementById('template-bg-row');
+    let html = `<button type="button" class="template-bg-choice ${selectedTemplateBg === 'coral' ? 'selected' : ''}" onclick="selectTemplateBg('coral')">Marken-Farbe</button>`;
+    if (hasHeaderImage) {
+      html += `<button type="button" class="template-bg-choice ${selectedTemplateBg === 'header' ? 'selected' : ''}" onclick="selectTemplateBg('header')">Eigenes Headerbild</button>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function selectTemplateBg(mode) {
+    selectedTemplateBg = mode;
+    renderTemplateBgChoices();
+    renderTemplateCanvas();
+  }
+
+  function renderTemplateCanvas() {
+    const canvas = document.getElementById('template-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    function drawText() {
+      const businessName = (currentListing && currentListing.name) || '';
+      const valueText = document.getElementById('offer-f-offerText').value.trim() || 'DEIN ANGEBOT';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 90px -apple-system, "Segoe UI", Inter, sans-serif';
+      wrapText(ctx, valueText.toUpperCase(), W / 2, H / 2 - 20, W - 160, 96);
+      if (businessName) {
+        ctx.font = '700 34px -apple-system, "Segoe UI", Inter, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillText(businessName.toUpperCase(), W / 2, H - 90);
+      }
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    if (selectedTemplateBg === 'header' && currentListing && currentListing.headerImage && currentListing.headerImage.url) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        drawCenterCropCover(ctx, img, W, H);
+        ctx.fillStyle = 'rgba(10,15,30,0.45)';
+        ctx.fillRect(0, 0, W, H);
+        drawText();
+      };
+      img.onerror = () => {
+        // Falls back to the solid brand background if the header image
+        // can't be loaded (e.g. CORS) -- never leaves the canvas blank.
+        ctx.fillStyle = '#ff6b5e';
+        ctx.fillRect(0, 0, W, H);
+        drawText();
+      };
+      img.src = headerImageDisplayUrl4x3(currentListing.headerImage.url);
+    } else {
+      ctx.fillStyle = '#ff6b5e';
+      ctx.fillRect(0, 0, W, H);
+      drawText();
+    }
+  }
+
+  // Minimal manual word-wrap for canvas fillText (no built-in wrapping
+  // in the Canvas 2D API) -- breaks on whitespace only, one deterministic
+  // layout, matching the "no drag/drop, no full graphics engine" boundary.
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    const startY = y - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+  }
+
+  // ── Step 2: commit the staged canvas (either path) ────────────────
+  async function confirmStagedImage() {
+    if (!currentOfferId) {
+      banner('offer-image-banner', 'error', 'Bitte zuerst Schritt 1 abschließen.');
+      return;
+    }
+    const canvas = document.getElementById(offerImageStageMode === 'template' ? 'template-canvas' : 'crop-canvas');
+    if (!canvas) return;
+    banner('offer-image-banner', 'info', 'Bild wird hochgeladen…');
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        banner('offer-image-banner', 'error', 'Bild konnte nicht erzeugt werden.');
+        return;
+      }
+      try {
+        const token = await getToken();
+        const formData = new FormData();
+        formData.append('image', blob, 'deal-image.jpg');
+        const uploadRes = await fetch(`${API_BASE}/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/image`, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: formData,
+        });
+        let uploadBody = null;
+        try { uploadBody = await uploadRes.json(); } catch (e) { /* no body */ }
+        if (!uploadRes.ok) {
+          banner('offer-image-banner', 'error', (uploadBody && uploadBody.error) || 'Upload fehlgeschlagen.');
+          return;
+        }
+        const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+          method: 'PUT', body: { image: uploadBody.image },
+        });
+        if (!saveRes.ok) {
+          banner('offer-image-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+          return;
+        }
+        currentOffer = saveRes.body.offer;
+        cancelImageStaging();
+        renderOfferImagePreview();
+        banner('offer-image-banner', 'success', 'Bild gespeichert. Noch nicht veröffentlicht.');
+      } catch (err) {
+        banner('offer-image-banner', 'error', 'Upload fehlgeschlagen.');
+      }
+    }, 'image/jpeg', 0.92);
+  }
+
+  // ── Step 4: admin preview (resembles the eventual customer view) ──
+  // Persistent live preview panel, visible from Step 1 onward. Reads
+  // title/offerText/description/dates directly from the visible form
+  // fields (always current, whether or not currentOffer exists yet --
+  // e.g. before Step 1's first "Weiter" for a brand-new offer), and
+  // image/status from currentOffer once it exists. Missing values get
+  // an explicit neutral placeholder, never a fabricated final value.
+  function renderDealPreview() {
+    const el = document.getElementById('deal-preview-card');
+    if (!el) return;
+    const titleEl = document.getElementById('offer-f-title');
+    const offerTextEl = document.getElementById('offer-f-offerText');
+    const descriptionEl = document.getElementById('offer-f-description');
+    const startsEl = document.getElementById('offer-f-startsAt');
+    const endsEl = document.getElementById('offer-f-endsAt');
+    const title = titleEl ? titleEl.value.trim() : (currentOffer && currentOffer.title) || '';
+    const offerText = offerTextEl ? offerTextEl.value.trim() : (currentOffer && currentOffer.offerText) || '';
+    const description = descriptionEl ? descriptionEl.value.trim() : (currentOffer && currentOffer.description) || '';
+    const startsRaw = startsEl ? parseGermanDateToISO(startsEl.value) : (currentOffer && currentOffer.startsAt) || null;
+    const endsRaw = endsEl ? parseGermanDateToISO(endsEl.value) : (currentOffer && currentOffer.endsAt) || null;
+
+    const image = currentOffer && currentOffer.image;
+    const imgHtml = image && image.url
+      ? `<img src="${escapeHtml(headerImageDisplayUrl4x3(image.url))}" alt="" />`
+      : '<span>Noch kein Bild ausgewählt</span>';
+    const validStart = startsRaw !== undefined ? startsRaw : null;
+    const validEnd = endsRaw !== undefined ? endsRaw : null;
+    const scheduleText = (validStart || validEnd) ? offerScheduleText({ startsAt: validStart, endsAt: validEnd }) : null;
+
+    el.innerHTML = `
+      <div class="deal-preview-image${image && image.url ? '' : ' placeholder'}">${imgHtml}</div>
+      <div class="deal-preview-value${offerText ? '' : ' placeholder'}">${escapeHtml(offerText || 'Angebotswert')}</div>
+      <div class="deal-preview-title${title ? '' : ' placeholder'}">${escapeHtml(title || 'Titel des Angebots')}</div>
+      ${description ? `<div class="deal-preview-desc">${escapeHtml(description)}</div>` : ''}
+      <div class="deal-preview-dates${scheduleText ? '' : ' placeholder'}">${scheduleText || 'Zeitraum noch nicht festgelegt'}</div>
+    `;
+    updateOfferStatusPill();
+  }
+
+  // ── Step 4: publishing actions ────────────────────────────────────
+  async function saveOfferDraftFromEditor() {
+    if (!currentOfferId) return;
+    const btn = document.getElementById('offer-save-draft-btn');
+    btn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+      method: 'PUT', body: {},
+    });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('offer-editor-banner', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+      return;
+    }
+    currentOffer = res.body.offer;
+    banner('offer-editor-banner', 'success', 'Entwurf gespeichert.');
+    renderDealPreview();
+  }
+
+  async function publishOfferFromEditor() {
+    if (!currentOfferId) return;
+    if (!confirm('Dieses Angebot jetzt veröffentlichen? Es wird sofort öffentlich sichtbar, sobald die Angebote-Seite live ist.')) return;
+    const btn = document.getElementById('offer-publish-btn');
+    btn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/publish`, { method: 'POST' });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('offer-editor-banner', 'error', (res.body && res.body.error) || 'Veröffentlichung fehlgeschlagen.');
+      return;
+    }
+    currentOffer = res.body.offer;
+    banner('offer-editor-banner', 'success', 'Veröffentlicht.');
+    document.getElementById('offer-editor-title').textContent = currentOffer.title;
+    updateOfferStatusPill();
+    setOfferActionButtons(currentOffer.status);
+    renderDealPreview();
+  }
+
+  async function archiveOfferFromEditor() {
+    if (!currentOfferId) return;
+    if (!confirm('Dieses Angebot wirklich archivieren? Es wird dauerhaft beendet.')) return;
+    const btn = document.getElementById('offer-archive-btn');
+    btn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/archive`, { method: 'POST' });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('offer-editor-banner', 'error', (res.body && res.body.error) || 'Archivieren fehlgeschlagen.');
+      return;
+    }
+    currentOffer = res.body.offer;
+    banner('offer-editor-banner', 'success', 'Angebot archiviert.');
+    updateOfferStatusPill();
+    setOfferActionButtons(currentOffer.status);
+    renderDealPreview();
   }
 
   // Wait for stadtpocket-admin-guard.js's own async chain (Clerk.load(),
