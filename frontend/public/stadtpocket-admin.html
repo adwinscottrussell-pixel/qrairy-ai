@@ -853,8 +853,18 @@
     document.getElementById(id).classList.add('active');
 
     const isShellPage = SHELL_PAGES.includes(id);
-    document.getElementById('pre-shell').style.display = isShellPage ? 'none' : '';
-    document.getElementById('business-shell').style.display = isShellPage ? '' : 'none';
+    // MUST be explicit values ('block'), never '' -- clearing an inline
+    // style only removes that declaration, which lets this stylesheet's
+    // own "#business-shell { display: none; }" rule win the cascade
+    // again (confirmed via getComputedStyle: '' left it computed as
+    // "none", identical to the bug already fixed once in the isolated
+    // local review harness's own boot line -- this was the one place
+    // that fix was never carried over to, since the real showPage()
+    // toggle logic didn't exist yet when that fix was made). Root cause
+    // of "click a business -> screen goes blank/dark": pre-shell
+    // correctly hid, but business-shell never actually became visible.
+    document.getElementById('pre-shell').style.display = isShellPage ? 'none' : 'block';
+    document.getElementById('business-shell').style.display = isShellPage ? 'block' : 'none';
     if (isShellPage) {
       document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
       const activeNavId = NAV_FOR_PAGE[id];
