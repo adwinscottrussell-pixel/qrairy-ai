@@ -356,6 +356,47 @@ test('H. description/image/startsAt/endsAt are never fabricated -- absent at cre
   assert.equal(state.endsAt, null);
 });
 
+// ── I. Image source tracking (Phase B.1) ─────────────────────────
+test('I. source "uploaded" is accepted', async () => {
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'uploaded' });
+  assert.equal(img.source, 'uploaded');
+});
+
+test('I. source "starter" is accepted', async () => {
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'starter' });
+  assert.equal(img.source, 'starter');
+});
+
+test('I. source "ai_generated" is accepted (validator allows it even though nothing sends it yet)', async () => {
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'ai_generated' });
+  assert.equal(img.source, 'ai_generated');
+});
+
+test('I. an invalid source value is rejected', async () => {
+  assert.throws(() => service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'stock_photo' }), service.StadtpocketOfferError);
+});
+
+test('I. source persists through draft save -> publish', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { image: { ...TRUSTED_IMAGE, source: 'starter' } });
+  const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(published.image.source, 'starter');
+  const rawRow = offerRows.find((o) => o.id === created.offerId);
+  assert.equal(rawRow.image.source, 'starter'); // copied onto the live column, not just left in draftData
+});
+
+test('I. an image object with no source key (pre-B.1 shape) remains valid', async () => {
+  const img = service.checkOfferImage(TRUSTED_IMAGE); // TRUSTED_IMAGE has no source key at all
+  assert.equal(img.url, TRUSTED_IMAGE.url);
+  assert.equal(img.publicId, TRUSTED_IMAGE.publicId);
+});
+
+test('I. missing source is never auto-inferred -- stays null, not guessed as "uploaded" or any other value', async () => {
+  const img = service.checkOfferImage(TRUSTED_IMAGE);
+  assert.equal(img.source, null);
+});
+
 // ── runner ──────────────────────────────────────────────────────
 (async () => {
   let pass = 0, fail = 0;

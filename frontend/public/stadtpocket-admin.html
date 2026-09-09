@@ -2107,8 +2107,16 @@
           banner('offer-image-banner', 'error', (uploadBody && uploadBody.error) || 'Upload fehlgeschlagen.');
           return;
         }
+        // Phase B.1 — record how this master image was produced.
+        // 'upload' -> the owner's own real file; 'template' -> the
+        // existing deterministic "Beispiel auswählen" generator. Never
+        // 'ai_generated' here -- no real AI generation exists yet, and
+        // this path is never reachable from the AI stage (its confirm
+        // action stays disabled in the HTML itself).
+        const OFFER_IMAGE_SOURCE_BY_STAGE = { upload: 'uploaded', template: 'starter' };
+        const source = OFFER_IMAGE_SOURCE_BY_STAGE[offerImageStageMode] || null;
         const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
-          method: 'PUT', body: { image: uploadBody.image },
+          method: 'PUT', body: { image: { ...uploadBody.image, source } },
         });
         if (!saveRes.ok) {
           banner('offer-image-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');

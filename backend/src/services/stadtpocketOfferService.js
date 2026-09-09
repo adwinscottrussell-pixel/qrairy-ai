@@ -49,6 +49,12 @@ class StadtpocketOfferError extends Error {
 // ── Field allow-list ──────────────────────────────────────────
 const OFFER_FIELDS = ['title', 'description', 'offerText', 'image', 'startsAt', 'endsAt'];
 
+// Phase B.1 — image source tracking (metadata only, see the schema
+// comment on StadtPocketOffer.image). No enum type: matches this
+// schema's existing no-enum convention for every other status-like
+// column, validated here as a plain string allow-list instead.
+const OFFER_IMAGE_SOURCES = ['uploaded', 'starter', 'ai_generated'];
+
 // ── Low-level validators ────────────────────────────────────────
 function checkOfferImage(image) {
   if (!image || typeof image !== 'object' || Array.isArray(image)) {
@@ -70,7 +76,21 @@ function checkOfferImage(image) {
     height = Number(image.height);
     if (!Number.isFinite(height) || height <= 0) throw new StadtpocketOfferError('image.height must be a positive number.');
   }
-  return { url: image.url.trim(), publicId: image.publicId.trim(), width, height };
+  // source (Phase B.1) -- optional, never inferred. Records how this
+  // master image was produced (uploaded / starter / a future real
+  // ai_generated path) without changing what the image itself is. An
+  // image validated before this field existed, or one that simply never
+  // had it supplied, gets source: null here -- exactly the same
+  // "default to null, never guess" posture width/height already use
+  // above, not a fabricated default source value.
+  let source = null;
+  if (image.source != null) {
+    if (typeof image.source !== 'string' || !OFFER_IMAGE_SOURCES.includes(image.source)) {
+      throw new StadtpocketOfferError(`image.source must be one of: ${OFFER_IMAGE_SOURCES.join(', ')}.`);
+    }
+    source = image.source;
+  }
+  return { url: image.url.trim(), publicId: image.publicId.trim(), width, height, source };
 }
 
 function parseOfferDate(value, fieldName) {
@@ -361,4 +381,5 @@ module.exports = {
   checkOfferImage,
   checkDateOrder,
   parseOfferDate,
+  OFFER_IMAGE_SOURCES,
 };
