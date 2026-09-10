@@ -105,14 +105,43 @@ function parseOfferDate(value, fieldName) {
   return date;
 }
 
+// Normalizes a startsAt/endsAt value that may have round-tripped
+// through draftData (a Prisma `Json` column) back into a real Date
+// instance. Prisma's Json type has no Date-reviving behavior: a Date
+// written into draftData in one request comes back as a plain ISO
+// string on the next read (JSON has no Date type), while a value
+// that's still fresh in the same request -- e.g. straight out of
+// parseOfferDate() -- is already a real Date instance. This accepts
+// either transparently, never fabricates a value (null stays null),
+// and treats a genuinely unparseable persisted value as null rather
+// than throwing -- the same "unknown stays unknown, never invented,
+// never allowed to crash an otherwise-valid read" posture this codebase
+// already uses elsewhere (see the opening-hours editor's own handling
+// of an unrecognized day).
+function toDateOrNull(value) {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 // startsAt/endsAt are validated together (not per-field) because the
 // only real constraint between them -- endsAt strictly after startsAt
 // -- only makes sense once both are known. Called both at save-draft
 // time (against the merged draft+live pair) and again at publish time
 // (defense-in-depth re-validation of the fully merged state, matching
 // stadtpocketManagerService.publishListingLocation's own pattern).
+// Coerces both inputs via toDateOrNull() first -- every call site
+// (createOfferDraft with fresh Dates, saveOfferDraft with a mix of
+// fresh Dates and possibly-round-tripped draftData strings, and
+// publishOfferInternal via mergeOfferState's own already-normalized
+// output) is protected by this one change, with no behavior difference
+// for the already-correct cases (a real Date or null in, the same
+// comparison result out).
 function checkDateOrder(startsAt, endsAt) {
-  if (startsAt != null && endsAt != null && endsAt.getTime() <= startsAt.getTime()) {
+  const s = toDateOrNull(startsAt);
+  const e = toDateOrNull(endsAt);
+  if (s != null && e != null && e.getTime() <= s.getTime()) {
     throw new StadtpocketOfferError('endsAt must be after startsAt.');
   }
 }
@@ -198,10 +227,20 @@ async function findOfferOrThrow(locationId, listingLocationId, offerId, scope) {
 // isExpired is always computed here, never stored -- see the schema
 // comment on StadtPocketOffer for why (a timestamp already carries this
 // fact; a second, potentially-stale status value would not).
+//
+// startsAt/endsAt are normalized via toDateOrNull() here -- this is the
+// single seam every reader (list, detail, and publish's own re-check of
+// this function's output) goes through, so the returned shape is always
+// a real Date-or-null regardless of whether the picked value came
+// fresh from a live column (already a Date) or from draftData after a
+// genuine DB round-trip (a plain ISO string). The HTTP response shape
+// is unchanged for the frontend either way: res.json() already
+// serializes a Date to the same ISO string it always did.
 function mergeOfferState(offer) {
   const draft = offer.draftData || {};
   const pick = (key, live) => (key in draft ? draft[key] : live);
-  const endsAt = pick('endsAt', offer.endsAt);
+  const startsAt = toDateOrNull(pick('startsAt', offer.startsAt));
+  const endsAt = toDateOrNull(pick('endsAt', offer.endsAt));
   return {
     offerId: offer.id,
     listingLocationId: offer.listingLocationId,
@@ -211,7 +250,7 @@ function mergeOfferState(offer) {
     description: pick('description', offer.description),
     offerText: pick('offerText', offer.offerText),
     image: pick('image', offer.image),
-    startsAt: pick('startsAt', offer.startsAt),
+    startsAt,
     endsAt,
     isExpired: endsAt != null ? endsAt.getTime() < Date.now() : false,
   };
@@ -381,5 +420,6 @@ module.exports = {
   checkOfferImage,
   checkDateOrder,
   parseOfferDate,
+  toDateOrNull,
   OFFER_IMAGE_SOURCES,
 };

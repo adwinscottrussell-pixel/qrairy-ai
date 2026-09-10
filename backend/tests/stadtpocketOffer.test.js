@@ -397,6 +397,153 @@ test('I. missing source is never auto-inferred -- stays null, not guessed as "up
   assert.equal(img.source, null);
 });
 
+// ── K. Date-roundtrip regression (draftData.startsAt/endsAt surviving
+//      a real JSON round-trip, as Prisma's `Json` column type actually
+//      returns them -- a plain Date written into draftData comes back
+//      as an ISO STRING on the next read, never revived. The existing
+//      mock Prisma above stores/returns object references directly
+//      (via `cloneRows`'s shallow `{...r}`), so it never exercised this
+//      path -- these tests build fixture rows with a genuine
+//      JSON.parse(JSON.stringify(...)) round-trip already applied to
+//      draftData, exactly like a real fresh SELECT of a JSONB column
+//      would produce, then drive them through the real service
+//      functions. ────────────────────────────────────────────────
+// mergeOfferState now normalizes startsAt/endsAt to real Date instances
+// (that's the fix) -- assertions below compare via ISO string so they
+// don't care whether the seam happens to hand back a Date or a string,
+// only that the VALUE round-tripped correctly.
+function isoOf(v) { return v instanceof Date ? v.toISOString() : v; }
+
+function seedRoundTrippedOffer(overrides = {}) {
+  const row = {
+    id: nextId('offer'),
+    listingLocationId: STAIB_LL_ID,
+    title: 'Bestandsangebot', description: null, offerText: 'Bestandswert',
+    image: null, status: 'draft', startsAt: null, endsAt: null, publishedAt: null,
+    createdBy: 'ulm_manager', createdAt: new Date(2026, 8, 1), updatedAt: new Date(2026, 8, 1),
+    draftData: null,
+    ...overrides,
+  };
+  // Simulate a genuine Postgres JSONB round-trip of draftData, exactly
+  // as a fresh Prisma read would return it -- any Date inside becomes a
+  // plain ISO string, never a Date instance.
+  if (row.draftData) row.draftData = JSON.parse(JSON.stringify(row.draftData));
+  offerRows.push(row);
+  return row;
+}
+
+test('K. empty Offer list still works (baseline, unaffected by the fix)', async () => {
+  resetFixtures();
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.deepEqual(list, []);
+});
+
+test('K. Offer without any dates still works', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { title: 'Bestandsangebot' } });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].startsAt, null);
+  assert.equal(list[0].endsAt, null);
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(detail.isExpired, false);
+});
+
+test('K. Offer with a round-tripped startsAt survives list + detail reads', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { startsAt: new Date('2026-09-10T00:00:00.000Z') } });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(isoOf(list[0].startsAt), '2026-09-10T00:00:00.000Z');
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(isoOf(detail.startsAt), '2026-09-10T00:00:00.000Z');
+});
+
+test('K. Offer with a round-tripped endsAt survives list + detail reads -- the exact reported bug condition', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list.length, 1);
+  assert.equal(isoOf(list[0].endsAt), '2026-09-20T00:00:00.000Z');
+  assert.equal(list[0].isExpired, false);
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(isoOf(detail.endsAt), '2026-09-20T00:00:00.000Z');
+});
+
+test('K. Offer with both round-tripped startsAt and endsAt survives list + detail reads', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({
+    draftData: { startsAt: new Date('2026-09-10T00:00:00.000Z'), endsAt: new Date('2026-09-20T00:00:00.000Z') },
+  });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(isoOf(list[0].startsAt), '2026-09-10T00:00:00.000Z');
+  assert.equal(isoOf(list[0].endsAt), '2026-09-20T00:00:00.000Z');
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(isoOf(detail.startsAt), '2026-09-10T00:00:00.000Z');
+  assert.equal(isoOf(detail.endsAt), '2026-09-20T00:00:00.000Z');
+});
+
+test('K. a fresh (non-round-tripped) Date instance for endsAt still works, unchanged', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
+  // Overwrite AFTER the round-trip helper ran, so this row genuinely
+  // holds a live Date instance (as e.g. a same-request write would).
+  row.draftData = { endsAt: new Date('2026-09-20T00:00:00.000Z') };
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(isoOf(detail.endsAt), '2026-09-20T00:00:00.000Z');
+  assert.equal(detail.isExpired, false);
+});
+
+test('K. null date values still work after a round-trip (null survives JSON as null, not the bug case)', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { startsAt: null, endsAt: null } });
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(detail.startsAt, null);
+  assert.equal(detail.endsAt, null);
+});
+
+test('K. invalid date input is still rejected the same way as before the fix (handled by validation, not silently swallowed)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const err = await throwsAsync(() => service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { endsAt: 'not-a-date' }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+});
+
+test('K. persisted image metadata (including source: "uploaded") is unchanged by a round-tripped endsAt on the same offer', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({
+    image: { ...TRUSTED_IMAGE, source: 'uploaded' },
+    draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') },
+  });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list[0].image.url, TRUSTED_IMAGE.url);
+  assert.equal(list[0].image.publicId, TRUSTED_IMAGE.publicId);
+  assert.equal(list[0].image.source, 'uploaded');
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(detail.image.source, 'uploaded');
+});
+
+test('K. REGRESSION: saveOfferDraft editing an unrelated field on an offer with a round-tripped endsAt no longer throws (was: TypeError: endsAt.getTime is not a function)', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
+  const updated = await service.saveOfferDraft(ULM, STAIB_LL_ID, row.id, ulmManagerScope, { title: 'Neuer Titel' });
+  assert.equal(updated.title, 'Neuer Titel');
+  assert.equal(isoOf(updated.endsAt), '2026-09-20T00:00:00.000Z');
+});
+
+test('K. REGRESSION: listOffersForListingLocation on a business with one round-tripped offer no longer throws (was: "Fehler beim Laden der Angebote")', async () => {
+  resetFixtures();
+  seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list.length, 1);
+});
+
+test('K. REGRESSION: getOfferState (detail endpoint) on a round-tripped offer no longer throws', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(detail.offerId, row.id);
+});
+
 // ── runner ──────────────────────────────────────────────────────
 (async () => {
   let pass = 0, fail = 0;
