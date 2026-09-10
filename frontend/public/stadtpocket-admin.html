@@ -216,9 +216,14 @@
   .starter-category { margin-top: 14px; }
   .starter-category:first-child { margin-top: 0; }
   .starter-category-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 8px; font-weight: 700; }
-  .starter-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 4px; }
+  /* minmax(200px, 1fr) with auto-fill: ~3 columns at the wizard-main
+     card's desktop width (~688px available), naturally settling to 2
+     then 1 as the container narrows -- no separate breakpoint rules
+     needed, and it can never exceed the existing content column since
+     it's sized purely from that column's own width. */
+  .starter-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 4px; }
   .starter-thumb {
-    aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; cursor: pointer;
+    aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; cursor: pointer;
     border: 2px solid var(--border); background: var(--surface-input); position: relative;
     display: flex; align-items: center; justify-content: center;
   }
@@ -226,8 +231,8 @@
   .starter-thumb:hover { border-color: var(--coral); }
   .starter-thumb:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
   .starter-thumb.selected { border-color: var(--coral); box-shadow: 0 0 0 2px var(--coral-soft); }
-  .starter-thumb.selected::after { content: '✓'; position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 999px; background: var(--coral); color: #1a0e0c; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-  .starter-thumb-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 6px; font-size: 10px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.65)); }
+  .starter-thumb.selected::after { content: '✓'; position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 999px; background: var(--coral); color: #1a0e0c; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .starter-thumb-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px; font-size: 12px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.7)); }
   .starter-gallery-empty { text-align: center; padding: 24px 12px; color: var(--text-secondary); font-size: 13px; }
 
   /* ── ✨ Mit KI erstellen -- honest inert scaffold ─────────────── */
@@ -2123,7 +2128,7 @@
     renderStarterGallery();
     renderOfferImagePreview();
     renderDealPreview();
-    banner('offer-image-banner', 'success', 'Vorlage übernommen. Noch nicht veröffentlicht.');
+    banner('offer-image-banner', 'success', 'Vorlage ausgewählt. Du kannst sie jederzeit ändern.');
   }
 
   // ── Step 2: commit the staged crop-canvas (own upload only -- the
