@@ -212,12 +212,23 @@
   .image-choice-row button { flex: 1; min-width: 160px; }
   .crop-stage { margin-top: 14px; }
   .crop-stage canvas { width: 100%; max-width: 420px; aspect-ratio: 4 / 3; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-input); display: block; }
-  .template-bg-row { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
-  .template-bg-choice {
-    border: 2px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600;
-    color: var(--text-secondary); background: var(--surface-card-alt); cursor: pointer;
+  /* ── 🖼 Vorlage auswählen -- starter-image gallery (Phase B.2) ── */
+  .starter-category { margin-top: 14px; }
+  .starter-category:first-child { margin-top: 0; }
+  .starter-category-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 8px; font-weight: 700; }
+  .starter-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 4px; }
+  .starter-thumb {
+    aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; cursor: pointer;
+    border: 2px solid var(--border); background: var(--surface-input); position: relative;
+    display: flex; align-items: center; justify-content: center;
   }
-  .template-bg-choice.selected { border-color: var(--coral); color: var(--coral); }
+  .starter-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .starter-thumb:hover { border-color: var(--coral); }
+  .starter-thumb:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+  .starter-thumb.selected { border-color: var(--coral); box-shadow: 0 0 0 2px var(--coral-soft); }
+  .starter-thumb.selected::after { content: '✓'; position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 999px; background: var(--coral); color: #1a0e0c; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .starter-thumb-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 6px; font-size: 10px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.65)); }
+  .starter-gallery-empty { text-align: center; padding: 24px 12px; color: var(--text-secondary); font-size: 13px; }
 
   /* ── ✨ Mit KI erstellen -- honest inert scaffold ─────────────── */
   .ai-badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--coral); background: var(--coral-soft); border-radius: 999px; padding: 5px 12px; }
@@ -667,7 +678,7 @@
             <div class="image-choice-row">
               <input type="file" id="offer-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleOfferImageSelected(event)" />
               <button class="secondary" type="button" onclick="openAiImageStage()">✨ Mit KI erstellen</button>
-              <button class="secondary" type="button" onclick="openTemplatePicker()">🖼 Beispiel auswählen</button>
+              <button class="secondary" type="button" onclick="openStarterGallery()">🖼 Vorlage auswählen</button>
               <button class="secondary" type="button" onclick="document.getElementById('offer-image-file-input').click()">↑ Eigenes Bild hochladen</button>
             </div>
             <div id="offer-image-banner"></div>
@@ -700,21 +711,21 @@
               </div>
             </div>
 
-            <!-- 🖼 Beispiel auswählen -- today this is one deterministic
-                 generated starter image (brand color or the business's
-                 own real photo, plus the real offer text/business name).
-                 Framed as an early, category-neutral version of the
-                 eventual category-aware starter-image system, never a
-                 fixed gallery for one industry. -->
-            <div class="crop-stage" id="template-stage" style="display:none">
-              <p class="muted" style="margin:0 0 8px">Automatisch erzeugtes Beispielbild auf Basis deines Angebots — eine einfache Startvorlage, bis echte Bildvorschläge verfügbar sind.</p>
-              <label style="margin-top:0">Hintergrund</label>
-              <div class="template-bg-row" id="template-bg-row"></div>
-              <canvas id="template-canvas" width="1200" height="900"></canvas>
-              <p class="helper-text">Das Beispielbild zeigt nur den Angebotswert — Beschreibung und Details bleiben Text auf der Seite, nicht im Bild.</p>
+            <!-- 🖼 Vorlage auswählen -- Phase B.2: a real curated
+                 starter-image gallery (STADTPOCKET_OFFER_STARTER_IMAGES
+                 below), grouped by category purely for browsability --
+                 any business may pick any category's image, category is
+                 never enforced against the business's own type.
+                 Selecting an entry commits it immediately (no staged
+                 "confirm" step -- there's nothing to generate, just an
+                 existing asset to pick), matching the shape
+                 checkOfferImage() already validates for every other
+                 image source. -->
+            <div class="crop-stage" id="starter-stage" style="display:none">
+              <p class="muted" style="margin:0 0 8px">Wähle eine Vorlage als Startpunkt für dein Angebot.</p>
+              <div id="starter-gallery"></div>
               <div class="actions" style="margin-top:12px">
-                <button class="secondary" type="button" onclick="cancelImageStaging()">Verwerfen</button>
-                <button class="primary" type="button" onclick="confirmStagedImage()">Beispielbild übernehmen</button>
+                <button class="secondary" type="button" onclick="cancelImageStaging()">Schließen</button>
               </div>
             </div>
           </div>
@@ -1593,6 +1604,48 @@
     { label: 'Upgrade', value: 'Kostenloses Upgrade', example: 'z. B. Größe gratis', icon: '↗' },
     { label: 'Eigenes Angebot', value: '', example: 'Freie Gestaltung', icon: '✎' },
   ];
+  // Phase B.2 — "🖼 Vorlage auswählen" starter-image catalog. Mirrors
+  // backend/src/data/stadtpocketOfferStarterImages.js exactly (same
+  // convention as DEAL_TYPES above being inline data with no backend
+  // route -- see that file for why this is intentionally empty as of
+  // B.2.1, and the exact shape a real entry must have). Every entry
+  // must be a real, already-uploaded Cloudinary asset in the
+  // stadtpocket-headers folder -- checkOfferImage() on the backend
+  // independently re-validates this regardless of what this array
+  // contains, so nothing here can bypass that check. `category` is
+  // catalog-only presentation metadata (gallery grouping) -- it is
+  // never sent to the backend and never validated there.
+  const STADTPOCKET_OFFER_STARTER_CATEGORIES = [
+    { id: 'bakery-cafe', label: 'Bäckerei & Café' },
+    { id: 'restaurant', label: 'Restaurant & Essen' },
+    { id: 'fashion-retail', label: 'Mode & Einzelhandel' },
+    { id: 'beauty-wellness', label: 'Beauty & Wellness' },
+    { id: 'fitness-sport', label: 'Fitness & Sport' },
+    { id: 'general-local', label: 'Allgemein / Lokales Geschäft' },
+  ];
+  const STADTPOCKET_OFFER_STARTER_IMAGES = [
+    // Mirrors backend/src/data/stadtpocketOfferStarterImages.js exactly
+    // -- see that file's header comment for provenance (Phase B.2.1,
+    // real Cloudinary uploads via backend/scripts/uploadStadtpocketStarterImages.js).
+    { id: "bakery-croissants-01", label: "Croissants & Gebäck", category: "bakery-cafe", alt: "Croissants & Gebäck", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071557/stadtpocket-headers/angebote-starter/bakery-croissants-01.jpg", publicId: "stadtpocket-headers/angebote-starter/bakery-croissants-01", width: 1200, height: 900, tags: [] },
+    { id: "bakery-bread-01", label: "Frisches Brot & Backwaren", category: "bakery-cafe", alt: "Frisches Brot & Backwaren", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071558/stadtpocket-headers/angebote-starter/bakery-bread-01.jpg", publicId: "stadtpocket-headers/angebote-starter/bakery-bread-01", width: 1200, height: 900, tags: [] },
+    { id: "bakery-coffee-01", label: "Kaffee & Kuchen", category: "bakery-cafe", alt: "Kaffee & Kuchen", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071559/stadtpocket-headers/angebote-starter/bakery-coffee-01.jpg", publicId: "stadtpocket-headers/angebote-starter/bakery-coffee-01", width: 1200, height: 900, tags: [] },
+    { id: "restaurant-meal-01", label: "Frisch serviert", category: "restaurant", alt: "Frisch serviert", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071560/stadtpocket-headers/angebote-starter/restaurant-meal-01.jpg", publicId: "stadtpocket-headers/angebote-starter/restaurant-meal-01", width: 1200, height: 900, tags: [] },
+    { id: "restaurant-table-01", label: "Gemeinsam genießen", category: "restaurant", alt: "Gemeinsam genießen", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071561/stadtpocket-headers/angebote-starter/restaurant-table-01.jpg", publicId: "stadtpocket-headers/angebote-starter/restaurant-table-01", width: 1200, height: 900, tags: [] },
+    { id: "restaurant-fresh-01", label: "Frisch & lecker", category: "restaurant", alt: "Frisch & lecker", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071562/stadtpocket-headers/angebote-starter/restaurant-fresh-01.jpg", publicId: "stadtpocket-headers/angebote-starter/restaurant-fresh-01", width: 1200, height: 900, tags: [] },
+    { id: "fashion-boutique-01", label: "Neue Styles entdecken", category: "fashion-retail", alt: "Neue Styles entdecken", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071563/stadtpocket-headers/angebote-starter/fashion-boutique-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fashion-boutique-01", width: 1200, height: 900, tags: [] },
+    { id: "fashion-rack-01", label: "Lieblingsstücke", category: "fashion-retail", alt: "Lieblingsstücke", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071564/stadtpocket-headers/angebote-starter/fashion-rack-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fashion-rack-01", width: 1200, height: 900, tags: [] },
+    { id: "fashion-lifestyle-01", label: "Shoppen & entdecken", category: "fashion-retail", alt: "Shoppen & entdecken", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071565/stadtpocket-headers/angebote-starter/fashion-lifestyle-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fashion-lifestyle-01", width: 1200, height: 900, tags: [] },
+    { id: "beauty-spa-01", label: "Entspannung & Wohlbefinden", category: "beauty-wellness", alt: "Entspannung & Wohlbefinden", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071566/stadtpocket-headers/angebote-starter/beauty-spa-01.jpg", publicId: "stadtpocket-headers/angebote-starter/beauty-spa-01", width: 1200, height: 900, tags: [] },
+    { id: "beauty-skincare-01", label: "Beauty & Pflege", category: "beauty-wellness", alt: "Beauty & Pflege", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071567/stadtpocket-headers/angebote-starter/beauty-skincare-01.jpg", publicId: "stadtpocket-headers/angebote-starter/beauty-skincare-01", width: 1200, height: 900, tags: [] },
+    { id: "beauty-salon-01", label: "Dein neuer Look", category: "beauty-wellness", alt: "Dein neuer Look", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071568/stadtpocket-headers/angebote-starter/beauty-salon-01.jpg", publicId: "stadtpocket-headers/angebote-starter/beauty-salon-01", width: 1200, height: 900, tags: [] },
+    { id: "fitness-gym-01", label: "Fit & stark", category: "fitness-sport", alt: "Fit & stark", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071569/stadtpocket-headers/angebote-starter/fitness-gym-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fitness-gym-01", width: 1200, height: 900, tags: [] },
+    { id: "fitness-training-01", label: "Gemeinsam trainieren", category: "fitness-sport", alt: "Gemeinsam trainieren", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071570/stadtpocket-headers/angebote-starter/fitness-training-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fitness-training-01", width: 1200, height: 900, tags: [] },
+    { id: "fitness-active-01", label: "Dein Start ins Training", category: "fitness-sport", alt: "Dein Start ins Training", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071571/stadtpocket-headers/angebote-starter/fitness-active-01.jpg", publicId: "stadtpocket-headers/angebote-starter/fitness-active-01", width: 1200, height: 900, tags: [] },
+    { id: "general-optician-01", label: "Brillen & Beratung", category: "general-local", alt: "Brillen & Beratung", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071573/stadtpocket-headers/angebote-starter/general-optician-01.jpg", publicId: "stadtpocket-headers/angebote-starter/general-optician-01", width: 1200, height: 900, tags: [] },
+    { id: "general-foodtruck-01", label: "Frisch unterwegs", category: "general-local", alt: "Frisch unterwegs", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071574/stadtpocket-headers/angebote-starter/general-foodtruck-01.jpg", publicId: "stadtpocket-headers/angebote-starter/general-foodtruck-01", width: 1200, height: 900, tags: [] },
+    { id: "general-flower-01", label: "Blumen & Freude", category: "general-local", alt: "Blumen & Freude", url: "https://res.cloudinary.com/dwqc6n7rn/image/upload/v1789071575/stadtpocket-headers/angebote-starter/general-flower-01.jpg", publicId: "stadtpocket-headers/angebote-starter/general-flower-01", width: 1200, height: 900, tags: [] },
+  ];
   const OFFER_STATUS_LABEL = { draft: 'Entwurf', published: 'Live', archived: 'Archiviert' };
   const OFFER_STATUS_CLASS = { draft: 'draft', published: 'published', archived: 'archived' };
   const OFFER_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -1601,8 +1654,7 @@
   let currentOffers = [];
   let currentOfferId = null;
   let currentOffer = null;
-  let offerImageStageMode = null; // 'upload' | 'template' | null
-  let selectedTemplateBg = 'coral';
+  let offerImageStageMode = null; // 'upload' | 'starter' | 'ai' | null
 
   // ── Offers list (business editor page) ─────────────────────────
   async function renderOffersSection() {
@@ -1936,7 +1988,7 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawCenterCropCover(ctx, img, canvas.width, canvas.height);
       URL.revokeObjectURL(objectUrl);
-      document.getElementById('template-stage').style.display = 'none';
+      document.getElementById('starter-stage').style.display = 'none';
       document.getElementById('ai-stage').style.display = 'none';
       document.getElementById('crop-stage').style.display = '';
       offerImageStageMode = 'upload';
@@ -1951,7 +2003,7 @@
 
   function cancelImageStaging() {
     document.getElementById('crop-stage').style.display = 'none';
-    document.getElementById('template-stage').style.display = 'none';
+    document.getElementById('starter-stage').style.display = 'none';
     document.getElementById('ai-stage').style.display = 'none';
     offerImageStageMode = null;
   }
@@ -1969,7 +2021,7 @@
 
   function openAiImageStage() {
     document.getElementById('crop-stage').style.display = 'none';
-    document.getElementById('template-stage').style.display = 'none';
+    document.getElementById('starter-stage').style.display = 'none';
     document.getElementById('ai-stage').style.display = '';
     offerImageStageMode = 'ai';
     const offerText = document.getElementById('offer-f-offerText').value.trim();
@@ -1989,112 +2041,100 @@
     renderAiStyleChips();
   }
 
-  // ── Step 2: "🖼 Beispiel auswählen" — minimal deterministic template
-  // generator. Functional, not scaffolded: renders a real 1200x900
-  // canvas (solid brand background OR the business's own published
-  // header image, center-cropped, with a dark overlay for legibility)
-  // plus the offer's own value text and the business name, using native
-  // Canvas 2D text rendering. Deliberately ONE fixed layout, no
-  // drag/drop positioning, no AI generation -- see the file header
-  // comment for the product boundary this stays inside.
-  function openTemplatePicker() {
+  // ── Step 2: "🖼 Vorlage auswählen" — Phase B.2. A real curated
+  // starter-image gallery, not a generator. Selecting an entry commits
+  // it immediately (there's nothing to render/stage -- it's an already-
+  // existing, already-trusted Cloudinary asset), via the exact same
+  // draft PUT every other image source already uses. See
+  // STADTPOCKET_OFFER_STARTER_IMAGES's own header comment for why it
+  // may currently be empty. Grouped by STADTPOCKET_OFFER_STARTER_CATEGORIES
+  // purely for browsability once the catalog holds ~18 images -- a
+  // business may still pick any category's image regardless of its own
+  // type (see that constant's own comment).
+  let selectedStarterId = null;
+
+  function openStarterGallery() {
     document.getElementById('crop-stage').style.display = 'none';
     document.getElementById('ai-stage').style.display = 'none';
-    document.getElementById('template-stage').style.display = '';
-    offerImageStageMode = 'template';
-    selectedTemplateBg = 'coral';
-    renderTemplateBgChoices();
-    renderTemplateCanvas();
+    document.getElementById('starter-stage').style.display = '';
+    offerImageStageMode = 'starter';
+    selectedStarterId = currentOffer && currentOffer.image && currentOffer.image.source === 'starter'
+      ? currentOffer.image.starterId
+      : null;
+    renderStarterGallery();
   }
 
-  function renderTemplateBgChoices() {
-    const hasHeaderImage = !!(currentListing && currentListing.headerImage && currentListing.headerImage.url);
-    const el = document.getElementById('template-bg-row');
-    let html = `<button type="button" class="template-bg-choice ${selectedTemplateBg === 'coral' ? 'selected' : ''}" onclick="selectTemplateBg('coral')">Marken-Farbe</button>`;
-    if (hasHeaderImage) {
-      html += `<button type="button" class="template-bg-choice ${selectedTemplateBg === 'header' ? 'selected' : ''}" onclick="selectTemplateBg('header')">Eigenes Headerbild</button>`;
+  function starterThumbHtml(entry) {
+    const isSelected = selectedStarterId === entry.id;
+    const label = escapeHtml(entry.label);
+    return `
+      <div class="starter-thumb${isSelected ? ' selected' : ''}"
+        role="button" tabindex="0" aria-pressed="${isSelected}" aria-label="${label}"
+        onclick="selectStarterImage('${entry.id}')"
+        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectStarterImage('${entry.id}'); }">
+        <img src="${escapeHtml(headerImageDisplayUrl4x3(entry.url))}" alt="${escapeHtml(entry.alt || entry.label)}" />
+        <span class="starter-thumb-label">${label}</span>
+      </div>
+    `;
+  }
+
+  function renderStarterGallery() {
+    const el = document.getElementById('starter-gallery');
+    if (!STADTPOCKET_OFFER_STARTER_IMAGES.length) {
+      el.innerHTML = '<p class="starter-gallery-empty">Noch keine Vorlagen verfügbar.</p>';
+      return;
     }
-    el.innerHTML = html;
+    const grouped = STADTPOCKET_OFFER_STARTER_CATEGORIES.map((cat) => ({
+      cat, entries: STADTPOCKET_OFFER_STARTER_IMAGES.filter((e) => e.category === cat.id),
+    })).filter((g) => g.entries.length);
+    // Defensive only -- covers a future entry whose category doesn't
+    // match any known id, so it still renders instead of silently
+    // disappearing from the gallery.
+    const uncategorized = STADTPOCKET_OFFER_STARTER_IMAGES.filter(
+      (e) => !STADTPOCKET_OFFER_STARTER_CATEGORIES.some((cat) => cat.id === e.category),
+    );
+    if (uncategorized.length) grouped.push({ cat: { id: '_other', label: 'Weitere' }, entries: uncategorized });
+    el.innerHTML = grouped.map(({ cat, entries }) => `
+      <div class="starter-category">
+        <p class="starter-category-label">${escapeHtml(cat.label)}</p>
+        <div class="starter-gallery">${entries.map(starterThumbHtml).join('')}</div>
+      </div>
+    `).join('');
   }
 
-  function selectTemplateBg(mode) {
-    selectedTemplateBg = mode;
-    renderTemplateBgChoices();
-    renderTemplateCanvas();
-  }
-
-  function renderTemplateCanvas() {
-    const canvas = document.getElementById('template-canvas');
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-
-    function drawText() {
-      const businessName = (currentListing && currentListing.name) || '';
-      const valueText = document.getElementById('offer-f-offerText').value.trim() || 'DEIN ANGEBOT';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 90px -apple-system, "Segoe UI", Inter, sans-serif';
-      wrapText(ctx, valueText.toUpperCase(), W / 2, H / 2 - 20, W - 160, 96);
-      if (businessName) {
-        ctx.font = '700 34px -apple-system, "Segoe UI", Inter, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.88)';
-        ctx.fillText(businessName.toUpperCase(), W / 2, H - 90);
-      }
+  async function selectStarterImage(id) {
+    if (!currentOfferId) {
+      banner('offer-image-banner', 'error', 'Bitte zuerst Schritt 1 abschließen.');
+      return;
     }
-
-    ctx.clearRect(0, 0, W, H);
-    if (selectedTemplateBg === 'header' && currentListing && currentListing.headerImage && currentListing.headerImage.url) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        drawCenterCropCover(ctx, img, W, H);
-        ctx.fillStyle = 'rgba(10,15,30,0.45)';
-        ctx.fillRect(0, 0, W, H);
-        drawText();
-      };
-      img.onerror = () => {
-        // Falls back to the solid brand background if the header image
-        // can't be loaded (e.g. CORS) -- never leaves the canvas blank.
-        ctx.fillStyle = '#ff6b5e';
-        ctx.fillRect(0, 0, W, H);
-        drawText();
-      };
-      img.src = headerImageDisplayUrl4x3(currentListing.headerImage.url);
-    } else {
-      ctx.fillStyle = '#ff6b5e';
-      ctx.fillRect(0, 0, W, H);
-      drawText();
+    const entry = STADTPOCKET_OFFER_STARTER_IMAGES.find((e) => e.id === id);
+    if (!entry) return;
+    banner('offer-image-banner', 'info', 'Vorlage wird übernommen…');
+    const image = { url: entry.url, publicId: entry.publicId, width: entry.width, height: entry.height, source: 'starter', starterId: entry.id };
+    const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+      method: 'PUT', body: { image },
+    });
+    if (!saveRes.ok) {
+      banner('offer-image-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+      return;
     }
+    currentOffer = saveRes.body.offer;
+    selectedStarterId = id;
+    renderStarterGallery();
+    renderOfferImagePreview();
+    renderDealPreview();
+    banner('offer-image-banner', 'success', 'Vorlage übernommen. Noch nicht veröffentlicht.');
   }
 
-  // Minimal manual word-wrap for canvas fillText (no built-in wrapping
-  // in the Canvas 2D API) -- breaks on whitespace only, one deterministic
-  // layout, matching the "no drag/drop, no full graphics engine" boundary.
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
-    let line = '';
-    const lines = [];
-    for (const word of words) {
-      const test = line ? line + ' ' + word : word;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    const startY = y - ((lines.length - 1) * lineHeight) / 2;
-    lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
-  }
-
-  // ── Step 2: commit the staged canvas (either path) ────────────────
+  // ── Step 2: commit the staged crop-canvas (own upload only -- the
+  // starter path commits directly via selectStarterImage above, and the
+  // AI stage has no confirm action at all). ────────────────────────
   async function confirmStagedImage() {
     if (!currentOfferId) {
       banner('offer-image-banner', 'error', 'Bitte zuerst Schritt 1 abschließen.');
       return;
     }
-    const canvas = document.getElementById(offerImageStageMode === 'template' ? 'template-canvas' : 'crop-canvas');
+    const canvas = document.getElementById('crop-canvas');
     if (!canvas) return;
     banner('offer-image-banner', 'info', 'Bild wird hochgeladen…');
     canvas.toBlob(async (blob) => {
@@ -2117,16 +2157,8 @@
           banner('offer-image-banner', 'error', (uploadBody && uploadBody.error) || 'Upload fehlgeschlagen.');
           return;
         }
-        // Phase B.1 — record how this master image was produced.
-        // 'upload' -> the owner's own real file; 'template' -> the
-        // existing deterministic "Beispiel auswählen" generator. Never
-        // 'ai_generated' here -- no real AI generation exists yet, and
-        // this path is never reachable from the AI stage (its confirm
-        // action stays disabled in the HTML itself).
-        const OFFER_IMAGE_SOURCE_BY_STAGE = { upload: 'uploaded', template: 'starter' };
-        const source = OFFER_IMAGE_SOURCE_BY_STAGE[offerImageStageMode] || null;
         const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
-          method: 'PUT', body: { image: { ...uploadBody.image, source } },
+          method: 'PUT', body: { image: { ...uploadBody.image, source: 'uploaded' } },
         });
         if (!saveRes.ok) {
           banner('offer-image-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');
@@ -2135,6 +2167,7 @@
         currentOffer = saveRes.body.offer;
         cancelImageStaging();
         renderOfferImagePreview();
+        renderDealPreview();
         banner('offer-image-banner', 'success', 'Bild gespeichert. Noch nicht veröffentlicht.');
       } catch (err) {
         banner('offer-image-banner', 'error', 'Upload fehlgeschlagen.');

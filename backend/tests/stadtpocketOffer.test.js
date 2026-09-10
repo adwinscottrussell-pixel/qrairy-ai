@@ -23,6 +23,7 @@
 // ============================================================
 const assert = require('assert/strict');
 const path = require('path');
+const fs = require('fs');
 
 const prismaClientPath = require.resolve(path.join(__dirname, '..', 'src', 'utils', 'prismaClient.js'));
 
@@ -102,8 +103,37 @@ require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClient
 process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 
 const service = require('../src/services/stadtpocketOfferService');
+const { STADTPOCKET_OFFER_STARTER_IMAGES, STADTPOCKET_OFFER_STARTER_CATEGORIES } = require('../src/data/stadtpocketOfferStarterImages');
 
 const TRUSTED_IMAGE = { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/stadtpocket-headers/offer1-123-abcd.jpg', publicId: 'stadtpocket-headers/offer1-123-abcd' };
+// A fixture starter-catalog entry, matching the exact shape
+// stadtpocketOfferStarterImages.js documents for a real entry -- used
+// only to prove the selection/validation MECHANISM works correctly;
+// never added to the real (currently empty) catalog file itself.
+const FIXTURE_STARTER_ENTRY = {
+  id: 'starter-fixture-01',
+  label: 'Testbild',
+  url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/stadtpocket-headers/starter-fixture-01.jpg',
+  publicId: 'stadtpocket-headers/starter-fixture-01',
+  width: 1200,
+  height: 900,
+  tags: ['neutral'],
+};
+
+// The 18 real starter-catalog entries (Phase B.2.1) point at the
+// PROJECT'S REAL Cloudinary cloud (uploaded via
+// backend/scripts/uploadStadtpocketStarterImages.js), not the
+// 'test-cloud' this whole file mocks CLOUDINARY_CLOUD_NAME as. Tests
+// that trust-check a REAL catalog entry must temporarily swap the env
+// var to the real cloud name for that one check (isTrustedStadtPocketHeaderImage
+// reads it at call time, not at require time -- see the note above --
+// so this is safe and doesn't need a fresh require of the service).
+const REAL_CLOUDINARY_CLOUD_NAME = 'dwqc6n7rn';
+async function withRealCloudName(fn) {
+  const prev = process.env.CLOUDINARY_CLOUD_NAME;
+  process.env.CLOUDINARY_CLOUD_NAME = REAL_CLOUDINARY_CLOUD_NAME;
+  try { return await fn(); } finally { process.env.CLOUDINARY_CLOUD_NAME = prev; }
+}
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
@@ -395,6 +425,204 @@ test('I. an image object with no source key (pre-B.1 shape) remains valid', asyn
 test('I. missing source is never auto-inferred -- stays null, not guessed as "uploaded" or any other value', async () => {
   const img = service.checkOfferImage(TRUSTED_IMAGE);
   assert.equal(img.source, null);
+});
+
+// ── J. Starter-image catalog (Phase B.2) ─────────────────────────
+test('J. the real starter catalog (18 entries, Phase B.2.1) is structurally valid', async () => {
+  // Runs against the ACTUAL committed catalog. Every entry must have
+  // all required fields and pass the exact same trust check real offer
+  // images go through -- proving no catalog entry could ever reach a
+  // business's Offer without also being a genuine, already-uploaded
+  // StadtPocket asset. Real entries point at the real Cloudinary cloud,
+  // so this check runs under REAL_CLOUDINARY_CLOUD_NAME (see
+  // withRealCloudName above), not this file's 'test-cloud' mock.
+  const ids = new Set();
+  const categoryIds = new Set(STADTPOCKET_OFFER_STARTER_CATEGORIES.map((c) => c.id));
+  await withRealCloudName(() => {
+    for (const entry of STADTPOCKET_OFFER_STARTER_IMAGES) {
+      assert.equal(typeof entry.id, 'string');
+      assert.ok(entry.id.trim().length > 0);
+      assert.equal(ids.has(entry.id), false, `duplicate starter id: ${entry.id}`);
+      ids.add(entry.id);
+      assert.equal(typeof entry.label, 'string');
+      assert.ok(entry.label.trim().length > 0);
+      assert.equal(typeof entry.alt, 'string');
+      assert.ok(entry.alt.trim().length > 0);
+      assert.ok(categoryIds.has(entry.category), `unknown category: ${entry.category}`);
+      assert.doesNotThrow(() => service.checkOfferImage({ url: entry.url, publicId: entry.publicId, width: entry.width, height: entry.height }));
+    }
+  });
+});
+
+test('J. STADTPOCKET_OFFER_STARTER_CATEGORIES has 6 categories with unique, non-empty ids/labels (B.2.1 initial structure)', async () => {
+  assert.equal(STADTPOCKET_OFFER_STARTER_CATEGORIES.length, 6);
+  const catIds = new Set();
+  for (const cat of STADTPOCKET_OFFER_STARTER_CATEGORIES) {
+    assert.equal(typeof cat.id, 'string');
+    assert.ok(cat.id.trim().length > 0);
+    assert.equal(catIds.has(cat.id), false, `duplicate category id: ${cat.id}`);
+    catIds.add(cat.id);
+    assert.equal(typeof cat.label, 'string');
+    assert.ok(cat.label.trim().length > 0);
+  }
+});
+
+test('J. the real catalog now holds exactly 18 entries (Phase B.2.1 -- populated from the real, approved Cloudinary upload)', async () => {
+  assert.equal(STADTPOCKET_OFFER_STARTER_IMAGES.length, 18);
+  // All 18 secure_urls must be real HTTPS Cloudinary URLs under the
+  // exact target folder, never invented or reconstructed.
+  for (const entry of STADTPOCKET_OFFER_STARTER_IMAGES) {
+    assert.ok(entry.url.startsWith('https://res.cloudinary.com/'));
+    assert.ok(entry.url.includes('/stadtpocket-headers/angebote-starter/'));
+    assert.ok(entry.publicId.startsWith('stadtpocket-headers/angebote-starter/'));
+    assert.equal(entry.width, 1200);
+    assert.equal(entry.height, 900);
+  }
+});
+
+test('J. every category has at least 1 real catalog entry (6 categories, 18 entries)', async () => {
+  for (const cat of STADTPOCKET_OFFER_STARTER_CATEGORIES) {
+    const count = STADTPOCKET_OFFER_STARTER_IMAGES.filter((e) => e.category === cat.id).length;
+    assert.ok(count > 0, `category ${cat.id} has no real entries`);
+  }
+});
+
+test('J. a valid fixture starter entry passes the exact same trust check as any other offer image', async () => {
+  const img = service.checkOfferImage({ url: FIXTURE_STARTER_ENTRY.url, publicId: FIXTURE_STARTER_ENTRY.publicId, width: FIXTURE_STARTER_ENTRY.width, height: FIXTURE_STARTER_ENTRY.height, source: 'starter', starterId: FIXTURE_STARTER_ENTRY.id });
+  assert.equal(img.source, 'starter');
+  assert.equal(img.starterId, FIXTURE_STARTER_ENTRY.id);
+});
+
+test('J. an untrusted url/publicId cannot pass as a starter image even with a valid starterId', async () => {
+  assert.throws(() => service.checkOfferImage({ url: 'https://evil.example.com/fake.jpg', publicId: 'fake', source: 'starter', starterId: FIXTURE_STARTER_ENTRY.id }), service.StadtpocketOfferError);
+});
+
+test('J. starterId is accepted as an optional non-empty string', async () => {
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, starterId: 'starter-01' });
+  assert.equal(img.starterId, 'starter-01');
+});
+
+test('J. an empty-string starterId is rejected', async () => {
+  assert.throws(() => service.checkOfferImage({ ...TRUSTED_IMAGE, starterId: '   ' }), service.StadtpocketOfferError);
+});
+
+test('J. missing starterId is never auto-inferred -- stays null', async () => {
+  const img = service.checkOfferImage(TRUSTED_IMAGE);
+  assert.equal(img.starterId, null);
+});
+
+test('J. an image object with no starterId key (pre-B.2 shape) remains valid', async () => {
+  const img = service.checkOfferImage(TRUSTED_IMAGE);
+  assert.equal(img.url, TRUSTED_IMAGE.url);
+});
+
+test('J. selecting a starter image (source+starterId via draft save) produces source: "starter" and persists through publish, without touching unrelated fields', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'Unverändert', offerText: 'Unverändert-Wert', description: 'Unverändert-Text' });
+  const afterImage = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, {
+    image: { url: FIXTURE_STARTER_ENTRY.url, publicId: FIXTURE_STARTER_ENTRY.publicId, width: FIXTURE_STARTER_ENTRY.width, height: FIXTURE_STARTER_ENTRY.height, source: 'starter', starterId: FIXTURE_STARTER_ENTRY.id },
+  });
+  // Title/offerText/description untouched -- saveOfferDraft's partial-
+  // update semantics only ever touch keys present in the payload, and
+  // this payload contained only "image".
+  assert.equal(afterImage.title, 'Unverändert');
+  assert.equal(afterImage.offerText, 'Unverändert-Wert');
+  assert.equal(afterImage.description, 'Unverändert-Text');
+  assert.equal(afterImage.image.source, 'starter');
+  assert.equal(afterImage.image.starterId, FIXTURE_STARTER_ENTRY.id);
+
+  const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(published.image.source, 'starter');
+  assert.equal(published.image.starterId, FIXTURE_STARTER_ENTRY.id);
+  assert.equal(published.title, 'Unverändert');
+});
+
+test('J. the existing uploaded path still produces source: "uploaded" (no B.2 regression)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const updated = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { image: { ...TRUSTED_IMAGE, source: 'uploaded' } });
+  assert.equal(updated.image.source, 'uploaded');
+  assert.equal(updated.image.starterId, null);
+});
+
+test('J. sending source: "ai_generated" is still accepted by the validator (unchanged from B.1) but nothing in this phase ever sends it', async () => {
+  // The validator itself must keep accepting the full allow-list
+  // (that's B.1's contract, unchanged) -- this phase's job is only to
+  // confirm no B.2 code path ever actually sends it. See the separate
+  // grep-based check in this session's report for the frontend side.
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'ai_generated' });
+  assert.equal(img.source, 'ai_generated');
+});
+
+test('J. catalog editing does not invalidate persisted offers -- a starterId absent from the CURRENT (real, 18-entry) catalog is still accepted, because trust is checked against url/publicId alone, never against catalog membership', async () => {
+  // Simulates the real-world case this architecture is built to survive:
+  // an offer was published while the catalog had an entry with this id;
+  // later that entry is renamed or removed from the catalog entirely.
+  // The offer's own persisted image (a real, already-trusted Cloudinary
+  // asset) must remain valid regardless -- checkOfferImage() never
+  // looks the starterId up anywhere, so there is nothing for a catalog
+  // edit to break.
+  const removedId = 'a-hypothetically-removed-starter-01';
+  assert.equal(STADTPOCKET_OFFER_STARTER_IMAGES.some((e) => e.id === removedId), false, 'precondition: this id must not exist in the current catalog for this test to be meaningful');
+  const img = service.checkOfferImage({ ...TRUSTED_IMAGE, source: 'starter', starterId: removedId });
+  assert.equal(img.starterId, removedId);
+  assert.equal(img.source, 'starter');
+});
+
+test('J. catalog editing does not invalidate persisted offers -- full draft save + publish flow with a starterId not present in the current catalog', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, {
+    image: { ...TRUSTED_IMAGE, source: 'starter', starterId: 'a-since-removed-catalog-entry' },
+  });
+  const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(published.image.starterId, 'a-since-removed-catalog-entry');
+  assert.equal(published.image.source, 'starter');
+});
+
+test('J. selecting a REAL catalog entry (not a fixture) end-to-end: draft save -> publish, using the exact real Cloudinary asset', async () => {
+  resetFixtures();
+  const realEntry = STADTPOCKET_OFFER_STARTER_IMAGES.find((e) => e.id === 'bakery-croissants-01');
+  assert.ok(realEntry, 'expected real catalog entry bakery-croissants-01 to exist');
+  await withRealCloudName(async () => {
+    const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+    const afterImage = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, {
+      image: { url: realEntry.url, publicId: realEntry.publicId, width: realEntry.width, height: realEntry.height, source: 'starter', starterId: realEntry.id },
+    });
+    assert.equal(afterImage.image.source, 'starter');
+    assert.equal(afterImage.image.starterId, 'bakery-croissants-01');
+    assert.equal(afterImage.image.url, realEntry.url);
+    const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+    assert.equal(published.image.url, realEntry.url);
+    assert.equal(published.image.starterId, 'bakery-croissants-01');
+  });
+});
+
+test('J. backend/frontend starter catalog parity -- frontend/public/stadtpocket-admin.html mirrors backend/src/data/stadtpocketOfferStarterImages.js exactly (18 entries, byte-identical fields)', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'stadtpocket-admin.html'), 'utf8');
+  const marker = 'const STADTPOCKET_OFFER_STARTER_IMAGES = [';
+  const start = html.indexOf(marker);
+  assert.ok(start !== -1, 'STADTPOCKET_OFFER_STARTER_IMAGES not found in stadtpocket-admin.html');
+  const arrayStart = start + marker.length - 1; // include the opening '['
+  const closeIdx = html.indexOf('\n  ];', arrayStart);
+  assert.ok(closeIdx !== -1, 'could not find closing "];" for STADTPOCKET_OFFER_STARTER_IMAGES');
+  const arraySource = html.slice(arrayStart, closeIdx + 4); // up to and including the ']'
+  // eslint-disable-next-line no-new-func -- isolated, no external input, evaluates only a literal array of plain data objects extracted from the real file
+  const frontendEntries = new Function(`return ${arraySource};`)();
+
+  assert.equal(frontendEntries.length, STADTPOCKET_OFFER_STARTER_IMAGES.length);
+  const backendById = new Map(STADTPOCKET_OFFER_STARTER_IMAGES.map((e) => [e.id, e]));
+  for (const feEntry of frontendEntries) {
+    const beEntry = backendById.get(feEntry.id);
+    assert.ok(beEntry, `frontend entry ${feEntry.id} has no backend counterpart`);
+    assert.equal(feEntry.label, beEntry.label);
+    assert.equal(feEntry.category, beEntry.category);
+    assert.equal(feEntry.alt, beEntry.alt);
+    assert.equal(feEntry.url, beEntry.url);
+    assert.equal(feEntry.publicId, beEntry.publicId);
+    assert.equal(feEntry.width, beEntry.width);
+    assert.equal(feEntry.height, beEntry.height);
+  }
 });
 
 // ── K. Date-roundtrip regression (draftData.startsAt/endsAt surviving

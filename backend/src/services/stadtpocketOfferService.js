@@ -90,7 +90,23 @@ function checkOfferImage(image) {
     }
     source = image.source;
   }
-  return { url: image.url.trim(), publicId: image.publicId.trim(), width, height, source };
+  // starterId (Phase B.2) -- optional, traces which catalog entry
+  // (stadtpocketOfferStarterImages.js) a starter-sourced image came
+  // from, for future re-selection/AI-reference use. Validated only for
+  // shape here (non-empty string) -- deliberately NOT cross-checked
+  // against the live catalog, so editing/removing a catalog entry later
+  // never retroactively invalidates an offer that already used it: the
+  // actual image url/publicId, already independently trust-checked
+  // above, remains the real source of truth regardless of what
+  // starterId points at.
+  let starterId = null;
+  if (image.starterId != null) {
+    if (typeof image.starterId !== 'string' || !image.starterId.trim()) {
+      throw new StadtpocketOfferError('image.starterId must be a non-empty string, or omitted.');
+    }
+    starterId = image.starterId.trim();
+  }
+  return { url: image.url.trim(), publicId: image.publicId.trim(), width, height, source, starterId };
 }
 
 function parseOfferDate(value, fieldName) {
