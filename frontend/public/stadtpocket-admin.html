@@ -856,6 +856,77 @@
   const HEADER_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
   let headerImageJustUploaded = false;
 
+  // ── Reload persistence: last-viewed business context ───────────────
+  // A hard reload previously always dropped back to the city list --
+  // currentLocationId/currentListingLocationId are plain in-memory `let`
+  // vars with nothing else remembering them. This restores exactly that
+  // one thing (which business, and which of its two shell pages, was
+  // open) so a reload lands back where the manager was, including on
+  // Angebote -- no URL/hash routing added, no other page's behavior
+  // touched. sessionStorage (not localStorage): scoped to this one tab
+  // for this one session, same lifetime as a "did I just reload"
+  // question -- it should not resurrect a business context days later
+  // or leak across tabs. Cleared whenever navigation leaves the business
+  // shell entirely (see showPage), so explicitly going back to the city/
+  // business list is never silently overridden by a stale restore.
+  const LAST_CONTEXT_KEY = 'stadtpocket_admin_last_context_v1';
+
+  function saveLastContext(locationId, listingLocationId, pageId) {
+    try {
+      sessionStorage.setItem(LAST_CONTEXT_KEY, JSON.stringify({ locationId, listingLocationId, pageId }));
+    } catch (e) { /* sessionStorage unavailable (private mode, quota, etc.) -- never fatal, just skip persistence */ }
+  }
+
+  function clearLastContext() {
+    try { sessionStorage.removeItem(LAST_CONTEXT_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function readLastContext() {
+    try {
+      const raw = sessionStorage.getItem(LAST_CONTEXT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.locationId !== 'string' || typeof parsed.listingLocationId !== 'string') return null;
+      return parsed;
+    } catch (e) {
+      return null; // malformed/corrupted value -- treat exactly like "nothing stored"
+    }
+  }
+
+  // Attempts to restore the last-viewed business after a reload, called
+  // once from boot() before it would otherwise default to the city list.
+  // Fails SAFELY and SILENTLY on any invalid/stale/unreachable stored
+  // context (business deleted, access revoked, malformed value, etc.) --
+  // exactly the same real authorization re-check openBusiness() itself
+  // relies on (the backend, never client-trusted), just without that
+  // function's alert() on failure, since a stale reload restore is an
+  // expected, unremarkable case, not a user-initiated action gone wrong.
+  async function tryRestoreLastContext() {
+    const ctx = readLastContext();
+    if (!ctx) return false;
+    const res = await api(`/manager/stadtpocket/listings/${ctx.locationId}/${ctx.listingLocationId}`);
+    if (!res.ok) {
+      clearLastContext();
+      return false;
+    }
+    currentLocationId = ctx.locationId;
+    currentListingLocationId = ctx.listingLocationId;
+    headerImageJustUploaded = false;
+    loadListingIntoEditor(res.body.listing);
+    renderSidebarBusinessCard();
+    if (ctx.pageId === 'page-offers' || ctx.pageId === 'page-offer-editor') {
+      // Restores to the Angebote LIST, not mid-wizard -- no specific
+      // offerId is persisted, deliberately: the stated goal is "the
+      // saved Angebot is visible again", which the list already
+      // satisfies without tracking wizard-step state across a reload.
+      showPage('page-offers');
+      await renderOffersSection();
+    } else {
+      showPage('page-editor');
+    }
+    return true;
+  }
+
   // Business Portal shell pages live in a separate wrapper from the
   // pre-selection pages (Städte/Geschäfte/Neues Geschäft/Unauthorized/
   // Loading) -- showPage() toggles both which .page is visible AND
@@ -868,6 +939,17 @@
   function showPage(id) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+
+    // Reload persistence (see tryRestoreLastContext above): remember
+    // the open business + which shell page whenever one is shown, clear
+    // it the moment navigation leaves the business shell entirely (city
+    // list, business list, init, unauthorized) -- leaving a business
+    // context on purpose must never be silently undone by a later reload.
+    if (SHELL_PAGES.includes(id) && currentLocationId && currentListingLocationId) {
+      saveLastContext(currentLocationId, currentListingLocationId, id);
+    } else if (!SHELL_PAGES.includes(id)) {
+      clearLastContext();
+    }
 
     const isShellPage = SHELL_PAGES.includes(id);
     // MUST be explicit values ('block'), never '' -- clearing an inline
@@ -993,6 +1075,12 @@
     } else {
       cities = window.__stadtpocketManagerLocations || [];
     }
+
+    // Reload persistence: try to land back on the business/page the
+    // manager was last viewing BEFORE rendering/showing the city list --
+    // avoids a visible flash of the city list on every ordinary reload.
+    // Falls through to the normal city-list landing on any failure.
+    if (await tryRestoreLastContext()) return;
 
     await renderCityList();
     showPage('page-cities');
