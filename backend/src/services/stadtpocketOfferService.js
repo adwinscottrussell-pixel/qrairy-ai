@@ -47,7 +47,13 @@ class StadtpocketOfferError extends Error {
 }
 
 // ── Field allow-list ──────────────────────────────────────────
-const OFFER_FIELDS = ['title', 'description', 'offerText', 'image', 'startsAt', 'endsAt'];
+const OFFER_FIELDS = ['title', 'description', 'offerText', 'offerType', 'offerDetails', 'image', 'startsAt', 'endsAt'];
+
+// Phase B.2.2 — offer-type structure. Plain string allow-list, matching
+// this schema's existing no-enum convention (see OFFER_IMAGE_SOURCES
+// above and the schema comment on StadtPocketOffer.offerType) -- adding
+// a 7th type later is a one-line addition here, no migration.
+const OFFER_TYPES = ['percentage_discount', 'two_for_one', 'fixed_price', 'free_bonus', 'upgrade', 'custom'];
 
 // Phase B.1 — image source tracking (metadata only, see the schema
 // comment on StadtPocketOffer.image). No enum type: matches this
@@ -109,6 +115,99 @@ function checkOfferImage(image) {
   return { url: image.url.trim(), publicId: image.publicId.trim(), width, height, source, starterId };
 }
 
+function checkOfferType(offerType) {
+  if (offerType === null) return null;
+  if (typeof offerType !== 'string' || !OFFER_TYPES.includes(offerType)) {
+    throw new StadtpocketOfferError(`offerType must be one of: ${OFFER_TYPES.join(', ')}, or null to clear it.`);
+  }
+  return offerType;
+}
+
+// Reject-not-strip, same posture as checkOfferImage above: an unknown
+// key in offerDetails always throws, never silently dropped. Each
+// type's shape is validated explicitly (no generic schema loop) so
+// every rule -- what's required, what's optional, what range is valid
+// -- stays readable and type-specific, matching this file's style.
+// offerDetails NEVER duplicates offerText: it only ever carries the
+// structured business meaning offerText itself can't express (a real
+// number/qty/label), never a second copy of the customer-facing string.
+function checkOfferDetails(offerType, offerDetails) {
+  if (offerDetails === null) return null;
+  if (offerType == null) {
+    throw new StadtpocketOfferError('offerDetails requires an offerType.');
+  }
+  if (!OFFER_TYPES.includes(offerType)) {
+    throw new StadtpocketOfferError(`offerDetails requires a valid offerType, got: ${offerType}.`);
+  }
+  if (typeof offerDetails !== 'object' || Array.isArray(offerDetails)) {
+    throw new StadtpocketOfferError('offerDetails must be an object, or null to clear it.');
+  }
+
+  const num = (key, { min, max } = {}) => {
+    if (offerDetails[key] == null) return null;
+    const n = Number(offerDetails[key]);
+    if (!Number.isFinite(n)) throw new StadtpocketOfferError(`offerDetails.${key} must be a finite number.`);
+    if (min != null && n < min) throw new StadtpocketOfferError(`offerDetails.${key} must be at least ${min}.`);
+    if (max != null && n > max) throw new StadtpocketOfferError(`offerDetails.${key} must be at most ${max}.`);
+    return n;
+  };
+  const str = (key) => {
+    if (offerDetails[key] == null) return null;
+    if (typeof offerDetails[key] !== 'string' || !offerDetails[key].trim()) {
+      throw new StadtpocketOfferError(`offerDetails.${key} must be a non-empty string, or omitted/null.`);
+    }
+    return offerDetails[key].trim();
+  };
+  const rejectExtraKeys = (allowed) => {
+    const extra = Object.keys(offerDetails).filter((k) => !allowed.includes(k));
+    if (extra.length) {
+      throw new StadtpocketOfferError(`Unexpected offerDetails field(s) for offerType "${offerType}": ${extra.join(', ')}.`);
+    }
+  };
+
+  // custom (Eigenes Angebot) stays genuinely free-form -- structured
+  // details never apply here, by design, not merely unimplemented.
+  if (offerType === 'custom') {
+    throw new StadtpocketOfferError('offerDetails is not supported for offerType "custom".');
+  }
+
+  if (offerType === 'percentage_discount') {
+    rejectExtraKeys(['percentOff']);
+    const percentOff = num('percentOff', { min: 1, max: 100 });
+    if (percentOff == null) throw new StadtpocketOfferError('offerDetails.percentOff is required for offerType "percentage_discount".');
+    return { percentOff };
+  }
+
+  if (offerType === 'two_for_one') {
+    rejectExtraKeys(['buyQty', 'freeQty']);
+    const buyQty = num('buyQty', { min: 1 });
+    const freeQty = num('freeQty', { min: 1 });
+    if (buyQty == null || freeQty == null) {
+      throw new StadtpocketOfferError('offerDetails.buyQty and offerDetails.freeQty are both required for offerType "two_for_one".');
+    }
+    return { buyQty, freeQty };
+  }
+
+  if (offerType === 'fixed_price') {
+    rejectExtraKeys(['price', 'currency']);
+    const price = num('price', { min: 0.01 });
+    if (price == null) throw new StadtpocketOfferError('offerDetails.price is required for offerType "fixed_price".');
+    // currency defaults to 'EUR' when omitted -- StadtPocket is DE/EUR-only
+    // today, a fixed default, never an inference from caller-supplied data.
+    const currency = str('currency') || 'EUR';
+    return { price, currency };
+  }
+
+  if (offerType === 'free_bonus') {
+    rejectExtraKeys(['freeItem', 'minPurchase']);
+    return { freeItem: str('freeItem'), minPurchase: str('minPurchase') };
+  }
+
+  // upgrade
+  rejectExtraKeys(['fromLabel', 'toLabel']);
+  return { fromLabel: str('fromLabel'), toLabel: str('toLabel') };
+}
+
 function parseOfferDate(value, fieldName) {
   if (value === null) return null;
   if (typeof value !== 'string' && !(value instanceof Date)) {
@@ -166,7 +265,13 @@ function checkDateOrder(startsAt, endsAt) {
 // identical convention to stadtpocketManagerService.validateDraftPayload:
 // a field is only touched in draftData if the caller included its key;
 // null on a nullable field is an explicit, honored "clear this field") ──
-function validateOfferDraftPayload(body) {
+// currentOfferType is the offer's EFFECTIVE offerType before this call
+// (draft-over-live, from mergeOfferState) -- needed because a caller may
+// send offerDetails alone, without also resending offerType in the same
+// payload (e.g. adding the percent value after already picking the
+// type in an earlier call). Only saveOfferDraft can supply this; direct
+// unit tests of this function pass it explicitly.
+function validateOfferDraftPayload(body, currentOfferType = null) {
   const src = body || {};
   const extra = Object.keys(src).filter((k) => !OFFER_FIELDS.includes(k));
   if (extra.length) {
@@ -192,6 +297,13 @@ function validateOfferDraftPayload(body) {
       throw new StadtpocketOfferError('offerText must be a non-empty string.');
     }
     fields.offerText = src.offerText.trim();
+  }
+  if ('offerType' in src) {
+    fields.offerType = checkOfferType(src.offerType);
+  }
+  if ('offerDetails' in src) {
+    const effectiveType = 'offerType' in fields ? fields.offerType : currentOfferType;
+    fields.offerDetails = src.offerDetails === null ? null : checkOfferDetails(effectiveType, src.offerDetails);
   }
   if ('image' in src) {
     fields.image = src.image === null ? null : checkOfferImage(src.image);
@@ -265,6 +377,8 @@ function mergeOfferState(offer) {
     title: pick('title', offer.title),
     description: pick('description', offer.description),
     offerText: pick('offerText', offer.offerText),
+    offerType: pick('offerType', offer.offerType),
+    offerDetails: pick('offerDetails', offer.offerDetails),
     image: pick('image', offer.image),
     startsAt,
     endsAt,
@@ -304,17 +418,24 @@ async function createOfferDraft(locationId, listingLocationId, scope, body) {
   if (missing.length) {
     throw new StadtpocketOfferError(`Missing required field(s) to create an offer: ${missing.join(', ')}.`);
   }
-  const allowedAtCreate = ['title', 'description', 'offerText', 'startsAt', 'endsAt'];
+  // offerType (not offerDetails) is allowed immediately at creation --
+  // Step 1 of the editor picks a type alongside title/offerText.
+  // offerDetails stays save-draft-only, same posture as image: it needs
+  // an already-resolved offerType to validate against, and the create
+  // payload only ever sets offerType itself in the same call, never
+  // both together.
+  const allowedAtCreate = ['title', 'description', 'offerText', 'offerType', 'startsAt', 'endsAt'];
   const extra = Object.keys(src).filter((k) => !allowedAtCreate.includes(k));
   if (extra.length) {
     throw new StadtpocketOfferError(
-      `Unexpected field(s) at creation: ${extra.join(', ')}. Use save-draft after creating the offer to set optional fields, including image.`
+      `Unexpected field(s) at creation: ${extra.join(', ')}. Use save-draft after creating the offer to set optional fields, including image and offerDetails.`
     );
   }
 
   const description = 'description' in src
     ? (src.description === null ? null : (typeof src.description === 'string' && src.description.trim() ? src.description.trim() : (() => { throw new StadtpocketOfferError('description must be a non-empty string, or null to clear it.'); })()))
     : null;
+  const offerType = 'offerType' in src ? checkOfferType(src.offerType) : null;
   const startsAt = 'startsAt' in src ? parseOfferDate(src.startsAt, 'startsAt') : null;
   const endsAt = 'endsAt' in src ? parseOfferDate(src.endsAt, 'endsAt') : null;
   checkDateOrder(startsAt, endsAt);
@@ -325,6 +446,7 @@ async function createOfferDraft(locationId, listingLocationId, scope, body) {
       title: src.title.trim(),
       description,
       offerText: src.offerText.trim(),
+      offerType,
       startsAt,
       endsAt,
       status: 'draft',
@@ -337,7 +459,19 @@ async function createOfferDraft(locationId, listingLocationId, scope, body) {
 // ── Save draft ──────────────────────────────────────────────────
 async function saveOfferDraft(locationId, listingLocationId, offerId, scope, body) {
   const offer = await findOfferOrThrow(locationId, listingLocationId, offerId, scope);
-  const fields = validateOfferDraftPayload(body);
+  const currentMerged = mergeOfferState(offer);
+  const fields = validateOfferDraftPayload(body, currentMerged.offerType);
+
+  // Defense-in-depth: if offerType is changing in this call and the
+  // caller didn't also explicitly send offerDetails, the OLD type's
+  // offerDetails would otherwise persist alongside the NEW type -- a
+  // mismatched combination the frontend is expected to avoid (clearing
+  // its own local state on switch) but never trusted to actually avoid.
+  // Auto-clearing here guarantees offerDetails always belongs to the
+  // CURRENT offerType regardless of what the caller remembered to send.
+  if ('offerType' in fields && fields.offerType !== currentMerged.offerType && !('offerDetails' in fields)) {
+    fields.offerDetails = null;
+  }
 
   // Defense-in-depth: validate date order against the state the draft
   // WOULD produce (merged fields over current live/draft values), not
@@ -381,6 +515,8 @@ async function publishOfferInternal(offerId, scope) {
     // stadtpocketManagerService.publishListingLocation's own re-checks.
     checkDateOrder(merged.startsAt, merged.endsAt);
     if (merged.image != null) checkOfferImage(merged.image);
+    if (merged.offerType != null) checkOfferType(merged.offerType);
+    if (merged.offerDetails != null) checkOfferDetails(merged.offerType, merged.offerDetails);
 
     const publishedAt = new Date();
     const updated = await tx.stadtPocketOffer.update({
@@ -389,6 +525,8 @@ async function publishOfferInternal(offerId, scope) {
         title: merged.title,
         description: merged.description,
         offerText: merged.offerText,
+        offerType: merged.offerType,
+        offerDetails: merged.offerDetails,
         image: merged.image,
         startsAt: merged.startsAt,
         endsAt: merged.endsAt,
@@ -434,8 +572,11 @@ module.exports = {
   validateOfferDraftPayload,
   mergeOfferState,
   checkOfferImage,
+  checkOfferType,
+  checkOfferDetails,
   checkDateOrder,
   parseOfferDate,
   toDateOrNull,
   OFFER_IMAGE_SOURCES,
+  OFFER_TYPES,
 };

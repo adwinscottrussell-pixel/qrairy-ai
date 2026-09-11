@@ -69,7 +69,7 @@ const mockPrisma = {
     },
     create: async ({ data }) => {
       const row = {
-        image: null, draftData: null, publishedAt: null,
+        image: null, draftData: null, publishedAt: null, offerDetails: null,
         createdAt: new Date(), updatedAt: new Date(), ...data,
       };
       offerRows.push(row);
@@ -770,6 +770,287 @@ test('K. REGRESSION: getOfferState (detail endpoint) on a round-tripped offer no
   const row = seedRoundTrippedOffer({ draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') } });
   const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
   assert.equal(detail.offerId, row.id);
+});
+
+// ── L. Offer-type structure (Phase B.2.2) ──────────────────────────
+// checkOfferType / checkOfferDetails validator unit tests, one example
+// per approved type: percentage_discount, two_for_one, fixed_price,
+// free_bonus, upgrade, custom.
+
+test('L. checkOfferType accepts every approved type and null', async () => {
+  service.OFFER_TYPES.forEach((t) => assert.equal(service.checkOfferType(t), t));
+  assert.equal(service.checkOfferType(null), null);
+});
+
+test('L. checkOfferType rejects an unknown value', async () => {
+  assert.throws(() => service.checkOfferType('buy_one_get_one_free'), service.StadtpocketOfferError);
+});
+
+test('L. checkOfferDetails: percentage_discount requires percentOff, accepts 1-100, rejects out of range', async () => {
+  assert.throws(() => service.checkOfferDetails('percentage_discount', {}), /percentOff is required/);
+  assert.deepEqual(service.checkOfferDetails('percentage_discount', { percentOff: 20 }), { percentOff: 20 });
+  assert.deepEqual(service.checkOfferDetails('percentage_discount', { percentOff: '20' }), { percentOff: 20 }); // coerced, as sent by a real <input type="number">
+  assert.throws(() => service.checkOfferDetails('percentage_discount', { percentOff: 0 }), /at least 1/);
+  assert.throws(() => service.checkOfferDetails('percentage_discount', { percentOff: 150 }), /at most 100/);
+});
+
+test('L. checkOfferDetails: percentage_discount rejects an unexpected key (reject-not-strip)', async () => {
+  const err = await throwsAsync(async () => service.checkOfferDetails('percentage_discount', { percentOff: 20, buyQty: 1 }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /Unexpected offerDetails field/);
+});
+
+test('L. checkOfferDetails: two_for_one requires BOTH buyQty and freeQty if either is sent', async () => {
+  assert.deepEqual(service.checkOfferDetails('two_for_one', { buyQty: 1, freeQty: 1 }), { buyQty: 1, freeQty: 1 });
+  assert.throws(() => service.checkOfferDetails('two_for_one', { buyQty: 1 }), /both required/);
+});
+
+test('L. checkOfferDetails: fixed_price requires price, defaults currency to EUR when omitted', async () => {
+  assert.deepEqual(service.checkOfferDetails('fixed_price', { price: 5.9 }), { price: 5.9, currency: 'EUR' });
+  assert.deepEqual(service.checkOfferDetails('fixed_price', { price: 5.9, currency: 'CHF' }), { price: 5.9, currency: 'CHF' });
+  assert.throws(() => service.checkOfferDetails('fixed_price', {}), /price is required/);
+  assert.throws(() => service.checkOfferDetails('fixed_price', { price: 0 }), /at least 0.01/);
+});
+
+test('L. checkOfferDetails: free_bonus has no required fields -- an empty object is valid', async () => {
+  assert.deepEqual(service.checkOfferDetails('free_bonus', {}), { freeItem: null, minPurchase: null });
+  assert.deepEqual(service.checkOfferDetails('free_bonus', { freeItem: '1 Kaffee' }), { freeItem: '1 Kaffee', minPurchase: null });
+});
+
+test('L. checkOfferDetails: upgrade has no required fields -- an empty object is valid', async () => {
+  assert.deepEqual(service.checkOfferDetails('upgrade', {}), { fromLabel: null, toLabel: null });
+  assert.deepEqual(service.checkOfferDetails('upgrade', { fromLabel: 'Standard', toLabel: 'Premium' }), { fromLabel: 'Standard', toLabel: 'Premium' });
+});
+
+test('L. checkOfferDetails: custom never accepts a details object -- structured data is not supported for it, by design', async () => {
+  const err = await throwsAsync(async () => service.checkOfferDetails('custom', {}));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /not supported for offerType "custom"/);
+});
+
+test('L. checkOfferDetails: null offerDetails always returns null regardless of offerType', async () => {
+  assert.equal(service.checkOfferDetails('percentage_discount', null), null);
+  assert.equal(service.checkOfferDetails('custom', null), null);
+});
+
+test('L. checkOfferDetails: a non-null offerDetails with offerType null is rejected', async () => {
+  const err = await throwsAsync(async () => service.checkOfferDetails(null, { percentOff: 20 }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /requires an offerType/);
+});
+
+// ── L. Create: offerType allowed, offerDetails is save-draft-only ────
+test('L. create accepts a valid offerType alongside title/offerText', async () => {
+  resetFixtures();
+  const state = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'percentage_discount' });
+  assert.equal(state.offerType, 'percentage_discount');
+  assert.equal(state.offerDetails, null);
+});
+
+test('L. create rejects an invalid offerType', async () => {
+  resetFixtures();
+  const err = await throwsAsync(() => service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'not_a_real_type' }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+});
+
+test('L. create rejects offerDetails at creation (same posture as image -- save-draft only)', async () => {
+  resetFixtures();
+  const err = await throwsAsync(() => service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, {
+    title: 'x', offerText: 'y', offerType: 'percentage_discount', offerDetails: { percentOff: 20 },
+  }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /Unexpected field/);
+});
+
+test('L. create without offerType leaves it null (legacy-compatible default)', async () => {
+  resetFixtures();
+  const state = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  assert.equal(state.offerType, null);
+  assert.equal(state.offerDetails, null);
+});
+
+// ── L. Save draft: offerType + offerDetails together and separately ──
+test('L. saveDraft sets offerType and offerDetails together in one call', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const updated = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, {
+    offerType: 'percentage_discount', offerDetails: { percentOff: 25 },
+  });
+  assert.equal(updated.offerType, 'percentage_discount');
+  assert.deepEqual(updated.offerDetails, { percentOff: 25 });
+});
+
+test('L. saveDraft sets offerDetails alone, resolved against the offerType ALREADY stored on the offer', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'fixed_price' });
+  const updated = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { price: 9.5 } });
+  assert.deepEqual(updated.offerDetails, { price: 9.5, currency: 'EUR' });
+});
+
+test('L. saveDraft rejects offerDetails when no offerType is resolvable (never set, not in this call either)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const err = await throwsAsync(() => service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { percentOff: 20 } }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /requires an offerType/);
+});
+
+test('L. saveDraft rejects malformed offerDetails for the resolved offerType (invalid combination -> clear 400-style error)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'two_for_one' });
+  const err = await throwsAsync(() => service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { buyQty: 1 } }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 400);
+  assert.match(err.message, /both required/);
+});
+
+test('L. saveDraft: switching offerType WITHOUT sending offerDetails auto-clears the old type\'s stale offerDetails (defense-in-depth)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'percentage_discount' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { percentOff: 20 } });
+  const switched = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerType: 'custom' });
+  assert.equal(switched.offerType, 'custom');
+  assert.equal(switched.offerDetails, null); // never left as a mismatched leftover from percentage_discount
+});
+
+test('L. saveDraft: switching offerType WITH offerDetails in the same call validates against the NEW type, not the old one', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'percentage_discount' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { percentOff: 20 } });
+  const switched = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, {
+    offerType: 'fixed_price', offerDetails: { price: 4.5 },
+  });
+  assert.equal(switched.offerType, 'fixed_price');
+  assert.deepEqual(switched.offerDetails, { price: 4.5, currency: 'EUR' });
+});
+
+test('L. saveDraft: re-selecting the SAME offerType without resending offerDetails leaves the existing offerDetails untouched', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'percentage_discount' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { percentOff: 20 } });
+  const resaved = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerType: 'percentage_discount' });
+  assert.deepEqual(resaved.offerDetails, { percentOff: 20 }); // not cleared -- this was not a genuine switch
+});
+
+test('L. saveDraft still rejects an entirely unknown top-level field (OFFER_FIELDS whitelist unaffected by this phase)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const err = await throwsAsync(() => service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { redemptionCode: 'FREE10' }));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.match(err.message, /Unexpected field/);
+});
+
+// ── L. Publish: offerType/offerDetails copy onto live columns ────────
+test('L. publish copies offerType and offerDetails from draftData onto the live columns', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType: 'two_for_one' });
+  await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: { buyQty: 1, freeQty: 1 } });
+  const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(published.offerType, 'two_for_one');
+  assert.deepEqual(published.offerDetails, { buyQty: 1, freeQty: 1 });
+  const rawRow = offerRows.find((o) => o.id === created.offerId);
+  assert.equal(rawRow.offerType, 'two_for_one'); // copied onto the live column, not just left in draftData
+  assert.deepEqual(rawRow.offerDetails, { buyQty: 1, freeQty: 1 });
+});
+
+// ── L. Legacy compatibility: offerType/offerDetails null/null ────────
+test('L. a legacy offer row (as this migration leaves every pre-existing row: offerType/offerDetails genuinely NULL, never inferred) loads as null/null, not an error', async () => {
+  resetFixtures();
+  // Bypasses createOfferDraft entirely -- seeded directly to represent
+  // exactly what an ALTER TABLE ... ADD COLUMN "offerType" TEXT (nullable,
+  // no default) leaves on every row that existed before this migration:
+  // a real, present NULL value on both new columns, never an inferred
+  // guess from the row's existing offerText.
+  const row = {
+    id: nextId('offer'), listingLocationId: STAIB_LL_ID,
+    title: 'Alt-Angebot', description: null, offerText: '10% Rabatt',
+    offerType: null, offerDetails: null,
+    image: null, status: 'draft', startsAt: null, endsAt: null, publishedAt: null,
+    createdBy: 'ulm_manager', createdAt: new Date(2026, 8, 1), updatedAt: new Date(2026, 8, 1),
+    draftData: null,
+  };
+  offerRows.push(row);
+  const state = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(state.offerType, null);
+  assert.equal(state.offerDetails, null);
+  assert.equal(state.offerText, '10% Rabatt'); // untouched, never re-derived
+});
+
+test('L. a legacy offer (offerType: null) can still be edited, saved, and published exactly as before -- untouched by this phase', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'Alt-Angebot', offerText: '10% Rabatt' });
+  const updated = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { title: 'Alt-Angebot (bearbeitet)' });
+  assert.equal(updated.offerType, null);
+  const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(published.status, 'published');
+  assert.equal(published.offerType, null);
+  assert.equal(published.offerDetails, null);
+});
+
+test('L. offerType is never inferred from existing offerText, even when the text strongly suggests a type', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: '20% Rabatt' });
+  assert.equal(created.offerType, null); // "20% Rabatt" looks exactly like the percentage_discount prefill string -- still never guessed
+});
+
+// ── L. Full round-trip per type: create -> save -> reload -> edit ->
+// save again -- proves the selected type and structured values survive
+// every step of the Deal Builder wizard, per the Phase B.2.2 brief.
+const ROUND_TRIP_CASES = [
+  { offerType: 'percentage_discount', details: { percentOff: 20 }, expected: { percentOff: 20 } },
+  { offerType: 'two_for_one', details: { buyQty: 1, freeQty: 1 }, expected: { buyQty: 1, freeQty: 1 } },
+  { offerType: 'fixed_price', details: { price: 5.9 }, expected: { price: 5.9, currency: 'EUR' } },
+  { offerType: 'free_bonus', details: { freeItem: '1 Kaffee' }, expected: { freeItem: '1 Kaffee', minPurchase: null } },
+  { offerType: 'upgrade', details: { fromLabel: 'Standard', toLabel: 'Premium' }, expected: { fromLabel: 'Standard', toLabel: 'Premium' } },
+  { offerType: 'custom', details: null, expected: null },
+];
+
+ROUND_TRIP_CASES.forEach(({ offerType, details, expected }) => {
+  test(`L. ROUND-TRIP (${offerType}): create -> save -> reload -> edit -> save again survives with the exact type and values`, async () => {
+    resetFixtures();
+    const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y', offerType });
+    if (details) {
+      await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { offerDetails: details });
+    }
+    // reload (simulates reopening the offer in the admin)
+    const reloaded = await service.getOfferState(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+    assert.equal(reloaded.offerType, offerType);
+    assert.deepEqual(reloaded.offerDetails, expected);
+    // edit an unrelated field, save again -- type/details must be untouched
+    const editedAgain = await service.saveOfferDraft(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope, { title: 'x (bearbeitet)' });
+    assert.equal(editedAgain.offerType, offerType);
+    assert.deepEqual(editedAgain.offerDetails, expected);
+    // publish -- type/details must survive onto the live columns too
+    const published = await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+    assert.equal(published.offerType, offerType);
+    assert.deepEqual(published.offerDetails, expected);
+    // reopen once more after publish (edit-after-publish path)
+    const reopenedAfterPublish = await service.getOfferState(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+    assert.equal(reopenedAfterPublish.offerType, offerType);
+    assert.deepEqual(reopenedAfterPublish.offerDetails, expected);
+  });
+});
+
+// ── L. Starter-gallery / date-roundtrip behavior is unchanged ────────
+// Not re-tested in depth here -- see sections I/J/K above, which are
+// untouched by this phase and still run as part of this same file/run.
+// This one test is a direct smoke check that an offer combining an
+// offerType/offerDetails AND a starter image AND a round-tripped date
+// still behaves correctly end-to-end, proving the three features don't
+// interfere with each other.
+test('L. offerType/offerDetails coexist correctly with a starter image and a round-tripped endsAt on the same offer', async () => {
+  resetFixtures();
+  const row = seedRoundTrippedOffer({
+    offerType: 'percentage_discount',
+    offerDetails: { percentOff: 20 },
+    image: { ...TRUSTED_IMAGE, source: 'starter', starterId: 'starter-fixture-01' },
+    draftData: { endsAt: new Date('2026-09-20T00:00:00.000Z') },
+  });
+  const detail = await service.getOfferState(ULM, STAIB_LL_ID, row.id, ulmManagerScope);
+  assert.equal(detail.offerType, 'percentage_discount');
+  assert.deepEqual(detail.offerDetails, { percentOff: 20 });
+  assert.equal(detail.image.source, 'starter');
+  assert.equal(isoOf(detail.endsAt), '2026-09-20T00:00:00.000Z');
 });
 
 // ── runner ──────────────────────────────────────────────────────

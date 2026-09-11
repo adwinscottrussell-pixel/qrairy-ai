@@ -656,6 +656,7 @@
             <h2 style="margin-top:0">Was für ein Angebot möchtest du erstellen?</h2>
             <p class="muted" style="margin:0 0 4px">Wähle eine Vorlage als Startpunkt. Du kannst alles danach noch ändern.</p>
             <div class="deal-type-grid" id="deal-type-chips"></div>
+            <div id="deal-type-details" style="display:none"></div>
 
             <label>Titel des Angebots</label>
             <input type="text" id="offer-f-title" placeholder="z. B. 20% auf ausgewählte Artikel" oninput="renderDealPreview()" />
@@ -1594,21 +1595,52 @@
   // Cloudinary metadata only -> committed via the existing draft PUT),
   // no second media system.
   //
-  // Deal-type chips (Step 1) are a pure UX helper: they only pre-fill
-  // the existing offerText/title fields with a suggested starting
-  // string. No new field, no new concept -- the Phase A model has
-  // exactly title/description/offerText/image/startsAt/endsAt, and
-  // that's all this editor ever sends.
+  // Deal-type chips (Step 1) -- Phase B.2.2. Each chip now carries a
+  // real `id` matching the backend's offerType allow-list
+  // (stadtpocketOfferService.js's OFFER_TYPES), in addition to its
+  // original UX role of pre-filling offerText/title with a suggested
+  // starting string. `value` (the prefill string) and offerType are two
+  // separate concerns -- offerText stays the free-editable customer-
+  // facing wording regardless of what structured offerDetails a type
+  // carries; see OFFER_TYPE_FIELD_DEFS below for the structured side.
   // ============================================================
 
   const DEAL_TYPES = [
-    { label: '% Prozent-Rabatt', value: '20% Rabatt', example: 'z. B. 20% Rabatt', icon: '%' },
-    { label: '2 für 1', value: '2 für 1', example: 'z. B. 2 für 1', icon: '🎁' },
-    { label: 'Festpreis', value: 'Nur 5,90 €', example: 'z. B. 5,90 €', icon: '€' },
-    { label: 'Kostenlos / Zugabe', value: 'Gratis dazu', example: 'z. B. 1 Artikel gratis', icon: '🎁' },
-    { label: 'Upgrade', value: 'Kostenloses Upgrade', example: 'z. B. Größe gratis', icon: '↗' },
-    { label: 'Eigenes Angebot', value: '', example: 'Freie Gestaltung', icon: '✎' },
+    { id: 'percentage_discount', label: '% Prozent-Rabatt', value: '20% Rabatt', example: 'z. B. 20% Rabatt', icon: '%' },
+    { id: 'two_for_one', label: '2 für 1', value: '2 für 1', example: 'z. B. 2 für 1', icon: '🎁' },
+    { id: 'fixed_price', label: 'Festpreis', value: 'Nur 5,90 €', example: 'z. B. 5,90 €', icon: '€' },
+    { id: 'free_bonus', label: 'Kostenlos / Zugabe', value: 'Gratis dazu', example: 'z. B. 1 Artikel gratis', icon: '🎁' },
+    { id: 'upgrade', label: 'Upgrade', value: 'Kostenloses Upgrade', example: 'z. B. Größe gratis', icon: '↗' },
+    { id: 'custom', label: 'Eigenes Angebot', value: '', example: 'Freie Gestaltung', icon: '✎' },
   ];
+
+  // Structured field definitions per offerType, mirroring
+  // stadtpocketOfferService.js's checkOfferDetails exactly (same keys,
+  // same required/optional split). `custom` intentionally has no
+  // entry -- it stays genuinely free-form, never gets a details panel.
+  // Values are kept as raw input strings here; the backend coerces
+  // numbers and re-validates ranges independently, so this never needs
+  // to duplicate that logic client-side.
+  const OFFER_TYPE_FIELD_DEFS = {
+    percentage_discount: [
+      { key: 'percentOff', label: 'Rabatt in Prozent', type: 'number', placeholder: 'z. B. 20', min: 1, max: 100 },
+    ],
+    two_for_one: [
+      { key: 'buyQty', label: 'Kaufen (Anzahl)', type: 'number', placeholder: '1', min: 1 },
+      { key: 'freeQty', label: 'Gratis dazu (Anzahl)', type: 'number', placeholder: '1', min: 1 },
+    ],
+    fixed_price: [
+      { key: 'price', label: 'Preis (€)', type: 'number', placeholder: 'z. B. 5.90', min: 0.01, step: '0.01' },
+    ],
+    free_bonus: [
+      { key: 'freeItem', label: 'Was ist gratis? (optional)', type: 'text', placeholder: 'z. B. 1 Kaffee' },
+      { key: 'minPurchase', label: 'Mindestbestellung (optional)', type: 'text', placeholder: 'z. B. ab 10 €' },
+    ],
+    upgrade: [
+      { key: 'fromLabel', label: 'Von (optional)', type: 'text', placeholder: 'z. B. Standard' },
+      { key: 'toLabel', label: 'Auf (optional)', type: 'text', placeholder: 'z. B. Premium' },
+    ],
+  };
   // Phase B.2 — "🖼 Vorlage auswählen" starter-image catalog. Mirrors
   // backend/src/data/stadtpocketOfferStarterImages.js exactly (same
   // convention as DEAL_TYPES above being inline data with no backend
@@ -1660,6 +1692,15 @@
   let currentOfferId = null;
   let currentOffer = null;
   let offerImageStageMode = null; // 'upload' | 'starter' | 'ai' | null
+  // Phase B.2.2 -- Step 1 offer-type selection state. selectedOfferType
+  // is the currently-highlighted chip's id (or null, matching a legacy
+  // offer with offerType: null); offerDetailsDraft holds the in-progress
+  // structured values for that type, keyed exactly like
+  // OFFER_TYPE_FIELD_DEFS[selectedOfferType]'s field keys. Both are
+  // reset on openNewOffer/openEditOffer and cleared on a genuine type
+  // switch -- see selectDealType.
+  let selectedOfferType = null;
+  let offerDetailsDraft = {};
 
   // ── Offers list (business editor page) ─────────────────────────
   async function renderOffersSection() {
@@ -1742,11 +1783,11 @@
     return new Date(iso).toLocaleDateString('de-DE', { timeZone: 'UTC' });
   }
 
-  // ── Deal-type chips (Step 1 UX helper only) ─────────────────────
+  // ── Deal-type chips (Step 1) -- Phase B.2.2 ─────────────────────
   function renderDealTypeChips() {
     const el = document.getElementById('deal-type-chips');
-    el.innerHTML = DEAL_TYPES.map((t, i) => `
-      <button type="button" class="deal-type-card" id="chip-${i}" onclick="selectDealType(${i})">
+    el.innerHTML = DEAL_TYPES.map((t) => `
+      <button type="button" class="deal-type-card" id="chip-${t.id}" onclick="selectDealType('${t.id}')">
         <span class="icon">${t.icon}</span>
         <div class="label">${escapeHtml(t.label)}</div>
         ${t.example ? `<div class="example">${escapeHtml(t.example)}</div>` : ''}
@@ -1754,14 +1795,86 @@
     `).join('');
   }
 
-  function selectDealType(i) {
-    document.querySelectorAll('.deal-type-card').forEach((c) => c.classList.remove('selected'));
-    document.getElementById(`chip-${i}`).classList.add('selected');
+  // User-initiated: clicking a Step 1 card. Always a fresh pick of that
+  // type -- switching AWAY from a different, previously-selected type
+  // clears offerDetailsDraft (values that belonged to the old type would
+  // be a malformed combination for the new one; the backend
+  // independently refuses to persist them anyway, this just keeps the
+  // visible form honest instead of silently holding stale input).
+  // Re-clicking the SAME already-selected chip is not a switch and
+  // leaves any entered detail values untouched.
+  function selectDealType(typeId) {
+    if (selectedOfferType !== typeId) {
+      selectedOfferType = typeId;
+      offerDetailsDraft = {};
+    }
+    applyDealTypeSelectionUI(typeId);
+
     const offerTextInput = document.getElementById('offer-f-offerText');
-    if (!offerTextInput.value.trim() && DEAL_TYPES[i].value) {
-      offerTextInput.value = DEAL_TYPES[i].value;
+    const def = DEAL_TYPES.find((t) => t.id === typeId);
+    if (!offerTextInput.value.trim() && def && def.value) {
+      offerTextInput.value = def.value;
       renderDealPreview();
     }
+  }
+
+  // Shared UI application: highlights the matching chip and renders that
+  // type's structured-value inputs from the CURRENT offerDetailsDraft.
+  // Used both by selectDealType (a fresh user pick) and by
+  // openEditOffer/openNewOffer (restoring or clearing a selection) -- one
+  // rendering path, different callers own setting offerDetailsDraft
+  // beforehand.
+  function applyDealTypeSelectionUI(typeId) {
+    document.querySelectorAll('.deal-type-card').forEach((c) => c.classList.remove('selected'));
+    const chip = typeId ? document.getElementById(`chip-${typeId}`) : null;
+    if (chip) chip.classList.add('selected');
+    renderOfferDetailFields(typeId);
+  }
+
+  function renderOfferDetailFields(typeId) {
+    const container = document.getElementById('deal-type-details');
+    const fields = OFFER_TYPE_FIELD_DEFS[typeId] || [];
+    if (!fields.length) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+    container.style.display = '';
+    container.innerHTML = fields.map((f) => `
+      <label>${escapeHtml(f.label)}</label>
+      <input type="${f.type}" id="offer-detail-${f.key}"
+        placeholder="${escapeHtml(f.placeholder || '')}"
+        ${f.min != null ? `min="${f.min}"` : ''} ${f.max != null ? `max="${f.max}"` : ''} ${f.step ? `step="${f.step}"` : ''}
+        value="${escapeHtml(offerDetailsDraft[f.key] != null ? String(offerDetailsDraft[f.key]) : '')}"
+        oninput="updateOfferDetailField('${f.key}', this.value)" />
+    `).join('');
+  }
+
+  function updateOfferDetailField(key, value) {
+    if (value === '' || value == null) {
+      delete offerDetailsDraft[key];
+    } else {
+      offerDetailsDraft[key] = value;
+    }
+    renderDealPreview();
+  }
+
+  // Builds the offerDetails payload to send for the CURRENTLY selected
+  // type from whatever the manager has actually filled in --
+  // deliberately returns undefined (not {}) when nothing is filled, so
+  // offerStepNext never sends an empty object that would trip the
+  // backend's "required" checks for a type the manager hasn't finished
+  // entering values for yet (they can finish later; offerType alone is
+  // already persisted and meaningful on its own).
+  function buildOfferDetailsPayload() {
+    const fields = OFFER_TYPE_FIELD_DEFS[selectedOfferType] || [];
+    if (!fields.length) return undefined;
+    const details = {};
+    fields.forEach((f) => {
+      const raw = offerDetailsDraft[f.key];
+      if (raw != null && String(raw).trim() !== '') details[f.key] = raw;
+    });
+    return Object.keys(details).length ? details : undefined;
   }
 
   // ── Offer editor: open / reset ──────────────────────────────────
@@ -1771,7 +1884,9 @@
     document.getElementById('offer-f-description').value = '';
     document.getElementById('offer-f-startsAt').value = '';
     document.getElementById('offer-f-endsAt').value = '';
-    document.querySelectorAll('.deal-type-card').forEach((c) => c.classList.remove('selected'));
+    selectedOfferType = null;
+    offerDetailsDraft = {};
+    applyDealTypeSelectionUI(null);
     cancelImageStaging();
     banner('offer-editor-banner', 'info', '');
     banner('offer-image-banner', 'info', '');
@@ -1806,6 +1921,12 @@
     document.getElementById('offer-f-description').value = currentOffer.description || '';
     document.getElementById('offer-f-startsAt').value = isoToGermanDateInput(currentOffer.startsAt);
     document.getElementById('offer-f-endsAt').value = isoToGermanDateInput(currentOffer.endsAt);
+    // Reconstruct Step 1's type selection from the loaded offer -- a
+    // legacy offer (offerType: null) leaves no chip selected, exactly as
+    // it should: nothing was ever inferred for it.
+    selectedOfferType = currentOffer.offerType || null;
+    offerDetailsDraft = currentOffer.offerDetails ? { ...currentOffer.offerDetails } : {};
+    applyDealTypeSelectionUI(selectedOfferType);
     cancelImageStaging();
     banner('offer-editor-banner', 'info', '');
     document.getElementById('offer-editor-title').textContent = currentOffer.title || '(ohne Titel)';
@@ -1901,6 +2022,27 @@
           method: 'PUT', body: { description },
         });
         if (descRes.ok) currentOffer = descRes.body.offer;
+      }
+      // offerType/offerDetails (Phase B.2.2) -- sent together in one PUT
+      // whenever a Step 1 card is selected, so the backend can resolve
+      // offerDetails against the offerType from this SAME call (same
+      // create-then-follow-up-PUT pattern description uses above). Only
+      // includes offerDetails when something was actually filled in --
+      // see buildOfferDetailsPayload. Skipped entirely when no type is
+      // selected (new offer never touched, or a legacy offer left as-is)
+      // so legacy offerType: null offers are never touched by this call.
+      if (selectedOfferType) {
+        const typeBody = { offerType: selectedOfferType };
+        const detailsPayload = buildOfferDetailsPayload();
+        if (detailsPayload !== undefined) typeBody.offerDetails = detailsPayload;
+        const typeRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
+          method: 'PUT', body: typeBody,
+        });
+        if (!typeRes.ok) {
+          banner('offer-editor-banner', 'error', (typeRes.body && typeRes.body.error) || 'Angebotstyp konnte nicht gespeichert werden.');
+          return;
+        }
+        currentOffer = typeRes.body.offer;
       }
       document.getElementById('offer-editor-title').textContent = currentOffer.title;
       document.getElementById('offer-crumb-title').textContent = currentOffer.title;
@@ -2032,8 +2174,29 @@
     const offerText = document.getElementById('offer-f-offerText').value.trim();
     const title = document.getElementById('offer-f-title').value.trim();
     const subject = offerText || title || 'dein Angebot';
-    document.getElementById('ai-stage-context').textContent = `StadtPocket hat dein Angebot „${subject}“ verstanden.`;
+    document.getElementById('ai-stage-context').textContent = `StadtPocket hat dein Angebot „${subject}“${offerTypeContextLabel()} verstanden.`;
     renderAiStyleChips();
+  }
+
+  // Phase B.2.2 -- Step 2 handoff. The AI stage above is still an
+  // honest inert scaffold (generation itself is not implemented, see
+  // its own header comment); this only makes the structured
+  // offerType/offerDetails context VISIBLE in that scaffold's context
+  // line, genuinely derived from the current Step 1 selection -- never
+  // fabricated -- so a future real generateOfferImage(context) seam has
+  // somewhere obvious to read it from. Returns '' for no type selected
+  // or for 'custom' (nothing structured to add for either).
+  function offerTypeContextLabel() {
+    if (!selectedOfferType || selectedOfferType === 'custom') return '';
+    const def = DEAL_TYPES.find((t) => t.id === selectedOfferType);
+    const label = def ? def.label : selectedOfferType;
+    const fields = OFFER_TYPE_FIELD_DEFS[selectedOfferType] || [];
+    const parts = [];
+    fields.forEach((f) => {
+      const v = offerDetailsDraft[f.key];
+      if (v != null && String(v).trim() !== '') parts.push(`${f.label}: ${v}`);
+    });
+    return parts.length ? ` (${label} – ${parts.join(', ')})` : ` (${label})`;
   }
 
   function renderAiStyleChips() {

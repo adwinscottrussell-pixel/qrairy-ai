@@ -880,6 +880,20 @@ model StadtPocketOffer {
   description String?
   offerText   String
 
+  // Phase B.2.2 — offer-type structure. offerType is a plain free-text
+  // discriminator (percentage_discount | two_for_one | fixed_price |
+  // free_bonus | upgrade | custom), matching this schema's existing
+  // no-enum convention (see `status` below) so a future 7th type needs
+  // no migration. offerDetails holds ONLY the structured values genuinely
+  // useful for that specific offerType (see checkOfferDetails in
+  // stadtpocketOfferService.js for the exact per-type shape) -- never a
+  // duplicate of offerText, which stays the exact customer-facing string
+  // regardless of offerType. Both are null on every offer created before
+  // this phase, and stay null forever unless a manager explicitly picks
+  // a type -- never inferred from existing offerText.
+  offerType    String?
+  offerDetails Json?
+
   image Json?
 
   status String @default("draft") // draft | published | archived
@@ -900,4 +914,5 @@ model StadtPocketOffer {
 
   @@index([listingLocationId])
   @@index([status])
+  @@index([offerType])
 }

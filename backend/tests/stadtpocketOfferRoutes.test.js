@@ -100,7 +100,7 @@ const mockPrisma = {
       return cloneRows(rows);
     },
     create: async ({ data }) => {
-      const row = { image: null, draftData: null, publishedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data };
+      const row = { image: null, draftData: null, publishedAt: null, offerDetails: null, createdAt: new Date(), updatedAt: new Date(), ...data };
       offerRows.push(row);
       return { ...row };
     },
@@ -374,6 +374,104 @@ test('G. offerImageFileFilter rejects a non-allowed mimetype (e.g. SVG)', async 
   let rejected = false;
   routes.offerImageFileFilter({}, { mimetype: 'image/svg+xml' }, (err) => { rejected = !!err; });
   assert.equal(rejected, true);
+});
+
+// ── H. Offer-type structure at the route/HTTP layer (Phase B.2.2) ──
+test('H. create accepts a valid offerType via the real HTTP path', async () => {
+  resetFixtures();
+  const res = await createOfferViaRoute({ offerType: 'percentage_discount' });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.body.offer.offerType, 'percentage_discount');
+  assert.equal(res.body.offer.offerDetails, null);
+});
+
+test('H. create rejects an invalid offerType via the real HTTP path with 400, not 500', async () => {
+  resetFixtures();
+  const res = await createOfferViaRoute({ offerType: 'not_a_real_type' });
+  assert.equal(res.statusCode, 400);
+});
+
+test('H. save-draft sets offerType + offerDetails together, reflected by a subsequent GET', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { offerType: 'fixed_price', offerDetails: { price: 5.9 } },
+  }));
+  const detail = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(detail.body.offer.offerType, 'fixed_price');
+  assert.deepEqual(detail.body.offer.offerDetails, { price: 5.9, currency: 'EUR' });
+});
+
+test('H. malformed offerDetails (missing a required field for the resolved offerType) -> 400 via the route, not a 500', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute({ offerType: 'two_for_one' });
+  const res = await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { offerDetails: { buyQty: 1 } }, // freeQty missing
+  }));
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.error, /both required/);
+});
+
+test('H. offerDetails with an unexpected key for the resolved offerType -> 400 (reject-not-strip, not silently dropped)', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute({ offerType: 'percentage_discount' });
+  const res = await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { offerDetails: { percentOff: 20, buyQty: 1 } },
+  }));
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.error, /Unexpected offerDetails field/);
+});
+
+test('H. offerDetails without a resolvable offerType -> 400', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute(); // no offerType at all
+  const res = await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { offerDetails: { percentOff: 20 } },
+  }));
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.error, /requires an offerType/);
+});
+
+test('H. offerDetails is rejected at creation (still whitelisted to save-draft only, via the real route)', async () => {
+  resetFixtures();
+  const res = await createOfferViaRoute({ offerType: 'percentage_discount', offerDetails: { percentOff: 20 } });
+  assert.equal(res.statusCode, 400);
+});
+
+test('H. an unrelated unexpected field is still rejected on save-draft, unaffected by this phase (whitelist regression)', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  const res = await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { redemptionCode: 'FREE10' },
+  }));
+  assert.equal(res.statusCode, 400);
+});
+
+test('H. publish copies offerType/offerDetails through to the published state via the route', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute({ offerType: 'upgrade' });
+  await callRoute(routes.handleSaveOfferDraft, fakeReq({
+    params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId },
+    body: { offerDetails: { fromLabel: 'Standard', toLabel: 'Premium' } },
+  }));
+  const pub = await callRoute(routes.handlePublishOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(pub.body.offer.offerType, 'upgrade');
+  assert.deepEqual(pub.body.offer.offerDetails, { fromLabel: 'Standard', toLabel: 'Premium' });
+});
+
+test('H. a legacy offer created via this same route with no offerType still returns offerType/offerDetails: null, not an error', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute(); // no offerType field sent at all
+  assert.equal(created.body.offer.offerType, null);
+  assert.equal(created.body.offer.offerDetails, null);
+  const detail = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(detail.body.offer.offerType, null);
+  assert.equal(detail.body.offer.offerDetails, null);
 });
 
 // ── runner ──────────────────────────────────────────────────────
