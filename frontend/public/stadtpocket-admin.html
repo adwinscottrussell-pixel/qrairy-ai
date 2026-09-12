@@ -1037,7 +1037,18 @@
   }
 
   // ── Boot: role already resolved by stadtpocket-admin-guard.js ──────
+  // Reload persistence (see saveLastContext/tryRestoreLastContext above)
+  // lives in sessionStorage, which is tab-scoped, not Clerk-session-
+  // scoped -- signing out and back in as a DIFFERENT Clerk identity in
+  // the same tab would otherwise silently restore the PREVIOUS
+  // identity's last-viewed business (proven during the auth identity
+  // audit: two genuinely different Clerk users both happening to have
+  // access to the same business made this look like one shared
+  // context). Clearing only this one key here, before navigating away,
+  // closes that gap without touching Clerk's own session data or any
+  // other storage.
   function signOutOfStadtPocket() {
+    clearLastContext();
     if (window.Clerk && window.Clerk.signOut) {
       window.Clerk.signOut().then(() => { window.location.href = '/stadtpocket-login.html'; });
     } else {
@@ -2471,12 +2482,42 @@
   }
 
   // ── Step 4: publishing actions ────────────────────────────────────
+  // BUGFIX (edit/save regression): this used to PUT an empty body,
+  // meaning it saved NOTHING -- any field changed on a step other than
+  // the one just navigated through via its own "Weiter" button (e.g.
+  // jumping back to Step 1 via the step-nav, changing a value, then
+  // using this persistent "Als Entwurf speichern" button instead of
+  // clicking through "Weiter" again) was silently discarded: visible in
+  // the form, never sent, gone on reload. All Step 1/3 fields live in
+  // the DOM simultaneously regardless of which step is visually active
+  // (CSS-toggled, not conditionally rendered), so they're always safe
+  // to read here -- this always reflects the CURRENT on-screen values,
+  // not stale ones from whenever the offer was first opened.
   async function saveOfferDraftFromEditor() {
     if (!currentOfferId) return;
     const btn = document.getElementById('offer-save-draft-btn');
+    const title = document.getElementById('offer-f-title').value.trim();
+    const offerText = document.getElementById('offer-f-offerText').value.trim();
+    if (!title || !offerText) {
+      banner('offer-editor-banner', 'error', 'Titel und Angebotswert sind erforderlich.');
+      return;
+    }
+    const description = document.getElementById('offer-f-description').value.trim();
+    const startsRaw = parseGermanDateToISO(document.getElementById('offer-f-startsAt').value);
+    const endsRaw = parseGermanDateToISO(document.getElementById('offer-f-endsAt').value);
+    if (startsRaw === undefined || endsRaw === undefined) {
+      banner('offer-editor-banner', 'error', 'Bitte Datum im Format TT.MM.JJJJ eingeben.');
+      return;
+    }
+    const payload = { title, offerText, description: description || null, startsAt: startsRaw, endsAt: endsRaw };
+    if (selectedOfferType) {
+      payload.offerType = selectedOfferType;
+      const detailsPayload = buildOfferDetailsPayload();
+      if (detailsPayload !== undefined) payload.offerDetails = detailsPayload;
+    }
     btn.disabled = true;
     const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${currentOfferId}/draft`, {
-      method: 'PUT', body: {},
+      method: 'PUT', body: payload,
     });
     btn.disabled = false;
     if (!res.ok) {
