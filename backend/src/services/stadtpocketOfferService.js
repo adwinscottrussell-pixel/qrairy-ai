@@ -560,6 +560,22 @@ async function archiveOffer(locationId, listingLocationId, offerId, scope) {
   return mergeOfferState(updated);
 }
 
+// ── Delete (hard delete; irreversible) ───────────────────────────────
+// Phase B.2.3. Unlike archive above (a status transition -- the row
+// stays, just terminal), this permanently removes the row. Same
+// three-level ownership re-check as every other mutation here
+// (findOfferOrThrow: locationId -> listingLocationId -> offerId, each
+// re-verified against the loaded row's own parent id) -- ownership is
+// always re-proven against the database, never assumed from the
+// caller-supplied ids alone. No status restriction: a draft, published,
+// or archived offer can all be deleted the same way, matching the
+// admin's "Löschen" action having no such distinction either.
+async function deleteOffer(locationId, listingLocationId, offerId, scope) {
+  const offer = await findOfferOrThrow(locationId, listingLocationId, offerId, scope);
+  await prisma.stadtPocketOffer.delete({ where: { id: offer.id } });
+  return { deleted: true, offerId: offer.id };
+}
+
 module.exports = {
   StadtpocketOfferError,
   createOfferDraft,
@@ -568,6 +584,7 @@ module.exports = {
   saveOfferDraft,
   publishOffer,
   archiveOffer,
+  deleteOffer,
   // exported for direct unit testing only
   validateOfferDraftPayload,
   mergeOfferState,

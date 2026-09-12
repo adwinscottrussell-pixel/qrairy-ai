@@ -68,7 +68,13 @@ const mockPrisma = {
       return cloneRows(rows);
     },
     create: async ({ data }) => {
+      // Real Prisma auto-generates `id` via @default(cuid()); createOfferDraft
+      // never supplies one itself. Without this, every mock row would share
+      // id: undefined, making two offers on the same business indistinguishable
+      // by id -- harmless for tests that only ever touch one offer at a time,
+      // but wrong for anything (like delete) that must target ONE of several.
       const row = {
+        id: nextId('offer'),
         image: null, draftData: null, publishedAt: null, offerDetails: null,
         createdAt: new Date(), updatedAt: new Date(), ...data,
       };
@@ -79,6 +85,12 @@ const mockPrisma = {
       const row = offerRows.find((o) => o.id === where.id);
       if (!row) throw new Error('offer not found in mock');
       Object.assign(row, data, { updatedAt: new Date() });
+      return { ...row };
+    },
+    delete: async ({ where }) => {
+      const idx = offerRows.findIndex((o) => o.id === where.id);
+      if (idx === -1) throw new Error('offer not found in mock');
+      const [row] = offerRows.splice(idx, 1);
       return { ...row };
     },
   },
@@ -1051,6 +1063,88 @@ test('L. offerType/offerDetails coexist correctly with a starter image and a rou
   assert.deepEqual(detail.offerDetails, { percentOff: 20 });
   assert.equal(detail.image.source, 'starter');
   assert.equal(isoOf(detail.endsAt), '2026-09-20T00:00:00.000Z');
+});
+
+// ── M. Delete (Phase B.2.3) ─────────────────────────────────────────
+test('M. authorized delete succeeds and the offer is genuinely gone (getOfferState now 404s)', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const result = await service.deleteOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.deepEqual(result, { deleted: true, offerId: created.offerId });
+  const err = await throwsAsync(() => service.getOfferState(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 404);
+});
+
+test('M. delete works regardless of status -- a PUBLISHED offer can be deleted too', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  await service.publishOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  const result = await service.deleteOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  assert.equal(result.deleted, true);
+  assert.equal(offerRows.some((o) => o.id === created.offerId), false);
+});
+
+test('M. unauthorized delete (manager outside the business city) fails, offer NOT deleted', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const err = await throwsAsync(() => service.deleteOffer(ULM, STAIB_LL_ID, created.offerId, stuttgartManagerScope));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 403);
+  assert.equal(offerRows.some((o) => o.id === created.offerId), true); // still there
+});
+
+test('M. delete via a sibling business in the same city (wrong listingLocationId) fails, offer NOT deleted', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const err = await throwsAsync(() => service.deleteOffer(ULM, OTHER_LL_ID, created.offerId, ulmManagerScope));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 404);
+  assert.equal(offerRows.some((o) => o.id === created.offerId), true);
+});
+
+test('M. delete via a mismatched locationId/listingLocationId pair (Stuttgart business addressed via Ulm locationId) fails, not leaked', async () => {
+  resetFixtures();
+  const err = await throwsAsync(() => service.deleteOffer(ULM, STUTTGART_LL_ID, 'irrelevant_offer_id', ulmManagerScope));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 404);
+});
+
+test('M. delete of a nonexistent offer fails safely with 404, not a crash', async () => {
+  resetFixtures();
+  const err = await throwsAsync(() => service.deleteOffer(ULM, STAIB_LL_ID, 'offer_does_not_exist', ulmManagerScope));
+  assert.ok(err instanceof service.StadtpocketOfferError);
+  assert.equal(err.status, 404);
+});
+
+test('M. deleted offer disappears from listOffersForListingLocation, another offer on the same business is unaffected', async () => {
+  resetFixtures();
+  const keep = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'Keep me', offerText: 'a' });
+  const doomed = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'Delete me', offerText: 'b' });
+  await service.deleteOffer(ULM, STAIB_LL_ID, doomed.offerId, ulmManagerScope);
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].offerId, keep.offerId);
+  assert.equal(list[0].title, 'Keep me'); // untouched
+});
+
+test('M. Global Admin can delete regardless of manager location scope', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  const result = await service.deleteOffer(ULM, STAIB_LL_ID, created.offerId, adminScope);
+  assert.equal(result.deleted, true);
+});
+
+test('M. delete is truly permanent -- re-querying after deletion (simulating a reload) never returns the offer', async () => {
+  resetFixtures();
+  const created = await service.createOfferDraft(ULM, STAIB_LL_ID, ulmManagerScope, { title: 'x', offerText: 'y' });
+  await service.deleteOffer(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope);
+  // Simulates a hard reload: a fresh read through the same list/detail
+  // paths a reload would use, with no special-cased "just deleted" state.
+  const list = await service.listOffersForListingLocation(ULM, STAIB_LL_ID, ulmManagerScope);
+  assert.equal(list.some((o) => o.offerId === created.offerId), false);
+  const err = await throwsAsync(() => service.getOfferState(ULM, STAIB_LL_ID, created.offerId, ulmManagerScope));
+  assert.equal(err.status, 404);
 });
 
 // ── runner ──────────────────────────────────────────────────────

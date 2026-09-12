@@ -100,7 +100,9 @@ const mockPrisma = {
       return cloneRows(rows);
     },
     create: async ({ data }) => {
-      const row = { image: null, draftData: null, publishedAt: null, offerDetails: null, createdAt: new Date(), updatedAt: new Date(), ...data };
+      // Real Prisma auto-generates `id`; the mock must too, so two offers
+      // on the same business are distinguishable by id (matters for delete).
+      const row = { id: nextId('offer'), image: null, draftData: null, publishedAt: null, offerDetails: null, createdAt: new Date(), updatedAt: new Date(), ...data };
       offerRows.push(row);
       return { ...row };
     },
@@ -109,6 +111,13 @@ const mockPrisma = {
       const row = offerRows.find((o) => o.id === where.id);
       if (!row) throw new Error('offer not found in mock');
       Object.assign(row, data, { updatedAt: new Date() });
+      return { ...row };
+    },
+    delete: async ({ where }) => {
+      if (offerUpdateShouldFail) throw new Error('simulated database failure: connection reset by peer');
+      const idx = offerRows.findIndex((o) => o.id === where.id);
+      if (idx === -1) throw new Error('offer not found in mock');
+      const [row] = offerRows.splice(idx, 1);
       return { ...row };
     },
   },
@@ -472,6 +481,71 @@ test('H. a legacy offer created via this same route with no offerType still retu
   const detail = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
   assert.equal(detail.body.offer.offerType, null);
   assert.equal(detail.body.offer.offerDetails, null);
+});
+
+// ── I. Delete route (Phase B.2.3) ────────────────────────────────
+test('I. unauthenticated delete -> 401', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ auth: false, params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(res.statusCode, 401);
+});
+
+test('I. authorized delete succeeds, subsequent GET 404s', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(res.body.error, undefined);
+  assert.equal(res.body.deleted, true);
+  const after = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(after.statusCode, 404);
+});
+
+test('I. cross-city delete denial: Stuttgart manager cannot delete an Ulm offer, offer survives', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  currentUserId = 'stuttgart_manager';
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(res.statusCode, 403);
+  currentUserId = 'ulm_manager';
+  const after = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(after.body.error, undefined);
+});
+
+test('I. delete via a sibling business (wrong listingLocationId) -> 404, offer survives', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: OTHER_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(res.statusCode, 404);
+  const after = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(after.body.error, undefined);
+});
+
+test('I. delete of a nonexistent offer -> 404, not a 500', async () => {
+  resetFixtures();
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: 'offer_does_not_exist' } }));
+  assert.equal(res.statusCode, 404);
+});
+
+test('I. deleting one offer leaves a sibling offer on the same business untouched', async () => {
+  resetFixtures();
+  const keep = await createOfferViaRoute({ title: 'Keep me' });
+  const doomed = await createOfferViaRoute({ title: 'Delete me' });
+  await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: doomed.body.offer.offerId } }));
+  const list = await callRoute(routes.handleListOffers, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(list.body.offers.length, 1);
+  assert.equal(list.body.offers[0].offerId, keep.body.offer.offerId);
+});
+
+test('I. a simulated database failure during delete surfaces as 500, offer not silently considered deleted', async () => {
+  resetFixtures();
+  const created = await createOfferViaRoute();
+  offerUpdateShouldFail = true;
+  const res = await callRoute(routes.handleDeleteOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(res.statusCode, 500);
+  offerUpdateShouldFail = false;
+  const after = await callRoute(routes.handleGetOffer, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID, offerId: created.body.offer.offerId } }));
+  assert.equal(after.body.error, undefined); // still there -- failure never partially applied
 });
 
 // ── runner ──────────────────────────────────────────────────────

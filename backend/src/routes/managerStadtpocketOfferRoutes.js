@@ -114,6 +114,19 @@ async function handleArchiveOffer(req, res) {
   }
 }
 
+// Phase B.2.3 -- hard delete. Same requireStadtpocketWriteScope +
+// three-level ownership re-check every other mutation on this router
+// already uses (via service.deleteOffer -> findOfferOrThrow); no
+// separate authorization path introduced for this one action.
+async function handleDeleteOffer(req, res) {
+  try {
+    const result = await service.deleteOffer(req.params.locationId, req.params.listingLocationId, req.params.offerId, req.stadtpocketScope);
+    return res.json(result);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/.../offers/:offerId DELETE');
+  }
+}
+
 // Upload-only, mirrors managerStadtpocketListingRoutes.js's
 // handleUploadHeaderImage exactly: never writes to the database itself,
 // only proves authorization (via getOfferState, which re-checks the
@@ -148,6 +161,7 @@ router.get('/listings/:locationId/:listingLocationId/offers/:offerId', requireSt
 router.put('/listings/:locationId/:listingLocationId/offers/:offerId/draft', requireStadtpocketWriteScope, handleSaveOfferDraft);
 router.post('/listings/:locationId/:listingLocationId/offers/:offerId/publish', requireStadtpocketWriteScope, handlePublishOffer);
 router.post('/listings/:locationId/:listingLocationId/offers/:offerId/archive', requireStadtpocketWriteScope, handleArchiveOffer);
+router.delete('/listings/:locationId/:listingLocationId/offers/:offerId', requireStadtpocketWriteScope, handleDeleteOffer);
 // requireStadtpocketWriteScope runs BEFORE multer parses the upload --
 // same ordering as the listing header-image route, for the same reason
 // (an unauthorized request never gets its file buffered at all).
@@ -165,6 +179,7 @@ module.exports.handleGetOffer = handleGetOffer; // exported for direct unit test
 module.exports.handleSaveOfferDraft = handleSaveOfferDraft; // exported for direct unit testing only
 module.exports.handlePublishOffer = handlePublishOffer; // exported for direct unit testing only
 module.exports.handleArchiveOffer = handleArchiveOffer; // exported for direct unit testing only
+module.exports.handleDeleteOffer = handleDeleteOffer; // exported for direct unit testing only
 module.exports.handleUploadOfferImage = handleUploadOfferImage; // exported for direct unit testing only
 module.exports.offerImageFileFilter = offerImageFileFilter; // exported for direct unit testing only
 module.exports.OFFER_IMAGE_ALLOWED_MIMETYPES = OFFER_IMAGE_ALLOWED_MIMETYPES; // exported for direct unit testing only

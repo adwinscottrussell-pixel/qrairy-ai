@@ -149,9 +149,28 @@
   button.ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
   button.ghost:hover { color: var(--text-primary); border-color: var(--coral); }
   button.small { padding: 6px 11px; font-size: 12px; }
+  /* The actual "Angebot löschen" confirm action inside the delete modal
+     -- filled/unambiguous, matching how every other decisive action
+     (primary/publish) is styled in this file. The two buttons that
+     merely OPEN that confirmation (list card, editor) use the existing
+     quiet `.ghost` class instead -- "secondary, not primary" per the
+     Phase B.2.3 requirement applies to the trigger, not the final
+     confirm step of an already-explicit dialog. */
+  button.danger { background: var(--danger); color: #2a0904; }
+  button.danger:hover { background: #ff5c50; }
   button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
   .actions { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; padding-top: 20px; border-top: 1px solid var(--border-soft); }
   @media (max-width: 520px) { .actions { flex-direction: column; } .actions button { width: 100%; } }
+
+  /* Phase B.2.3 -- delete confirmation modal. Only place in this file
+     that needs a real overlay/dialog (native confirm() can't render a
+     custom title or the exact requested button labels). */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10, 6, 5, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+  .modal-box { background: var(--surface-card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; max-width: 420px; width: 100%; }
+  .modal-box h3 { margin: 0 0 10px; }
+  .modal-box p { margin: 0 0 22px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+  .offer-card-delete { margin-left: 8px; }
   .banner { border-radius: 10px; padding: 13px 16px; font-size: 13px; margin: 14px 0; border: 1px solid transparent; }
   .banner.error { background: var(--danger-soft); color: var(--danger); border-color: rgba(255, 90, 80, 0.3); }
   .banner.success { background: var(--success-soft); color: var(--success); border-color: rgba(51, 196, 140, 0.3); }
@@ -769,6 +788,7 @@
             <button class="primary" id="offer-save-draft-btn" onclick="saveOfferDraftFromEditor()">Als Entwurf speichern</button>
             <button class="publish" id="offer-publish-btn" onclick="publishOfferFromEditor()">Veröffentlichen</button>
             <button class="ghost" id="offer-archive-btn" onclick="archiveOfferFromEditor()" style="display:none">Archivieren / Veröffentlichung beenden</button>
+            <button class="ghost" id="offer-delete-btn" onclick="openDeleteOfferModal(currentOfferId, 'editor')" style="display:none">Löschen</button>
           </div>
         </div>
 
@@ -788,6 +808,21 @@
 </div>
 </div>
 </div><!-- /business-shell -->
+
+<!-- Phase B.2.3 -- delete confirmation modal. Shared by both the
+     Angebote list ("Löschen" on a card) and the offer editor itself;
+     one modal, one delete flow, addressed via pendingDeleteOfferId. -->
+<div class="modal-overlay" id="delete-offer-modal" style="display:none">
+  <div class="modal-box">
+    <h3>Angebot löschen?</h3>
+    <p>Dieses Angebot wird dauerhaft gelöscht und ist danach nicht mehr für Kunden sichtbar.</p>
+    <div id="delete-offer-modal-banner"></div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeDeleteOfferModal()">Abbrechen</button>
+      <button class="danger" id="delete-offer-confirm-btn" onclick="confirmDeleteOfferModal()">Angebot löschen</button>
+    </div>
+  </div>
+</div>
 
 <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/stadtpocket-admin-guard.js"></script>
@@ -1838,6 +1873,7 @@
           <div class="offer-card-schedule">${offerScheduleText(o)}</div>
         </div>
         <span class="status-pill ${OFFER_STATUS_CLASS[statusKey] || 'none'}">${statusLabel}</span>
+        <button class="ghost small offer-card-delete" onclick="event.stopPropagation(); openDeleteOfferModal('${o.offerId}', 'list')">Löschen</button>
       </div>
     `;
   }
@@ -2049,12 +2085,17 @@
   function setOfferActionButtons(status) {
     const publishBtn = document.getElementById('offer-publish-btn');
     const archiveBtn = document.getElementById('offer-archive-btn');
+    const deleteBtn = document.getElementById('offer-delete-btn');
     const saveDraftBtn = document.getElementById('offer-save-draft-btn');
     const topbarSaveBtn = document.getElementById('offer-topbar-save-btn');
     // The persistent top-right "Als Entwurf speichern" only makes sense
     // once the offer actually exists (Step 1 must have run at least
     // once) -- there is nothing to PUT .../draft against before that.
     topbarSaveBtn.style.display = currentOfferId && status !== 'archived' ? '' : 'none';
+    // Unlike archive (hidden once already archived -- nothing further to
+    // transition to), delete has no status restriction: draft,
+    // published, or archived can all be deleted the same way.
+    deleteBtn.style.display = currentOfferId ? '' : 'none';
     if (status === 'archived') {
       // Terminal state -- Phase A rejects re-publishing an archived
       // offer, so no action here pretends otherwise.
@@ -2564,6 +2605,61 @@
     updateOfferStatusPill();
     setOfferActionButtons(currentOffer.status);
     renderDealPreview();
+  }
+
+  // ── Delete (Phase B.2.3) ──────────────────────────────────────────
+  // One shared confirmation modal + delete flow for both trigger points
+  // (the Angebote list card's "Löschen" button, and the editor's own
+  // "Löschen" button) -- addressed via pendingDeleteOfferId/Context
+  // rather than two separate modals or two separate implementations.
+  // Never deletes immediately: every path goes through this modal.
+  let pendingDeleteOfferId = null;
+  let pendingDeleteContext = null; // 'list' | 'editor'
+
+  function openDeleteOfferModal(offerId, context) {
+    if (!offerId) return;
+    pendingDeleteOfferId = offerId;
+    pendingDeleteContext = context;
+    banner('delete-offer-modal-banner', 'info', '');
+    document.getElementById('delete-offer-modal').style.display = 'flex';
+  }
+
+  function closeDeleteOfferModal() {
+    pendingDeleteOfferId = null;
+    pendingDeleteContext = null;
+    document.getElementById('delete-offer-modal').style.display = 'none';
+  }
+
+  async function confirmDeleteOfferModal() {
+    const offerId = pendingDeleteOfferId;
+    const context = pendingDeleteContext;
+    if (!offerId) return;
+    const confirmBtn = document.getElementById('delete-offer-confirm-btn');
+    confirmBtn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/offers/${offerId}`, { method: 'DELETE' });
+    confirmBtn.disabled = false;
+    if (!res.ok) {
+      // Failure: nothing was removed optimistically before this point,
+      // so there is nothing to undo -- the offer is exactly as it was.
+      // The modal stays open (editor/list behind it stays fully usable)
+      // so the error is visible right next to the action that failed.
+      banner('delete-offer-modal-banner', 'error', (res.body && res.body.error) || 'Löschen fehlgeschlagen.');
+      return;
+    }
+    closeDeleteOfferModal();
+    // Clear editor state if the deleted offer is the one currently open
+    // -- regardless of which trigger point started the delete, in case
+    // it was opened in the editor earlier and the list-card path was
+    // used to delete it (e.g. after navigating back to the list).
+    if (currentOfferId === offerId) {
+      currentOfferId = null;
+      currentOffer = null;
+    }
+    if (context === 'editor') {
+      backToOffersList(); // re-fetches the list fresh; the deleted offer is simply absent, never spliced out locally
+    } else {
+      await renderOffersSection();
+    }
   }
 
   // Wait for stadtpocket-admin-guard.js's own async chain (Clerk.load(),
