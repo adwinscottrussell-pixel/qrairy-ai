@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "accountType" TEXT DEFAULT 'free';
+
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "trialExpiresAt" TIMESTAMP(3);
