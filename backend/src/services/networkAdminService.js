@@ -11,6 +11,7 @@
 // (see docs/architecture/NETWORK_LOCATION_FOUNDATION.md).
 
 const prisma = require('../utils/prismaClient');
+const { fetchPrimaryEmail } = require('../utils/clerkEmailSync');
 
 const NETWORK_STATUSES = ['active', 'paused', 'archived'];
 const LOCATION_STATUSES = ['active', 'paused'];
@@ -547,7 +548,24 @@ async function resolveUsers(userIds) {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return new Map();
   const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, email: true, plan: true } });
-  return new Map(users.map((u) => [u.id, u]));
+  const resolved = new Map(users.map((u) => [u.id, u]));
+
+  // NetworkMember.userId is a Clerk id, not a local User.id -- a manager
+  // assigned directly by Clerk id (no local signup/QR-code account) has
+  // no row here to find. Fall back to Clerk itself for display only,
+  // never fabricating a local User row. fetchPrimaryEmail never throws;
+  // an id that still can't be resolved (Clerk user deleted, lookup
+  // failed) simply stays absent from this map, and every existing
+  // caller already treats a missing entry as `user: null` -> falls back
+  // to the raw id (Stadt Pocket manager-resolution fix, 2026-09-13).
+  const missingIds = ids.filter((id) => !resolved.has(id));
+  if (missingIds.length) {
+    const emails = await Promise.all(missingIds.map((id) => fetchPrimaryEmail(id)));
+    missingIds.forEach((id, i) => {
+      if (emails[i]) resolved.set(id, { id, email: emails[i], plan: null });
+    });
+  }
+  return resolved;
 }
 
 module.exports = {
@@ -575,6 +593,7 @@ module.exports = {
   listManagers,
   assignManager,
   removeManager,
+  resolveUsers, // exported for direct unit testing only
   listUnmappedLandingPages,
   listUnassignedLandingPages,
   assignLandingPageOwner,

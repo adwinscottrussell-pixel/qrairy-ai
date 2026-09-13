@@ -81,4 +81,26 @@ async function fetchPrimaryEmailVerified(clerkUserId) {
   }
 }
 
-module.exports = { resolvePrimaryEmail, fetchPrimaryEmail, isPrimaryEmailVerified, fetchPrimaryEmailVerified };
+// Lists real Clerk users for the StadtPocket manager-assignment picker
+// (Global Admin "+ Manager zuweisen"). Clerk is the identity authority
+// for NetworkMember.userId -- a user who has never signed up in the
+// main app (no local User row) must still be assignable, so this reads
+// Clerk directly rather than the local `User` table. Unlike
+// fetchPrimaryEmail, this deliberately does NOT swallow errors: a
+// failed Clerk lookup here must surface as a real admin API error
+// (Stadt Pocket manager-resolution fix, 2026-09-13) -- silently
+// returning an empty list would look identical to "no users exist,"
+// which is not the same failure and must not be hidden.
+async function listAssignableUsers({ query, limit } = {}) {
+  const result = await getClerkClient().users.getUserList({
+    query: query || undefined,
+    limit: Math.min(limit || 100, 200),
+    orderBy: '-created_at',
+  });
+  const users = result.data || result;
+  return users
+    .map((u) => ({ id: u.id, email: resolvePrimaryEmail(u) }))
+    .filter((u) => u.email);
+}
+
+module.exports = { resolvePrimaryEmail, fetchPrimaryEmail, isPrimaryEmailVerified, fetchPrimaryEmailVerified, listAssignableUsers };

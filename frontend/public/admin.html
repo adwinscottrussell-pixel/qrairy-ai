@@ -1810,7 +1810,10 @@
     async function populateSpAssignManagerUserOptions() {
       const sel = document.getElementById('sp-assign-manager-user');
       sel.innerHTML = '<option value="">Lädt…</option>';
-      const result = await safeFetchAdmin('/admin/users');
+      // Clerk-authoritative on purpose, not /admin/users (which only
+      // lists local signups) -- a manager can be assigned by Clerk id
+      // even with no local account yet.
+      const result = await safeFetchAdmin('/admin/manager-candidates');
       if (!result.ok) { sel.innerHTML = `<option value="">${adminErrorMessage(result)}</option>`; return; }
       const users = result.data.users || [];
       sel.innerHTML = users.length

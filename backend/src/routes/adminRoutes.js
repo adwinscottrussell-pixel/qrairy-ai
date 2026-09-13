@@ -21,6 +21,7 @@ const networkAdmin = require('../services/networkAdminService');
 const { createSupportAction } = require('../services/supportActionService');
 const managerInviteService = require('../services/managerInviteService');
 const { sendManagerInviteEmail } = require('../services/emailService');
+const { listAssignableUsers } = require('../utils/clerkEmailSync');
 
 // ── GET /admin/overview ───────────────────────────────────────
 router.get('/overview', requireAdmin, async (req, res) => {
@@ -449,6 +450,25 @@ router.delete('/managers/:id', requireAdmin, async (req, res) => {
   } catch (err) { return handleAdminServiceError(err, res); }
 });
 
+// ── Manager-assignment candidates (Clerk-authoritative) ────────────────
+// Separate from GET /admin/users on purpose: that endpoint backs "All
+// Customers" (local User rows only -- plan/QR/billing data, and its
+// Change-Plan/Suspend actions require a real local row to update). A
+// NetworkMember.userId is a Clerk id and can be assigned even when no
+// local User row exists yet, so the manager picker needs Clerk itself
+// as the source, not the local table (Stadt Pocket manager-resolution
+// fix, 2026-09-13). Read-only; never creates or touches a local User row.
+async function handleGetManagerCandidates(req, res) {
+  try {
+    const users = await listAssignableUsers({ query: req.query.q });
+    return res.json({ users });
+  } catch (err) {
+    console.error('[admin/manager-candidates]', err);
+    return res.status(502).json({ error: 'Could not reach Clerk to list users.' });
+  }
+}
+router.get('/manager-candidates', requireAdmin, handleGetManagerCandidates);
+
 // ── Manager Invites (Phase 6D.1) ────────────────────────────────────────
 // Global Admin only (requireAdmin, same as every other /admin route in
 // this file). The actual grant of access never happens here -- see
@@ -566,3 +586,4 @@ module.exports.handleListManagerInvites = handleListManagerInvites; // exported 
 module.exports.handleCreateManagerInvite = handleCreateManagerInvite; // exported for direct unit testing only
 module.exports.handleRevokeManagerInvite = handleRevokeManagerInvite; // exported for direct unit testing only
 module.exports.handleResendManagerInvite = handleResendManagerInvite; // exported for direct unit testing only
+module.exports.handleGetManagerCandidates = handleGetManagerCandidates; // exported for direct unit testing only
