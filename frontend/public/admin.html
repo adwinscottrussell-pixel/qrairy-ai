@@ -416,6 +416,23 @@
       <button class="sb-item" onclick="showPage('logs')">
         <span class="sb-icon">📋</span> Error Logs
       </button>
+
+      <div class="sb-section">StadtPocket</div>
+      <button class="sb-item" onclick="showPage('sp-overview')">
+        <span class="sb-icon">🏙️</span> Übersicht
+      </button>
+      <button class="sb-item" onclick="showPage('sp-cities')">
+        <span class="sb-icon">📍</span> Städte
+      </button>
+      <button class="sb-item" onclick="showPage('sp-network')">
+        <span class="sb-icon">🌐</span> Netzwerk / City Manager
+      </button>
+      <button class="sb-item" onclick="showPage('sp-businesses')">
+        <span class="sb-icon">🏢</span> Unternehmen
+      </button>
+      <button class="sb-item" onclick="showPage('sp-invites')">
+        <span class="sb-icon">✉️</span> Einladungen / Onboarding
+      </button>
     </nav>
     <div class="sb-footer">
       <button class="sb-signout" onclick="signOut()">
@@ -689,6 +706,150 @@
       </div>
     </div>
 
+    <!-- STADTPOCKET OVERVIEW -->
+    <div class="page" id="page-sp-overview">
+      <div class="page-header">
+        <div class="page-title">StadtPocket <span>Übersicht</span></div>
+        <button class="refresh-btn" onclick="loadSpOverview()">↻ Refresh</button>
+      </div>
+      <div class="stats-grid" id="sp-overview-stats">
+        <div class="loading">Loading...</div>
+      </div>
+      <div id="sp-overview-note" style="font-size:0.72rem;margin-bottom:16px"></div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">StadtPocket Portal</div>
+        </div>
+        <div style="padding:16px 20px;font-size:0.78rem;color:var(--text-mid);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <span>Städte, Unternehmen und Angebote werden im dedizierten StadtPocket Portal verwaltet.</span>
+          <a class="refresh-btn" href="stadtpocket-admin.html" target="_blank" rel="noopener">→ Portal öffnen</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- STADTPOCKET CITIES -->
+    <div class="page" id="page-sp-cities">
+      <div class="page-header">
+        <div class="page-title">StadtPocket <span>Städte</span></div>
+        <button class="refresh-btn" onclick="loadSpCities()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Städte</div>
+          <span class="table-count" id="sp-cities-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Stadt</th><th>Netzwerk</th><th>Status</th><th>Unternehmen</th><th>Manager</th></tr>
+          </thead>
+          <tbody id="sp-cities-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADTPOCKET NETWORK / CITY MANAGER -->
+    <div class="page" id="page-sp-network">
+      <div class="page-header">
+        <div class="page-title">Netzwerk / <span>City Manager</span></div>
+        <button class="refresh-btn" onclick="loadSpNetwork()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Netzwerke</div>
+          <span class="table-count" id="sp-networks-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Slug</th><th>Typ</th><th>Status</th><th>Städte</th><th>Manager</th></tr>
+          </thead>
+          <tbody id="sp-networks-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">City Manager</div>
+          <span class="table-count" id="sp-managers-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>E-Mail</th><th>Rolle</th><th>Netzwerk</th><th>Zuständig für</th></tr>
+          </thead>
+          <tbody id="sp-managers-body"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADTPOCKET BUSINESSES -->
+    <div class="page" id="page-sp-businesses">
+      <div class="page-header">
+        <div class="page-title">StadtPocket <span>Unternehmen</span></div>
+        <button class="refresh-btn" onclick="loadSpBusinesses()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Unternehmen</div>
+          <span class="table-count" id="sp-businesses-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Inhaber</th><th>Status</th><th>Standorte</th><th>Landing Pages</th></tr>
+          </thead>
+          <tbody id="sp-businesses-body"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STADTPOCKET INVITES -->
+    <div class="page" id="page-sp-invites">
+      <div class="page-header">
+        <div class="page-title">Einladungen / <span>Onboarding</span></div>
+        <button class="refresh-btn" onclick="loadSpInvites()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Neue Einladung</div>
+        </div>
+        <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+          <div>
+            <label class="modal-label" style="margin-top:0">E-Mail</label>
+            <input type="text" class="search-input" id="sp-invite-email" placeholder="name@stadt.de" />
+          </div>
+          <div>
+            <label class="modal-label" style="margin-top:0">Name</label>
+            <input type="text" class="search-input" id="sp-invite-name" placeholder="optional" />
+          </div>
+          <div>
+            <label class="modal-label" style="margin-top:0">Netzwerk</label>
+            <select class="modal-select" id="sp-invite-network" style="width:180px"></select>
+          </div>
+          <div>
+            <label class="modal-label" style="margin-top:0">Stadt</label>
+            <select class="modal-select" id="sp-invite-city" style="width:180px"></select>
+          </div>
+          <div>
+            <label class="modal-label" style="margin-top:0">Rolle</label>
+            <select class="modal-select" id="sp-invite-role" style="width:160px">
+              <option value="location_manager">City Manager</option>
+              <option value="network_admin">Netzwerk-Admin</option>
+            </select>
+          </div>
+          <button class="refresh-btn" onclick="createSpInvite()">Einladen</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">Einladungen</div>
+          <span class="table-count" id="sp-invites-count">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>E-Mail</th><th>Name</th><th>Rolle</th><th>Stadt</th><th>Status</th><th>Aktionen</th></tr>
+          </thead>
+          <tbody id="sp-invites-body"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /main -->
 
   <script>
@@ -725,6 +886,11 @@
         'qr-analytics': loadQRAnalytics,
         health: loadHealth,
         logs: loadLogs,
+        'sp-overview': loadSpOverview,
+        'sp-cities': loadSpCities,
+        'sp-network': loadSpNetwork,
+        'sp-businesses': loadSpBusinesses,
+        'sp-invites': loadSpInvites,
       };
       if (loaders[name]) loaders[name]();
     }
@@ -1284,6 +1450,228 @@
     async function loadLogs() {
       document.getElementById('logs-body').innerHTML = '<tr><td colspan="4" class="loading">No error logging endpoint yet — add to Phase 3.</td></tr>';
       document.getElementById('logs-count').textContent = '0 errors';
+    }
+
+    // ── STADTPOCKET (Global Admin: Network / City / Business / Manager) ──
+    // Reuses the existing Phase 1B Operations Center backend
+    // (adminRoutes.js -> networkAdminService.js) and the existing Manager
+    // Invite backend (managerInviteService.js) — both already live and
+    // already called by stadtpocket-admin.html's own Global Admin city
+    // list / invite section. No new backend routes were added for this.
+    let spNetworksCache = [];
+    let spCitiesCache = [];
+
+    function spStatusBadge(status) {
+      const ok = status === 'active';
+      return `<span class="status-dot ${ok ? 'status-ok' : 'status-warn'}"></span>${escapeHtml(status || '—')}`;
+    }
+
+    async function loadSpOverview() {
+      const [networksR, citiesR, businessesR, managersR, invitesR] = await Promise.all([
+        safeFetchAdmin('/admin/networks'),
+        safeFetchAdmin('/admin/locations?type=city'),
+        safeFetchAdmin('/admin/businesses'),
+        safeFetchAdmin('/admin/managers'),
+        safeFetchAdmin('/admin/manager-invites'),
+      ]);
+      const countOr = (r, key) => (r.ok ? (r.data[key] || []).length : null);
+      const networks = countOr(networksR, 'networks');
+      const cities = countOr(citiesR, 'locations');
+      const businesses = countOr(businessesR, 'businesses');
+      const managers = countOr(managersR, 'managers');
+      const pendingInvites = invitesR.ok ? (invitesR.data.invites || []).filter(i => i.status === 'pending').length : null;
+
+      const card = (label, value, cls) => `
+        <div class="stat-card ${cls}">
+          <div class="stat-label">${label}</div>
+          <div class="stat-value">${value === null ? '—' : value}</div>
+        </div>`;
+      document.getElementById('sp-overview-stats').innerHTML =
+        card('Netzwerke', networks, 'blue') +
+        card('Städte', cities, 'orange') +
+        card('Unternehmen', businesses, 'purple') +
+        card('City Manager', managers, 'green') +
+        card('Offene Einladungen', pendingInvites, 'yellow');
+
+      const failed = [networksR, citiesR, businessesR, managersR, invitesR].find(r => !r.ok);
+      document.getElementById('sp-overview-note').innerHTML = failed
+        ? `<div style="color:var(--red)">${adminErrorMessage(failed)}</div>` : '';
+    }
+
+    async function loadSpCities() {
+      const tbody = document.getElementById('sp-cities-body');
+      const result = await safeFetchAdmin('/admin/locations?type=city');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('sp-cities-count').textContent = '—';
+        return;
+      }
+      spCitiesCache = result.data.locations || [];
+      document.getElementById('sp-cities-count').textContent = `${spCitiesCache.length} Städte`;
+      tbody.innerHTML = spCitiesCache.length ? spCitiesCache.map(c => `
+        <tr>
+          <td class="td-name">${escapeHtml(c.name)}</td>
+          <td class="td-email">${escapeHtml(c.network?.name || '—')}</td>
+          <td>${spStatusBadge(c.status)}</td>
+          <td>${c.businessesCount ?? 0}</td>
+          <td>${c.managersCount ?? 0}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="loading">Noch keine Städte.</td></tr>';
+    }
+
+    async function loadSpNetwork() {
+      const netTbody = document.getElementById('sp-networks-body');
+      const netResult = await safeFetchAdmin('/admin/networks');
+      if (!netResult.ok) {
+        netTbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:var(--red)">${adminErrorMessage(netResult)}</td></tr>`;
+        document.getElementById('sp-networks-count').textContent = '—';
+      } else {
+        spNetworksCache = netResult.data.networks || [];
+        document.getElementById('sp-networks-count').textContent = `${spNetworksCache.length} Netzwerke`;
+        netTbody.innerHTML = spNetworksCache.length ? spNetworksCache.map(n => `
+          <tr>
+            <td class="td-name">${escapeHtml(n.name)}</td>
+            <td class="td-email">${escapeHtml(n.slug)}</td>
+            <td>${escapeHtml(n.type)}</td>
+            <td>${spStatusBadge(n.status)}</td>
+            <td>${n.locationsCount ?? 0}</td>
+            <td>${n.managersCount ?? 0}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="6" class="loading">Noch keine Netzwerke.</td></tr>';
+        populateSpInviteNetworkOptions(spNetworksCache);
+      }
+
+      const mgrTbody = document.getElementById('sp-managers-body');
+      const mgrResult = await safeFetchAdmin('/admin/managers');
+      if (!mgrResult.ok) {
+        mgrTbody.innerHTML = `<tr><td colspan="4" class="loading" style="color:var(--red)">${adminErrorMessage(mgrResult)}</td></tr>`;
+        document.getElementById('sp-managers-count').textContent = '—';
+        return;
+      }
+      const managers = mgrResult.data.managers || [];
+      document.getElementById('sp-managers-count').textContent = `${managers.length} City Manager`;
+      mgrTbody.innerHTML = managers.length ? managers.map(m => `
+        <tr>
+          <td class="td-name">${escapeHtml(m.user?.email || m.userId)}</td>
+          <td>${m.role === 'network_admin' ? 'Netzwerk-Admin' : 'City Manager'}</td>
+          <td class="td-email">${escapeHtml(m.network?.name || '—')}</td>
+          <td class="td-email">${escapeHtml(m.location?.name || 'gesamtes Netzwerk')}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="4" class="loading">Noch keine City Manager zugewiesen.</td></tr>';
+    }
+
+    async function loadSpBusinesses() {
+      const tbody = document.getElementById('sp-businesses-body');
+      const result = await safeFetchAdmin('/admin/businesses');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('sp-businesses-count').textContent = '—';
+        return;
+      }
+      const businesses = result.data.businesses || [];
+      document.getElementById('sp-businesses-count').textContent = `${businesses.length} Unternehmen`;
+      tbody.innerHTML = businesses.length ? businesses.map(b => `
+        <tr>
+          <td class="td-name">${escapeHtml(b.name)}${b.isLegacyShim ? ' <span class="plan-badge plan-free">unreviewed</span>' : ''}</td>
+          <td class="td-email">${escapeHtml(b.owner?.email || b.primaryOwnerUserId)}</td>
+          <td>${spStatusBadge(b.status)}</td>
+          <td>${b.standalone ? 'Standalone' : `${b.businessLocations?.length ?? 0} Standort(e)`}</td>
+          <td>${b.landingPagesCount ?? 0}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="loading">Noch keine Unternehmen.</td></tr>';
+    }
+
+    async function loadSpInvites() {
+      const tbody = document.getElementById('sp-invites-body');
+      const result = await safeFetchAdmin('/admin/manager-invites');
+      if (!result.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color:var(--red)">${adminErrorMessage(result)}</td></tr>`;
+        document.getElementById('sp-invites-count').textContent = '—';
+      } else {
+        const invites = result.data.invites || [];
+        document.getElementById('sp-invites-count').textContent = `${invites.length} Einladungen`;
+        tbody.innerHTML = invites.length ? invites.map(i => `
+          <tr>
+            <td class="td-email">${escapeHtml(i.email)}</td>
+            <td>${escapeHtml(i.name || '—')}</td>
+            <td>${i.role === 'network_admin' ? 'Netzwerk-Admin' : 'City Manager'}</td>
+            <td class="td-email">${escapeHtml(i.location?.name || 'gesamtes Netzwerk')}</td>
+            <td><span class="plan-badge ${i.status === 'accepted' ? 'plan-pro' : i.status === 'revoked' ? 'plan-free' : 'plan-starter'}">${escapeHtml(i.status)}</span></td>
+            <td>${i.status === 'pending' ? `<button class="action-btn" onclick="resendSpInvite('${i.id}')">Erneut senden</button><button class="action-btn danger" onclick="revokeSpInvite('${i.id}')">Widerrufen</button>` : ''}</td>
+          </tr>
+        `).join('') : '<tr><td colspan="6" class="loading">Noch keine Einladungen.</td></tr>';
+      }
+
+      await populateSpInviteCityOptions();
+      if (!spNetworksCache.length) {
+        const netResult = await safeFetchAdmin('/admin/networks');
+        if (netResult.ok) { spNetworksCache = netResult.data.networks || []; populateSpInviteNetworkOptions(spNetworksCache); }
+      } else {
+        populateSpInviteNetworkOptions(spNetworksCache);
+      }
+    }
+
+    function populateSpInviteNetworkOptions(networks) {
+      const sel = document.getElementById('sp-invite-network');
+      if (!sel) return;
+      sel.innerHTML = networks.length
+        ? networks.map(n => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('')
+        : '<option value="">— keine Netzwerke —</option>';
+    }
+
+    async function populateSpInviteCityOptions() {
+      const sel = document.getElementById('sp-invite-city');
+      if (!sel) return;
+      if (!spCitiesCache.length) {
+        const result = await safeFetchAdmin('/admin/locations?type=city');
+        if (result.ok) spCitiesCache = result.data.locations || [];
+      }
+      sel.innerHTML = '<option value="">gesamtes Netzwerk</option>' +
+        spCitiesCache.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    }
+
+    async function createSpInvite() {
+      const email = document.getElementById('sp-invite-email').value.trim();
+      const name = document.getElementById('sp-invite-name').value.trim();
+      const networkId = document.getElementById('sp-invite-network').value;
+      const locationId = document.getElementById('sp-invite-city').value || undefined;
+      const role = document.getElementById('sp-invite-role').value;
+      if (!email || !networkId) { alert('E-Mail und Netzwerk sind erforderlich.'); return; }
+      try {
+        const res = await fetch(`${API_BASE}/admin/manager-invites`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getAdminToken() },
+          body: JSON.stringify({ email, name: name || undefined, networkId, locationId, role }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Einladung konnte nicht erstellt werden.'); return; }
+        document.getElementById('sp-invite-email').value = '';
+        document.getElementById('sp-invite-name').value = '';
+        loadSpInvites();
+      } catch (err) {
+        alert('Server nicht erreichbar.');
+      }
+    }
+
+    async function revokeSpInvite(id) {
+      if (!confirm('Diese Einladung widerrufen?')) return;
+      try {
+        await fetch(`${API_BASE}/admin/manager-invites/${id}/revoke`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
+        });
+        loadSpInvites();
+      } catch (err) { alert('Fehlgeschlagen.'); }
+    }
+
+    async function resendSpInvite(id) {
+      try {
+        const res = await fetch(`${API_BASE}/admin/manager-invites/${id}/resend`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + await getAdminToken() },
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Erneutes Senden fehlgeschlagen.'); return; }
+        loadSpInvites();
+      } catch (err) { alert('Fehlgeschlagen.'); }
     }
 
     // ── CSV Export ───────────────────────────────────────────
