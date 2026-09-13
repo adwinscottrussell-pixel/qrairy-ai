@@ -303,6 +303,12 @@
   .sidebar-business-card .biz-status.is-draft { color: var(--coral); } .sidebar-business-card .biz-status.is-draft .dot { background: var(--coral); }
   .sidebar-business-card .biz-status.is-paused { color: var(--text-tertiary); } .sidebar-business-card .biz-status.is-paused .dot { background: var(--text-tertiary); }
 
+  /* City Manager framing above the business card -- never shown for
+     Global Admin (see renderSidebarBusinessCard). */
+  .sidebar-role-context { background: var(--coral-soft); border: 1px solid rgba(255, 107, 94, 0.3); border-radius: 10px; padding: 9px 11px; margin-bottom: 10px; }
+  .sidebar-role-context .role-context-role { font-size: 11px; font-weight: 700; color: var(--coral); text-transform: uppercase; letter-spacing: 0.04em; }
+  .sidebar-role-context .role-context-managing { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
   .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
   .nav-item {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; cursor: pointer;
@@ -517,6 +523,14 @@
     <div class="brand-sub">Business Portal</div>
   </div>
 
+  <!-- City Manager framing (goal: never look like the business's own
+       owner/admin) -- hidden entirely for Global Admin, whose wording
+       stays unchanged. Populated by renderSidebarBusinessCard(). -->
+  <div class="sidebar-role-context" id="sidebar-role-context" style="display:none">
+    <div class="role-context-role">City Manager</div>
+    <div class="role-context-managing">Verwaltet: <span id="sidebar-role-context-business"></span></div>
+  </div>
+
   <div class="sidebar-business-card">
     <div class="thumb" id="sidebar-biz-thumb">…</div>
     <div class="info">
@@ -544,7 +558,7 @@
     <div class="a">Unser Team ist für dich da.</div>
     <button class="secondary" type="button">Support kontaktieren</button>
   </div>
-  <div class="sidebar-back" onclick="backToBusinesses()">← Zurück zu StadtPocket</div>
+  <div class="sidebar-back" id="sidebar-back-link" onclick="backToBusinesses()">← Zurück zu StadtPocket</div>
 </aside>
 
 <div class="shell-main">
@@ -1036,6 +1050,17 @@
     statusEl.className = 'biz-status' + (status === 'published' ? '' : status === 'paused' ? ' is-paused' : ' is-draft');
     statusTextEl.textContent = status === 'published' ? 'Live' : status === 'paused' ? 'Pausiert' : 'Entwurf';
     document.getElementById('shell-role-badge').textContent = document.getElementById('role-badge').textContent;
+
+    // City Manager framing -- never shown for Global Admin, whose
+    // wording/behavior stays exactly as before (untouched here).
+    const isCityManager = window.__stadtpocketRole === 'city_manager';
+    document.getElementById('sidebar-role-context').style.display = isCityManager ? '' : 'none';
+    if (isCityManager) {
+      document.getElementById('sidebar-role-context-business').textContent = currentListing.name || '(ohne Namen)';
+    }
+    document.getElementById('sidebar-back-link').textContent = isCityManager
+      ? '← Zurück zur Stadtverwaltung'
+      : '← Zurück zu StadtPocket';
   }
 
   function goToProfil() { showPage('page-editor'); }
