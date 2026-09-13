@@ -200,6 +200,12 @@
   .interval-row input[type="time"] { width: 110px; flex-shrink: 0; }
   .closed-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
   .closed-toggle input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--coral); }
+  .copy-hours-toggle { margin-top: 4px; }
+  .copy-hours-panel { margin-top: 10px; padding: 10px 12px; background: var(--surface-card-alt); border-radius: 8px; border: 1px solid var(--border-soft); }
+  .copy-hours-days { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .copy-hours-day-chip { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; cursor: pointer; user-select: none; }
+  .copy-hours-day-chip input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--coral); margin: 0; }
+  .copy-hours-day-chip.checked { border-color: var(--coral); background: rgba(255,111,97,0.08); }
   .compare-block { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
   @media (max-width: 640px) { .compare-block { grid-template-columns: 1fr; } }
   .compare-col h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 8px; font-weight: 700; }
@@ -1604,6 +1610,9 @@
   // ── Opening hours editor ─────────────────────────────────────────
   // Days absent from hoursState stay absent from the saved payload --
   // "unknown" is never invented as open or closed.
+  let copyHoursSourceDay = null;
+  let copyHoursSelectedDays = new Set();
+
   function renderHoursEditor() {
     const el = document.getElementById('hours-editor');
     el.innerHTML = DAY_KEYS.map((day) => {
@@ -1618,6 +1627,11 @@
           <button class="ghost small" onclick="removeInterval('${day}',${i})" type="button">Entfernen</button>
         </div>
       `).join('');
+      const hasRealIntervals = intervals.some((iv) => iv.open && iv.close);
+      const copyToggleHtml = !closed && hasRealIntervals ? `
+        <button class="ghost small copy-hours-toggle" type="button" onclick="toggleCopyHoursPanel('${day}')">Zeiten für weitere Tage übernehmen</button>
+        ${copyHoursSourceDay === day ? renderCopyHoursPanel(day) : ''}
+      ` : '';
       return `
         <div class="hours-day">
           <div class="day-label">${DAY_LABELS[day]}</div>
@@ -1628,10 +1642,74 @@
             </label>
             ${!closed ? intervalsHtml + `<button class="ghost small" type="button" onclick="addInterval('${day}')">+ Zeitspanne</button>` : ''}
             ${!closed && intervals.length === 0 ? '<div class="muted" style="font-size:12px">Keine Zeiten hinterlegt (unbekannt).</div>' : ''}
+            ${copyToggleHtml}
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  // Copies a day's complete interval structure (all time spans) to one
+  // or more other days, as an independent one-time copy -- destination
+  // days are never linked back to the source, matching every other
+  // field in this editor (Business Portal Profile UX enhancement,
+  // 2026-09-13). Uses the exact same hoursState shape/serializeHours()
+  // already saved by the existing draft mechanism -- no schema/backend
+  // change.
+  function renderCopyHoursPanel(sourceDay) {
+    const otherDays = DAY_KEYS.filter((d) => d !== sourceDay);
+    const chips = otherDays.map((d) => `
+      <label class="copy-hours-day-chip${copyHoursSelectedDays.has(d) ? ' checked' : ''}">
+        <input type="checkbox" ${copyHoursSelectedDays.has(d) ? 'checked' : ''} onchange="toggleCopyHoursDay('${d}', this.checked)" />
+        ${DAY_LABELS[d]}
+      </label>
+    `).join('');
+    return `
+      <div class="copy-hours-panel">
+        <div class="copy-hours-days">${chips}</div>
+        <button class="primary small" type="button" onclick="applyCopyHours()">Übernehmen</button>
+        <button class="ghost small" type="button" onclick="toggleCopyHoursPanel('${sourceDay}')">Abbrechen</button>
+      </div>
+    `;
+  }
+
+  function toggleCopyHoursPanel(day) {
+    copyHoursSourceDay = copyHoursSourceDay === day ? null : day;
+    copyHoursSelectedDays = new Set();
+    renderHoursEditor();
+  }
+
+  function toggleCopyHoursDay(day, checked) {
+    if (checked) copyHoursSelectedDays.add(day);
+    else copyHoursSelectedDays.delete(day);
+    renderHoursEditor();
+  }
+
+  function applyCopyHours() {
+    const sourceDay = copyHoursSourceDay;
+    const sourceEntry = hoursState[sourceDay];
+    const selectedDays = [...copyHoursSelectedDays];
+    if (!sourceEntry || !sourceEntry.intervals || !selectedDays.length) return;
+
+    const daysWithExistingHours = selectedDays.filter((d) => {
+      const existing = hoursState[d];
+      return existing && !existing.closed && (existing.intervals || []).some((iv) => iv.open && iv.close);
+    });
+    if (daysWithExistingHours.length) {
+      const names = daysWithExistingHours.map((d) => DAY_LABELS[d]).join(', ');
+      const proceed = confirm(`${names} ${daysWithExistingHours.length === 1 ? 'hat' : 'haben'} bereits Zeiten hinterlegt. Diese werden durch die Zeiten von ${DAY_LABELS[sourceDay]} ersetzt. Fortfahren?`);
+      if (!proceed) return;
+    }
+
+    // Deep copy per destination day -- each becomes fully independent;
+    // editing one afterward must never change the source or any sibling.
+    selectedDays.forEach((d) => {
+      hoursState[d] = { intervals: sourceEntry.intervals.map((iv) => ({ ...iv })) };
+    });
+
+    copyHoursSourceDay = null;
+    copyHoursSelectedDays = new Set();
+    renderHoursEditor();
   }
 
   function toggleClosed(day, checked) {
@@ -1657,6 +1735,12 @@
 
   function setIntervalTime(day, index, key, value) {
     hoursState[day].intervals[index][key] = value;
+    // Re-render so "Zeiten für weitere Tage übernehmen" appears the
+    // moment a day gets its first real open+close pair -- previously
+    // only toggleClosed/addInterval/removeInterval re-rendered, so
+    // typing a time here left the copy button (and any open copy panel)
+    // stale until some unrelated action happened to trigger a render.
+    renderHoursEditor();
   }
 
   function serializeHours() {
