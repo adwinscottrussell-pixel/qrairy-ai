@@ -444,10 +444,16 @@
   <section class="page" id="page-cities">
     <h1 id="cities-heading">Städte</h1>
     <p class="muted" id="cities-sub"></p>
+    <!-- Section label, shown only for Global Admin (see renderCityList)
+         -- organizes the Operations landing without changing the list
+         itself. Redundant/hidden for a multi-city City Manager, whose
+         page heading already says "Städte". -->
+    <h2 id="cities-section-label" style="display:none">Städte</h2>
     <div id="cities-list"></div>
 
     <div id="manager-invites-section" style="display:none">
-      <h2>Manager einladen</h2>
+      <h2>Netzwerk / City Manager</h2>
+      <p class="muted" style="margin:0 0 12px">Manager einladen und verwalten.</p>
       <div class="card section-card">
         <div id="invite-banner"></div>
         <label>E-Mail</label>
@@ -527,7 +533,7 @@
        owner/admin) -- hidden entirely for Global Admin, whose wording
        stays unchanged. Populated by renderSidebarBusinessCard(). -->
   <div class="sidebar-role-context" id="sidebar-role-context" style="display:none">
-    <div class="role-context-role">City Manager</div>
+    <div class="role-context-role" id="sidebar-role-context-role">City Manager</div>
     <div class="role-context-managing">Verwaltet: <span id="sidebar-role-context-business"></span></div>
   </div>
 
@@ -1051,16 +1057,23 @@
     statusTextEl.textContent = status === 'published' ? 'Live' : status === 'paused' ? 'Pausiert' : 'Entwurf';
     document.getElementById('shell-role-badge').textContent = document.getElementById('role-badge').textContent;
 
-    // City Manager framing -- never shown for Global Admin, whose
-    // wording/behavior stays exactly as before (untouched here).
-    const isCityManager = window.__stadtpocketRole === 'city_manager';
-    document.getElementById('sidebar-role-context').style.display = isCityManager ? '' : 'none';
-    if (isCityManager) {
+    // Role framing -- makes clear inside the shared Business Portal that
+    // whoever is here (City Manager or Global Admin) is VISITING this
+    // business, not its owner. Same block, same shared Business Portal
+    // for both roles -- no separate Global Admin portal.
+    const role = window.__stadtpocketRole;
+    const isCityManager = role === 'city_manager';
+    const isGlobalAdmin = role === 'global_admin';
+    document.getElementById('sidebar-role-context').style.display = (isCityManager || isGlobalAdmin) ? '' : 'none';
+    if (isCityManager || isGlobalAdmin) {
+      document.getElementById('sidebar-role-context-role').textContent = isCityManager ? 'City Manager' : 'Global Admin';
       document.getElementById('sidebar-role-context-business').textContent = currentListing.name || '(ohne Namen)';
     }
     document.getElementById('sidebar-back-link').textContent = isCityManager
       ? '← Zurück zur Stadtverwaltung'
-      : '← Zurück zu StadtPocket';
+      : isGlobalAdmin
+        ? '← Zurück zu StadtPocket Operations'
+        : '← Zurück zu StadtPocket';
   }
 
   function goToProfil() { showPage('page-editor'); }
@@ -1274,20 +1287,34 @@
   async function renderCityList() {
     const listEl = document.getElementById('cities-list');
     const subEl = document.getElementById('cities-sub');
-    // City Manager with exactly one assigned city: name the page after
-    // that city ("Stadtverwaltung Ulm") instead of the generic plural
-    // "Städte" -- Global Admin (many cities) and a multi-city City
-    // Manager keep the unchanged generic heading.
-    document.getElementById('cities-heading').textContent =
-      (window.__stadtpocketRole === 'city_manager' && cities.length === 1)
+    const isGlobalAdmin = window.__stadtpocketRole === 'global_admin';
+    // Heading: "StadtPocket Operations" for Global Admin (the
+    // network-wide management area) -- takes priority over the
+    // City-Manager single-city case, which never applies to Global
+    // Admin anyway. City Manager cases are exactly as Step 1 left them:
+    // "Stadtverwaltung {City}" for one assigned city, generic "Städte"
+    // for more than one.
+    document.getElementById('cities-heading').textContent = isGlobalAdmin
+      ? 'StadtPocket Operations'
+      : (window.__stadtpocketRole === 'city_manager' && cities.length === 1)
         ? `Stadtverwaltung ${cities[0].name}`
         : 'Städte';
+    // Subtitle + "Städte" section label: Global-Admin-only framing, set
+    // unconditionally (before the empty-network early return below) so
+    // it survives even a network with zero cities. Never touches the
+    // City Manager subtitle logic further down.
+    document.getElementById('cities-section-label').style.display = isGlobalAdmin ? '' : 'none';
+    if (isGlobalAdmin) {
+      subEl.textContent = 'Verwalte Städte, City Manager und Unternehmen im StadtPocket Netzwerk.';
+    }
     if (cities.length === 0) {
-      subEl.textContent = '';
+      if (!isGlobalAdmin) subEl.textContent = '';
       listEl.innerHTML = '<div class="empty-state">Keine Städte in deinem Zugriffsbereich.</div>';
       return;
     }
-    subEl.textContent = `${cities.length} ${cities.length === 1 ? 'Stadt' : 'Städte'} in deinem Zugriffsbereich.`;
+    if (!isGlobalAdmin) {
+      subEl.textContent = `${cities.length} ${cities.length === 1 ? 'Stadt' : 'Städte'} in deinem Zugriffsbereich.`;
+    }
     listEl.innerHTML = cities.map((c) => `
       <div class="card city-row" data-location-id="${c.id}" onclick="openCity('${c.id}')">
         <div>
