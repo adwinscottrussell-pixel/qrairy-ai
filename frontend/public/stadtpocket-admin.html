@@ -442,7 +442,7 @@
   </section>
 
   <section class="page" id="page-cities">
-    <h1>Städte</h1>
+    <h1 id="cities-heading">Städte</h1>
     <p class="muted" id="cities-sub"></p>
     <div id="cities-list"></div>
 
@@ -1153,6 +1153,17 @@
     // Falls through to the normal city-list landing on any failure.
     if (await tryRestoreLastContext()) return;
 
+    // Phase 2 Step 1 -- a City Manager scoped to exactly ONE authorized
+    // city never needs the city-selection screen at all: reuses openCity()
+    // (no duplicated city-loading logic) with that ONE already-authorized
+    // id from window.__stadtpocketManagerLocations, never a client-picked
+    // value. Global Admin and any multi-city manager are untouched --
+    // they still see the ordinary city list below, unchanged.
+    if (role !== 'global_admin' && cities.length === 1) {
+      await openCity(cities[0].id);
+      return;
+    }
+
     await renderCityList();
     showPage('page-cities');
   }
@@ -1263,6 +1274,14 @@
   async function renderCityList() {
     const listEl = document.getElementById('cities-list');
     const subEl = document.getElementById('cities-sub');
+    // City Manager with exactly one assigned city: name the page after
+    // that city ("Stadtverwaltung Ulm") instead of the generic plural
+    // "Städte" -- Global Admin (many cities) and a multi-city City
+    // Manager keep the unchanged generic heading.
+    document.getElementById('cities-heading').textContent =
+      (window.__stadtpocketRole === 'city_manager' && cities.length === 1)
+        ? `Stadtverwaltung ${cities[0].name}`
+        : 'Städte';
     if (cities.length === 0) {
       subEl.textContent = '';
       listEl.innerHTML = '<div class="empty-state">Keine Städte in deinem Zugriffsbereich.</div>';
@@ -1310,7 +1329,16 @@
   async function openCity(locationId) {
     currentLocationId = locationId;
     const city = cities.find((c) => c.id === locationId);
-    document.getElementById('businesses-title').textContent = `Geschäfte in ${city ? city.name : locationId}`;
+    // A single-city City Manager never sees the page-cities list at all
+    // (see boot()'s auto-skip) -- this is their actual landing, so it
+    // carries the "Stadtverwaltung" framing instead of the generic
+    // "Geschäfte in X" a Global Admin / multi-city manager sees after
+    // explicitly picking a city from that list. Role- and city-count-
+    // gated so neither of those other cases changes at all.
+    const isSingleCityManagerLanding = window.__stadtpocketRole === 'city_manager' && cities.length === 1;
+    document.getElementById('businesses-title').textContent = isSingleCityManagerLanding
+      ? `Stadtverwaltung ${city ? city.name : locationId}`
+      : `Geschäfte in ${city ? city.name : locationId}`;
     document.getElementById('businesses-crumb-city').textContent = city ? city.name : locationId;
     document.getElementById('init-city-name').textContent = city ? city.name : locationId;
     banner('businesses-banner', 'info', '');
