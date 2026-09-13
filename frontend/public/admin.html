@@ -1004,7 +1004,16 @@
   </div><!-- /main -->
 
   <script>
-    const API_BASE = 'https://api.qraivy.com';
+    // Environment routing must match stadtpocket-admin-guard.js's own
+    // hostname branch exactly (see that file) -- otherwise a Global Admin
+    // action taken here and a City Manager action taken there can silently
+    // land in two different databases (Phase 6D StadtPocket incident,
+    // 2026-09-13: a manager assignment created here on preview.qraivy.com
+    // went to production while the City Manager login on the same preview
+    // hostname read staging, and could never see it).
+    const API_BASE = window.location.hostname === 'preview.qraivy.com'
+      ? 'https://pacific-youth-staging.up.railway.app'
+      : 'https://api.qraivy.com';
     let allUsers = [];
     let currentEditUserId = null;
 
@@ -1805,7 +1814,7 @@
       if (!result.ok) { sel.innerHTML = `<option value="">${adminErrorMessage(result)}</option>`; return; }
       const users = result.data.users || [];
       sel.innerHTML = users.length
-        ? users.map(u => `<option value="${u.id}">${escapeHtml(u.email || u.id)}</option>`).join('')
+        ? '<option value="">Nutzer auswählen…</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.email || u.id)}</option>`).join('')
         : '<option value="">— keine Nutzer —</option>';
     }
 
