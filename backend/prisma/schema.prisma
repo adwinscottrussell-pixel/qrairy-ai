@@ -99,6 +99,13 @@ model LandingPage {
   businessId String?
   business   Business? @relation(fields: [businessId], references: [id])
 
+  // Reverse side of StadtPocketListingLocation.loyaltyLandingPageId --
+  // additive, optional. A LandingPage's own existing loyalty program
+  // (StampSettings/Pass, keyed by this slug) may be referenced by zero,
+  // one, or several StadtPocketListingLocation rows -- see that field's
+  // comment for the full reasoning.
+  stadtPocketLoyaltyLocations StadtPocketListingLocation[]
+
   @@index([businessName])
   @@index([businessId])
 }
@@ -825,6 +832,21 @@ model StadtPocketListingLocation {
   businessLocationId String?           @unique
   businessLocation   BusinessLocation? @relation(fields: [businessLocationId], references: [id])
 
+  // Optional loyalty bridge -- links this storefront to an existing
+  // legacy LandingPage-based loyalty program (StampSettings/Pass, both
+  // keyed by LandingPage.slug -- see those models' own comments), by
+  // explicit City Manager/Business Portal assignment (not built yet;
+  // this phase is the schema bridge only). Deliberately NOT unique,
+  // unlike businessLocationId above: a single loyalty program may
+  // intentionally cover several StadtPocket storefronts, so more than
+  // one StadtPocketListingLocation row may reference the same
+  // LandingPage. Never required, never auto-populated. Deleting the
+  // LandingPage nulls this column out (ON DELETE SET NULL) rather than
+  // touching this row -- a StadtPocket location must never be deleted
+  // as a side effect of removing an unrelated legacy loyalty page.
+  loyaltyLandingPageId String?
+  loyaltyLandingPage   LandingPage? @relation(fields: [loyaltyLandingPageId], references: [id])
+
   sourceProvider String?
   sourceUrl      String?
   sourceType     String?
@@ -838,6 +860,7 @@ model StadtPocketListingLocation {
 
   @@index([listingId])
   @@index([locationId])
+  @@index([loyaltyLandingPageId])
 }
 
 // ============================================================
