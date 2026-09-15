@@ -1,0 +1,278 @@
+# Daily Engineer Report
+
+## Last Updated
+
+2026-09-15 — compiled by Claude Code session inspecting live `git`/filesystem
+state. No aggregate timestamp beyond today's date is available.
+
+## Repository
+
+QRAIVY (`qrairy.ai`) — `C:\Users\adwin\OneDrive\Desktop\qrairy.ai`
+Remote: `https://github.com/adwinscottrussell-pixel/qrairy-ai.git`
+
+## Git State
+
+- Branch: `preview/remove-wallet-studio-theme-tabs`, up to date with
+  `origin/preview/remove-wallet-studio-theme-tabs`.
+- HEAD: `91ec925` — `chore(wallet-studio): remove unfinished Wallet Theme
+  section`.
+- Working tree: clean, nothing uncommitted.
+- vs `origin/main` (`a6ee88b`): this branch is 1 commit ahead / 3 behind.
+  Its one commit is already present on `main` under a different hash
+  (`03a6235`, same change promoted as a production candidate) — this
+  branch's work is effectively already shipped, just not fast-forwarded
+  onto `main` itself.
+- 60+ local/remote branches exist across `preview/*`, `production-candidate/*`,
+  `promote/*`, `backup/*` prefixes — see Blockers/Risks.
+- 4 stashes present, oldest dated 2026-08-16 — uninspected, unreconciled.
+- ~20 git worktrees registered outside this checkout, mostly under
+  `AppData\Local\Temp\claude\...\scratchpad` (several already flagged
+  `prunable` by Git) — see Blockers/Risks.
+
+## Current Development Phase
+
+**Cannot be stated with confidence from a single authoritative source.**
+`CURRENT_SPRINT.md` and `PROJECT_STATE.md` are stale (last updated
+2026-07-15, describe the "Mission Control MC-1" sprint on a now-abandoned
+branch, `preview/sprint-2d-smart-qr-renderer`) and do not reflect the
+repository's actual current state.
+
+From git evidence: the most recently active branch by commit date is
+`preview/stadtpocket-phase6d-admin` (last commit 2026-09-14), 38 commits /
+~10,600 lines ahead of `main`, containing the StadtPocket City
+Manager/Operations Admin portal, an Angebote/offers backend service, and a
+business header-image service. This — not the currently checked-out
+branch — appears to be the actual frontier of active development.
+
+`main` itself (`a6ee88b`, 2026-09-04) carries Phase 6C: the Draft →
+Preview → Publish write API for `StadtPocketListing`.
+
+## Completed
+
+- Phase 6C — StadtPocketListing Draft/Preview/Publish write path
+  (backend), on `main` (`a6ee88b`).
+- StadtPocket listing foundation, on `main` (`6814dd3`).
+- Wallet Pass Studio: removed unfinished "Wallet Theme" chip row,
+  promoted to `main` (`03a6235`) and mirrored on the current preview
+  branch (`91ec925`).
+- (On unmerged `preview/stadtpocket-phase6d-admin` only — **not yet on
+  `main`**, so not "done" at production level): StadtPocket
+  Operations/City Manager admin restoration, manager invite flow, Clerk
+  email sync, an offers service, a header-image service, admin/manager
+  guard scripts.
+
+## In Progress
+
+- `preview/stadtpocket-phase6d-admin` — 38 unmerged commits, last activity
+  2026-09-14 (`050ac9e`, "add loyalty landing page bridge"). No
+  corresponding `production-candidate/*` branch exists for it yet.
+- `local/phase6d-seed-script-prep` (2026-09-06) — seed-script prep,
+  unmerged; purpose not independently verified beyond the branch name.
+- 4 unresolved stashes: two near-duplicate diffs to
+  `docs/QRAIVY_DESIGN_SYSTEM.md` (2026-09-06 / 2026-09-08), and two
+  near-duplicate large diffs touching `CLAUDE.md`, `schema.prisma`, and
+  several controllers (2026-08-16 / 2026-08-21) — not reconciled into any
+  branch.
+
+## Tests / Build
+
+- Backend has no aggregate `npm test` script; each of the 18 files in
+  `backend/tests/` is a self-contained Node script (`assert` + inline
+  runner, no Jest/Mocha dependency).
+- Ran all 18 directly this session: **17 files pass in full.**
+  `scansVsVisits.test.js` has **3 passed / 5 failed** — this matches a
+  failure explicitly called "pre-existing, unrelated" in commit
+  `a6ee88b`'s message, so it predates and is unrelated to recent work,
+  but remains unfixed.
+- No frontend build step (static HTML/CSS/JS, no bundler) — nothing to
+  build there.
+- No CI configuration found (`.github/` does not exist in this repo).
+
+## Deployment Status
+
+- Backend: Railway, `nixpacks` builder (`backend/railway.toml`;
+  pre-deploy runs `prisma migrate deploy`, healthcheck `/health`).
+  Railway CLI is authenticated in this environment
+  (`adwinscottrussell@gmail.com`) and sees a project `sparkling-love`,
+  but this checkout is **not linked** to it — `railway link` was
+  deliberately not run (state-changing/interactive), so **live
+  production state was not confirmed this session.**
+- Frontend: Vercel, root `vercel.json` proxies `/lp`, `/stamp`, `/wallet`,
+  `/manifest`, `/sw.js` to `api.qraivy.com`. No Vercel CLI installed in
+  this environment — **not verified.**
+- A separate Railway staging service, `pacific-youth`
+  (`pacific-youth-staging.up.railway.app`), is documented — in the
+  `stadtpocket-web` repo, not here — as the API the StadtPocket consumer
+  frontend calls. Distinct from QRAIVY's own production backend.
+- **Everything above is inferred from committed config files, not
+  confirmed against a live endpoint or authenticated deploy dashboard in
+  this session.**
+
+## Cross-Repo Dependencies
+
+- `stadtpocket-web`'s consumer frontend (Screens 1–2: Start, Angebote)
+  calls this backend directly: `GET
+  /public/stadtpocket/cities/:city/businesses/:slug` and an offers
+  endpoint, hardcoded to the Railway staging host
+  `pacific-youth-staging.up.railway.app` (per
+  `stadtpocket-web/docs/STADTPOCKET_PAGE_REGISTRY.md`, verified
+  2026-09-14).
+- The service code behind that real-API connection
+  (`stadtpocketOfferService.js`, and changes to
+  `stadtpocketPublicService.js`) lives on this repo's **unmerged**
+  `preview/stadtpocket-phase6d-admin` branch, not on `main` — meaning the
+  consumer app's "real, end-to-end" data path in the other repo currently
+  depends on code that is not yet in this repo's production branch. Flag
+  this to the founder before altering or rebasing that branch.
+- This repo's own admin surfaces (`admin.html`, `stadtpocket-admin.html`)
+  are explicitly documented as never edited from `stadtpocket-web`.
+
+## Blockers / Risks
+
+- `CURRENT_SPRINT.md` and `PROJECT_STATE.md` are ~2 months stale and
+  describe an abandoned sprint/branch — do not trust them for current
+  state.
+- Branch sprawl: 60+ local/remote branches with no single index of what's
+  live vs. abandoned.
+- ~20 registered git worktrees sit under
+  `AppData\Local\Temp\claude\...\scratchpad`, several already flagged
+  `prunable` — ephemeral Claude session checkouts of `promote/*` and
+  other branches; if temp is cleared, the convenience checkouts go stale
+  (the underlying branches/commits survive in `.git`, the worktree
+  registrations don't).
+- 4 stashes, oldest ~1 month old, uninspected.
+- `preview/stadtpocket-phase6d-admin` (38 commits, ~10.6k lines) has no
+  promotion path started — large amount of work at risk of drifting
+  further from `main` the longer it sits.
+- Pre-existing failing test (`scansVsVisits.test.js`, 5/8 failing) is
+  unresolved (documented as unrelated to recent changes, but still red).
+- Live deployment state (Railway/Vercel) not independently verified this
+  session.
+
+## Founder-Approved Product Direction
+
+**This section records explicit founder decisions. It is not inferred
+from branch activity, commit timestamps, or line counts, and a future
+session must not silently override it just because another branch looks
+newer or larger.**
+
+- StadtPocket backend/admin work (currently concentrated on
+  `preview/stadtpocket-phase6d-admin` and related branches) is being
+  developed in coordination with the separate `stadtpocket-web` consumer
+  repository — the two are intentionally linked, not independent tracks.
+  `stadtpocket-web`'s Start and Angebote screens already depend on this
+  backend's public StadtPocket API.
+- Because of that coupling, **promotion or merging of any StadtPocket
+  branch (preview → production-candidate → main) must never be inferred
+  merely from branch age, commit recency, or line count.** It requires
+  explicit founder approval, and should be checked against the
+  corresponding state in `stadtpocket-web` first — a change here can
+  break "real, proven" claims made in that repo's own docs.
+- No other founder-approved product-direction decision beyond this
+  coordination rule was found recorded anywhere in the repository as of
+  this session. If one exists only in prior chat history, add it here
+  explicitly the next time it's confirmed — do not reconstruct it from
+  inference.
+
+## Recovery Audit — Preserved Work
+
+Founder-reviewed 2026-09-15. Every item below is **preserved only** —
+none may be merged, cherry-picked, deployed, or promoted without a
+separate, explicit founder approval for that specific item. This section
+records status, not permission.
+
+- **A — StadtPocket Angebote public API offers.**
+  STATUS: **PRESERVED / READY FOR PRODUCTION REVIEW.**
+  Recovery branch: `recovery/stadtpocket-angebote-public-api-fix-20260915`,
+  commit `ce0d99b`. 37/37 relevant tests passing. Not merged/deployed.
+- **B — StadtPocket City Manager Operations Center**
+  (`preview/stadt-pocket-phase1b-operations-center`).
+  STATUS: **PRESERVE / NEEDS VISUAL REVIEW.**
+  Contains distinct frontend functionality **not** present in
+  `preview/stadtpocket-phase6d-admin` — specifically the Unassigned
+  Landing Pages queue and Move-to-Business UI. **Do not treat this
+  branch as superseded by phase6d-admin.** Not promoted.
+- **C — Dashboard campaign push-report parsing fix**
+  (`founder-preview` / `preview/pwa-reliability`, commit `d502463`).
+  STATUS: **READY FOR PRODUCTION REVIEW.**
+  Small, independent, single-file fix. Not promoted.
+- **D — Post-claim activation card / AI business-setup launch**
+  (`preview/stadtpocket-phase3c-4-page-linking` chain).
+  STATUS: **PRESERVE / NEEDS VISUAL REVIEW.**
+  Not promoted yet — underlying files (`dashboard.html`,
+  `claim-business.html`, `onboarding.js`, `auth-guard.js`) have moved
+  significantly since this branch was last active.
+- **E — 76-commit Loyalty/Compliance/Staff-PIN rebuild**
+  (`preview/sprint-2d-smart-qr-renderer` and related branches).
+  STATUS: **PRESERVE / SHELVED.**
+  Not abandoned, must not be deleted — but outside the current
+  StadtPocket production path. Do not spend further development time on
+  it until explicitly resumed.
+
+**Verified already on production (`origin/main`) — no action needed:**
+QRAIVY homepage/marketing + SEO + bilingual redesign · Smart QR canonical
+renderer · Wallet Studio "Edit Brand Settings" navigation fix · Wallet
+Studio Business Wallet Card / 3C.6A work.
+
+Full audit evidence (file-level checks, commit lists, classification
+table) lives in this session's transcript — intentionally not duplicated
+here; ask for it if a future session needs to re-derive the reasoning.
+
+## Next Task
+
+**Two separate tracks exist — do not conflate them.**
+
+1. **Recovery-item review queue** (promoting preserved work — see above):
+   C, then A, then B, then D, in that order. E is shelved; spend no
+   further time on it unless the founder explicitly resumes it.
+2. **Active development** — cannot be stated as a single confirmed
+   ticket; no current, non-stale sprint doc exists. Based purely on
+   branch activity (most recent commit timestamp across the whole
+   repo), the most likely resumption point is
+   **`preview/stadtpocket-phase6d-admin`** (HEAD `050ac9e`, "add
+   loyalty landing page bridge", 2026-09-14) — the StadtPocket City
+   Manager/Operations Admin + Offers backend work. Confirm with the
+   founder whether this branch is (a) still active WIP, (b) ready to
+   cut a `production-candidate/*` branch for promotion, or (c)
+   superseded. **Do not assume either answer** — this is inferred from
+   timestamps, not an explicit directive.
+
+## Resume Instructions
+
+1. Read this file in full.
+2. Run `git status`, `git branch --show-current`, `git log -1` to confirm
+   nothing has changed since this report was written.
+3. Read `CLAUDE.md` — note its listed "read `CURRENT_SPRINT.md` /
+   `PROJECT_STATE.md`" step currently points at stale files; prefer this
+   report until those are refreshed or retired.
+4. If resuming `preview/stadtpocket-phase6d-admin`, check out the branch
+   fresh (don't reuse an old scratchpad worktree without confirming it's
+   still current) and read its recent commit messages before writing
+   code.
+5. Confirm with the founder which branch is authoritative before
+   promoting or merging anything — do not infer promotion intent from
+   branch activity alone.
+
+## Recent History
+
+- 2026-09-15 — QRAIVY Recovery Audit performed (read-only): surveyed all
+  60+ branches, stashes, and worktrees against `origin/main` for
+  completed/approved work not yet in production. Findings A–E recorded
+  above under Recovery Audit — Preserved Work, founder-reviewed same day.
+- 2026-09-15 — Recovered a uniquely-existing, previously uncommitted
+  Angebote public-API fix (found only in a temp scratchpad worktree, no
+  other copy anywhere) onto
+  `recovery/stadtpocket-angebote-public-api-fix-20260915` (`ce0d99b`),
+  pushed to origin. Diagnosed and fixed a stale test-fixture date during
+  preservation (application code itself needed no change); 37/37 tests
+  passing.
+- 2026-09-14 — `preview/stadtpocket-phase6d-admin`: loyalty landing page
+  bridge (latest commit on the repo's most active branch).
+- 2026-09-04 — `main` promoted to Phase 6C: StadtPocketListing
+  Draft→Preview→Publish write API.
+- 2026-09-04 — StadtPocket listing foundation promoted to `main`.
+- 2026-08-30 — Wallet Pass Studio "Wallet Theme" unfinished section
+  removed (preview + production-candidate).
+- 2026-07-15 (stale reference point, kept for continuity) — Mission
+  Control MC-1 completed on the now-superseded
+  `preview/sprint-2d-smart-qr-renderer` branch.

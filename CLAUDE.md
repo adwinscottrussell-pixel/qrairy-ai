@@ -29,6 +29,28 @@ At the start of every implementation session:
 4. inspect git status
 5. read `CURRENT_SPRINT.md`
 6. read `PROJECT_STATE.md`
+7. read `docs/DAILY_ENGINEER_REPORT.md`
+8. read `docs/PROJECT_LINKS.md`
+
+`CURRENT_SPRINT.md` and `PROJECT_STATE.md` may be stale — if they
+conflict with `docs/DAILY_ENGINEER_REPORT.md`, the daily report wins;
+verify git status/branch/HEAD yourself before trusting any of them, and
+before making any change.
+
+Treat that report's **Founder-Approved Product Direction** and **Next
+Task** sections as intentional project direction. Do not replace or
+contradict them just because another branch has a newer commit
+timestamp or more commits — promotion/merge decisions are never inferred
+from branch activity alone.
+
+At the end of every meaningful engineering session:
+
+1. Update `docs/DAILY_ENGINEER_REPORT.md` in place (not a new dated
+   file) with verified current state, and record the exact next task.
+2. Update `docs/PROJECT_LINKS.md` if any deployment URL, preview URL,
+   API endpoint, admin URL, or important local path changed.
+3. Commit the documentation checkpoint so recovery state is preserved in
+   Git — these files must not be left as untracked local files.
 
 Rules:
 
