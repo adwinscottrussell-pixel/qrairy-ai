@@ -95,8 +95,35 @@ function toListItem(listing) {
   return item;
 }
 
+// Offers — public-safe shape only. Never listingLocationId (internal
+// id), status (visibility is already fully decided before this function
+// ever sees an offer -- see getCityBusiness), draftData, or createdBy
+// (Clerk id) -- matching this file's existing "no internal/admin/
+// provenance data" rule for listings above. isExpired is computed by
+// the caller (getCityBusiness), never here and never stored -- same
+// "never persisted" convention as StadtPocketOffer's own schema
+// comment, kept independent of stadtpocketOfferService.js's own
+// (draft-aware) merge logic on purpose: this file must never import
+// anything that knows how to read draftData.
+function toOfferItem(offer) {
+  const item = { id: offer.id, title: offer.title, offerText: offer.offerText };
+  if (offer.description) item.description = offer.description;
+  if (offer.offerType) item.offerType = offer.offerType;
+  if (offer.offerDetails) item.offerDetails = offer.offerDetails;
+  if (offer.image && offer.image.url) {
+    item.image = { url: offer.image.url, width: offer.image.width, height: offer.image.height };
+  }
+  if (offer.startsAt) item.startsAt = offer.startsAt;
+  if (offer.endsAt) item.endsAt = offer.endsAt;
+  return item;
+}
+
 // One storefront's shape, nested inside the detail response's locations[].
-function toLocationItem(listingLocation) {
+// `offers` (already filtered to published + non-expired by the caller)
+// is included only when non-empty, matching every other optional field
+// in this function -- omitted, never an empty array, when there is
+// nothing to show.
+function toLocationItem(listingLocation, offers) {
   const item = { address: listingLocation.address };
   if (listingLocation.latitude != null && listingLocation.longitude != null) {
     item.coordinates = { lat: listingLocation.latitude, lng: listingLocation.longitude };
@@ -106,12 +133,17 @@ function toLocationItem(listingLocation) {
   if (listingLocation.hours && Array.isArray(listingLocation.hours) && listingLocation.hours.length) {
     item.hours = listingLocation.hours;
   }
+  if (offers && offers.length) item.offers = offers.map(toOfferItem);
   return item;
 }
 
 // Full shape for the detail endpoint -- brand-level fields plus every
 // published storefront this listing has in the requested city.
-function toDetailItem(listing, listingLocations) {
+// offersByLocationId: Map<listingLocationId, StadtPocketOffer[]> --
+// already scoped/filtered by getCityBusiness before this function ever
+// runs, so this function only ever attaches offers to the exact
+// storefront they belong to.
+function toDetailItem(listing, listingLocations, offersByLocationId) {
   const item = {
     slug: listing.slug,
     name: listing.name,
@@ -123,7 +155,7 @@ function toDetailItem(listing, listingLocations) {
   if (listing.longDescription) item.longDescription = listing.longDescription;
   const headerImage = pickPublicHeaderImage(listing);
   if (headerImage) item.headerImage = headerImage;
-  item.locations = listingLocations.map(toLocationItem);
+  item.locations = listingLocations.map((ll) => toLocationItem(ll, offersByLocationId.get(ll.id)));
   return item;
 }
 
@@ -181,7 +213,26 @@ async function getCityBusiness(citySlug, listingSlug) {
 
   if (!listingLocations.length) return null;
 
-  return toDetailItem(listingLocations[0].listing, listingLocations);
+  // Offers: published only, and not expired -- the only two visibility
+  // rules for a public read (draft/archived are already excluded by the
+  // status filter itself; "not expired" is a computed, never-stored
+  // fact, same convention as StadtPocketOffer's own schema comment).
+  // Scoped to exactly these storefronts' ids -- never a business-wide
+  // or cross-city query -- so a listing with storefronts in multiple
+  // cities can never leak another city's offers onto this one.
+  const listingLocationIds = listingLocations.map((ll) => ll.id);
+  const rawOffers = await prisma.stadtPocketOffer.findMany({
+    where: { listingLocationId: { in: listingLocationIds }, status: PUBLISHED },
+  });
+  const offersByLocationId = new Map();
+  const now = Date.now();
+  for (const offer of rawOffers) {
+    if (offer.endsAt != null && new Date(offer.endsAt).getTime() < now) continue; // expired -- never shown
+    if (!offersByLocationId.has(offer.listingLocationId)) offersByLocationId.set(offer.listingLocationId, []);
+    offersByLocationId.get(offer.listingLocationId).push(offer);
+  }
+
+  return toDetailItem(listingLocations[0].listing, listingLocations, offersByLocationId);
 }
 
 module.exports = {

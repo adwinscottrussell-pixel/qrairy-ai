@@ -30,13 +30,48 @@ const stuttgartLocation = { id: STUTTGART, name: 'Stuttgart', slug: 'stuttgart',
 let locationRows = [];
 let listingRows = [];
 let listingLocationRows = [];
+let offerRows = [];
 let seq = 0;
 
 function resetFixtures() {
   locationRows = [ulmLocation, stuttgartLocation];
   listingRows = [];
   listingLocationRows = [];
+  offerRows = [];
   seq = 0;
+}
+
+// Offer fixture builder -- defaults to a real, currently-valid published
+// offer (matches the real Bäckerei Staib test offer used for the
+// Phase 6E-2 end-to-end verification: "2 für 1", 12.09.2026–14.09.2026).
+function addOffer({
+  listingLocationId,
+  status = 'published',
+  title = 'testing',
+  description = 'this is a test',
+  offerText = '2 für 1',
+  offerType = 'two_for_one',
+  offerDetails = null,
+  image = { url: 'https://res.cloudinary.com/demo/image/upload/bakery.jpg', width: 800, height: 600 },
+  startsAt = new Date('2026-09-12T00:00:00.000Z'),
+  endsAt = new Date('2026-09-14T23:59:59.000Z'),
+} = {}) {
+  seq += 1;
+  offerRows.push({
+    id: `offer_${seq}`,
+    listingLocationId,
+    status,
+    title,
+    description,
+    offerText,
+    offerType,
+    offerDetails,
+    image,
+    startsAt,
+    endsAt,
+    createdBy: 'user_admin',
+    createdAt: new Date(2026, 0, seq),
+  });
 }
 
 // Convenience fixture builder: one listing with N storefronts (default:
@@ -116,6 +151,17 @@ const mockPrisma = {
         result = [...result].sort((a, b) => a.createdAt - b.createdAt);
       }
       return result;
+    },
+  },
+  stadtPocketOffer: {
+    findMany: async ({ where }) => {
+      let rows = offerRows;
+      if (where.listingLocationId && where.listingLocationId.in) {
+        const ids = where.listingLocationId.in;
+        rows = rows.filter((o) => ids.includes(o.listingLocationId));
+      }
+      if (where.status) rows = rows.filter((o) => o.status === where.status);
+      return rows.map((o) => ({ ...o }));
     },
   },
   // Deliberately NOT defined -- this public surface must never write, and
@@ -517,6 +563,108 @@ test('never includes a deals field anywhere', async () => {
   const detailRes = await detailUlm('baeckerei-staib');
   assert.equal('deals' in listRes.body.businesses[0], false);
   assert.equal('deals' in detailRes.body, false);
+});
+
+// ── Offers (Phase 6E-2 — connect published Deal Builder offers to the
+// consumer Angebote screen) ─────────────────────────────────────────
+
+// addOffer()'s own startsAt/endsAt defaults are fixed calendar dates
+// (2026-09-12 to 2026-09-14) documenting the real Bäckerei Staib test
+// offer used for the Phase 6E-2 end-to-end verification -- kept as-is
+// for that record. Any test that actually needs "currently valid right
+// now" uses this relative-to-now override instead, so it can never go
+// stale the way a second hardcoded calendar date eventually would.
+const FAR_FUTURE_ENDS_AT = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+test('a published, currently-valid offer is visible on its storefront, with the exact fields the real Deal Builder test offer used', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, endsAt: FAR_FUTURE_ENDS_AT });
+  const res = await detailUlm('baeckerei-staib');
+  const offer = res.body.locations[0].offers[0];
+  assert.equal(typeof offer.id, 'string');
+  assert.deepEqual({ ...offer, id: 'offer_1' }, {
+    id: 'offer_1',
+    title: 'testing',
+    offerText: '2 für 1',
+    description: 'this is a test',
+    offerType: 'two_for_one',
+    image: { url: 'https://res.cloudinary.com/demo/image/upload/bakery.jpg', width: 800, height: 600 },
+    startsAt: new Date('2026-09-12T00:00:00.000Z'),
+    endsAt: FAR_FUTURE_ENDS_AT,
+  });
+});
+
+test('a draft offer is never visible', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, status: 'draft' });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('offers' in res.body.locations[0], false);
+});
+
+test('an archived offer is never visible', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, status: 'archived' });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('offers' in res.body.locations[0], false);
+});
+
+test('an expired published offer (endsAt in the past) is never visible', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, endsAt: new Date('2020-01-01T00:00:00.000Z') });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('offers' in res.body.locations[0], false);
+});
+
+test('an offer with no endsAt (never expires) remains visible', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, endsAt: null });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal(res.body.locations[0].offers.length, 1);
+});
+
+test('zero offers omits the offers field entirely -- never an empty array, matching every other optional field in this file', async () => {
+  resetFixtures();
+  addListing();
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('offers' in res.body.locations[0], false);
+});
+
+test('business scoping: an offer on a DIFFERENT business\'s storefront never appears on this business', async () => {
+  resetFixtures();
+  addListing({ listingId: 'listing_staib', slug: 'baeckerei-staib' });
+  addListing({ listingId: 'listing_other', slug: 'other-shop', name: 'Other Shop' });
+  addOffer({ listingLocationId: listingLocationRows[1].id, endsAt: FAR_FUTURE_ENDS_AT }); // the OTHER shop's storefront
+  const staibRes = await detailUlm('baeckerei-staib');
+  const otherRes = await detailUlm('other-shop');
+  assert.equal('offers' in staibRes.body.locations[0], false, 'Staib must not see the other business\'s offer');
+  assert.equal(otherRes.body.locations[0].offers.length, 1, 'the other business must see its own offer');
+});
+
+test('multi-storefront scoping: an offer on one storefront never appears on a sibling storefront of the SAME listing', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ id: 'll_ulm_a' }, { id: 'll_ulm_b', address: 'Zweite Filiale' }] });
+  addOffer({ listingLocationId: 'll_ulm_a', endsAt: FAR_FUTURE_ENDS_AT });
+  const res = await detailUlm('baeckerei-staib');
+  const [locA, locB] = res.body.locations;
+  assert.equal(locA.offers.length, 1);
+  assert.equal('offers' in locB, false);
+});
+
+test('never includes internal offer fields (listingLocationId, status, draftData, createdBy)', async () => {
+  resetFixtures();
+  addListing();
+  addOffer({ listingLocationId: listingLocationRows[0].id, endsAt: FAR_FUTURE_ENDS_AT });
+  const res = await detailUlm('baeckerei-staib');
+  const offer = res.body.locations[0].offers[0];
+  assert.equal('listingLocationId' in offer, false);
+  assert.equal('status' in offer, false);
+  assert.equal('draftData' in offer, false);
+  assert.equal('createdBy' in offer, false);
 });
 
 // ── runner ────────────────────────────────────────────────────
