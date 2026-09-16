@@ -570,6 +570,12 @@ module.exports = {
   previewDraft,
   publishForLocation,
   pauseForLocation,
+  // Reused by stadtpocketLoyaltyBridgeService.js (Phase 2, Stempelkarte)
+  // for the exact same "never trust a caller-supplied listingLocationId"
+  // re-check -- not exported for testing only, genuinely consumed
+  // elsewhere, unlike the block below.
+  findListingLocationInCityOrThrow,
+  authorizeLocationAccess,
   // exported for direct unit testing only
   validateDraftPayload,
   mergeState,

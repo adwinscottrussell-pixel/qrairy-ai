@@ -642,6 +642,25 @@
     <h2>Öffnungszeiten</h2>
     <div class="card section-card" id="hours-editor"></div>
 
+    <!-- Stempelkarte (Phase 2) — business-level connection to an
+         EXISTING QRAIVY loyalty program only. Never shows customer
+         stamp counts, customer identity, or wallet state -- the
+         backend (stadtpocketLoyaltyBridgeService.js) has nothing of
+         that kind to return here in the first place. -->
+    <h2>Stempelkarte</h2>
+    <div class="card section-card" id="loyalty-section">
+      <div id="loyalty-state"></div>
+      <div id="loyalty-picker" style="display:none;margin-top:14px">
+        <label>QRAIVY-Stempelkarte auswählen</label>
+        <select id="loyalty-picker-select"></select>
+        <div class="actions" style="margin-top:10px">
+          <button class="secondary" type="button" onclick="closeLoyaltyPicker()">Abbrechen</button>
+          <button class="primary" type="button" id="loyalty-picker-confirm-btn" onclick="confirmConnectLoyalty()">Verbinden</button>
+        </div>
+      </div>
+      <div id="loyalty-banner"></div>
+    </div>
+
     <div id="publish-compare"></div>
 
     <div class="actions">
@@ -1494,6 +1513,104 @@
     });
     renderHoursEditor();
     renderHeaderImagePreview();
+    renderLoyaltySection();
+  }
+
+  // ── Stempelkarte (Phase 2 — loyalty bridge, business-level only) ──
+  // Connects/disconnects an EXISTING QRAIVY loyalty program
+  // (LandingPage + StampSettings) via loyaltyLandingPageId. Never
+  // creates or edits a program here -- see loyalty-setup.html for that,
+  // linked to below rather than duplicated. Never fetches or displays
+  // customer-specific data (stamp count, customer identity, wallet
+  // state) -- the backend has nothing of that kind to return to this
+  // endpoint in the first place.
+  let loyaltyEligiblePrograms = [];
+
+  async function renderLoyaltySection() {
+    const el = document.getElementById('loyalty-state');
+    document.getElementById('loyalty-picker').style.display = 'none';
+    banner('loyalty-banner', 'info', '');
+    el.innerHTML = '<p class="muted">Lade…</p>';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`);
+    if (!res.ok) {
+      el.innerHTML = '<p class="muted">Fehler beim Laden der Stempelkarte.</p>';
+      return;
+    }
+    if (res.body.connected) {
+      const p = res.body.program;
+      el.innerHTML = `
+        <span class="status-pill published">Stempelkarte verbunden</span>
+        <p style="margin:10px 0 2px;font-weight:700;color:var(--text-primary)">${escapeHtml(String(p.requiredStamps))} Stempel</p>
+        <p class="muted" style="margin:0 0 12px">Belohnung: ${escapeHtml(p.rewardTitle)}</p>
+        <div class="actions">
+          <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
+        </div>
+      `;
+    } else {
+      el.innerHTML = `
+        <p class="muted" style="margin:0 0 12px">Keine Stempelkarte verbunden.</p>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="openLoyaltyPicker()">Stempelkarte verbinden</button>
+        </div>
+      `;
+    }
+  }
+
+  async function openLoyaltyPicker() {
+    banner('loyalty-banner', 'info', '');
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/eligible`);
+    const picker = document.getElementById('loyalty-picker');
+    const select = document.getElementById('loyalty-picker-select');
+    if (!res.ok) {
+      banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Laden verfügbarer Stempelkarten.');
+      return;
+    }
+    loyaltyEligiblePrograms = res.body.programs || [];
+    if (loyaltyEligiblePrograms.length === 0) {
+      picker.style.display = 'none';
+      // Honest empty state -- never silently creates a program. Links
+      // to the existing QRAIVY loyalty setup rather than duplicating it.
+      banner('loyalty-banner', 'info',
+        'Für dieses Geschäft ist noch keine QRAIVY-Stempelkarte eingerichtet. Richte zuerst ein Loyalty-Programm im QRAIVY Dashboard ein (loyalty-setup.html), bevor du es hier verbindest.');
+      return;
+    }
+    select.innerHTML = loyaltyEligiblePrograms
+      .map((p, i) => `<option value="${i}">${escapeHtml(p.businessName)} — ${escapeHtml(String(p.requiredStamps))} Stempel, ${escapeHtml(p.rewardTitle)}</option>`)
+      .join('');
+    picker.style.display = '';
+  }
+
+  function closeLoyaltyPicker() {
+    document.getElementById('loyalty-picker').style.display = 'none';
+    banner('loyalty-banner', 'info', '');
+  }
+
+  async function confirmConnectLoyalty() {
+    const select = document.getElementById('loyalty-picker-select');
+    const chosen = loyaltyEligiblePrograms[Number(select.value)];
+    if (!chosen) return;
+    const btn = document.getElementById('loyalty-picker-confirm-btn');
+    btn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`, {
+      method: 'PUT',
+      body: { landingPageId: chosen.landingPageId },
+    });
+    btn.disabled = false;
+    if (!res.ok) {
+      banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Verbinden.');
+      return;
+    }
+    await renderLoyaltySection();
+  }
+
+  async function disconnectLoyalty() {
+    if (!confirm('Stempelkarte wirklich trennen?')) return;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`, { method: 'DELETE' });
+    if (!res.ok) {
+      banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Trennen.');
+      return;
+    }
+    await renderLoyaltySection();
   }
 
   // ── Header/hero image (Phase 6D.2) ────────────────────────────────

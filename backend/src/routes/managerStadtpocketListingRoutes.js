@@ -26,6 +26,7 @@ const router = express.Router();
 const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManagerAuth');
 const service = require('../services/stadtpocketManagerService');
 const { uploadStadtPocketHeaderImage } = require('../services/stadtPocketHeaderImageService');
+const loyaltyBridgeService = require('../services/stadtpocketLoyaltyBridgeService');
 
 function handleServiceError(err, res, route) {
   if (err instanceof service.StadtpocketManagerError) {
@@ -158,6 +159,46 @@ async function handleUploadHeaderImage(req, res) {
   }
 }
 
+// Stempelkarte Phase 2 — loyalty bridge (connect/disconnect an existing
+// QRAIVY loyalty program). See stadtpocketLoyaltyBridgeService.js for
+// the eligibility/authorization rules; this file is routing only, same
+// posture as every other handler above.
+async function handleGetLoyaltyState(req, res) {
+  try {
+    const state = await loyaltyBridgeService.getBridgeState(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json(state);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty GET');
+  }
+}
+
+async function handleListEligiblePrograms(req, res) {
+  try {
+    const programs = await loyaltyBridgeService.listEligiblePrograms(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope, req.query);
+    return res.json({ programs });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/eligible GET');
+  }
+}
+
+async function handleConnectLoyalty(req, res) {
+  try {
+    const program = await loyaltyBridgeService.connectProgram(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope, req.body && req.body.landingPageId);
+    return res.json({ connected: true, program });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty PUT');
+  }
+}
+
+async function handleDisconnectLoyalty(req, res) {
+  try {
+    const state = await loyaltyBridgeService.disconnectProgram(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json(state);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty DELETE');
+  }
+}
+
 // City-scoped list + create.
 router.get('/listings/:locationId', requireStadtpocketWriteScope, handleListListings);
 router.post('/listings/:locationId', requireStadtpocketWriteScope, handleInitializeDraft);
@@ -178,6 +219,12 @@ router.post('/listings/:locationId/:listingLocationId/header-image', requireStad
   });
 }, handleUploadHeaderImage);
 
+// Stempelkarte Phase 2 — loyalty bridge.
+router.get('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleGetLoyaltyState);
+router.get('/listings/:locationId/:listingLocationId/loyalty/eligible', requireStadtpocketWriteScope, handleListEligiblePrograms);
+router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleConnectLoyalty);
+router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
+
 module.exports = router;
 module.exports.handleListListings = handleListListings; // exported for direct unit testing only
 module.exports.handleInitializeDraft = handleInitializeDraft; // exported for direct unit testing only
@@ -190,3 +237,7 @@ module.exports.handleUploadHeaderImage = handleUploadHeaderImage; // exported fo
 module.exports.headerImageFileFilter = headerImageFileFilter; // exported for direct unit testing only
 module.exports.HEADER_IMAGE_ALLOWED_MIMETYPES = HEADER_IMAGE_ALLOWED_MIMETYPES; // exported for direct unit testing only
 module.exports.HEADER_IMAGE_MAX_BYTES = HEADER_IMAGE_MAX_BYTES; // exported for direct unit testing only
+module.exports.handleGetLoyaltyState = handleGetLoyaltyState; // exported for direct unit testing only
+module.exports.handleListEligiblePrograms = handleListEligiblePrograms; // exported for direct unit testing only
+module.exports.handleConnectLoyalty = handleConnectLoyalty; // exported for direct unit testing only
+module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only
