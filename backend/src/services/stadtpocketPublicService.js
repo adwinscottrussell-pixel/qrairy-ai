@@ -37,8 +37,11 @@
 // admin/provenance data has no business being on it.
 //
 // Never fabricates: no deals field (no Deal model exists), no rating/
-// reviews/loyalty/qraivyLandingUrl/logoUrl/coverImage/gallery -- none of
-// those exist in this phase. Optional fields are omitted from the
+// reviews/qraivyLandingUrl/logoUrl/coverImage/gallery -- none of those
+// exist in this phase. `loyalty` (business-level only, see
+// toLoyaltyItem below) is the one exception, added once an existing
+// QRAIVY loyalty program is actually bridged and enabled -- still never
+// fabricated, just conditionally real. Optional fields are omitted from the
 // response when absent, never sent as null/placeholder values. Brand-
 // level fields (address, phone, hours, etc. were NEVER brand-level to
 // begin with) are never picked from one arbitrary storefront and
@@ -118,12 +121,36 @@ function toOfferItem(offer) {
   return item;
 }
 
+// Loyalty — business-level configuration only. Deliberately excludes
+// every customer-specific field on LoyaltyCustomer (customerId, cid,
+// stampCount, totalStamps, rewardsEarned, rewardReady, hasWallet, any
+// stamp history) -- this is a public, unauthenticated surface, and this
+// phase exposes only "does this storefront have an active loyalty
+// program, and what does it take to earn the reward," never anything
+// about who is asking or their personal progress. That's a deliberately
+// separate, later milestone (real customer identity, not built here).
+//
+// Reads QRAIVY's existing loyalty engine (StampSettings, keyed by
+// LandingPage.slug) through the loyaltyLandingPageId bridge already on
+// StadtPocketListingLocation -- no second loyalty system, no new
+// program model. `enabled` here means StampSettings.enabled, i.e. the
+// business owner has actually turned the program on, not merely that a
+// StampSettings row exists.
+function toLoyaltyItem(stampSettings) {
+  return {
+    enabled: true,
+    requiredStamps: stampSettings.goal,
+    rewardTitle: stampSettings.rewardName,
+  };
+}
+
 // One storefront's shape, nested inside the detail response's locations[].
 // `offers` (already filtered to published + non-expired by the caller)
-// is included only when non-empty, matching every other optional field
-// in this function -- omitted, never an empty array, when there is
-// nothing to show.
-function toLocationItem(listingLocation, offers) {
+// and `loyalty` (already resolved+filtered to an enabled program by the
+// caller) are each included only when present, matching every other
+// optional field in this function -- omitted, never an empty array or a
+// disabled/placeholder object, when there is nothing to show.
+function toLocationItem(listingLocation, offers, loyalty) {
   const item = { address: listingLocation.address };
   if (listingLocation.latitude != null && listingLocation.longitude != null) {
     item.coordinates = { lat: listingLocation.latitude, lng: listingLocation.longitude };
@@ -134,16 +161,17 @@ function toLocationItem(listingLocation, offers) {
     item.hours = listingLocation.hours;
   }
   if (offers && offers.length) item.offers = offers.map(toOfferItem);
+  if (loyalty) item.loyalty = loyalty;
   return item;
 }
 
 // Full shape for the detail endpoint -- brand-level fields plus every
 // published storefront this listing has in the requested city.
-// offersByLocationId: Map<listingLocationId, StadtPocketOffer[]> --
-// already scoped/filtered by getCityBusiness before this function ever
-// runs, so this function only ever attaches offers to the exact
-// storefront they belong to.
-function toDetailItem(listing, listingLocations, offersByLocationId) {
+// offersByLocationId / loyaltyByLocationId: Map<listingLocationId, ...>
+// -- already scoped/filtered by getCityBusiness before this function
+// ever runs, so this function only ever attaches data to the exact
+// storefront it belongs to.
+function toDetailItem(listing, listingLocations, offersByLocationId, loyaltyByLocationId) {
   const item = {
     slug: listing.slug,
     name: listing.name,
@@ -155,7 +183,9 @@ function toDetailItem(listing, listingLocations, offersByLocationId) {
   if (listing.longDescription) item.longDescription = listing.longDescription;
   const headerImage = pickPublicHeaderImage(listing);
   if (headerImage) item.headerImage = headerImage;
-  item.locations = listingLocations.map((ll) => toLocationItem(ll, offersByLocationId.get(ll.id)));
+  item.locations = listingLocations.map((ll) =>
+    toLocationItem(ll, offersByLocationId.get(ll.id), loyaltyByLocationId.get(ll.id))
+  );
   return item;
 }
 
@@ -207,11 +237,38 @@ async function getCityBusiness(citySlug, listingSlug) {
       publicationStatus: PUBLISHED,
       listing: { slug: normalizedListingSlug },
     },
-    include: { listing: true },
+    include: { listing: true, loyaltyLandingPage: true },
     orderBy: { createdAt: 'asc' },
   });
 
   if (!listingLocations.length) return null;
+
+  // Loyalty (business-level only -- see toLoyaltyItem's header comment).
+  // loyaltyLandingPage is only ever populated when a storefront's
+  // loyaltyLandingPageId bridge has actually been set (unset for every
+  // storefront today -- see StadtPocketListingLocation's schema
+  // comment); every one of those cases resolves to "no loyalty" below,
+  // never a fabricated program. StampSettings is looked up in one
+  // batched query by slug (its own key, no direct Prisma relation to
+  // LandingPage exists) -- same batching convention as the offers query
+  // below, scoped to exactly the slugs these storefronts bridge to.
+  const loyaltySlugs = [
+    ...new Set(
+      listingLocations
+        .map((ll) => ll.loyaltyLandingPage && ll.loyaltyLandingPage.slug)
+        .filter(Boolean)
+    ),
+  ];
+  const enabledStampSettings = loyaltySlugs.length
+    ? await prisma.stampSettings.findMany({ where: { slug: { in: loyaltySlugs }, enabled: true } })
+    : [];
+  const stampSettingsBySlug = new Map(enabledStampSettings.map((s) => [s.slug, s]));
+  const loyaltyByLocationId = new Map();
+  for (const ll of listingLocations) {
+    const slug = ll.loyaltyLandingPage && ll.loyaltyLandingPage.slug;
+    const settings = slug && stampSettingsBySlug.get(slug);
+    if (settings) loyaltyByLocationId.set(ll.id, toLoyaltyItem(settings));
+  }
 
   // Offers: published only, and not expired -- the only two visibility
   // rules for a public read (draft/archived are already excluded by the
@@ -232,7 +289,7 @@ async function getCityBusiness(citySlug, listingSlug) {
     offersByLocationId.get(offer.listingLocationId).push(offer);
   }
 
-  return toDetailItem(listingLocations[0].listing, listingLocations, offersByLocationId);
+  return toDetailItem(listingLocations[0].listing, listingLocations, offersByLocationId, loyaltyByLocationId);
 }
 
 module.exports = {

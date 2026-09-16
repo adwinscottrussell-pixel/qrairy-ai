@@ -31,6 +31,8 @@ let locationRows = [];
 let listingRows = [];
 let listingLocationRows = [];
 let offerRows = [];
+let landingPageRows = [];
+let stampSettingsRows = [];
 let seq = 0;
 
 function resetFixtures() {
@@ -38,7 +40,22 @@ function resetFixtures() {
   listingRows = [];
   listingLocationRows = [];
   offerRows = [];
+  landingPageRows = [];
+  stampSettingsRows = [];
   seq = 0;
+}
+
+// LandingPage fixture builder -- only the fields this service ever reads
+// (id, slug). A storefront bridges to one of these via
+// storefronts[].loyaltyLandingPageId (see addListing).
+function addLandingPage({ id, slug }) {
+  landingPageRows.push({ id, slug });
+}
+
+// StampSettings fixture builder -- defaults to a real, currently-enabled
+// program matching this file's other real-data conventions.
+function addStampSettings({ slug, goal = 10, rewardName = 'Free item', enabled = true }) {
+  stampSettingsRows.push({ slug, goal, rewardName, enabled });
 }
 
 // Offer fixture builder -- defaults to a real, currently-valid published
@@ -117,6 +134,7 @@ function addListing({
       hours: field(sf, 'hours', null),
       publicationStatus: field(sf, 'publicationStatus', 'published'),
       businessLocationId: field(sf, 'businessLocationId', null),
+      loyaltyLandingPageId: field(sf, 'loyaltyLandingPageId', null),
       sourceProvider: field(sf, 'sourceProvider', null),
       sourceUrl: field(sf, 'sourceUrl', null),
       sourceType: field(sf, 'sourceType', null),
@@ -146,6 +164,7 @@ const mockPrisma = {
       let result = rows.map((ll) => ({
         ...ll,
         listing: listingRows.find((l) => l.id === ll.listingId) || null,
+        loyaltyLandingPage: landingPageRows.find((lp) => lp.id === ll.loyaltyLandingPageId) || null,
       }));
       if (orderBy && orderBy.createdAt === 'asc') {
         result = [...result].sort((a, b) => a.createdAt - b.createdAt);
@@ -164,12 +183,27 @@ const mockPrisma = {
       return rows.map((o) => ({ ...o }));
     },
   },
+  stampSettings: {
+    findMany: async ({ where }) => {
+      let rows = stampSettingsRows;
+      if (where.slug && where.slug.in) {
+        const slugs = where.slug.in;
+        rows = rows.filter((s) => slugs.includes(s.slug));
+      }
+      if (where.enabled != null) rows = rows.filter((s) => s.enabled === where.enabled);
+      return rows.map((s) => ({ ...s }));
+    },
+  },
   // Deliberately NOT defined -- this public surface must never write, and
-  // must never read Business/BusinessLocation for a visibility decision.
+  // must never read Business/BusinessLocation for a visibility decision,
+  // nor ever read LoyaltyCustomer (customer-specific data) at all -- if
+  // the service code ever attempted to, these tests would crash with a
+  // "Cannot read property of undefined" instead of silently succeeding.
   business: undefined,
   businessLocation: undefined,
   stadtPocketListing: undefined,
   cityBusinessInvite: undefined,
+  loyaltyCustomer: undefined,
 };
 
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
@@ -665,6 +699,98 @@ test('never includes internal offer fields (listingLocationId, status, draftData
   assert.equal('status' in offer, false);
   assert.equal('draftData' in offer, false);
   assert.equal('createdBy' in offer, false);
+});
+
+// ── Loyalty (Stempelkarte Phase 1 — business-level loyalty bridge,
+// 2026-09-16) ─────────────────────────────────────────────────
+//
+// Business-level configuration only. LoyaltyCustomer (customer-specific
+// progress/identity) is never queried by this service at all -- see
+// mockPrisma.loyaltyCustomer: undefined above, which would crash any
+// test here if the implementation ever tried.
+
+test('linked storefront with an enabled loyalty program returns enabled/requiredStamps/rewardTitle', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ loyaltyLandingPageId: 'lp_staib' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty', goal: 10, rewardName: 'Gratis Kaffee', enabled: true });
+  const res = await detailUlm('baeckerei-staib');
+  assert.deepEqual(res.body.locations[0].loyalty, {
+    enabled: true,
+    requiredStamps: 10,
+    rewardTitle: 'Gratis Kaffee',
+  });
+});
+
+test('no loyaltyLandingPageId set -- honest no-loyalty state, field omitted entirely', async () => {
+  resetFixtures();
+  addListing(); // default storefront: loyaltyLandingPageId null
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('loyalty' in res.body.locations[0], false);
+});
+
+test('linked LandingPage with no StampSettings row at all -- honest no-loyalty state', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ loyaltyLandingPageId: 'lp_staib' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  // deliberately no addStampSettings() call
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('loyalty' in res.body.locations[0], false);
+});
+
+test('linked LandingPage with StampSettings.enabled === false -- never appears as an active program', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ loyaltyLandingPageId: 'lp_staib' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty', enabled: false });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('loyalty' in res.body.locations[0], false);
+});
+
+test('never includes customer-specific or internal loyalty fields -- loyalty object is exactly {enabled, requiredStamps, rewardTitle}', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ loyaltyLandingPageId: 'lp_staib' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty', goal: 8, rewardName: 'Freies Brot', enabled: true });
+  const res = await detailUlm('baeckerei-staib');
+  const loyalty = res.body.locations[0].loyalty;
+  assert.deepEqual(Object.keys(loyalty).sort(), ['enabled', 'requiredStamps', 'rewardTitle']);
+  for (const forbidden of [
+    'customerId', 'cid', 'currentStamps', 'totalStamps', 'rewardsEarned',
+    'rewardReady', 'hasWallet', 'stampCount', 'lastStampAt',
+    'loyaltyLandingPageId', 'slug', 'id', 'color',
+  ]) {
+    assert.equal(forbidden in loyalty, false, `loyalty object must not expose "${forbidden}"`);
+  }
+  // Also never at the top level of the location or the detail response.
+  for (const forbidden of ['customerId', 'cid', 'currentStamps', 'loyaltyLandingPageId']) {
+    assert.equal(forbidden in res.body.locations[0], false, `location must not expose "${forbidden}"`);
+    assert.equal(forbidden in res.body, false, `detail response must not expose "${forbidden}"`);
+  }
+});
+
+test('loyalty and offers coexist correctly on the same storefront -- neither interferes with the other (existing Angebote behavior unchanged)', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ loyaltyLandingPageId: 'lp_staib' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty', goal: 10, rewardName: 'Gratis Kaffee', enabled: true });
+  addOffer({ listingLocationId: listingLocationRows[0].id, endsAt: FAR_FUTURE_ENDS_AT });
+  const res = await detailUlm('baeckerei-staib');
+  const loc = res.body.locations[0];
+  assert.deepEqual(loc.loyalty, { enabled: true, requiredStamps: 10, rewardTitle: 'Gratis Kaffee' });
+  assert.equal(loc.offers.length, 1);
+  assert.equal(loc.offers[0].title, 'testing');
+});
+
+test('multi-storefront: loyalty bridge on one storefront never appears on a sibling storefront of the SAME listing', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ id: 'll_ulm_a', loyaltyLandingPageId: 'lp_staib' }, { id: 'll_ulm_b', address: 'Zweite Filiale' }] });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty', enabled: true });
+  const res = await detailUlm('baeckerei-staib');
+  const [locA, locB] = res.body.locations;
+  assert.ok(locA.loyalty);
+  assert.equal('loyalty' in locB, false);
 });
 
 // ── runner ────────────────────────────────────────────────────
