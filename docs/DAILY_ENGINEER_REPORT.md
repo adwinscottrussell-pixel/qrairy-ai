@@ -254,6 +254,55 @@ here; ask for it if a future session needs to re-derive the reasoning.
   acceptance-test record — never modified, recreated, or deleted by any
   session action.
 
+## StadtPocket Stempelkarte — Phase 2 Staging Verification
+
+- **2026-09-16** — Deployed and staging-verified (not yet visually
+  reviewed by founder). `preview/stadtpocket-phase6d-admin` fast-forwarded
+  to `cc757a7` (Phase 1 `2964028` + Phase 2 `cc757a7`), pushed; Railway's
+  normal GitHub auto-deploy picked it up on its own — confirmed via the
+  Railway dashboard/API, no manual `railway up` needed this time.
+- **Backend business-level loyalty bridge** (Phase 1): live on staging.
+  `stadtpocketPublicService.js` resolves `loyaltyLandingPageId` to the
+  linked `LandingPage`'s `StampSettings` and attaches
+  `locations[].loyalty = {enabled, requiredStamps, rewardTitle}` when a
+  program is connected and enabled — honestly omitted otherwise.
+- **Admin loyalty connection UI/API** (Phase 2): live on staging.
+  `stadtpocket-admin.html`'s business editor has a new "Stempelkarte"
+  section (confirmed present in the deployed page's own HTML/JS,
+  2026-09-16); backed by
+  `GET/PUT/DELETE /manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty`
+  and `GET .../loyalty/eligible`.
+- **Authorization/ownership protection**: verified by the 15 dedicated
+  tests in `stadtpocketLoyaltyBridge.test.js` (all passing on staging's
+  deployed commit) — a scoped City Manager can only connect a
+  `LandingPage` whose `businessId` matches the same claimed `Business`
+  as the target listing; Global Admin may search any enabled program;
+  every other path (unrelated business, nonexistent/disabled program,
+  out-of-scope location) is rejected server-side, never trusting a
+  frontend-displayed "eligible" list.
+- **Bäckerei Staib eligible-program discovery: UNKNOWN.** The
+  authenticated `.../loyalty/eligible` endpoint is the correct, safe way
+  to determine this (business-level only, no customer data) — but this
+  session has no Clerk Admin session token to call it with. Needs a
+  human with real Admin access (see Resume Instructions) or a future
+  session with credentials.
+- **Public API confirmed still honest**: live-checked after this
+  deploy — Bäckerei Staib's `locations[]` has no `loyalty` key at all
+  (no bridge connected yet), and its existing Angebote offer
+  ("testing" / "2 für 1", 12.09–18.09.2026) is unchanged.
+- **Consumer Stempelkarte (`stadtpocket-web`) is NOT connected yet** —
+  `StempelkarteScreen.jsx` still reads mock data only; that work hasn't
+  started.
+- **Customer-specific stamp progress is NOT implemented** — by design,
+  this milestone. Deliberately deferred; see this session's Phase 2
+  design notes (Customer Identity / Security Considerations) before
+  starting it.
+- **No loyalty program was connected to Bäckerei Staib** — the bridge
+  remains unset; nothing in this pass wrote real StadtPocket loyalty
+  data.
+- `origin/main` and production were **not** touched, merged into, or
+  promoted at any point in this work.
+
 ## Next Task
 
 **Two separate tracks exist — do not conflate them.**
