@@ -642,25 +642,6 @@
     <h2>Öffnungszeiten</h2>
     <div class="card section-card" id="hours-editor"></div>
 
-    <!-- Stempelkarte (Phase 2) — business-level connection to an
-         EXISTING QRAIVY loyalty program only. Never shows customer
-         stamp counts, customer identity, or wallet state -- the
-         backend (stadtpocketLoyaltyBridgeService.js) has nothing of
-         that kind to return here in the first place. -->
-    <h2>Stempelkarte</h2>
-    <div class="card section-card" id="loyalty-section">
-      <div id="loyalty-state"></div>
-      <div id="loyalty-picker" style="display:none;margin-top:14px">
-        <label>QRAIVY-Stempelkarte auswählen</label>
-        <select id="loyalty-picker-select"></select>
-        <div class="actions" style="margin-top:10px">
-          <button class="secondary" type="button" onclick="closeLoyaltyPicker()">Abbrechen</button>
-          <button class="primary" type="button" id="loyalty-picker-confirm-btn" onclick="confirmConnectLoyalty()">Verbinden</button>
-        </div>
-      </div>
-      <div id="loyalty-banner"></div>
-    </div>
-
     <div id="publish-compare"></div>
 
     <div class="actions">
@@ -849,6 +830,33 @@
     </div>
   </section>
 
+  <!-- STEMPELKARTE — dedicated workspace (Phase 3A). Sibling of
+       Angebote, same shell/sidebar. Reuses the exact Phase 2 loyalty
+       bridge API (GET/PUT/DELETE .../loyalty, GET .../loyalty/eligible)
+       and authorization model unchanged -- only the presentation moved
+       out of Profil into its own destination. Never shows customer
+       stamp counts, customer identity, or wallet state -- the backend
+       has nothing of that kind to return to this endpoint in the first
+       place. -->
+  <section class="page" id="page-stempelkarte">
+    <div class="page-heading-row">
+      <div>
+        <h1>Stempelkarte</h1>
+        <p class="subtitle">Belohne deine Stammkunden.</p>
+      </div>
+    </div>
+    <div id="loyalty-banner"></div>
+    <div id="loyalty-workspace"></div>
+    <div id="loyalty-picker" class="card section-card" style="display:none;margin-top:14px">
+      <label>QRAIVY-Stempelkarte auswählen</label>
+      <select id="loyalty-picker-select"></select>
+      <div class="actions" style="margin-top:10px">
+        <button class="secondary" type="button" onclick="closeLoyaltyPicker()">Abbrechen</button>
+        <button class="primary" type="button" id="loyalty-picker-confirm-btn" onclick="confirmConnectLoyalty()">Verbinden</button>
+      </div>
+    </div>
+  </section>
+
   </main>
 </div>
 </div>
@@ -1001,6 +1009,9 @@
       // satisfies without tracking wizard-step state across a reload.
       showPage('page-offers');
       await renderOffersSection();
+    } else if (ctx.pageId === 'page-stempelkarte') {
+      showPage('page-stempelkarte');
+      await renderLoyaltyWorkspace();
     } else {
       showPage('page-editor');
     }
@@ -1013,8 +1024,8 @@
   // which of the two top-level wrappers is shown, since a City Manager
   // is only ever "inside" the sidebar-driven Business Portal once a
   // specific business is open.
-  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor'];
-  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote' };
+  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor', 'page-stempelkarte'];
+  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote', 'page-stempelkarte': 'nav-stempelkarte' };
 
   function showPage(id) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
@@ -1103,20 +1114,9 @@
 
   function goToProfil() { showPage('page-editor'); }
   function goToOffersList() { showPage('page-offers'); renderOffersSection(); }
-  // Stempelkarte (Phase 2) lives inside the existing business editor
-  // (page-editor) -- same page Profil already opens, no new page, no
-  // duplicated panel. Only the active-nav highlight and scroll position
-  // differ from goToProfil(), since page-editor's own NAV_FOR_PAGE entry
-  // is a single-page->single-nav-item map and can't express "this page,
-  // but highlight a different nav item" on its own.
-  function goToStempelkarte() {
-    showPage('page-editor');
-    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
-    const navItem = document.getElementById('nav-stempelkarte');
-    if (navItem) navItem.classList.add('active');
-    const section = document.getElementById('loyalty-section');
-    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  // Stempelkarte (Phase 3A) — its own workspace, sibling of Angebote,
+  // same pattern exactly.
+  function goToStempelkarte() { showPage('page-stempelkarte'); renderLoyaltyWorkspace(); }
 
   async function getToken() {
     await window.Clerk.load();
@@ -1527,71 +1527,140 @@
     });
     renderHoursEditor();
     renderHeaderImagePreview();
-    renderLoyaltySection();
   }
 
-  // ── Stempelkarte (Phase 2 — loyalty bridge, business-level only) ──
-  // Connects/disconnects an EXISTING QRAIVY loyalty program
-  // (LandingPage + StampSettings) via loyaltyLandingPageId. Never
-  // creates or edits a program here -- see loyalty-setup.html for that,
-  // linked to below rather than duplicated. Never fetches or displays
+  // ── Stempelkarte (Phase 3A — dedicated workspace) ───────────────
+  // Presentation only. Connects/disconnects an EXISTING QRAIVY loyalty
+  // program (LandingPage + StampSettings) via loyaltyLandingPageId,
+  // through the exact same Phase 2 API and authorization model
+  // (GET/PUT/DELETE .../loyalty, GET .../loyalty/eligible) -- unchanged.
+  // Never creates or edits a program here. Never fetches or displays
   // customer-specific data (stamp count, customer identity, wallet
   // state) -- the backend has nothing of that kind to return to this
   // endpoint in the first place.
   let loyaltyEligiblePrograms = [];
 
-  async function renderLoyaltySection() {
-    const el = document.getElementById('loyalty-state');
+  async function renderLoyaltyWorkspace() {
+    const el = document.getElementById('loyalty-workspace');
     document.getElementById('loyalty-picker').style.display = 'none';
     banner('loyalty-banner', 'info', '');
     el.innerHTML = '<p class="muted">Lade…</p>';
-    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`);
-    if (!res.ok) {
+
+    const stateRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`);
+    if (!stateRes.ok) {
       el.innerHTML = '<p class="muted">Fehler beim Laden der Stempelkarte.</p>';
       return;
     }
-    if (res.body.connected) {
-      const p = res.body.program;
-      el.innerHTML = `
-        <span class="status-pill published">Stempelkarte verbunden</span>
-        <p style="margin:10px 0 2px;font-weight:700;color:var(--text-primary)">${escapeHtml(String(p.requiredStamps))} Stempel</p>
-        <p class="muted" style="margin:0 0 12px">Belohnung: ${escapeHtml(p.rewardTitle)}</p>
-        <div class="actions">
-          <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
-        </div>
-      `;
+    if (stateRes.body.connected) {
+      renderConnectedProgram(stateRes.body.program);
+      return;
+    }
+
+    // Not connected -- same discovery call the old picker used, just
+    // run automatically so the workspace can show what it already
+    // knows (Step 3/4's "found" state) instead of requiring an extra
+    // click first.
+    const eligRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/eligible`);
+    if (!eligRes.ok) {
+      el.innerHTML = '<p class="muted">Fehler beim Laden verfügbarer Stempelkarten.</p>';
+      return;
+    }
+    loyaltyEligiblePrograms = eligRes.body.programs || [];
+    renderDiscoveryResult();
+  }
+
+  function renderNoProgramFound() {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card empty-state">
+        <p style="margin:0 0 8px;font-weight:700;color:var(--text-primary)">Noch keine Stempelkarte eingerichtet</p>
+        <p class="muted" style="margin:0 0 20px">Erstelle deine digitale Stempelkarte und lege fest, wie viele Stempel deine Kunden sammeln und welche Belohnung sie erhalten.</p>
+        <button class="primary" type="button" onclick="setupStempelkarte()">Stempelkarte einrichten</button>
+      </div>
+    `;
+  }
+
+  function renderDiscoveryResult() {
+    if (loyaltyEligiblePrograms.length === 0) {
+      renderNoProgramFound();
+    } else if (loyaltyEligiblePrograms.length === 1) {
+      renderProgramFound(loyaltyEligiblePrograms[0]);
     } else {
-      el.innerHTML = `
-        <p class="muted" style="margin:0 0 12px">Keine Stempelkarte verbunden.</p>
-        <div class="actions">
-          <button class="secondary" type="button" onclick="openLoyaltyPicker()">Stempelkarte verbinden</button>
+      // More than one eligible program (only reachable for a Global
+      // Admin's slug search) -- same picker UI as before, just re-homed
+      // to this workspace instead of Profil.
+      document.getElementById('loyalty-workspace').innerHTML = `
+        <div class="card section-card">
+          <p style="margin:0;font-weight:700;color:var(--text-primary)">Mehrere QRAIVY-Stempelkarten gefunden</p>
+          <p class="muted" style="margin:6px 0 0">Wähle unten die passende Stempelkarte aus.</p>
         </div>
       `;
+      const select = document.getElementById('loyalty-picker-select');
+      select.innerHTML = loyaltyEligiblePrograms
+        .map((p, i) => `<option value="${i}">${escapeHtml(p.businessName)} — ${escapeHtml(String(p.requiredStamps))} Stempel, ${escapeHtml(p.rewardTitle)}</option>`)
+        .join('');
+      document.getElementById('loyalty-picker').style.display = '';
     }
   }
 
-  async function openLoyaltyPicker() {
-    banner('loyalty-banner', 'info', '');
+  function renderProgramFound(program) {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card">
+        <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">QRAIVY-Stempelkarte gefunden</p>
+        <p style="margin:0 0 2px;color:var(--text-primary)">${escapeHtml(String(program.requiredStamps))} Stempel</p>
+        <p class="muted" style="margin:0 0 16px">Belohnung: ${escapeHtml(program.rewardTitle)}</p>
+        <button class="primary" type="button" onclick="connectFoundProgram('${program.landingPageId}')">Stempelkarte verbinden</button>
+      </div>
+    `;
+  }
+
+  function renderConnectedProgram(program) {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="status-pill published">Aktiv</span>
+        <p style="margin:14px 0 2px;font-weight:700;color:var(--text-primary)">Deine Stempelkarte</p>
+        <p style="margin:0 0 2px;color:var(--text-primary)">${escapeHtml(String(program.requiredStamps))} Stempel</p>
+        <p class="muted" style="margin:0 0 16px">Belohnung: ${escapeHtml(program.rewardTitle)}</p>
+        <div class="actions">
+          <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // "Stempelkarte einrichten" CTA (honest-empty-state primary action).
+  // Must never create anything -- Phase 3B builds the real setup flow.
+  // For now it only re-runs the same safe, read-only discovery call
+  // renderLoyaltyWorkspace() already used, in case a program has since
+  // become available, and otherwise shows the same honest message
+  // (never naming an internal filename/route to the founder-facing UI).
+  async function setupStempelkarte() {
+    banner('loyalty-banner', 'info', 'Suche nach vorhandenen QRAIVY-Stempelkarten…');
     const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/eligible`);
-    const picker = document.getElementById('loyalty-picker');
-    const select = document.getElementById('loyalty-picker-select');
     if (!res.ok) {
-      banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Laden verfügbarer Stempelkarten.');
+      banner('loyalty-banner', 'error', 'Fehler beim Laden verfügbarer Stempelkarten.');
       return;
     }
     loyaltyEligiblePrograms = res.body.programs || [];
     if (loyaltyEligiblePrograms.length === 0) {
-      picker.style.display = 'none';
-      // Honest empty state -- never silently creates a program. Links
-      // to the existing QRAIVY loyalty setup rather than duplicating it.
       banner('loyalty-banner', 'info',
-        'Für dieses Geschäft ist noch keine QRAIVY-Stempelkarte eingerichtet. Richte zuerst ein Loyalty-Programm im QRAIVY Dashboard ein (loyalty-setup.html), bevor du es hier verbindest.');
+        'Für dieses Geschäft ist noch kein Loyalty-Programm eingerichtet. Richte zuerst ein Loyalty-Programm im QRAIVY Dashboard ein, bevor du es hier verbindest.');
       return;
     }
-    select.innerHTML = loyaltyEligiblePrograms
-      .map((p, i) => `<option value="${i}">${escapeHtml(p.businessName)} — ${escapeHtml(String(p.requiredStamps))} Stempel, ${escapeHtml(p.rewardTitle)}</option>`)
-      .join('');
-    picker.style.display = '';
+    banner('loyalty-banner', 'info', '');
+    renderDiscoveryResult();
+  }
+
+  async function connectFoundProgram(landingPageId) {
+    banner('loyalty-banner', 'info', '');
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`, {
+      method: 'PUT',
+      body: { landingPageId },
+    });
+    if (!res.ok) {
+      banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Verbinden.');
+      return;
+    }
+    await renderLoyaltyWorkspace();
   }
 
   function closeLoyaltyPicker() {
@@ -1614,7 +1683,7 @@
       banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Verbinden.');
       return;
     }
-    await renderLoyaltySection();
+    await renderLoyaltyWorkspace();
   }
 
   async function disconnectLoyalty() {
@@ -1624,7 +1693,7 @@
       banner('loyalty-banner', 'error', (res.body && res.body.error) || 'Fehler beim Trennen.');
       return;
     }
-    await renderLoyaltySection();
+    await renderLoyaltyWorkspace();
   }
 
   // ── Header/hero image (Phase 6D.2) ────────────────────────────────
