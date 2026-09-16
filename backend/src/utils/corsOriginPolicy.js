@@ -6,7 +6,7 @@
 // origin (see middleware/adminMiddleware.js). Extracted from index.js so
 // the matching logic can be unit-tested without booting the full app.
 
-const STATIC_ALLOWED_ORIGINS = ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com', 'https://preview.qraivy.com'];
+const STATIC_ALLOWED_ORIGINS = ['https://www.qraivy.com', 'https://qraivy.com', 'https://api.qraivy.com', 'https://preview.qraivy.com', 'https://preview.stadtpocket.de'];
 
 // QRAIVY's own Vercel team/project preview deployments only. Every preview
 // URL for this project ends in this exact, Vercel-assigned team-scope
