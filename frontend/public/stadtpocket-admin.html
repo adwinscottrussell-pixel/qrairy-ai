@@ -558,7 +558,7 @@
     <div class="nav-item disabled"><span class="nav-icon">⚲</span>Standorte<span class="soon-badge">Bald</span></div>
     <div class="nav-item" id="nav-angebote" onclick="goToOffersList()"><span class="nav-icon">◆</span>Angebote</div>
     <div class="nav-item disabled"><span class="nav-icon">▤</span>Aktuelles<span class="soon-badge">Bald</span></div>
-    <div class="nav-item disabled"><span class="nav-icon">▦</span>Stempelkarte<span class="soon-badge">Bald</span></div>
+    <div class="nav-item" id="nav-stempelkarte" onclick="goToStempelkarte()"><span class="nav-icon">▦</span>Stempelkarte</div>
     <div class="nav-item disabled"><span class="nav-icon">▧</span>Galerie / Medien<span class="soon-badge">Bald</span></div>
     <div class="nav-item disabled"><span class="nav-icon">▥</span>Statistiken<span class="soon-badge">Bald</span></div>
     <div class="nav-item disabled"><span class="nav-icon">◐</span>Kunden<span class="soon-badge">Bald</span></div>
@@ -1103,6 +1103,20 @@
 
   function goToProfil() { showPage('page-editor'); }
   function goToOffersList() { showPage('page-offers'); renderOffersSection(); }
+  // Stempelkarte (Phase 2) lives inside the existing business editor
+  // (page-editor) -- same page Profil already opens, no new page, no
+  // duplicated panel. Only the active-nav highlight and scroll position
+  // differ from goToProfil(), since page-editor's own NAV_FOR_PAGE entry
+  // is a single-page->single-nav-item map and can't express "this page,
+  // but highlight a different nav item" on its own.
+  function goToStempelkarte() {
+    showPage('page-editor');
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+    const navItem = document.getElementById('nav-stempelkarte');
+    if (navItem) navItem.classList.add('active');
+    const section = document.getElementById('loyalty-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function getToken() {
     await window.Clerk.load();
