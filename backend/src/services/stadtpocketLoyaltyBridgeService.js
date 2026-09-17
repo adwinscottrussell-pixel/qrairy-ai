@@ -47,6 +47,7 @@ const prisma = require('../utils/prismaClient');
 const {
   StadtpocketManagerError,
   findListingLocationInCityOrThrow,
+  slugify,
 } = require('./stadtpocketManagerService');
 
 // Business-level, admin-authenticated shape for a loyalty program.
@@ -67,9 +68,13 @@ function toProgramSummary(landingPage, stampSettings) {
 // The claim link a scoped (non-Global-Admin) caller's eligibility is
 // checked against. Null whenever the listing hasn't been claimed yet
 // (the common case today) — never fabricated, never inferred another way.
-async function resolveClaimedBusinessId(listingLocation) {
+// `client` defaults to the module-level `prisma` (existing callers,
+// unchanged) but accepts a `tx` handle so createAndConnectProgram below
+// can call this from inside its own transaction without reading through
+// a separate, non-transactional connection.
+async function resolveClaimedBusinessId(listingLocation, client = prisma) {
   if (!listingLocation.businessLocationId) return null;
-  const businessLocation = await prisma.businessLocation.findUnique({
+  const businessLocation = await client.businessLocation.findUnique({
     where: { id: listingLocation.businessLocationId },
   });
   return businessLocation ? businessLocation.businessId : null;
@@ -167,6 +172,139 @@ async function disconnectProgram(locationId, listingLocationId, scope) {
   return { connected: false };
 }
 
+// ── Setup (Phase 3B, 2026-09-17): platform-managed loyalty anchor ──
+// For an unclaimed StadtPocket business, creates a LandingPage with
+// userId: null -- never a fake owner, never a fake Business, never a
+// fake BusinessLocation (see Phase 3B architecture report, this date).
+// The schema already models "no owner yet" as a first-class state
+// (LandingPage.userId String? -- nullable), and networkAdminService.js
+// already has the repair path (assignLandingPageOwner/
+// mapLandingPageToBusiness) that will later adopt this exact row when
+// the real owner claims the business -- this function never duplicates
+// that machinery, only produces a row that fits it.
+
+const MIN_GOAL = 2;
+const MAX_GOAL = 50;
+const MAX_REWARD_NAME_LENGTH = 80;
+
+function validateGoal(goal) {
+  if (typeof goal !== 'number' || !Number.isInteger(goal)) {
+    throw new StadtpocketManagerError('goal must be a whole number.');
+  }
+  if (goal < MIN_GOAL || goal > MAX_GOAL) {
+    throw new StadtpocketManagerError(`goal must be between ${MIN_GOAL} and ${MAX_GOAL}.`);
+  }
+  return goal;
+}
+
+function validateRewardName(rewardName) {
+  if (typeof rewardName !== 'string') {
+    throw new StadtpocketManagerError('rewardName is required.');
+  }
+  const trimmed = rewardName.trim();
+  if (!trimmed) {
+    throw new StadtpocketManagerError('rewardName is required.');
+  }
+  if (trimmed.length > MAX_REWARD_NAME_LENGTH) {
+    throw new StadtpocketManagerError(`rewardName must be ${MAX_REWARD_NAME_LENGTH} characters or fewer.`);
+  }
+  return trimmed;
+}
+
+// Mirrors stadtpocketManagerService.js's own generateUniqueSlug exactly
+// (same slugify, same bounded-collision-loop shape) but checked against
+// LandingPage.slug's own uniqueness, not StadtPocketListing's -- these
+// are two separate unique namespaces in the schema, never conflated.
+async function generateUniqueLandingPageSlug(tx, name) {
+  const base = slugify(name) || 'stempelkarte';
+  let candidate = base;
+  let suffix = 1;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const existing = await tx.landingPage.findUnique({ where: { slug: candidate } });
+    if (!existing) return candidate;
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+  throw new StadtpocketManagerError('Could not generate a unique slug.', 500);
+}
+
+// caller-supplied input is only ever { goal, rewardName } -- no id of
+// any kind is accepted here, so there is no field through which a
+// caller could point this at another business's LandingPage/Business/
+// user. The target is derived entirely server-side from
+// (locationId, listingLocationId, scope).
+async function createAndConnectProgram(locationId, listingLocationId, scope, input) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+  const goal = validateGoal(input && input.goal);
+  const rewardName = validateRewardName(input && input.rewardName);
+
+  // Everything below runs in one transaction so the public side can
+  // never observe a half-created program (LandingPage without
+  // StampSettings, or either without the bridge column set).
+  //
+  // Idempotency: the bridge/eligible-program state is re-read fresh
+  // INSIDE the transaction (`fresh`, `tx.landingPage.findFirst`) rather
+  // than trusting the pre-transaction `listingLocation` snapshot, so a
+  // second submission -- after the first has committed -- always finds
+  // and reuses the same row instead of creating another one. This does
+  // not add a DB-level unique constraint or advisory lock, so it does
+  // not guarantee safety against two literally-simultaneous requests;
+  // that is out of scope for the smallest working model. The realistic
+  // case this guards -- a resubmitted or double-clicked setup call -- is
+  // fully covered.
+  return prisma.$transaction(async (tx) => {
+    const fresh = await tx.stadtPocketListingLocation.findUnique({ where: { id: listingLocationId } });
+    if (!fresh) throw new StadtpocketManagerError('StadtPocket listing not found for this location.', 404);
+
+    let landingPage = null;
+
+    // 1. Already connected -- reuse the exact same row (idempotent resubmit).
+    if (fresh.loyaltyLandingPageId) {
+      landingPage = await tx.landingPage.findUnique({ where: { id: fresh.loyaltyLandingPageId } });
+    }
+
+    // 2. Not connected yet, but this business is already claimed and
+    // has its own LandingPage -- reuse it rather than creating a second,
+    // platform-managed one alongside a real owner's existing program.
+    if (!landingPage) {
+      const businessId = await resolveClaimedBusinessId({ businessLocationId: fresh.businessLocationId }, tx);
+      if (businessId) {
+        landingPage = await tx.landingPage.findFirst({ where: { businessId } });
+      }
+    }
+
+    // 3. Nothing eligible exists -- create ONE platform-managed
+    // LandingPage. userId stays null; businessId stays null. No
+    // Business or BusinessLocation is created here, ever.
+    if (!landingPage) {
+      const slug = await generateUniqueLandingPageSlug(tx, listingLocation.listing.name);
+      landingPage = await tx.landingPage.create({
+        data: {
+          slug,
+          businessName: listingLocation.listing.name,
+          userId: null,
+          status: 'live',
+        },
+      });
+    }
+
+    await tx.stampSettings.upsert({
+      where: { slug: landingPage.slug },
+      create: { slug: landingPage.slug, goal, rewardName, enabled: true },
+      update: { goal, rewardName, enabled: true },
+    });
+
+    if (fresh.loyaltyLandingPageId !== landingPage.id) {
+      await tx.stadtPocketListingLocation.update({
+        where: { id: listingLocationId },
+        data: { loyaltyLandingPageId: landingPage.id },
+      });
+    }
+
+    return toProgramSummary(landingPage, { goal, rewardName });
+  });
+}
+
 // ── Diagnostic (Phase 3B pre-work, 2026-09-17) ──────────────────
 // TEMPORARY, READ-ONLY, Global-Admin-only. Checks whether this
 // StadtPocket business already has a matching QRAIVY Business /
@@ -240,8 +378,14 @@ module.exports = {
   getBridgeState,
   connectProgram,
   disconnectProgram,
+  createAndConnectProgram,
   checkExistingQraivyLinkage,
   // exported for direct unit testing only
   toProgramSummary,
   resolveClaimedBusinessId,
+  validateGoal,
+  validateRewardName,
+  MIN_GOAL,
+  MAX_GOAL,
+  MAX_REWARD_NAME_LENGTH,
 };

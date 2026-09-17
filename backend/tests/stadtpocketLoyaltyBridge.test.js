@@ -62,8 +62,8 @@ function addBusiness({ id, name, slug, status = 'active' }) {
   businessRows.push({ id, name, slug, status });
 }
 
-function addLandingPage({ id, slug, businessName = 'Test Business', businessId = null }) {
-  landingPageRows.push({ id, slug, businessName, businessId, userId: 'some_owner', websiteUrl: null, useCase: null });
+function addLandingPage({ id, slug, businessName = 'Test Business', businessId = null, userId = 'some_owner' }) {
+  landingPageRows.push({ id, slug, businessName, businessId, userId, websiteUrl: null, useCase: null });
 }
 
 function addStampSettings({ slug, goal = 10, rewardName = 'Free item', enabled = true }) {
@@ -81,7 +81,7 @@ const mockPrisma = {
     },
   },
   landingPage: {
-    findUnique: async ({ where }) => landingPageRows.find((lp) => lp.id === where.id) || null,
+    findUnique: async ({ where }) => landingPageRows.find((lp) => lp.id === where.id || lp.slug === where.slug) || null,
     findFirst: async ({ where }) => landingPageRows.find((lp) => (!where.businessId || lp.businessId === where.businessId)) || null,
     findMany: async ({ where, take }) => {
       let rows = landingPageRows;
@@ -93,6 +93,11 @@ const mockPrisma = {
       if (take) rows = rows.slice(0, take);
       return rows.map((r) => ({ ...r }));
     },
+    create: async ({ data }) => {
+      const row = { id: `lp_${++seq}`, businessId: null, userId: null, ...data };
+      landingPageRows.push(row);
+      return { ...row };
+    },
   },
   stampSettings: {
     findUnique: async ({ where }) => stampSettingsRows.find((s) => s.slug === where.slug) || null,
@@ -101,6 +106,16 @@ const mockPrisma = {
       if (where.slug && where.slug.in) rows = rows.filter((s) => where.slug.in.includes(s.slug));
       if (where.enabled != null) rows = rows.filter((s) => s.enabled === where.enabled);
       return rows.map((r) => ({ ...r }));
+    },
+    upsert: async ({ where, create, update }) => {
+      const existing = stampSettingsRows.find((s) => s.slug === where.slug);
+      if (existing) {
+        Object.assign(existing, update);
+        return { ...existing };
+      }
+      const row = { id: `ss_${++seq}`, color: '#ff5a1f', ...create };
+      stampSettingsRows.push(row);
+      return { ...row };
     },
   },
   businessLocation: {
@@ -127,6 +142,13 @@ const mockPrisma = {
   loyaltyCustomer: undefined,
 };
 
+// Interactive-transaction shape only -- the real code never calls the
+// array form here. Runs the callback against the SAME mock object (no
+// real isolation), which is enough to test createAndConnectProgram's
+// read-then-write logic; true concurrent-race behavior is not something
+// this mock can exercise and is not claimed to be covered by these tests.
+mockPrisma.$transaction = async (fn) => fn(mockPrisma);
+
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
 
 const {
@@ -134,6 +156,7 @@ const {
   getBridgeState,
   connectProgram,
   disconnectProgram,
+  createAndConnectProgram,
   checkExistingQraivyLinkage,
 } = require('../src/services/stadtpocketLoyaltyBridgeService');
 const { StadtpocketManagerError } = require('../src/services/stadtpocketManagerService');
@@ -399,6 +422,141 @@ test('a caller-supplied listingLocationId outside this city is rejected (404), e
   } catch (err) {
     assert.equal(err.status, 404);
   }
+});
+
+// ── createAndConnectProgram (Phase 3B — platform-managed setup) ───
+
+test('Global Admin can create a platform-managed program for an unclaimed listing', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' });
+  assert.equal(program.requiredStamps, 10);
+  assert.equal(program.rewardTitle, 'Gratis Kaffee');
+  assert.equal(program.businessName, 'Bäckerei Staib');
+});
+
+test('a City Manager can create a platform-managed program within their own authorized city', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', ulmManager(), { goal: 8, rewardName: 'Gratis Brötchen' });
+  assert.equal(program.requiredStamps, 8);
+});
+
+test('an out-of-scope City Manager is rejected (403), no writes happen', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', stuttgartManager, { goal: 10, rewardName: 'Gratis Kaffee' }), 403);
+  assert.equal(landingPageRows.length, 0);
+  assert.equal(stampSettingsRows.length, 0);
+});
+
+test('the created LandingPage is platform-managed: userId null, no Business, no BusinessLocation', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' });
+  assert.equal(landingPageRows.length, 1);
+  assert.equal(landingPageRows[0].userId, null);
+  assert.equal(landingPageRows[0].businessId, null);
+  assert.equal(businessRows.length, 0);
+  assert.equal(businessLocationRows.length, 0);
+});
+
+test('StampSettings is created with the exact goal/reward and enabled: true', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 12, rewardName: 'Gratis Kuchen' });
+  assert.equal(stampSettingsRows.length, 1);
+  assert.equal(stampSettingsRows[0].goal, 12);
+  assert.equal(stampSettingsRows[0].rewardName, 'Gratis Kuchen');
+  assert.equal(stampSettingsRows[0].enabled, true);
+});
+
+test('the bridge (loyaltyLandingPageId) is set to the newly created LandingPage', async () => {
+  resetFixtures();
+  const ll = addListingLocation({ listingName: 'Bäckerei Staib' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' });
+  assert.equal(ll.loyaltyLandingPageId, landingPageRows[0].id);
+  assert.equal(ll.loyaltyLandingPageId, program.landingPageId);
+});
+
+test('an invalid goal (bad input) is rejected before any row is written -- atomic failure', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 1, rewardName: 'Gratis Kaffee' }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 51, rewardName: 'Gratis Kaffee' }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10.5, rewardName: 'Gratis Kaffee' }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 'ten', rewardName: 'Gratis Kaffee' }));
+  assert.equal(landingPageRows.length, 0);
+  assert.equal(stampSettingsRows.length, 0);
+});
+
+test('an invalid rewardName (empty, whitespace-only, too long, non-string) is rejected before any row is written', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: '' }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: '   ' }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'x'.repeat(81) }));
+  await expectError(() => createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: null }));
+  assert.equal(landingPageRows.length, 0);
+  assert.equal(stampSettingsRows.length, 0);
+});
+
+test('repeated submission does not create a duplicate LandingPage or StampSettings', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const first = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' });
+  const second = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 12, rewardName: 'Gratis Kuchen' });
+  assert.equal(landingPageRows.length, 1);
+  assert.equal(stampSettingsRows.length, 1);
+  assert.equal(second.landingPageId, first.landingPageId);
+  assert.equal(second.requiredStamps, 12);
+  assert.equal(second.rewardTitle, 'Gratis Kuchen');
+});
+
+test('an already-claimed business with its own existing LandingPage is reused, not duplicated', async () => {
+  resetFixtures();
+  addBusinessLocation({ id: 'bl_staib', businessId: 'biz_staib' });
+  const ll = addListingLocation({ businessLocationId: 'bl_staib', listingName: 'Bäckerei Staib' });
+  addLandingPage({ id: 'lp_owned', slug: 'baeckerei-staib-loyalty', businessId: 'biz_staib', userId: 'real_owner' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', ulmManager(), { goal: 10, rewardName: 'Gratis Kaffee' });
+  assert.equal(landingPageRows.length, 1);
+  assert.equal(program.landingPageId, 'lp_owned');
+  assert.equal(ll.loyaltyLandingPageId, 'lp_owned');
+  assert.equal(landingPageRows[0].userId, 'real_owner'); // untouched -- never overwritten
+});
+
+test('extra/unexpected fields in the request body cannot inject a target id -- only goal/rewardName are ever read', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, {
+    goal: 10,
+    rewardName: 'Gratis Kaffee',
+    landingPageId: 'lp_attacker_supplied',
+    businessId: 'biz_attacker_supplied',
+    userId: 'user_attacker_supplied',
+  });
+  assert.equal(landingPageRows.length, 1);
+  assert.notEqual(landingPageRows[0].id, 'lp_attacker_supplied');
+  assert.equal(landingPageRows[0].businessId, null);
+  assert.equal(landingPageRows[0].userId, null);
+});
+
+test('the created-program response never exposes customer-specific or internal fields', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const program = await createAndConnectProgram(ULM, 'll_staib', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' });
+  assert.deepEqual(Object.keys(program).sort(), ['businessName', 'landingPageId', 'requiredStamps', 'rewardTitle', 'slug'].sort());
+  for (const forbidden of [
+    'customerId', 'cid', 'currentStamps', 'totalStamps', 'rewardsEarned', 'rewardReady',
+    'hasWallet', 'stampCount', 'userId', 'websiteUrl', 'useCase', 'color', 'id',
+  ]) {
+    assert.equal(forbidden in program, false, `program summary must not expose "${forbidden}"`);
+  }
+});
+
+test('a nonexistent listingLocationId is rejected (404) inside the transaction too', async () => {
+  resetFixtures();
+  await expectError(() => createAndConnectProgram(ULM, 'll_does_not_exist', GLOBAL_ADMIN, { goal: 10, rewardName: 'Gratis Kaffee' }), 404);
 });
 
 // ── runner ────────────────────────────────────────────────────

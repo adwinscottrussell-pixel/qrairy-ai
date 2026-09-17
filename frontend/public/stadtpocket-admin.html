@@ -913,6 +913,11 @@
   //                                                (Phase 6D.2, upload-only -- never writes the draft itself;
   //                                                 the returned headerImage is committed via the existing
   //                                                 PUT .../draft call right after, same as every other field)
+  //   POST /manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/setup
+  //                                                (Phase 3B, Stempelkarte wizard -- body is only
+  //                                                 { goal, rewardName }, never an id; creates a
+  //                                                 platform-managed LandingPage server-side, or reuses
+  //                                                 one that already applies, and connects it)
   //
   // A city (locationId) is only ever the authorization boundary here, never
   // a business itself -- every editor action is addressed by the pair
@@ -1585,7 +1590,7 @@
       <div class="card section-card empty-state">
         <p style="margin:0 0 8px;font-weight:700;color:var(--text-primary)">Noch keine Stempelkarte eingerichtet</p>
         <p class="muted" style="margin:0 0 20px">Erstelle deine digitale Stempelkarte und lege fest, wie viele Stempel deine Kunden sammeln und welche Belohnung sie erhalten.</p>
-        <button class="primary" type="button" onclick="setupStempelkarte()">Stempelkarte einrichten</button>
+        <button class="primary" type="button" onclick="openStempelkarteWizard()">Stempelkarte einrichten</button>
       </div>
     `;
   }
@@ -1639,26 +1644,177 @@
   }
 
   // "Stempelkarte einrichten" CTA (honest-empty-state primary action).
-  // Must never create anything -- Phase 3B builds the real setup flow.
-  // For now it only re-runs the same safe, read-only discovery call
-  // renderLoyaltyWorkspace() already used, in case a program has since
-  // become available, and otherwise shows the same honest message
-  // (never naming an internal filename/route to the founder-facing UI).
-  async function setupStempelkarte() {
-    banner('loyalty-banner', 'info', 'Suche nach vorhandenen QRAIVY-Stempelkarten…');
+  // Re-runs the same safe, read-only discovery call renderLoyaltyWorkspace()
+  // already used, in case an eligible existing QRAIVY program has since
+  // become available (Phase 2 reuse path, unchanged) -- and only when
+  // nothing is found does it open the integrated Phase 3B wizard, which
+  // creates a NEW platform-managed program (never a fake owner/Business).
+  async function openStempelkarteWizard() {
+    banner('loyalty-banner', 'info', '');
     const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/eligible`);
     if (!res.ok) {
       banner('loyalty-banner', 'error', 'Fehler beim Laden verfügbarer Stempelkarten.');
       return;
     }
     loyaltyEligiblePrograms = res.body.programs || [];
-    if (loyaltyEligiblePrograms.length === 0) {
-      banner('loyalty-banner', 'info',
-        'Für dieses Geschäft ist noch kein Loyalty-Programm eingerichtet. Richte zuerst ein Loyalty-Programm im QRAIVY Dashboard ein, bevor du es hier verbindest.');
+    if (loyaltyEligiblePrograms.length > 0) {
+      renderDiscoveryResult();
       return;
     }
-    banner('loyalty-banner', 'info', '');
-    renderDiscoveryResult();
+    wizardState = { step: 1, goal: 10, customGoal: false, rewardName: '' };
+    renderWizardStep();
+  }
+
+  // ── Stempelkarte setup wizard (Phase 3B) ────────────────────────
+  // Pure presentation over POST .../loyalty/setup -- all validation,
+  // idempotency, and the platform-managed-vs-reuse decision happen
+  // server-side (stadtpocketLoyaltyBridgeService.js's
+  // createAndConnectProgram). This wizard never sends a landingPageId,
+  // businessId, or userId -- only { goal, rewardName }.
+  const STEMPELKARTE_GOAL_CHOICES = [5, 8, 10, 12, 15];
+  let wizardState = { step: 1, goal: 10, customGoal: false, rewardName: '' };
+
+  function renderWizardStep() {
+    if (wizardState.step === 1) return renderWizardStep1();
+    if (wizardState.step === 2) return renderWizardStep2();
+    return renderWizardStep3();
+  }
+
+  function wizardStepNav(active) {
+    const labels = [
+      { title: 'Stempel', sub: 'Wie viele Stempel?' },
+      { title: 'Belohnung', sub: 'Was gibt es dafür?' },
+      { title: 'Übersicht', sub: 'Prüfen & aktivieren' },
+    ];
+    return `<div class="step-nav">${labels.map((l, i) => `
+      <div class="step${active === i + 1 ? ' active' : ''}${active > i + 1 ? ' done' : ''}">
+        <span class="step-num">${i + 1}</span>
+        <span class="step-labels"><span class="step-title">${l.title}</span><span class="step-sub">${l.sub}</span></span>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function renderWizardStep1() {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card">
+        ${wizardStepNav(1)}
+        <p style="margin:0 0 14px;font-weight:700;color:var(--text-primary)">Wie viele Stempel sollen gesammelt werden?</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          ${STEMPELKARTE_GOAL_CHOICES.map((n) => `
+            <button type="button" class="ai-style-chip${(!wizardState.customGoal && wizardState.goal === n) ? ' selected' : ''}" onclick="selectWizardGoal(${n})">${n} Stempel</button>
+          `).join('')}
+        </div>
+        <label>Oder eigene Anzahl (2–50)</label>
+        <input type="number" id="wizard-goal-custom" min="2" max="50" step="1"
+          value="${wizardState.customGoal ? wizardState.goal : ''}"
+          placeholder="z. B. 20"
+          oninput="onWizardCustomGoalInput(this.value)" style="max-width:140px" />
+        <div id="wizard-step1-error"></div>
+        <div class="actions" style="margin-top:20px">
+          <button class="primary" type="button" onclick="wizardGoToStep2()">Weiter</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function selectWizardGoal(n) {
+    wizardState.goal = n;
+    wizardState.customGoal = false;
+    renderWizardStep1();
+  }
+
+  function onWizardCustomGoalInput(value) {
+    const n = Number(value);
+    wizardState.customGoal = true;
+    wizardState.goal = Number.isInteger(n) ? n : value;
+    document.querySelectorAll('#loyalty-workspace .ai-style-chip').forEach((c) => c.classList.remove('selected'));
+  }
+
+  function wizardGoToStep2() {
+    const goal = Number(wizardState.goal);
+    if (!Number.isInteger(goal) || goal < 2 || goal > 50) {
+      document.getElementById('wizard-step1-error').innerHTML = '<p class="muted" style="color:var(--coral);margin:8px 0 0">Bitte eine ganze Zahl zwischen 2 und 50 wählen.</p>';
+      return;
+    }
+    wizardState.goal = goal;
+    wizardState.step = 2;
+    renderWizardStep();
+  }
+
+  function renderWizardStep2() {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card">
+        ${wizardStepNav(2)}
+        <p style="margin:0 0 14px;font-weight:700;color:var(--text-primary)">Welche Belohnung erhält der Kunde?</p>
+        <label>Belohnung</label>
+        <input type="text" id="wizard-reward-name" maxlength="80" placeholder="z. B. Gratis Kaffee" value="${escapeHtml(wizardState.rewardName)}" />
+        <div id="wizard-step2-error"></div>
+        <div class="actions" style="margin-top:20px">
+          <button class="secondary" type="button" onclick="wizardGoToStep1()">Zurück</button>
+          <button class="primary" type="button" onclick="wizardGoToStep3()">Weiter</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function wizardGoToStep1() {
+    wizardState.step = 1;
+    renderWizardStep();
+  }
+
+  function wizardGoToStep3() {
+    const rewardName = document.getElementById('wizard-reward-name').value.trim();
+    if (!rewardName) {
+      document.getElementById('wizard-step2-error').innerHTML = '<p class="muted" style="color:var(--coral);margin:8px 0 0">Bitte eine Belohnung angeben.</p>';
+      return;
+    }
+    if (rewardName.length > 80) {
+      document.getElementById('wizard-step2-error').innerHTML = '<p class="muted" style="color:var(--coral);margin:8px 0 0">Maximal 80 Zeichen.</p>';
+      return;
+    }
+    wizardState.rewardName = rewardName;
+    wizardState.step = 3;
+    renderWizardStep();
+  }
+
+  function renderWizardStep3() {
+    document.getElementById('loyalty-workspace').innerHTML = `
+      <div class="card section-card">
+        ${wizardStepNav(3)}
+        <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">Stempelkarte</p>
+        <p style="margin:0 0 2px;color:var(--text-primary)">${escapeHtml(String(wizardState.goal))} Stempel</p>
+        <label style="margin-top:14px">Belohnung</label>
+        <p style="margin:0 0 4px;color:var(--text-primary)">${escapeHtml(wizardState.rewardName)}</p>
+        <div id="wizard-step3-error"></div>
+        <div class="actions" style="margin-top:20px">
+          <button class="secondary" type="button" onclick="wizardGoToStep2()">Zurück</button>
+          <button class="primary" type="button" id="wizard-activate-btn" onclick="activateStempelkarte()">Stempelkarte aktivieren</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Retry-safe: the backend upserts by slug and re-derives the target
+  // listing/location server-side every call, so re-clicking "Stempelkarte
+  // aktivieren" after a failure (e.g. a dropped connection) never
+  // creates a second LandingPage -- see createAndConnectProgram's own
+  // idempotency comment.
+  async function activateStempelkarte() {
+    const btn = document.getElementById('wizard-activate-btn');
+    btn.disabled = true;
+    document.getElementById('wizard-step3-error').innerHTML = '';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/setup`, {
+      method: 'POST',
+      body: { goal: wizardState.goal, rewardName: wizardState.rewardName },
+    });
+    btn.disabled = false;
+    if (!res.ok) {
+      document.getElementById('wizard-step3-error').innerHTML =
+        `<p class="muted" style="color:var(--coral);margin:8px 0 0">${escapeHtml((res.body && res.body.error) || 'Fehler beim Aktivieren. Bitte erneut versuchen.')}</p>`;
+      return;
+    }
+    // Backend already set loyaltyLandingPageId -- no separate connect step.
+    await renderLoyaltyWorkspace();
   }
 
   async function connectFoundProgram(landingPageId) {

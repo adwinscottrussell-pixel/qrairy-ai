@@ -190,6 +190,27 @@ async function handleConnectLoyalty(req, res) {
   }
 }
 
+// Stempelkarte Phase 3B — platform-managed setup. Body is only
+// { goal, rewardName } -- no id of any kind is accepted from the
+// caller (see stadtpocketLoyaltyBridgeService.js's own comment on
+// createAndConnectProgram); the target LandingPage/StampSettings/bridge
+// are all derived server-side from (locationId, listingLocationId,
+// scope) exactly like every other route in this file.
+async function handleSetupLoyalty(req, res) {
+  try {
+    const body = req.body || {};
+    const program = await loyaltyBridgeService.createAndConnectProgram(
+      req.params.locationId,
+      req.params.listingLocationId,
+      req.stadtpocketScope,
+      { goal: body.goal, rewardName: body.rewardName }
+    );
+    return res.json({ connected: true, program });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/setup POST');
+  }
+}
+
 async function handleDisconnectLoyalty(req, res) {
   try {
     const state = await loyaltyBridgeService.disconnectProgram(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
@@ -236,6 +257,7 @@ router.post('/listings/:locationId/:listingLocationId/header-image', requireStad
 router.get('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleGetLoyaltyState);
 router.get('/listings/:locationId/:listingLocationId/loyalty/eligible', requireStadtpocketWriteScope, handleListEligiblePrograms);
 router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleConnectLoyalty);
+router.post('/listings/:locationId/:listingLocationId/loyalty/setup', requireStadtpocketWriteScope, handleSetupLoyalty);
 router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
 router.get('/listings/:locationId/:listingLocationId/loyalty/linkage-check', requireStadtpocketWriteScope, handleCheckExistingLinkage);
 
@@ -254,5 +276,6 @@ module.exports.HEADER_IMAGE_MAX_BYTES = HEADER_IMAGE_MAX_BYTES; // exported for 
 module.exports.handleGetLoyaltyState = handleGetLoyaltyState; // exported for direct unit testing only
 module.exports.handleListEligiblePrograms = handleListEligiblePrograms; // exported for direct unit testing only
 module.exports.handleConnectLoyalty = handleConnectLoyalty; // exported for direct unit testing only
+module.exports.handleSetupLoyalty = handleSetupLoyalty; // exported for direct unit testing only
 module.exports.handleCheckExistingLinkage = handleCheckExistingLinkage; // exported for direct unit testing only
 module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only

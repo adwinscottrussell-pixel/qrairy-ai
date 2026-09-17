@@ -340,6 +340,27 @@ here; ask for it if a future session needs to re-derive the reasoning.
 
 ## Recent History
 
+- 2026-09-17 — Stempelkarte Phase 3B: platform-managed loyalty setup.
+  `stadtpocketLoyaltyBridgeService.js`'s `createAndConnectProgram`
+  creates a LandingPage with `userId: null` (no fake owner, no fake
+  Business, no fake BusinessLocation) for an unclaimed StadtPocket
+  business, upserts StampSettings, and sets
+  `StadtPocketListingLocation.loyaltyLandingPageId` -- all inside one
+  `prisma.$transaction`. No schema migration (`LandingPage.userId` was
+  already nullable; see Phase 3B architecture report, same date).
+  New route: `POST /manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/setup`.
+  Frontend: integrated 3-step wizard inside the existing
+  `page-stempelkarte` workspace in `stadtpocket-admin.html`
+  (`openStempelkarteWizard` / `renderWizardStep1-3` / `activateStempelkarte`).
+  **Future claim requirement (not yet implemented):** when a StadtPocket
+  business created this way is later claimed via `businessClaimService.js`,
+  the SAME LandingPage/StampSettings row must be adopted by the real
+  owner (via `networkAdminService.js`'s existing `assignLandingPageOwner`
+  then `mapLandingPageToBusiness` -- built for exactly this transition,
+  never wired to claim yet) and `StadtPocketListingLocation.businessLocationId`
+  set — claim must never create a second, duplicate loyalty LandingPage
+  for a business that already has a platform-managed one connected via
+  `loyaltyLandingPageId`.
 - 2026-09-15 — QRAIVY Recovery Audit performed (read-only): surveyed all
   60+ branches, stashes, and worktrees against `origin/main` for
   completed/approved work not yet in production. Findings A–E recorded
