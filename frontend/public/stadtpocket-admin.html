@@ -855,6 +855,15 @@
         <button class="primary" type="button" id="loyalty-picker-confirm-btn" onclick="confirmConnectLoyalty()">Verbinden</button>
       </div>
     </div>
+
+    <!-- TEMPORARY diagnostic (Phase 3B pre-work, 2026-09-17) -- Global
+         Admin only, read-only. Remove once Phase 3B's ownership question
+         is resolved; not a permanent product surface. -->
+    <div id="loyalty-diagnostic" class="card section-card" style="display:none;margin-top:14px">
+      <p class="muted" style="margin:0 0 10px">Nur für Global Admin: prüft, ob für dieses Geschäft bereits eine QRAIVY-Verknüpfung existiert (nur lesend).</p>
+      <button class="secondary" type="button" id="loyalty-diagnostic-btn" onclick="checkQraivyLinkage()">QRAIVY-Verknüpfung prüfen</button>
+      <div id="loyalty-diagnostic-result" style="margin-top:12px"></div>
+    </div>
   </section>
 
   </main>
@@ -1543,6 +1552,8 @@
   async function renderLoyaltyWorkspace() {
     const el = document.getElementById('loyalty-workspace');
     document.getElementById('loyalty-picker').style.display = 'none';
+    document.getElementById('loyalty-diagnostic').style.display = (window.__stadtpocketRole === 'global_admin') ? '' : 'none';
+    document.getElementById('loyalty-diagnostic-result').innerHTML = '';
     banner('loyalty-banner', 'info', '');
     el.innerHTML = '<p class="muted">Lade…</p>';
 
@@ -1694,6 +1705,35 @@
       return;
     }
     await renderLoyaltyWorkspace();
+  }
+
+  // ── TEMPORARY diagnostic (Phase 3B pre-work, 2026-09-17) ─────────
+  // Global-Admin-only, read-only. Never writes anything. Shows only
+  // business-level identifiers (name/slug/status) -- never a Clerk id,
+  // never a token, never anything customer-specific. Remove once
+  // Phase 3B's ownership question is resolved.
+  async function checkQraivyLinkage() {
+    const resultEl = document.getElementById('loyalty-diagnostic-result');
+    const btn = document.getElementById('loyalty-diagnostic-btn');
+    btn.disabled = true;
+    resultEl.innerHTML = '<p class="muted">Prüfe…</p>';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/linkage-check`);
+    btn.disabled = false;
+    if (!res.ok) {
+      resultEl.innerHTML = `<p class="muted">${escapeHtml((res.body && res.body.error) || 'Fehler bei der Prüfung.')}</p>`;
+      return;
+    }
+    const { business, businessLocation, landingPage } = res.body;
+    const row = (label, found, detail) => `
+      <div class="summary-row" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <span class="muted">${escapeHtml(label)}</span>
+        <span style="color:var(--text-primary)">${found ? '✓ Gefunden' + (detail ? ' — ' + escapeHtml(detail) : '') : '— Nicht gefunden'}</span>
+      </div>
+    `;
+    resultEl.innerHTML =
+      row('QRAIVY Business', !!business, business ? business.name + (business.ambiguous ? ' (mehrere Treffer, unsicher)' : '') : '') +
+      row('BusinessLocation (diese Stadt)', !!businessLocation, businessLocation ? businessLocation.status : '') +
+      row('LandingPage', !!landingPage, landingPage ? '/' + landingPage.slug : '');
   }
 
   // ── Header/hero image (Phase 6D.2) ────────────────────────────────

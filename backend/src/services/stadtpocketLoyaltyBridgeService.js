@@ -167,11 +167,80 @@ async function disconnectProgram(locationId, listingLocationId, scope) {
   return { connected: false };
 }
 
+// ── Diagnostic (Phase 3B pre-work, 2026-09-17) ──────────────────
+// TEMPORARY, READ-ONLY, Global-Admin-only. Checks whether this
+// StadtPocket business already has a matching QRAIVY Business /
+// BusinessLocation / LandingPage, using the listing's own public name
+// as the search term -- the exact same case-insensitive `contains`
+// pattern managerRoutes.js's own GET /manager/businesses/search already
+// uses (that endpoint itself isn't reusable here: it sits behind
+// requireManagerScope, a NetworkMember-only middleware with no
+// Global-Admin bypass, entirely separate from requireStadtpocketWriteScope).
+//
+// Writes nothing, ever -- no Business/BusinessLocation/LandingPage/
+// StampSettings is created, and loyaltyLandingPageId is never touched
+// here. Never reads or returns LandingPage.userId, any Clerk id, or
+// anything from LoyaltyCustomer -- business-level identifiers
+// (name/slug/status) only.
+//
+// Global-Admin-only by explicit scope check (not just a hidden frontend
+// button): a scoped City Manager gets 403 before any Prisma call runs,
+// since the Business-name search below is broader than any other
+// Phase 2/3 read in this file (it isn't confined to one already-
+// authorized listingLocation's own claim state) and this is a
+// temporary diagnostic, not a permanent product surface.
+async function checkExistingQraivyLinkage(locationId, listingLocationId, scope) {
+  if (!scope.isGlobalAdmin) {
+    throw new StadtpocketManagerError('Forbidden. Global Admin only.', 403);
+  }
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+  const listingName = listingLocation.listing.name;
+
+  const businesses = await prisma.business.findMany({
+    where: {
+      status: { not: 'archived' },
+      name: { contains: listingName, mode: 'insensitive' },
+    },
+    select: { id: true, name: true, slug: true },
+    take: 5,
+  });
+
+  if (!businesses.length) {
+    return { business: null, businessLocation: null, landingPage: null };
+  }
+
+  // Diagnostic, not a picker -- report the first match's relationships,
+  // and flag plainly if the name search was ambiguous rather than
+  // silently guessing which one is "the" match.
+  const business = businesses[0];
+  const ambiguous = businesses.length > 1;
+
+  const businessLocation = await prisma.businessLocation.findFirst({
+    where: { businessId: business.id, locationId },
+    select: { status: true },
+  });
+
+  // Found via businessId, so "associated with the matching Business" is
+  // true by construction whenever this is non-null -- no separate check
+  // needed (Step 6).
+  const landingPage = await prisma.landingPage.findFirst({
+    where: { businessId: business.id },
+    select: { slug: true },
+  });
+
+  return {
+    business: { name: business.name, slug: business.slug, ambiguous },
+    businessLocation: businessLocation ? { status: businessLocation.status } : null,
+    landingPage: landingPage ? { slug: landingPage.slug } : null,
+  };
+}
+
 module.exports = {
   listEligiblePrograms,
   getBridgeState,
   connectProgram,
   disconnectProgram,
+  checkExistingQraivyLinkage,
   // exported for direct unit testing only
   toProgramSummary,
   resolveClaimedBusinessId,

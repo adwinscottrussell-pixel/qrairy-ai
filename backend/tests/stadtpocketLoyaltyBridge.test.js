@@ -31,6 +31,7 @@ let listingLocationRows = [];
 let landingPageRows = [];
 let stampSettingsRows = [];
 let businessLocationRows = [];
+let businessRows = [];
 let seq = 0;
 
 function resetFixtures() {
@@ -38,19 +39,27 @@ function resetFixtures() {
   landingPageRows = [];
   stampSettingsRows = [];
   businessLocationRows = [];
+  businessRows = [];
   seq = 0;
 }
 
 // Staib's own StadtPocketListingLocation -- unclaimed by default
 // (businessLocationId: null), matching the real, currently-verified
 // state of every StadtPocket listing today (see this phase's own audit).
-function addListingLocation({ id = 'll_staib', locationId = ULM, businessLocationId = null, loyaltyLandingPageId = null } = {}) {
-  listingLocationRows.push({ id, locationId, businessLocationId, loyaltyLandingPageId });
+// `listing.name` is the public StadtPocket business name -- read by
+// checkExistingQraivyLinkage as its search term, exactly like the real
+// service does off the real include:{listing:true} relation.
+function addListingLocation({ id = 'll_staib', locationId = ULM, businessLocationId = null, loyaltyLandingPageId = null, listingName = 'Bäckerei Staib' } = {}) {
+  listingLocationRows.push({ id, locationId, businessLocationId, loyaltyLandingPageId, listing: { name: listingName } });
   return listingLocationRows[listingLocationRows.length - 1];
 }
 
-function addBusinessLocation({ id, businessId }) {
-  businessLocationRows.push({ id, businessId });
+function addBusinessLocation({ id, businessId, locationId = ULM, status = 'active' }) {
+  businessLocationRows.push({ id, businessId, locationId, status });
+}
+
+function addBusiness({ id, name, slug, status = 'active' }) {
+  businessRows.push({ id, name, slug, status });
 }
 
 function addLandingPage({ id, slug, businessName = 'Test Business', businessId = null }) {
@@ -73,6 +82,7 @@ const mockPrisma = {
   },
   landingPage: {
     findUnique: async ({ where }) => landingPageRows.find((lp) => lp.id === where.id) || null,
+    findFirst: async ({ where }) => landingPageRows.find((lp) => (!where.businessId || lp.businessId === where.businessId)) || null,
     findMany: async ({ where, take }) => {
       let rows = landingPageRows;
       if (where && where.businessId) rows = rows.filter((lp) => lp.businessId === where.businessId);
@@ -95,6 +105,22 @@ const mockPrisma = {
   },
   businessLocation: {
     findUnique: async ({ where }) => businessLocationRows.find((bl) => bl.id === where.id) || null,
+    findFirst: async ({ where }) => businessLocationRows.find((bl) =>
+      (!where.businessId || bl.businessId === where.businessId) &&
+      (!where.locationId || bl.locationId === where.locationId)
+    ) || null,
+  },
+  business: {
+    findMany: async ({ where, take }) => {
+      let rows = businessRows;
+      if (where && where.status && where.status.not) rows = rows.filter((b) => b.status !== where.status.not);
+      if (where && where.name && where.name.contains != null) {
+        const q = where.name.contains.toLowerCase();
+        rows = rows.filter((b) => b.name.toLowerCase().includes(q));
+      }
+      if (take) rows = rows.slice(0, take);
+      return rows.map((r) => ({ ...r }));
+    },
   },
   // Deliberately NOT defined -- this Admin flow must never read or write
   // customer-specific data.
@@ -108,6 +134,7 @@ const {
   getBridgeState,
   connectProgram,
   disconnectProgram,
+  checkExistingQraivyLinkage,
 } = require('../src/services/stadtpocketLoyaltyBridgeService');
 const { StadtpocketManagerError } = require('../src/services/stadtpocketManagerService');
 
@@ -289,6 +316,88 @@ test('program summaries never include customer-specific or internal fields', asy
     'hasWallet', 'stampCount', 'userId', 'websiteUrl', 'useCase', 'color', 'id',
   ]) {
     assert.equal(forbidden in program, false, `program summary must not expose "${forbidden}"`);
+  }
+});
+
+// ── checkExistingQraivyLinkage (Phase 3B pre-work diagnostic) ──────
+
+test('Global Admin: finds a matching Business, BusinessLocation, and LandingPage', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  addBusiness({ id: 'biz_staib', name: 'Bäckerei Staib', slug: 'baeckerei-staib' });
+  addBusinessLocation({ id: 'bl_staib', businessId: 'biz_staib', locationId: ULM, status: 'active' });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty', businessId: 'biz_staib' });
+  const result = await checkExistingQraivyLinkage(ULM, 'll_staib', GLOBAL_ADMIN);
+  assert.deepEqual(result, {
+    business: { name: 'Bäckerei Staib', slug: 'baeckerei-staib', ambiguous: false },
+    businessLocation: { status: 'active' },
+    landingPage: { slug: 'baeckerei-staib-loyalty' },
+  });
+});
+
+test('Global Admin: nothing found -- all three null, never an error', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  const result = await checkExistingQraivyLinkage(ULM, 'll_staib', GLOBAL_ADMIN);
+  assert.deepEqual(result, { business: null, businessLocation: null, landingPage: null });
+});
+
+test('Global Admin: Business found but no BusinessLocation in this city and no LandingPage', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  addBusiness({ id: 'biz_staib', name: 'Bäckerei Staib', slug: 'baeckerei-staib' });
+  const result = await checkExistingQraivyLinkage(ULM, 'll_staib', GLOBAL_ADMIN);
+  assert.equal(result.business.name, 'Bäckerei Staib');
+  assert.equal(result.businessLocation, null);
+  assert.equal(result.landingPage, null);
+});
+
+test('Global Admin: ambiguous match (multiple Businesses) is flagged, not silently guessed', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Staib' });
+  addBusiness({ id: 'biz_1', name: 'Bäckerei Staib', slug: 'baeckerei-staib' });
+  addBusiness({ id: 'biz_2', name: 'Staib Backwaren GmbH', slug: 'staib-backwaren' });
+  const result = await checkExistingQraivyLinkage(ULM, 'll_staib', GLOBAL_ADMIN);
+  assert.equal(result.business.ambiguous, true);
+});
+
+test('a scoped City Manager cannot call the diagnostic at all -- 403 before any Prisma read', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  addBusiness({ id: 'biz_staib', name: 'Bäckerei Staib', slug: 'baeckerei-staib' });
+  addBusinessLocation({ id: 'bl_staib', businessId: 'biz_staib', locationId: ULM });
+  try {
+    await checkExistingQraivyLinkage(ULM, 'll_staib', ulmManager());
+    throw new Error('expected 403, none was thrown');
+  } catch (err) {
+    assert.equal(err.status, 403);
+  }
+});
+
+test('the diagnostic never exposes LandingPage.userId, any Clerk id, or customer-specific fields', async () => {
+  resetFixtures();
+  addListingLocation({ listingName: 'Bäckerei Staib' });
+  addBusiness({ id: 'biz_staib', name: 'Bäckerei Staib', slug: 'baeckerei-staib' });
+  addBusinessLocation({ id: 'bl_staib', businessId: 'biz_staib', locationId: ULM, status: 'active' });
+  addLandingPage({ id: 'lp_staib', slug: 'baeckerei-staib-loyalty', businessId: 'biz_staib' });
+  const result = await checkExistingQraivyLinkage(ULM, 'll_staib', GLOBAL_ADMIN);
+  const flat = JSON.stringify(result);
+  for (const forbidden of ['userId', 'some_owner', 'primaryOwnerUserId', 'customerId', 'cid', 'stampCount', 'currentStamps']) {
+    assert.equal(flat.includes(forbidden), false, `diagnostic response must not expose "${forbidden}"`);
+  }
+  assert.deepEqual(Object.keys(result.business).sort(), ['ambiguous', 'name', 'slug'].sort());
+  assert.deepEqual(Object.keys(result.businessLocation).sort(), ['status'].sort());
+  assert.deepEqual(Object.keys(result.landingPage).sort(), ['slug'].sort());
+});
+
+test('a caller-supplied listingLocationId outside this city is rejected (404), even for Global Admin', async () => {
+  resetFixtures();
+  addListingLocation({ id: 'll_staib', locationId: ULM });
+  try {
+    await checkExistingQraivyLinkage(STUTTGART, 'll_staib', GLOBAL_ADMIN);
+    throw new Error('expected 404, none was thrown');
+  } catch (err) {
+    assert.equal(err.status, 404);
   }
 });
 

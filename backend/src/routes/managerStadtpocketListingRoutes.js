@@ -199,6 +199,19 @@ async function handleDisconnectLoyalty(req, res) {
   }
 }
 
+// Stempelkarte Phase 3B pre-work (2026-09-17) — TEMPORARY, read-only,
+// Global-Admin-only diagnostic. See stadtpocketLoyaltyBridgeService.js's
+// checkExistingQraivyLinkage for the exact scope/eligibility reasoning;
+// this handler is routing only.
+async function handleCheckExistingLinkage(req, res) {
+  try {
+    const result = await loyaltyBridgeService.checkExistingQraivyLinkage(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json(result);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/linkage-check GET');
+  }
+}
+
 // City-scoped list + create.
 router.get('/listings/:locationId', requireStadtpocketWriteScope, handleListListings);
 router.post('/listings/:locationId', requireStadtpocketWriteScope, handleInitializeDraft);
@@ -224,6 +237,7 @@ router.get('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocke
 router.get('/listings/:locationId/:listingLocationId/loyalty/eligible', requireStadtpocketWriteScope, handleListEligiblePrograms);
 router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleConnectLoyalty);
 router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
+router.get('/listings/:locationId/:listingLocationId/loyalty/linkage-check', requireStadtpocketWriteScope, handleCheckExistingLinkage);
 
 module.exports = router;
 module.exports.handleListListings = handleListListings; // exported for direct unit testing only
@@ -240,4 +254,5 @@ module.exports.HEADER_IMAGE_MAX_BYTES = HEADER_IMAGE_MAX_BYTES; // exported for 
 module.exports.handleGetLoyaltyState = handleGetLoyaltyState; // exported for direct unit testing only
 module.exports.handleListEligiblePrograms = handleListEligiblePrograms; // exported for direct unit testing only
 module.exports.handleConnectLoyalty = handleConnectLoyalty; // exported for direct unit testing only
+module.exports.handleCheckExistingLinkage = handleCheckExistingLinkage; // exported for direct unit testing only
 module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only
