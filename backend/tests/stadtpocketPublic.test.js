@@ -31,6 +31,7 @@ let locationRows = [];
 let listingRows = [];
 let listingLocationRows = [];
 let offerRows = [];
+let updateRows = [];
 let landingPageRows = [];
 let stampSettingsRows = [];
 let seq = 0;
@@ -40,6 +41,7 @@ function resetFixtures() {
   listingRows = [];
   listingLocationRows = [];
   offerRows = [];
+  updateRows = [];
   landingPageRows = [];
   stampSettingsRows = [];
   seq = 0;
@@ -86,6 +88,31 @@ function addOffer({
     image,
     startsAt,
     endsAt,
+    createdBy: 'user_admin',
+    createdAt: new Date(2026, 0, seq),
+  });
+}
+
+// Update (Aktuelles) fixture builder -- defaults to a real, currently-
+// published post shape (no offer-specific/expiry fields exist on this
+// model at all -- product lock, 2026-09-17).
+function addUpdate({
+  listingLocationId,
+  status = 'published',
+  title = 'Neue Öffnungszeiten',
+  body = 'Ab sofort haben wir sonntags geöffnet.',
+  image = null,
+  publishedAt = new Date('2026-09-16T09:00:00.000Z'),
+} = {}) {
+  seq += 1;
+  updateRows.push({
+    id: `update_${seq}`,
+    listingLocationId,
+    status,
+    title,
+    body,
+    image,
+    publishedAt,
     createdBy: 'user_admin',
     createdAt: new Date(2026, 0, seq),
   });
@@ -181,6 +208,21 @@ const mockPrisma = {
       }
       if (where.status) rows = rows.filter((o) => o.status === where.status);
       return rows.map((o) => ({ ...o }));
+    },
+  },
+  stadtPocketUpdate: {
+    findMany: async ({ where, orderBy }) => {
+      let rows = updateRows;
+      if (where.listingLocationId && where.listingLocationId.in) {
+        const ids = where.listingLocationId.in;
+        rows = rows.filter((u) => ids.includes(u.listingLocationId));
+      }
+      if (where.status) rows = rows.filter((u) => u.status === where.status);
+      let result = rows.map((u) => ({ ...u }));
+      if (orderBy && orderBy.publishedAt === 'desc') {
+        result = [...result].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+      }
+      return result;
     },
   },
   stampSettings: {
@@ -791,6 +833,118 @@ test('multi-storefront: loyalty bridge on one storefront never appears on a sibl
   const [locA, locB] = res.body.locations;
   assert.ok(locA.loyalty);
   assert.equal('loyalty' in locB, false);
+});
+
+// ── Aktuelles (Screen 4, Phase 4B — business news feed, 2026-09-17) ──
+//
+// Business-level, published-only content. No offer-specific/expiry
+// field exists on this model at all -- see toUpdateItem's own comment.
+
+test('a published update is visible on its storefront, with the exact fields', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({ listingLocationId: listingLocationRows[0].id });
+  const res = await detailUlm('baeckerei-staib');
+  const update = res.body.locations[0].updates[0];
+  assert.equal(typeof update.id, 'string');
+  assert.deepEqual({ ...update, id: 'update_1' }, {
+    id: 'update_1',
+    title: 'Neue Öffnungszeiten',
+    body: 'Ab sofort haben wir sonntags geöffnet.',
+    publishedAt: new Date('2026-09-16T09:00:00.000Z'),
+  });
+});
+
+test('a published update with an image includes it in the public-safe shape', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({
+    listingLocationId: listingLocationRows[0].id,
+    image: { url: 'https://res.cloudinary.com/demo/image/upload/post.jpg', publicId: 'demo/post', width: 1200, height: 900 },
+  });
+  const res = await detailUlm('baeckerei-staib');
+  const update = res.body.locations[0].updates[0];
+  assert.deepEqual(update.image, { url: 'https://res.cloudinary.com/demo/image/upload/post.jpg', width: 1200, height: 900 });
+  assert.equal('publicId' in update.image, false, 'Cloudinary publicId is internal, never public');
+});
+
+test('a draft update is never visible', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({ listingLocationId: listingLocationRows[0].id, status: 'draft' });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('updates' in res.body.locations[0], false);
+});
+
+test('an archived update is never visible', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({ listingLocationId: listingLocationRows[0].id, status: 'archived' });
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('updates' in res.body.locations[0], false);
+});
+
+test('zero updates omits the updates field entirely -- never an empty array', async () => {
+  resetFixtures();
+  addListing();
+  const res = await detailUlm('baeckerei-staib');
+  assert.equal('updates' in res.body.locations[0], false);
+});
+
+test('multiple published updates are ordered most-recent-first by publishedAt', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({ listingLocationId: listingLocationRows[0].id, title: 'Older', publishedAt: new Date('2026-09-10T00:00:00.000Z') });
+  addUpdate({ listingLocationId: listingLocationRows[0].id, title: 'Newer', publishedAt: new Date('2026-09-16T00:00:00.000Z') });
+  const res = await detailUlm('baeckerei-staib');
+  assert.deepEqual(res.body.locations[0].updates.map((u) => u.title), ['Newer', 'Older']);
+});
+
+test('business scoping: an update on a DIFFERENT business\'s storefront never appears on this business', async () => {
+  resetFixtures();
+  addListing({ listingId: 'listing_staib', slug: 'baeckerei-staib' });
+  addListing({ listingId: 'listing_other', slug: 'other-shop', name: 'Other Shop' });
+  addUpdate({ listingLocationId: listingLocationRows[1].id }); // the OTHER shop's storefront
+  const staibRes = await detailUlm('baeckerei-staib');
+  const otherRes = await detailUlm('other-shop');
+  assert.equal('updates' in staibRes.body.locations[0], false, 'Staib must not see the other business\'s update');
+  assert.equal(otherRes.body.locations[0].updates.length, 1, 'the other business must see its own update');
+});
+
+test('multi-storefront scoping: an update on one storefront never appears on a sibling storefront of the SAME listing', async () => {
+  resetFixtures();
+  addListing({ storefronts: [{ id: 'll_ulm_a' }, { id: 'll_ulm_b', address: 'Zweite Filiale' }] });
+  addUpdate({ listingLocationId: 'll_ulm_a' });
+  const res = await detailUlm('baeckerei-staib');
+  const [locA, locB] = res.body.locations;
+  assert.equal(locA.updates.length, 1);
+  assert.equal('updates' in locB, false);
+});
+
+test('never includes internal update fields (listingLocationId, status, draftData, createdBy)', async () => {
+  resetFixtures();
+  addListing();
+  addUpdate({ listingLocationId: listingLocationRows[0].id });
+  const res = await detailUlm('baeckerei-staib');
+  const update = res.body.locations[0].updates[0];
+  assert.equal('listingLocationId' in update, false);
+  assert.equal('status' in update, false);
+  assert.equal('draftData' in update, false);
+  assert.equal('createdBy' in update, false);
+});
+
+test('updates, offers, and loyalty coexist correctly on the same storefront -- none interferes with the others', async () => {
+  resetFixtures();
+  addLandingPage({ id: 'lp1', slug: 'baeckerei-staib-loyalty' });
+  addStampSettings({ slug: 'baeckerei-staib-loyalty' });
+  addListing({ storefronts: [{ id: 'll1', loyaltyLandingPageId: 'lp1' }] });
+  addOffer({ listingLocationId: 'll1', endsAt: new Date('2099-01-01T00:00:00.000Z') });
+  addUpdate({ listingLocationId: 'll1' });
+  const res = await detailUlm('baeckerei-staib');
+  const loc = res.body.locations[0];
+  assert.equal(loc.offers.length, 1);
+  assert.equal(loc.updates.length, 1);
+  assert.equal(loc.loyalty.enabled, true);
 });
 
 // ── runner ────────────────────────────────────────────────────

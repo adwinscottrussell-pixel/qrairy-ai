@@ -856,7 +856,8 @@ model StadtPocketListingLocation {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  offers StadtPocketOffer[]
+  offers  StadtPocketOffer[]
+  updates StadtPocketUpdate[]
 
   @@index([listingId])
   @@index([locationId])
@@ -938,4 +939,49 @@ model StadtPocketOffer {
   @@index([listingLocationId])
   @@index([status])
   @@index([offerType])
+}
+
+// ============================================================
+// StadtPocketUpdate — Aktuelles Foundation, Phase 4B (additive only).
+//
+// Attached to StadtPocketListingLocation (the storefront), same
+// reasoning as StadtPocketOffer above -- a multi-storefront brand may
+// post different Aktuelles updates per physical location.
+//
+// Deliberately reuses ONLY StadtPocketOffer's proven shape/lifecycle
+// (draftData isolation, status convention, image shape) -- it does NOT
+// carry any offer-specific field (no offerText/offerType/offerDetails,
+// no startsAt/endsAt). Aktuelles is a simple business news feed
+// (title/body/image), never a second Deals engine, and by product
+// decision (2026-09-17) has no expiresAt/auto-archive concept -- a post
+// is either draft, published, or explicitly archived by the manager.
+//
+// image reuses the exact {url, publicId, width, height} shape as
+// StadtPocketOffer.image / StadtPocketListing.headerImage (same
+// Cloudinary account, same trusted-origin validation in the service
+// layer) -- no second media system introduced.
+model StadtPocketUpdate {
+  id                String                     @id @default(cuid())
+  listingLocationId String
+  listingLocation   StadtPocketListingLocation @relation(fields: [listingLocationId], references: [id])
+
+  title String
+  body  String
+
+  image Json?
+
+  status      String    @default("draft") // draft | published | archived
+  publishedAt DateTime? // set on every successful publish call, same convention as StadtPocketOffer.publishedAt
+
+  // Draft isolation, identical guarantee to StadtPocketOffer.draftData:
+  // never read by any public-facing code path.
+  draftData Json?
+
+  createdBy String // Clerk userId of the manager/admin who created this update
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([listingLocationId])
+  @@index([status])
 }

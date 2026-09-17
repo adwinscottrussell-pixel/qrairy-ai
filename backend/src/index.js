@@ -16,6 +16,7 @@ const managerInviteAcceptRoutes = require('./routes/managerInviteAcceptRoutes');
 const stadtpocketPublicRoutes = require('./routes/stadtpocketPublicRoutes');
 const managerStadtpocketListingRoutes = require('./routes/managerStadtpocketListingRoutes');
 const managerStadtpocketOfferRoutes = require('./routes/managerStadtpocketOfferRoutes');
+const managerStadtpocketUpdateRoutes = require('./routes/managerStadtpocketUpdateRoutes');
 const opsRoutes       = require('./routes/opsRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
@@ -114,6 +115,7 @@ app.use('/manager-invites', managerInviteAcceptRoutes);
 app.use('/public/stadtpocket', stadtpocketPublicRoutes);
 app.use('/manager/stadtpocket', managerStadtpocketListingRoutes);
 app.use('/manager/stadtpocket', managerStadtpocketOfferRoutes);
+app.use('/manager/stadtpocket', managerStadtpocketUpdateRoutes);
 app.use('/ops',      opsRoutes);
 
 app.use('/', lpRoutes);

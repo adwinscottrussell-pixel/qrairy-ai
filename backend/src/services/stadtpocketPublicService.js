@@ -121,6 +121,23 @@ function toOfferItem(offer) {
   return item;
 }
 
+// Updates (Aktuelles) — public-safe shape only. Never listingLocationId
+// (internal id), status (visibility is already fully decided before
+// this function ever sees an update -- see getCityBusiness), draftData,
+// or createdBy (Clerk id) -- same "no internal/admin/provenance data"
+// rule as toOfferItem above. Deliberately narrower than an offer: no
+// offerText/offerType/offerDetails/startsAt/endsAt exist on this model
+// at all (product lock, 2026-09-17) -- this is a simple business news
+// post, not a second Deals shape.
+function toUpdateItem(update) {
+  const item = { id: update.id, title: update.title, body: update.body };
+  if (update.image && update.image.url) {
+    item.image = { url: update.image.url, width: update.image.width, height: update.image.height };
+  }
+  if (update.publishedAt) item.publishedAt = update.publishedAt;
+  return item;
+}
+
 // Loyalty — business-level configuration only. Deliberately excludes
 // every customer-specific field on LoyaltyCustomer (customerId, cid,
 // stampCount, totalStamps, rewardsEarned, rewardReady, hasWallet, any
@@ -150,7 +167,7 @@ function toLoyaltyItem(stampSettings) {
 // caller) are each included only when present, matching every other
 // optional field in this function -- omitted, never an empty array or a
 // disabled/placeholder object, when there is nothing to show.
-function toLocationItem(listingLocation, offers, loyalty) {
+function toLocationItem(listingLocation, offers, loyalty, updates) {
   const item = { address: listingLocation.address };
   if (listingLocation.latitude != null && listingLocation.longitude != null) {
     item.coordinates = { lat: listingLocation.latitude, lng: listingLocation.longitude };
@@ -162,16 +179,17 @@ function toLocationItem(listingLocation, offers, loyalty) {
   }
   if (offers && offers.length) item.offers = offers.map(toOfferItem);
   if (loyalty) item.loyalty = loyalty;
+  if (updates && updates.length) item.updates = updates.map(toUpdateItem);
   return item;
 }
 
 // Full shape for the detail endpoint -- brand-level fields plus every
 // published storefront this listing has in the requested city.
-// offersByLocationId / loyaltyByLocationId: Map<listingLocationId, ...>
-// -- already scoped/filtered by getCityBusiness before this function
-// ever runs, so this function only ever attaches data to the exact
-// storefront it belongs to.
-function toDetailItem(listing, listingLocations, offersByLocationId, loyaltyByLocationId) {
+// offersByLocationId / loyaltyByLocationId / updatesByLocationId:
+// Map<listingLocationId, ...> -- already scoped/filtered by
+// getCityBusiness before this function ever runs, so this function only
+// ever attaches data to the exact storefront it belongs to.
+function toDetailItem(listing, listingLocations, offersByLocationId, loyaltyByLocationId, updatesByLocationId) {
   const item = {
     slug: listing.slug,
     name: listing.name,
@@ -184,7 +202,7 @@ function toDetailItem(listing, listingLocations, offersByLocationId, loyaltyByLo
   const headerImage = pickPublicHeaderImage(listing);
   if (headerImage) item.headerImage = headerImage;
   item.locations = listingLocations.map((ll) =>
-    toLocationItem(ll, offersByLocationId.get(ll.id), loyaltyByLocationId.get(ll.id))
+    toLocationItem(ll, offersByLocationId.get(ll.id), loyaltyByLocationId.get(ll.id), updatesByLocationId.get(ll.id))
   );
   return item;
 }
@@ -289,7 +307,23 @@ async function getCityBusiness(citySlug, listingSlug) {
     offersByLocationId.get(offer.listingLocationId).push(offer);
   }
 
-  return toDetailItem(listingLocations[0].listing, listingLocations, offersByLocationId, loyaltyByLocationId);
+  // Updates (Aktuelles): published only -- the only visibility rule
+  // (draft/archived already excluded by the status filter). No expiry
+  // concept exists for an update (product lock, 2026-09-17), unlike
+  // offers -- so no "not expired" filter is applied here. Scoped to
+  // exactly these storefronts' ids, same cross-city-leak protection as
+  // the offers query above.
+  const rawUpdates = await prisma.stadtPocketUpdate.findMany({
+    where: { listingLocationId: { in: listingLocationIds }, status: PUBLISHED },
+    orderBy: { publishedAt: 'desc' },
+  });
+  const updatesByLocationId = new Map();
+  for (const update of rawUpdates) {
+    if (!updatesByLocationId.has(update.listingLocationId)) updatesByLocationId.set(update.listingLocationId, []);
+    updatesByLocationId.get(update.listingLocationId).push(update);
+  }
+
+  return toDetailItem(listingLocations[0].listing, listingLocations, offersByLocationId, loyaltyByLocationId, updatesByLocationId);
 }
 
 module.exports = {

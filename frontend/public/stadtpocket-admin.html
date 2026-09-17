@@ -557,7 +557,7 @@
     <div class="nav-item" id="nav-profil" onclick="goToProfil()"><span class="nav-icon">◎</span>Profil</div>
     <div class="nav-item disabled"><span class="nav-icon">⚲</span>Standorte<span class="soon-badge">Bald</span></div>
     <div class="nav-item" id="nav-angebote" onclick="goToOffersList()"><span class="nav-icon">◆</span>Angebote</div>
-    <div class="nav-item disabled"><span class="nav-icon">▤</span>Aktuelles<span class="soon-badge">Bald</span></div>
+    <div class="nav-item" id="nav-aktuelles" onclick="goToAktuelles()"><span class="nav-icon">▤</span>Aktuelles</div>
     <div class="nav-item" id="nav-stempelkarte" onclick="goToStempelkarte()"><span class="nav-icon">▦</span>Stempelkarte</div>
     <div class="nav-item disabled"><span class="nav-icon">▧</span>Galerie / Medien<span class="soon-badge">Bald</span></div>
     <div class="nav-item disabled"><span class="nav-icon">▥</span>Statistiken<span class="soon-badge">Bald</span></div>
@@ -830,6 +830,50 @@
     </div>
   </section>
 
+  <!-- AKTUELLES — StadtPocket business news feed (Phase 4B). Deliberately
+       simple, single-page editor (no multi-step wizard, no image
+       cropping) -- Aktuelles is a business news feed, not a second
+       Deals engine. Reuses the exact draft/publish/archive lifecycle
+       and image-upload plumbing already proven by Angebote. -->
+  <section class="page" id="page-aktuelles">
+    <div class="page-heading-row">
+      <div>
+        <h1>Aktuelles</h1>
+        <p class="subtitle">Teile Neuigkeiten aus deinem Geschäft.</p>
+      </div>
+      <button class="primary" onclick="openNewUpdate()">+ Beitrag erstellen</button>
+    </div>
+    <div id="updates-banner"></div>
+    <div id="updates-list"></div>
+  </section>
+
+  <section class="page" id="page-update-editor">
+    <nav class="breadcrumb">
+      <span class="crumb-link" onclick="goToAktuelles()">Aktuelles</span> / <span id="update-editor-breadcrumb">Neuer Beitrag</span>
+    </nav>
+    <div id="update-editor-banner"></div>
+    <div class="card section-card" style="margin-top:14px;max-width:520px">
+      <label>Titel</label>
+      <input type="text" id="update-title-input" placeholder="z. B. Neue Öffnungszeiten" />
+      <label>Text</label>
+      <textarea id="update-body-input" rows="5" placeholder="Was möchtest du deinen Kunden mitteilen?"></textarea>
+
+      <label>Bild (optional)</label>
+      <div id="update-image-preview" style="margin-bottom:8px"></div>
+      <input type="file" id="update-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleUpdateImageSelected(event)" />
+      <button class="secondary" type="button" id="update-image-upload-btn" onclick="document.getElementById('update-image-file-input').click()">Bild hochladen</button>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="secondary" type="button" onclick="saveUpdateDraftFromEditor()">Entwurf speichern</button>
+        <button class="primary" type="button" onclick="publishUpdateFromEditor()">Veröffentlichen</button>
+      </div>
+      <div id="update-editor-existing-actions" style="display:none;margin-top:10px;padding-top:14px;border-top:1px solid var(--border)" class="actions">
+        <button class="ghost" type="button" onclick="archiveUpdateFromEditor()">Archivieren</button>
+        <button class="danger" type="button" onclick="deleteUpdateFromEditor()">Löschen</button>
+      </div>
+    </div>
+  </section>
+
   <!-- STEMPELKARTE — dedicated workspace (Phase 3A). Sibling of
        Angebote, same shell/sidebar. Reuses the exact Phase 2 loyalty
        bridge API (GET/PUT/DELETE .../loyalty, GET .../loyalty/eligible)
@@ -1038,8 +1082,8 @@
   // which of the two top-level wrappers is shown, since a City Manager
   // is only ever "inside" the sidebar-driven Business Portal once a
   // specific business is open.
-  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor', 'page-stempelkarte'];
-  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote', 'page-stempelkarte': 'nav-stempelkarte' };
+  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor', 'page-stempelkarte', 'page-aktuelles', 'page-update-editor'];
+  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote', 'page-stempelkarte': 'nav-stempelkarte', 'page-aktuelles': 'nav-aktuelles', 'page-update-editor': 'nav-aktuelles' };
 
   function showPage(id) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
@@ -3219,6 +3263,227 @@
       backToOffersList(); // re-fetches the list fresh; the deleted offer is simply absent, never spliced out locally
     } else {
       await renderOffersSection();
+    }
+  }
+
+  // ── Aktuelles (Phase 4B — business news feed) ───────────────────
+  // Deliberately simple: no multi-step wizard, no image cropping, no
+  // offer-specific fields (offerText/offerType/offerDetails/dates).
+  // Reuses the exact draft/publish/archive lifecycle and image-upload
+  // plumbing already proven by Angebote (api(), banner(), escapeHtml(),
+  // getToken(), HEADER_IMAGE_ALLOWED_TYPES/HEADER_IMAGE_MAX_BYTES).
+  let currentUpdates = [];
+  let currentUpdateId = null;
+  let currentUpdate = null;
+
+  const UPDATE_STATUS_LABEL = { draft: 'Entwurf', published: 'Veröffentlicht', archived: 'Archiviert' };
+
+  function goToAktuelles() { showPage('page-aktuelles'); renderAktuellesSection(); }
+
+  async function renderAktuellesSection() {
+    const listEl = document.getElementById('updates-list');
+    listEl.innerHTML = '<p class="muted">Laden…</p>';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates`);
+    if (!res.ok) {
+      listEl.innerHTML = '<p class="muted">Fehler beim Laden der Beiträge.</p>';
+      return;
+    }
+    currentUpdates = res.body.updates || [];
+    if (currentUpdates.length === 0) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">Noch keine Beiträge</p>
+          <p class="muted" style="margin:0">Teile deinen ersten Beitrag mit deinen Kunden.</p>
+        </div>
+      `;
+      return;
+    }
+    listEl.innerHTML = currentUpdates.map((u) => updateCardHtml(u)).join('');
+  }
+
+  // Reuses .offer-card's generic flex-row card styling -- no thumbnail
+  // column (Aktuelles' list view intentionally stays text-only/simple;
+  // the image, when present, is only shown inside the editor).
+  function updateCardHtml(u) {
+    const bodyPreview = (u.body || '').length > 80 ? `${(u.body || '').slice(0, 80)}…` : (u.body || '');
+    return `
+      <div class="card offer-card" onclick="openEditUpdate('${u.updateId}')">
+        <div class="offer-card-body">
+          <div class="offer-card-title">${escapeHtml(u.title || '(ohne Titel)')}</div>
+          <div class="offer-card-schedule">${escapeHtml(bodyPreview)}</div>
+        </div>
+        <span class="status-pill ${u.status}">${escapeHtml(UPDATE_STATUS_LABEL[u.status] || u.status)}</span>
+      </div>
+    `;
+  }
+
+  function renderUpdateImagePreview() {
+    const el = document.getElementById('update-image-preview');
+    if (currentUpdate && currentUpdate.image && currentUpdate.image.url) {
+      el.innerHTML = `<img src="${escapeHtml(currentUpdate.image.url)}" alt="" style="max-width:200px;border-radius:8px;display:block" />`;
+    } else {
+      el.innerHTML = '<p class="muted" style="margin:0">Kein Bild ausgewählt.</p>';
+    }
+  }
+
+  function openNewUpdate() {
+    currentUpdateId = null;
+    currentUpdate = null;
+    document.getElementById('update-title-input').value = '';
+    document.getElementById('update-body-input').value = '';
+    document.getElementById('update-editor-breadcrumb').textContent = 'Neuer Beitrag';
+    document.getElementById('update-editor-existing-actions').style.display = 'none';
+    renderUpdateImagePreview();
+    banner('update-editor-banner', 'info', '');
+    showPage('page-update-editor');
+  }
+
+  async function openEditUpdate(updateId) {
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${updateId}`);
+    if (!res.ok) {
+      alert('Fehler beim Laden: ' + (res.body && res.body.error ? res.body.error : res.status));
+      return;
+    }
+    currentUpdateId = updateId;
+    currentUpdate = res.body.update;
+    document.getElementById('update-title-input').value = currentUpdate.title || '';
+    document.getElementById('update-body-input').value = currentUpdate.body || '';
+    document.getElementById('update-editor-breadcrumb').textContent = currentUpdate.title || 'Beitrag bearbeiten';
+    document.getElementById('update-editor-existing-actions').style.display = '';
+    renderUpdateImagePreview();
+    banner('update-editor-banner', 'info', '');
+    showPage('page-update-editor');
+  }
+
+  // Creates the update on first save (title/body are required to create
+  // at all -- see stadtpocketUpdateService.createUpdateDraft), or saves
+  // a draft edit on every subsequent call. Shared by both "Entwurf
+  // speichern" and "Veröffentlichen" (publish always saves first, so a
+  // brand-new post can be published in one click without a separate
+  // create step).
+  async function saveUpdateDraftFromEditor() {
+    const title = document.getElementById('update-title-input').value.trim();
+    const body = document.getElementById('update-body-input').value.trim();
+    if (!title || !body) {
+      banner('update-editor-banner', 'error', 'Titel und Text sind erforderlich.');
+      return;
+    }
+    if (!currentUpdateId) {
+      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates`, {
+        method: 'POST', body: { title, body },
+      });
+      if (!res.ok) {
+        banner('update-editor-banner', 'error', (res.body && res.body.error) || 'Fehler beim Erstellen.');
+        return;
+      }
+      currentUpdateId = res.body.update.updateId;
+      currentUpdate = res.body.update;
+      document.getElementById('update-editor-existing-actions').style.display = '';
+      document.getElementById('update-editor-breadcrumb').textContent = title;
+      banner('update-editor-banner', 'success', 'Entwurf gespeichert.');
+      return;
+    }
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}/draft`, {
+      method: 'PUT', body: { title, body },
+    });
+    if (!res.ok) {
+      banner('update-editor-banner', 'error', (res.body && res.body.error) || 'Fehler beim Speichern.');
+      return;
+    }
+    currentUpdate = res.body.update;
+    document.getElementById('update-editor-breadcrumb').textContent = title;
+    banner('update-editor-banner', 'success', 'Entwurf gespeichert.');
+  }
+
+  async function publishUpdateFromEditor() {
+    await saveUpdateDraftFromEditor();
+    if (!currentUpdateId) return; // create/save failed -- its own banner already shown
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}/publish`, { method: 'POST' });
+    if (!res.ok) {
+      banner('update-editor-banner', 'error', (res.body && res.body.error) || 'Fehler beim Veröffentlichen.');
+      return;
+    }
+    currentUpdate = res.body.update;
+    banner('update-editor-banner', 'success', 'Veröffentlicht.');
+    await goToAktuelles();
+  }
+
+  async function archiveUpdateFromEditor() {
+    if (!currentUpdateId) return;
+    if (!confirm('Beitrag wirklich archivieren?')) return;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}/archive`, { method: 'POST' });
+    if (!res.ok) {
+      banner('update-editor-banner', 'error', (res.body && res.body.error) || 'Fehler beim Archivieren.');
+      return;
+    }
+    currentUpdate = res.body.update;
+    banner('update-editor-banner', 'success', 'Archiviert.');
+  }
+
+  async function deleteUpdateFromEditor() {
+    if (!currentUpdateId) return;
+    if (!confirm('Beitrag wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) return;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      banner('update-editor-banner', 'error', (res.body && res.body.error) || 'Fehler beim Löschen.');
+      return;
+    }
+    currentUpdateId = null;
+    currentUpdate = null;
+    await goToAktuelles();
+  }
+
+  // Raw fetch, not the api() helper -- multipart upload, same reasoning
+  // as handleHeaderImageSelected. Requires an already-created update
+  // (title/body saved at least once) since the upload route addresses
+  // it by id, exactly like the offer image upload requires currentOfferId.
+  async function handleUpdateImageSelected(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    if (!currentUpdateId) {
+      banner('update-editor-banner', 'error', 'Bitte zuerst Titel und Text speichern, bevor du ein Bild hochlädst.');
+      return;
+    }
+    if (!HEADER_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+      banner('update-editor-banner', 'error', 'Nur PNG, JPG oder WebP Bilder sind erlaubt.');
+      return;
+    }
+    if (file.size > HEADER_IMAGE_MAX_BYTES) {
+      banner('update-editor-banner', 'error', 'Die Datei ist zu groß (maximal 5 MB).');
+      return;
+    }
+
+    banner('update-editor-banner', 'info', 'Bild wird hochgeladen…');
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('image', file);
+      const uploadRes = await fetch(`${API_BASE}/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}/image`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: formData,
+      });
+      let uploadBody = null;
+      try { uploadBody = await uploadRes.json(); } catch (e) { /* no body */ }
+      if (!uploadRes.ok) {
+        banner('update-editor-banner', 'error', (uploadBody && uploadBody.error) || 'Upload fehlgeschlagen.');
+        return;
+      }
+      const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/updates/${currentUpdateId}/draft`, {
+        method: 'PUT', body: { image: uploadBody.image },
+      });
+      if (!saveRes.ok) {
+        banner('update-editor-banner', 'error', (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.');
+        return;
+      }
+      currentUpdate = saveRes.body.update;
+      renderUpdateImagePreview();
+      banner('update-editor-banner', 'success', 'Bild gespeichert. Noch nicht veröffentlicht.');
+    } catch (err) {
+      banner('update-editor-banner', 'error', 'Upload fehlgeschlagen.');
     }
   }
 
