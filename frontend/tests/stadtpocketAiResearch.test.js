@@ -26,6 +26,11 @@ const {
   validateAiResearchInput,
   buildAiResearchRequestBody,
   extractEditableFieldsFromCandidate,
+  duplicateAllowsDraftCreation,
+  getMissingRequiredFieldsForDraft,
+  buildInitializeDraftPayload,
+  parseTagsInput,
+  buildEnrichmentDraftPayload,
 } = require('../public/js/stadtpocket-ai-research');
 
 const tests = [];
@@ -173,6 +178,124 @@ test('24. an empty candidate (no fields at all) -> an empty editable object, nev
   assert.deepEqual(extractEditableFieldsFromCandidate({ fields: {} }), {});
   assert.deepEqual(extractEditableFieldsFromCandidate({}), {});
   assert.deepEqual(extractEditableFieldsFromCandidate(null), {});
+});
+
+// ── Phase 1D — draft-creation gating and payload building ───────
+test('25. only NEW allows draft creation; every other duplicate status blocks it', () => {
+  assert.equal(duplicateAllowsDraftCreation('NEW'), true);
+  assert.equal(duplicateAllowsDraftCreation('POSSIBLE_MATCH'), false);
+  assert.equal(duplicateAllowsDraftCreation('ALREADY_DRAFT'), false);
+  assert.equal(duplicateAllowsDraftCreation('ALREADY_PUBLISHED'), false);
+  assert.equal(duplicateAllowsDraftCreation(null), false);
+});
+
+test('26. all 4 required fields present -> no missing fields', () => {
+  const editable = { name: 'Café Brettle', category: 'Café', shortDescription: 'Gemütlich', address: 'Rabengasse 10' };
+  assert.deepEqual(getMissingRequiredFieldsForDraft(editable), []);
+});
+test('27. missing/blank required fields are reported by German label', () => {
+  const editable = { name: 'Café Brettle', category: '', shortDescription: '   ', address: 'Rabengasse 10' };
+  assert.deepEqual(getMissingRequiredFieldsForDraft(editable), ['Kategorie', 'Kurzbeschreibung']);
+});
+test('28. an empty/undefined editable object reports all 4 as missing, never throws', () => {
+  assert.deepEqual(getMissingRequiredFieldsForDraft(undefined), ['Unternehmensname', 'Kategorie', 'Kurzbeschreibung', 'Adresse']);
+});
+
+test('29. buildInitializeDraftPayload sends exactly the 4 required fields, trimmed, nothing else', () => {
+  const editable = { name: '  Café Brettle  ', category: ' Café ', shortDescription: ' Gemütlich ', address: ' Rabengasse 10 ', phone: '0731 000', website: 'https://x.de' };
+  const payload = buildInitializeDraftPayload(editable);
+  assert.deepEqual(payload, { name: 'Café Brettle', category: 'Café', shortDescription: 'Gemütlich', address: 'Rabengasse 10' });
+});
+test('30. the EDITED value wins -- initializeDraft payload reflects a corrected field, not the original AI value', () => {
+  // Admin corrected the researched name before creating the draft.
+  const editable = { name: 'Café Brettle (korrigiert)', category: 'Café', shortDescription: 'x', address: 'y' };
+  assert.equal(buildInitializeDraftPayload(editable).name, 'Café Brettle (korrigiert)');
+});
+test('31. initializeDraft payload never includes requestedBy or any other field', () => {
+  const payload = buildInitializeDraftPayload({ name: 'a', category: 'b', shortDescription: 'c', address: 'd' });
+  assert.deepEqual(Object.keys(payload).sort(), ['address', 'category', 'name', 'shortDescription']);
+});
+
+test('32. parseTagsInput splits/trims a comma-joined string deterministically', () => {
+  assert.deepEqual(parseTagsInput('Café, Frühstück,  Kuchen '), ['Café', 'Frühstück', 'Kuchen']);
+});
+test('33. parseTagsInput of empty/whitespace input is an empty array', () => {
+  assert.deepEqual(parseTagsInput(''), []);
+  assert.deepEqual(parseTagsInput('   '), []);
+  assert.deepEqual(parseTagsInput(undefined), []);
+});
+
+test('34. buildEnrichmentDraftPayload includes only present, non-empty optional plain fields', () => {
+  const editable = { phone: '0731 000', website: '', subCategory: 'Bäckerei' };
+  const { payload, skipped } = buildEnrichmentDraftPayload(editable, {}, {});
+  assert.deepEqual(payload, { phone: '0731 000', subCategory: 'Bäckerei' });
+  assert.deepEqual(skipped, []);
+});
+test('35. the EDITED value wins for enrichment fields too', () => {
+  const editable = { phone: '0731 654321' }; // admin corrected the AI-researched 0731 123456
+  const { payload } = buildEnrichmentDraftPayload(editable, {}, {});
+  assert.equal(payload.phone, '0731 654321');
+});
+test('36. missing optional fields are simply omitted, never sent as empty/placeholder', () => {
+  const { payload } = buildEnrichmentDraftPayload({}, {}, {});
+  assert.deepEqual(payload, {});
+});
+test('37. headerImage/headerImageCandidate is NEVER included in either payload -- image adoption stays manual', () => {
+  const initPayload = buildInitializeDraftPayload({ name: 'a', category: 'b', shortDescription: 'c', address: 'd', headerImage: 'x' });
+  assert.equal('headerImage' in initPayload, false);
+  const { payload } = buildEnrichmentDraftPayload({ headerImageCandidateUrl: 'https://x.de/img.jpg' }, {}, {});
+  assert.equal('headerImage' in payload, false);
+  assert.equal('headerImageCandidateUrl' in payload, false);
+});
+
+test('38. unedited tags round-trip through the comma-join/split exactly', () => {
+  const candidateFields = {};
+  const original = { tags: 'Café, Frühstück' };
+  const { payload } = buildEnrichmentDraftPayload({ tags: 'Café, Frühstück' }, original, candidateFields);
+  assert.deepEqual(payload.tags, ['Café', 'Frühstück']);
+});
+
+test('39. UNEDITED hours are persisted using the real structured value from the candidate, not re-parsed text', () => {
+  const structuredHours = [{ day: 'Mo', closed: true }, { day: 'Di', intervals: [{ open: '09:00', close: '18:00' }] }];
+  const displayString = 'Montag geschlossen\nDienstag 09:00–18:00'; // whatever the display happened to be
+  const editable = { hours: displayString };
+  const originalEditable = { hours: displayString }; // unchanged since research
+  const candidateFields = { hours: { value: structuredHours } };
+  const { payload, skipped } = buildEnrichmentDraftPayload(editable, originalEditable, candidateFields);
+  assert.deepEqual(payload.hours, structuredHours);
+  assert.deepEqual(skipped, []);
+});
+test('40. EDITED hours are never persisted (no unsafe re-parse), and reported back as skipped', () => {
+  const structuredHours = [{ day: 'Mo', closed: true }];
+  const editable = { hours: 'Montag: irgendwas anderes getippt' }; // admin free-edited the text
+  const originalEditable = { hours: 'Montag geschlossen' };
+  const candidateFields = { hours: { value: structuredHours } };
+  const { payload, skipped } = buildEnrichmentDraftPayload(editable, originalEditable, candidateFields);
+  assert.equal('hours' in payload, false);
+  assert.deepEqual(skipped, ['Öffnungszeiten']);
+});
+
+test('41. UNEDITED coordinates are persisted as real numeric lat/lng, not parsed from the "lat, lng" string', () => {
+  const editable = { coordinates: '48.4, 9.99' };
+  const originalEditable = { coordinates: '48.4, 9.99' };
+  const candidateFields = { coordinates: { value: { lat: 48.4, lng: 9.99 } } };
+  const { payload, skipped } = buildEnrichmentDraftPayload(editable, originalEditable, candidateFields);
+  assert.equal(payload.latitude, 48.4);
+  assert.equal(payload.longitude, 9.99);
+  assert.deepEqual(skipped, []);
+});
+test('42. EDITED coordinates are never invented from re-parsed text, and reported back as skipped', () => {
+  const editable = { coordinates: 'irgendwo in der Nähe' }; // admin typed something ambiguous
+  const originalEditable = { coordinates: '48.4, 9.99' };
+  const candidateFields = { coordinates: { value: { lat: 48.4, lng: 9.99 } } };
+  const { payload, skipped } = buildEnrichmentDraftPayload(editable, originalEditable, candidateFields);
+  assert.equal('latitude' in payload, false);
+  assert.equal('longitude' in payload, false);
+  assert.deepEqual(skipped, ['Koordinaten']);
+});
+test('43. a field absent from the candidate entirely is never reported as skipped -- only an EDITED researched field is', () => {
+  const { skipped } = buildEnrichmentDraftPayload({}, {}, {}); // no hours/coordinates in candidateFields at all
+  assert.deepEqual(skipped, []);
 });
 
 // ── runner ──────────────────────────────────────────────────────

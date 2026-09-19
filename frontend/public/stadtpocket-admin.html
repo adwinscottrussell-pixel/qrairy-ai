@@ -1797,7 +1797,6 @@
     const statusMessage = getResearchStatusMessage(c.researchStatus);
     const duplicateStatus = c.duplicate ? c.duplicate.status : 'POSSIBLE_MATCH';
     const dupUi = getDuplicateStatusUI(duplicateStatus);
-    const blocked = isDuplicateBlocking(duplicateStatus);
 
     const presentFields = AI_FIELD_DISPLAY_ORDER.filter(([key]) => key in fields);
     const fieldCardsHtml = presentFields.map(([key, label]) => renderAiFieldCard(key, label, fields[key])).join('');
@@ -1813,6 +1812,20 @@
         <p class="muted" style="margin-top:10px">Dieses Bild wurde auf einer öffentlichen Quelle gefunden. Es wurde noch nicht als StadtPocket-Bild übernommen.</p>
       </div>
     ` : '';
+
+    // Phase 1D: the button becomes REALLY functional for a genuine NEW
+    // candidate with every required field present -- never trusted from
+    // this render alone, though: createDraftFromAiResearch() re-checks
+    // both conditions again itself before ever calling the API (§8/§9).
+    const missingRequired = getMissingRequiredFieldsForDraft(s.editable);
+    const canCreate = duplicateAllowsDraftCreation(duplicateStatus) && missingRequired.length === 0;
+    const createBtnHtml = canCreate
+      ? `<button class="primary" type="button" onclick="createDraftFromAiResearch()">Als Entwurf erstellen</button>`
+      : `<button class="primary" type="button" disabled title="${escapeHtml(
+          !duplicateAllowsDraftCreation(duplicateStatus)
+            ? 'Aufgrund eines möglichen Duplikats derzeit nicht verfügbar'
+            : `Fehlende Pflichtfelder: ${missingRequired.join(', ')}`
+        )}">Als Entwurf erstellen</button>`;
 
     document.getElementById('ai-research-workspace').innerHTML = `
       <div class="card section-card">
@@ -1831,12 +1844,96 @@
 
       ${imageCandidateHtml}
 
+      <div id="ai-create-error"></div>
       <div class="actions">
         <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
         <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
-        <button class="primary" type="button" disabled title="${blocked ? 'Aufgrund eines möglichen Duplikats derzeit nicht verfügbar' : 'Nächster Schritt'}">Als Entwurf erstellen (bald verfügbar)</button>
+        ${createBtnHtml}
       </div>
     `;
+  }
+
+  function renderAiResearchCreating() {
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">✨ Entwurf wird erstellt…</span>
+        <p class="muted" style="margin-top:12px">Bitte einen Moment warten.</p>
+      </div>
+    `;
+  }
+
+  // Converts the reviewed/edited AI research result into a REAL
+  // StadtPocket draft via ONE call to the dedicated
+  // POST .../research/draft endpoint (stadtpocketAiDraftService.js),
+  // which internally reuses the EXISTING initializeDraft/saveDraft
+  // services -- never a parallel persistence system. This replaced an
+  // earlier two-call client-orchestrated version (separate POST
+  // .../listings/:locationId then PUT .../draft) specifically because
+  // that version had no server-side duplicate re-check in between: a
+  // stale client-side "NEW" from an earlier /research call was
+  // sufficient to create a duplicate. The server now re-checks
+  // duplicate identity itself, fresh, immediately before creation --
+  // see stadtpocketAiDraftService.js's own header comment for the exact
+  // guarantee (and its honestly-stated limits).
+  //
+  // headerImageCandidate is never referenced anywhere below -- image
+  // adoption remains a separate, later, explicit action via the
+  // existing upload flow.
+  async function createDraftFromAiResearch() {
+    const s = aiResearchState;
+    if (!s || s.creatingDraft) return; // prevent double submission
+
+    // Client-side pre-flight only, never the real guarantee -- the
+    // server re-checks this itself, fresh, against the actual request
+    // body, before ever creating anything (Phase 1D §8/§9 follow-up).
+    const duplicateStatus = s.candidate && s.candidate.duplicate ? s.candidate.duplicate.status : null;
+    if (!duplicateAllowsDraftCreation(duplicateStatus)) return;
+    if (getMissingRequiredFieldsForDraft(s.editable).length) return;
+
+    s.creatingDraft = true;
+    renderAiResearchCreating();
+
+    const initPayload = buildInitializeDraftPayload(s.editable);
+    const originalEditable = extractEditableFieldsFromCandidate(s.candidate);
+    const { payload: enrichPayload, skipped: enrichmentSkipped } = buildEnrichmentDraftPayload(s.editable, originalEditable, (s.candidate && s.candidate.fields) || {});
+    const combinedPayload = { ...initPayload, ...enrichPayload };
+
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research/draft`, { method: 'POST', body: combinedPayload });
+    s.creatingDraft = false;
+
+    if (!res.ok) {
+      if (res.status === 409 && res.body && res.body.duplicate) {
+        // The server just found a REAL, fresh duplicate -- possibly one
+        // that didn't exist yet when /research originally ran. Reflect
+        // that new truth in the review screen instead of a generic
+        // error, and the button re-locks itself on re-render.
+        s.candidate.duplicate = res.body.duplicate;
+        renderAiResearchReview();
+        return;
+      }
+      renderAiResearchReview();
+      banner('ai-create-error', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht erstellt werden.');
+      return;
+    }
+
+    const finalListing = res.body.listing;
+    currentListingLocationId = finalListing.listingLocationId;
+    headerImageJustUploaded = false;
+    loadListingIntoEditor(finalListing);
+    renderSidebarBusinessCard();
+    showPage('page-editor');
+
+    const notes = [];
+    if (res.body.enrichmentFailed) notes.push('einige zusätzliche Angaben konnten nicht gespeichert werden');
+    if (enrichmentSkipped.length) notes.push(`${enrichmentSkipped.join(' und ')} wurde/n bearbeitet und muss/müssen manuell ergänzt werden`);
+
+    if (notes.length) {
+      banner('editor-banner', 'error', `Entwurf wurde erstellt, aber ${notes.join('; ')}. Bitte ergänzen Sie die Angaben im Editor.`);
+    } else {
+      banner('editor-banner', 'success', 'Entwurf wurde erstellt. Bitte prüfen Sie die Angaben vor der Veröffentlichung.');
+    }
+
+    await renderCityList();
   }
 
   // ── Editor ────────────────────────────────────────────────────────

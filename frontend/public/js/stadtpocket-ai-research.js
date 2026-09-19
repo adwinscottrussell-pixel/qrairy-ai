@@ -60,6 +60,116 @@ function isDuplicateBlocking(duplicateStatus) {
   return duplicateStatus === 'ALREADY_DRAFT' || duplicateStatus === 'ALREADY_PUBLISHED';
 }
 
+// ── Phase 1D — AI research result → real StadtPocket draft ─────────
+// Pure logic behind "Als Entwurf erstellen": what's allowed to create a
+// draft, and exactly what gets sent to the EXISTING
+// initializeDraft/saveDraft write path. Nothing here calls api()/fetch
+// or touches the DOM -- see stadtpocket-admin.html's
+// createDraftFromAiResearch() for the orchestration that calls these.
+
+// Only a NEW candidate may create a draft -- POSSIBLE_MATCH/
+// ALREADY_DRAFT/ALREADY_PUBLISHED all block it (§8 of the Phase 1D
+// task). Never trusted from the DOM's disabled attribute alone --
+// stadtpocket-admin.html re-checks this exact function again inside
+// createDraftFromAiResearch() itself before ever calling the API.
+function duplicateAllowsDraftCreation(duplicateStatus) {
+  return duplicateStatus === 'NEW';
+}
+
+// The four fields initializeDraft() requires (see
+// stadtpocketManagerService.js) -- a draft cannot be created at all
+// without them, AI-assisted or manual.
+const AI_REQUIRED_DRAFT_FIELDS = [
+  ['name', 'Unternehmensname'],
+  ['category', 'Kategorie'],
+  ['shortDescription', 'Kurzbeschreibung'],
+  ['address', 'Adresse'],
+];
+
+function getMissingRequiredFieldsForDraft(editable) {
+  const e = editable || {};
+  return AI_REQUIRED_DRAFT_FIELDS.filter(([key]) => !(e[key] && String(e[key]).trim())).map(([, label]) => label);
+}
+
+// Exactly the payload initializeDraft's route accepts -- trimmed, and
+// nothing else (that route rejects any unexpected key). Uses the
+// Admin's EDITED values (aiResearchState.editable), never the original
+// AI response directly -- the human-reviewed value always wins.
+function buildInitializeDraftPayload(editable) {
+  const e = editable || {};
+  return {
+    name: String(e.name || '').trim(),
+    category: String(e.category || '').trim(),
+    shortDescription: String(e.shortDescription || '').trim(),
+    address: String(e.address || '').trim(),
+  };
+}
+
+// Deterministic, lossless-enough parse of the comma-joined display
+// string extractEditableFieldsFromCandidate() itself produces from a
+// real tags array -- a plain split/trim, never an LLM, never
+// ambiguous. Safe to apply whether the Admin edited the text or not.
+function parseTagsInput(tagsString) {
+  if (typeof tagsString !== 'string' || !tagsString.trim()) return [];
+  return tagsString.split(',').map((t) => t.trim()).filter(Boolean);
+}
+
+/**
+ * Builds the PUT .../draft payload for optional-field enrichment,
+ * called only after initializeDraft has already succeeded. Only ever
+ * includes a key when there is a genuine, safely-persistable value.
+ *
+ * hours/coordinates are the one real hazard here: their editable form
+ * is a free-text display string (formatHoursForDisplay()'s joined
+ * lines, or "lat, lng"), and there is no safe deterministic parser back
+ * to the exact structured shape saveDraft's checkHours/checkLatitude/
+ * checkLongitude validators expect once that text has been genuinely
+ * edited -- and this file must never let an LLM "reinterpret" it either
+ * (Phase 1D §5/§6). So: if the Admin left the field exactly as
+ * originally researched (`editable[key] === originalEditable[key]`),
+ * the untouched STRUCTURED value from the candidate is persisted
+ * as-is; if it was edited, the field is skipped entirely and reported
+ * back via `skipped` rather than silently saving a malformed or
+ * invented value -- the Admin fills it in manually in the real editor
+ * afterward.
+ *
+ * `originalEditable` must be a fresh call to
+ * extractEditableFieldsFromCandidate(candidate) -- i.e. what the field
+ * looked like immediately after research, before any Admin edit.
+ */
+function buildEnrichmentDraftPayload(editable, originalEditable, candidateFields) {
+  const e = editable || {};
+  const orig = originalEditable || {};
+  const fields = candidateFields || {};
+  const payload = {};
+  const skipped = [];
+
+  if (e.subCategory && e.subCategory.trim()) payload.subCategory = e.subCategory.trim();
+  if (e.longDescription && e.longDescription.trim()) payload.longDescription = e.longDescription.trim();
+  if (e.phone && e.phone.trim()) payload.phone = e.phone.trim();
+  if (e.website && e.website.trim()) payload.website = e.website.trim();
+
+  if (typeof e.tags === 'string' && e.tags.trim()) {
+    const tags = parseTagsInput(e.tags);
+    if (tags.length) payload.tags = tags;
+  }
+
+  if ('hours' in fields) {
+    if (e.hours === orig.hours) payload.hours = fields.hours.value;
+    else skipped.push('Öffnungszeiten');
+  }
+  if ('coordinates' in fields) {
+    if (e.coordinates === orig.coordinates) {
+      payload.latitude = fields.coordinates.value.lat;
+      payload.longitude = fields.coordinates.value.lng;
+    } else {
+      skipped.push('Koordinaten');
+    }
+  }
+
+  return { payload, skipped };
+}
+
 // Display order + German labels for every field the real StadtPocket
 // listing contract supports (matches stadtpocketAiExtractionService.js's
 // FIELD_VALIDATORS keys, minus headerImageCandidateUrl -- that one is
@@ -202,5 +312,11 @@ if (typeof module !== 'undefined' && module.exports) {
     validateAiResearchInput,
     buildAiResearchRequestBody,
     extractEditableFieldsFromCandidate,
+    duplicateAllowsDraftCreation,
+    AI_REQUIRED_DRAFT_FIELDS,
+    getMissingRequiredFieldsForDraft,
+    buildInitializeDraftPayload,
+    parseTagsInput,
+    buildEnrichmentDraftPayload,
   };
 }

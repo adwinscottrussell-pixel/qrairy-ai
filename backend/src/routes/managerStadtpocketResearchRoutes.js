@@ -15,11 +15,19 @@
  * requireStadtpocketWriteScope already runs first) rather than relying
  * on the generic app-wide IP limiter alone.
  *
- * Only ONE route exists here today: POST .../research, accepting exactly
- * ONE candidate (businessName and/or websiteUrl) per request -- see
- * stadtpocketResearchService.js's own header comment for why the same
- * function is already shaped to be reusable for a future bulk caller
- * without needing to change here first.
+ * POST .../research accepts exactly ONE candidate (businessName and/or
+ * websiteUrl) per request -- see stadtpocketResearchService.js's own
+ * header comment for why the same function is already shaped to be
+ * reusable for a future bulk caller without needing to change here
+ * first.
+ *
+ * POST .../research/draft (Phase 1D follow-up) turns a REVIEWED
+ * candidate into a real draft, with a fresh server-side duplicate
+ * re-check immediately before creation -- see
+ * stadtpocketAiDraftService.js's own header comment for why this
+ * exists (a stale client-side "NEW" from an earlier /research call must
+ * never be trusted at creation time) and its precise, honestly-stated
+ * atomicity guarantee.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -28,6 +36,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const router = express.Router();
 const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManagerAuth');
 const { researchBusiness, StadtpocketResearchError, StadtpocketManagerError } = require('../services/stadtpocketResearchService');
+const { createDraftFromReview, StadtpocketDuplicateError } = require('../services/stadtpocketAiDraftService');
 
 const researchRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -64,8 +73,28 @@ async function handleResearch(req, res) {
   }
 }
 
+// Not rate-limited like handleResearch above -- this performs no
+// external/paid provider call, only DB reads/writes, the same cost
+// class as initializeDraft/saveDraft (neither of which is rate-limited
+// either).
+async function handleCreateDraftFromReview(req, res) {
+  try {
+    const result = await createDraftFromReview(req.params.locationId, req.stadtpocketScope, req.body);
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof StadtpocketDuplicateError) {
+      // Structured, non-500 response -- the Admin gets the real
+      // duplicate result to review, never a generic failure.
+      return res.status(err.status).json({ error: err.message, duplicate: err.duplicate });
+    }
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/research/draft POST');
+  }
+}
+
 router.post('/listings/:locationId/research', requireStadtpocketWriteScope, researchRateLimiter, handleResearch);
+router.post('/listings/:locationId/research/draft', requireStadtpocketWriteScope, handleCreateDraftFromReview);
 
 module.exports = router;
 module.exports.handleResearch = handleResearch; // exported for direct unit testing only
+module.exports.handleCreateDraftFromReview = handleCreateDraftFromReview; // exported for direct unit testing only
 module.exports.researchRateLimiter = researchRateLimiter; // exported for direct unit testing only
