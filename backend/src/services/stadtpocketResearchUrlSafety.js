@@ -33,6 +33,37 @@
 const net = require('net');
 const dns = require('dns').promises;
 
+// dns.promises.lookup() has no built-in cap and no AbortSignal support in
+// Node's dns API -- an unresponsive/misbehaving resolver could otherwise
+// hold this request open indefinitely, well past both provider timeouts
+// downstream (see stadtpocketResearchService.js's own overall deadline,
+// which exists as a second, independent backstop). DNS normally resolves
+// in well under a second; this bound is generous while still guaranteeing
+// forward progress. A timeout fails exactly like any other DNS error
+// (REASONS.DNS_FAILURE) -- fail-closed, never treated as "safe, proceed."
+const DNS_LOOKUP_TIMEOUT_MS = 3000;
+
+// Bounds any promise to `ms` -- rejects with a distinguishable timeout
+// error if it hasn't settled in time. Does not (cannot) cancel the
+// underlying work; it only guarantees THIS await doesn't wait forever.
+// A `dnsLookup` call that eventually settles after we've moved on
+// resolves/rejects harmlessly into a promise nothing is listening to
+// anymore (dns.promises.lookup never throws in a way that would
+// otherwise produce an unhandled rejection here).
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const err = new Error(`Timed out after ${ms}ms`);
+      err.code = 'ETIMEDOUT_INTERNAL';
+      reject(err);
+    }, ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 const REASONS = {
   INVALID_URL: 'invalid-url',
   UNSUPPORTED_PROTOCOL: 'unsupported-protocol',
@@ -101,9 +132,11 @@ function isPrivateOrReservedAddress(address) {
  * `dnsLookup` is injectable (defaults to the real dns.promises.lookup)
  * purely so the DNS-rebinding layer is directly unit-testable without a
  * real network/DNS call, matching this repo's established injectable-
- * dependency convention (fetchImpl elsewhere in this phase).
+ * dependency convention (fetchImpl elsewhere in this phase). `timeoutMs`
+ * is injectable for the same reason (testing a timeout at the real 3s
+ * bound would make the suite slow) -- defaults to DNS_LOOKUP_TIMEOUT_MS.
  */
-async function validateResearchUrl(rawUrl, { dnsLookup = dns.lookup } = {}) {
+async function validateResearchUrl(rawUrl, { dnsLookup = dns.lookup, timeoutMs = DNS_LOOKUP_TIMEOUT_MS } = {}) {
   let url;
   try {
     url = new URL(String(rawUrl || ''));
@@ -139,12 +172,15 @@ async function validateResearchUrl(rawUrl, { dnsLookup = dns.lookup } = {}) {
   // ANY resolved address is private/reserved. A lookup failure fails
   // closed (rejected as unreachable), never treated as "safe, proceed."
   try {
-    const records = await dnsLookup(hostname, { all: true, verbatim: true });
+    const records = await withTimeout(dnsLookup(hostname, { all: true, verbatim: true }), timeoutMs);
     if (!records.length) return { ok: false, reason: REASONS.DNS_FAILURE };
     if (records.some((r) => isPrivateOrReservedAddress(r.address))) {
       return { ok: false, reason: REASONS.PRIVATE_TARGET };
     }
   } catch {
+    // Covers both a genuine DNS error AND our own timeout -- both fail
+    // exactly the same way (closed, DNS_FAILURE), never proceeding on
+    // an unresolved/unconfirmed hostname.
     return { ok: false, reason: REASONS.DNS_FAILURE };
   }
 

@@ -23,11 +23,21 @@ const NET1 = 'net_stadtpocket';
 let listingLocationRows = [];
 let webResult;
 let aiResult;
+// Phase 1E follow-up: rather than reassigning the exported FUNCTION
+// (which stadtpocketResearchService.js already destructured once at
+// its own require() time, so a later reassignment on the exports
+// object would never be seen by it), these flags are read by the
+// mock's own closure -- the SAME mock function reference the module
+// under test already holds, just changing what it does.
+let webShouldHang = false;
+let aiShouldHang = false;
 
 function resetFixtures() {
   listingLocationRows = [];
   webResult = { status: 'ok', content: 'scraped content', sourceUrl: 'https://www.brettle-ulm.de/', truncated: false };
   aiResult = { status: 'ok', fields: { name: { value: 'Café Brettle', confidence: 'high' }, phone: { value: '0731 000000', confidence: 'high' } } };
+  webShouldHang = false;
+  aiShouldHang = false;
 }
 resetFixtures();
 
@@ -42,14 +52,14 @@ require.cache[webResearchPath] = {
   id: webResearchPath, filename: webResearchPath, loaded: true,
   exports: {
     STATUS: { OK: 'ok', INVALID_URL: 'invalid-url', UNSUPPORTED_PROTOCOL: 'unsupported-protocol', PRIVATE_TARGET: 'private-target', DNS_FAILURE: 'dns-failure', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNREACHABLE: 'unreachable', EMPTY: 'empty' },
-    fetchBusinessWebsiteContent: async () => webResult,
+    fetchBusinessWebsiteContent: () => (webShouldHang ? new Promise(() => {}) : Promise.resolve(webResult)),
   },
 };
 require.cache[aiExtractionPath] = {
   id: aiExtractionPath, filename: aiExtractionPath, loaded: true,
   exports: {
     STATUS: { OK: 'ok', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNAVAILABLE: 'unavailable', MALFORMED_OUTPUT: 'malformed-output' },
-    extractBusinessFields: async () => aiResult,
+    extractBusinessFields: () => (aiShouldHang ? new Promise(() => {}) : Promise.resolve(aiResult)),
   },
 };
 
@@ -234,6 +244,54 @@ test('18. one candidate\'s research failure does not affect a subsequent, indepe
   const succeeded = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { businessName: 'Succeeds', websiteUrl: 'https://ok.example.com' });
   assert.equal(succeeded.researchStatus, RESEARCH_STATUS.OK);
   assert.equal(succeeded.fields.name.value, 'Succeeds');
+});
+
+// ── Phase 1E follow-up: overall research deadline ────────────────
+test('19. a web-fetch that never resolves still returns a structured failure once the (short, test-injected) deadline elapses', async () => {
+  resetFixtures();
+  webShouldHang = true;
+  const start = Date.now();
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://slow.example.com' }, { deadlineMs: 30 });
+  const elapsed = Date.now() - start;
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.PROVIDER_UNAVAILABLE);
+  assert.deepEqual(candidate.fields, {});
+  assert.ok(elapsed < 2000, `expected the deadline to cut this off quickly, took ${elapsed}ms`);
+});
+
+test('20. an AI extraction that never resolves also returns a structured failure once the deadline elapses (web fetch succeeded first)', async () => {
+  resetFixtures();
+  aiShouldHang = true;
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' }, { deadlineMs: 30 });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.PROVIDER_UNAVAILABLE);
+  assert.deepEqual(candidate.fields, {});
+});
+
+test('21. the duplicate check still runs and is still accurate even when the provider portion hits the deadline', async () => {
+  resetFixtures();
+  // Website match (a strong identity field) against an existing DRAFT
+  // row -- correctly ALREADY_DRAFT per stadtpocketDuplicateService.js's
+  // existing, separately-tested rules (a name-only match would only
+  // ever be POSSIBLE_MATCH, not asserted here since that distinction
+  // is already covered by stadtpocketDuplicateService.test.js).
+  listingLocationRows = [{ id: 'll_x', locationId: ULM, website: 'https://slow.example.com', phone: null, address: null, publicationStatus: 'draft', listing: { id: 'listing_x', name: 'Bereits Vorhanden', slug: 'bereits-vorhanden' } }];
+  webShouldHang = true;
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { businessName: 'Ganz Anderer Name', websiteUrl: 'https://slow.example.com' }, { deadlineMs: 30 });
+  assert.equal(candidate.duplicate.status, 'ALREADY_DRAFT');
+});
+
+test('22. a deadline timeout never creates a draft or touches any write-capable Prisma method -- the mock exposes none', async () => {
+  resetFixtures();
+  assert.equal(mockPrisma.stadtPocketListing, undefined);
+  assert.equal(mockPrisma.stadtPocketListingLocation.create, undefined);
+  webShouldHang = true;
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://slow.example.com' }, { deadlineMs: 30 });
+  // reaching here without a thrown "not a function" error is the proof
+});
+
+test('23. a normal, fast research call is completely unaffected by the deadline machinery (default deadline never fires)', async () => {
+  resetFixtures();
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.OK);
 });
 
 // ── runner ──────────────────────────────────────────────────────

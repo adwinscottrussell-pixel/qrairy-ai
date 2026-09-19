@@ -1687,6 +1687,15 @@
     `;
   }
 
+  // Bounded comfortably above the backend's own overall research
+  // deadline (45s, stadtpocketResearchService.js) plus margin -- under
+  // normal conditions the backend always responds first with an honest
+  // structured result; this is the final client-side backstop so the
+  // Admin can NEVER be left staring at "KI-Recherche läuft…" forever,
+  // regardless of what goes wrong (a genuinely stuck backend, a dropped
+  // connection, anything else).
+  const AI_RESEARCH_CLIENT_TIMEOUT_MS = 55000;
+
   async function submitAiResearch() {
     const s = aiResearchState;
     if (s.submitting) return; // prevent accidental repeated submissions while the request is running
@@ -1708,8 +1717,30 @@
     const body = buildAiResearchRequestBody(s.businessName, s.websiteUrl);
     // currentLocationId is the manager's own, already-authorized city --
     // never a value this form lets the Admin choose or override.
-    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research`, { method: 'POST', body });
-    s.submitting = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_RESEARCH_CLIENT_TIMEOUT_MS);
+
+    let res;
+    try {
+      res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research`, { method: 'POST', body, signal: controller.signal });
+    } catch (err) {
+      // Network failure OR our own client-side timeout (fetch throws
+      // AbortError either way) -- both must return the Admin to a
+      // retryable, honest state. This is the guarantee that closes the
+      // gap the real Bäckerei-Betz test exposed: previously nothing
+      // here ever caught a thrown error at all, so s.submitting was
+      // never reset and the loading screen never changed.
+      s.step = 'form';
+      renderAiResearchForm();
+      banner('ai-form-error', 'error', getAiResearchFailureMessage(err));
+      return;
+    } finally {
+      // Always runs -- success, structured failure, thrown error, or
+      // timeout -- so the Admin is never left in "läuft…" with a
+      // permanently-disabled submit button and no way to retry.
+      clearTimeout(timeoutId);
+      s.submitting = false;
+    }
 
     if (!res.ok) {
       s.step = 'form';

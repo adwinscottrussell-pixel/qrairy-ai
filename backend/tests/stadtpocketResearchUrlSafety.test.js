@@ -126,6 +126,41 @@ test('15. a genuinely empty DNS result (zero records) fails closed', async () =>
   assert.equal(result.reason, REASONS.DNS_FAILURE);
 });
 
+// ── DNS timeout (Phase 1E follow-up) ─────────────────────────────
+function fakeDnsHangsForever() {
+  return () => new Promise(() => {}); // never resolves/rejects
+}
+function fakeDnsSlow(addresses, delayMs) {
+  return () => new Promise((resolve) => setTimeout(() => resolve(addresses.map((address) => ({ address, family: 4 }))), delayMs));
+}
+
+test('16. a DNS lookup that never resolves fails closed once the (short, test-injected) timeout elapses', async () => {
+  const start = Date.now();
+  const result = await validateResearchUrl('https://example.com/', { dnsLookup: fakeDnsHangsForever(), timeoutMs: 30 });
+  const elapsed = Date.now() - start;
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, REASONS.DNS_FAILURE);
+  assert.ok(elapsed < 1000, `expected to fail closed quickly, took ${elapsed}ms`);
+});
+
+test('17. a DNS lookup slower than the timeout fails closed, never waits for it', async () => {
+  const result = await validateResearchUrl('https://example.com/', { dnsLookup: fakeDnsSlow(['8.8.8.8'], 200), timeoutMs: 30 });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, REASONS.DNS_FAILURE);
+});
+
+test('18. a DNS lookup faster than the timeout still succeeds normally (the timeout does not break the normal path)', async () => {
+  const result = await validateResearchUrl('https://example.com/', { dnsLookup: fakeDnsSlow(['8.8.8.8'], 5), timeoutMs: 3000 });
+  assert.equal(result.ok, true);
+});
+
+test('19. the default production timeoutMs is used when not overridden (signature check, no real wait)', async () => {
+  // Confirms the parameter exists and defaults sanely -- does not
+  // exercise a real 3s wait (fakeDnsLookup resolves instantly).
+  const result = await validateResearchUrl('https://example.com/', { dnsLookup: fakeDnsLookup(['8.8.8.8']) });
+  assert.equal(result.ok, true);
+});
+
 // ── runner ──────────────────────────────────────────────────────
 (async () => {
   let pass = 0, fail = 0;

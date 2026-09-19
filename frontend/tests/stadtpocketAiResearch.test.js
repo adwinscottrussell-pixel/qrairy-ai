@@ -31,6 +31,9 @@ const {
   buildInitializeDraftPayload,
   parseTagsInput,
   buildEnrichmentDraftPayload,
+  getAiResearchFailureMessage,
+  AI_RESEARCH_TIMEOUT_MESSAGE,
+  AI_RESEARCH_NETWORK_ERROR_MESSAGE,
 } = require('../public/js/stadtpocket-ai-research');
 
 const tests = [];
@@ -296,6 +299,21 @@ test('42. EDITED coordinates are never invented from re-parsed text, and reporte
 test('43. a field absent from the candidate entirely is never reported as skipped -- only an EDITED researched field is', () => {
   const { skipped } = buildEnrichmentDraftPayload({}, {}, {}); // no hours/coordinates in candidateFields at all
   assert.deepEqual(skipped, []);
+});
+
+// ── Phase 1E follow-up — research submission failure messages ────
+test('44. an AbortError (client-side timeout or abort) produces the honest timeout message', () => {
+  const err = new Error('The user aborted a request.');
+  err.name = 'AbortError';
+  assert.equal(getAiResearchFailureMessage(err), AI_RESEARCH_TIMEOUT_MESSAGE);
+});
+test('45. any other thrown error (network failure, etc.) produces the honest connection-failure message', () => {
+  assert.equal(getAiResearchFailureMessage(new TypeError('Failed to fetch')), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
+  assert.equal(getAiResearchFailureMessage(new Error('generic')), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
+});
+test('46. a missing/undefined error still resolves to an honest message, never throws', () => {
+  assert.equal(getAiResearchFailureMessage(undefined), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
+  assert.equal(getAiResearchFailureMessage(null), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
 });
 
 // ── runner ──────────────────────────────────────────────────────

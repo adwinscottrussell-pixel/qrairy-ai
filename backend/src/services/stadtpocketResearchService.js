@@ -25,6 +25,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
+const { randomUUID } = require('crypto');
 const { authorizeLocationAccess, StadtpocketManagerError } = require('./stadtpocketManagerService');
 const { fetchBusinessWebsiteContent, STATUS: WEB_STATUS } = require('./stadtpocketWebResearchService');
 const { extractBusinessFields, STATUS: AI_STATUS } = require('./stadtpocketAiExtractionService');
@@ -35,6 +36,36 @@ class StadtpocketResearchError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+// Overall deadline for the external-provider portion (website fetch +
+// AI extraction) of one research request -- a second, independent
+// backstop on top of Firecrawl's own 15s AbortSignal timeout and
+// Anthropic's own 20s SDK timeout (neither of those two is changed
+// here). Exists specifically to guarantee the HTTP response always
+// returns even if some step turns out not to be bounded the way it's
+// expected to be (see stadtpocketResearchUrlSafety.js's own DNS-lookup
+// timeout, added for the same reason) -- generous enough to comfortably
+// fit both real provider timeouts plus DNS/overhead in the normal case.
+const OVERALL_RESEARCH_DEADLINE_MS = 45000;
+const DEADLINE_EXCEEDED = Symbol('deadline-exceeded');
+
+// Minimal, structured stage logging -- concise enough to distinguish
+// where a request is spending its time without ever printing a secret,
+// token, full scraped page, or full AI response. `requestId` correlates
+// every line for one call to researchBusiness().
+function logStage(requestId, stage, details = {}) {
+  const parts = Object.entries(details).map(([k, v]) => `${k}=${v}`).join(' ');
+  // eslint-disable-next-line no-console
+  console.log(`[stadtpocket-research] requestId=${requestId} stage=${stage}${parts ? ' ' + parts : ''}`);
+}
+
+function raceWithDeadline(promise, ms) {
+  let timer;
+  const deadline = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(DEADLINE_EXCEEDED), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
 const RESEARCH_STATUS = {
@@ -106,6 +137,37 @@ function validateRequest(body) {
   return { businessName: businessName || undefined, websiteUrl: websiteUrl || undefined };
 }
 
+// The external-provider portion only (website fetch + AI extraction) --
+// isolated into its own function specifically so it can be raced
+// against the overall deadline below without that deadline also
+// covering the (fast, DB-only, never-hangs) duplicate check, which
+// should always run regardless of how the provider portion turned out.
+async function runWebAndExtraction(requestId, businessName, websiteUrl) {
+  const webStart = Date.now();
+  const webResult = await fetchBusinessWebsiteContent(websiteUrl);
+  logStage(requestId, 'firecrawl', { status: webResult.status, durationMs: Date.now() - webStart });
+
+  if (webResult.status !== WEB_STATUS.OK) {
+    return { evidencedFields: {}, researchStatus: WEB_STATUS_TO_RESEARCH_STATUS[webResult.status] || RESEARCH_STATUS.WEBSITE_UNREACHABLE };
+  }
+
+  const aiStart = Date.now();
+  const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content });
+  logStage(requestId, 'anthropic', { status: extraction.status, durationMs: Date.now() - aiStart });
+
+  if (extraction.status === AI_STATUS.OK) {
+    const evidencedFields = withEvidence(extraction.fields, webResult.sourceUrl);
+    return { evidencedFields, researchStatus: Object.keys(evidencedFields).length ? RESEARCH_STATUS.OK : RESEARCH_STATUS.PARTIAL };
+  }
+  if (extraction.status === AI_STATUS.PROVIDER_UNAVAILABLE) {
+    return { evidencedFields: {}, researchStatus: RESEARCH_STATUS.PROVIDER_UNAVAILABLE };
+  }
+  if (extraction.status === AI_STATUS.MALFORMED_OUTPUT) {
+    return { evidencedFields: {}, researchStatus: RESEARCH_STATUS.MALFORMED_OUTPUT };
+  }
+  return { evidencedFields: {}, researchStatus: RESEARCH_STATUS.PROVIDER_UNAVAILABLE };
+}
+
 /**
  * The one entry point. `scope` is the already-resolved
  * req.stadtpocketScope (see middleware/stadtpocketManagerAuth.js) --
@@ -113,31 +175,42 @@ function validateRequest(body) {
  * function re-checks its own caller, never trusted merely because the
  * route matched. `requestedBy` is the caller's userId, always
  * server-derived from scope, never accepted from the request body.
+ *
+ * `options.deadlineMs` is injectable (defaults to
+ * OVERALL_RESEARCH_DEADLINE_MS) purely so the deadline behavior is
+ * directly unit-testable without a real 45s wait, matching this
+ * repo's established injectable-dependency convention.
  */
-async function researchBusiness(locationId, scope, body) {
+async function researchBusiness(locationId, scope, body, options = {}) {
+  const { deadlineMs = OVERALL_RESEARCH_DEADLINE_MS } = options;
+  const requestId = randomUUID();
+  const requestStart = Date.now();
+
   authorizeLocationAccess(locationId, scope);
   const { businessName, websiteUrl } = validateRequest(body);
   const requestedBy = scope.userId;
+
+  logStage(requestId, 'start', { locationId, hasWebsite: !!websiteUrl });
 
   let evidencedFields = {};
   let researchStatus = RESEARCH_STATUS.NO_SOURCE;
 
   if (websiteUrl) {
-    const webResult = await fetchBusinessWebsiteContent(websiteUrl);
-    if (webResult.status !== WEB_STATUS.OK) {
-      researchStatus = WEB_STATUS_TO_RESEARCH_STATUS[webResult.status] || RESEARCH_STATUS.WEBSITE_UNREACHABLE;
+    const urlSafetyStart = Date.now();
+    const outcome = await raceWithDeadline(runWebAndExtraction(requestId, businessName, websiteUrl), deadlineMs);
+    if (outcome === DEADLINE_EXCEEDED) {
+      // The provider portion is still running in the background (this
+      // does not, and cannot, forcibly cancel it -- Firecrawl's own
+      // 15s AbortSignal and Anthropic's own 20s SDK timeout will still
+      // conclude it on their own). This only guarantees OUR response
+      // doesn't wait for that any longer. Reuses the existing
+      // provider-unavailable public status -- no new public-contract
+      // value, per Phase 1E's own instruction -- with a distinct
+      // internal log tag for diagnosis.
+      logStage(requestId, 'deadline-exceeded', { afterMs: Date.now() - urlSafetyStart });
+      researchStatus = RESEARCH_STATUS.PROVIDER_UNAVAILABLE;
     } else {
-      const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content });
-      if (extraction.status === AI_STATUS.OK) {
-        evidencedFields = withEvidence(extraction.fields, webResult.sourceUrl);
-        researchStatus = Object.keys(evidencedFields).length ? RESEARCH_STATUS.OK : RESEARCH_STATUS.PARTIAL;
-      } else if (extraction.status === AI_STATUS.PROVIDER_UNAVAILABLE) {
-        researchStatus = RESEARCH_STATUS.PROVIDER_UNAVAILABLE;
-      } else if (extraction.status === AI_STATUS.MALFORMED_OUTPUT) {
-        researchStatus = RESEARCH_STATUS.MALFORMED_OUTPUT;
-      } else {
-        researchStatus = RESEARCH_STATUS.PROVIDER_UNAVAILABLE;
-      }
+      ({ evidencedFields, researchStatus } = outcome);
     }
   }
 
@@ -146,7 +219,12 @@ async function researchBusiness(locationId, scope, body) {
   // Duplicate check always runs, even when research produced nothing --
   // a manager researching "Café Brettle, Ulm" with an unreachable
   // website should still learn it already exists as a draft, per the
-  // Phase 1A duplicate-detection design.
+  // Phase 1A duplicate-detection design. Deliberately NOT inside the
+  // deadline race above: this is a fast, DB-only read with no external
+  // provider involved, so it should never be the thing a timeout is
+  // protecting against, and skipping it on a provider timeout would
+  // throw away real, always-available information for no reason.
+  const dupStart = Date.now();
   const duplicate = await checkForDuplicateListing({
     locationId,
     businessName: businessName || fields.name?.value,
@@ -154,6 +232,9 @@ async function researchBusiness(locationId, scope, body) {
     phone: fields.phone?.value,
     address: fields.address?.value,
   });
+  logStage(requestId, 'duplicate-check', { status: duplicate.status, durationMs: Date.now() - dupStart });
+
+  logStage(requestId, 'complete', { researchStatus, totalDurationMs: Date.now() - requestStart });
 
   return {
     locationId,

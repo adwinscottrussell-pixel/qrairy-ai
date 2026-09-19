@@ -296,6 +296,22 @@ function extractEditableFieldsFromCandidate(candidate) {
   return editable;
 }
 
+// ── Phase 1E follow-up — research submission failure messages ──────
+// Pure classification of a thrown fetch()/AbortController error into
+// the exact honest German message to show. AbortError is what both a
+// genuine user-triggered abort AND our own client-side research
+// timeout look like (fetch's AbortController always throws this exact
+// error name on abort, regardless of who called .abort()) -- there is
+// no reliable way to distinguish them further, so both read as "took
+// too long," which is accurate either way.
+const AI_RESEARCH_TIMEOUT_MESSAGE = 'Die Recherche hat zu lange gedauert. Bitte versuchen Sie es erneut.';
+const AI_RESEARCH_NETWORK_ERROR_MESSAGE = 'Die Verbindung ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
+
+function getAiResearchFailureMessage(err) {
+  if (err && err.name === 'AbortError') return AI_RESEARCH_TIMEOUT_MESSAGE;
+  return AI_RESEARCH_NETWORK_ERROR_MESSAGE;
+}
+
 // Isomorphic export: `module` does not exist in a browser <script> tag,
 // so this is inert there -- only Node's require() sees it.
 if (typeof module !== 'undefined' && module.exports) {
@@ -318,5 +334,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildInitializeDraftPayload,
     parseTagsInput,
     buildEnrichmentDraftPayload,
+    AI_RESEARCH_TIMEOUT_MESSAGE,
+    AI_RESEARCH_NETWORK_ERROR_MESSAGE,
+    getAiResearchFailureMessage,
   };
 }
