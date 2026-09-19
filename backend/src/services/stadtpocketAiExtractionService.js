@@ -30,7 +30,14 @@
 
 const { checkWebsite, checkHours, checkLatitude, checkLongitude } = require('./stadtpocketManagerService');
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'; // same model designController.js already uses
+// claude-sonnet-4-20250514 (the model designController.js originally
+// used, copied here at Phase 1B) was retired by Anthropic -- confirmed
+// live on staging (2026-09-19): a real request against this listing's
+// exact scraped content returned a clean HTTP 404 not_found_error
+// ("model: claude-sonnet-4-20250514") in 325ms, not a timeout or auth
+// failure. claude-sonnet-5 is the current model ID per Anthropic's
+// documentation.
+const ANTHROPIC_MODEL = 'claude-sonnet-5';
 const ANTHROPIC_TIMEOUT_MS = 20000;
 const ANTHROPIC_MAX_TOKENS = 1500;
 
@@ -163,7 +170,21 @@ async function extractBusinessFields({ businessName, websiteUrl, siteContent, an
     return { status: STATUS.UNAVAILABLE, fields: {} };
   }
 
-  const text = message && message.content && message.content[0] && message.content[0].text;
+  // Finds the actual text block by TYPE rather than assuming index 0 --
+  // Claude Sonnet 5 uses adaptive thinking by default (per Anthropic's
+  // documentation), which can add a preceding `{ type: 'thinking', ... }`
+  // content block ahead of the text block. This request never explicitly
+  // requests or reads thinking output either way; this only makes
+  // locating the real text response robust to that block's presence,
+  // so a genuinely successful call is never misclassified as malformed
+  // output purely because of its position in the array. No sampling
+  // parameters (temperature/top_p/top_k) are set anywhere in this file
+  // -- the request already used entirely default sampling before this
+  // change, so there was nothing incompatible to remove there.
+  const textBlock = message && Array.isArray(message.content)
+    ? message.content.find((block) => block && block.type === 'text' && typeof block.text === 'string')
+    : null;
+  const text = textBlock ? textBlock.text : undefined;
   if (!isNonEmptyString(text)) return { status: STATUS.MALFORMED_OUTPUT, fields: {} };
 
   let parsed;
@@ -184,4 +205,5 @@ module.exports = {
   sanitizeExtractedFields,
   buildUserMessage,
   FIELD_VALIDATORS,
+  ANTHROPIC_MODEL,
 };

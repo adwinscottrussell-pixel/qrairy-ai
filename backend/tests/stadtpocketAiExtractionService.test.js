@@ -7,10 +7,21 @@
 // Run: node tests/stadtpocketAiExtractionService.test.js
 // ============================================================
 const assert = require('assert/strict');
-const { extractBusinessFields, STATUS, sanitizeExtractedFields } = require('../src/services/stadtpocketAiExtractionService');
+const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL } = require('../src/services/stadtpocketAiExtractionService');
 
+// Real Anthropic responses carry a `type: 'text'` field on the text
+// content block -- matched exactly here (not just `{ text }`) since
+// extractBusinessFields() finds the text block by type, not position
+// (see that file's own comment on why: Claude Sonnet 5's default
+// adaptive thinking can add a preceding non-text block).
 function fakeClient(text) {
-  return { messages: { create: async () => ({ content: [{ text }] }) } };
+  return { messages: { create: async () => ({ content: [{ type: 'text', text }] }) } };
+}
+// Simulates a response where adaptive thinking produced a `thinking`
+// block BEFORE the real text block -- proves extraction finds the text
+// block by type regardless of its position in the array.
+function fakeClientWithThinkingBlock(text) {
+  return { messages: { create: async () => ({ content: [{ type: 'thinking', thinking: 'internal reasoning, never read by this code' }, { type: 'text', text }] }) } };
 }
 function fakeClientThrows() {
   return { messages: { create: async () => { throw new Error('simulated provider outage'); } } };
@@ -137,6 +148,64 @@ test('14. no API key AND no injected client -> provider-unavailable, provider ne
   const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x' });
   if (saved !== undefined) process.env.ANTHROPIC_API_KEY = saved;
   assert.equal(result.status, STATUS.PROVIDER_UNAVAILABLE);
+});
+
+// ── Phase 1E follow-up — Claude Sonnet 5 model migration ─────────
+// Captures the exact request object passed to messages.create() so the
+// tests below can assert on model/params directly, not just the
+// resulting extraction outcome.
+function fakeClientCapturing(text) {
+  const calls = [];
+  const client = {
+    messages: {
+      create: async (request) => {
+        calls.push(request);
+        return { content: [{ type: 'text', text }] };
+      },
+    },
+  };
+  return { client, calls };
+}
+
+test('15. the request uses claude-sonnet-5, matching the exported ANTHROPIC_MODEL constant', () => {
+  assert.equal(ANTHROPIC_MODEL, 'claude-sonnet-5');
+});
+
+test('16. the stale claude-sonnet-4-20250514 model ID is never sent', async () => {
+  const { client, calls } = fakeClientCapturing(JSON.stringify({ name: { value: 'x', confidence: 'high' } }));
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].model, 'claude-sonnet-5');
+  assert.notEqual(calls[0].model, 'claude-sonnet-4-20250514');
+});
+
+test('17. no incompatible non-default sampling parameters (temperature/top_p/top_k) are ever sent', async () => {
+  const { client, calls } = fakeClientCapturing(JSON.stringify({ name: { value: 'x', confidence: 'high' } }));
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal('temperature' in calls[0], false);
+  assert.equal('top_p' in calls[0], false);
+  assert.equal('top_k' in calls[0], false);
+});
+
+test('18. no thinking parameter is set -- the request relies on the model\'s own default behavior, nothing manually enabled here', async () => {
+  const { client, calls } = fakeClientCapturing(JSON.stringify({ name: { value: 'x', confidence: 'high' } }));
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal('thinking' in calls[0], false);
+});
+
+test('19. structured extraction still works when a preceding "thinking" content block is present (adaptive thinking response shape)', async () => {
+  const json = JSON.stringify({ name: { value: 'Bäckerei Betz', confidence: 'high' }, phone: { value: '0731 000000', confidence: 'medium' } });
+  const result = await extractBusinessFields({ businessName: 'Bäckerei Betz', websiteUrl: 'https://baeckerei-betz.com/', siteContent: 'x', anthropicClient: fakeClientWithThinkingBlock(json) });
+  assert.equal(result.status, STATUS.OK);
+  assert.equal(result.fields.name.value, 'Bäckerei Betz');
+  assert.equal(result.fields.phone.value, '0731 000000');
+});
+
+test('20. a response consisting ONLY of a thinking block (no text block at all) -> malformed-output, never throws', async () => {
+  const client = { messages: { create: async () => ({ content: [{ type: 'thinking', thinking: 'no text block follows' }] }) } };
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal(result.status, STATUS.MALFORMED_OUTPUT);
+  assert.deepEqual(result.fields, {});
 });
 
 // ── runner ──────────────────────────────────────────────────────
