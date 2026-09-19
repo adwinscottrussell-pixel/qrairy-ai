@@ -228,6 +228,42 @@
   .status-pill.archived { background: var(--surface-card-alt); color: var(--text-tertiary); }
   .status-pill.expired { background: var(--danger-soft); color: var(--danger); }
 
+  /* ── AI Business Onboarding (Phase 1C) ───────────────────────── */
+  .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+  @media (max-width: 640px) { .choice-grid { grid-template-columns: 1fr; } }
+  .choice-card { cursor: pointer; text-align: left; transition: border-color .15s ease, background .15s ease; }
+  .choice-card:hover { background: var(--surface-card-alt); border-color: var(--coral); }
+  .choice-card .choice-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+  .choice-card h3 { margin: 0 0 6px; font-size: 15px; color: var(--text-primary); }
+  .choice-card p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  .ai-loading-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 10px; }
+  .ai-loading-list li { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .ai-loading-list li .tick { color: var(--coral); font-weight: 700; }
+
+  /* Visual polish pass (founder review): tighter vertical rhythm than
+     the base .card default (18px padding / 14px margin-bottom) so a
+     review screen with several fields doesn't run unnecessarily long --
+     horizontal padding/width, colors, and typography all untouched. */
+  .field-review-card { padding: 14px 18px; margin-bottom: 10px; }
+  .field-review-card .field-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  /* The border-top makes the evidence row read as a distinct,
+     subordinate metadata strip below the editable value (hierarchy
+     request) rather than tightened spacing alone implying it's part of
+     the value itself -- uses the existing --border-soft token, no new
+     color introduced. */
+  .field-review-card .field-evidence { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border-soft); font-size: 12px; color: var(--text-tertiary); }
+  .field-review-card .field-evidence a { color: var(--coral); text-decoration: none; }
+  .field-review-card .field-evidence a:hover { text-decoration: underline; }
+  .field-review-card .confidence-tag { font-weight: 700; }
+  .field-review-card .confidence-tag.hoch { color: var(--success); }
+  .field-review-card .confidence-tag.mittel { color: var(--coral); }
+  .field-review-card .confidence-tag.niedrig { color: var(--text-tertiary); }
+
+  .image-candidate-box { position: relative; }
+  .image-candidate-label { position: absolute; top: 8px; left: 8px; background: rgba(10,15,30,0.82); color: var(--text-primary); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .duplicate-match-row { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
   .offer-step { display: none; }
   .offer-step.active { display: block; }
 
@@ -494,8 +530,46 @@
     <div id="businesses-banner"></div>
     <div id="businesses-list"></div>
     <div class="actions">
-      <button class="primary" onclick="openInitForCurrentCity()">+ Neues Geschäft</button>
+      <button class="primary" onclick="openAddBusinessChoice()">+ Neues Geschäft</button>
     </div>
+  </section>
+
+  <section class="page" id="page-add-choice">
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current">Neues Geschäft</span>
+    </nav>
+    <h1>Neues Geschäft</h1>
+    <p class="muted">Für <span id="choice-city-name"></span>. Wie möchten Sie dieses Geschäft anlegen?</p>
+    <div class="choice-grid">
+      <div class="card choice-card" onclick="openInitForCurrentCity()">
+        <span class="choice-icon">✎</span>
+        <h3>Manuell hinzufügen</h3>
+        <p>Alle Angaben selbst eintragen.</p>
+      </div>
+      <div class="card choice-card" onclick="openAiResearch()">
+        <span class="choice-icon">✨</span>
+        <h3>Mit KI hinzufügen</h3>
+        <p>StadtPocket recherchiert öffentlich verfügbare Informationen und bereitet sie zur Überprüfung vor.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-ai-research">
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="showPage('page-add-choice')">Neues Geschäft</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current">Mit KI hinzufügen</span>
+    </nav>
+    <h1>Unternehmen mit KI hinzufügen</h1>
+    <div id="ai-research-workspace"></div>
   </section>
 
   <section class="page" id="page-init">
@@ -932,6 +1006,7 @@
 
 <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/stadtpocket-admin-guard.js"></script>
+<script src="js/stadtpocket-ai-research.js"></script>
 <script>
   // ============================================================
   // stadtpocket-admin.html — StadtPocket Admin, Phase 6D.
@@ -1551,6 +1626,217 @@
     banner('publish-compare', 'success', '');
     showPage('page-editor');
     await renderCityList();
+  }
+
+  // ── AI Business Onboarding — "Mit KI hinzufügen" (Phase 1C) ────────
+  // Research + review UI only. Wires the existing Admin add-business
+  // flow to the real Phase 1B endpoint (POST .../research) using the
+  // exact same api()/currentLocationId scope every other manager call
+  // in this file already uses -- no separate auth path, no separate
+  // city-selection UI (currentLocationId is already fixed by which city
+  // the manager navigated into, exactly like the manual flow above).
+  // Never calls initializeDraft/saveDraft/publish: editing a field here
+  // only updates aiResearchState.editable, an in-memory object -- never
+  // sent anywhere in this phase. Pure label/confidence/hours-formatting
+  // helpers live in js/stadtpocket-ai-research.js (loaded above), kept
+  // out of this inline script specifically so they're unit-testable
+  // without a browser (see frontend/tests/stadtpocketAiResearch.test.js).
+  let aiResearchState = null;
+
+  function resetAiResearchState() {
+    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false };
+  }
+
+  function openAddBusinessChoice() {
+    const city = cities.find((c) => c.id === currentLocationId);
+    document.getElementById('choice-city-name').textContent = city ? city.name : currentLocationId;
+    showPage('page-add-choice');
+  }
+
+  function openAiResearch() {
+    resetAiResearchState();
+    showPage('page-ai-research');
+    renderAiResearchForm();
+  }
+
+  // Returns to the form with the previously-entered name/website still
+  // filled in (not a full reset) -- "Erneut recherchieren" is meant for
+  // adjusting and re-submitting, not starting over from nothing.
+  function retryAiResearch() {
+    aiResearchState.step = 'form';
+    aiResearchState.candidate = null;
+    renderAiResearchForm();
+  }
+
+  function renderAiResearchForm() {
+    const s = aiResearchState;
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">✨ KI-Recherche</span>
+        <p class="muted" style="margin-top:12px">StadtPocket recherchiert öffentlich verfügbare Unternehmensinformationen und bereitet sie zur Überprüfung vor. Nichts wird automatisch veröffentlicht.</p>
+        <label>Unternehmensname</label>
+        <input type="text" id="ai-business-name" value="${escapeHtml(s.businessName)}" placeholder="z. B. Café Brettle" />
+        <label>Website (optional)</label>
+        <input type="url" id="ai-website-url" value="${escapeHtml(s.websiteUrl)}" placeholder="https://www.beispiel.de/" />
+        <div id="ai-form-error"></div>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+          <button class="primary" type="button" id="ai-research-submit-btn" onclick="submitAiResearch()">Unternehmen recherchieren</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function submitAiResearch() {
+    const s = aiResearchState;
+    if (s.submitting) return; // prevent accidental repeated submissions while the request is running
+    s.businessName = document.getElementById('ai-business-name').value;
+    s.websiteUrl = document.getElementById('ai-website-url').value;
+
+    const validation = validateAiResearchInput(s.businessName, s.websiteUrl);
+    if (!validation.valid) {
+      banner('ai-form-error', 'error', validation.error);
+      return;
+    }
+
+    s.submitting = true;
+    const btn = document.getElementById('ai-research-submit-btn');
+    if (btn) btn.disabled = true;
+    s.step = 'loading';
+    renderAiResearchLoading();
+
+    const body = buildAiResearchRequestBody(s.businessName, s.websiteUrl);
+    // currentLocationId is the manager's own, already-authorized city --
+    // never a value this form lets the Admin choose or override.
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research`, { method: 'POST', body });
+    s.submitting = false;
+
+    if (!res.ok) {
+      s.step = 'form';
+      renderAiResearchForm();
+      banner('ai-form-error', 'error', (res.body && res.body.error) || 'Fehler bei der Recherche.');
+      return;
+    }
+
+    s.candidate = res.body.candidate;
+    s.editable = extractEditableFieldsFromCandidate(s.candidate);
+    s.step = 'review';
+    renderAiResearchReview();
+  }
+
+  function renderAiResearchLoading() {
+    // Honest, static loading state -- these are the categories the
+    // pipeline checks, not a live per-item progress signal the backend
+    // does not actually expose (Phase 1B returns one result at the end,
+    // never incremental stage updates).
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">✨ KI-Recherche läuft…</span>
+        <p class="muted" style="margin-top:12px">Dies kann einen Moment dauern.</p>
+        <p style="margin:14px 0 0;font-weight:700;font-size:13px;color:var(--text-primary)">Wir prüfen:</p>
+        <ul class="ai-loading-list">
+          <li><span class="tick">✓</span> Unternehmensinformationen</li>
+          <li><span class="tick">✓</span> Website</li>
+          <li><span class="tick">✓</span> Kontaktdaten</li>
+          <li><span class="tick">✓</span> Öffnungszeiten</li>
+          <li><span class="tick">✓</span> mögliche Duplikate</li>
+        </ul>
+      </div>
+    `;
+  }
+
+  function renderAiFieldCard(key, label, fieldData) {
+    const editableId = `ai-field-${key}`;
+    const confidenceLabel = translateConfidence(fieldData.confidence);
+    const confidenceClass = confidenceLabel.toLowerCase();
+    const currentValue = aiResearchState.editable[key] || '';
+    const isMultiline = key === 'longDescription' || key === 'hours';
+    const inputHtml = isMultiline
+      ? `<textarea id="${editableId}" oninput="onAiFieldInput('${key}', this.value)">${escapeHtml(currentValue)}</textarea>`
+      : `<input type="text" id="${editableId}" value="${escapeHtml(currentValue)}" oninput="onAiFieldInput('${key}', this.value)" />`;
+    const evidenceHtml = fieldData.source ? `
+      <div class="field-evidence">
+        <span>Quelle: ${escapeHtml(fieldData.source)}</span>
+        <span class="confidence-tag ${confidenceClass}">Vertrauen: ${confidenceLabel}</span>
+        ${fieldData.sourceUrl ? `<a href="${escapeHtml(fieldData.sourceUrl)}" target="_blank" rel="noopener noreferrer">Quelle ansehen ↗</a>` : ''}
+      </div>
+    ` : '';
+    return `
+      <div class="card field-review-card">
+        <div class="field-label">${escapeHtml(label)}</div>
+        ${inputHtml}
+        ${evidenceHtml}
+      </div>
+    `;
+  }
+
+  // In-memory only -- see this section's own header comment. Never
+  // calls api()/saveDraft; Phase 1D is the first phase allowed to
+  // persist any of this.
+  function onAiFieldInput(key, value) {
+    aiResearchState.editable[key] = value;
+  }
+
+  function renderDuplicateMatches(matches) {
+    return `
+      <div style="margin-top:10px">
+        ${matches.map((m) => `
+          <div class="duplicate-match-row">${escapeHtml(m.name)} — ${escapeHtml((m.matchedOn || []).join(', '))}</div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderAiResearchReview() {
+    const s = aiResearchState;
+    const c = s.candidate;
+    const fields = c.fields || {};
+    const name = (fields.name && fields.name.value) || s.businessName || '(ohne Namen)';
+    const address = (fields.address && fields.address.value) || '';
+
+    const statusMessage = getResearchStatusMessage(c.researchStatus);
+    const duplicateStatus = c.duplicate ? c.duplicate.status : 'POSSIBLE_MATCH';
+    const dupUi = getDuplicateStatusUI(duplicateStatus);
+    const blocked = isDuplicateBlocking(duplicateStatus);
+
+    const presentFields = AI_FIELD_DISPLAY_ORDER.filter(([key]) => key in fields);
+    const fieldCardsHtml = presentFields.map(([key, label]) => renderAiFieldCard(key, label, fields[key])).join('');
+
+    const imageCandidateHtml = c.headerImageCandidate ? `
+      <div class="card">
+        <h2 style="margin-top:0">Bildvorschlag</h2>
+        <div class="header-image-preview image-candidate-box">
+          <img src="${escapeHtml(c.headerImageCandidate.value.url)}" alt=""
+            onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar'; " />
+          <span class="image-candidate-label">Nur Vorschlag</span>
+        </div>
+        <p class="muted" style="margin-top:10px">Dieses Bild wurde auf einer öffentlichen Quelle gefunden. Es wurde noch nicht als StadtPocket-Bild übernommen.</p>
+      </div>
+    ` : '';
+
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <h1 style="margin:0 0 4px">${escapeHtml(name)}</h1>
+        ${address ? `<p class="muted" style="margin:0">${escapeHtml(address)}</p>` : '<p class="muted" style="margin:0">Recherche abgeschlossen</p>'}
+      </div>
+
+      <div class="card">
+        <div class="banner ${dupUi.type}" style="margin:0">${escapeHtml(dupUi.message)}</div>
+        ${(c.duplicate && c.duplicate.matches && c.duplicate.matches.length) ? renderDuplicateMatches(c.duplicate.matches) : ''}
+      </div>
+
+      ${statusMessage ? `<div class="banner info">${escapeHtml(statusMessage)}</div>` : ''}
+
+      ${presentFields.length ? fieldCardsHtml : '<div class="empty-state">Keine verwertbaren Informationen gefunden.</div>'}
+
+      ${imageCandidateHtml}
+
+      <div class="actions">
+        <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+        <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
+        <button class="primary" type="button" disabled title="${blocked ? 'Aufgrund eines möglichen Duplikats derzeit nicht verfügbar' : 'Nächster Schritt'}">Als Entwurf erstellen (bald verfügbar)</button>
+      </div>
+    `;
   }
 
   // ── Editor ────────────────────────────────────────────────────────
