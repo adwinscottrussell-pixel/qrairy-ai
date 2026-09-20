@@ -32,6 +32,9 @@ let cityName; // Phase 1G -- backs mockPrisma.location.findUnique
 // under test already holds, just changing what it does.
 let webShouldHang = false;
 let aiShouldHang = false;
+// Phase 1G.3 -- set the moment the `signal` given to the hanging mock
+// actually fires 'abort', or stays null if it never does.
+let extractionAbortedAt = null;
 
 function resetFixtures() {
   listingLocationRows = [];
@@ -39,6 +42,7 @@ function resetFixtures() {
   aiResult = { status: 'ok', fields: { name: { value: 'Café Brettle', confidence: 'high' }, phone: { value: '0731 000000', confidence: 'high' } } };
   webShouldHang = false;
   aiShouldHang = false;
+  extractionAbortedAt = null;
   cityName = 'Ulm';
 }
 resetFixtures();
@@ -67,7 +71,19 @@ require.cache[aiExtractionPath] = {
     STATUS: { OK: 'ok', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNAVAILABLE: 'unavailable', MALFORMED_OUTPUT: 'malformed-output' },
     extractBusinessFields: (args) => {
       lastExtractionArgs = args;
-      return aiShouldHang ? new Promise(() => {}) : Promise.resolve(aiResult);
+      if (!aiShouldHang) return Promise.resolve(aiResult);
+      // Hanging mode never resolves on its own, but -- exactly like the
+      // REAL extractBusinessFields resolving safely once its signal is
+      // aborted -- reacts to the passed signal instead of hanging
+      // forever once it is actually cancelled.
+      return new Promise((resolve) => {
+        if (args && args.signal) {
+          args.signal.addEventListener('abort', () => {
+            extractionAbortedAt = Date.now();
+            resolve({ status: 'unavailable', fields: {} });
+          });
+        }
+      });
     },
   },
 };
@@ -301,6 +317,72 @@ test('23. a normal, fast research call is completely unaffected by the deadline 
   resetFixtures();
   const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
   assert.equal(candidate.researchStatus, RESEARCH_STATUS.OK);
+});
+
+// ── PHASE 1G.3 — real cancellation on deadline expiry ────────────
+// Real Bäckerei Betz staging failure: the deadline previously only
+// stopped researchBusiness()'s own wait, leaving the real Anthropic
+// call running orphaned for ~16.5s after the Admin had already
+// received provider-unavailable. These tests prove the fix at the
+// orchestration level: a real AbortController is created, its signal
+// reaches extractBusinessFields, and deadline expiry actually aborts
+// it -- using the mock's own abort-reactive hanging behavior (see
+// aiExtractionPath's mock above) as proof, not merely that
+// researchBusiness() itself returns in time (already covered by
+// test 20).
+test('24a. extractBusinessFields always receives a signal (an AbortSignal) when a website is researched, even on a normal fast completion', async () => {
+  resetFixtures();
+  lastExtractionArgs = null;
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.ok(lastExtractionArgs.signal, 'expected a signal to be passed');
+  assert.equal(typeof lastExtractionArgs.signal.addEventListener, 'function', 'expected an AbortSignal-shaped object');
+});
+
+test('24b. a successful extraction that finishes before the deadline is never aborted', async () => {
+  resetFixtures();
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(lastExtractionArgs.signal.aborted, false);
+  assert.equal(extractionAbortedAt, null, 'the extraction mock must never have seen an abort for a fast, successful call');
+});
+
+test('24c. deadline expiry actually calls AbortController.abort() -- the signal reaching extractBusinessFields fires, proven by the mock reacting to it (not merely researchBusiness() timing out on its own)', async () => {
+  resetFixtures();
+  aiShouldHang = true;
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' }, { deadlineMs: 30 });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.PROVIDER_UNAVAILABLE);
+  assert.ok(extractionAbortedAt !== null, 'expected the signal passed to extractBusinessFields to have actually fired abort');
+  assert.ok(lastExtractionArgs.signal.aborted, 'the signal object itself must report aborted:true');
+});
+
+test('24d. the (now-cancelled) provider request resolves into the existing safe UNAVAILABLE shape rather than hanging forever or rejecting -- no orphaned promise, no unhandled rejection', async () => {
+  resetFixtures();
+  aiShouldHang = true;
+  // Await all the way through -- if the mock's hanging promise never
+  // settled (i.e. cancellation never reached it), this test would hang
+  // and time out the whole suite, which is itself a meaningful proof.
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' }, { deadlineMs: 30 });
+  assert.ok(extractionAbortedAt !== null);
+});
+
+test('24e. the AbortController is never fired on a candidate that never has a website at all (no-source path) -- abort() only ever applies to a genuinely in-flight provider call', async () => {
+  resetFixtures();
+  lastExtractionArgs = null;
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { businessName: 'Nur ein Name' });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.NO_SOURCE);
+  assert.equal(lastExtractionArgs, null, 'extraction is never even attempted without a website, so there is nothing to abort');
+});
+
+test('24f. two independent back-to-back requests each get their OWN AbortController -- a deadline/abort on one never affects the other', async () => {
+  resetFixtures();
+  aiShouldHang = true;
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://slow.example.com' }, { deadlineMs: 30 });
+  const firstAbortedAt = extractionAbortedAt;
+  assert.ok(firstAbortedAt !== null);
+
+  resetFixtures(); // fresh signal/state for the second, normal-speed call
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.OK);
+  assert.equal(lastExtractionArgs.signal.aborted, false, 'the second, independent request\'s own signal must never be pre-aborted by the first request\'s cancellation');
 });
 
 // ── PHASE 1G — multi-location detection ─────────────────────────

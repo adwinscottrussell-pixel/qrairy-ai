@@ -42,13 +42,29 @@ class StadtpocketResearchError extends Error {
 // Overall deadline for the external-provider portion (website fetch +
 // AI extraction) of one research request -- a second, independent
 // backstop on top of Firecrawl's own 15s AbortSignal timeout and
-// Anthropic's own 20s SDK timeout (neither of those two is changed
-// here). Exists specifically to guarantee the HTTP response always
-// returns even if some step turns out not to be bounded the way it's
-// expected to be (see stadtpocketResearchUrlSafety.js's own DNS-lookup
-// timeout, added for the same reason) -- generous enough to comfortably
-// fit both real provider timeouts plus DNS/overhead in the normal case.
-const OVERALL_RESEARCH_DEADLINE_MS = 45000;
+// Anthropic's own per-attempt SDK timeout (stadtpocketAiExtractionService.js's
+// ANTHROPIC_TIMEOUT_MS). Exists specifically to guarantee the HTTP
+// response always returns even if some step turns out not to be
+// bounded the way it's expected to be (see
+// stadtpocketResearchUrlSafety.js's own DNS-lookup timeout, added for
+// the same reason).
+//
+// Phase 1G.3 -- raised from 45000 alongside ANTHROPIC_TIMEOUT_MS's own
+// increase to 60000 (see that constant's comment for the full real-
+// staging-failure reasoning): the old 45s no longer comfortably fits a
+// single legitimate 60s Anthropic attempt. 70000 = 60000 (the new
+// single-attempt Anthropic ceiling; Phase 1G.3 also set the SDK's own
+// maxRetries to 0, so this is now genuinely the ceiling, not a
+// multiplied one) + ~10000 coordination margin for Firecrawl/DNS/
+// overhead in the normal case -- an initial, deliberately bounded value
+// for real-world validation, not claimed as permanently tuned.
+//
+// Also as of Phase 1G.3, this deadline is no longer purely advisory:
+// when it wins the race below, researchBusiness() actively cancels the
+// still-running Anthropic call via an AbortController rather than only
+// abandoning its own wait for it -- see runWebAndExtraction's `signal`
+// parameter and researchBusiness's own call site.
+const OVERALL_RESEARCH_DEADLINE_MS = 70000;
 const DEADLINE_EXCEEDED = Symbol('deadline-exceeded');
 
 // Minimal, structured stage logging -- concise enough to distinguish
@@ -272,7 +288,18 @@ function validateRequest(body) {
 // against the overall deadline below without that deadline also
 // covering the (fast, DB-only, never-hangs) duplicate check, which
 // should always run regardless of how the provider portion turned out.
-async function runWebAndExtraction(requestId, businessName, websiteUrl, cityContext) {
+//
+// `signal` (Phase 1G.3) is forwarded to extractBusinessFields, which
+// forwards it again to the Anthropic SDK call itself -- see that
+// file's own header comment on its `signal` parameter. Firecrawl is
+// deliberately NOT wired to this same signal: it already has its own
+// independent, always-effective AbortSignal.timeout() per page (see
+// stadtpocketWebResearchService.js), and typically finishes in a few
+// seconds (confirmed on the real Bäckerei Betz staging request: 2.2s
+// for 5 pages) -- the real, evidenced problem this phase fixes is
+// specifically the Anthropic call being left running unbounded after
+// the deadline, not Firecrawl.
+async function runWebAndExtraction(requestId, businessName, websiteUrl, cityContext, signal) {
   const webStart = Date.now();
   const webResult = await fetchBusinessWebsiteResearch(websiteUrl);
   logStage(requestId, 'firecrawl', { status: webResult.status, durationMs: Date.now() - webStart, pages: (webResult.pageUrls || []).length });
@@ -282,7 +309,7 @@ async function runWebAndExtraction(requestId, businessName, websiteUrl, cityCont
   }
 
   const aiStart = Date.now();
-  const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content, cityContext });
+  const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content, cityContext, signal });
   logStage(requestId, 'anthropic', { status: extraction.status, durationMs: Date.now() - aiStart });
 
   if (extraction.status === AI_STATUS.OK) {
@@ -332,16 +359,37 @@ async function researchBusiness(locationId, scope, body, options = {}) {
 
   if (websiteUrl) {
     const urlSafetyStart = Date.now();
-    const outcome = await raceWithDeadline(runWebAndExtraction(requestId, businessName, websiteUrl, cityContext), deadlineMs);
+    // Phase 1G.3 -- real cancellation. A real deployed Bäckerei Betz
+    // request proved the deadline previously only stopped OUR wait: the
+    // Anthropic call kept running for ~16.5s after the Admin had
+    // already received provider-unavailable (the SDK's own default
+    // maxRetries=2 turned one 20s timeout into ~61.5s of orphaned
+    // work -- see stadtpocketAiExtractionService.js's own
+    // ANTHROPIC_TIMEOUT_MS/ANTHROPIC_MAX_RETRIES comments for the full
+    // diagnosis). This controller's signal is threaded through
+    // runWebAndExtraction -> extractBusinessFields ->
+    // client.messages.create(params, { signal }) -- the SDK's own
+    // documented per-request cancellation option -- so aborting it here
+    // actually tears down the in-flight HTTP request, not just this
+    // function's own await.
+    const controller = new AbortController();
+    const outcome = await raceWithDeadline(runWebAndExtraction(requestId, businessName, websiteUrl, cityContext, controller.signal), deadlineMs);
     if (outcome === DEADLINE_EXCEEDED) {
-      // The provider portion is still running in the background (this
-      // does not, and cannot, forcibly cancel it -- Firecrawl's own
-      // 15s AbortSignal and Anthropic's own 20s SDK timeout will still
-      // conclude it on their own). This only guarantees OUR response
-      // doesn't wait for that any longer. Reuses the existing
-      // provider-unavailable public status -- no new public-contract
-      // value, per Phase 1E's own instruction -- with a distinct
-      // internal log tag for diagnosis.
+      // Only reached when the deadline actually won the race -- a
+      // normal completion never calls abort() at all, so a fast,
+      // successful request is never affected by this. Reuses the
+      // existing provider-unavailable public status -- no new public-
+      // contract value, per Phase 1E's own instruction -- with a
+      // distinct internal log tag for diagnosis. The now-cancelled
+      // extractBusinessFields() call resolves (never throws) into its
+      // own existing STATUS.UNAVAILABLE path once the abort reaches it
+      // -- exactly the same safe shape a genuine provider timeout
+      // already produced, so there is nothing new to catch here and no
+      // unhandled rejection risk: that orphaned promise is simply never
+      // awaited again, and it was never going to reject in the first
+      // place (extractBusinessFields catches its own errors, including
+      // an abort, and returns a status object).
+      controller.abort();
       logStage(requestId, 'deadline-exceeded', { afterMs: Date.now() - urlSafetyStart });
       researchStatus = RESEARCH_STATUS.PROVIDER_UNAVAILABLE;
     } else {

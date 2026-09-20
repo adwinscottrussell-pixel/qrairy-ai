@@ -60,7 +60,39 @@ function looksLikeUselessImageCandidate(url) {
 // failure. claude-sonnet-5 is the current model ID per Anthropic's
 // documentation.
 const ANTHROPIC_MODEL = 'claude-sonnet-5';
-const ANTHROPIC_TIMEOUT_MS = 20000;
+
+// Phase 1G.3 -- raised from 20000 after a real deployed Bäckerei Betz
+// request (2026-09-20, staging) proved the old value was never enough
+// for a genuine large multi-location generation: the request timed out
+// on its FIRST attempt, then (because the SDK's own default
+// maxRetries=2 was never overridden) retried twice more, each also
+// timing out at 20s, for an observed total of ~61.5s before finally
+// throwing -- and no attempt ever returned a real response to measure
+// actual generation time against. 60000 is a deliberately bounded
+// initial value for real-world validation (not claimed as a
+// permanently-tuned number) giving one attempt genuine room to finish
+// an 8000-token generation. See ANTHROPIC_MAX_RETRIES just below for
+// the other half of this fix -- without also eliminating retries, a
+// single generous timeout would only make the old 3x-multiplication
+// problem worse (up to 3 x 60s), not fix it.
+const ANTHROPIC_TIMEOUT_MS = 60000;
+
+// Phase 1G.3 -- the @anthropic-ai/sdk's own default (confirmed directly
+// from the installed package, not assumed: core.js's APIClient
+// constructor defaults `maxRetries = 2`) retries a request on timeout,
+// re-running the ENTIRE generation from scratch each time. For a
+// request that is slow because it is legitimately generating a large
+// multi-location response -- not because of a transient network blip
+// or a 5xx the retry logic exists for -- a retry just re-pays the same
+// cost and wait for no benefit, and is exactly what turned one 20s
+// timeout into an observed ~61.5s of orphaned work. This research
+// pipeline already has its own outer safety net
+// (stadtpocketResearchService.js's OVERALL_RESEARCH_DEADLINE_MS,
+// enforced with real cancellation as of this same phase -- see that
+// file), so a second, SDK-level retry layer underneath it is not
+// needed and actively works against predictable timing. One controlled
+// attempt only.
+const ANTHROPIC_MAX_RETRIES = 0;
 
 // Phase 1G.2 -- raised from 1500 (Phase 1B's original value, calibrated
 // for a single-location business's handful of fields) after a real
@@ -284,26 +316,53 @@ function sanitizeExtractedFields(raw) {
  * messages.create(...)) purely for testing -- defaults to a real
  * @anthropic-ai/sdk client constructed lazily so importing this module
  * never requires an API key to exist.
+ *
+ * `signal` (Phase 1G.3) is an optional AbortSignal, forwarded verbatim
+ * as `client.messages.create(params, { signal })` -- the SDK's own
+ * documented per-request option (Core.RequestOptions.signal, confirmed
+ * against the installed package), not a bespoke mechanism. Lets the
+ * caller (stadtpocketResearchService.js) actually cancel this specific
+ * in-flight call the moment its own overall deadline fires, instead of
+ * merely stopping its own wait and leaving the real provider call
+ * running orphaned in the background (the exact gap the real Bäckerei
+ * Betz staging test exposed -- see this file's own ANTHROPIC_TIMEOUT_MS
+ * comment). Never required: omitting it (e.g. every existing test)
+ * behaves exactly as before, an ordinary uncancellable call.
  */
-async function extractBusinessFields({ businessName, websiteUrl, siteContent, cityContext, anthropicClient } = {}) {
+async function extractBusinessFields({ businessName, websiteUrl, siteContent, cityContext, anthropicClient, signal } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicClient && !apiKey) return { status: STATUS.PROVIDER_UNAVAILABLE, fields: {} };
 
   const client = anthropicClient || (() => {
     const Anthropic = require('@anthropic-ai/sdk');
-    return new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS });
+    return new Anthropic({ apiKey, timeout: ANTHROPIC_TIMEOUT_MS, maxRetries: ANTHROPIC_MAX_RETRIES });
   })();
 
   let message;
   try {
-    message = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: ANTHROPIC_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: buildUserMessage(businessName, websiteUrl, siteContent, cityContext) }],
-    });
+    message = await client.messages.create(
+      {
+        model: ANTHROPIC_MODEL,
+        max_tokens: ANTHROPIC_MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildUserMessage(businessName, websiteUrl, siteContent, cityContext) }],
+      },
+      signal ? { signal } : undefined
+    );
   } catch (err) {
-    console.error('[stadtpocketAiExtractionService] provider call failed:', err.message);
+    // Phase 1G.3 -- distinguishes, in the logs only (never in the
+    // German message the Admin sees, which stays exactly what it was),
+    // an external cancellation (the overall research deadline firing;
+    // see stadtpocketResearchService.js) from a genuine provider
+    // timeout/outage -- both still resolve to the same safe
+    // STATUS.UNAVAILABLE below either way. err.constructor.name is used
+    // rather than err.message text matching -- none of this SDK's error
+    // classes override the inherited generic `.name`, but the concrete
+    // constructor (e.g. "APIUserAbortError" for our own abort() call,
+    // "APIConnectionTimeoutError" for the SDK's own per-attempt
+    // timeout) reliably identifies which one occurred.
+    const cause = (err && err.constructor && err.constructor.name) || 'UnknownError';
+    console.error(`[stadtpocketAiExtractionService] provider call failed: ${err.message} (${cause})`);
     return { status: STATUS.UNAVAILABLE, fields: {} };
   }
 
@@ -375,6 +434,8 @@ module.exports = {
   FIELD_VALIDATORS,
   ANTHROPIC_MODEL,
   ANTHROPIC_MAX_TOKENS,
+  ANTHROPIC_TIMEOUT_MS,
+  ANTHROPIC_MAX_RETRIES,
   looksLikeUselessImageCandidate,
   MAX_LOCATION_CANDIDATES,
 };

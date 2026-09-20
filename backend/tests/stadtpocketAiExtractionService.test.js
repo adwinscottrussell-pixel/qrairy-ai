@@ -7,7 +7,7 @@
 // Run: node tests/stadtpocketAiExtractionService.test.js
 // ============================================================
 const assert = require('assert/strict');
-const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL, ANTHROPIC_MAX_TOKENS, buildUserMessage, looksLikeUselessImageCandidate, MAX_LOCATION_CANDIDATES } = require('../src/services/stadtpocketAiExtractionService');
+const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL, ANTHROPIC_MAX_TOKENS, ANTHROPIC_TIMEOUT_MS, ANTHROPIC_MAX_RETRIES, buildUserMessage, looksLikeUselessImageCandidate, MAX_LOCATION_CANDIDATES } = require('../src/services/stadtpocketAiExtractionService');
 
 // Real Anthropic responses carry a `type: 'text'` field on the text
 // content block -- matched exactly here (not just `{ text }`) since
@@ -402,6 +402,152 @@ test('36. the new diagnostic log line never includes the scraped website content
   assert.ok(!diagnosticLine.includes(secretEvidence), 'scraped evidence must never appear in diagnostic logs');
   assert.ok(!diagnosticLine.includes(generatedJsonMarker), 'the model\'s generated JSON/business data must never appear in diagnostic logs');
   assert.ok(diagnosticLine.includes('stopReason=') && diagnosticLine.includes('blockTypes=') && diagnosticLine.includes('hasText=') && diagnosticLine.includes('textLength='), 'expected only structural metadata fields');
+});
+
+// ── PHASE 1G.3 — Anthropic timeout/retry/cancellation fix ────────
+// Real Bäckerei Betz staging failure: the SDK's own default
+// maxRetries=2 turned one 20s per-attempt timeout into ~61.5s of
+// orphaned work, and the overall deadline never actually cancelled the
+// in-flight call. These tests prove the real client construction
+// (maxRetries: 0, the new 60000ms timeout) and the new `signal`
+// plumbing, using a mocked @anthropic-ai/sdk module (require.cache
+// pre-seeding, same convention as this repo's Prisma/Clerk mocks) so
+// the REAL, non-injected construction path -- new Anthropic({...}) --
+// is exercised directly, not just the injectable-client shortcut every
+// other test in this file uses.
+const anthropicSdkPath = require.resolve('@anthropic-ai/sdk');
+let capturedConstructorOptions = null;
+function installMockAnthropicSdk(responseText) {
+  class MockAnthropic {
+    constructor(opts) {
+      capturedConstructorOptions = opts;
+      this.messages = {
+        create: async (request, options) => {
+          if (options && options.signal && options.signal.aborted) {
+            throw new APIUserAbortError();
+          }
+          return { content: [{ type: 'text', text: responseText }] };
+        },
+      };
+    }
+  }
+  require.cache[anthropicSdkPath] = { id: anthropicSdkPath, filename: anthropicSdkPath, loaded: true, exports: MockAnthropic };
+}
+function uninstallMockAnthropicSdk() {
+  delete require.cache[anthropicSdkPath];
+}
+// Named exactly like the real SDK's error class (error.js's
+// APIUserAbortError) purely so err.constructor.name matches what the
+// real SDK would produce -- this file's own diagnostic logging reads
+// that field to distinguish an abort from a generic provider failure.
+class APIUserAbortError extends Error {
+  constructor(message) { super(message || 'Request was aborted.'); }
+}
+
+test('37. ANTHROPIC_MAX_RETRIES is 0 -- one controlled attempt, no SDK-level retry multiplication', () => {
+  assert.equal(ANTHROPIC_MAX_RETRIES, 0);
+});
+
+test('38. ANTHROPIC_TIMEOUT_MS is raised to 60000 (from the old, too-small 20000)', () => {
+  assert.equal(ANTHROPIC_TIMEOUT_MS, 60000);
+  assert.ok(ANTHROPIC_TIMEOUT_MS > 20000);
+});
+
+test('39. ANTHROPIC_MAX_TOKENS remains 8000 -- this phase only touches timeout/retry/cancellation', () => {
+  assert.equal(ANTHROPIC_MAX_TOKENS, 8000);
+});
+
+test('40. the real (non-injected) client construction passes maxRetries:0 and timeout:60000 to the Anthropic SDK', async () => {
+  const savedKey = process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  capturedConstructorOptions = null;
+  installMockAnthropicSdk(JSON.stringify({ name: { value: 'x', confidence: 'high' } }));
+  try {
+    const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x' }); // no anthropicClient injected -- exercises the real lazy construction
+    assert.equal(result.status, STATUS.OK);
+    assert.equal(capturedConstructorOptions.maxRetries, 0);
+    assert.equal(capturedConstructorOptions.timeout, 60000);
+  } finally {
+    uninstallMockAnthropicSdk();
+    if (savedKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = savedKey;
+  }
+});
+
+test('41. a provided AbortSignal is forwarded to client.messages.create() as the second-argument options.signal', async () => {
+  let capturedOptions = null;
+  const client = {
+    messages: {
+      create: async (request, options) => {
+        capturedOptions = options;
+        return { content: [{ type: 'text', text: '{}' }] };
+      },
+    },
+  };
+  const controller = new AbortController();
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client, signal: controller.signal });
+  assert.equal(capturedOptions.signal, controller.signal);
+});
+
+test('42. no signal provided -- messages.create() is still called normally, options omitted (existing behavior unchanged for every other test in this file)', async () => {
+  let callArgs = null;
+  const client = { messages: { create: async (...args) => { callArgs = args; return { content: [{ type: 'text', text: '{}' }] }; } } };
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal(callArgs.length, 2);
+  assert.equal(callArgs[1], undefined);
+});
+
+test('43. an already-aborted signal causes the provider call to fail safely (STATUS.UNAVAILABLE), never throwing out of extractBusinessFields', async () => {
+  const client = {
+    messages: {
+      create: async (request, options) => {
+        if (options && options.signal && options.signal.aborted) {
+          throw new APIUserAbortError();
+        }
+        return { content: [{ type: 'text', text: '{}' }] };
+      },
+    },
+  };
+  const controller = new AbortController();
+  controller.abort();
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client, signal: controller.signal });
+  assert.equal(result.status, STATUS.UNAVAILABLE);
+  assert.deepEqual(result.fields, {});
+});
+
+test('44. an abort mid-flight (signal aborts after the call starts) is caught the same safe way, no unhandled rejection', async () => {
+  const controller = new AbortController();
+  const client = {
+    messages: {
+      create: (request, options) => new Promise((resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          reject(new APIUserAbortError());
+        });
+      }),
+    },
+  };
+  const promise = extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client, signal: controller.signal });
+  controller.abort();
+  const result = await promise;
+  assert.equal(result.status, STATUS.UNAVAILABLE);
+});
+
+test('45. the diagnostic error log distinguishes an abort from a generic provider failure, without ever changing the returned status shape', async () => {
+  const originalError = console.error;
+  const loggedLines = [];
+  console.error = (...args) => { loggedLines.push(args.join(' ')); };
+  const client = {
+    messages: {
+      create: async () => {
+        throw new APIUserAbortError();
+      },
+    },
+  };
+  try {
+    await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  } finally {
+    console.error = originalError;
+  }
+  assert.ok(loggedLines.some((l) => l.includes('APIUserAbortError')));
 });
 
 // ── Phase 1G — image-candidate junk filtering ───────────────────
