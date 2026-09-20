@@ -427,6 +427,171 @@ async function initializeDraft(locationId, scope, body) {
   });
 }
 
+// ── Create / initialize — MULTI-LOCATION (Phase 1G.1) ──────────────
+// Companion to initializeDraft() above for the one case that function
+// cannot express: ONE business/brand with MORE THAN ONE physical
+// storefront known up front (e.g. AI research verifying several real
+// branches of the same chain in one city -- the real Bäckerei Betz has
+// 8 in Ulm). Creates exactly ONE StadtPocketListing plus N
+// StadtPocketListingLocation rows, all inside ONE transaction -- never
+// N separate listings. This matters concretely: stadtpocketPublicService.js's
+// listCityBusinesses() shows one card per LISTING, not per storefront
+// (see that file's own header comment) -- N listings would wrongly
+// appear as N separate businesses in the public city directory, exactly
+// the outcome this function exists to prevent. A single-location
+// business keeps using initializeDraft() above, completely unchanged;
+// this function is never called for that case (the caller -- see
+// stadtpocketAiDraftService.js -- only calls this when 2+ verified
+// locations exist).
+//
+// No schema change / migration was needed for this: StadtPocketListing
+// already declares `locations StadtPocketListingLocation[]`, and that
+// model's own header comment already anticipated "a single brand may
+// have multiple physical storefronts in the SAME city" -- this function
+// is new orchestration over an already-correct schema, not new schema.
+//
+// body: { listing: { name, category, shortDescription, subCategory?,
+// tags?, longDescription? }, locations: [{ address, phone?, website?,
+// hours?, latitude?, longitude? }, ... ] } (at least 2 entries).
+// Optional listing fields go straight into the new listing's draftData
+// (never the live columns -- same isolation model as saveDraft, see
+// this file's own header comment), so nothing is ever publicly visible
+// until an explicit publish, exactly like the single-location path.
+const MAX_LOCATIONS_PER_DRAFT = 50; // matches stadtpocketAiExtractionService.js's own MAX_LOCATION_CANDIDATES ceiling -- a defensive request-size bound, not a product decision about how many locations a real business may have.
+const OPTIONAL_LISTING_FIELDS_AT_CREATE = ['subCategory', 'tags', 'longDescription'];
+const LOCATION_ENTRY_FIELDS = ['address', 'latitude', 'longitude', 'phone', 'website', 'hours'];
+
+function validateMultiLocationListingFields(listingSrc) {
+  const required = ['name', 'category', 'shortDescription'];
+  const missing = required.filter((f) => typeof listingSrc[f] !== 'string' || !listingSrc[f].trim());
+  if (missing.length) {
+    throw new StadtpocketManagerError(`Missing required listing field(s): ${missing.join(', ')}.`);
+  }
+  const allowed = [...required, ...OPTIONAL_LISTING_FIELDS_AT_CREATE];
+  const extra = Object.keys(listingSrc).filter((k) => !allowed.includes(k));
+  if (extra.length) {
+    throw new StadtpocketManagerError(`Unexpected listing field(s): ${extra.join(', ')}.`);
+  }
+
+  const draft = {};
+  if ('subCategory' in listingSrc) {
+    if (typeof listingSrc.subCategory !== 'string' || !listingSrc.subCategory.trim()) {
+      throw new StadtpocketManagerError('subCategory must be a non-empty string.');
+    }
+    draft.subCategory = listingSrc.subCategory.trim();
+  }
+  if ('tags' in listingSrc) {
+    if (!Array.isArray(listingSrc.tags) || listingSrc.tags.some((t) => typeof t !== 'string' || !t.trim())) {
+      throw new StadtpocketManagerError('tags must be an array of non-empty strings.');
+    }
+    draft.tags = listingSrc.tags.map((t) => t.trim());
+  }
+  if ('longDescription' in listingSrc) {
+    if (typeof listingSrc.longDescription !== 'string' || !listingSrc.longDescription.trim()) {
+      throw new StadtpocketManagerError('longDescription must be a non-empty string.');
+    }
+    draft.longDescription = listingSrc.longDescription.trim();
+  }
+  return draft;
+}
+
+function validateMultiLocationEntries(rawLocations) {
+  if (!Array.isArray(rawLocations) || rawLocations.length < 2) {
+    throw new StadtpocketManagerError('locations must be an array of at least 2 entries -- use initializeDraft for a single-location business.');
+  }
+  if (rawLocations.length > MAX_LOCATIONS_PER_DRAFT) {
+    throw new StadtpocketManagerError(`Too many locations in one request (max ${MAX_LOCATIONS_PER_DRAFT}).`);
+  }
+  return rawLocations.map((loc, i) => {
+    const l = loc || {};
+    if (typeof l.address !== 'string' || !l.address.trim()) {
+      throw new StadtpocketManagerError(`Location ${i + 1}: address is required.`);
+    }
+    const extra = Object.keys(l).filter((k) => !LOCATION_ENTRY_FIELDS.includes(k));
+    if (extra.length) {
+      throw new StadtpocketManagerError(`Location ${i + 1}: unexpected field(s): ${extra.join(', ')}.`);
+    }
+    const cleaned = { address: l.address.trim() };
+    if (l.phone !== undefined) {
+      if (typeof l.phone !== 'string' || !l.phone.trim()) {
+        throw new StadtpocketManagerError(`Location ${i + 1}: phone must be a non-empty string.`);
+      }
+      cleaned.phone = l.phone.trim();
+    }
+    if (l.website !== undefined) {
+      checkWebsite(l.website);
+      cleaned.website = l.website;
+    }
+    if (l.hours !== undefined) {
+      checkHours(l.hours);
+      cleaned.hours = l.hours;
+    }
+    if (l.latitude !== undefined || l.longitude !== undefined) {
+      checkLatitude(l.latitude);
+      checkLongitude(l.longitude);
+      cleaned.latitude = l.latitude;
+      cleaned.longitude = l.longitude;
+    }
+    return cleaned;
+  });
+}
+
+async function initializeMultiLocationDraft(locationId, scope, body) {
+  authorizeLocationAccess(locationId, scope);
+
+  const src = body || {};
+  const listingDraft = validateMultiLocationListingFields(src.listing || {});
+  const cleanedLocations = validateMultiLocationEntries(src.locations);
+  const listingSrc = src.listing;
+
+  return prisma.$transaction(async (tx) => {
+    const slug = await generateUniqueSlug(tx, listingSrc.name);
+    const listing = await tx.stadtPocketListing.create({
+      data: {
+        slug,
+        name: listingSrc.name.trim(),
+        category: listingSrc.category.trim(),
+        shortDescription: listingSrc.shortDescription.trim(),
+        createdBy: scope.userId,
+        draftData: Object.keys(listingDraft).length ? listingDraft : undefined,
+      },
+    });
+
+    const createdLocations = [];
+    // Sequential, not Promise.all -- each create depends on the same
+    // listing.id and this is already inside one transaction; sequential
+    // writes keep the transaction's statement order deterministic and
+    // easy to reason about for what is, in practice, a small (<=50) list.
+    for (const loc of cleanedLocations) {
+      // eslint-disable-next-line no-await-in-loop
+      const listingLocation = await tx.stadtPocketListingLocation.create({
+        data: { listingId: listing.id, locationId, publicationStatus: 'draft', ...loc },
+      });
+      createdLocations.push(listingLocation);
+    }
+
+    return {
+      listingId: listing.id,
+      slug: listing.slug,
+      name: listing.name,
+      category: listing.category,
+      subCategory: listingDraft.subCategory || null,
+      shortDescription: listing.shortDescription,
+      tags: listingDraft.tags || [],
+      longDescription: listingDraft.longDescription || null,
+      locations: createdLocations.map((ll) => ({
+        listingLocationId: ll.id,
+        locationId: ll.locationId,
+        address: ll.address,
+        phone: ll.phone,
+        website: ll.website,
+        hours: ll.hours,
+        publicationStatus: ll.publicationStatus,
+      })),
+    };
+  });
+}
+
 // ── Save draft ──────────────────────────────────────────────────
 async function saveDraft(locationId, listingLocationId, scope, body) {
   const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
@@ -566,6 +731,8 @@ module.exports = {
   getEditableState,
   listListingsForLocation,
   initializeDraft,
+  initializeMultiLocationDraft,
+  MAX_LOCATIONS_PER_DRAFT,
   saveDraft,
   previewDraft,
   publishForLocation,
@@ -584,4 +751,6 @@ module.exports = {
   checkLongitude,
   checkWebsite,
   slugify,
+  validateMultiLocationListingFields,
+  validateMultiLocationEntries,
 };

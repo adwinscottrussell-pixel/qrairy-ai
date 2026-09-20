@@ -26,8 +26,9 @@
  */
 
 const { randomUUID } = require('crypto');
+const prisma = require('../utils/prismaClient');
 const { authorizeLocationAccess, StadtpocketManagerError } = require('./stadtpocketManagerService');
-const { fetchBusinessWebsiteContent, STATUS: WEB_STATUS } = require('./stadtpocketWebResearchService');
+const { fetchBusinessWebsiteResearch, STATUS: WEB_STATUS } = require('./stadtpocketWebResearchService');
 const { extractBusinessFields, STATUS: AI_STATUS } = require('./stadtpocketAiExtractionService');
 const { checkForDuplicateListing } = require('./stadtpocketDuplicateService');
 
@@ -123,6 +124,135 @@ function splitHeaderImageCandidate(evidencedFields) {
   };
 }
 
+// Phase 1G correction -- exact match only (never .includes()/substring):
+// "Ulm" must never match "Neu-Ulm" just because one contains the other.
+// Also strips a leading German postal code ("89073 Ulm" -> "Ulm") in
+// case a location's "city" field ever carries one despite the
+// extraction prompt asking for the city name alone -- defensive, not
+// something this system relies on the model getting wrong on purpose.
+function normalizeCityName(value) {
+  return typeof value === 'string' ? value.trim().replace(/^\d{4,5}\s+/, '').toLowerCase() : '';
+}
+
+function shapeLocationCandidate(loc, generalSourceUrl) {
+  return {
+    name: loc.name || null,
+    address: loc.address,
+    phone: loc.phone || null,
+    hours: loc.hours || null,
+    city: loc.city || null,
+    postalCode: loc.postalCode || null,
+    sourceUrl: loc.sourceUrl || generalSourceUrl,
+  };
+}
+
+function foldSingleLocationIntoFields(rest, locationsMeta, only, generalSourceUrl) {
+  const merged = { ...rest };
+  const sourceUrl = only.sourceUrl || generalSourceUrl;
+  if (!merged.address) merged.address = { value: only.address, confidence: locationsMeta.confidence, source: locationsMeta.source, sourceUrl };
+  if (only.phone && !merged.phone) merged.phone = { value: only.phone, confidence: locationsMeta.confidence, source: locationsMeta.source, sourceUrl };
+  if (only.hours && !merged.hours) merged.hours = { value: only.hours, confidence: locationsMeta.confidence, source: locationsMeta.source, sourceUrl };
+  return merged;
+}
+
+// Phase 1G, corrected -- pulls the optional "locations" signal out of
+// the evidenced field set and decides what the Admin sees. Backwards
+// compatible by construction: a business with no "locations" key (the
+// overwhelming majority, and every pre-Phase-1G behavior) is untouched
+// here -- `fields` passes through exactly as it always has.
+//
+// DISCOVERY is never limited here: every entry Claude returned (already
+// capped, if at all, far upstream by stadtpocketAiExtractionService.js's
+// own MAX_LOCATION_CANDIDATES safety ceiling -- see that file) survives
+// into `totalLocationsDiscovered`. A real Bäckerei Betz research call
+// discovers all ~30 branches, not 2 and not 5 -- MAX_RESEARCH_PAGES
+// (stadtpocketWebResearchService.js) bounds how many PAGES are fetched,
+// never how many locations one page may describe.
+//
+// CITY-RELEVANCE FILTERING happens entirely HERE, in this server's own
+// code, by exact (case-insensitive) comparison of each candidate's own
+// `city` field against the manager's authorized StadtPocket city name
+// (`cityContext`) -- never left to the model's own judgment (the
+// extraction prompt explicitly tells it to include every location
+// regardless of city; see that file's own header comment for why).
+// "Ulm" and "Neu-Ulm" are different strings and are never conflated.
+//
+// Exactly ONE city-relevant entry is treated the same as a normal
+// single-location result: folded into the top-level address/phone/hours
+// fields (this also covers the plain "totalLocationsDiscovered === 1"
+// case, where there is nothing to filter by city at all -- unchanged
+// from Phase 1G's original behavior).
+//
+// TWO OR MORE city-relevant entries is the real multi-location case:
+// multipleLocationsDetected becomes true, only the CITY-RELEVANT
+// candidates are returned for the Admin to choose from (not all ~30),
+// and the top-level address/phone/hours fields are left absent -- never
+// auto-filled from any one candidate. No code path here may ever choose
+// a branch, or a city, on the Admin's behalf.
+//
+// ZERO city-relevant entries among two-or-more discovered (or an
+// unresolvable cityContext) is reported as `noMatchingCityLocation:
+// true` -- an honest "we found several locations but none we could
+// confirm for your city" signal, never a silent fallback to the
+// nearest-looking one (e.g. Neu-Ulm when the authorized city is Ulm).
+function splitLocationCandidates(evidencedFields, generalSourceUrl, cityContext) {
+  const { locations, locationsTruncated, ...rest } = evidencedFields;
+  const rawLocations = locations && Array.isArray(locations.value) ? locations.value : null;
+  const truncated = !!(locationsTruncated && locationsTruncated.value);
+
+  const NONE = { fields: rest, multipleLocationsDetected: false, locations: null, totalLocationsDiscovered: 0, noMatchingCityLocation: false, locationsTruncated: false };
+  if (!rawLocations || !rawLocations.length) return NONE;
+
+  const totalLocationsDiscovered = rawLocations.length;
+
+  if (totalLocationsDiscovered === 1) {
+    const fields = foldSingleLocationIntoFields(rest, locations, rawLocations[0], generalSourceUrl);
+    return { fields, multipleLocationsDetected: false, locations: null, totalLocationsDiscovered, noMatchingCityLocation: false, locationsTruncated: truncated };
+  }
+
+  const normalizedCity = normalizeCityName(cityContext);
+  const cityRelevant = normalizedCity
+    ? rawLocations.filter((loc) => normalizeCityName(loc.city) === normalizedCity)
+    : []; // authorized city unknown -- cannot safely determine relevance, never guess
+
+  if (cityRelevant.length >= 2) {
+    return {
+      fields: rest,
+      multipleLocationsDetected: true,
+      locations: cityRelevant.map((loc) => shapeLocationCandidate(loc, generalSourceUrl)),
+      totalLocationsDiscovered,
+      noMatchingCityLocation: false,
+      locationsTruncated: truncated,
+    };
+  }
+
+  if (cityRelevant.length === 1) {
+    const fields = foldSingleLocationIntoFields(rest, locations, cityRelevant[0], generalSourceUrl);
+    return { fields, multipleLocationsDetected: false, locations: null, totalLocationsDiscovered, noMatchingCityLocation: false, locationsTruncated: truncated };
+  }
+
+  // Two or more locations exist, but none could be confirmed for the
+  // authorized city -- never fall back to an out-of-city address.
+  return { fields: rest, multipleLocationsDetected: false, locations: null, totalLocationsDiscovered, noMatchingCityLocation: true, locationsTruncated: truncated };
+}
+
+// Best-effort, read-only lookup of the manager's already-authorized
+// city name (Location.name -- same field managerRoutes.js's own invite
+// endpoints already select), used ONLY as informational context handed
+// to the extraction model so it can prioritize which verified
+// location(s) are relevant when a site describes several (Phase 1G §6).
+// Never used to filter/select on this service's own behalf, and a
+// lookup failure here must never fail or degrade the research request
+// itself -- it just means no city hint is given this one time.
+async function resolveCityName(locationId) {
+  try {
+    const location = await prisma.location.findUnique({ where: { id: locationId }, select: { name: true } });
+    return (location && location.name) || null;
+  } catch {
+    return null;
+  }
+}
+
 function validateRequest(body) {
   const src = body || {};
   const businessName = typeof src.businessName === 'string' ? src.businessName.trim() : '';
@@ -142,17 +272,17 @@ function validateRequest(body) {
 // against the overall deadline below without that deadline also
 // covering the (fast, DB-only, never-hangs) duplicate check, which
 // should always run regardless of how the provider portion turned out.
-async function runWebAndExtraction(requestId, businessName, websiteUrl) {
+async function runWebAndExtraction(requestId, businessName, websiteUrl, cityContext) {
   const webStart = Date.now();
-  const webResult = await fetchBusinessWebsiteContent(websiteUrl);
-  logStage(requestId, 'firecrawl', { status: webResult.status, durationMs: Date.now() - webStart });
+  const webResult = await fetchBusinessWebsiteResearch(websiteUrl);
+  logStage(requestId, 'firecrawl', { status: webResult.status, durationMs: Date.now() - webStart, pages: (webResult.pageUrls || []).length });
 
   if (webResult.status !== WEB_STATUS.OK) {
     return { evidencedFields: {}, researchStatus: WEB_STATUS_TO_RESEARCH_STATUS[webResult.status] || RESEARCH_STATUS.WEBSITE_UNREACHABLE };
   }
 
   const aiStart = Date.now();
-  const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content });
+  const extraction = await extractBusinessFields({ businessName, websiteUrl: webResult.sourceUrl, siteContent: webResult.content, cityContext });
   logStage(requestId, 'anthropic', { status: extraction.status, durationMs: Date.now() - aiStart });
 
   if (extraction.status === AI_STATUS.OK) {
@@ -194,10 +324,15 @@ async function researchBusiness(locationId, scope, body, options = {}) {
 
   let evidencedFields = {};
   let researchStatus = RESEARCH_STATUS.NO_SOURCE;
+  // Resolved once, used both as extraction context (informational only,
+  // see runWebAndExtraction) and, further below, as the deterministic
+  // basis for this server's OWN city-relevance filtering in
+  // splitLocationCandidates -- never left to the model's judgment.
+  const cityContext = await resolveCityName(locationId);
 
   if (websiteUrl) {
     const urlSafetyStart = Date.now();
-    const outcome = await raceWithDeadline(runWebAndExtraction(requestId, businessName, websiteUrl), deadlineMs);
+    const outcome = await raceWithDeadline(runWebAndExtraction(requestId, businessName, websiteUrl, cityContext), deadlineMs);
     if (outcome === DEADLINE_EXCEEDED) {
       // The provider portion is still running in the background (this
       // does not, and cannot, forcibly cancel it -- Firecrawl's own
@@ -214,7 +349,16 @@ async function researchBusiness(locationId, scope, body, options = {}) {
     }
   }
 
-  const { fields, headerImageCandidate } = splitHeaderImageCandidate(evidencedFields);
+  const { fields: fieldsWithLocations, headerImageCandidate } = splitHeaderImageCandidate(evidencedFields);
+  const generalSourceUrl = headerImageCandidate ? headerImageCandidate.sourceUrl : Object.values(fieldsWithLocations)[0]?.sourceUrl;
+  const {
+    fields,
+    multipleLocationsDetected,
+    locations,
+    totalLocationsDiscovered,
+    noMatchingCityLocation,
+    locationsTruncated,
+  } = splitLocationCandidates(fieldsWithLocations, generalSourceUrl, cityContext);
 
   // Duplicate check always runs, even when research produced nothing --
   // a manager researching "Café Brettle, Ulm" with an unreachable
@@ -243,6 +387,11 @@ async function researchBusiness(locationId, scope, body, options = {}) {
     researchStatus,
     fields,
     headerImageCandidate: headerImageCandidate || null,
+    multipleLocationsDetected,
+    locations,
+    totalLocationsDiscovered,
+    noMatchingCityLocation,
+    locationsTruncated,
     duplicate,
   };
 }
@@ -255,6 +404,9 @@ module.exports = {
   validateRequest,
   withEvidence,
   splitHeaderImageCandidate,
+  splitLocationCandidates,
+  resolveCityName,
+  normalizeCityName,
 };
 
 // Re-exported for the route layer's error-handling convenience, mirroring

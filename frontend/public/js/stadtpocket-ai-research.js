@@ -91,6 +91,21 @@ function getMissingRequiredFieldsForDraft(editable) {
   return AI_REQUIRED_DRAFT_FIELDS.filter(([key]) => !(e[key] && String(e[key]).trim())).map(([, label]) => label);
 }
 
+// The single source of truth for whether the SINGLE-location "Als
+// Entwurf erstellen" button may run -- re-checked by
+// createDraftFromAiResearch() itself before ever calling the API, same
+// as every other gate in this file -- never trusted from the button's
+// disabled attribute alone. Multi-location candidates use their own,
+// separate gate -- canCreateMultiLocationDraft, further below -- since
+// creating a multi-location draft is a different action entirely (see
+// that function's own header comment for the Phase 1G.1 correction).
+function canCreateDraftFromCandidate(candidate, editable) {
+  const c = candidate || {};
+  const duplicateStatus = c.duplicate ? c.duplicate.status : null;
+  if (!duplicateAllowsDraftCreation(duplicateStatus)) return false;
+  return getMissingRequiredFieldsForDraft(editable).length === 0;
+}
+
 // Exactly the payload initializeDraft's route accepts -- trimmed, and
 // nothing else (that route rejects any unexpected key). Uses the
 // Admin's EDITED values (aiResearchState.editable), never the original
@@ -296,6 +311,101 @@ function extractEditableFieldsFromCandidate(candidate) {
   return editable;
 }
 
+// ── Phase 1G.1 — multi-location business model correction ───────────
+// A multi-location result (e.g. the real Bäckerei Betz: 8 verified
+// branches in Ulm) is ONE proposed business with several locations
+// underneath it -- never a "pick one branch to BE the business" choice.
+// The earlier Phase 1G single-select design (a picked location's
+// address/phone/hours overwriting the parent business proposal) has
+// been replaced: the business-level proposal (name/category/
+// shortDescription/website/...) stays exactly as researched regardless
+// of which locations are included, and every verified city-relevant
+// location is INCLUDED BY DEFAULT -- the Admin may deselect a bad one,
+// never has to hand-pick one true location out of several correct ones.
+
+// All location indices included by default -- the Admin's job is to
+// review and optionally EXCLUDE a bad one, never to pick exactly one.
+function defaultIncludedLocationIndices(candidate) {
+  const locations = (candidate && candidate.locations) || [];
+  return new Set(locations.map((_, i) => i));
+}
+
+function getIncludedLocations(candidate, includedIndices) {
+  const locations = (candidate && candidate.locations) || [];
+  const included = includedIndices || new Set();
+  return locations.filter((_, i) => included.has(i));
+}
+
+// Business-level required fields for a MULTI-location draft -- "address"
+// is deliberately absent: address is a per-location fact now, never a
+// single overwritten value on the parent business. The existing
+// AI_REQUIRED_DRAFT_FIELDS (name/category/shortDescription/address) is
+// untouched and still governs the single-location flow exactly as
+// before.
+const AI_REQUIRED_BRAND_FIELDS = [
+  ['name', 'Unternehmensname'],
+  ['category', 'Kategorie'],
+  ['shortDescription', 'Kurzbeschreibung'],
+];
+
+function getMissingRequiredBrandFields(editable) {
+  const e = editable || {};
+  return AI_REQUIRED_BRAND_FIELDS.filter(([key]) => !(e[key] && String(e[key]).trim())).map(([, label]) => label);
+}
+
+/**
+ * The single source of truth for whether "Entwurf mit N Standorten
+ * erstellen" may run. Re-checked by createMultiLocationDraftFromAiResearch()
+ * itself before ever calling the API, same as every other gate in this
+ * file -- never trusted from the button's disabled attribute alone.
+ */
+function canCreateMultiLocationDraft(candidate, editable, includedIndices) {
+  const c = candidate || {};
+  const duplicateStatus = c.duplicate ? c.duplicate.status : null;
+  if (!duplicateAllowsDraftCreation(duplicateStatus)) return false;
+  if (getMissingRequiredBrandFields(editable).length) return false;
+  return !!(includedIndices && includedIndices.size > 0);
+}
+
+/**
+ * Builds the exact POST body for .../research/draft-multi: ONE business
+ * (name/category/shortDescription, plus optional subCategory/tags/
+ * longDescription when present) plus the INCLUDED locations only.
+ * Never sends an excluded location. The brand's researched website (a
+ * top-level candidate field, not part of any one location) is applied
+ * to every included location, matching how website is already modeled
+ * at the schema level (StadtPocketListingLocation.website, per-
+ * storefront) -- exactly like an ordinary single-location draft already
+ * carries its own website value.
+ */
+function buildMultiLocationInitPayload(editable, candidate, includedIndices) {
+  const e = editable || {};
+  const c = candidate || {};
+  const brandWebsite = c.fields && c.fields.website && c.fields.website.value;
+
+  const listing = {
+    name: String(e.name || '').trim(),
+    category: String(e.category || '').trim(),
+    shortDescription: String(e.shortDescription || '').trim(),
+  };
+  if (e.subCategory && e.subCategory.trim()) listing.subCategory = e.subCategory.trim();
+  if (e.longDescription && e.longDescription.trim()) listing.longDescription = e.longDescription.trim();
+  if (typeof e.tags === 'string' && e.tags.trim()) {
+    const tags = parseTagsInput(e.tags);
+    if (tags.length) listing.tags = tags;
+  }
+
+  const locations = getIncludedLocations(c, includedIndices).map((loc) => {
+    const entry = { address: loc.address };
+    if (loc.phone) entry.phone = loc.phone;
+    if (loc.hours) entry.hours = loc.hours;
+    if (brandWebsite) entry.website = brandWebsite;
+    return entry;
+  });
+
+  return { listing, locations };
+}
+
 // ── Phase 1E follow-up — research submission failure messages ──────
 // Pure classification of a thrown fetch()/AbortController error into
 // the exact honest German message to show. AbortError is what both a
@@ -337,5 +447,12 @@ if (typeof module !== 'undefined' && module.exports) {
     AI_RESEARCH_TIMEOUT_MESSAGE,
     AI_RESEARCH_NETWORK_ERROR_MESSAGE,
     getAiResearchFailureMessage,
+    canCreateDraftFromCandidate,
+    defaultIncludedLocationIndices,
+    getIncludedLocations,
+    AI_REQUIRED_BRAND_FIELDS,
+    getMissingRequiredBrandFields,
+    canCreateMultiLocationDraft,
+    buildMultiLocationInitPayload,
   };
 }

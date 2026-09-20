@@ -45,7 +45,7 @@ resetFixtures();
 
 const mockPrisma = {
   networkMember: { findMany: async ({ where }) => networkMemberRows.filter((r) => r.userId === where.userId) },
-  location: { findMany: async () => [] },
+  location: { findMany: async () => [], findUnique: async () => ({ name: 'Ulm' }) },
   stadtPocketListingLocation: {
     findMany: async ({ where }) => listingLocationRows.filter((r) => r.locationId === where.locationId).map((r) => ({ ...r, listing: { ...r.listing } })),
   },
@@ -67,7 +67,7 @@ require.cache[webResearchPath] = {
   id: webResearchPath, filename: webResearchPath, loaded: true,
   exports: {
     STATUS: { OK: 'ok', INVALID_URL: 'invalid-url', UNSUPPORTED_PROTOCOL: 'unsupported-protocol', PRIVATE_TARGET: 'private-target', DNS_FAILURE: 'dns-failure', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNREACHABLE: 'unreachable', EMPTY: 'empty' },
-    fetchBusinessWebsiteContent: async () => webResult,
+    fetchBusinessWebsiteResearch: async () => webResult,
   },
 };
 require.cache[aiExtractionPath] = {

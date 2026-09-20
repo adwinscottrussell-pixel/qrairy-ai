@@ -23,6 +23,7 @@ const NET1 = 'net_stadtpocket';
 let listingLocationRows = [];
 let webResult;
 let aiResult;
+let cityName; // Phase 1G -- backs mockPrisma.location.findUnique
 // Phase 1E follow-up: rather than reassigning the exported FUNCTION
 // (which stadtpocketResearchService.js already destructured once at
 // its own require() time, so a later reassignment on the exports
@@ -34,16 +35,20 @@ let aiShouldHang = false;
 
 function resetFixtures() {
   listingLocationRows = [];
-  webResult = { status: 'ok', content: 'scraped content', sourceUrl: 'https://www.brettle-ulm.de/', truncated: false };
+  webResult = { status: 'ok', content: 'scraped content', sourceUrl: 'https://www.brettle-ulm.de/', truncated: false, pageUrls: ['https://www.brettle-ulm.de/'] };
   aiResult = { status: 'ok', fields: { name: { value: 'Café Brettle', confidence: 'high' }, phone: { value: '0731 000000', confidence: 'high' } } };
   webShouldHang = false;
   aiShouldHang = false;
+  cityName = 'Ulm';
 }
 resetFixtures();
 
 const mockPrisma = {
   stadtPocketListingLocation: {
     findMany: async ({ where }) => listingLocationRows.filter((r) => r.locationId === where.locationId).map((r) => ({ ...r, listing: { ...r.listing } })),
+  },
+  location: {
+    findUnique: async () => (cityName ? { name: cityName } : null),
   },
 };
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
@@ -52,18 +57,22 @@ require.cache[webResearchPath] = {
   id: webResearchPath, filename: webResearchPath, loaded: true,
   exports: {
     STATUS: { OK: 'ok', INVALID_URL: 'invalid-url', UNSUPPORTED_PROTOCOL: 'unsupported-protocol', PRIVATE_TARGET: 'private-target', DNS_FAILURE: 'dns-failure', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNREACHABLE: 'unreachable', EMPTY: 'empty' },
-    fetchBusinessWebsiteContent: () => (webShouldHang ? new Promise(() => {}) : Promise.resolve(webResult)),
+    fetchBusinessWebsiteResearch: () => (webShouldHang ? new Promise(() => {}) : Promise.resolve(webResult)),
   },
 };
+let lastExtractionArgs = null;
 require.cache[aiExtractionPath] = {
   id: aiExtractionPath, filename: aiExtractionPath, loaded: true,
   exports: {
     STATUS: { OK: 'ok', PROVIDER_UNAVAILABLE: 'provider-unavailable', UNAVAILABLE: 'unavailable', MALFORMED_OUTPUT: 'malformed-output' },
-    extractBusinessFields: () => (aiShouldHang ? new Promise(() => {}) : Promise.resolve(aiResult)),
+    extractBusinessFields: (args) => {
+      lastExtractionArgs = args;
+      return aiShouldHang ? new Promise(() => {}) : Promise.resolve(aiResult);
+    },
   },
 };
 
-const { researchBusiness, StadtpocketResearchError, StadtpocketManagerError, RESEARCH_STATUS } = require('../src/services/stadtpocketResearchService');
+const { researchBusiness, StadtpocketResearchError, StadtpocketManagerError, RESEARCH_STATUS, splitLocationCandidates, normalizeCityName } = require('../src/services/stadtpocketResearchService');
 
 const GLOBAL_ADMIN_SCOPE = { userId: 'admin_1', isGlobalAdmin: true };
 const ULM_MANAGER_SCOPE = { userId: 'ulm_manager', isGlobalAdmin: false, locationIds: [ULM] };
@@ -140,10 +149,10 @@ test('6. headerImageCandidateUrl is reshaped into a distinct headerImageCandidat
 test('7. a manager scoped to a different city is rejected (403) before any research happens', async () => {
   resetFixtures();
   let webCalled = false;
-  const original = require.cache[webResearchPath].exports.fetchBusinessWebsiteContent;
-  require.cache[webResearchPath].exports.fetchBusinessWebsiteContent = async () => { webCalled = true; return webResult; };
+  const original = require.cache[webResearchPath].exports.fetchBusinessWebsiteResearch;
+  require.cache[webResearchPath].exports.fetchBusinessWebsiteResearch = async () => { webCalled = true; return webResult; };
   await expectThrow(() => researchBusiness(ULM, STUTTGART_MANAGER_SCOPE, { businessName: 'x' }), StadtpocketManagerError, 403);
-  require.cache[webResearchPath].exports.fetchBusinessWebsiteContent = original;
+  require.cache[webResearchPath].exports.fetchBusinessWebsiteResearch = original;
   assert.equal(webCalled, false);
 });
 
@@ -292,6 +301,229 @@ test('23. a normal, fast research call is completely unaffected by the deadline 
   resetFixtures();
   const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
   assert.equal(candidate.researchStatus, RESEARCH_STATUS.OK);
+});
+
+// ── PHASE 1G — multi-location detection ─────────────────────────
+test('24. two or more CITY-RELEVANT location entries -> multipleLocationsDetected true, candidates returned, top-level address left absent', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      name: { value: 'Bäckerei Betz', confidence: 'high' },
+      locations: {
+        value: [
+          { address: 'Westerlingerstr. 49, 89073 Ulm', city: 'Ulm', phone: '0731 111', sourceUrl: 'https://betz.de/filialen/' },
+          { address: 'Haslacherweg 59, 89075 Ulm', city: 'Ulm', sourceUrl: 'https://betz.de/filialen/' },
+        ],
+        confidence: 'high',
+      },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.multipleLocationsDetected, true);
+  assert.equal(candidate.locations.length, 2);
+  assert.equal(candidate.locations[0].address, 'Westerlingerstr. 49, 89073 Ulm');
+  assert.equal(candidate.fields.address, undefined);
+  assert.equal('locations' in candidate.fields, false); // never leaked into the generic field list
+});
+
+// ── PHASE 1G CORRECTION — complete multi-location discovery ─────
+// Real Bäckerei Betz (2026-09-20, read-only inspection): 30 branches
+// across 16 towns, 8 of them in Ulm. These tests prove none of that is
+// silently reduced to 2, 5, or "the first N" anywhere in this pipeline.
+test('24b. all 8 real Ulm branches survive -- nothing here reduces a location list bigger than 5 down to 5', async () => {
+  resetFixtures();
+  const ulmStreets = ['Westerlingerstraße 49', 'Haslacherweg 59', 'Neue Gasse 2', 'Ehingerstraße 25', 'Ensostraße 31', 'Schlösslegasse 1', 'Stifterweg 76', 'Bahnhofstraße 17'];
+  aiResult = {
+    status: 'ok',
+    fields: {
+      name: { value: 'Bäckerei Betz', confidence: 'high' },
+      locations: { value: ulmStreets.map((street) => ({ address: `${street}, Ulm`, city: 'Ulm', sourceUrl: 'https://betz.de/filialen/' })), confidence: 'high' },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.totalLocationsDiscovered, 8);
+  assert.equal(candidate.multipleLocationsDetected, true);
+  assert.equal(candidate.locations.length, 8);
+  assert.deepEqual(candidate.locations.map((l) => l.address), ulmStreets.map((s) => `${s}, Ulm`));
+});
+
+test('24c. the real 30-branch/16-town Betz shape: totalLocationsDiscovered reflects ALL of them, but "locations" (the Admin picker) contains only the 8 in Ulm -- city filtering happens AFTER complete discovery, never before', async () => {
+  resetFixtures();
+  const otherTowns = ['Achstetten', 'Bellenberg', 'Blaustein', 'Burlafingen', 'Dietenheim', 'Erbach', 'Heidenheim', 'Illerkirchberg', 'Langenau', 'Leipheim', 'Nersingen', 'Pfuhl', 'Pfuhl', 'Senden', 'Senden', 'Thalfingen', 'Thalfingen'];
+  const neuUlm = ['Neu-Ulm', 'Neu-Ulm', 'Neu-Ulm', 'Neu-Ulm', 'Neu-Ulm'];
+  const ulm = ['Ulm', 'Ulm', 'Ulm', 'Ulm', 'Ulm', 'Ulm', 'Ulm', 'Ulm'];
+  const all = [...otherTowns, ...neuUlm, ...ulm]; // interleave-free is fine -- order must not matter, see next test
+  aiResult = {
+    status: 'ok',
+    fields: {
+      name: { value: 'Bäckerei Betz', confidence: 'high' },
+      locations: { value: all.map((city, i) => ({ address: `Straße ${i}, ${city}`, city, sourceUrl: 'https://betz.de/filialen/' })), confidence: 'high' },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.totalLocationsDiscovered, 30);
+  assert.equal(candidate.multipleLocationsDetected, true);
+  assert.equal(candidate.locations.length, 8);
+  assert.ok(candidate.locations.every((l) => l.city === 'Ulm'));
+});
+
+test('24d. "Ulm" never matches "Neu-Ulm" -- a Neu-Ulm branch is excluded even though the authorized city is Ulm', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      locations: {
+        value: [
+          { address: 'Westerlingerstr. 49, Ulm', city: 'Ulm' },
+          { address: 'Carl-Zeiss-Str. 1, Neu-Ulm', city: 'Neu-Ulm' },
+          { address: 'Industriestraße 2, Neu-Ulm', city: 'Neu-Ulm' },
+        ],
+        confidence: 'high',
+      },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  // Exactly one Ulm match among 3 discovered -> folds into the normal
+  // single-location fields (not a picker), and it must be the Ulm one.
+  assert.equal(candidate.totalLocationsDiscovered, 3);
+  assert.equal(candidate.multipleLocationsDetected, false);
+  assert.equal(candidate.fields.address.value, 'Westerlingerstr. 49, Ulm');
+});
+
+test('24e. locations scattered non-contiguously all survive -- never just "the first N" city-relevant matches', async () => {
+  resetFixtures();
+  const cities = ['Ulm', 'Senden', 'Ulm', 'Pfuhl', 'Ulm', 'Neu-Ulm', 'Ulm']; // Ulm at indices 0,2,4,6 -- not contiguous
+  aiResult = {
+    status: 'ok',
+    fields: { locations: { value: cities.map((city, i) => ({ address: `Straße ${i}, ${city}`, city })), confidence: 'high' } },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.locations.length, 4);
+  assert.deepEqual(candidate.locations.map((l) => l.address).sort(), ['Straße 0, Ulm', 'Straße 2, Ulm', 'Straße 4, Ulm', 'Straße 6, Ulm']);
+});
+
+test('24f. zero Ulm-matching locations among several discovered -> noMatchingCityLocation true, no silent fallback to a nearby city (e.g. Neu-Ulm)', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      locations: {
+        value: [
+          { address: 'Carl-Zeiss-Str. 1, Neu-Ulm', city: 'Neu-Ulm' },
+          { address: 'Industriestraße 2, Neu-Ulm', city: 'Neu-Ulm' },
+        ],
+        confidence: 'high',
+      },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.totalLocationsDiscovered, 2);
+  assert.equal(candidate.multipleLocationsDetected, false);
+  assert.equal(candidate.locations, null);
+  assert.equal(candidate.noMatchingCityLocation, true);
+  assert.equal(candidate.fields.address, undefined); // never silently uses the Neu-Ulm address
+});
+
+test('24g. an unresolvable authorized city (DB lookup failed) with 2+ discovered locations is also reported as noMatchingCityLocation, never a guess', async () => {
+  resetFixtures();
+  cityName = null; // resolveCityName() returns null
+  aiResult = {
+    status: 'ok',
+    fields: { locations: { value: [{ address: 'A', city: 'Ulm' }, { address: 'B', city: 'Neu-Ulm' }], confidence: 'high' } },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.noMatchingCityLocation, true);
+  assert.equal(candidate.locations, null);
+});
+
+test('24h. locationsTruncated passes through from the extraction layer to the final candidate, visibly, when present', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      locations: { value: [{ address: 'A', city: 'Ulm' }, { address: 'B', city: 'Ulm' }], confidence: 'high' },
+      locationsTruncated: { value: true, confidence: 'high' },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.locationsTruncated, true);
+});
+
+test('24i. locationsTruncated is false by default when the extraction layer never sent it', async () => {
+  resetFixtures();
+  aiResult = { status: 'ok', fields: { locations: { value: [{ address: 'A', city: 'Ulm' }, { address: 'B', city: 'Ulm' }], confidence: 'high' } } };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://betz.de/' });
+  assert.equal(candidate.locationsTruncated, false);
+});
+
+test('24j. normalizeCityName: exact match only, case-insensitive, tolerates a stray leading postal code -- "Ulm" is never "Neu-Ulm"', () => {
+  assert.equal(normalizeCityName('Ulm'), normalizeCityName('ulm'));
+  assert.equal(normalizeCityName('  Ulm  '), normalizeCityName('Ulm'));
+  assert.equal(normalizeCityName('89073 Ulm'), normalizeCityName('Ulm'));
+  assert.notEqual(normalizeCityName('Neu-Ulm'), normalizeCityName('Ulm'));
+  assert.notEqual(normalizeCityName('Ulm'), normalizeCityName('Neu-Ulm'));
+});
+
+test('25. exactly one location entry is folded into the normal top-level fields, multipleLocationsDetected stays false', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      name: { value: 'Café Solo', confidence: 'high' },
+      locations: { value: [{ address: 'Einzelstr. 1, Ulm', phone: '0731 222' }], confidence: 'high' },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://solo.example.com/' });
+  assert.equal(candidate.multipleLocationsDetected, false);
+  assert.equal(candidate.locations, null);
+  assert.equal(candidate.fields.address.value, 'Einzelstr. 1, Ulm');
+  assert.equal(candidate.fields.phone.value, '0731 222');
+});
+
+test('26. a normal single-location business with no "locations" key at all is completely unaffected (regression)', async () => {
+  resetFixtures();
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(candidate.multipleLocationsDetected, false);
+  assert.equal(candidate.locations, null);
+});
+
+test('27. an existing top-level address is never overwritten by a single "locations" entry', async () => {
+  resetFixtures();
+  aiResult = {
+    status: 'ok',
+    fields: {
+      address: { value: 'Bereits Bekannte Str. 5', confidence: 'high' },
+      locations: { value: [{ address: 'Andere Str. 9' }], confidence: 'high' },
+    },
+  };
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://x.example.com/' });
+  assert.equal(candidate.fields.address.value, 'Bereits Bekannte Str. 5');
+});
+
+test('28. the manager\'s city name is looked up and passed to extractBusinessFields as cityContext', async () => {
+  resetFixtures();
+  cityName = 'Ulm';
+  lastExtractionArgs = null;
+  await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(lastExtractionArgs.cityContext, 'Ulm');
+});
+
+test('29. a city-name lookup failure never fails the research request -- cityContext is simply null', async () => {
+  resetFixtures();
+  cityName = null;
+  lastExtractionArgs = null;
+  const candidate = await researchBusiness(ULM, ULM_MANAGER_SCOPE, { websiteUrl: 'https://www.brettle-ulm.de/' });
+  assert.equal(candidate.researchStatus, RESEARCH_STATUS.OK);
+  assert.equal(lastExtractionArgs.cityContext, null);
+});
+
+test('30. splitLocationCandidates is a pure, backwards-compatible no-op when no "locations" key is present', () => {
+  const fields = { name: { value: 'x', confidence: 'high', source: 's', sourceUrl: 'u' } };
+  const result = splitLocationCandidates(fields, 'https://x.de/');
+  assert.deepEqual(result.fields, fields);
+  assert.equal(result.multipleLocationsDetected, false);
+  assert.equal(result.locations, null);
 });
 
 // ── runner ──────────────────────────────────────────────────────

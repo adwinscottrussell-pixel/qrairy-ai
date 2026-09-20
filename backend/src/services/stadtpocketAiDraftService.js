@@ -56,6 +56,7 @@ const {
   StadtpocketManagerError,
   authorizeLocationAccess,
   initializeDraft,
+  initializeMultiLocationDraft,
   saveDraft,
 } = require('./stadtpocketManagerService');
 const { checkForDuplicateListing, STATUS: DUPLICATE_STATUS } = require('./stadtpocketDuplicateService');
@@ -150,9 +151,64 @@ async function createDraftFromReview(locationId, scope, body) {
   return { listing: finalListing, enrichmentFailed, enrichmentError };
 }
 
+// Phase 1G.1 — multi-location counterpart to createDraftFromReview
+// above, for the case that function cannot express: an AI research
+// result with MORE THAN ONE verified, city-relevant location (e.g. the
+// real Bäckerei Betz, 8 branches in Ulm). Creates ONE
+// StadtPocketListing plus one StadtPocketListingLocation PER included
+// location, never one listing per location -- see
+// initializeMultiLocationDraft's own header comment in
+// stadtpocketManagerService.js for exactly why that distinction matters
+// (the public city directory shows one card per listing, see
+// stadtpocketPublicService.js's listCityBusinesses()). A single-location
+// result still goes through createDraftFromReview above, completely
+// unchanged -- this function is only ever called when the Admin's
+// reviewed candidate has 2+ locations.
+//
+// body: { listing: { name, category, shortDescription, subCategory?,
+// tags?, longDescription? }, locations: [{ address, phone?, website?,
+// hours?, latitude?, longitude? }, ... ] }.
+//
+// Duplicate protection, precisely scoped (same honesty as
+// createDraftFromReview's own header comment): this re-checks the BRAND
+// identity (name, and the first location's website if one is present --
+// there is no single brand-level website field in this schema; website
+// lives on StadtPocketListingLocation, see that model's own comment)
+// fresh, immediately before creation. If "Bäckerei Betz" already exists
+// as a listing in this city, the ENTIRE batch is refused before any row
+// is written -- never a partial create.
+//
+// Known, acknowledged gap (not hidden -- see this feature's own final
+// report): this does NOT yet check each individual proposed address
+// against existing StadtPocketListingLocation rows in the city
+// (a LOCATION-level duplicate, e.g. one of the 8 addresses already
+// exists as its own separately-entered row from a different source).
+// Only the PARENT/brand-level duplicate is checked. Closing that fully
+// is a real, separate piece of work -- flagged for the next phase
+// rather than forced in here.
+async function createMultiLocationDraftFromReview(locationId, scope, body) {
+  authorizeLocationAccess(locationId, scope);
+  const src = body || {};
+  const listing = src.listing || {};
+  const firstWebsite = (Array.isArray(src.locations) && src.locations[0] && src.locations[0].website) || undefined;
+
+  const duplicate = await checkForDuplicateListing({
+    locationId,
+    businessName: listing.name,
+    websiteUrl: firstWebsite,
+  });
+  if (duplicate.status !== DUPLICATE_STATUS.NEW) {
+    throw new StadtpocketDuplicateError(duplicate);
+  }
+
+  const created = await initializeMultiLocationDraft(locationId, scope, src);
+  return { listing: created };
+}
+
 module.exports = {
   StadtpocketDuplicateError,
   createDraftFromReview,
+  createMultiLocationDraftFromReview,
   // exported for direct unit testing only
   splitRequiredAndOptional,
 };

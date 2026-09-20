@@ -36,7 +36,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const router = express.Router();
 const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManagerAuth');
 const { researchBusiness, StadtpocketResearchError, StadtpocketManagerError } = require('../services/stadtpocketResearchService');
-const { createDraftFromReview, StadtpocketDuplicateError } = require('../services/stadtpocketAiDraftService');
+const { createDraftFromReview, createMultiLocationDraftFromReview, StadtpocketDuplicateError } = require('../services/stadtpocketAiDraftService');
 
 const researchRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -91,10 +91,31 @@ async function handleCreateDraftFromReview(req, res) {
   }
 }
 
+// Phase 1G.1 -- multi-location counterpart to
+// POST .../research/draft above, for a reviewed candidate with 2+
+// verified, city-relevant locations (see
+// stadtpocketAiDraftService.js's createMultiLocationDraftFromReview for
+// the full contract). Not rate-limited for the same reason as the
+// single-location draft route: no external/paid provider call, DB
+// reads/writes only.
+async function handleCreateMultiLocationDraftFromReview(req, res) {
+  try {
+    const result = await createMultiLocationDraftFromReview(req.params.locationId, req.stadtpocketScope, req.body);
+    return res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof StadtpocketDuplicateError) {
+      return res.status(err.status).json({ error: err.message, duplicate: err.duplicate });
+    }
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/research/draft-multi POST');
+  }
+}
+
 router.post('/listings/:locationId/research', requireStadtpocketWriteScope, researchRateLimiter, handleResearch);
 router.post('/listings/:locationId/research/draft', requireStadtpocketWriteScope, handleCreateDraftFromReview);
+router.post('/listings/:locationId/research/draft-multi', requireStadtpocketWriteScope, handleCreateMultiLocationDraftFromReview);
 
 module.exports = router;
 module.exports.handleResearch = handleResearch; // exported for direct unit testing only
 module.exports.handleCreateDraftFromReview = handleCreateDraftFromReview; // exported for direct unit testing only
+module.exports.handleCreateMultiLocationDraftFromReview = handleCreateMultiLocationDraftFromReview; // exported for direct unit testing only
 module.exports.researchRateLimiter = researchRateLimiter; // exported for direct unit testing only

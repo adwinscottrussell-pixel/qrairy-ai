@@ -1644,7 +1644,22 @@
   let aiResearchState = null;
 
   function resetAiResearchState() {
-    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false };
+    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false, includedLocationIndices: new Set() };
+  }
+
+  // Phase 1G.1 — the Admin excludes a bad location, never "selects the
+  // one true location." Every verified city-relevant location starts
+  // INCLUDED (see submitAiResearch's use of defaultIncludedLocationIndices
+  // below); this only toggles ONE location's membership in that set and
+  // re-renders. Never touches candidate.fields or editable -- the
+  // business-level proposal (name/category/shortDescription/...) is
+  // never overwritten by any one location, included or not. Toggling
+  // alone never calls the API or creates anything.
+  function toggleAiLocationIncluded(index) {
+    const s = aiResearchState;
+    if (s.includedLocationIndices.has(index)) s.includedLocationIndices.delete(index);
+    else s.includedLocationIndices.add(index);
+    renderAiResearchReview();
   }
 
   function openAddBusinessChoice() {
@@ -1751,6 +1766,10 @@
 
     s.candidate = res.body.candidate;
     s.editable = extractEditableFieldsFromCandidate(s.candidate);
+    // Every verified city-relevant location starts INCLUDED -- the
+    // Admin's job is to review and optionally exclude a bad one, never
+    // to hand-pick exactly one true location (Phase 1G.1 correction).
+    s.includedLocationIndices = defaultIncludedLocationIndices(s.candidate);
     s.step = 'review';
     renderAiResearchReview();
   }
@@ -1818,7 +1837,115 @@
     `;
   }
 
+  // Phase 1G correction — "X Standorte insgesamt gefunden, Y davon in
+  // <Stadt>". Shown whenever the backend discovered more than one
+  // physical location anywhere (regardless of whether any turned out to
+  // be in this city) -- keeps the Admin honestly informed of the full
+  // discovered scope (e.g. Bäckerei Betz's real ~30 branches) without
+  // ever cluttering the selection screen with all of them; only the
+  // CITY-RELEVANT candidates (already filtered server-side) are ever
+  // shown as cards below.
+  function renderLocationDiscoverySummary(c, cityName) {
+    if (!c.totalLocationsDiscovered || c.totalLocationsDiscovered < 2) return '';
+    const relevantCount = c.multipleLocationsDetected ? (c.locations || []).length : (c.noMatchingCityLocation ? 0 : 1);
+    const cityLabel = cityName || 'dieser Stadt';
+    return `
+      <div class="card">
+        <p class="muted" style="margin:0">${c.totalLocationsDiscovered} Standorte insgesamt gefunden${c.noMatchingCityLocation ? '' : `, ${relevantCount} davon in ${escapeHtml(cityLabel)}`}</p>
+        ${c.locationsTruncated ? '<p class="muted" style="margin:6px 0 0">Hinweis: Es wurden möglicherweise nicht alle vorhandenen Standorte angezeigt.</p>' : ''}
+        ${c.noMatchingCityLocation ? `<div class="banner error" style="margin:10px 0 0">Mehrere Standorte gefunden, aber kein eindeutiger Standort in ${escapeHtml(cityLabel)} gefunden.</div>` : ''}
+      </div>
+    `;
+  }
+
+  // Phase 1G.1 correction — "Mehrere Standorte gefunden". A multi-
+  // location result is ONE proposed business with several locations
+  // underneath it; every verified, city-relevant candidate is INCLUDED
+  // BY DEFAULT (see submitAiResearch's defaultIncludedLocationIndices)
+  // and shown as a checkbox card, never a mutually-exclusive radio pick.
+  // Candidates are already filtered to this StadtPocket city server-side
+  // (see stadtpocketResearchService.js's splitLocationCandidates) --
+  // this never shows an out-of-city branch. Nothing here creates a
+  // draft.
+  //
+  // Interaction bug fix (Phase 1G.1 follow-up): the checkbox is wired
+  // ONLY via its own native <label for="..."> pairing and a single
+  // onchange handler -- there is deliberately no separate onclick on
+  // the outer card as well. A real <input>/<label> pair already makes
+  // the WHOLE label clickable (clicking the address text, not just the
+  // 12x12px box, toggles it) and already fires exactly one "change"
+  // event per user click, tap, or Space press, because the browser
+  // itself reconciles "clicked the input directly" vs. "clicked
+  // elsewhere in the label" into one control activation -- it is not
+  // something this code needs to (and must not try to) reimplement with
+  // onclick/stopPropagation. The earlier version had BOTH an onclick on
+  // the outer <div> AND the checkbox nested inside a <label> with no
+  // stopPropagation: every click fired the toggle twice (once from the
+  // click bubbling to the div, once more from the label's native
+  // "activate the labelled control" behavior separately bubbling too),
+  // which silently cancelled itself out -- the checkbox visually never
+  // changed no matter how many times it was clicked. The
+  // "Quelle ansehen" link lives OUTSIDE the <label> entirely (a sibling
+  // element below it), so clicking it never reaches or activates the
+  // checkbox at all -- no stopPropagation needed there either.
+  function renderLocationCandidates(candidates, includedIndices, cityName) {
+    const includedCount = candidates.filter((_, i) => includedIndices.has(i)).length;
+    return `
+      <div class="card">
+        <h2 style="margin-top:0">Mehrere Standorte gefunden</h2>
+        <p class="muted" style="margin:0 0 12px">${includedCount} von ${candidates.length} Standorten werden diesem Unternehmen in ${escapeHtml(cityName || 'dieser Stadt')} zugeordnet. Deaktivieren Sie einen Standort, falls er nicht dazugehört.</p>
+        ${candidates.map((loc, i) => {
+          const included = includedIndices.has(i);
+          const hoursLines = formatHoursForDisplay(loc.hours).join(' · ');
+          const inputId = `ai-location-${i}`;
+          return `
+            <div class="card field-review-card" style="border:2px solid ${included ? 'var(--accent, #2563eb)' : 'transparent'};opacity:${included ? '1' : '0.55'}">
+              <label for="${inputId}" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0">
+                <input type="checkbox" id="${inputId}" ${included ? 'checked' : ''} onchange="toggleAiLocationIncluded(${i})" style="margin-top:3px" />
+                <span>
+                  <div class="field-label">${escapeHtml(loc.name || `Standort ${i + 1}`)}</div>
+                  <div>${escapeHtml(loc.address)}</div>
+                  ${loc.phone ? `<div class="muted">${escapeHtml(loc.phone)}</div>` : ''}
+                  ${hoursLines ? `<div class="muted">${escapeHtml(hoursLines)}</div>` : ''}
+                </span>
+              </label>
+              ${loc.sourceUrl ? `<div class="field-evidence" style="margin-left:26px"><a href="${escapeHtml(loc.sourceUrl)}" target="_blank" rel="noopener noreferrer">Quelle ansehen ↗</a></div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Shared by both the single-location and multi-location review
+  // screens -- identical rendering either way, extracted once Phase
+  // 1G.1 introduced a second review screen that also needs it.
+  function renderImageCandidateHtml(c) {
+    return c.headerImageCandidate ? `
+      <div class="card">
+        <h2 style="margin-top:0">Bildvorschlag</h2>
+        <div class="header-image-preview image-candidate-box">
+          <img src="${escapeHtml(c.headerImageCandidate.value.url)}" alt=""
+            onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar'; " />
+          <span class="image-candidate-label">Nur Vorschlag</span>
+        </div>
+        <p class="muted" style="margin-top:10px">Dieses Bild wurde auf einer öffentlichen Quelle gefunden. Es wurde noch nicht als StadtPocket-Bild übernommen.</p>
+      </div>
+    ` : '';
+  }
+
+  // Phase 1G.1 — dispatches to the multi-location review screen when
+  // the backend found more than one city-relevant location; otherwise
+  // renders the ordinary single-location review, unchanged from before
+  // Phase 1G ever existed.
   function renderAiResearchReview() {
+    if (aiResearchState.candidate && aiResearchState.candidate.multipleLocationsDetected) {
+      return renderAiResearchReviewMultiLocation();
+    }
+    return renderAiResearchReviewSingleLocation();
+  }
+
+  function renderAiResearchReviewSingleLocation() {
     const s = aiResearchState;
     const c = s.candidate;
     const fields = c.fields || {};
@@ -1832,24 +1959,12 @@
     const presentFields = AI_FIELD_DISPLAY_ORDER.filter(([key]) => key in fields);
     const fieldCardsHtml = presentFields.map(([key, label]) => renderAiFieldCard(key, label, fields[key])).join('');
 
-    const imageCandidateHtml = c.headerImageCandidate ? `
-      <div class="card">
-        <h2 style="margin-top:0">Bildvorschlag</h2>
-        <div class="header-image-preview image-candidate-box">
-          <img src="${escapeHtml(c.headerImageCandidate.value.url)}" alt=""
-            onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar'; " />
-          <span class="image-candidate-label">Nur Vorschlag</span>
-        </div>
-        <p class="muted" style="margin-top:10px">Dieses Bild wurde auf einer öffentlichen Quelle gefunden. Es wurde noch nicht als StadtPocket-Bild übernommen.</p>
-      </div>
-    ` : '';
-
     // Phase 1D: the button becomes REALLY functional for a genuine NEW
     // candidate with every required field present -- never trusted from
     // this render alone, though: createDraftFromAiResearch() re-checks
     // both conditions again itself before ever calling the API (§8/§9).
     const missingRequired = getMissingRequiredFieldsForDraft(s.editable);
-    const canCreate = duplicateAllowsDraftCreation(duplicateStatus) && missingRequired.length === 0;
+    const canCreate = canCreateDraftFromCandidate(c, s.editable);
     const createBtnHtml = canCreate
       ? `<button class="primary" type="button" onclick="createDraftFromAiResearch()">Als Entwurf erstellen</button>`
       : `<button class="primary" type="button" disabled title="${escapeHtml(
@@ -1857,6 +1972,9 @@
             ? 'Aufgrund eines möglichen Duplikats derzeit nicht verfügbar'
             : `Fehlende Pflichtfelder: ${missingRequired.join(', ')}`
         )}">Als Entwurf erstellen</button>`;
+
+    const cityName = (cities.find((x) => x.id === currentLocationId) || {}).name || '';
+    const locationSummaryHtml = renderLocationDiscoverySummary(c, cityName);
 
     document.getElementById('ai-research-workspace').innerHTML = `
       <div class="card section-card">
@@ -1871,9 +1989,81 @@
 
       ${statusMessage ? `<div class="banner info">${escapeHtml(statusMessage)}</div>` : ''}
 
+      ${locationSummaryHtml}
+
       ${presentFields.length ? fieldCardsHtml : '<div class="empty-state">Keine verwertbaren Informationen gefunden.</div>'}
 
-      ${imageCandidateHtml}
+      ${renderImageCandidateHtml(c)}
+
+      <div id="ai-create-error"></div>
+      <div class="actions">
+        <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+        <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
+        ${createBtnHtml}
+      </div>
+    `;
+  }
+
+  // Phase 1G.1 — multi-location review: ONE business-level proposal
+  // (name/category/shortDescription/...; never address/phone/hours,
+  // which stay absent from candidate.fields for a multi-location result
+  // -- see stadtpocketResearchService.js's splitLocationCandidates) plus
+  // the checkbox location list above. "Entwurf mit N Standorten
+  // erstellen" calls createMultiLocationDraftFromAiResearch(), which
+  // posts to the dedicated .../research/draft-multi endpoint -- never
+  // the single-location .../research/draft endpoint, and never creates
+  // more than one StadtPocketListing no matter how many locations are
+  // included (see stadtpocketManagerService.js's
+  // initializeMultiLocationDraft header comment for why that matters).
+  function renderAiResearchReviewMultiLocation() {
+    const s = aiResearchState;
+    const c = s.candidate;
+    const fields = c.fields || {};
+    const name = (fields.name && fields.name.value) || s.businessName || '(ohne Namen)';
+
+    const statusMessage = getResearchStatusMessage(c.researchStatus);
+    const duplicateStatus = c.duplicate ? c.duplicate.status : 'POSSIBLE_MATCH';
+    const dupUi = getDuplicateStatusUI(duplicateStatus);
+
+    const presentFields = AI_FIELD_DISPLAY_ORDER.filter(([key]) => key in fields);
+    const fieldCardsHtml = presentFields.map(([key, label]) => renderAiFieldCard(key, label, fields[key])).join('');
+
+    const missingRequired = getMissingRequiredBrandFields(s.editable);
+    const includedCount = getIncludedLocations(c, s.includedLocationIndices).length;
+    const canCreate = canCreateMultiLocationDraft(c, s.editable, s.includedLocationIndices);
+    const createBtnHtml = canCreate
+      ? `<button class="primary" type="button" onclick="createMultiLocationDraftFromAiResearch()">Entwurf mit ${includedCount} Standort${includedCount === 1 ? '' : 'en'} erstellen</button>`
+      : `<button class="primary" type="button" disabled title="${escapeHtml(
+          !duplicateAllowsDraftCreation(duplicateStatus)
+            ? 'Aufgrund eines möglichen Duplikats derzeit nicht verfügbar'
+            : includedCount === 0
+              ? 'Bitte mindestens einen Standort auswählen'
+              : `Fehlende Pflichtfelder: ${missingRequired.join(', ')}`
+        )}">Entwurf erstellen</button>`;
+
+    const cityName = (cities.find((x) => x.id === currentLocationId) || {}).name || '';
+    const locationSummaryHtml = renderLocationDiscoverySummary(c, cityName);
+    const locationCandidatesHtml = renderLocationCandidates(c.locations || [], s.includedLocationIndices, cityName);
+
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <h1 style="margin:0 0 4px">${escapeHtml(name)}</h1>
+        <p class="muted" style="margin:0">Mehrere Standorte gefunden</p>
+      </div>
+
+      <div class="card">
+        <div class="banner ${dupUi.type}" style="margin:0">${escapeHtml(dupUi.message)}</div>
+        ${(c.duplicate && c.duplicate.matches && c.duplicate.matches.length) ? renderDuplicateMatches(c.duplicate.matches) : ''}
+      </div>
+
+      ${statusMessage ? `<div class="banner info">${escapeHtml(statusMessage)}</div>` : ''}
+
+      ${locationSummaryHtml}
+      ${locationCandidatesHtml}
+
+      ${presentFields.length ? fieldCardsHtml : '<div class="empty-state">Keine verwertbaren Informationen gefunden.</div>'}
+
+      ${renderImageCandidateHtml(c)}
 
       <div id="ai-create-error"></div>
       <div class="actions">
@@ -1917,9 +2107,10 @@
     // Client-side pre-flight only, never the real guarantee -- the
     // server re-checks this itself, fresh, against the actual request
     // body, before ever creating anything (Phase 1D §8/§9 follow-up).
-    const duplicateStatus = s.candidate && s.candidate.duplicate ? s.candidate.duplicate.status : null;
-    if (!duplicateAllowsDraftCreation(duplicateStatus)) return;
-    if (getMissingRequiredFieldsForDraft(s.editable).length) return;
+    // Only ever called for a single-location candidate -- a multi-
+    // location one renders its own separate button, calling
+    // createMultiLocationDraftFromAiResearch() below instead.
+    if (!canCreateDraftFromCandidate(s.candidate, s.editable)) return;
 
     s.creatingDraft = true;
     renderAiResearchCreating();
@@ -1965,6 +2156,73 @@
     }
 
     await renderCityList();
+  }
+
+  // Phase 1G.1 — multi-location counterpart to createDraftFromAiResearch
+  // above. Converts the reviewed candidate (business-level proposal +
+  // the Admin-included locations) into ONE StadtPocketListing plus one
+  // StadtPocketListingLocation PER included location, via ONE call to
+  // the dedicated POST .../research/draft-multi endpoint
+  // (stadtpocketAiDraftService.js's createMultiLocationDraftFromReview),
+  // which internally calls stadtpocketManagerService.js's
+  // initializeMultiLocationDraft -- never N separate listings no matter
+  // how many locations are included. headerImageCandidate is never
+  // referenced below, same as the single-location flow -- image
+  // adoption remains a separate, later, explicit action.
+  async function createMultiLocationDraftFromAiResearch() {
+    const s = aiResearchState;
+    if (!s || s.creatingDraft) return; // prevent double submission
+    if (!canCreateMultiLocationDraft(s.candidate, s.editable, s.includedLocationIndices)) return;
+
+    s.creatingDraft = true;
+    renderAiResearchCreating();
+
+    const payload = buildMultiLocationInitPayload(s.editable, s.candidate, s.includedLocationIndices);
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research/draft-multi`, { method: 'POST', body: payload });
+    s.creatingDraft = false;
+
+    if (!res.ok) {
+      if (res.status === 409 && res.body && res.body.duplicate) {
+        s.candidate.duplicate = res.body.duplicate;
+        renderAiResearchReview();
+        return;
+      }
+      renderAiResearchReview();
+      banner('ai-create-error', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht erstellt werden.');
+      return;
+    }
+
+    // No multi-location editor exists yet (the existing page-editor is
+    // shaped around exactly one listingLocationId at a time -- see
+    // stadtpocketManagerService.js's mergeState). Opening it for one
+    // arbitrary one of the just-created locations would misrepresent
+    // the result the same way the earlier single-select design did, so
+    // this deliberately does not do that -- see this feature's own
+    // final report for the next-phase follow-up (a real multi-location
+    // editor view). Instead: an honest inline confirmation, then back
+    // to the city list.
+    renderAiResearchMultiLocationCreated(res.body.listing);
+    await renderCityList();
+  }
+
+  function renderAiResearchMultiLocationCreated(listing) {
+    const locationsHtml = (listing.locations || []).map((l) => `
+      <div class="card field-review-card">
+        <div>${escapeHtml(l.address)}</div>
+        ${l.phone ? `<div class="muted">${escapeHtml(l.phone)}</div>` : ''}
+      </div>
+    `).join('');
+    document.getElementById('ai-research-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">✨ Entwurf wurde erstellt</span>
+        <h1 style="margin:8px 0 4px">${escapeHtml(listing.name)}</h1>
+        <p class="muted" style="margin:0">${listing.locations.length} Standort${listing.locations.length === 1 ? '' : 'e'} als Entwurf angelegt. Bitte prüfen Sie die Angaben vor der Veröffentlichung.</p>
+      </div>
+      ${locationsHtml}
+      <div class="actions">
+        <button class="primary" type="button" onclick="showPage('page-add-choice')">Fertig</button>
+      </div>
+    `;
   }
 
   // ── Editor ────────────────────────────────────────────────────────

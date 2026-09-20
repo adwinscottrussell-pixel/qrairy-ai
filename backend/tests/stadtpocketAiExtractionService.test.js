@@ -7,7 +7,7 @@
 // Run: node tests/stadtpocketAiExtractionService.test.js
 // ============================================================
 const assert = require('assert/strict');
-const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL } = require('../src/services/stadtpocketAiExtractionService');
+const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL, buildUserMessage, looksLikeUselessImageCandidate, MAX_LOCATION_CANDIDATES } = require('../src/services/stadtpocketAiExtractionService');
 
 // Real Anthropic responses carry a `type: 'text'` field on the text
 // content block -- matched exactly here (not just `{ text }`) since
@@ -206,6 +206,141 @@ test('20. a response consisting ONLY of a thinking block (no text block at all) 
   const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
   assert.equal(result.status, STATUS.MALFORMED_OUTPUT);
   assert.deepEqual(result.fields, {});
+});
+
+// ── Phase 1G — "locations" field validation ─────────────────────
+test('21. a well-formed multi-location array is retained with sourceUrl per entry', async () => {
+  const json = JSON.stringify({
+    locations: {
+      value: [
+        { name: 'Westerlingerstraße', address: 'Westerlingerstr. 49, 89073 Ulm', phone: '0731 111111', sourceUrl: 'https://betz.de/filialen/' },
+        { name: 'Haslacherweg', address: 'Haslacherweg 59, 89075 Ulm', sourceUrl: 'https://betz.de/filialen/' },
+      ],
+      confidence: 'high',
+    },
+  });
+  const result = await extractBusinessFields({ businessName: 'Betz', websiteUrl: 'https://betz.de/', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.status, STATUS.OK);
+  assert.equal(result.fields.locations.value.length, 2);
+  assert.equal(result.fields.locations.value[0].address, 'Westerlingerstr. 49, 89073 Ulm');
+  assert.equal(result.fields.locations.value[1].sourceUrl, 'https://betz.de/filialen/');
+});
+
+test('22. a location entry missing an address is dropped; siblings with a real address survive', async () => {
+  const json = JSON.stringify({
+    locations: { value: [{ address: 'Echte Str. 1, Ulm' }, { name: 'ohne Adresse' }], confidence: 'medium' },
+  });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.locations.value.length, 1);
+  assert.equal(result.fields.locations.value[0].address, 'Echte Str. 1, Ulm');
+});
+
+test('23. if every location entry is malformed, the whole "locations" field is dropped rather than kept empty', async () => {
+  const json = JSON.stringify({
+    name: { value: 'x', confidence: 'high' },
+    locations: { value: [{ name: 'nur ein Name, keine Adresse' }], confidence: 'low' },
+  });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal('locations' in result.fields, false);
+  assert.equal(result.fields.name.value, 'x'); // sibling field unaffected
+});
+
+test('24. "locations" that is not an array at all is dropped, never coerced', async () => {
+  const json = JSON.stringify({ locations: { value: 'not an array', confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal('locations' in result.fields, false);
+});
+
+test('25. malformed hours within one location entry are dropped for that entry only, address/phone survive', async () => {
+  const json = JSON.stringify({
+    locations: { value: [{ address: 'Str. 1', phone: '0731 1', hours: 'not-an-array' }], confidence: 'high' },
+  });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  const loc = result.fields.locations.value[0];
+  assert.equal(loc.address, 'Str. 1');
+  assert.equal(loc.phone, '0731 1');
+  assert.equal('hours' in loc, false);
+});
+
+test('30b. a location entry\'s optional "city" and "postalCode" are retained verbatim', async () => {
+  const json = JSON.stringify({
+    locations: {
+      value: [
+        { address: 'Westerlingerstr. 49, 89073 Ulm', city: 'Ulm', postalCode: '89073' },
+        { address: 'Carl-Zeiss-Str. 1, 89231 Neu-Ulm', city: 'Neu-Ulm', postalCode: '89231' },
+      ],
+      confidence: 'high',
+    },
+  });
+  const result = await extractBusinessFields({ businessName: 'Betz', websiteUrl: 'https://betz.de/', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.locations.value[0].city, 'Ulm');
+  assert.equal(result.fields.locations.value[0].postalCode, '89073');
+  assert.equal(result.fields.locations.value[1].city, 'Neu-Ulm');
+});
+
+// ── PHASE 1G CORRECTION — real Bäckerei Betz has 30 branches; prove
+// none of that is silently limited to 2 or 5, and that a defensive cap
+// only ever engages far above that, with an explicit, honest flag. ───
+test('30c. 30 real-shaped location entries (the actual Bäckerei Betz count) all survive -- nothing here reduces them to 2 or 5', async () => {
+  const thirty = Array.from({ length: 30 }, (_, i) => ({ address: `Straße ${i}, Stadt ${i}`, city: i < 8 ? 'Ulm' : `Stadt ${i}` }));
+  const json = JSON.stringify({ locations: { value: thirty, confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'Betz', websiteUrl: 'https://betz.de/', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.locations.value.length, 30);
+  assert.equal('locationsTruncated' in result.fields, false);
+});
+
+test('30d. more than MAX_LOCATION_CANDIDATES entries are capped, with an explicit locationsTruncated flag -- never silently discarded without a trace', async () => {
+  const many = Array.from({ length: MAX_LOCATION_CANDIDATES + 20 }, (_, i) => ({ address: `Straße ${i}, Stadt ${i}` }));
+  const json = JSON.stringify({ locations: { value: many, confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.locations.value.length, MAX_LOCATION_CANDIDATES);
+  assert.equal(result.fields.locationsTruncated.value, true);
+});
+
+test('30e. exactly MAX_LOCATION_CANDIDATES entries are not flagged as truncated (the cap is inclusive)', async () => {
+  const exact = Array.from({ length: MAX_LOCATION_CANDIDATES }, (_, i) => ({ address: `Straße ${i}, Stadt ${i}` }));
+  const json = JSON.stringify({ locations: { value: exact, confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.locations.value.length, MAX_LOCATION_CANDIDATES);
+  assert.equal('locationsTruncated' in result.fields, false);
+});
+
+test('30f. buildUserMessage no longer suggests filtering by relevance -- it instructs the model to include every location regardless of the requested city', () => {
+  const msg = buildUserMessage('Betz', 'https://betz.de', 'content', 'Ulm');
+  assert.ok(msg.includes('include EVERY one of them in "locations" regardless of city'));
+  assert.ok(!msg.toLowerCase().includes('help identify which'));
+});
+
+// ── Phase 1G — image-candidate junk filtering ───────────────────
+test('26. a favicon URL is rejected as a header image candidate', async () => {
+  const json = JSON.stringify({ headerImageCandidateUrl: { value: 'https://betz.de/cropped-favicon-180x180.jpg', confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://betz.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal('headerImageCandidateUrl' in result.fields, false);
+});
+
+test('27. a plausible hero/storefront photo URL is accepted', async () => {
+  const json = JSON.stringify({ headerImageCandidateUrl: { value: 'https://betz.de/wp-content/uploads/laden-aussenansicht.jpg', confidence: 'medium' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://betz.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.fields.headerImageCandidateUrl.value, 'https://betz.de/wp-content/uploads/laden-aussenansicht.jpg');
+});
+
+test('28. looksLikeUselessImageCandidate directly: icon-size suffix, spacer, and placeholder patterns are all rejected', () => {
+  assert.equal(looksLikeUselessImageCandidate('https://x.de/img/icon-32x32.png'), true);
+  assert.equal(looksLikeUselessImageCandidate('https://x.de/img/spacer.gif'), true);
+  assert.equal(looksLikeUselessImageCandidate('https://x.de/img/placeholder.jpg'), true);
+  assert.equal(looksLikeUselessImageCandidate('https://x.de/img/laden-vorne.jpg'), false);
+});
+
+test('29. looksLikeUselessImageCandidate treats an unparsable URL as useless (fail-closed)', () => {
+  assert.equal(looksLikeUselessImageCandidate('not a url'), true);
+});
+
+// ── Phase 1G — city context passed through to the model ─────────
+test('30. buildUserMessage includes the city context line only when one is provided', () => {
+  const withCity = buildUserMessage('Betz', 'https://betz.de', 'content', 'Ulm');
+  assert.ok(withCity.includes('StadtPocket city "Ulm"'));
+  const withoutCity = buildUserMessage('Betz', 'https://betz.de', 'content');
+  assert.ok(!withoutCity.includes('StadtPocket city'));
 });
 
 // ── runner ──────────────────────────────────────────────────────

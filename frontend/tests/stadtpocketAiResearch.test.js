@@ -34,6 +34,11 @@ const {
   getAiResearchFailureMessage,
   AI_RESEARCH_TIMEOUT_MESSAGE,
   AI_RESEARCH_NETWORK_ERROR_MESSAGE,
+  canCreateDraftFromCandidate,
+  defaultIncludedLocationIndices,
+  getIncludedLocations,
+  canCreateMultiLocationDraft,
+  buildMultiLocationInitPayload,
 } = require('../public/js/stadtpocket-ai-research');
 
 const tests = [];
@@ -314,6 +319,152 @@ test('45. any other thrown error (network failure, etc.) produces the honest con
 test('46. a missing/undefined error still resolves to an honest message, never throws', () => {
   assert.equal(getAiResearchFailureMessage(undefined), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
   assert.equal(getAiResearchFailureMessage(null), AI_RESEARCH_NETWORK_ERROR_MESSAGE);
+});
+
+// ── Phase 1G.1 — multi-location business model correction ───────
+// A multi-location result is ONE proposed business with several
+// locations, all included by default -- never a single-branch pick
+// that overwrites the parent business proposal (that earlier Phase 1G
+// design is gone; see stadtpocket-ai-research.js's own header comment
+// on this section for the full reasoning).
+test('47. canCreateDraftFromCandidate no longer takes or needs a location-selection argument -- single-location gating is unaffected', () => {
+  const candidate = { duplicate: { status: 'NEW' } };
+  const editable = { name: 'x', category: 'x', shortDescription: 'x', address: 'x' };
+  assert.equal(canCreateDraftFromCandidate(candidate, editable), true);
+});
+
+test('48. canCreateDraftFromCandidate still blocks on duplicate/missing fields, exactly as before', () => {
+  assert.equal(canCreateDraftFromCandidate({ duplicate: { status: 'ALREADY_DRAFT' } }, { name: 'x', category: 'x', shortDescription: 'x', address: 'x' }), false);
+  assert.equal(canCreateDraftFromCandidate({ duplicate: { status: 'NEW' } }, {}), false);
+});
+
+test('49. defaultIncludedLocationIndices includes every location by default -- never just the first one', () => {
+  const candidate = { locations: [{ address: 'A' }, { address: 'B' }, { address: 'C' }] };
+  const included = defaultIncludedLocationIndices(candidate);
+  assert.equal(included.size, 3);
+  assert.deepEqual([...included].sort(), [0, 1, 2]);
+});
+
+test('50. getIncludedLocations returns only the included subset, preserving order', () => {
+  const candidate = { locations: [{ address: 'A' }, { address: 'B' }, { address: 'C' }] };
+  const included = new Set([0, 2]);
+  const result = getIncludedLocations(candidate, included);
+  assert.deepEqual(result.map((l) => l.address), ['A', 'C']);
+});
+
+test('51. canCreateMultiLocationDraft requires at least one included location, even with all other checks passing', () => {
+  const candidate = { duplicate: { status: 'NEW' } };
+  const editable = { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'x' };
+  assert.equal(canCreateMultiLocationDraft(candidate, editable, new Set()), false);
+  assert.equal(canCreateMultiLocationDraft(candidate, editable, new Set([0])), true);
+});
+
+test('52. canCreateMultiLocationDraft does NOT require "address" as a brand-level field -- address is per-location now', () => {
+  const candidate = { duplicate: { status: 'NEW' } };
+  const editable = { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'x' }; // no "address" key at all
+  assert.equal(canCreateMultiLocationDraft(candidate, editable, new Set([0, 1])), true);
+});
+
+test('53. canCreateMultiLocationDraft still blocks on duplicate / missing brand fields', () => {
+  const blocked = { duplicate: { status: 'ALREADY_DRAFT' } };
+  assert.equal(canCreateMultiLocationDraft(blocked, { name: 'x', category: 'x', shortDescription: 'x' }, new Set([0])), false);
+  const missingCategory = { duplicate: { status: 'NEW' } };
+  assert.equal(canCreateMultiLocationDraft(missingCategory, { name: 'x', shortDescription: 'x' }, new Set([0])), false);
+});
+
+test('54. buildMultiLocationInitPayload sends only the business-level fields plus INCLUDED locations, excluding a deselected one', () => {
+  const candidate = {
+    fields: { website: { value: 'https://baeckerei-betz.com/' } },
+    locations: [
+      { address: 'Westerlingerstr. 49, Ulm', phone: '0731 978000' },
+      { address: 'Haslacherweg 59, Ulm' },
+      { address: 'Bad Row, Ulm' },
+    ],
+  };
+  const editable = { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'Traditionsbäckerei' };
+  const payload = buildMultiLocationInitPayload(editable, candidate, new Set([0, 1])); // index 2 excluded
+  assert.deepEqual(payload.listing, { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'Traditionsbäckerei' });
+  assert.equal(payload.locations.length, 2);
+  assert.equal(payload.locations[0].address, 'Westerlingerstr. 49, Ulm');
+  assert.equal(payload.locations[0].phone, '0731 978000');
+  assert.equal(payload.locations[0].website, 'https://baeckerei-betz.com/'); // brand website applied to every included location
+  assert.ok(!payload.locations.some((l) => l.address === 'Bad Row, Ulm'));
+});
+
+test('55. buildMultiLocationInitPayload includes optional brand fields (subCategory/tags/longDescription) only when present', () => {
+  const candidate = { locations: [{ address: 'A' }, { address: 'B' }] };
+  const editable = { name: 'x', category: 'y', shortDescription: 'z', subCategory: 'Feinkost', tags: 'brot, kuchen', longDescription: 'Lang und ausführlich.' };
+  const payload = buildMultiLocationInitPayload(editable, candidate, defaultIncludedLocationIndices(candidate));
+  assert.equal(payload.listing.subCategory, 'Feinkost');
+  assert.deepEqual(payload.listing.tags, ['brot', 'kuchen']);
+  assert.equal(payload.listing.longDescription, 'Lang und ausführlich.');
+});
+
+test('56. buildMultiLocationInitPayload never includes an excluded location, even when it is the only one deselected', () => {
+  const candidate = { locations: [{ address: 'A' }, { address: 'B' }, { address: 'C' }, { address: 'D' }] };
+  const editable = { name: 'x', category: 'y', shortDescription: 'z' };
+  const payload = buildMultiLocationInitPayload(editable, candidate, new Set([0, 1, 3]));
+  assert.equal(payload.locations.length, 3);
+  assert.ok(!payload.locations.some((l) => l.address === 'C'));
+});
+
+// ── Phase 1G.1 follow-up — checkbox interaction bug regression ──
+// The reported bug (clicking a checkbox appeared to do nothing) was a
+// pure DOM/event-wiring defect in stadtpocket-admin.html's rendered
+// markup (a competing outer onclick + a checkbox nested in a <label>
+// with no stopPropagation -- every real click fired the toggle twice,
+// cancelling itself out) -- never a defect in this pure-logic module,
+// which has no DOM and was never the buggy layer. These tests pin down
+// the exact state-machine shape the fix's re-render relies on: the
+// real 8-Ulm-branch scenario, deselect exactly one, re-select it.
+// The DOM/event-wiring fix itself is verified interactively against
+// real click events in the local visual-review harness
+// (domcheck-phase1g1-checkbox.js), which this repo's committed test
+// suite has no jsdom dependency to reproduce.
+test('57. the exact reported scenario: 8 included, deselect index 0 (Set.delete, what toggleAiLocationIncluded does), 7 remain -- all in the correct order', () => {
+  const candidate = {
+    locations: Array.from({ length: 8 }, (_, i) => ({ address: `Standort ${i}` })),
+  };
+  const included = defaultIncludedLocationIndices(candidate);
+  assert.equal(included.size, 8);
+  included.delete(0); // exactly what toggleAiLocationIncluded(0) does on an unchecked event
+  assert.equal(included.size, 7);
+  const remaining = getIncludedLocations(candidate, included);
+  assert.equal(remaining.length, 7);
+  assert.ok(!remaining.some((l) => l.address === 'Standort 0'));
+  assert.deepEqual(remaining.map((l) => l.address), Array.from({ length: 7 }, (_, i) => `Standort ${i + 1}`));
+});
+
+test('58. re-adding a deselected index (Set.add, what toggleAiLocationIncluded does on a re-checked event) restores it to the original position/count', () => {
+  const candidate = { locations: Array.from({ length: 8 }, (_, i) => ({ address: `Standort ${i}` })) };
+  const included = defaultIncludedLocationIndices(candidate);
+  included.delete(0);
+  included.add(0); // re-check
+  assert.equal(included.size, 8);
+  assert.equal(getIncludedLocations(candidate, included).length, 8);
+});
+
+test('59. deselecting all 8 one at a time reaches zero, and canCreateMultiLocationDraft correctly disables at that exact point', () => {
+  const candidate = { duplicate: { status: 'NEW' }, locations: Array.from({ length: 8 }, (_, i) => ({ address: `Standort ${i}` })) };
+  const editable = { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'x' };
+  const included = defaultIncludedLocationIndices(candidate);
+  for (let i = 0; i < 8; i += 1) {
+    included.delete(i);
+    const shouldStillAllow = included.size > 0;
+    assert.equal(canCreateMultiLocationDraft(candidate, editable, included), shouldStillAllow, `at ${included.size} included`);
+  }
+  assert.equal(included.size, 0);
+});
+
+test('60. re-selecting exactly one after all were deselected re-enables creation, matching only that one location in the payload', () => {
+  const candidate = { duplicate: { status: 'NEW' }, locations: Array.from({ length: 8 }, (_, i) => ({ address: `Standort ${i}` })) };
+  const editable = { name: 'Bäckerei Betz', category: 'Bäckerei', shortDescription: 'x' };
+  const included = new Set(); // all deselected
+  assert.equal(canCreateMultiLocationDraft(candidate, editable, included), false);
+  included.add(3);
+  assert.equal(canCreateMultiLocationDraft(candidate, editable, included), true);
+  const payload = buildMultiLocationInitPayload(editable, candidate, included);
+  assert.deepEqual(payload.locations.map((l) => l.address), ['Standort 3']);
 });
 
 // ── runner ──────────────────────────────────────────────────────
