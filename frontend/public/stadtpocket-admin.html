@@ -608,6 +608,24 @@
     <div id="ai-discovery-workspace"></div>
   </section>
 
+  <!-- Phase 1H.4 -- Selected Businesses -> AI Preparation Pipeline.
+       Sequential progress screen for the "Ausgewählte Unternehmen
+       vorbereiten" step, then hands off to the EXISTING page-ai-research
+       review screen (below) for each prepared candidate -- no separate
+       review UI is built here. -->
+  <section class="page" id="page-ai-discovery-prep">
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="showPage('page-add-choice')">Neues Geschäft</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current">Vorbereitung</span>
+    </nav>
+    <div id="ai-discovery-prep-workspace"></div>
+  </section>
+
   <section class="page" id="page-ai-research">
     <nav class="breadcrumb">
       <span class="crumb">StadtPocket Admin</span>
@@ -1847,7 +1865,29 @@
   let aiResearchState = null;
 
   function resetAiResearchState() {
-    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false, includedLocationIndices: new Set() };
+    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false, includedLocationIndices: new Set(), batchContext: null };
+  }
+
+  // Phase 1H.4 -- loads an already-completed research result (produced
+  // by the batch preparation pipeline below) directly into the EXISTING
+  // aiResearchState/renderAiResearchReview() review screen, so a
+  // prepared candidate is reviewed with the exact same UI/component as
+  // a normal single-business "Mit KI hinzufügen" result -- no second
+  // review screen. batchContext (sourceId/position/total) is the only
+  // addition; when present, the review screen's own actions row adds
+  // Zurück/Weiter batch navigation (see renderBatchNavButtonsHtml)
+  // without changing anything else about that screen.
+  function loadCandidateIntoAiResearchState(businessName, websiteUrl, candidate, batchContext) {
+    aiResearchState = {
+      step: 'review',
+      businessName: businessName || '',
+      websiteUrl: websiteUrl || '',
+      candidate,
+      editable: extractEditableFieldsFromCandidate(candidate),
+      submitting: false,
+      includedLocationIndices: defaultIncludedLocationIndices(candidate),
+      batchContext: batchContext || null,
+    };
   }
 
   // Phase 1G.1 — the Admin excludes a bad location, never "selects the
@@ -2060,9 +2100,173 @@
       <div class="discovery-candidate-list">${rows}</div>
       <div class="actions">
         <button class="secondary" type="button" onclick="retryAiDiscovery()">Erneut suchen</button>
-        <button class="primary" type="button" disabled title="Nächster Schritt: ausgewählte Unternehmen zur Recherche vorbereiten (noch nicht verfügbar)">Ausgewählte Unternehmen vorbereiten (${selectedCount})</button>
+        <button class="primary" type="button" ${selectedCount === 0 ? 'disabled' : ''} onclick="submitAiDiscoveryPrep()">Ausgewählte Unternehmen vorbereiten (${selectedCount})</button>
       </div>
     `;
+  }
+
+  // ── Selected Businesses -> AI Preparation Pipeline (Phase 1H.4) ────
+  // Connects the discovery-results screen above to the EXISTING Phase
+  // 1G single-business research pipeline -- no second research engine.
+  // Orchestration (sequential processing, one-failure-never-aborts-the-
+  // batch, ready/drafted bookkeeping) is the pure, DOM-free
+  // runSequentialPreparation/getPrepReadyResultIndices/getPrepSummary
+  // trio in js/stadtpocket-ai-research.js; everything below is DOM
+  // wiring + the one real I/O call (prepResearchOneCandidate, which
+  // calls the exact same POST .../research endpoint the single-
+  // business "Mit KI hinzufügen" flow already uses -- never Anthropic/
+  // Firecrawl directly, never a new backend route).
+  //
+  // aiDiscoveryPrepState = { results: [...], processing: bool } --
+  // transient, in-memory only, cleared on every new "vorbereiten" run;
+  // nothing here is ever written to a database. A prepared candidate
+  // only ever becomes a real StadtPocketListing through the SAME
+  // human-triggered research/draft flow the single-business screen
+  // already uses (createDraftFromAiResearch /
+  // createMultiLocationDraftFromAiResearch, both completely
+  // unmodified) -- research completing never auto-creates a draft.
+  let aiDiscoveryPrepState = null;
+
+  // The sole I/O boundary the sequential orchestrator calls through.
+  // Same endpoint, same request shape, same client-side timeout
+  // backstop as submitAiResearch() above -- reused, not reimplemented.
+  // Throws (never resolves to a fake/partial result) on any failure so
+  // runSequentialPreparation's own try/catch records it as this one
+  // candidate's 'failed' status without touching any other candidate.
+  async function prepResearchOneCandidate(result) {
+    const body = { businessName: result.name };
+    if (result.website) body.websiteUrl = result.website;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_RESEARCH_CLIENT_TIMEOUT_MS);
+    let res;
+    try {
+      res = await api(`/manager/stadtpocket/listings/${currentLocationId}/research`, { method: 'POST', body, signal: controller.signal });
+    } catch (err) {
+      throw new Error(getAiResearchFailureMessage(err));
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (!res.ok) throw new Error((res.body && res.body.error) || 'Recherche fehlgeschlagen.');
+    return res.body.candidate;
+  }
+
+  async function submitAiDiscoveryPrep() {
+    const discovery = aiDiscoveryState;
+    const selected = discovery.candidates.filter((c) => discovery.selectedSourceIds.has(c.sourceId));
+    if (!selected.length) return;
+
+    aiDiscoveryPrepState = { results: [], processing: true };
+    showPage('page-ai-discovery-prep');
+    renderAiDiscoveryPrepProgress();
+
+    const results = await runSequentialPreparation(selected, prepResearchOneCandidate, (liveResults) => {
+      aiDiscoveryPrepState.results = liveResults;
+      renderAiDiscoveryPrepProgress();
+    });
+
+    aiDiscoveryPrepState.results = results;
+    aiDiscoveryPrepState.processing = false;
+    renderAiDiscoveryPrepProgress();
+  }
+
+  // Re-runs research for exactly ONE candidate (never the whole batch)
+  // -- the "Erneut versuchen" action next to a failed row.
+  async function retryPrepCandidate(index) {
+    const prep = aiDiscoveryPrepState;
+    if (!prep) return;
+    const result = prep.results[index];
+    if (!result) return;
+    result.status = 'preparing';
+    result.error = null;
+    renderAiDiscoveryPrepProgress();
+    try {
+      result.researchCandidate = await prepResearchOneCandidate(result);
+      result.status = 'ready';
+    } catch (err) {
+      result.status = 'failed';
+      result.error = err.message;
+    }
+    renderAiDiscoveryPrepProgress();
+  }
+
+  function renderAiDiscoveryPrepProgress() {
+    const prep = aiDiscoveryPrepState;
+    const workspace = document.getElementById('ai-discovery-prep-workspace');
+    if (!prep) { workspace.innerHTML = ''; return; }
+
+    const total = prep.results.length;
+    const rows = prep.results.map((r, i) => {
+      let statusHtml;
+      if (r.draftCreated) statusHtml = '<span style="color:var(--success)">✓ Entwurf erstellt</span>';
+      else if (r.status === 'pending') statusHtml = '<span class="muted">Wartet…</span>';
+      else if (r.status === 'preparing') statusHtml = '<span class="muted">Wird recherchiert…</span>';
+      else if (r.status === 'ready') statusHtml = '<span style="color:var(--success)">✓ Bereit zur Prüfung</span>';
+      else statusHtml = `<span style="color:var(--danger)">⚠ Recherche nicht abgeschlossen${r.error ? ': ' + escapeHtml(r.error) : ''}</span>` +
+        ` <button class="ghost small" type="button" onclick="retryPrepCandidate(${i})" ${prep.processing ? 'disabled' : ''}>Erneut versuchen</button>`;
+      return `
+        <div class="card city-row" style="cursor:default">
+          <div>
+            <div style="font-weight:700">${i + 1} von ${total} — ${escapeHtml(r.name || 'Unbenanntes Unternehmen')}</div>
+            <div>${statusHtml}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const summary = getPrepSummary(prep.results);
+    const summaryHtml = prep.processing ? '' : `
+      <div class="card section-card">
+        <h3 style="margin-top:0">Vorbereitung abgeschlossen</h3>
+        <p class="muted">
+          ${summary.readyCount + summary.draftedCount} Unternehmen bereit zur Prüfung${summary.draftedCount ? ` (${summary.draftedCount} bereits als Entwurf erstellt)` : ''}
+          ${summary.failedCount ? `<br>${summary.failedCount} Unternehmen konnte${summary.failedCount === 1 ? '' : 'n'} nicht vollständig vorbereitet werden` : ''}
+        </p>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="showPage('page-add-choice')">Fertig</button>
+          ${summary.readyCount > 0 ? '<button class="primary" type="button" onclick="openPrepReviewFirst()">Ergebnisse prüfen</button>' : ''}
+        </div>
+      </div>
+    `;
+
+    workspace.innerHTML = `
+      <h1>${prep.processing ? 'Unternehmen werden vorbereitet' : 'Vorbereitung'}</h1>
+      <div class="discovery-candidate-list">${rows}</div>
+      ${summaryHtml}
+    `;
+  }
+
+  // Opens the review screen (the EXISTING single-business
+  // renderAiResearchReview()) at the given 0-based position AMONG
+  // currently-ready, not-yet-drafted results. Out of range in either
+  // direction (before the first or past the last) returns to the
+  // prep/summary screen instead -- this is how "Zur Übersicht" (at the
+  // first item) and "Fertig" (at the last item) both work, via the
+  // same navigatePrepBatchStep() call.
+  function openPrepReviewAt(position) {
+    const prep = aiDiscoveryPrepState;
+    if (!prep) return;
+    const readyIndices = getPrepReadyResultIndices(prep.results);
+    if (position < 0 || position >= readyIndices.length) {
+      showPage('page-ai-discovery-prep');
+      renderAiDiscoveryPrepProgress();
+      return;
+    }
+    const result = prep.results[readyIndices[position]];
+    loadCandidateIntoAiResearchState(result.name, result.website, result.researchCandidate, {
+      sourceId: result.sourceId, position: position + 1, total: readyIndices.length,
+    });
+    showPage('page-ai-research');
+    renderAiResearchReview();
+  }
+
+  function openPrepReviewFirst() {
+    openPrepReviewAt(0);
+  }
+
+  function navigatePrepBatchStep(direction) {
+    const s = aiResearchState;
+    if (!s || !s.batchContext) return;
+    openPrepReviewAt(s.batchContext.position - 1 + direction);
   }
 
   function openAiResearch() {
@@ -2331,6 +2535,29 @@
     ` : '';
   }
 
+  // Phase 1H.4 -- when reviewing a prepared candidate FROM a discovery
+  // batch (aiResearchState.batchContext set), these render a small
+  // "N von M" position line and Zurück/Weiter batch-navigation buttons
+  // for the review screen's existing .actions row. Both return '' (no
+  // markup at all) when batchContext is absent, so the single-business
+  // "Mit KI hinzufügen" flow is completely unaffected.
+  function renderBatchPositionBadge(s) {
+    if (!s.batchContext) return '';
+    return `<p class="muted" style="margin:0 0 4px">${s.batchContext.position} von ${s.batchContext.total}</p>`;
+  }
+
+  function renderBatchPrevButtonHtml(s) {
+    if (!s.batchContext) return '';
+    const isFirst = s.batchContext.position === 1;
+    return `<button class="secondary" type="button" onclick="navigatePrepBatchStep(-1)">${isFirst ? 'Zur Übersicht' : 'Zurück'}</button>`;
+  }
+
+  function renderBatchNextButtonHtml(s) {
+    if (!s.batchContext) return '';
+    const isLast = s.batchContext.position === s.batchContext.total;
+    return `<button class="secondary" type="button" onclick="navigatePrepBatchStep(1)">${isLast ? 'Fertig' : 'Weiter'}</button>`;
+  }
+
   // Phase 1G.1 — dispatches to the multi-location review screen when
   // the backend found more than one city-relevant location; otherwise
   // renders the ordinary single-location review, unchanged from before
@@ -2374,6 +2601,7 @@
     const locationSummaryHtml = renderLocationDiscoverySummary(c, cityName);
 
     document.getElementById('ai-research-workspace').innerHTML = `
+      ${renderBatchPositionBadge(s)}
       <div class="card section-card">
         <h1 style="margin:0 0 4px">${escapeHtml(name)}</h1>
         ${address ? `<p class="muted" style="margin:0">${escapeHtml(address)}</p>` : '<p class="muted" style="margin:0">Recherche abgeschlossen</p>'}
@@ -2394,9 +2622,10 @@
 
       <div id="ai-create-error"></div>
       <div class="actions">
-        <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+        ${s.batchContext ? renderBatchPrevButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
         <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
         ${createBtnHtml}
+        ${renderBatchNextButtonHtml(s)}
       </div>
     `;
   }
@@ -2443,6 +2672,7 @@
     const locationCandidatesHtml = renderLocationCandidates(c.locations || [], s.includedLocationIndices, cityName);
 
     document.getElementById('ai-research-workspace').innerHTML = `
+      ${renderBatchPositionBadge(s)}
       <div class="card section-card">
         <h1 style="margin:0 0 4px">${escapeHtml(name)}</h1>
         <p class="muted" style="margin:0">Mehrere Standorte gefunden</p>
@@ -2464,9 +2694,10 @@
 
       <div id="ai-create-error"></div>
       <div class="actions">
-        <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+        ${s.batchContext ? renderBatchPrevButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
         <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
         ${createBtnHtml}
+        ${renderBatchNextButtonHtml(s)}
       </div>
     `;
   }
@@ -2535,6 +2766,15 @@
       return;
     }
 
+    // Phase 1H.4 -- mark this batch item's own entry as drafted (never
+    // touches Betz/Staib/Brettle or any other listing) so it drops out
+    // of the batch review queue (getPrepReadyResultIndices) and a
+    // "Weiter" navigated to afterward skips it. No-op outside batch mode.
+    if (s.batchContext && aiDiscoveryPrepState) {
+      const prepResult = aiDiscoveryPrepState.results.find((r) => r.sourceId === s.batchContext.sourceId);
+      if (prepResult) prepResult.draftCreated = true;
+    }
+
     const finalListing = res.body.listing;
     currentListingLocationId = finalListing.listingLocationId;
     headerImageJustUploaded = false;
@@ -2587,6 +2827,13 @@
       renderAiResearchReview();
       banner('ai-create-error', 'error', (res.body && res.body.error) || 'Entwurf konnte nicht erstellt werden.');
       return;
+    }
+
+    // Phase 1H.4 -- see the identical marking in
+    // createDraftFromAiResearch() above for the full reasoning.
+    if (s.batchContext && aiDiscoveryPrepState) {
+      const prepResult = aiDiscoveryPrepState.results.find((r) => r.sourceId === s.batchContext.sourceId);
+      if (prepResult) prepResult.draftCreated = true;
     }
 
     // No multi-location editor exists yet (the existing page-editor is

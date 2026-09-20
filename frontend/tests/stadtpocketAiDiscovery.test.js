@@ -33,7 +33,13 @@ const adminHtml = fs.readFileSync(adminHtmlPath, 'utf8');
 // checks below, so a match elsewhere in this large file (e.g. the
 // single-business research screen) can never produce a false pass.
 const discoveryBlockStart = adminHtml.indexOf('function openAiDiscovery()');
-const discoveryBlockEnd = adminHtml.indexOf('function openAiResearch()');
+// Ends right before the Phase 1H.4 preparation-pipeline block (which
+// legitimately DOES call POST .../research, once a human explicitly
+// presses "Ausgewählte Unternehmen vorbereiten" -- see
+// stadtpocketAiPreparation.test.js for that block's own tests) so
+// discovery's "never calls research/draft directly" checks below stay
+// scoped to discovery itself, not the later step it hands off to.
+const discoveryBlockEnd = adminHtml.indexOf('// ── Selected Businesses -> AI Preparation Pipeline (Phase 1H.4) ────');
 assert.ok(discoveryBlockStart > -1 && discoveryBlockEnd > discoveryBlockStart, 'discovery script block not found');
 const discoveryBlock = adminHtml.slice(discoveryBlockStart, discoveryBlockEnd);
 
@@ -188,9 +194,16 @@ test('14. discovery never calls a draft/publish/initialize endpoint', () => {
   assert.equal(/\/publish/.test(discoveryBlock), false);
   assert.equal(/initializeDraft/.test(discoveryBlock), false);
 });
-test('14b. "Ausgewählte Unternehmen vorbereiten" is rendered disabled -- this screen creates nothing', () => {
+// Phase 1H.4 connected this button (see stadtpocketAiPreparation.test.js
+// for the actual preparation-pipeline behavior it triggers, including
+// that draft creation still never happens automatically). It stays
+// disabled with zero candidates selected -- never a bare click with
+// nothing to process -- and calls submitAiDiscoveryPrep() only, never a
+// draft/publish endpoint directly, when something is selected.
+test('14b. "Ausgewählte Unternehmen vorbereiten" is disabled with nothing selected, and calls only submitAiDiscoveryPrep()', () => {
   const fn = discoveryBlock.match(/function renderAiDiscoveryResults\(\)\s*\{([\s\S]*?)\n  \}/)[1];
-  assert.match(fn, /<button class="primary" type="button" disabled/);
+  assert.match(fn, /\$\{selectedCount === 0 \? 'disabled' : ''\}/);
+  assert.match(fn, /onclick="submitAiDiscoveryPrep\(\)"/);
   assert.match(fn, /Ausgewählte Unternehmen vorbereiten/);
 });
 

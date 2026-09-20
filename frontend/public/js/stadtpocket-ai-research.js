@@ -482,6 +482,90 @@ function getAiDiscoveryProviderStatusMessage(status) {
   return AI_DISCOVERY_PROVIDER_STATUS_MESSAGES[status] || null;
 }
 
+// ── Phase 1H.4 -- Selected Businesses -> AI Preparation Pipeline ────
+// Sequential batch orchestrator: takes the candidates the Admin
+// selected on the discovery-results screen and runs the EXISTING
+// single-business research call (via the injected `researchFn`) for
+// each one, ONE AT A TIME -- never Promise.all, never concurrent
+// Firecrawl/Anthropic calls. This is deliberately the ONLY place that
+// "does" batch research; stadtpocket-admin.html's own
+// prepResearchOneCandidate() is the sole I/O boundary it calls through
+// (POST .../research, the exact endpoint the single-business "Mit KI
+// hinzufügen" flow already uses) -- there is no second research engine
+// here, only orchestration of the existing one.
+//
+// A failure on one candidate is caught here and recorded as that
+// candidate's own 'failed' result; it is NEVER allowed to reject the
+// overall promise or stop the remaining candidates from being
+// processed -- see the try/catch inside the loop. `onProgress(results,
+// index)` is called after every status transition so a DOM caller can
+// re-render incrementally (the exact "1 von 5 -- wird recherchiert...,
+// then ✓ bereit..." progress this phase's UI requires) -- purely
+// optional and never required for correctness, so this function stays
+// trivially testable with no DOM at all.
+//
+// Each result's `status` models the lifecycle this phase specifies
+// (DISCOVERED -> PREPARING -> READY_FOR_REVIEW, or a controlled
+// failure) as the lowercase values this codebase already uses
+// elsewhere (e.g. publicationStatus): 'pending' -> 'preparing' ->
+// 'ready' | 'failed'. Nothing here ever writes to a database or marks
+// anything published -- researchCandidate is the exact same transient
+// candidate object POST .../research already returns; a draft is only
+// ever created later by the EXISTING, unmodified research/draft flow,
+// via an explicit human action.
+async function runSequentialPreparation(candidates, researchFn, onProgress) {
+  const results = (candidates || []).map((c) => ({
+    sourceId: c.sourceId,
+    name: c.name,
+    website: c.website || null,
+    status: 'pending',
+    researchCandidate: null,
+    error: null,
+    draftCreated: false,
+  }));
+  const notify = typeof onProgress === 'function' ? onProgress : () => {};
+  notify(results, -1);
+  for (let i = 0; i < results.length; i += 1) {
+    results[i].status = 'preparing';
+    results[i].error = null;
+    notify(results, i);
+    try {
+      // eslint-disable-next-line no-await-in-loop -- intentional: one
+      // candidate at a time is the explicit Phase 1H.4 requirement.
+      results[i].researchCandidate = await researchFn(results[i]);
+      results[i].status = 'ready';
+    } catch (err) {
+      results[i].status = 'failed';
+      results[i].error = (err && err.message) || 'Recherche fehlgeschlagen.';
+    }
+    notify(results, i);
+  }
+  return results;
+}
+
+// A "ready" result that already produced a draft (draftCreated: true)
+// is excluded -- once a human has acted on it, it no longer belongs in
+// the review queue. Order-preserving: index N in the returned array is
+// always a later-or-equal position in `results` than index N-1.
+function getPrepReadyResultIndices(results) {
+  const indices = [];
+  (results || []).forEach((r, i) => {
+    if (r.status === 'ready' && !r.draftCreated) indices.push(i);
+  });
+  return indices;
+}
+
+function getPrepSummary(results) {
+  const rows = results || [];
+  return {
+    total: rows.length,
+    readyCount: rows.filter((r) => r.status === 'ready' && !r.draftCreated).length,
+    draftedCount: rows.filter((r) => r.draftCreated).length,
+    failedCount: rows.filter((r) => r.status === 'failed').length,
+    pendingCount: rows.filter((r) => r.status === 'pending' || r.status === 'preparing').length,
+  };
+}
+
 // Isomorphic export: `module` does not exist in a browser <script> tag,
 // so this is inert there -- only Node's require() sees it.
 if (typeof module !== 'undefined' && module.exports) {
@@ -524,5 +608,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildAiDiscoveryRequestBody,
     AI_DISCOVERY_PROVIDER_STATUS_MESSAGES,
     getAiDiscoveryProviderStatusMessage,
+    runSequentialPreparation,
+    getPrepReadyResultIndices,
+    getPrepSummary,
   };
 }
