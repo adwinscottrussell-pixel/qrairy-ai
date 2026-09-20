@@ -2,8 +2,12 @@
 
 ## Last Updated
 
-2026-09-15 — compiled by Claude Code session inspecting live `git`/filesystem
-state. No aggregate timestamp beyond today's date is available.
+2026-09-20 — StadtPocket AI Business Discovery (Phase 1H.2/1H.3) checkpoint
+appended below. Everything above this note that still says 2026-09-15
+predates that work and has not been re-verified against current state in
+this pass — trust the dated sections lower in this file (in particular
+"StadtPocket AI Business Discovery" and "Next Task") over the older
+material near the top where they conflict.
 
 ## Repository
 
@@ -305,22 +309,28 @@ here; ask for it if a future session needs to re-derive the reasoning.
 
 ## Next Task
 
-**Two separate tracks exist — do not conflate them.**
+**Supersedes the two tracks originally listed here (2026-09-15) — see the
+"StadtPocket AI Business Discovery" checkpoint below for full current
+context before resuming.**
 
-1. **Recovery-item review queue** (promoting preserved work — see above):
-   C, then A, then B, then D, in that order. E is shelved; spend no
-   further time on it unless the founder explicitly resumes it.
-2. **Active development** — cannot be stated as a single confirmed
-   ticket; no current, non-stale sprint doc exists. Based purely on
-   branch activity (most recent commit timestamp across the whole
-   repo), the most likely resumption point is
-   **`preview/stadtpocket-phase6d-admin`** (HEAD `050ac9e`, "add
-   loyalty landing page bridge", 2026-09-14) — the StadtPocket City
-   Manager/Operations Admin + Offers backend work. Confirm with the
-   founder whether this branch is (a) still active WIP, (b) ready to
-   cut a `production-candidate/*` branch for promotion, or (c)
-   superseded. **Do not assume either answer** — this is inferred from
-   timestamps, not an explicit directive.
+- Active development is confirmed (not inferred) to be
+  **`preview/stadtpocket-phase6d-admin`**, currently at `8910b32`
+  (2026-09-20). Next planned phase: **Phase 1H.4 — Selected Businesses →
+  AI Preparation Pipeline** (hand the businesses a manager selects on the
+  Phase 1H.3 discovery-results screen into the existing, unmodified
+  Phase 1G research/draft pipeline — no second onboarding engine).
+- **Blocker before Phase 1H.4 can be visually end-to-end tested with real
+  data:** Google Places discovery itself is blocked on Google Cloud
+  Billing (overdue/invalid payment method on the project the
+  `GOOGLE_PLACES_API_KEY` belongs to), not on any code issue — see the
+  checkpoint below. A €20 payment was submitted 2026-09-20; Google states
+  processing may take 3–5 working days. Do not change the Places
+  implementation or make further billable test calls until billing
+  clears and a founder-run test confirms real candidates return.
+- The original recovery-item review queue (C, then A, then B, then D; E
+  shelved) from 2026-09-15 is still unactioned as far as this session's
+  records show — re-confirm with the founder whether it's still current
+  before resuming it, since it predates several weeks of StadtPocket work.
 
 ## Resume Instructions
 
@@ -338,8 +348,89 @@ here; ask for it if a future session needs to re-derive the reasoning.
    promoting or merging anything — do not infer promotion intent from
    branch activity alone.
 
+## StadtPocket AI Business Discovery — Phase 1H.2/1H.3 Staging Checkpoint (2026-09-20)
+
+- **Phase 1H.2 (Google Places discovery backend)** and **Phase 1H.3
+  (Admin discovery UI)** are both complete, tested, and pushed to
+  `preview/stadtpocket-phase6d-admin`. Discovery is deliberately kept
+  separate from Phase 1G (single-business research/draft pipeline) --
+  it only ever returns transient, reviewable candidates; nothing here
+  creates a `StadtPocketListing`/`StadtPocketListingLocation`, a draft,
+  a publish, or an owner/user record, and it never calls Anthropic or
+  Firecrawl.
+- **Also fixed same day, same branch:** Railway's Express app was
+  missing `app.set('trust proxy', 1)`, which Railway's own single-hop
+  edge proxy requires (same posture as Heroku's classic router).
+  Root-caused by reading the actual `express-rate-limit` v8.5.2 source:
+  the `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` line the founder saw in
+  Railway logs is caught internally and only ever `console.error`'d --
+  it never throws or blocks a request, so it was **not** the reason
+  Google Places was failing. The underlying misconfiguration was real
+  regardless (every caller behind the app-wide rate limiter was
+  silently collapsing into one shared IP key) and is now correctly
+  fixed with the narrow, single-hop value (not `true`, which
+  express-rate-limit's own `ERR_ERL_PERMISSIVE_TRUST_PROXY` check
+  flags as unsafe).
+- Safe, structured Google Places diagnostics added around the Text
+  Search call only: `[stadtpocket-discovery] google-places-success`
+  (httpStatus/resultCount/elapsedMs) and `google-places-failure`
+  (httpStatus/Google's own error.status+error.code+error.message when
+  present/endpoint/elapsedMs). Verified by a dedicated test that
+  serializes every captured log call and asserts the real API key
+  value and any header name never appear in it.
+- Commits on `preview/stadtpocket-phase6d-admin`:
+  - `5c3628a` -- Phase 1H.2 discovery backend (service + route,
+    `POST /manager/stadtpocket/listings/:locationId/discover`).
+  - `183d3b1` -- Phase 1H.3 Admin UI ("Unternehmen mit KI finden").
+  - `8910b32` (current HEAD) -- trust proxy fix + safe Places
+    diagnostics.
+- **GOOGLE_PLACES_API_KEY is now configured on Railway staging**
+  (confirmed present by variable name only, value never read/logged).
+  Places API (New) is enabled on the Google Cloud project; the key is
+  restricted to Places API (New); its application restriction is
+  currently None (needed for this server-side/Railway test).
+- **Real test performed:** Ulm / Fitness / quantity 10, via the actual
+  Admin UI ("Unternehmen finden" pressed once by the founder). The
+  request reached `POST https://places.googleapis.com/v1/places:searchText`
+  successfully at the transport level (confirmed correctly formed: a
+  malformed request would have come back `400 INVALID_ARGUMENT`, not
+  `403`) and Google returned:
+  - httpStatus `403`, googleStatus `PERMISSION_DENIED`, googleErrorCode
+    `403`, googleErrorMessage `"The caller does not have permission"`,
+    elapsedMs `119`.
+- **Root cause identified: Google Cloud Billing**, not application code
+  -- the billing account on that Google Cloud project was overdue /
+  did not have valid payment information. A €20 payment was submitted
+  2026-09-20; Google states processing may take 3-5 working days.
+  **Google Places discovery is therefore currently BLOCKED BY BILLING.
+  Do not change the Places implementation and do not make further
+  billable test calls while billing is pending** -- re-test only after
+  the founder confirms billing has cleared.
+- Railway staging (`sparkling-love` / `staging` / `pacific-youth`)
+  confirmed healthy at commit `8910b320bcdcfb82dd1b21dd52e8cc22ff4a2afa`
+  (`/health` = 200, active deployment's own `commitHash` metadata
+  checked directly via the Railway API, not inferred).
+- Tests: `stadtpocketDiscovery.test.js` 31/31, `trustProxy.test.js`
+  6/6, `stadtpocketAiDiscovery.test.js` (frontend) 26/26,
+  `stadtpocketAiResearch.test.js` (frontend) 60/60 unaffected. Pre-
+  existing, unrelated baseline failures unchanged throughout this work:
+  `scansVsVisits.test.js` 3/5, `stadtpocketManagerWrite.test.js` 52/5,
+  `stadtpocketOffer.test.js` 105/2.
+- `origin/main` was not touched, merged into, or deployed at any point
+  in this work -- still `a6ee88b9009e8834f3ff969c43363efffa5d5447`.
+- Also same session: added safe DRAFT-listing delete + LIVE-listing
+  archive controls to StadtPocket Admin (`d1a7519`) -- an authorized
+  Admin can now permanently delete a draft (with confirmation; the
+  failed Bäckerei Betz test draft was deleted this way by the founder)
+  and archive (unpublish) a live listing; Bäckerei Staib and Café
+  Brettle were never modified by this work.
+
 ## Recent History
 
+- 2026-09-20 — StadtPocket AI Business Discovery (Phase 1H.2/1H.3),
+  Railway trust-proxy fix, and safe Google Places diagnostics -- see
+  full checkpoint section above. Real discovery test blocked on Google
+  Cloud Billing (payment submitted, pending 3-5 business days).
 - 2026-09-17 — Stempelkarte Phase 3B: platform-managed loyalty setup.
   `stadtpocketLoyaltyBridgeService.js`'s `createAndConnectProgram`
   creates a LandingPage with `userId: null` (no fake owner, no fake
