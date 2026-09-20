@@ -158,10 +158,22 @@ function normalizeForDedupe(name, address) {
   return `${n}|${a}`;
 }
 
+// Structured, SAFE-only diagnostics (Step B) -- never the request
+// itself, never any header (the api key travels only in
+// X-Goog-Api-Key, which is never read back or logged here), never any
+// business/candidate data. `detail` is a small, explicitly-built plain
+// object (see call sites below), never req/res/headers passed through
+// directly, so there is no path for a secret to end up in a log line
+// by accident.
+function logDiscoveryEvent(event, detail) {
+  console.log(`[stadtpocket-discovery] ${event}`, detail);
+}
+
 async function callGooglePlacesTextSearch(query, quantity, { fetchImpl = fetch } = {}) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) return { status: PROVIDER_STATUS.NOT_CONFIGURED, places: [] };
 
+  const startedAt = Date.now();
   let res;
   try {
     res = await fetchImpl(PLACES_ENDPOINT, {
@@ -178,20 +190,52 @@ async function callGooglePlacesTextSearch(query, quantity, { fetchImpl = fetch }
       // hanging the discovery request indefinitely.
       signal: AbortSignal.timeout(PLACES_TIMEOUT_MS),
     });
-  } catch {
+  } catch (err) {
+    logDiscoveryEvent('google-places-failure', {
+      httpStatus: null,
+      googleStatus: null,
+      googleErrorMessage: err && err.name === 'TimeoutError' ? 'request timed out' : (err && err.message) || 'network error',
+      endpoint: PLACES_ENDPOINT,
+      elapsedMs: Date.now() - startedAt,
+    });
     return { status: PROVIDER_STATUS.UNAVAILABLE, places: [] };
   }
 
-  if (!res || !res.ok) return { status: PROVIDER_STATUS.UNAVAILABLE, places: [] };
-
-  let body;
+  // Google's Places API (New) error envelope, when present, is
+  // { error: { code, message, status } } -- these three fields only are
+  // safe, small, and directly diagnostic; nothing else from the body is
+  // ever logged. Read once regardless of res.ok so a non-2xx response's
+  // real reason is captured before the body is discarded. A body that
+  // fails to parse as JSON at all is its own distinct failure --
+  // jsonParseFailed is tracked separately so it is never silently
+  // reinterpreted as "zero results" below.
+  let body = null;
+  let jsonParseFailed = false;
   try {
     body = await res.json();
   } catch {
+    jsonParseFailed = true;
+  }
+
+  if (!res || !res.ok || jsonParseFailed) {
+    const googleError = body && body.error;
+    logDiscoveryEvent('google-places-failure', {
+      httpStatus: res ? res.status : null,
+      googleStatus: googleError ? googleError.status || null : null,
+      googleErrorCode: googleError ? googleError.code || null : null,
+      googleErrorMessage: googleError ? googleError.message || null : (jsonParseFailed ? 'response body was not valid JSON' : null),
+      endpoint: PLACES_ENDPOINT,
+      elapsedMs: Date.now() - startedAt,
+    });
     return { status: PROVIDER_STATUS.UNAVAILABLE, places: [] };
   }
 
   const places = Array.isArray(body && body.places) ? body.places : [];
+  logDiscoveryEvent('google-places-success', {
+    httpStatus: res.status,
+    resultCount: places.length,
+    elapsedMs: Date.now() - startedAt,
+  });
   return { status: PROVIDER_STATUS.OK, places };
 }
 

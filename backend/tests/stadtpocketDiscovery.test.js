@@ -503,6 +503,86 @@ test('extractAddressComponent returns null when the type is absent', () => {
   assert.equal(extractAddressComponent([{ longText: 'x', types: ['route'] }], 'postal_code'), null);
 });
 
+// ── Safe Google Places diagnostics (staging trust-proxy/Places diagnosis) ──
+function captureConsoleLog(fn) {
+  const original = console.log;
+  const calls = [];
+  console.log = (...args) => { calls.push(args); };
+  return fn().finally(() => { console.log = original; }).then(() => calls);
+}
+
+test('diagnostics: a successful call logs safe metadata only (event, httpStatus, resultCount, elapsedMs)', async () => {
+  resetFixtures();
+  const calls = await captureConsoleLog(() => discoverBusinesses({
+    locationId: ULM,
+    scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' },
+    category: 'Fitness',
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ places: [place('ChIJ001', 'FitZone Ulm', 'Bahnhofstr. 1, Ulm', 48.4, 9.99, ['gym'])] }) }),
+  }));
+  const successCall = calls.find((c) => c[0] === '[stadtpocket-discovery] google-places-success');
+  assert.ok(successCall, 'expected a google-places-success log line');
+  const detail = successCall[1];
+  assert.equal(detail.httpStatus, 200);
+  assert.equal(detail.resultCount, 1);
+  assert.equal(typeof detail.elapsedMs, 'number');
+  assert.deepEqual(Object.keys(detail).sort(), ['elapsedMs', 'httpStatus', 'resultCount']);
+});
+
+test('diagnostics: a structured Google error response logs the safe error.code/status/message fields', async () => {
+  resetFixtures();
+  const calls = await captureConsoleLog(() => discoverBusinesses({
+    locationId: ULM,
+    scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' },
+    category: 'Fitness',
+    fetchImpl: async () => ({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: { code: 403, status: 'PERMISSION_DENIED', message: 'This API key is not authorized to use this service or API.' } }),
+    }),
+  }));
+  const failureCall = calls.find((c) => c[0] === '[stadtpocket-discovery] google-places-failure');
+  assert.ok(failureCall, 'expected a google-places-failure log line');
+  const detail = failureCall[1];
+  assert.equal(detail.httpStatus, 403);
+  assert.equal(detail.googleStatus, 'PERMISSION_DENIED');
+  assert.equal(detail.googleErrorCode, 403);
+  assert.equal(detail.googleErrorMessage, 'This API key is not authorized to use this service or API.');
+  assert.equal(detail.endpoint, discoveryService.PLACES_ENDPOINT);
+});
+
+test('diagnostics: NEVER logs the API key, headers, or Authorization, in either success or failure', async () => {
+  resetFixtures();
+  const secretKey = process.env.GOOGLE_PLACES_API_KEY;
+  const calls = await captureConsoleLog(async () => {
+    await discoverBusinesses({
+      locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+      fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ places: [] }) }),
+    });
+    await discoverBusinesses({
+      locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+      fetchImpl: async () => ({ ok: false, status: 403, json: async () => ({ error: { code: 403, status: 'PERMISSION_DENIED', message: 'denied' } }) }),
+    });
+  });
+  const serialized = JSON.stringify(calls);
+  assert.equal(serialized.includes(secretKey), false);
+  assert.equal(/x-goog-api-key/i.test(serialized), false);
+  assert.equal(/authorization/i.test(serialized), false);
+});
+
+test('diagnostics: a network failure (fetch throws) logs a safe failure line with null httpStatus/googleStatus', async () => {
+  resetFixtures();
+  const calls = await captureConsoleLog(() => discoverBusinesses({
+    locationId: ULM,
+    scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' },
+    category: 'Fitness',
+    fetchImpl: fetchImplThrowing(),
+  }));
+  const failureCall = calls.find((c) => c[0] === '[stadtpocket-discovery] google-places-failure');
+  assert.ok(failureCall);
+  assert.equal(failureCall[1].httpStatus, null);
+  assert.equal(failureCall[1].googleStatus, null);
+});
+
 // ── runner ──────────────────────────────────────────────────────
 (async () => {
   let pass = 0, fail = 0;

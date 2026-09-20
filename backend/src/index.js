@@ -30,6 +30,30 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway (both `staging` and `production` environments -- see
+// railway.toml) terminates TLS and proxies every request through
+// exactly ONE internal hop before it reaches this container, adding its
+// own X-Forwarded-For/X-Forwarded-Proto headers same as Heroku's
+// classic router. Express's own default (`trust proxy` unset, i.e.
+// `false`) means `req.ip` resolves to Railway's internal proxy address
+// for every request instead of the real client -- this collapsed every
+// caller behind the app-wide rate limiter below into one shared IP key
+// and produced express-rate-limit's own
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR warning on every request (see
+// express-rate-limit's validations.xForwardedForHeader -- a logged
+// warning only, never a thrown/blocking error, so this was never the
+// cause of a request actually failing; it only ever meant IP-based
+// rate limiting was silently broken).
+//
+// `true` is deliberately NOT used here -- it trusts an X-Forwarded-For
+// value from ANY hop, which would let a client trivially spoof their
+// own IP by sending that header directly, and express-rate-limit's own
+// validations.trustProxy check flags exactly this
+// (ERR_ERL_PERMISSIVE_TRUST_PROXY) as unsafe. `1` is the narrow,
+// correct value: trust exactly the one hop Railway's own edge adds, no
+// more.
+app.set('trust proxy', 1);
+
 app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
 
 // CORS is transport-origin permission only — it decides whose responses a
