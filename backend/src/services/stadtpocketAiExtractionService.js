@@ -61,7 +61,36 @@ function looksLikeUselessImageCandidate(url) {
 // documentation.
 const ANTHROPIC_MODEL = 'claude-sonnet-5';
 const ANTHROPIC_TIMEOUT_MS = 20000;
-const ANTHROPIC_MAX_TOKENS = 1500;
+
+// Phase 1G.2 -- raised from 1500 (Phase 1B's original value, calibrated
+// for a single-location business's handful of fields) after a real
+// deployed Bäckerei Betz request (2026-09-20, staging) came back with
+// STATUS.MALFORMED_OUTPUT: the response contained no usable text
+// content block at all, meaning the model's entire 1500-token budget
+// was exhausted before any output could be produced -- Phase 1G's
+// "locations" array can now legitimately need up to
+// stadtpocketResearchService.js's own MAX_LOCATION_CANDIDATES (50)
+// entries, each carrying name/address/city/postalCode/phone/hours/
+// sourceUrl.
+//
+// Sized from the actual expected JSON shape, not picked arbitrarily:
+// one fully-populated location entry (full 7-day hours, every optional
+// field present) is roughly 450-500 characters of JSON; at a
+// conservative ~3.5 characters/token (JSON's quotes/braces/commas
+// tokenize less efficiently than prose, so this errs toward MORE
+// tokens per location than a typical estimate would), that is
+// ~130-145 tokens per location. 50 locations (the hard ceiling) x
+// ~150 tokens/location (rounded up for margin) = 7500 tokens, plus a
+// few hundred more for the business-level fields (name, category,
+// subCategory, tags, shortDescription, longDescription, website,
+// headerImageCandidateUrl) that share the same response. 8000 covers
+// that full worst case with headroom, without jumping to an
+// arbitrarily huge number -- a normal single-location response (the
+// overwhelming majority of requests) still finishes in a few hundred
+// tokens regardless of this ceiling; Anthropic bills by tokens
+// actually generated, not by max_tokens, so raising this ceiling adds
+// no cost to the common case.
+const ANTHROPIC_MAX_TOKENS = 8000;
 
 const STATUS = {
   OK: 'ok',
@@ -279,20 +308,51 @@ async function extractBusinessFields({ businessName, websiteUrl, siteContent, ci
   }
 
   // Finds the actual text block by TYPE rather than assuming index 0 --
-  // Claude Sonnet 5 uses adaptive thinking by default (per Anthropic's
-  // documentation), which can add a preceding `{ type: 'thinking', ... }`
-  // content block ahead of the text block. This request never explicitly
-  // requests or reads thinking output either way; this only makes
-  // locating the real text response robust to that block's presence,
-  // so a genuinely successful call is never misclassified as malformed
-  // output purely because of its position in the array. No sampling
-  // parameters (temperature/top_p/top_k) are set anywhere in this file
-  // -- the request already used entirely default sampling before this
-  // change, so there was nothing incompatible to remove there.
+  // kept defensive regardless of thinking configuration (see below), so
+  // a genuinely successful call is never misclassified as malformed
+  // output purely because of a content block's position in the array.
+  // No sampling parameters (temperature/top_p/top_k) are set anywhere
+  // in this file -- the request already used entirely default sampling
+  // before this change, so there was nothing incompatible to remove
+  // there.
+  //
+  // Phase 1G.2 -- thinking configuration, verified against this
+  // project's actual installed SDK rather than assumed: the installed
+  // @anthropic-ai/sdk (0.39.0) types `thinking` as an OPTIONAL,
+  // explicitly opt-in request parameter (`ThinkingConfigParam` =
+  // `ThinkingConfigEnabled | ThinkingConfigDisabled`, requiring an
+  // explicit `budget_tokens` to enable). This request never sets
+  // `thinking` at all, so per the SDK's own documented behavior it is
+  // OFF by default -- there is no evidence, from this SDK's own type
+  // definitions, that Sonnet 5 silently spends part of max_tokens on
+  // thinking unless a caller explicitly opts in. (An earlier version of
+  // this comment claimed adaptive thinking was on by default; that
+  // claim was not verified against the SDK's own documentation and is
+  // corrected here.) Nothing to change: thinking stays unconfigured,
+  // matching this task's own instruction to leave it alone when there
+  // is no need to modify it -- predictable, non-thinking structured
+  // extraction is exactly what this task wants, and that is already
+  // this request's behavior.
+  const blockTypes = message && Array.isArray(message.content) ? message.content.map((b) => b && b.type) : [];
   const textBlock = message && Array.isArray(message.content)
     ? message.content.find((block) => block && block.type === 'text' && typeof block.text === 'string')
     : null;
   const text = textBlock ? textBlock.text : undefined;
+
+  // Phase 1G.2 -- minimal, non-content diagnostic logging so a future
+  // malformed-output failure (this file's own MALFORMED_OUTPUT status)
+  // can be told apart from a max_tokens truncation, a thinking-only
+  // response, or a missing text block, without ever logging the
+  // scraped website evidence, the model's generated JSON, or any
+  // business/customer data. Only structural metadata: which content
+  // block types came back, whether a text block was found, its length
+  // (a character COUNT, never the text itself), the stop reason, and
+  // token usage counts (also just counts, never content) when the SDK
+  // exposes them.
+  console.log(
+    `[stadtpocketAiExtractionService] response stopReason=${message && message.stop_reason} blockTypes=${JSON.stringify(blockTypes)} hasText=${!!textBlock} textLength=${text ? text.length : 0} inputTokens=${message && message.usage && message.usage.input_tokens} outputTokens=${message && message.usage && message.usage.output_tokens}`
+  );
+
   if (!isNonEmptyString(text)) return { status: STATUS.MALFORMED_OUTPUT, fields: {} };
 
   let parsed;
@@ -314,6 +374,7 @@ module.exports = {
   buildUserMessage,
   FIELD_VALIDATORS,
   ANTHROPIC_MODEL,
+  ANTHROPIC_MAX_TOKENS,
   looksLikeUselessImageCandidate,
   MAX_LOCATION_CANDIDATES,
 };

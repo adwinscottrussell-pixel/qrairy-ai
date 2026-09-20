@@ -7,7 +7,7 @@
 // Run: node tests/stadtpocketAiExtractionService.test.js
 // ============================================================
 const assert = require('assert/strict');
-const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL, buildUserMessage, looksLikeUselessImageCandidate, MAX_LOCATION_CANDIDATES } = require('../src/services/stadtpocketAiExtractionService');
+const { extractBusinessFields, STATUS, sanitizeExtractedFields, ANTHROPIC_MODEL, ANTHROPIC_MAX_TOKENS, buildUserMessage, looksLikeUselessImageCandidate, MAX_LOCATION_CANDIDATES } = require('../src/services/stadtpocketAiExtractionService');
 
 // Real Anthropic responses carry a `type: 'text'` field on the text
 // content block -- matched exactly here (not just `{ text }`) since
@@ -187,7 +187,7 @@ test('17. no incompatible non-default sampling parameters (temperature/top_p/top
   assert.equal('top_k' in calls[0], false);
 });
 
-test('18. no thinking parameter is set -- the request relies on the model\'s own default behavior, nothing manually enabled here', async () => {
+test('18. no thinking parameter is set -- per the installed SDK\'s own types, thinking is opt-in and stays off, matching this extraction task\'s need for predictable structured output', async () => {
   const { client, calls } = fakeClientCapturing(JSON.stringify({ name: { value: 'x', confidence: 'high' } }));
   await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
   assert.equal('thinking' in calls[0], false);
@@ -309,6 +309,99 @@ test('30f. buildUserMessage no longer suggests filtering by relevance -- it inst
   const msg = buildUserMessage('Betz', 'https://betz.de', 'content', 'Ulm');
   assert.ok(msg.includes('include EVERY one of them in "locations" regardless of city'));
   assert.ok(!msg.toLowerCase().includes('help identify which'));
+});
+
+// ── PHASE 1G.2 — Sonnet output budget fix (real Bäckerei Betz staging
+// failure: 1500-token cap left no room for a real multi-location
+// response, response came back with no usable text block at all) ──
+function makeLocation(i) {
+  return {
+    name: `Filiale ${i}`,
+    address: `Musterstraße ${i}, 89${String(i).padStart(3, '0')} Ulm`,
+    city: 'Ulm',
+    postalCode: `89${String(i).padStart(3, '0')}`,
+    phone: `0731 97800${i % 10}`,
+    hours: [
+      { day: 'Mo', intervals: [{ open: '06:30', close: '18:30' }] },
+      { day: 'Di', intervals: [{ open: '06:30', close: '18:30' }] },
+      { day: 'Mi', intervals: [{ open: '06:30', close: '18:30' }] },
+      { day: 'Do', intervals: [{ open: '06:30', close: '18:30' }] },
+      { day: 'Fr', intervals: [{ open: '06:30', close: '18:30' }] },
+      { day: 'Sa', intervals: [{ open: '07:00', close: '14:00' }] },
+      { day: 'So', closed: true },
+    ],
+    sourceUrl: 'https://baeckerei-betz.com/filialen/',
+  };
+}
+
+test('31. the Sonnet request uses the new, larger ANTHROPIC_MAX_TOKENS value', async () => {
+  let capturedRequest = null;
+  const client = { messages: { create: async (req) => { capturedRequest = req; return { content: [{ type: 'text', text: '{}' }] }; } } };
+  await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal(capturedRequest.max_tokens, ANTHROPIC_MAX_TOKENS);
+  assert.ok(ANTHROPIC_MAX_TOKENS > 1500, 'must be raised above the old, too-small value');
+});
+
+test('32. a full 30-location response (real Betz shape, full weekly hours) parses successfully -- the exact case that failed on staging', async () => {
+  const thirty = Array.from({ length: 30 }, (_, i) => makeLocation(i));
+  const json = JSON.stringify({
+    name: { value: 'Bäckerei Betz', confidence: 'high' },
+    category: { value: 'Bäckerei', confidence: 'high' },
+    shortDescription: { value: 'Traditionsbäckerei mit über 30 Filialen in und um Ulm.', confidence: 'medium' },
+    locations: { value: thirty, confidence: 'high' },
+  });
+  const result = await extractBusinessFields({ businessName: 'Bäckerei Betz', websiteUrl: 'https://baeckerei-betz.com/', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.status, STATUS.OK);
+  assert.equal(result.fields.locations.value.length, 30);
+  assert.equal(result.fields.locations.value[0].address, 'Musterstraße 0, 89000 Ulm');
+});
+
+test('33. a full 50-location response (the application-side ceiling) parses successfully and is not flagged as truncated', async () => {
+  const fifty = Array.from({ length: 50 }, (_, i) => makeLocation(i));
+  const json = JSON.stringify({ locations: { value: fifty, confidence: 'high' } });
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(json) });
+  assert.equal(result.status, STATUS.OK);
+  assert.equal(result.fields.locations.value.length, 50);
+  assert.equal('locationsTruncated' in result.fields, false);
+});
+
+test('34. stop_reason/usage diagnostic metadata on the response never affects parsing -- extra, unknown top-level response fields are simply ignored', async () => {
+  const client = {
+    messages: {
+      create: async () => ({
+        content: [{ type: 'text', text: JSON.stringify({ name: { value: 'x', confidence: 'high' } }) }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 1234, output_tokens: 56 },
+      }),
+    },
+  };
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: client });
+  assert.equal(result.status, STATUS.OK);
+  assert.equal(result.fields.name.value, 'x');
+});
+
+test('35. the response missing stop_reason/usage entirely (older/mocked shapes) still parses normally -- diagnostic logging never throws on absent metadata', async () => {
+  const result = await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: 'x', anthropicClient: fakeClient(JSON.stringify({ name: { value: 'x', confidence: 'high' } })) });
+  assert.equal(result.status, STATUS.OK);
+});
+
+test('36. the new diagnostic log line never includes the scraped website content or the model\'s generated JSON text -- structural metadata only', async () => {
+  const secretEvidence = 'SECRET-SCRAPED-CONTENT-MARKER-89073-Ulm-vertraulich';
+  const generatedJsonMarker = 'GENERATED-JSON-TEXT-MARKER';
+  const json = JSON.stringify({ name: { value: generatedJsonMarker, confidence: 'high' } });
+  const originalLog = console.log;
+  const capturedLines = [];
+  console.log = (...args) => { capturedLines.push(args.join(' ')); };
+  try {
+    await extractBusinessFields({ businessName: 'x', websiteUrl: 'https://x.de', siteContent: secretEvidence, anthropicClient: fakeClient(json) });
+  } finally {
+    console.log = originalLog;
+  }
+  const diagnosticLine = capturedLines.find((l) => l.includes('[stadtpocketAiExtractionService] response'));
+  assert.ok(diagnosticLine, 'expected the diagnostic line to be logged');
+  assert.ok(!diagnosticLine.includes(secretEvidence), 'scraped evidence must never appear in diagnostic logs');
+  assert.ok(!diagnosticLine.includes(generatedJsonMarker), 'the model\'s generated JSON/business data must never appear in diagnostic logs');
+  assert.ok(diagnosticLine.includes('stopReason=') && diagnosticLine.includes('blockTypes=') && diagnosticLine.includes('hasText=') && diagnosticLine.includes('textLength='), 'expected only structural metadata fields');
 });
 
 // ── Phase 1G — image-candidate junk filtering ───────────────────
