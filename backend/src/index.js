@@ -18,6 +18,7 @@ const managerStadtpocketListingRoutes = require('./routes/managerStadtpocketList
 const managerStadtpocketOfferRoutes = require('./routes/managerStadtpocketOfferRoutes');
 const managerStadtpocketUpdateRoutes = require('./routes/managerStadtpocketUpdateRoutes');
 const managerStadtpocketResearchRoutes = require('./routes/managerStadtpocketResearchRoutes');
+const managerStadtpocketDiscoveryRoutes = require('./routes/managerStadtpocketDiscoveryRoutes');
 const opsRoutes       = require('./routes/opsRoutes');
 const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
@@ -118,6 +119,7 @@ app.use('/manager/stadtpocket', managerStadtpocketListingRoutes);
 app.use('/manager/stadtpocket', managerStadtpocketOfferRoutes);
 app.use('/manager/stadtpocket', managerStadtpocketUpdateRoutes);
 app.use('/manager/stadtpocket', managerStadtpocketResearchRoutes);
+app.use('/manager/stadtpocket', managerStadtpocketDiscoveryRoutes);
 app.use('/ops',      opsRoutes);
 
 app.use('/', lpRoutes);
