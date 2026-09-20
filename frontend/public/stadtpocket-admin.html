@@ -113,6 +113,26 @@
   .status-pill.published { background: var(--success-soft); color: var(--success); }
   .status-pill.draft { background: var(--coral-soft); color: var(--coral); }
   .status-pill.none { background: var(--surface-card-alt); color: var(--text-tertiary); }
+  /* Business list "Verwalten" affordance (StadtPocket Admin business
+     delete/archive) -- deliberately minimal: one small icon button next
+     to the existing status pill, one tiny popup menu, reusing the
+     existing .modal-overlay/.modal-box/.danger patterns below for the
+     actual confirmation. Nothing else about the card changes. */
+  .card-menu-wrap { position: relative; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .card-menu-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+    width: 28px; height: 28px; padding: 0; border-radius: 8px; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-menu-btn:hover { color: var(--text-primary); border-color: var(--coral); }
+  .card-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; background: var(--surface-card);
+    border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    min-width: 190px; z-index: 20; overflow: hidden;
+  }
+  .card-menu button { display: block; width: 100%; text-align: left; background: transparent; border: none; border-radius: 0; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .card-menu button:hover { background: var(--surface-card-alt); }
+  .card-menu button.menu-danger { color: var(--danger); }
   .empty-state { text-align: center; padding: 48px 16px; color: var(--text-secondary); }
   label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 16px 0 6px; }
   input[type="text"], input[type="number"], input[type="url"], textarea, input[type="time"], select {
@@ -1004,6 +1024,40 @@
   </div>
 </div>
 
+<!-- StadtPocket Admin business delete -- DRAFT-only, from the city
+     business list's "Verwalten" (⋯) menu. See openDeleteDraftModal /
+     confirmDeleteDraftModal below; addressed via
+     pendingDeleteListingLocationId, same one-modal-one-flow shape as
+     the offer delete modal above. -->
+<div class="modal-overlay" id="delete-draft-modal" style="display:none">
+  <div class="modal-box">
+    <h3>Entwurf wirklich löschen?</h3>
+    <p><strong id="delete-draft-modal-name"></strong> wird dauerhaft aus StadtPocket entfernt. Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    <div id="delete-draft-modal-banner"></div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeDeleteDraftModal()">Abbrechen</button>
+      <button class="danger" id="delete-draft-confirm-btn" onclick="confirmDeleteDraftModal()">Entwurf löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- StadtPocket Admin business archive -- published/paused only, from
+     the same "Verwalten" (⋯) menu. Never deletes anything: only sets
+     publicationStatus to 'archived' (see archiveForLocation), which is
+     already excluded from the public API exactly like a draft or a
+     paused listing. -->
+<div class="modal-overlay" id="archive-listing-modal" style="display:none">
+  <div class="modal-box">
+    <h3>Veröffentlichung aufheben?</h3>
+    <p><strong id="archive-listing-modal-name"></strong> wird nicht mehr öffentlich angezeigt. Die Daten bleiben erhalten und können später erneut veröffentlicht werden.</p>
+    <div id="archive-listing-modal-banner"></div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeArchiveListingModal()">Abbrechen</button>
+      <button class="danger" id="archive-listing-confirm-btn" onclick="confirmArchiveListingModal()">Veröffentlichung aufheben</button>
+    </div>
+  </div>
+</div>
+
 <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/stadtpocket-admin-guard.js"></script>
 <script src="js/stadtpocket-ai-research.js"></script>
@@ -1546,10 +1600,15 @@
   }
 
   // ── Business list for the currently open city ───────────────────
+  // Fetch (renderBusinessList) and pure re-render (renderBusinessListMarkup)
+  // are deliberately split: toggling the "Verwalten" (⋯) menu only needs
+  // to re-render the already-fetched `businesses` array, never re-fetch.
+  let openCardMenuListingLocationId = null;
+
   async function renderBusinessList() {
     const listEl = document.getElementById('businesses-list');
-    const subEl = document.getElementById('businesses-sub');
     listEl.innerHTML = '<p class="muted">Laden…</p>';
+    openCardMenuListingLocationId = null;
     const res = await api(`/manager/stadtpocket/listings/${currentLocationId}`);
     if (!res.ok) {
       listEl.innerHTML = '';
@@ -1557,6 +1616,12 @@
       return;
     }
     businesses = res.body.listings || [];
+    renderBusinessListMarkup();
+  }
+
+  function renderBusinessListMarkup() {
+    const listEl = document.getElementById('businesses-list');
+    const subEl = document.getElementById('businesses-sub');
     const city = cities.find((c) => c.id === currentLocationId);
     const cityName = city ? city.name : currentLocationId;
     if (businesses.length === 0) {
@@ -1565,15 +1630,123 @@
       return;
     }
     subEl.textContent = `${businesses.length} ${businesses.length === 1 ? 'Geschäft' : 'Geschäfte'} in ${cityName}.`;
-    listEl.innerHTML = businesses.map((l) => `
+    listEl.innerHTML = businesses.map((l) => {
+      const pillClass = l.publicationStatus === 'published' ? 'published' : l.publicationStatus === 'archived' ? 'archived' : 'draft';
+      const pillLabel = l.publicationStatus === 'published' ? 'Live'
+        : l.publicationStatus === 'paused' ? 'Pausiert'
+        : l.publicationStatus === 'archived' ? 'Archiviert'
+        : 'Entwurf';
+      // Exactly one management action per status in this pass: a draft
+      // can be deleted, a published/paused listing can be archived. An
+      // already-archived listing gets no action here (permanent delete
+      // of a once-live business is a deliberately separate, not-yet-
+      // built step -- see the delete/archive service functions' own
+      // comments).
+      let menuItem = '';
+      if (l.publicationStatus === 'draft') {
+        menuItem = `<button type="button" class="menu-danger" onclick="event.stopPropagation(); openDeleteDraftModal('${l.listingLocationId}')">Entwurf löschen</button>`;
+      } else if (l.publicationStatus === 'published' || l.publicationStatus === 'paused') {
+        menuItem = `<button type="button" onclick="event.stopPropagation(); openArchiveListingModal('${l.listingLocationId}')">Veröffentlichung aufheben</button>`;
+      }
+      const menuOpen = openCardMenuListingLocationId === l.listingLocationId;
+      return `
       <div class="card city-row" onclick="openBusiness('${currentLocationId}','${l.listingLocationId}')">
         <div>
           <div style="font-weight:700">${escapeHtml(l.name)}</div>
           <div class="muted">${escapeHtml(l.category || '')}</div>
         </div>
-        <span class="status-pill ${l.publicationStatus === 'published' ? 'published' : 'draft'}">${l.publicationStatus === 'published' ? 'Live' : l.publicationStatus === 'paused' ? 'Pausiert' : 'Entwurf'}</span>
+        <div class="card-menu-wrap">
+          <span class="status-pill ${pillClass}">${pillLabel}</span>
+          ${menuItem ? `
+          <button type="button" class="card-menu-btn" aria-label="Verwalten" onclick="event.stopPropagation(); toggleBusinessCardMenu('${l.listingLocationId}')">⋯</button>
+          ${menuOpen ? `<div class="card-menu" onclick="event.stopPropagation()">${menuItem}</div>` : ''}
+          ` : ''}
+        </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
+  }
+
+  function toggleBusinessCardMenu(listingLocationId) {
+    openCardMenuListingLocationId = openCardMenuListingLocationId === listingLocationId ? null : listingLocationId;
+    renderBusinessListMarkup();
+  }
+
+  // Any click that isn't on a card-menu-btn/card-menu (both stopPropagation
+  // their own clicks above) closes an open "Verwalten" menu.
+  document.addEventListener('click', () => {
+    if (openCardMenuListingLocationId !== null) {
+      openCardMenuListingLocationId = null;
+      renderBusinessListMarkup();
+    }
+  });
+
+  // ── Delete a DRAFT business (from the "Verwalten" menu) ─────────
+  let pendingDeleteListingLocationId = null;
+
+  function openDeleteDraftModal(listingLocationId) {
+    const biz = businesses.find((b) => b.listingLocationId === listingLocationId);
+    pendingDeleteListingLocationId = listingLocationId;
+    openCardMenuListingLocationId = null;
+    renderBusinessListMarkup();
+    document.getElementById('delete-draft-modal-name').textContent = biz ? biz.name : '';
+    banner('delete-draft-modal-banner', 'info', '');
+    document.getElementById('delete-draft-modal').style.display = 'flex';
+  }
+
+  function closeDeleteDraftModal() {
+    pendingDeleteListingLocationId = null;
+    document.getElementById('delete-draft-modal').style.display = 'none';
+  }
+
+  async function confirmDeleteDraftModal() {
+    const llId = pendingDeleteListingLocationId;
+    if (!llId) return;
+    const confirmBtn = document.getElementById('delete-draft-confirm-btn');
+    confirmBtn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${llId}`, { method: 'DELETE' });
+    confirmBtn.disabled = false;
+    if (!res.ok) {
+      banner('delete-draft-modal-banner', 'error', (res.body && res.body.error) || 'Löschen fehlgeschlagen.');
+      return;
+    }
+    closeDeleteDraftModal();
+    banner('businesses-banner', 'success', 'Entwurf wurde gelöscht.');
+    await renderBusinessList();
+  }
+
+  // ── Archive a published/paused business (from the "Verwalten" menu) ──
+  let pendingArchiveListingLocationId = null;
+
+  function openArchiveListingModal(listingLocationId) {
+    const biz = businesses.find((b) => b.listingLocationId === listingLocationId);
+    pendingArchiveListingLocationId = listingLocationId;
+    openCardMenuListingLocationId = null;
+    renderBusinessListMarkup();
+    document.getElementById('archive-listing-modal-name').textContent = biz ? biz.name : '';
+    banner('archive-listing-modal-banner', 'info', '');
+    document.getElementById('archive-listing-modal').style.display = 'flex';
+  }
+
+  function closeArchiveListingModal() {
+    pendingArchiveListingLocationId = null;
+    document.getElementById('archive-listing-modal').style.display = 'none';
+  }
+
+  async function confirmArchiveListingModal() {
+    const llId = pendingArchiveListingLocationId;
+    if (!llId) return;
+    const confirmBtn = document.getElementById('archive-listing-confirm-btn');
+    confirmBtn.disabled = true;
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${llId}/archive`, { method: 'POST' });
+    confirmBtn.disabled = false;
+    if (!res.ok) {
+      banner('archive-listing-modal-banner', 'error', (res.body && res.body.error) || 'Aktion fehlgeschlagen.');
+      return;
+    }
+    closeArchiveListingModal();
+    banner('businesses-banner', 'success', 'Veröffentlichung wurde aufgehoben.');
+    await renderBusinessList();
   }
 
   async function backToBusinesses() {

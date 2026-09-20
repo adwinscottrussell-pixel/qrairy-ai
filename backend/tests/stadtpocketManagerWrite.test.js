@@ -38,6 +38,8 @@ let locationRows = [
 ];
 let listingRows = [];
 let listingLocationRows = [];
+let offerRows = [];
+let updateRows = [];
 let idSeq = 0;
 function nextId(prefix) { idSeq += 1; return `${prefix}_${idSeq}`; }
 
@@ -68,6 +70,8 @@ function resetFixtures() {
       createdAt: new Date(2026, 0, 1), updatedAt: new Date(2026, 0, 1),
     },
   ];
+  offerRows = [];
+  updateRows = [];
   idSeq = 100;
   tokenValid = true;
   currentUserId = 'ulm_manager';
@@ -116,6 +120,12 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return row;
     },
+    delete: async ({ where }) => {
+      const idx = listingRows.findIndex((l) => l.id === where.id);
+      if (idx === -1) throw new Error('listing not found in mock');
+      const [row] = listingRows.splice(idx, 1);
+      return row;
+    },
   },
   stadtPocketListingLocation: {
     findMany: async ({ where, include }) => {
@@ -158,6 +168,35 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return row;
     },
+    delete: async ({ where }) => {
+      const idx = listingLocationRows.findIndex((ll) => ll.id === where.id);
+      if (idx === -1) throw new Error('listing location not found in mock');
+      // Mirrors the real ON DELETE RESTRICT FK from StadtPocketOffer/
+      // StadtPocketUpdate -- Postgres rejects the delete if either
+      // still has a row pointing at this listingLocationId.
+      const hasOffers = offerRows.some((o) => o.listingLocationId === where.id);
+      const hasUpdates = updateRows.some((u) => u.listingLocationId === where.id);
+      if (hasOffers || hasUpdates) {
+        throw new Error('simulated foreign key violation: dependent Offer/Update rows still exist');
+      }
+      const [row] = listingLocationRows.splice(idx, 1);
+      return row;
+    },
+    count: async ({ where }) => listingLocationRows.filter((ll) => (where.listingId ? ll.listingId === where.listingId : true)).length,
+  },
+  stadtPocketOffer: {
+    deleteMany: async ({ where }) => {
+      const before = offerRows.length;
+      offerRows = offerRows.filter((o) => o.listingLocationId !== where.listingLocationId);
+      return { count: before - offerRows.length };
+    },
+  },
+  stadtPocketUpdate: {
+    deleteMany: async ({ where }) => {
+      const before = updateRows.length;
+      updateRows = updateRows.filter((u) => u.listingLocationId !== where.listingLocationId);
+      return { count: before - updateRows.length };
+    },
   },
   // Array form (used by saveDraft) and interactive callback form (used
   // by initializeDraft/publishListingLocation) both supported. The
@@ -168,6 +207,8 @@ const mockPrisma = {
     if (Array.isArray(arg)) return Promise.all(arg);
     const listingSnapshot = cloneRows(listingRows);
     const listingLocationSnapshot = cloneRows(listingLocationRows);
+    const offerSnapshot = cloneRows(offerRows);
+    const updateSnapshot = cloneRows(updateRows);
     try {
       return await arg(mockPrisma);
     } catch (err) {
@@ -175,6 +216,10 @@ const mockPrisma = {
       listingRows.push(...listingSnapshot);
       listingLocationRows.length = 0;
       listingLocationRows.push(...listingLocationSnapshot);
+      offerRows.length = 0;
+      offerRows.push(...offerSnapshot);
+      updateRows.length = 0;
+      updateRows.push(...updateSnapshot);
       throw err;
     }
   },
@@ -653,6 +698,180 @@ test('M. publishing one business in a city does not publish a sibling draft busi
 
   const secondList = await publicService.getCityBusiness('ulm', 'cafe-zweite-geschichte');
   assert.equal(secondList, null); // still not public
+});
+
+// ── N. Archive (published/paused -> archived) ──────────────────────
+test('N. Ulm manager can archive a published listing', async () => {
+  resetFixtures();
+  const res = await callRoute(routes.handleArchive, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.body.archived.publicationStatus, 'archived');
+  const detail = await publicService.getCityBusiness('ulm', 'baeckerei-staib');
+  assert.equal(detail, null); // archived is invisible on the public API, same as paused/draft
+});
+
+test('N. archiving a paused listing is allowed', async () => {
+  resetFixtures();
+  await callRoute(routes.handlePause, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  const res = await callRoute(routes.handleArchive, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.body.archived.publicationStatus, 'archived');
+});
+
+test('N. archiving a draft listing is rejected', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Neuer Laden', category: 'Shopping', shortDescription: 'Kurz.', address: 'Weg 1, Ulm' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+  const res = await callRoute(routes.handleArchive, fakeReq({ params: { locationId: ULM, listingLocationId: llId } }));
+  assert.equal(res.statusCode, 400);
+});
+
+test('N. Stuttgart manager cannot archive an Ulm listing', async () => {
+  resetFixtures();
+  currentUserId = 'stuttgart_manager';
+  const res = await callRoute(routes.handleArchive, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.statusCode, 403);
+  const row = listingLocationRows.find((r) => r.id === STAIB_LL_ID);
+  assert.equal(row.publicationStatus, 'published'); // untouched
+});
+
+test('N. Staib is never altered by an archive test elsewhere (control)', async () => {
+  resetFixtures();
+  const row = listingLocationRows.find((r) => r.id === STAIB_LL_ID);
+  assert.equal(row.publicationStatus, 'published');
+});
+
+// ── O. Delete a DRAFT listing (and dependents) ──────────────────────
+test('O. unauthenticated delete -> 401', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Testentwurf', category: 'Shopping', shortDescription: 'Kurz.', address: 'Weg 1, Ulm' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ auth: false, params: { locationId: ULM, listingLocationId: llId } }));
+  assert.equal(res.statusCode, 401);
+});
+
+test('O. Stuttgart manager cannot delete an Ulm draft', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Testentwurf', category: 'Shopping', shortDescription: 'Kurz.', address: 'Weg 1, Ulm' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+  currentUserId = 'stuttgart_manager';
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: llId } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(listingLocationRows.some((r) => r.id === llId), true); // still exists
+});
+
+test('O. nonexistent listingLocationId -> 404', async () => {
+  resetFixtures();
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: 'll_does_not_exist' } }));
+  assert.equal(res.statusCode, 404);
+});
+
+test('O. a published (LIVE) listing cannot use the simple draft-delete path', async () => {
+  resetFixtures();
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.statusCode, 400);
+  assert.equal(listingLocationRows.some((r) => r.id === STAIB_LL_ID), true); // Staib untouched
+  assert.equal(listingRows.some((r) => r.id === 'listing_staib'), true);
+});
+
+test('O. a paused listing cannot use the simple draft-delete path either', async () => {
+  resetFixtures();
+  await callRoute(routes.handlePause, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.statusCode, 400);
+});
+
+test('O. an archived listing cannot use the simple draft-delete path either', async () => {
+  resetFixtures();
+  await callRoute(routes.handleArchive, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: STAIB_LL_ID } }));
+  assert.equal(res.statusCode, 400);
+});
+
+test('O. deleting a single-location draft also deletes its now-orphaned parent listing (this is the Betz case)', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Bäckerei Betz Test', category: 'Essen & Trinken', shortDescription: 'Testentwurf.', address: 'Testweg 1, Ulm' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+  const listingId = created.body.listing.listingId;
+
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: llId } }));
+  assert.equal(res.statusCode, undefined);
+  assert.equal(res.body.deleted.listingDeleted, true);
+  assert.equal(listingLocationRows.some((r) => r.id === llId), false);
+  assert.equal(listingRows.some((l) => l.id === listingId), false);
+
+  // Staib (unrelated business) is completely untouched.
+  assert.equal(listingRows.some((l) => l.id === 'listing_staib'), true);
+  assert.equal(listingLocationRows.some((r) => r.id === STAIB_LL_ID), true);
+  const staib = listingLocationRows.find((r) => r.id === STAIB_LL_ID);
+  assert.equal(staib.publicationStatus, 'published');
+});
+
+test('O. deleting one draft location of a multi-location listing leaves the sibling location and the parent listing intact', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Filialkette Ulm', category: 'Shopping', shortDescription: 'Kurz.', address: 'Erste Filiale 1, Ulm' },
+  }));
+  const firstLLId = created.body.listing.listingLocationId;
+  const listingId = created.body.listing.listingId;
+  // Second storefront under the SAME listing (mirrors how a multi-
+  // location AI draft adds sibling StadtPocketListingLocation rows).
+  const secondLL = {
+    id: nextId('ll'), listingId, locationId: ULM, address: 'Zweite Filiale 2, Ulm',
+    latitude: null, longitude: null, phone: null, website: null, hours: null,
+    publicationStatus: 'draft', publishedAt: null, businessLocationId: null, draftData: null,
+    createdAt: new Date(), updatedAt: new Date(),
+  };
+  listingLocationRows.push(secondLL);
+
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: firstLLId } }));
+  assert.equal(res.body.deleted.listingDeleted, false);
+  assert.equal(listingLocationRows.some((r) => r.id === firstLLId), false);
+  assert.equal(listingLocationRows.some((r) => r.id === secondLL.id), true); // sibling survives
+  assert.equal(listingRows.some((l) => l.id === listingId), true); // parent survives (sibling still depends on it)
+});
+
+test('O. deleting a draft also deletes its Offers/Updates, leaving no orphans', async () => {
+  resetFixtures();
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: ULM },
+    body: { name: 'Laden mit Angeboten', category: 'Shopping', shortDescription: 'Kurz.', address: 'Weg 1, Ulm' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+  offerRows.push({ id: 'offer_1', listingLocationId: llId, title: 'Test', offerText: '2 für 1', status: 'draft' });
+  updateRows.push({ id: 'update_1', listingLocationId: llId, title: 'Test', body: 'Neu!', status: 'draft' });
+
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: ULM, listingLocationId: llId } }));
+  assert.equal(res.statusCode, undefined);
+  assert.equal(offerRows.length, 0);
+  assert.equal(updateRows.length, 0);
+});
+
+test('O. Global Admin can delete a draft outside their own manager scope', async () => {
+  resetFixtures();
+  currentUserId = 'stuttgart_manager';
+  const created = await callRoute(routes.handleInitializeDraft, fakeReq({
+    params: { locationId: STUTTGART },
+    body: { name: 'Admin-Test-Laden', category: 'Shopping', shortDescription: 'Kurz.', address: 'Weg 1, Stuttgart' },
+  }));
+  const llId = created.body.listing.listingLocationId;
+
+  currentUserId = 'platform_admin_1';
+  currentRole = 'admin';
+  const res = await callRoute(routes.handleDeleteDraft, fakeReq({ params: { locationId: STUTTGART, listingLocationId: llId } }));
+  assert.equal(res.statusCode, undefined);
+  assert.equal(listingLocationRows.some((r) => r.id === llId), false);
 });
 
 // ── runner ──────────────────────────────────────────────────────

@@ -726,6 +726,90 @@ async function pauseForLocation(locationId, listingLocationId, scope) {
   return { listingLocationId: updated.id, publicationStatus: updated.publicationStatus };
 }
 
+// ── Archive (published or paused -> archived) ────────────────────
+// publicationStatus's documented value set already includes 'archived'
+// (see the schema comment on this column) -- no migration needed, and
+// this mirrors pauseForLocation's exact shape. An archived listing is
+// never deleted: StadtPocketOffer/StadtPocketUpdate rows and the
+// listing/location themselves are all left completely intact, simply
+// no longer visible on the public API (stadtpocketPublicService.js's
+// visibility check is `publicationStatus === 'published'`, a strict
+// equality, so 'archived' is already exactly as invisible as 'paused'
+// or 'draft' with zero further change needed there).
+async function archiveForLocation(locationId, listingLocationId, scope) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+  if (listingLocation.publicationStatus !== 'published' && listingLocation.publicationStatus !== 'paused') {
+    throw new StadtpocketManagerError('Only a published or paused listing can be archived.', 400);
+  }
+  const updated = await prisma.stadtPocketListingLocation.update({
+    where: { id: listingLocation.id },
+    data: { publicationStatus: 'archived' },
+  });
+  return { listingLocationId: updated.id, publicationStatus: updated.publicationStatus };
+}
+
+// ── Delete a DRAFT listing location (and its now-orphaned parent, if
+// this was its only location) ─────────────────────────────────────
+// Only a 'draft' listing location may use this path. A published,
+// paused, or archived listing must never be deleted this way -- it
+// must be explicitly archived first (see archiveForLocation above),
+// and even then permanent deletion of a once-live business is a
+// separate, more deliberate action this function does not perform.
+//
+// Every StadtPocketOffer/StadtPocketUpdate row belonging to this
+// listing location is deleted first, inside the SAME transaction,
+// because both of those foreign keys are ON DELETE RESTRICT at the
+// database level (see the migration SQL -- no ON DELETE CASCADE
+// exists anywhere in this relationship graph); Postgres would
+// otherwise reject the StadtPocketListingLocation delete outright
+// with a foreign-key violation, and a partial delete would leave an
+// orphaned Offer/Update pointing at a listingLocationId that no
+// longer exists.
+//
+// If this was the ONLY StadtPocketListingLocation under its parent
+// StadtPocketListing, the now-childless listing row is deleted too,
+// in the same transaction, so a single-location test/failed draft
+// never leaves an orphaned parent behind. If sibling locations still
+// exist under the same listing, only this one location (and its own
+// dependent Offers/Updates) is removed -- deleting one draft location
+// of a multi-location business never touches that business's other,
+// unrelated locations.
+//
+// Never touches Business/BusinessLocation/User or any other QRAIVY
+// account record: StadtPocketListing.businessId is the only link to
+// that world, and deleting a StadtPocketListing never cascades onto
+// the Business it optionally points at (that FK's own ON DELETE
+// direction is SET NULL on Business's deletion, not the reverse, and
+// this function never deletes a Business row in either case).
+async function deleteDraftListingLocation(locationId, listingLocationId, scope) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+
+  if (listingLocation.publicationStatus !== 'draft') {
+    throw new StadtpocketManagerError(
+      'Only a draft listing can be deleted this way. Archive a published or paused listing first.',
+      400
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.stadtPocketOffer.deleteMany({ where: { listingLocationId } });
+    await tx.stadtPocketUpdate.deleteMany({ where: { listingLocationId } });
+    await tx.stadtPocketListingLocation.delete({ where: { id: listingLocationId } });
+
+    const remainingSiblings = await tx.stadtPocketListingLocation.count({
+      where: { listingId: listingLocation.listingId },
+    });
+
+    let listingDeleted = false;
+    if (remainingSiblings === 0) {
+      await tx.stadtPocketListing.delete({ where: { id: listingLocation.listingId } });
+      listingDeleted = true;
+    }
+
+    return { listingLocationId, listingId: listingLocation.listingId, listingDeleted };
+  });
+}
+
 module.exports = {
   StadtpocketManagerError,
   getEditableState,
@@ -737,6 +821,8 @@ module.exports = {
   previewDraft,
   publishForLocation,
   pauseForLocation,
+  archiveForLocation,
+  deleteDraftListingLocation,
   // Reused by stadtpocketLoyaltyBridgeService.js (Phase 2, Stempelkarte)
   // for the exact same "never trust a caller-supplied listingLocationId"
   // re-check -- not exported for testing only, genuinely consumed

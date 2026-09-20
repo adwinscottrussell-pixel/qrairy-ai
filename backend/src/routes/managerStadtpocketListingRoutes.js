@@ -122,6 +122,24 @@ async function handlePause(req, res) {
   }
 }
 
+async function handleArchive(req, res) {
+  try {
+    const result = await service.archiveForLocation(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json({ archived: result });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/archive POST');
+  }
+}
+
+async function handleDeleteDraft(req, res) {
+  try {
+    const result = await service.deleteDraftListingLocation(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json({ deleted: result });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId DELETE');
+  }
+}
+
 // Phase 6D.2 — header/hero image upload. Upload-only: this route never
 // writes to the database at all (mirrors /lp/upload-logo's exact
 // posture) -- it only proves authorization, uploads to Cloudinary, and
@@ -243,6 +261,12 @@ router.put('/listings/:locationId/:listingLocationId/draft', requireStadtpocketW
 router.get('/listings/:locationId/:listingLocationId/preview', requireStadtpocketWriteScope, handlePreviewDraft);
 router.post('/listings/:locationId/:listingLocationId/publish', requireStadtpocketWriteScope, handlePublish);
 router.post('/listings/:locationId/:listingLocationId/pause', requireStadtpocketWriteScope, handlePause);
+router.post('/listings/:locationId/:listingLocationId/archive', requireStadtpocketWriteScope, handleArchive);
+// Draft-only delete -- deleteDraftListingLocation itself refuses any
+// non-'draft' publicationStatus (see that function's own comment), so
+// a published/paused/archived listing can never reach this path
+// regardless of what the frontend does or doesn't show.
+router.delete('/listings/:locationId/:listingLocationId', requireStadtpocketWriteScope, handleDeleteDraft);
 // requireStadtpocketWriteScope runs BEFORE multer parses the upload --
 // an unauthenticated/unauthorized request never gets its file buffered
 // at all, same ordering as /lp/upload-logo in lpRoutes.js.
@@ -269,6 +293,8 @@ module.exports.handleSaveDraft = handleSaveDraft; // exported for direct unit te
 module.exports.handlePreviewDraft = handlePreviewDraft; // exported for direct unit testing only
 module.exports.handlePublish = handlePublish; // exported for direct unit testing only
 module.exports.handlePause = handlePause; // exported for direct unit testing only
+module.exports.handleArchive = handleArchive; // exported for direct unit testing only
+module.exports.handleDeleteDraft = handleDeleteDraft; // exported for direct unit testing only
 module.exports.handleUploadHeaderImage = handleUploadHeaderImage; // exported for direct unit testing only
 module.exports.headerImageFileFilter = headerImageFileFilter; // exported for direct unit testing only
 module.exports.HEADER_IMAGE_ALLOWED_MIMETYPES = HEADER_IMAGE_ALLOWED_MIMETYPES; // exported for direct unit testing only
