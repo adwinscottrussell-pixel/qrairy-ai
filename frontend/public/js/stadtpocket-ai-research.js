@@ -422,6 +422,66 @@ function getAiResearchFailureMessage(err) {
   return AI_RESEARCH_NETWORK_ERROR_MESSAGE;
 }
 
+// ── Phase 1H.3 -- AI Business Discovery ("Unternehmen mit KI finden") ──
+// Calls the Phase 1H.2 backend (POST .../discover), never Google
+// directly and never Anthropic/Firecrawl. Kept separate from
+// AI_DUPLICATE_STATUS_UI above -- that map is full-sentence status
+// messages for the single-business research review screen; discovery
+// needs short, per-candidate list labels with exact wording specified
+// for this screen.
+const AI_DISCOVERY_DUPLICATE_LABELS = {
+  NEW: 'Neu',
+  POSSIBLE_MATCH: 'Möglicher Treffer',
+  ALREADY_DRAFT: 'Bereits als Entwurf vorhanden',
+  ALREADY_PUBLISHED: 'Bereits in StadtPocket',
+};
+
+function getDiscoveryDuplicateLabel(duplicateStatus) {
+  return AI_DISCOVERY_DUPLICATE_LABELS[duplicateStatus] || AI_DISCOVERY_DUPLICATE_LABELS.POSSIBLE_MATCH;
+}
+
+// Only a genuinely NEW candidate starts checked -- a possible or
+// definite match against an existing StadtPocket record must never be
+// pre-selected as if it were new.
+function isDiscoveryCandidateSelectedByDefault(duplicateStatus) {
+  return duplicateStatus === 'NEW';
+}
+
+const AI_DISCOVERY_DEFAULT_QUANTITY = 10;
+const AI_DISCOVERY_MIN_QUANTITY = 1;
+const AI_DISCOVERY_MAX_QUANTITY = 20;
+
+// Matches stadtpocketDiscoveryService.js's own validateCategory/
+// validateQuantity rules -- a client-side mirror so the Admin gets an
+// immediate, honest error instead of a round-trip 400, but the backend
+// remains the actual authority (never trusted to be bypassed).
+function validateAiDiscoveryInput(category, quantity) {
+  if (typeof category !== 'string' || !category.trim()) {
+    return { valid: false, error: 'Bitte eine Kategorie angeben.' };
+  }
+  const q = Number(quantity);
+  if (!Number.isInteger(q) || q < AI_DISCOVERY_MIN_QUANTITY || q > AI_DISCOVERY_MAX_QUANTITY) {
+    return { valid: false, error: `Die Anzahl muss zwischen ${AI_DISCOVERY_MIN_QUANTITY} und ${AI_DISCOVERY_MAX_QUANTITY} liegen.` };
+  }
+  return { valid: true };
+}
+
+function buildAiDiscoveryRequestBody(category, quantity) {
+  return { category: category.trim(), quantity: Number(quantity) };
+}
+
+// Matches stadtpocketDiscoveryService.js's PROVIDER_STATUS values.
+// 'ok' has no message (the results screen renders candidates/empty
+// state directly, no warning banner needed).
+const AI_DISCOVERY_PROVIDER_STATUS_MESSAGES = {
+  'provider-not-configured': 'Die Unternehmenssuche ist derzeit nicht konfiguriert. Bitte den Administrator kontaktieren.',
+  'provider-unavailable': 'Die Unternehmenssuche ist momentan nicht verfügbar. Bitte später erneut versuchen.',
+};
+
+function getAiDiscoveryProviderStatusMessage(status) {
+  return AI_DISCOVERY_PROVIDER_STATUS_MESSAGES[status] || null;
+}
+
 // Isomorphic export: `module` does not exist in a browser <script> tag,
 // so this is inert there -- only Node's require() sees it.
 if (typeof module !== 'undefined' && module.exports) {
@@ -454,5 +514,15 @@ if (typeof module !== 'undefined' && module.exports) {
     getMissingRequiredBrandFields,
     canCreateMultiLocationDraft,
     buildMultiLocationInitPayload,
+    AI_DISCOVERY_DUPLICATE_LABELS,
+    getDiscoveryDuplicateLabel,
+    isDiscoveryCandidateSelectedByDefault,
+    AI_DISCOVERY_DEFAULT_QUANTITY,
+    AI_DISCOVERY_MIN_QUANTITY,
+    AI_DISCOVERY_MAX_QUANTITY,
+    validateAiDiscoveryInput,
+    buildAiDiscoveryRequestBody,
+    AI_DISCOVERY_PROVIDER_STATUS_MESSAGES,
+    getAiDiscoveryProviderStatusMessage,
   };
 }

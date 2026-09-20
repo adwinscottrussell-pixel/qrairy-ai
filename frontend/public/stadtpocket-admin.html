@@ -256,6 +256,11 @@
   .choice-card .choice-icon { font-size: 22px; margin-bottom: 8px; display: block; }
   .choice-card h3 { margin: 0 0 6px; font-size: 15px; color: var(--text-primary); }
   .choice-card p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  /* Phase 1H.3 -- AI discovery candidate list. */
+  .discovery-candidate-list { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+  .discovery-candidate-row { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .discovery-candidate-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--coral); flex-shrink: 0; }
+  .discovery-candidate-info { flex: 1; min-width: 0; }
 
   .ai-loading-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 10px; }
   .ai-loading-list li { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
@@ -575,7 +580,32 @@
         <h3>Mit KI hinzufügen</h3>
         <p>StadtPocket recherchiert öffentlich verfügbare Informationen und bereitet sie zur Überprüfung vor.</p>
       </div>
+      <div class="card choice-card" onclick="openAiDiscovery()">
+        <span class="choice-icon">🔎</span>
+        <h3>Unternehmen mit KI finden</h3>
+        <p>Finde mehrere reale Unternehmen in deiner Stadt auf einmal und wähle aus, welche hinzugefügt werden sollen.</p>
+      </div>
     </div>
+  </section>
+
+  <!-- Phase 1H.3 -- AI Business Discovery ("Unternehmen mit KI finden").
+       Calls the existing, authenticated Phase 1H.2 backend endpoint
+       only (POST .../discover) -- never Google directly from the
+       browser. Ends at reviewing candidates; "Ausgewählte Unternehmen
+       vorbereiten" is intentionally disabled here (Phase 1H.4, not yet
+       built) -- this screen creates nothing. -->
+  <section class="page" id="page-ai-discovery">
+    <nav class="breadcrumb">
+      <span class="crumb">StadtPocket Admin</span>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="backToBusinesses()">Geschäfte</a>
+      <span class="crumb-sep">/</span>
+      <a class="crumb crumb-link" onclick="showPage('page-add-choice')">Neues Geschäft</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb crumb-current">Unternehmen mit KI finden</span>
+    </nav>
+    <h1>Unternehmen mit KI finden</h1>
+    <div id="ai-discovery-workspace"></div>
   </section>
 
   <section class="page" id="page-ai-research">
@@ -1839,6 +1869,200 @@
     const city = cities.find((c) => c.id === currentLocationId);
     document.getElementById('choice-city-name').textContent = city ? city.name : currentLocationId;
     showPage('page-add-choice');
+  }
+
+  // ── AI Business Discovery — "Unternehmen mit KI finden" (Phase 1H.3) ──
+  // Calls the existing, authenticated Phase 1H.2 backend only
+  // (POST .../discover) -- never Google/Anthropic/Firecrawl directly
+  // from the browser (see stadtpocketDiscoveryService.js). This screen
+  // ends at REVIEWING candidates: nothing here creates a listing, a
+  // listing location, a draft, or publishes anything -- "Ausgewählte
+  // Unternehmen vorbereiten" is intentionally disabled (Phase 1H.4, not
+  // built yet). Pure label/validation helpers live in
+  // js/stadtpocket-ai-research.js, same convention as the single-
+  // business AI research screen above.
+  let aiDiscoveryState = null;
+
+  function resetAiDiscoveryState() {
+    aiDiscoveryState = {
+      step: 'form', category: '', quantity: AI_DISCOVERY_DEFAULT_QUANTITY,
+      candidates: [], selectedSourceIds: new Set(), submitting: false,
+    };
+  }
+
+  function openAiDiscovery() {
+    resetAiDiscoveryState();
+    showPage('page-ai-discovery');
+    renderAiDiscoveryForm();
+  }
+
+  function retryAiDiscovery() {
+    aiDiscoveryState.step = 'form';
+    aiDiscoveryState.candidates = [];
+    renderAiDiscoveryForm();
+  }
+
+  function renderAiDiscoveryForm() {
+    const s = aiDiscoveryState;
+    const city = cities.find((c) => c.id === currentLocationId);
+    const cityName = city ? city.name : currentLocationId;
+    document.getElementById('ai-discovery-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">🔎 KI-Unternehmenssuche</span>
+        <p class="muted" style="margin-top:12px">Finde reale Unternehmen in deiner Stadt und prüfe sie, bevor sie zu StadtPocket hinzugefügt werden.</p>
+        <label>Stadt</label>
+        <input type="text" value="${escapeHtml(cityName)}" disabled />
+        <label>Kategorie</label>
+        <input type="text" id="ai-discovery-category" value="${escapeHtml(s.category)}" placeholder="z. B. Fitness" />
+        <label>Anzahl</label>
+        <input type="number" id="ai-discovery-quantity" value="${s.quantity}" min="${AI_DISCOVERY_MIN_QUANTITY}" max="${AI_DISCOVERY_MAX_QUANTITY}" />
+        <div id="ai-discovery-form-error"></div>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="showPage('page-add-choice')">Zurück</button>
+          <button class="primary" type="button" id="ai-discovery-submit-btn" onclick="submitAiDiscovery()">Unternehmen finden</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Comfortably under the backend's own discovery rate-limit window,
+  // generous for one Google Places Text Search call -- a client-side
+  // backstop only, same pattern as AI_RESEARCH_CLIENT_TIMEOUT_MS above.
+  const AI_DISCOVERY_CLIENT_TIMEOUT_MS = 20000;
+
+  async function submitAiDiscovery() {
+    const s = aiDiscoveryState;
+    if (s.submitting) return;
+    s.category = document.getElementById('ai-discovery-category').value;
+    s.quantity = document.getElementById('ai-discovery-quantity').value;
+
+    const validation = validateAiDiscoveryInput(s.category, s.quantity);
+    if (!validation.valid) {
+      banner('ai-discovery-form-error', 'error', validation.error);
+      return;
+    }
+
+    s.submitting = true;
+    const btn = document.getElementById('ai-discovery-submit-btn');
+    if (btn) btn.disabled = true;
+    s.step = 'loading';
+    renderAiDiscoveryLoading();
+
+    const body = buildAiDiscoveryRequestBody(s.category, s.quantity);
+    // currentLocationId is the manager's own, already-authorized city --
+    // this form never lets the Admin choose or override it; the backend
+    // independently re-derives the city name from locationId regardless.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_DISCOVERY_CLIENT_TIMEOUT_MS);
+
+    let res;
+    try {
+      res = await api(`/manager/stadtpocket/listings/${currentLocationId}/discover`, { method: 'POST', body, signal: controller.signal });
+    } catch (err) {
+      s.step = 'form';
+      renderAiDiscoveryForm();
+      banner('ai-discovery-form-error', 'error', getAiResearchFailureMessage(err));
+      return;
+    } finally {
+      clearTimeout(timeoutId);
+      s.submitting = false;
+    }
+
+    if (!res.ok) {
+      s.step = 'form';
+      renderAiDiscoveryForm();
+      banner('ai-discovery-form-error', 'error', (res.body && res.body.error) || 'Fehler bei der Suche.');
+      return;
+    }
+
+    // Provider-level non-'ok' status (not-configured / unavailable) is a
+    // 200 with an honest status field, not an HTTP error -- see
+    // stadtpocketDiscoveryService.js's PROVIDER_STATUS. Routed back to
+    // the form with a clear message rather than silently rendering an
+    // empty result list, which would look identical to a genuine
+    // zero-result search.
+    const providerMessage = getAiDiscoveryProviderStatusMessage(res.body.status);
+    if (providerMessage) {
+      s.step = 'form';
+      renderAiDiscoveryForm();
+      banner('ai-discovery-form-error', 'error', providerMessage);
+      return;
+    }
+
+    s.candidates = res.body.candidates || [];
+    // Only a genuinely NEW candidate starts checked -- see
+    // isDiscoveryCandidateSelectedByDefault's own comment.
+    s.selectedSourceIds = new Set(
+      s.candidates.filter((c) => isDiscoveryCandidateSelectedByDefault(c.duplicateStatus)).map((c) => c.sourceId)
+    );
+    s.step = 'results';
+    renderAiDiscoveryResults();
+  }
+
+  function renderAiDiscoveryLoading() {
+    document.getElementById('ai-discovery-workspace').innerHTML = `
+      <div class="card section-card">
+        <span class="ai-badge">🔎 Suche läuft…</span>
+        <p class="muted" style="margin-top:12px">Dies kann einen Moment dauern.</p>
+      </div>
+    `;
+  }
+
+  function toggleAiDiscoveryCandidateSelected(sourceId) {
+    const s = aiDiscoveryState;
+    if (s.selectedSourceIds.has(sourceId)) s.selectedSourceIds.delete(sourceId);
+    else s.selectedSourceIds.add(sourceId);
+    renderAiDiscoveryResults();
+  }
+
+  function renderAiDiscoveryResults() {
+    const s = aiDiscoveryState;
+    const count = s.candidates.length;
+
+    if (count === 0) {
+      document.getElementById('ai-discovery-workspace').innerHTML = `
+        <div class="card section-card">
+          <h3 style="margin-top:0">Keine Unternehmen gefunden</h3>
+          <p class="muted">Für diese Suche wurden keine Unternehmen gefunden. Versuchen Sie eine andere Kategorie.</p>
+          <div class="actions">
+            <button class="secondary" type="button" onclick="retryAiDiscovery()">Erneut suchen</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const rows = s.candidates.map((c) => {
+      const checked = s.selectedSourceIds.has(c.sourceId) ? 'checked' : '';
+      const label = getDiscoveryDuplicateLabel(c.duplicateStatus);
+      const labelClass = c.duplicateStatus === 'NEW' ? 'published' : 'draft';
+      // Never fabricated: website/category only render when the
+      // provider actually returned them (see stadtpocketDiscoveryService.js
+      // -- website is deliberately always null at discovery time today).
+      return `
+      <label class="card discovery-candidate-row">
+        <input type="checkbox" ${checked} onchange="toggleAiDiscoveryCandidateSelected('${c.sourceId}')" />
+        <div class="discovery-candidate-info">
+          <div style="font-weight:700">${escapeHtml(c.name || 'Unbenanntes Unternehmen')}</div>
+          ${c.address ? `<div class="muted">${escapeHtml(c.address)}</div>` : ''}
+          ${c.category ? `<div class="muted">${escapeHtml(c.category)}</div>` : ''}
+          ${c.website ? `<div class="muted">${escapeHtml(c.website)}</div>` : ''}
+        </div>
+        <span class="status-pill ${labelClass}">${escapeHtml(label)}</span>
+      </label>
+    `;
+    }).join('');
+
+    const selectedCount = s.selectedSourceIds.size;
+
+    document.getElementById('ai-discovery-workspace').innerHTML = `
+      <h3 style="margin-top:0">${count} Unternehmen gefunden</h3>
+      <div class="discovery-candidate-list">${rows}</div>
+      <div class="actions">
+        <button class="secondary" type="button" onclick="retryAiDiscovery()">Erneut suchen</button>
+        <button class="primary" type="button" disabled title="Nächster Schritt: ausgewählte Unternehmen zur Recherche vorbereiten (noch nicht verfügbar)">Ausgewählte Unternehmen vorbereiten (${selectedCount})</button>
+      </div>
+    `;
   }
 
   function openAiResearch() {
