@@ -630,30 +630,43 @@ function getPrepRowStatusLabel(result) {
 // business logo, a separate, untouched concept this phase does not
 // introduce or change.
 //
-// heroImage shape: { candidates: [{url, sourceUrl}], selected: null |
+// heroImage shape: { candidates: [{url, sourceUrl}], committed: null |
 // {source:'website', url, sourceUrl} | {source:'upload', file,
-// previewUrl}, discovering: bool }. Every function below is pure
-// (returns a new object, never mutates its input) so the exact same
-// logic is directly testable and used by the real page.
+// previewUrl}, pending: same shape as committed | null, discovering:
+// bool }. Every function below is pure (returns a new object, never
+// mutates its input) so the exact same logic is directly testable and
+// used by the real page.
+//
+// UX correction (small addition within Phase 1H.4.3, prompted by real
+// Kieser-review feedback): picking a thumbnail or uploading a file is
+// no longer immediately "the" selection -- it only stages `pending`, a
+// preview the Admin can look at before committing. `committed` is the
+// ONLY value ever used for draft creation (see
+// attachSelectedHeroImageToListing in stadtpocket-admin.html) --
+// nothing the Admin merely clicked/uploaded reaches the draft until
+// they explicitly press "Bild übernehmen" (applyPendingHeroImage).
+// This removes the original ambiguity where selecting a thumbnail had
+// no visible confirm step.
 
-// Seeds the initial BILD state from a Phase 1G research result.
-// Preserves the EXISTING single-candidate behavior unchanged (a found
-// headerImageCandidate starts pre-selected, exactly like before this
-// phase -- e.g. TopFit) while also handling the case that exposed the
-// bug (no candidate at all, e.g. Kieser Ulm) with an honest empty
-// state instead of hiding the section.
+// Seeds the initial BILD state from a Phase 1G research result. A
+// found headerImageCandidate starts pre-COMMITTED (not merely staged)
+// -- preserves the exact existing single-candidate behavior (e.g.
+// TopFit already showing an image) with no extra click required just
+// to keep the AI's own default suggestion. The case that exposed the
+// original bug (no candidate at all, e.g. Kieser Ulm) gets an honest
+// empty state instead of hiding the section.
 function seedHeroImageFromCandidate(candidate) {
   const hic = candidate && candidate.headerImageCandidate;
   if (hic && hic.value && hic.value.url) {
     const entry = { url: hic.value.url, sourceUrl: hic.sourceUrl || null };
-    return { candidates: [entry], selected: { source: 'website', ...entry }, discovering: false };
+    return { candidates: [entry], committed: { source: 'website', ...entry }, pending: null, discovering: false };
   }
-  return { candidates: [], selected: null, discovering: false };
+  return { candidates: [], committed: null, pending: null, discovering: false };
 }
 
 // Adds newly-discovered candidates to the existing list, deduped by
 // URL -- never replaces or reorders what's already there, and never
-// touches `selected` (a newly discovered candidate is never
+// touches `committed`/`pending` (a newly discovered candidate is never
 // auto-selected; the Admin always chooses explicitly).
 function mergeHeroImageCandidates(existingCandidates, newCandidates) {
   const existing = existingCandidates || [];
@@ -665,28 +678,43 @@ function mergeHeroImageCandidates(existingCandidates, newCandidates) {
   return merged;
 }
 
-// Selecting a thumbnail changes ONLY the selected image -- the
-// candidate list (and every other candidate in it) is untouched, so
-// switching back and forth between candidates never loses any of them.
-function selectHeroImageCandidate(heroImage, url) {
+// Clicking a thumbnail stages it as the PENDING preview only -- the
+// committed image (and every candidate in the list) is untouched until
+// "Bild übernehmen" is explicitly pressed.
+function stageHeroImageCandidate(heroImage, url) {
   const found = (heroImage.candidates || []).find((c) => c.url === url);
   if (!found) return heroImage;
-  return { ...heroImage, selected: { source: 'website', url: found.url, sourceUrl: found.sourceUrl } };
+  return { ...heroImage, pending: { source: 'website', url: found.url, sourceUrl: found.sourceUrl } };
 }
 
-function selectUploadedHeroImage(heroImage, file, previewUrl) {
-  return { ...heroImage, selected: { source: 'upload', file, previewUrl } };
+// A manual upload is staged the same way -- the file is not uploaded
+// anywhere yet (that only ever happens once "Als Entwurf erstellen" is
+// clicked; see attachSelectedHeroImageToListing), so nothing here is
+// destructive or irreversible.
+function stageUploadedHeroImage(heroImage, file, previewUrl) {
+  return { ...heroImage, pending: { source: 'upload', file, previewUrl } };
 }
 
-// "Bild löschen" -- clears the current selection only. The candidate
-// list survives (an external website candidate that was never copied
-// into our own storage has nothing to delete server-side; see this
-// phase's own report for the uploaded-asset case, which is a real
-// Cloudinary object created only once draft creation actually runs,
-// never before). After this, heroImage.selected is null -- an honest
-// "no image selected" state the Admin can pick a new image from.
+// "Bild übernehmen" -- the ONLY thing that turns a staged preview into
+// the committed hero image. A no-op (returns the input unchanged) when
+// nothing is pending, so this is always safe to call from a
+// disabled/hidden button state without special-casing the caller.
+function applyPendingHeroImage(heroImage) {
+  if (!heroImage.pending) return heroImage;
+  return { ...heroImage, committed: heroImage.pending, pending: null };
+}
+
+// "Bild löschen" -- clears BOTH the committed image and any pending,
+// unapplied preview; a clean "nothing selected" reset, never requiring
+// a replacement. The candidate list survives (an external website
+// candidate that was never copied into our own storage has nothing to
+// delete server-side; an uploaded file at this point is still just a
+// local, unsent File object -- see this phase's own report for the
+// real Cloudinary asset case, which is only ever created once draft
+// creation actually runs). After this, the business has no selected
+// hero image, and the Admin can pick/upload another one.
 function clearHeroImageSelection(heroImage) {
-  return { ...heroImage, selected: null };
+  return { ...heroImage, committed: null, pending: null };
 }
 
 // Mirrors the existing HEADER_IMAGE_ALLOWED_TYPES/HEADER_IMAGE_MAX_BYTES
@@ -758,8 +786,9 @@ if (typeof module !== 'undefined' && module.exports) {
     getPrepRowStatusLabel,
     seedHeroImageFromCandidate,
     mergeHeroImageCandidates,
-    selectHeroImageCandidate,
-    selectUploadedHeroImage,
+    stageHeroImageCandidate,
+    stageUploadedHeroImage,
+    applyPendingHeroImage,
     clearHeroImageSelection,
     HERO_IMAGE_ALLOWED_TYPES,
     HERO_IMAGE_MAX_BYTES,

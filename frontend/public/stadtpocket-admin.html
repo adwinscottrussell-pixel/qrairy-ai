@@ -287,6 +287,7 @@
 
   .image-candidate-box { position: relative; }
   .image-candidate-label { position: absolute; top: 8px; left: 8px; background: rgba(10,15,30,0.82); color: var(--text-primary); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .image-candidate-label-applied { left: auto; right: 8px; background: var(--success); color: #062016; }
   /* Phase 1H.4.3 -- BILD section thumbnail gallery (website image candidates). */
   .hero-image-thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .hero-image-thumb { padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; width: 64px; height: 64px; cursor: pointer; background: var(--surface-input); flex-shrink: 0; }
@@ -1873,7 +1874,7 @@
     aiResearchState = {
       step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false,
       includedLocationIndices: new Set(), batchContext: null,
-      heroImage: { candidates: [], selected: null, discovering: false },
+      heroImage: { candidates: [], committed: null, pending: null, discovering: false },
     };
   }
 
@@ -2288,6 +2289,17 @@
     loadCandidateIntoAiResearchState(result.name, result.website, result.researchCandidate, {
       sourceId: result.sourceId, position: position + 1, total: readyIndices.length,
     });
+    // If this business's BILD choice was already committed/cleared on a
+    // previous visit (see syncCommittedHeroImageToBatchResult), restore
+    // it here -- otherwise loadCandidateIntoAiResearchState's own fresh
+    // seedHeroImageFromCandidate() default (the plain research result)
+    // stands. This is what makes a committed image survive navigating
+    // away to the queue and back (Phase 1H.4.3's own "preserve the
+    // selected image while navigating within the current preparation
+    // batch" requirement).
+    if (result.heroImage) {
+      aiResearchState.heroImage = result.heroImage;
+    }
     showPage('page-ai-research');
     renderAiResearchReview();
   }
@@ -2603,40 +2615,58 @@
   // other field correctly, but with zero image candidates the old
   // function returned '' and the whole section silently vanished).
   //
-  // s.heroImage = { candidates: [{url, sourceUrl}], selected: null |
-  // {source:'website', url, sourceUrl} | {source:'upload', file,
-  // previewUrl}, discovering: bool } -- seeded by
-  // seedHeroImageFromCandidate() (js/stadtpocket-ai-research.js) from
-  // the EXISTING single headerImageCandidate Phase 1G's research
-  // already produces (TopFit's case: pre-selected by default, exactly
-  // like before -- no regression). Additional candidates only ever
-  // come from an EXPLICIT "Bilder von Website suchen"/"Anderes Bild
-  // wählen" click (discoverAiHeroImageCandidates) -- never fetched or
-  // selected automatically.
+  // s.heroImage = { candidates: [{url, sourceUrl}], committed: null |
+  // {source, url|previewUrl, ...}, pending: same shape | null,
+  // discovering: bool } -- seeded by seedHeroImageFromCandidate()
+  // (js/stadtpocket-ai-research.js) from the EXISTING single
+  // headerImageCandidate Phase 1G's research already produces
+  // (TopFit's case: pre-committed by default, exactly like before --
+  // no regression). Additional candidates only ever come from an
+  // EXPLICIT "Bilder von Website suchen"/"Anderes Bild wählen" click
+  // (discoverAiHeroImageCandidates) -- never fetched or selected
+  // automatically.
+  //
+  // UX correction: picking a thumbnail or uploading only stages
+  // `pending` -- a preview with an explicit "Bild übernehmen" action.
+  // Nothing becomes the real committed image (the only value draft
+  // creation ever reads) until that button is pressed.
   function renderHeroImageSectionHtml(s) {
-    const hero = s.heroImage || { candidates: [], selected: null, discovering: false };
-    const sel = hero.selected;
+    const hero = s.heroImage || { candidates: [], committed: null, pending: null, discovering: false };
+    const shown = hero.pending || hero.committed;
+    const isPending = !!hero.pending;
 
     let previewHtml;
-    if (sel) {
-      const previewSrc = sel.source === 'upload' ? sel.previewUrl : sel.url;
-      const sourceLabel = sel.source === 'upload' ? 'Hochgeladenes Bild' : 'Quelle: Offizielle Website';
+    if (shown) {
+      const previewSrc = shown.source === 'upload' ? shown.previewUrl : shown.url;
+      let captionText;
+      if (isPending) {
+        captionText = 'Vorschau — noch nicht übernommen';
+      } else {
+        captionText = shown.source === 'upload' ? 'Hochgeladenes Bild — Ausgewählt' : 'Quelle: Offizielle Website — Ausgewählt';
+      }
       previewHtml = `
         <div class="header-image-preview image-candidate-box">
           <img src="${escapeHtml(previewSrc)}" alt=""
             onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar';" />
-          ${sel.source === 'website' ? '<span class="image-candidate-label">Nur Vorschlag</span>' : ''}
+          ${shown.source === 'website' && isPending ? '<span class="image-candidate-label">Nur Vorschlag</span>' : ''}
+          ${!isPending ? '<span class="image-candidate-label image-candidate-label-applied">Ausgewählt</span>' : ''}
         </div>
-        <p class="muted" style="margin:10px 0 0">${escapeHtml(sourceLabel)}</p>
+        <p class="muted" style="margin:10px 0 0">${escapeHtml(captionText)}</p>
       `;
     } else {
       previewHtml = '<div class="header-image-preview empty">Noch kein Bild ausgewählt</div>';
     }
 
+    // A thumbnail is highlighted when it matches whichever is currently
+    // being shown (the pending preview takes priority over the
+    // committed image, matching what the preview box itself displays).
+    const activeUrl = (isPending && shown.source === 'website' && shown.url)
+      || (!isPending && shown && shown.source === 'website' && shown.url)
+      || null;
     const thumbsHtml = hero.candidates.length > 1 ? `
       <div class="hero-image-thumbs">
         ${hero.candidates.map((c) => `
-          <button type="button" class="hero-image-thumb ${sel && sel.source === 'website' && sel.url === c.url ? 'selected' : ''}" onclick="selectAiHeroImageCandidate('${escapeHtml(c.url).replace(/'/g, "\\'")}')" title="${escapeHtml(c.url)}">
+          <button type="button" class="hero-image-thumb ${activeUrl === c.url ? 'selected' : ''}" onclick="stageAiHeroImageCandidate('${escapeHtml(c.url).replace(/'/g, "\\'")}')" title="${escapeHtml(c.url)}">
             <img src="${escapeHtml(c.url)}" alt="" onerror="this.parentElement.style.display='none'" />
           </button>
         `).join('')}
@@ -2655,7 +2685,8 @@
         <div class="header-image-actions">
           ${websiteUrl ? `<button class="secondary" type="button" ${hero.discovering ? 'disabled' : ''} onclick="discoverAiHeroImageCandidates()">${escapeHtml(chooseLabel)}</button>` : ''}
           <button class="secondary" type="button" onclick="document.getElementById('ai-hero-image-file-input').click()">Bild hochladen</button>
-          ${sel ? '<button class="ghost" type="button" onclick="clearAiHeroImageSelection()">Bild löschen</button>' : ''}
+          ${isPending ? '<button class="primary" type="button" onclick="applyAiHeroImage()">Bild übernehmen</button>' : ''}
+          ${shown ? '<button class="ghost" type="button" onclick="clearAiHeroImageSelection()">Bild löschen</button>' : ''}
         </div>
         <input type="file" id="ai-hero-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleAiHeroImageFileSelected(event)" />
       </div>
@@ -2693,37 +2724,70 @@
     }
   }
 
-  // Clicking a thumbnail changes the selected image only -- never
-  // removes it from the candidate list, never triggers a new fetch.
-  function selectAiHeroImageCandidate(url) {
+  // Clicking a thumbnail stages it as the PENDING preview only -- never
+  // removes anything from the candidate list, never triggers a new
+  // fetch, and never touches the committed image until "Bild
+  // übernehmen" is pressed (applyAiHeroImage below).
+  function stageAiHeroImageCandidate(url) {
     const s = aiResearchState;
-    s.heroImage = selectHeroImageCandidate(s.heroImage, url);
+    s.heroImage = stageHeroImageCandidate(s.heroImage, url);
     renderAiResearchReview();
   }
 
-  // "Bild löschen" -- clears the CURRENT SELECTION for this draft/
-  // review only. A website candidate was never copied into our own
-  // storage, so there is nothing to delete server-side; an uploaded
-  // file at this point is still just a local, unsent File object (the
-  // real Cloudinary upload only happens once "Als Entwurf erstellen" is
-  // actually clicked -- see attachSelectedHeroImageToListing below), so
-  // there is nothing server-side to delete here either. After this,
-  // the business simply has no selected hero image, exactly as
-  // required.
+  // "Bild übernehmen" -- the ONLY action that turns a staged preview
+  // into the real committed hero image (the only value
+  // attachSelectedHeroImageToListing / draft creation ever reads).
+  // While reviewing a batch item, the committed choice is also synced
+  // back into aiDiscoveryPrepState so it survives navigating away and
+  // back within the current preparation queue (Phase 1H.4.2's own
+  // "Zur Übersicht"/"Weiter" navigation) -- see
+  // syncCommittedHeroImageToBatchResult and its use in openPrepReviewAt.
+  function applyAiHeroImage() {
+    const s = aiResearchState;
+    s.heroImage = applyPendingHeroImage(s.heroImage);
+    syncCommittedHeroImageToBatchResult();
+    renderAiResearchReview();
+  }
+
+  // "Bild löschen" -- clears BOTH the committed image and any pending,
+  // unapplied preview for this draft/review only. A website candidate
+  // was never copied into our own storage, so there is nothing to
+  // delete server-side; an uploaded file at this point is still just a
+  // local, unsent File object (the real Cloudinary upload only happens
+  // once "Als Entwurf erstellen" is actually clicked -- see
+  // attachSelectedHeroImageToListing below), so there is nothing
+  // server-side to delete here either. After this, the business simply
+  // has no selected hero image, exactly as required -- also synced
+  // into the batch result, same reasoning as applyAiHeroImage.
   function clearAiHeroImageSelection() {
     const s = aiResearchState;
     s.heroImage = clearHeroImageSelection(s.heroImage);
+    syncCommittedHeroImageToBatchResult();
     renderAiResearchReview();
+  }
+
+  // Persists the current committed/pending BILD state onto this
+  // review's own entry in aiDiscoveryPrepState.results (keyed by
+  // batchContext.sourceId) -- a no-op outside batch mode (no
+  // batchContext, or no active preparation batch at all). Only called
+  // from the two "durable" actions (apply/clear); an in-progress,
+  // not-yet-applied pending choice is deliberately NOT persisted here
+  // -- only a real commit/clear is meant to survive navigation.
+  function syncCommittedHeroImageToBatchResult() {
+    const s = aiResearchState;
+    if (!s.batchContext || !aiDiscoveryPrepState) return;
+    const result = aiDiscoveryPrepState.results.find((r) => r.sourceId === s.batchContext.sourceId);
+    if (result) result.heroImage = s.heroImage;
   }
 
   // Manual upload -- reuses the EXISTING client-side validation
   // constants (validateHeroImageUploadFile mirrors
   // HEADER_IMAGE_ALLOWED_TYPES/HEADER_IMAGE_MAX_BYTES, the same rule
   // the business editor's own header-image upload already enforces).
-  // Only stages the file locally (an object URL preview) -- the real
-  // upload happens later, at draft-creation time, once a real
-  // listingLocationId exists to attach it to (see
-  // attachSelectedHeroImageToListing).
+  // Only STAGES the file locally (an object URL preview, pending until
+  // "Bild übernehmen") -- the real upload happens later, at draft-
+  // creation time, once a real listingLocationId exists to attach it
+  // to (see attachSelectedHeroImageToListing).
   function handleAiHeroImageFileSelected(event) {
     const input = event.target;
     const file = input.files && input.files[0];
@@ -2736,7 +2800,7 @@
     }
     const s = aiResearchState;
     const previewUrl = URL.createObjectURL(file);
-    s.heroImage = selectUploadedHeroImage(s.heroImage, file, previewUrl);
+    s.heroImage = stageUploadedHeroImage(s.heroImage, file, previewUrl);
     renderAiResearchReview();
   }
 
@@ -3039,8 +3103,8 @@
     // draft; it only adds a note, same posture as the existing
     // enrichmentFailed/enrichmentSkipped handling below.
     let heroImageNote = null;
-    if (s.heroImage && s.heroImage.selected) {
-      const imgResult = await attachSelectedHeroImageToListing(finalListing.listingLocationId, s.heroImage.selected);
+    if (s.heroImage && s.heroImage.committed) {
+      const imgResult = await attachSelectedHeroImageToListing(finalListing.listingLocationId, s.heroImage.committed);
       if (imgResult.ok) {
         finalListing = imgResult.listing;
       } else {
@@ -3122,8 +3186,8 @@
     // is kept, only whether the attach succeeded is used here.
     const finalListing = res.body.listing;
     let heroImageNote = null;
-    if (s.heroImage && s.heroImage.selected && finalListing.locations && finalListing.locations[0]) {
-      const imgResult = await attachSelectedHeroImageToListing(finalListing.locations[0].listingLocationId, s.heroImage.selected);
+    if (s.heroImage && s.heroImage.committed && finalListing.locations && finalListing.locations[0]) {
+      const imgResult = await attachSelectedHeroImageToListing(finalListing.locations[0].listingLocationId, s.heroImage.committed);
       if (!imgResult.ok) {
         heroImageNote = 'das ausgewählte Bild konnte nicht gespeichert werden';
       }
