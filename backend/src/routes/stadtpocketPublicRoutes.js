@@ -17,6 +17,7 @@
 const express = require('express');
 const router = express.Router();
 const stadtpocketPublicService = require('../services/stadtpocketPublicService');
+const stadtpocketEventsService = require('../services/stadtpocketEventsService');
 
 async function handleListCityBusinesses(req, res) {
   try {
@@ -46,9 +47,30 @@ async function handleGetCityBusiness(req, res) {
   }
 }
 
+// Independent of the business list/detail routes above: events come
+// from an external city event feed (stadtpocketEventsService.js), never
+// from StadtPocketListing/StadtPocketListingLocation, so "city not
+// found" here means "no event source configured for this city", not
+// "no Location row for this city".
+async function handleListCityEvents(req, res) {
+  try {
+    const { citySlug } = req.params;
+    const result = await stadtpocketEventsService.fetchCityEvents(citySlug);
+    if (!result) {
+      return res.status(404).json({ error: 'City not found.' });
+    }
+    return res.json(result);
+  } catch (err) {
+    console.error('[public/stadtpocket/cities/:citySlug/events]', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 router.get('/cities/:citySlug/businesses', handleListCityBusinesses);
 router.get('/cities/:citySlug/businesses/:listingSlug', handleGetCityBusiness);
+router.get('/cities/:citySlug/events', handleListCityEvents);
 
 module.exports = router;
 module.exports.handleListCityBusinesses = handleListCityBusinesses; // exported for direct unit testing only
 module.exports.handleGetCityBusiness = handleGetCityBusiness; // exported for direct unit testing only
+module.exports.handleListCityEvents = handleListCityEvents; // exported for direct unit testing only
