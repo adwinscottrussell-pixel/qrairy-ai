@@ -624,6 +624,91 @@ function getPrepRowStatusLabel(result) {
   return { text: '', tone: 'muted' };
 }
 
+// ── Phase 1H.4.3 -- BILD (hero/cover image) selection ───────────────
+// This image is the StadtPocket business HERO/COVER image (the
+// existing StadtPocketListing.headerImage field) -- explicitly NOT the
+// business logo, a separate, untouched concept this phase does not
+// introduce or change.
+//
+// heroImage shape: { candidates: [{url, sourceUrl}], selected: null |
+// {source:'website', url, sourceUrl} | {source:'upload', file,
+// previewUrl}, discovering: bool }. Every function below is pure
+// (returns a new object, never mutates its input) so the exact same
+// logic is directly testable and used by the real page.
+
+// Seeds the initial BILD state from a Phase 1G research result.
+// Preserves the EXISTING single-candidate behavior unchanged (a found
+// headerImageCandidate starts pre-selected, exactly like before this
+// phase -- e.g. TopFit) while also handling the case that exposed the
+// bug (no candidate at all, e.g. Kieser Ulm) with an honest empty
+// state instead of hiding the section.
+function seedHeroImageFromCandidate(candidate) {
+  const hic = candidate && candidate.headerImageCandidate;
+  if (hic && hic.value && hic.value.url) {
+    const entry = { url: hic.value.url, sourceUrl: hic.sourceUrl || null };
+    return { candidates: [entry], selected: { source: 'website', ...entry }, discovering: false };
+  }
+  return { candidates: [], selected: null, discovering: false };
+}
+
+// Adds newly-discovered candidates to the existing list, deduped by
+// URL -- never replaces or reorders what's already there, and never
+// touches `selected` (a newly discovered candidate is never
+// auto-selected; the Admin always chooses explicitly).
+function mergeHeroImageCandidates(existingCandidates, newCandidates) {
+  const existing = existingCandidates || [];
+  const seen = new Set(existing.map((c) => c.url));
+  const merged = existing.slice();
+  for (const c of newCandidates || []) {
+    if (!seen.has(c.url)) { seen.add(c.url); merged.push(c); }
+  }
+  return merged;
+}
+
+// Selecting a thumbnail changes ONLY the selected image -- the
+// candidate list (and every other candidate in it) is untouched, so
+// switching back and forth between candidates never loses any of them.
+function selectHeroImageCandidate(heroImage, url) {
+  const found = (heroImage.candidates || []).find((c) => c.url === url);
+  if (!found) return heroImage;
+  return { ...heroImage, selected: { source: 'website', url: found.url, sourceUrl: found.sourceUrl } };
+}
+
+function selectUploadedHeroImage(heroImage, file, previewUrl) {
+  return { ...heroImage, selected: { source: 'upload', file, previewUrl } };
+}
+
+// "Bild löschen" -- clears the current selection only. The candidate
+// list survives (an external website candidate that was never copied
+// into our own storage has nothing to delete server-side; see this
+// phase's own report for the uploaded-asset case, which is a real
+// Cloudinary object created only once draft creation actually runs,
+// never before). After this, heroImage.selected is null -- an honest
+// "no image selected" state the Admin can pick a new image from.
+function clearHeroImageSelection(heroImage) {
+  return { ...heroImage, selected: null };
+}
+
+// Mirrors the existing HEADER_IMAGE_ALLOWED_TYPES/HEADER_IMAGE_MAX_BYTES
+// constants already defined inline in stadtpocket-admin.html (used by
+// the business editor's own header-image upload and by Aktuelles'
+// update-image upload) -- duplicated here, not imported, since this
+// file loads as a plain global <script> before that inline script
+// defines them; the values themselves must stay in lockstep with the
+// real upload route's own multer config
+// (managerStadtpocketListingRoutes.js: HEADER_IMAGE_ALLOWED_MIMETYPES /
+// HEADER_IMAGE_MAX_BYTES), which is the actual, authoritative
+// server-side limit regardless of what this client-side pre-check says.
+const HERO_IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const HERO_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+function validateHeroImageUploadFile(file) {
+  if (!file) return { valid: false, error: 'Keine Datei ausgewählt.' };
+  if (!HERO_IMAGE_ALLOWED_TYPES.includes(file.type)) return { valid: false, error: 'Nur PNG, JPG oder WebP Bilder sind erlaubt.' };
+  if (file.size > HERO_IMAGE_MAX_BYTES) return { valid: false, error: 'Die Datei ist zu groß (maximal 5 MB).' };
+  return { valid: true };
+}
+
 // Isomorphic export: `module` does not exist in a browser <script> tag,
 // so this is inert there -- only Node's require() sees it.
 if (typeof module !== 'undefined' && module.exports) {
@@ -671,5 +756,13 @@ if (typeof module !== 'undefined' && module.exports) {
     getPrepSummary,
     AI_PREP_NO_EVIDENCE_STATUS_LABELS,
     getPrepRowStatusLabel,
+    seedHeroImageFromCandidate,
+    mergeHeroImageCandidates,
+    selectHeroImageCandidate,
+    selectUploadedHeroImage,
+    clearHeroImageSelection,
+    HERO_IMAGE_ALLOWED_TYPES,
+    HERO_IMAGE_MAX_BYTES,
+    validateHeroImageUploadFile,
   };
 }

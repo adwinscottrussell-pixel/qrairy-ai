@@ -287,6 +287,11 @@
 
   .image-candidate-box { position: relative; }
   .image-candidate-label { position: absolute; top: 8px; left: 8px; background: rgba(10,15,30,0.82); color: var(--text-primary); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  /* Phase 1H.4.3 -- BILD section thumbnail gallery (website image candidates). */
+  .hero-image-thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .hero-image-thumb { padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; width: 64px; height: 64px; cursor: pointer; background: var(--surface-input); flex-shrink: 0; }
+  .hero-image-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hero-image-thumb.selected { border-color: var(--coral); }
   .duplicate-match-row { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
 
   .offer-step { display: none; }
@@ -1865,7 +1870,11 @@
   let aiResearchState = null;
 
   function resetAiResearchState() {
-    aiResearchState = { step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false, includedLocationIndices: new Set(), batchContext: null };
+    aiResearchState = {
+      step: 'form', businessName: '', websiteUrl: '', candidate: null, editable: {}, submitting: false,
+      includedLocationIndices: new Set(), batchContext: null,
+      heroImage: { candidates: [], selected: null, discovering: false },
+    };
   }
 
   // Phase 1H.4 -- loads an already-completed research result (produced
@@ -1887,6 +1896,7 @@
       submitting: false,
       includedLocationIndices: defaultIncludedLocationIndices(candidate),
       batchContext: batchContext || null,
+      heroImage: seedHeroImageFromCandidate(candidate),
     };
   }
 
@@ -2436,6 +2446,7 @@
     // Admin's job is to review and optionally exclude a bad one, never
     // to hand-pick exactly one true location (Phase 1G.1 correction).
     s.includedLocationIndices = defaultIncludedLocationIndices(s.candidate);
+    s.heroImage = seedHeroImageFromCandidate(s.candidate);
     s.step = 'review';
     renderAiResearchReview();
   }
@@ -2583,21 +2594,196 @@
     `;
   }
 
-  // Shared by both the single-location and multi-location review
-  // screens -- identical rendering either way, extracted once Phase
-  // 1G.1 introduced a second review screen that also needs it.
-  function renderImageCandidateHtml(c) {
-    return c.headerImageCandidate ? `
-      <div class="card">
-        <h2 style="margin-top:0">Bildvorschlag</h2>
+  // Phase 1H.4.3 -- BILD section. Shared by both the single-location and
+  // multi-location review screens (same "identical rendering either
+  // way" reasoning the old renderImageCandidateHtml already had this
+  // comment for) -- but unlike that function, this ALWAYS renders a
+  // BILD card, even when nothing was found or selected yet (Kieser
+  // Ulm's real-world case that exposed the bug: research found every
+  // other field correctly, but with zero image candidates the old
+  // function returned '' and the whole section silently vanished).
+  //
+  // s.heroImage = { candidates: [{url, sourceUrl}], selected: null |
+  // {source:'website', url, sourceUrl} | {source:'upload', file,
+  // previewUrl}, discovering: bool } -- seeded by
+  // seedHeroImageFromCandidate() (js/stadtpocket-ai-research.js) from
+  // the EXISTING single headerImageCandidate Phase 1G's research
+  // already produces (TopFit's case: pre-selected by default, exactly
+  // like before -- no regression). Additional candidates only ever
+  // come from an EXPLICIT "Bilder von Website suchen"/"Anderes Bild
+  // wählen" click (discoverAiHeroImageCandidates) -- never fetched or
+  // selected automatically.
+  function renderHeroImageSectionHtml(s) {
+    const hero = s.heroImage || { candidates: [], selected: null, discovering: false };
+    const sel = hero.selected;
+
+    let previewHtml;
+    if (sel) {
+      const previewSrc = sel.source === 'upload' ? sel.previewUrl : sel.url;
+      const sourceLabel = sel.source === 'upload' ? 'Hochgeladenes Bild' : 'Quelle: Offizielle Website';
+      previewHtml = `
         <div class="header-image-preview image-candidate-box">
-          <img src="${escapeHtml(c.headerImageCandidate.value.url)}" alt=""
-            onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar'; " />
-          <span class="image-candidate-label">Nur Vorschlag</span>
+          <img src="${escapeHtml(previewSrc)}" alt=""
+            onerror="this.closest('.header-image-preview').classList.add('empty'); this.closest('.header-image-preview').textContent = 'Bild nicht verfügbar';" />
+          ${sel.source === 'website' ? '<span class="image-candidate-label">Nur Vorschlag</span>' : ''}
         </div>
-        <p class="muted" style="margin-top:10px">Dieses Bild wurde auf einer öffentlichen Quelle gefunden. Es wurde noch nicht als StadtPocket-Bild übernommen.</p>
+        <p class="muted" style="margin:10px 0 0">${escapeHtml(sourceLabel)}</p>
+      `;
+    } else {
+      previewHtml = '<div class="header-image-preview empty">Noch kein Bild ausgewählt</div>';
+    }
+
+    const thumbsHtml = hero.candidates.length > 1 ? `
+      <div class="hero-image-thumbs">
+        ${hero.candidates.map((c) => `
+          <button type="button" class="hero-image-thumb ${sel && sel.source === 'website' && sel.url === c.url ? 'selected' : ''}" onclick="selectAiHeroImageCandidate('${escapeHtml(c.url).replace(/'/g, "\\'")}')" title="${escapeHtml(c.url)}">
+            <img src="${escapeHtml(c.url)}" alt="" onerror="this.parentElement.style.display='none'" />
+          </button>
+        `).join('')}
       </div>
     ` : '';
+
+    const websiteUrl = (s.editable && s.editable.website) || s.websiteUrl;
+    const chooseLabel = hero.discovering ? 'Suche läuft…' : (hero.candidates.length > 0 ? 'Anderes Bild wählen' : 'Bilder von Website suchen');
+
+    return `
+      <div class="card">
+        <h2 style="margin-top:0">Bild</h2>
+        ${previewHtml}
+        ${thumbsHtml}
+        <div id="hero-image-banner"></div>
+        <div class="header-image-actions">
+          ${websiteUrl ? `<button class="secondary" type="button" ${hero.discovering ? 'disabled' : ''} onclick="discoverAiHeroImageCandidates()">${escapeHtml(chooseLabel)}</button>` : ''}
+          <button class="secondary" type="button" onclick="document.getElementById('ai-hero-image-file-input').click()">Bild hochladen</button>
+          ${sel ? '<button class="ghost" type="button" onclick="clearAiHeroImageSelection()">Bild löschen</button>' : ''}
+        </div>
+        <input type="file" id="ai-hero-image-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleAiHeroImageFileSelected(event)" />
+      </div>
+    `;
+  }
+
+  // "Bilder von Website suchen" / "Anderes Bild wählen" -- the ONLY
+  // trigger for website image discovery; never runs automatically as
+  // part of research itself. Calls the new, bounded, non-AI
+  // POST .../image-candidates endpoint (stadtpocketImageDiscoveryService.js)
+  // against the ALREADY-verified official website
+  // (s.editable.website/s.websiteUrl), never Google Image Search. New
+  // candidates are merged into the existing list -- never replace the
+  // current selection (mergeHeroImageCandidates never touches
+  // `selected`; see its own comment).
+  async function discoverAiHeroImageCandidates() {
+    const s = aiResearchState;
+    const websiteUrl = (s.editable && s.editable.website) || s.websiteUrl;
+    if (!websiteUrl || s.heroImage.discovering) return;
+    s.heroImage.discovering = true;
+    renderAiResearchReview();
+
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/image-candidates`, { method: 'POST', body: { websiteUrl } });
+    s.heroImage.discovering = false;
+
+    if (!res.ok || !res.body || res.body.status !== 'ok') {
+      renderAiResearchReview();
+      banner('hero-image-banner', 'error', 'Es konnten keine Bilder von der Website geladen werden.');
+      return;
+    }
+    s.heroImage.candidates = mergeHeroImageCandidates(s.heroImage.candidates, res.body.candidates);
+    renderAiResearchReview();
+    if (res.body.candidates.length === 0) {
+      banner('hero-image-banner', 'info', 'Auf der Website wurden keine passenden Bilder gefunden.');
+    }
+  }
+
+  // Clicking a thumbnail changes the selected image only -- never
+  // removes it from the candidate list, never triggers a new fetch.
+  function selectAiHeroImageCandidate(url) {
+    const s = aiResearchState;
+    s.heroImage = selectHeroImageCandidate(s.heroImage, url);
+    renderAiResearchReview();
+  }
+
+  // "Bild löschen" -- clears the CURRENT SELECTION for this draft/
+  // review only. A website candidate was never copied into our own
+  // storage, so there is nothing to delete server-side; an uploaded
+  // file at this point is still just a local, unsent File object (the
+  // real Cloudinary upload only happens once "Als Entwurf erstellen" is
+  // actually clicked -- see attachSelectedHeroImageToListing below), so
+  // there is nothing server-side to delete here either. After this,
+  // the business simply has no selected hero image, exactly as
+  // required.
+  function clearAiHeroImageSelection() {
+    const s = aiResearchState;
+    s.heroImage = clearHeroImageSelection(s.heroImage);
+    renderAiResearchReview();
+  }
+
+  // Manual upload -- reuses the EXISTING client-side validation
+  // constants (validateHeroImageUploadFile mirrors
+  // HEADER_IMAGE_ALLOWED_TYPES/HEADER_IMAGE_MAX_BYTES, the same rule
+  // the business editor's own header-image upload already enforces).
+  // Only stages the file locally (an object URL preview) -- the real
+  // upload happens later, at draft-creation time, once a real
+  // listingLocationId exists to attach it to (see
+  // attachSelectedHeroImageToListing).
+  function handleAiHeroImageFileSelected(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow re-selecting the exact same file again later
+    if (!file) return;
+    const validation = validateHeroImageUploadFile(file);
+    if (!validation.valid) {
+      banner('hero-image-banner', 'error', validation.error);
+      return;
+    }
+    const s = aiResearchState;
+    const previewUrl = URL.createObjectURL(file);
+    s.heroImage = selectUploadedHeroImage(s.heroImage, file, previewUrl);
+    renderAiResearchReview();
+  }
+
+  // Phase 1H.4.3 -- turns the Admin's selection (a website candidate or
+  // an uploaded file) into a real StadtPocket headerImage, called ONLY
+  // after a real draft/listingLocationId already exists (right after
+  // "Als Entwurf erstellen" succeeds). Reuses the EXACT SAME two-step
+  // pattern the business editor's own manual upload already uses
+  // (upload/copy endpoint -> PUT .../draft with { headerImage }) --
+  // never a parallel persistence path. Never throws: returns
+  // { ok:false, error } so a failure here can be surfaced as a note
+  // alongside an already-successfully-created draft, never as a reason
+  // to discard that draft.
+  async function attachSelectedHeroImageToListing(listingLocationId, selection) {
+    let uploadOk;
+    let uploadBody;
+    if (selection.source === 'upload') {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('image', selection.file);
+      const rawRes = await fetch(`${API_BASE}/manager/stadtpocket/listings/${currentLocationId}/${listingLocationId}/header-image`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: formData,
+      });
+      uploadOk = rawRes.ok;
+      try { uploadBody = await rawRes.json(); } catch (e) { uploadBody = null; }
+    } else {
+      const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${listingLocationId}/header-image-from-url`, {
+        method: 'POST',
+        body: { url: selection.url },
+      });
+      uploadOk = res.ok;
+      uploadBody = res.body;
+    }
+    if (!uploadOk) {
+      return { ok: false, error: (uploadBody && uploadBody.error) || 'Bild konnte nicht gespeichert werden.' };
+    }
+
+    const saveRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${listingLocationId}/draft`, {
+      method: 'PUT',
+      body: { headerImage: uploadBody.headerImage },
+    });
+    if (!saveRes.ok) {
+      return { ok: false, error: (saveRes.body && saveRes.body.error) || 'Entwurf konnte nicht gespeichert werden.' };
+    }
+    return { ok: true, listing: saveRes.body.listing };
   }
 
   // Phase 1H.4 -- when reviewing a prepared candidate FROM a discovery
@@ -2685,7 +2871,7 @@
 
       ${presentFields.length ? fieldCardsHtml : '<div class="empty-state">Keine verwertbaren Informationen gefunden.</div>'}
 
-      ${renderImageCandidateHtml(c)}
+      ${renderHeroImageSectionHtml(s)}
 
       <div id="ai-create-error"></div>
       <div class="actions">
@@ -2757,7 +2943,7 @@
 
       ${presentFields.length ? fieldCardsHtml : '<div class="empty-state">Keine verwertbaren Informationen gefunden.</div>'}
 
-      ${renderImageCandidateHtml(c)}
+      ${renderHeroImageSectionHtml(s)}
 
       <div id="ai-create-error"></div>
       <div class="actions">
@@ -2842,9 +3028,26 @@
       if (prepResult) prepResult.draftCreated = true;
     }
 
-    const finalListing = res.body.listing;
+    let finalListing = res.body.listing;
     currentListingLocationId = finalListing.listingLocationId;
     headerImageJustUploaded = false;
+
+    // Phase 1H.4.3 -- attach the selected BILD, if any, now that a real
+    // listingLocationId exists. If nothing was selected, this step is
+    // skipped entirely -- draft creation never requires an image. A
+    // failure here never discards the already-successfully-created
+    // draft; it only adds a note, same posture as the existing
+    // enrichmentFailed/enrichmentSkipped handling below.
+    let heroImageNote = null;
+    if (s.heroImage && s.heroImage.selected) {
+      const imgResult = await attachSelectedHeroImageToListing(finalListing.listingLocationId, s.heroImage.selected);
+      if (imgResult.ok) {
+        finalListing = imgResult.listing;
+      } else {
+        heroImageNote = 'das ausgewählte Bild konnte nicht gespeichert werden';
+      }
+    }
+
     loadListingIntoEditor(finalListing);
     renderSidebarBusinessCard();
     showPage('page-editor');
@@ -2852,6 +3055,7 @@
     const notes = [];
     if (res.body.enrichmentFailed) notes.push('einige zusätzliche Angaben konnten nicht gespeichert werden');
     if (enrichmentSkipped.length) notes.push(`${enrichmentSkipped.join(' und ')} wurde/n bearbeitet und muss/müssen manuell ergänzt werden`);
+    if (heroImageNote) notes.push(heroImageNote);
 
     if (notes.length) {
       banner('editor-banner', 'error', `Entwurf wurde erstellt, aber ${notes.join('; ')}. Bitte ergänzen Sie die Angaben im Editor.`);
@@ -2903,6 +3107,28 @@
       if (prepResult) prepResult.draftCreated = true;
     }
 
+    // Phase 1H.4.3 -- headerImage is a brand-/listing-level field (see
+    // stadtpocketManagerService.js's LISTING_FIELDS), never per-
+    // location, so it can be attached through ANY one of the just-
+    // created locations' own listingLocationId -- the write always
+    // resolves to the same parent StadtPocketListing regardless of
+    // which one addresses it. Same never-discards-the-draft failure
+    // posture as the single-location flow above. Note: unlike the
+    // single-location flow, `finalListing` here is deliberately NOT
+    // replaced with the PUT .../draft response -- that response is
+    // shaped for ONE location (mergeState), not the multi-location
+    // { locations: [...] } shape renderAiResearchMultiLocationCreated
+    // needs; the original res.body.listing (already correctly shaped)
+    // is kept, only whether the attach succeeded is used here.
+    const finalListing = res.body.listing;
+    let heroImageNote = null;
+    if (s.heroImage && s.heroImage.selected && finalListing.locations && finalListing.locations[0]) {
+      const imgResult = await attachSelectedHeroImageToListing(finalListing.locations[0].listingLocationId, s.heroImage.selected);
+      if (!imgResult.ok) {
+        heroImageNote = 'das ausgewählte Bild konnte nicht gespeichert werden';
+      }
+    }
+
     // No multi-location editor exists yet (the existing page-editor is
     // shaped around exactly one listingLocationId at a time -- see
     // stadtpocketManagerService.js's mergeState). Opening it for one
@@ -2912,11 +3138,11 @@
     // final report for the next-phase follow-up (a real multi-location
     // editor view). Instead: an honest inline confirmation, then back
     // to the city list.
-    renderAiResearchMultiLocationCreated(res.body.listing);
+    renderAiResearchMultiLocationCreated(finalListing, heroImageNote);
     await renderCityList();
   }
 
-  function renderAiResearchMultiLocationCreated(listing) {
+  function renderAiResearchMultiLocationCreated(listing, heroImageNote) {
     const locationsHtml = (listing.locations || []).map((l) => `
       <div class="card field-review-card">
         <div>${escapeHtml(l.address)}</div>
@@ -2929,6 +3155,7 @@
         <h1 style="margin:8px 0 4px">${escapeHtml(listing.name)}</h1>
         <p class="muted" style="margin:0">${listing.locations.length} Standort${listing.locations.length === 1 ? '' : 'e'} als Entwurf angelegt. Bitte prüfen Sie die Angaben vor der Veröffentlichung.</p>
       </div>
+      ${heroImageNote ? `<div class="banner error">Entwurf wurde erstellt, aber ${escapeHtml(heroImageNote)}.</div>` : ''}
       ${locationsHtml}
       <div class="actions">
         <button class="primary" type="button" onclick="showPage('page-add-choice')">Fertig</button>

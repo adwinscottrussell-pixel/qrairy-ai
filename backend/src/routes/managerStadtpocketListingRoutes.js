@@ -22,14 +22,34 @@
 
 const express = require('express');
 const multer = require('multer');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const router = express.Router();
 const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManagerAuth');
 const service = require('../services/stadtpocketManagerService');
 const { uploadStadtPocketHeaderImage } = require('../services/stadtPocketHeaderImageService');
 const loyaltyBridgeService = require('../services/stadtpocketLoyaltyBridgeService');
+const {
+  discoverWebsiteImageCandidates,
+  copyWebsiteImageToCloudinary,
+  StadtpocketImageError,
+} = require('../services/stadtpocketImageDiscoveryService');
+
+// Phase 1H.4.3 -- image discovery/copy both make a real, bounded
+// external fetch (Firecrawl for discovery, a direct image download for
+// the copy step), same cost class as the existing research rate
+// limiter, so both share its exact convention: keyed by the resolved
+// manager userId (requireStadtpocketWriteScope runs first), never per-IP
+// alone.
+const imageRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.stadtpocketScope && req.stadtpocketScope.userId) || ipKeyGenerator(req.ip),
+});
 
 function handleServiceError(err, res, route) {
-  if (err instanceof service.StadtpocketManagerError) {
+  if (err instanceof service.StadtpocketManagerError || err instanceof StadtpocketImageError) {
     return res.status(err.status).json({ error: err.message });
   }
   console.error(`[${route}]`, err);
@@ -177,6 +197,48 @@ async function handleUploadHeaderImage(req, res) {
   }
 }
 
+// Phase 1H.4.3 — website image candidate discovery. Read-only: never
+// writes to the database, never uploads anything to Cloudinary. Scoped
+// by :locationId only (city-level authorization) -- deliberately NOT
+// :listingLocationId, since this is called from the AI research review
+// screen BEFORE any draft/listing exists yet. websiteUrl is re-validated
+// inside discoverWebsiteImageCandidates -- never trusted merely because
+// it was present in an earlier research result.
+async function handleDiscoverImageCandidates(req, res) {
+  try {
+    service.authorizeLocationAccess(req.params.locationId, req.stadtpocketScope);
+    const websiteUrl = req.body && req.body.websiteUrl;
+    if (typeof websiteUrl !== 'string' || !websiteUrl.trim()) {
+      return res.status(400).json({ error: 'websiteUrl is required.' });
+    }
+    const result = await discoverWebsiteImageCandidates(websiteUrl.trim());
+    return res.json(result);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/image-candidates POST');
+  }
+}
+
+// Phase 1H.4.3 — turns one Admin-SELECTED website image candidate into
+// a real, StadtPocket-owned Cloudinary asset, scoped to a specific
+// listing exactly like the manual file-upload route above (same
+// getEditableState re-authorization, same never-writes-the-draft-
+// itself posture -- the frontend commits it via the EXISTING
+// PUT .../draft with { headerImage } afterward, identical to the
+// manual-upload flow).
+async function handleCopyWebsiteImage(req, res) {
+  try {
+    const url = req.body && req.body.url;
+    if (typeof url !== 'string' || !url.trim()) {
+      return res.status(400).json({ error: 'url is required.' });
+    }
+    const state = await service.getEditableState(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    const headerImage = await copyWebsiteImageToCloudinary(url.trim(), state.listingId);
+    return res.json({ headerImage });
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/header-image-from-url POST');
+  }
+}
+
 // Stempelkarte Phase 2 — loyalty bridge (connect/disconnect an existing
 // QRAIVY loyalty program). See stadtpocketLoyaltyBridgeService.js for
 // the eligibility/authorization rules; this file is routing only, same
@@ -277,6 +339,10 @@ router.post('/listings/:locationId/:listingLocationId/header-image', requireStad
   });
 }, handleUploadHeaderImage);
 
+// Phase 1H.4.3 — hero image candidate discovery/copy.
+router.post('/listings/:locationId/image-candidates', requireStadtpocketWriteScope, imageRateLimiter, handleDiscoverImageCandidates);
+router.post('/listings/:locationId/:listingLocationId/header-image-from-url', requireStadtpocketWriteScope, imageRateLimiter, handleCopyWebsiteImage);
+
 // Stempelkarte Phase 2 — loyalty bridge.
 router.get('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleGetLoyaltyState);
 router.get('/listings/:locationId/:listingLocationId/loyalty/eligible', requireStadtpocketWriteScope, handleListEligiblePrograms);
@@ -296,6 +362,9 @@ module.exports.handlePause = handlePause; // exported for direct unit testing on
 module.exports.handleArchive = handleArchive; // exported for direct unit testing only
 module.exports.handleDeleteDraft = handleDeleteDraft; // exported for direct unit testing only
 module.exports.handleUploadHeaderImage = handleUploadHeaderImage; // exported for direct unit testing only
+module.exports.handleDiscoverImageCandidates = handleDiscoverImageCandidates; // exported for direct unit testing only
+module.exports.handleCopyWebsiteImage = handleCopyWebsiteImage; // exported for direct unit testing only
+module.exports.imageRateLimiter = imageRateLimiter; // exported for direct unit testing only
 module.exports.headerImageFileFilter = headerImageFileFilter; // exported for direct unit testing only
 module.exports.HEADER_IMAGE_ALLOWED_MIMETYPES = HEADER_IMAGE_ALLOWED_MIMETYPES; // exported for direct unit testing only
 module.exports.HEADER_IMAGE_MAX_BYTES = HEADER_IMAGE_MAX_BYTES; // exported for direct unit testing only
