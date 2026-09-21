@@ -198,15 +198,19 @@ test('getPrepReadyResultIndices excludes failed, pending, preparing, and already
   ];
   assert.deepEqual(getPrepReadyResultIndices(results), [0, 4]);
 });
-test('getPrepSummary counts each bucket correctly and they sum to the total', () => {
+test('getPrepSummary counts each bucket correctly and they sum to the total (Phase 1H.4.2: reviewed/toReview split)', () => {
   const results = [
-    { status: 'ready', draftCreated: false },
+    { status: 'ready', draftCreated: false, reviewed: true },
+    { status: 'ready', draftCreated: false, reviewed: false },
     { status: 'ready', draftCreated: true },
     { status: 'failed', draftCreated: false },
     { status: 'preparing', draftCreated: false },
   ];
   const summary = getPrepSummary(results);
-  assert.deepEqual(summary, { total: 4, readyCount: 1, draftedCount: 1, failedCount: 1, pendingCount: 1 });
+  assert.deepEqual(summary, {
+    total: 5, readyCount: 2, reviewedCount: 1, toReviewCount: 1, draftedCount: 1, failedCount: 1, pendingCount: 1,
+  });
+  assert.equal(summary.reviewedCount + summary.toReviewCount, summary.readyCount);
 });
 test('an empty candidate list produces an empty, honest result -- never fabricated', async () => {
   const results = await runSequentialPreparation([], async () => { throw new Error('should never be called'); });
@@ -278,6 +282,127 @@ test('10. the preparation pipeline still never calls a draft, publish, or owner-
   assert.equal(/\/publish/.test(prepBlock), false);
   assert.equal(/\/owners?/i.test(prepBlock), false);
   assert.equal(/initializeDraft/.test(prepBlock), false);
+});
+
+// ============================================================
+// Phase 1H.4.2 — Business Review Queue UX
+// ============================================================
+
+// ── 1/2. every prepared business can be opened individually; business
+// #4 opens business #4, not business #1 ────────────────────────────
+test('1H.4.2-1/2. the ready-index lookup used by openPrepReviewForResult opens the CLICKED business, not always the first', () => {
+  // Mirrors openPrepReviewForResult's own logic exactly
+  // (readyIndices.indexOf(resultIndex)) using the real, exported,
+  // pure getPrepReadyResultIndices -- proves the translation from
+  // "clicked row #4" to "the correct position in the ready list" is
+  // correct for every ready row, not just the first.
+  const results = [
+    { status: 'ready', draftCreated: false },   // #0
+    { status: 'preparing', draftCreated: false }, // #1 -- not reviewable yet
+    { status: 'failed', draftCreated: false },  // #2 -- not reviewable
+    { status: 'ready', draftCreated: false },   // #3 -- "business #4"
+    { status: 'ready', draftCreated: false },   // #4
+  ];
+  const readyIndices = getPrepReadyResultIndices(results);
+  assert.deepEqual(readyIndices, [0, 3, 4]);
+  // Clicking business #4 (absolute index 3) must resolve to position 1
+  // (the SECOND ready item), never position 0 (which would silently
+  // open business #1 instead).
+  assert.equal(readyIndices.indexOf(3), 1);
+  assert.notEqual(readyIndices.indexOf(3), 0);
+  // Clicking business #1 (absolute index 0) still correctly resolves
+  // to position 0 -- the fix does not break the simple case.
+  assert.equal(readyIndices.indexOf(0), 0);
+});
+test('1H.4.2-1b. openPrepReviewForResult uses the exact same ready-index translation, not a hardcoded position', () => {
+  const fn = prepBlock.match(/function openPrepReviewForResult\(resultIndex\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /getPrepReadyResultIndices\(prep\.results\)/);
+  assert.match(fn, /readyIndices\.indexOf\(resultIndex\)/);
+  assert.match(fn, /openPrepReviewAt\(position\)/);
+});
+test('1H.4.2-1c. every ready row in the queue renders its own "Prüfen" action wired to openPrepReviewForResult(i)', () => {
+  const fn = prepBlock.match(/function renderAiDiscoveryPrepProgress\(\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /openPrepReviewForResult\(\$\{i\}\)/);
+});
+
+// ── 3/4. "Zur Übersicht" returns to the queue, and batch state survives ──
+test('1H.4.2-3. navigatePrepBatchToOverview always returns to the queue page', () => {
+  const fn = prepBlock.match(/function navigatePrepBatchToOverview\(\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /showPage\('page-ai-discovery-prep'\)/);
+  assert.match(fn, /renderAiDiscoveryPrepProgress\(\)/);
+});
+test('1H.4.2-4. navigatePrepBatchToOverview never resets or clears aiDiscoveryPrepState -- the batch survives the trip back to the queue', () => {
+  const fn = prepBlock.match(/function navigatePrepBatchToOverview\(\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.equal(/aiDiscoveryPrepState\s*=/.test(fn), false);
+});
+test('1H.4.2-4b. the "Zur Übersicht" button is always present when reviewing a batch item, not only at the first/last position', () => {
+  assert.match(adminHtml, /function renderBatchOverviewButtonHtml\(s\)\s*\{\s*\n\s*if \(!s\.batchContext\) return '';\s*\n\s*return '<button class="secondary" type="button" onclick="navigatePrepBatchToOverview\(\)">Zur Übersicht<\/button>';/);
+});
+
+// ── 5. "Weiter" still works ─────────────────────────────────────────
+test('1H.4.2-5. the "Weiter" button still advances via navigatePrepBatchStep(1)', () => {
+  assert.match(adminHtml, /onclick="navigatePrepBatchStep\(1\)">\$\{isLast \? 'Fertig' : 'Weiter'\}<\/button>/);
+});
+
+// ── 6. reviewed state is represented correctly ───────────────────────
+test('1H.4.2-6. a reviewed, evidence-bearing ready result shows "Geprüft" instead of the plain "Bereit zur Prüfung"', () => {
+  const unreviewed = getPrepRowStatusLabel({ status: 'ready', draftCreated: false, reviewed: false, researchCandidate: { researchStatus: 'ok' } });
+  const reviewed = getPrepRowStatusLabel({ status: 'ready', draftCreated: false, reviewed: true, researchCandidate: { researchStatus: 'ok' } });
+  assert.equal(unreviewed.text, 'Bereit zur Prüfung');
+  assert.equal(reviewed.text, 'Geprüft');
+  assert.equal(reviewed.tone, 'success');
+});
+test('1H.4.2-6b. reviewed is only ever set by explicitly navigating away from a review, never merely because research finished', () => {
+  const fn = prepBlock.match(/function markCurrentBatchResultReviewed\(\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /result\.reviewed = true/);
+  // Called from navigatePrepBatchToOverview/navigatePrepBatchStep only
+  // -- never from prepResearchOneCandidate or runSequentialPreparation
+  // (the actual research-completion code paths).
+  assert.equal(/markCurrentBatchResultReviewed/.test(prepBlock.match(/async function prepResearchOneCandidate\(result\)\s*\{([\s\S]*?)\n  \}/)[1]), false);
+});
+
+// ── 7. draft-created state is represented only after successful existing draft creation ──
+test('1H.4.2-7. draftCreated is set only inside the success path (after the !res.ok check), not unconditionally', () => {
+  const fnStart = adminHtml.indexOf('async function createDraftFromAiResearch()');
+  const fnEnd = adminHtml.indexOf('async function createMultiLocationDraftFromAiResearch()');
+  const fn = adminHtml.slice(fnStart, fnEnd);
+  const notOkIdx = fn.indexOf('if (!res.ok)');
+  const draftCreatedIdx = fn.indexOf('prepResult.draftCreated = true');
+  assert.ok(notOkIdx > -1 && draftCreatedIdx > notOkIdx, 'draftCreated must be set after the failure check, in the success path only');
+});
+test('1H.4.2-7b. draftCreated takes display priority over "Geprüft" and over the plain ready state', () => {
+  const label = getPrepRowStatusLabel({ status: 'ready', draftCreated: true, reviewed: true });
+  assert.equal(label.text, 'Entwurf erstellt');
+});
+
+// ── 8. failed/no-source candidates remain individually selectable ────
+test('1H.4.2-8. a no-source (or other no-evidence) ready result is STILL in the reviewable/ready-index set -- "Prüfen" remains available', () => {
+  const results = [{ status: 'ready', draftCreated: false, researchCandidate: { researchStatus: 'no-source' } }];
+  assert.deepEqual(getPrepReadyResultIndices(results), [0]);
+});
+test('1H.4.2-8b. a failed candidate\'s retry action is only disabled while the batch is still actively processing, never permanently', () => {
+  const fn = prepBlock.match(/function renderAiDiscoveryPrepProgress\(\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /retryPrepCandidate\(\$\{i\}\)" \$\{prep\.processing \? 'disabled' : ''\}/);
+});
+
+// ── 9. no automatic draft creation (regression, restated for 1H.4.2) ──
+test('1H.4.2-9. neither the queue rendering nor the navigation functions ever call a draft-creation endpoint', () => {
+  assert.equal(/\/research\/draft/.test(prepBlock), false);
+});
+
+// ── 10. existing Phase 1H.4 sequential preparation remains unchanged ──
+test('1H.4.2-10. runSequentialPreparation is untouched: still strictly sequential, one candidate at a time', async () => {
+  let maxConcurrent = 0;
+  let inFlight = 0;
+  const researchFn = async (r) => {
+    inFlight += 1;
+    maxConcurrent = Math.max(maxConcurrent, inFlight);
+    await new Promise((resolve) => setTimeout(resolve, 3));
+    inFlight -= 1;
+    return fakeCandidateResult(r.name);
+  };
+  await runSequentialPreparation([candidate('s1', 'A'), candidate('s2', 'B'), candidate('s3', 'C')], researchFn);
+  assert.equal(maxConcurrent, 1);
 });
 
 // ── runner ──────────────────────────────────────────────────────

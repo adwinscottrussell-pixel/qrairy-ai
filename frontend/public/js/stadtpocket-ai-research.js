@@ -555,11 +555,20 @@ function getPrepReadyResultIndices(results) {
   return indices;
 }
 
+// Phase 1H.4.2 -- readyCount is unchanged (ready & not yet drafted);
+// reviewedCount/toReviewCount split that same set by whether the Admin
+// has actually opened and navigated away from that business's review
+// (result.reviewed -- set only by markCurrentBatchResultReviewed(), see
+// stadtpocket-admin.html, never merely because research finished).
+// readyCount === reviewedCount + toReviewCount always holds.
 function getPrepSummary(results) {
   const rows = results || [];
+  const readyRows = rows.filter((r) => r.status === 'ready' && !r.draftCreated);
   return {
     total: rows.length,
-    readyCount: rows.filter((r) => r.status === 'ready' && !r.draftCreated).length,
+    readyCount: readyRows.length,
+    reviewedCount: readyRows.filter((r) => r.reviewed).length,
+    toReviewCount: readyRows.filter((r) => !r.reviewed).length,
     draftedCount: rows.filter((r) => r.draftCreated).length,
     failedCount: rows.filter((r) => r.status === 'failed').length,
     pendingCount: rows.filter((r) => r.status === 'pending' || r.status === 'preparing').length,
@@ -585,10 +594,20 @@ const AI_PREP_NO_EVIDENCE_STATUS_LABELS = {
   'malformed-output': 'Recherche fehlgeschlagen',
 };
 
-// Returns { text, tone } for one progress-list row. tone is one of
+// Returns { text, tone } for one queue-row status. tone is one of
 // 'success' | 'warning' | 'danger' | 'muted' -- a pure display decision,
 // no DOM access, so the exact same logic renders correctly in a test
 // and in the real page.
+//
+// Phase 1H.4.2 review-state model (READY / REVIEWED / DRAFT_CREATED,
+// plus the pre-existing no-evidence/failed states): priority order is
+// draftCreated > no-evidence-found > reviewed > plain ready. A
+// no-evidence result keeps showing its honest label even after review
+// -- that fact stays relevant and is never masked by "Geprüft" once
+// the Admin has looked at it. 'reviewed' is only ever set by an
+// explicit navigate-away-from-review action (see
+// markCurrentBatchResultReviewed in stadtpocket-admin.html) -- it is
+// NEVER set just because research completed.
 function getPrepRowStatusLabel(result) {
   if (!result) return { text: '', tone: 'muted' };
   if (result.draftCreated) return { text: 'Entwurf erstellt', tone: 'success' };
@@ -598,7 +617,8 @@ function getPrepRowStatusLabel(result) {
   if (result.status === 'ready') {
     const researchStatus = result.researchCandidate && result.researchCandidate.researchStatus;
     const noEvidenceLabel = researchStatus && AI_PREP_NO_EVIDENCE_STATUS_LABELS[researchStatus];
-    if (noEvidenceLabel) return { text: `${noEvidenceLabel} — Bereit zur Prüfung`, tone: 'warning' };
+    if (noEvidenceLabel) return { text: noEvidenceLabel, tone: 'warning' };
+    if (result.reviewed) return { text: 'Geprüft', tone: 'success' };
     return { text: 'Bereit zur Prüfung', tone: 'success' };
   }
   return { text: '', tone: 'muted' };

@@ -2189,67 +2189,82 @@
     renderAiDiscoveryPrepProgress();
   }
 
+  // Phase 1H.4.2 -- the completed/in-progress preparation list is a
+  // real HUMAN REVIEW QUEUE: every business with a completed research
+  // result (status 'ready', evidence found or not) gets its own
+  // "Prüfen" action opening THAT exact business -- never a forced
+  // "always starts at #1" sequential walk. A failed/no-source result
+  // stays individually visible with its own retry action; nothing here
+  // ever creates a draft or publishes anything by itself.
   function renderAiDiscoveryPrepProgress() {
     const prep = aiDiscoveryPrepState;
     const workspace = document.getElementById('ai-discovery-prep-workspace');
     if (!prep) { workspace.innerHTML = ''; return; }
 
-    const total = prep.results.length;
     const TONE_COLOR = { success: 'var(--success)', warning: 'var(--coral)', danger: 'var(--danger)', muted: null };
     const TONE_ICON = { success: '✓ ', warning: '⚠ ', danger: '⚠ ', muted: '' };
     const rows = prep.results.map((r, i) => {
       // getPrepRowStatusLabel (js/stadtpocket-ai-research.js) is the
-      // single source of truth for this text -- in particular, a
-      // 'ready' result whose underlying research found no usable
-      // evidence (no-source, website-unreachable, ...) is NEVER shown
-      // as a plain, undifferentiated "Bereit zur Prüfung" success
-      // checkmark (Phase 1H.4.1 Problem 3).
+      // single source of truth for this text -- READY/REVIEWED/
+      // DRAFT_CREATED and the honest no-evidence labels (Phase 1H.4.1
+      // Problem 3) are all decided there, never re-derived here.
       const { text, tone } = getPrepRowStatusLabel(r);
       const color = TONE_COLOR[tone];
+      const canReview = r.status === 'ready'; // a real researchCandidate exists to show
       let statusHtml = `<span${color ? ` style="color:${color}"` : ' class="muted"'}>${TONE_ICON[tone]}${escapeHtml(text)}</span>`;
+      let actionHtml = '';
       if (r.status === 'failed') {
-        statusHtml += (r.error ? `: ${escapeHtml(r.error)}` : '') +
-          ` <button class="ghost small" type="button" onclick="retryPrepCandidate(${i})" ${prep.processing ? 'disabled' : ''}>Erneut versuchen</button>`;
+        statusHtml += r.error ? `: ${escapeHtml(r.error)}` : '';
+        actionHtml = `<button class="ghost small" type="button" onclick="event.stopPropagation(); retryPrepCandidate(${i})" ${prep.processing ? 'disabled' : ''}>Erneut versuchen</button>`;
+      } else if (canReview) {
+        actionHtml = `<button class="ghost small" type="button" onclick="event.stopPropagation(); openPrepReviewForResult(${i})">Prüfen</button>`;
       }
       return `
-        <div class="card city-row" style="cursor:default">
+        <div class="card city-row" ${canReview ? `onclick="openPrepReviewForResult(${i})"` : 'style="cursor:default"'}>
           <div>
-            <div style="font-weight:700">${i + 1} von ${total} — ${escapeHtml(r.name || 'Unbenanntes Unternehmen')}</div>
+            <div style="font-weight:700">${escapeHtml(r.name || 'Unbenanntes Unternehmen')}</div>
             <div>${statusHtml}</div>
           </div>
+          ${actionHtml}
         </div>
       `;
     }).join('');
 
     const summary = getPrepSummary(prep.results);
-    const summaryHtml = prep.processing ? '' : `
-      <div class="card section-card">
-        <h3 style="margin-top:0">Vorbereitung abgeschlossen</h3>
-        <p class="muted">
-          ${summary.readyCount + summary.draftedCount} Unternehmen bereit zur Prüfung${summary.draftedCount ? ` (${summary.draftedCount} bereits als Entwurf erstellt)` : ''}
-          ${summary.failedCount ? `<br>${summary.failedCount} Unternehmen konnte${summary.failedCount === 1 ? '' : 'n'} nicht vollständig vorbereitet werden` : ''}
-        </p>
-        <div class="actions">
-          <button class="secondary" type="button" onclick="showPage('page-add-choice')">Fertig</button>
-          ${summary.readyCount > 0 ? '<button class="primary" type="button" onclick="openPrepReviewFirst()">Ergebnisse prüfen</button>' : ''}
-        </div>
+    // "7 Unternehmen / 2 Entwürfe erstellt / 1 geprüft / 4 zu prüfen" --
+    // shown as soon as anything is ready, not only once the whole
+    // sequential batch has finished, so the Admin can start reviewing
+    // early results while the rest are still being researched.
+    const summaryParts = [];
+    if (summary.draftedCount > 0) summaryParts.push(`${summary.draftedCount} ${summary.draftedCount === 1 ? 'Entwurf' : 'Entwürfe'} erstellt`);
+    if (summary.reviewedCount > 0) summaryParts.push(`${summary.reviewedCount} geprüft`);
+    if (summary.toReviewCount > 0) summaryParts.push(`${summary.toReviewCount} zu prüfen`);
+    if (summary.failedCount > 0) summaryParts.push(`${summary.failedCount} fehlgeschlagen`);
+    const summaryLineHtml = summary.total > 0
+      ? `<p class="muted" style="margin:4px 0 18px">${summary.total} ${summary.total === 1 ? 'Unternehmen' : 'Unternehmen'}${summaryParts.length ? ' — ' + summaryParts.join(', ') : ''}</p>`
+      : '';
+
+    const doneHtml = prep.processing ? '' : `
+      <div class="actions">
+        <button class="secondary" type="button" onclick="showPage('page-add-choice')">Fertig</button>
       </div>
     `;
 
     workspace.innerHTML = `
       <h1>${prep.processing ? 'Unternehmen werden vorbereitet' : 'Vorbereitung'}</h1>
+      ${summaryLineHtml}
       <div class="discovery-candidate-list">${rows}</div>
-      ${summaryHtml}
+      ${doneHtml}
     `;
   }
 
   // Opens the review screen (the EXISTING single-business
   // renderAiResearchReview()) at the given 0-based position AMONG
   // currently-ready, not-yet-drafted results. Out of range in either
-  // direction (before the first or past the last) returns to the
-  // prep/summary screen instead -- this is how "Zur Übersicht" (at the
-  // first item) and "Fertig" (at the last item) both work, via the
-  // same navigatePrepBatchStep() call.
+  // direction returns to the queue instead -- this is how "Weiter" at
+  // the last item ("Fertig") behaves; "Zur Übersicht" always returns to
+  // the queue directly (see navigatePrepBatchToOverview), never by
+  // relying on this out-of-range fallback.
   function openPrepReviewAt(position) {
     const prep = aiDiscoveryPrepState;
     if (!prep) return;
@@ -2271,9 +2286,51 @@
     openPrepReviewAt(0);
   }
 
+  // Phase 1H.4.2 -- opens THAT SPECIFIC business (by its real index in
+  // aiDiscoveryPrepState.results), not always business #1. Translates
+  // the clicked row's absolute index into its position within the
+  // ready-only list openPrepReviewAt() actually navigates, so "Prüfen"
+  // on business #4 opens business #4 regardless of how many others are
+  // still pending/preparing/failed around it.
+  function openPrepReviewForResult(resultIndex) {
+    const prep = aiDiscoveryPrepState;
+    if (!prep) return;
+    const readyIndices = getPrepReadyResultIndices(prep.results);
+    const position = readyIndices.indexOf(resultIndex);
+    if (position === -1) return; // not currently reviewable (failed/pending/already drafted)
+    openPrepReviewAt(position);
+  }
+
+  // Marks the business currently open in the review screen as REVIEWED
+  // -- called only when the Admin actually navigates away from having
+  // opened it (Zur Übersicht / Weiter), never merely because its
+  // research finished. A drafted result is left alone (draftCreated
+  // already takes display priority in getPrepRowStatusLabel).
+  function markCurrentBatchResultReviewed() {
+    const s = aiResearchState;
+    if (!s || !s.batchContext || !aiDiscoveryPrepState) return;
+    const result = aiDiscoveryPrepState.results.find((r) => r.sourceId === s.batchContext.sourceId);
+    if (result && !result.draftCreated) result.reviewed = true;
+  }
+
+  // "Zur Übersicht" -- ALWAYS returns to the queue, regardless of which
+  // business is currently open or its position in the ready list
+  // (Phase 1H.4.2: the Admin must always be able to get back to the
+  // queue and pick a different business manually, not just step
+  // backward one at a time).
+  function navigatePrepBatchToOverview() {
+    markCurrentBatchResultReviewed();
+    showPage('page-ai-discovery-prep');
+    renderAiDiscoveryPrepProgress();
+  }
+
+  // "Weiter" -- advances to the next ready-and-not-yet-drafted business;
+  // past the last one, falls through to the queue via openPrepReviewAt's
+  // own out-of-range handling (rendered as "Fertig" at that point).
   function navigatePrepBatchStep(direction) {
     const s = aiResearchState;
     if (!s || !s.batchContext) return;
+    markCurrentBatchResultReviewed();
     openPrepReviewAt(s.batchContext.position - 1 + direction);
   }
 
@@ -2554,10 +2611,12 @@
     return `<p class="muted" style="margin:0 0 4px">${s.batchContext.position} von ${s.batchContext.total}</p>`;
   }
 
-  function renderBatchPrevButtonHtml(s) {
+  // Phase 1H.4.2 -- "Zur Übersicht" ALWAYS returns to the queue (never
+  // "previous business" -- the Admin picks the next business manually
+  // from the queue, not by stepping backward one at a time).
+  function renderBatchOverviewButtonHtml(s) {
     if (!s.batchContext) return '';
-    const isFirst = s.batchContext.position === 1;
-    return `<button class="secondary" type="button" onclick="navigatePrepBatchStep(-1)">${isFirst ? 'Zur Übersicht' : 'Zurück'}</button>`;
+    return '<button class="secondary" type="button" onclick="navigatePrepBatchToOverview()">Zur Übersicht</button>';
   }
 
   function renderBatchNextButtonHtml(s) {
@@ -2630,7 +2689,7 @@
 
       <div id="ai-create-error"></div>
       <div class="actions">
-        ${s.batchContext ? renderBatchPrevButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
+        ${s.batchContext ? renderBatchOverviewButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
         <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
         ${createBtnHtml}
         ${renderBatchNextButtonHtml(s)}
@@ -2702,7 +2761,7 @@
 
       <div id="ai-create-error"></div>
       <div class="actions">
-        ${s.batchContext ? renderBatchPrevButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
+        ${s.batchContext ? renderBatchOverviewButtonHtml(s) : '<button class="secondary" type="button" onclick="showPage(\'page-add-choice\')">Zurück</button>'}
         <button class="ghost" type="button" onclick="retryAiResearch()">Erneut recherchieren</button>
         ${createBtnHtml}
         ${renderBatchNextButtonHtml(s)}
