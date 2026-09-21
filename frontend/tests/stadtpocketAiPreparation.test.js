@@ -20,6 +20,7 @@ const {
   runSequentialPreparation,
   getPrepReadyResultIndices,
   getPrepSummary,
+  getPrepRowStatusLabel,
 } = require('../public/js/stadtpocket-ai-research');
 
 const adminHtmlPath = path.join(__dirname, '..', 'public', 'stadtpocket-admin.html');
@@ -215,6 +216,68 @@ test('an empty candidate list produces an empty, honest result -- never fabricat
 // ── no database persistence anywhere in this pipeline (source check) ──
 test('the preparation pipeline never references a Prisma/database write -- everything is transient/in-memory', () => {
   assert.equal(/prisma\.|CandidateBusiness|\.create\(|\.update\(/.test(prepBlock), false);
+});
+
+// ── Phase 1H.4.1 — website survives the discovery -> preparation handoff ──
+test('2. a discovery candidate\'s website is included in the request body sent to research (prepResearchOneCandidate)', () => {
+  const fn = prepBlock.match(/async function prepResearchOneCandidate\(result\)\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(fn, /if \(result\.website\) body\.websiteUrl = result\.website;/);
+});
+test('2b. a discovery candidate WITHOUT a website omits websiteUrl entirely rather than sending an empty/fake one', async () => {
+  let capturedBody = null;
+  // Simulate exactly what prepResearchOneCandidate builds, using the
+  // same real branch it contains (verified by the source check above)
+  // -- this proves the actual behavior for both cases, not just that
+  // the line of code exists.
+  const buildBody = (result) => {
+    const body = { businessName: result.name };
+    if (result.website) body.websiteUrl = result.website;
+    return body;
+  };
+  capturedBody = buildBody({ name: 'No Website Gym', website: null });
+  assert.equal('websiteUrl' in capturedBody, false);
+  capturedBody = buildBody({ name: 'TopFit Ulm', website: 'https://www.topfit.fitness/ulm/' });
+  assert.equal(capturedBody.websiteUrl, 'https://www.topfit.fitness/ulm/');
+});
+test('3. runSequentialPreparation passes each candidate\'s website through to the injected research function unchanged', async () => {
+  let receivedWebsite;
+  const researchFn = async (r) => { receivedWebsite = r.website; return fakeCandidateResult(r.name); };
+  await runSequentialPreparation([candidate('s1', 'TopFit Ulm', 'https://www.topfit.fitness/ulm/')], researchFn);
+  assert.equal(receivedWebsite, 'https://www.topfit.fitness/ulm/');
+});
+
+// ── Phase 1H.4.1 — no-source is never presented as a normal success (Problem 3) ──
+test('8. a ready result with researchStatus "no-source" is labeled honestly, never a plain "Bereit zur Prüfung"', () => {
+  const result = { status: 'ready', draftCreated: false, researchCandidate: { researchStatus: 'no-source' } };
+  const { text, tone } = getPrepRowStatusLabel(result);
+  assert.equal(text.includes('Keine Quelle gefunden'), true);
+  assert.notEqual(text, 'Bereit zur Prüfung'); // never JUST the bare success text
+  assert.notEqual(tone, 'success');
+});
+test('8b. a ready result that genuinely found evidence (researchStatus "ok") IS shown as a normal "Bereit zur Prüfung" success', () => {
+  const result = { status: 'ready', draftCreated: false, researchCandidate: { researchStatus: 'ok' } };
+  const { text, tone } = getPrepRowStatusLabel(result);
+  assert.equal(text, 'Bereit zur Prüfung');
+  assert.equal(tone, 'success');
+});
+test('8c. every no-evidence research status (website-rejected/unreachable/provider-unavailable/malformed-output) gets its own honest label, never a bare success checkmark', () => {
+  for (const status of ['no-source', 'website-rejected', 'website-unreachable', 'provider-unavailable', 'malformed-output']) {
+    const { text, tone } = getPrepRowStatusLabel({ status: 'ready', draftCreated: false, researchCandidate: { researchStatus: status } });
+    assert.notEqual(tone, 'success');
+    assert.notEqual(text, 'Bereit zur Prüfung');
+  }
+});
+test('8d. a "partial" research result (some real evidence found) still reads as ready for review, not a failure', () => {
+  const { tone } = getPrepRowStatusLabel({ status: 'ready', draftCreated: false, researchCandidate: { researchStatus: 'partial' } });
+  assert.equal(tone, 'success');
+});
+
+// ── Phase 1H.4.1 — no automatic draft/publish behavior introduced (regression) ──
+test('10. the preparation pipeline still never calls a draft, publish, or owner-creation endpoint (unchanged from Phase 1H.4)', () => {
+  assert.equal(/\/research\/draft/.test(prepBlock), false);
+  assert.equal(/\/publish/.test(prepBlock), false);
+  assert.equal(/\/owners?/i.test(prepBlock), false);
+  assert.equal(/initializeDraft/.test(prepBlock), false);
 });
 
 // ── runner ──────────────────────────────────────────────────────

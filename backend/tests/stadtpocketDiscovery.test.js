@@ -111,19 +111,27 @@ const {
 } = discoveryService;
 
 // ── Fake Google Places (New) Text Search responses ──────────────────
-function place(id, name, address, lat, lng, types, extraAddressComponents = []) {
-  return {
+// options: { locality, postalCode, website } -- all optional, default
+// to the original Ulm/89073/no-website shape so every pre-existing call
+// site below (none of which pass this 8th argument) is completely
+// unaffected. Used by the Phase 1H.4.1 website/city-filter tests to
+// build a Neu-Ulm or website-bearing place without duplicating the
+// whole fixture shape.
+function place(id, name, address, lat, lng, types, extraAddressComponents = [], options = {}) {
+  const locality = options.locality !== undefined ? options.locality : 'Ulm';
+  const postalCode = options.postalCode !== undefined ? options.postalCode : '89073';
+  const localityComponents = locality === null ? [] : [{ longText: locality, shortText: locality, types: ['locality'] }];
+  const postalComponents = postalCode === null ? [] : [{ longText: postalCode, shortText: postalCode, types: ['postal_code'] }];
+  const p = {
     id,
     displayName: { text: name, languageCode: 'de' },
     formattedAddress: address,
     location: { latitude: lat, longitude: lng },
     types: types || ['gym'],
-    addressComponents: [
-      { longText: 'Ulm', shortText: 'Ulm', types: ['locality'] },
-      { longText: '89073', shortText: '89073', types: ['postal_code'] },
-      ...extraAddressComponents,
-    ],
+    addressComponents: [...localityComponents, ...postalComponents, ...extraAddressComponents],
   };
+  if (options.website) p.websiteUri = options.website;
+  return p;
 }
 
 const TEN_ULM_FITNESS_PLACES = [
@@ -441,11 +449,16 @@ test('19. discovery performs no database writes (mock exposes no write method fo
 });
 
 // ── 20/21/22. no Phase 1G research / Anthropic / Firecrawl call ───────
-test('20/21/22. discovery never requires or touches the Phase 1G research/Anthropic/Firecrawl modules', () => {
+test('20/21/22. discovery never requires or touches Anthropic/Firecrawl, and only reuses normalizeCityName (a pure helper) from Phase 1G -- never the research/extraction pipeline itself', () => {
   // stadtpocketDiscoveryService.js's own require graph -- proven
-  // statically, not just by absence of a mock: it depends on
-  // stadtpocketManagerService.js (authorizeLocationAccess) and
-  // stadtpocketDuplicateService.js (checkForDuplicateListing) only.
+  // statically, not just by absence of a mock. Phase 1H.4.1 added ONE
+  // import from stadtpocketResearchService.js: normalizeCityName, the
+  // exact same pure "Ulm != Neu-Ulm" string-normalization rule Phase 1G
+  // already established -- reused deliberately, not a research/
+  // Firecrawl/Anthropic call. researchBusiness (the actual research
+  // entry point) is asserted absent below alongside the extraction/
+  // Anthropic/Firecrawl modules, so a future accidental research call
+  // would still be caught.
   const servicePath = resolve('src', 'services', 'stadtpocketDiscoveryService.js');
   const src = require('fs').readFileSync(servicePath, 'utf8');
   // Only actual require(...) calls count -- this file's own header
@@ -454,7 +467,8 @@ test('20/21/22. discovery never requires or touches the Phase 1G research/Anthro
   // so, which must not itself trip this check.
   const requireLines = src.split('\n').filter((line) => /require\(/.test(line));
   const requiredText = requireLines.join('\n');
-  assert.equal(/stadtpocketResearchService/.test(requiredText), false);
+  assert.equal(/require\('\.\/stadtpocketResearchService'\)/.test(requiredText), true); // the ONE allowed import
+  assert.equal(/researchBusiness/.test(requiredText), false); // but never the actual research entry point
   assert.equal(/stadtpocketWebResearchService/.test(requiredText), false);
   assert.equal(/stadtpocketAiExtractionService/.test(requiredText), false);
   assert.equal(/@anthropic-ai\/sdk/.test(requiredText), false);
@@ -490,9 +504,9 @@ test('unresolvable locationId -> 404, not a silently broken query', async () => 
   );
 });
 
-// ── FieldMask / SKU tier sanity (Step 4) ────────────────────────────────
-test('FieldMask requests only Pro-tier fields, never websiteUri/nationalPhoneNumber (Enterprise SKU)', () => {
-  assert.equal(discoveryService.FIELD_MASK.includes('websiteUri'), false);
+// ── FieldMask / SKU tier sanity (Step 4, revised Phase 1H.4.1) ─────────
+test('FieldMask requests websiteUri (now genuinely required by the Phase 1G handoff) but never the unrelated nationalPhoneNumber field', () => {
+  assert.equal(discoveryService.FIELD_MASK.includes('places.websiteUri'), true);
   assert.equal(discoveryService.FIELD_MASK.includes('nationalPhoneNumber'), false);
   assert.equal(discoveryService.FIELD_MASK.includes('places.displayName'), true);
   assert.equal(discoveryService.FIELD_MASK.includes('places.formattedAddress'), true);
@@ -501,6 +515,110 @@ test('FieldMask requests only Pro-tier fields, never websiteUri/nationalPhoneNum
 // ── extractAddressComponent ─────────────────────────────────────────────
 test('extractAddressComponent returns null when the type is absent', () => {
   assert.equal(extractAddressComponent([{ longText: 'x', types: ['route'] }], 'postal_code'), null);
+});
+
+// ── Phase 1H.4.1 — website mapping (Problem 1) ──────────────────────────
+test('1H.4.1-1. a Google websiteUri maps directly onto CandidateBusiness.website', () => {
+  const p = place('ChIJtopfit', 'TopFit Ulm', 'Beispielstr. 1, 89073 Ulm', 48.4, 9.99, ['gym'], [], { website: 'https://www.topfit.fitness/ulm/' });
+  const c = toCandidate(p);
+  assert.equal(c.website, 'https://www.topfit.fitness/ulm/');
+});
+
+test('1H.4.1-1b. a place with no websiteUri still maps to website: null (never fabricated)', () => {
+  const c = toCandidate(place('ChIJnowebsite', 'No Website Gym', 'Weg 1, Ulm', 48.4, 9.99, ['gym']));
+  assert.equal(c.website, null);
+});
+
+test('1H.4.1-1c. discoverBusinesses end-to-end: a real websiteUri from Google survives into the returned candidate', async () => {
+  resetFixtures();
+  const places = [place('ChIJtopfit', 'TopFit Ulm', 'Beispielstr. 1, 89073 Ulm', 48.4, 9.99, ['gym'], [], { website: 'https://www.topfit.fitness/ulm/' })];
+  const result = await discoverBusinesses({
+    locationId: ULM,
+    scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' },
+    category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates[0].website, 'https://www.topfit.fitness/ulm/');
+});
+
+// ── Phase 1H.4.1 — exact-city filtering (Problem 2) ─────────────────────
+test('1H.4.1-4. a candidate whose locality is EXACTLY "Ulm" is accepted', async () => {
+  resetFixtures();
+  const places = [place('ChIJa', 'FitZone Ulm', 'Bahnhofstr. 1, 89073 Ulm', 48.4, 9.99, ['gym'], [], { locality: 'Ulm' })];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.rejectedOutOfCity, 0);
+});
+
+test('1H.4.1-5. a candidate whose locality is "Neu-Ulm" is rejected for an Ulm search', async () => {
+  resetFixtures();
+  const places = [place('ChIJb', 'clever fit Neu-Ulm', 'Augsburger Str. 5, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' })];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates.length, 0);
+  assert.equal(result.rejectedOutOfCity, 1);
+});
+
+test('1H.4.1-6. "Ulm" as a substring inside "Neu-Ulm" never passes -- exact normalized equality only, never substring matching', async () => {
+  resetFixtures();
+  // Deliberately adversarial names/addresses that CONTAIN the literal
+  // substring "Ulm" so a naive .includes('ulm') check would wrongly
+  // accept these -- only the exact locality component decides.
+  const places = [
+    place('ChIJc', 'Real Steel Neu-Ulm Gym', 'Ulmer Straße 99, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' }),
+    place('ChIJd', 'OrangeGym Ulm/Neu-Ulm', 'Ulmer Straße 1, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' }),
+  ];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates.length, 0);
+  assert.equal(result.rejectedOutOfCity, 2);
+});
+
+test('1H.4.1-6b. a candidate with no resolvable locality at all is rejected too, never included on the benefit of the doubt', async () => {
+  resetFixtures();
+  const places = [place('ChIJe', 'Unknown Locality Gym', 'Irgendwo 1', 48.4, 9.99, ['gym'], [], { locality: null })];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates.length, 0);
+  assert.equal(result.rejectedOutOfCity, 1);
+});
+
+test('1H.4.1-7. mixed Ulm/Neu-Ulm results: only the real Ulm candidates survive, and nothing is fabricated to replace the rejected ones', async () => {
+  resetFixtures();
+  const places = [
+    place('ChIJf1', 'FitZone Ulm', 'Bahnhofstr. 1, 89073 Ulm', 48.40, 9.99, ['gym'], [], { locality: 'Ulm' }),
+    place('ChIJf2', 'clever fit Neu-Ulm', 'Augsburger Str. 5, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' }),
+    place('ChIJf3', 'CrossFit Ulm', 'Olgastr. 3, 89073 Ulm', 48.398, 9.991, ['gym'], [], { locality: 'Ulm' }),
+    place('ChIJf4', 'McFit gym Neu-Ulm', 'Ludwigsfelder Str. 9, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' }),
+    place('ChIJf5', 'Fitnessstudio Varol', 'Silcherstr. 2, 89231 Neu-Ulm', 48.39, 10.0, ['gym'], [], { locality: 'Neu-Ulm', postalCode: '89231' }),
+  ];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness', quantity: 10,
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates.length, 2); // NOT padded back up to 5 or 10
+  assert.deepEqual(result.candidates.map((c) => c.name).sort(), ['CrossFit Ulm', 'FitZone Ulm']);
+  assert.equal(result.rejectedOutOfCity, 3);
+});
+
+// ── Phase 1H.4.1 — existing duplicate behavior intact (regression) ──────
+test('1H.4.1-9. duplicate checking still runs correctly on the surviving in-city candidates, now with a real website too', async () => {
+  resetFixtures();
+  const places = [place('ChIJg', 'FitZone Ulm Draft', 'Teststraße 5, Ulm', 48.4, 9.99, ['gym'], [], { website: 'https://fitzone-ulm.example/' })];
+  const result = await discoverBusinesses({
+    locationId: ULM, scope: { isGlobalAdmin: false, locationIds: [ULM], userId: 'ulm_manager' }, category: 'Fitness',
+    fetchImpl: fetchImplReturning(places),
+  });
+  assert.equal(result.candidates[0].duplicateStatus, 'ALREADY_DRAFT'); // matches the existing draft fixture by name/address
 });
 
 // ── Safe Google Places diagnostics (staging trust-proxy/Places diagnosis) ──

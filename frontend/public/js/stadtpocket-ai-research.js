@@ -566,6 +566,44 @@ function getPrepSummary(results) {
   };
 }
 
+// Phase 1H.4.1 -- a prepared candidate whose research genuinely found
+// no usable evidence (no website reachable/provided, provider outage,
+// unparseable output, ...) completed WITHOUT throwing -- its own
+// 'status' is correctly 'ready' (it IS reviewable, human review is
+// still mandatory and still possible). But the progress list must
+// never show that as a plain, undifferentiated "✓ Bereit zur Prüfung"
+// success checkmark, which would misleadingly read as "a real business
+// was researched" when nothing useful was actually found. Short labels
+// here (distinct from AI_RESEARCH_STATUS_MESSAGES' longer sentences,
+// which still show inside the review screen itself, unchanged) --
+// used ONLY for this one-line progress row.
+const AI_PREP_NO_EVIDENCE_STATUS_LABELS = {
+  'no-source': 'Keine Quelle gefunden',
+  'website-rejected': 'Website abgelehnt',
+  'website-unreachable': 'Website nicht erreichbar',
+  'provider-unavailable': 'Recherche nicht verfügbar',
+  'malformed-output': 'Recherche fehlgeschlagen',
+};
+
+// Returns { text, tone } for one progress-list row. tone is one of
+// 'success' | 'warning' | 'danger' | 'muted' -- a pure display decision,
+// no DOM access, so the exact same logic renders correctly in a test
+// and in the real page.
+function getPrepRowStatusLabel(result) {
+  if (!result) return { text: '', tone: 'muted' };
+  if (result.draftCreated) return { text: 'Entwurf erstellt', tone: 'success' };
+  if (result.status === 'pending') return { text: 'Wartet…', tone: 'muted' };
+  if (result.status === 'preparing') return { text: 'Wird recherchiert…', tone: 'muted' };
+  if (result.status === 'failed') return { text: 'Recherche nicht abgeschlossen', tone: 'danger' };
+  if (result.status === 'ready') {
+    const researchStatus = result.researchCandidate && result.researchCandidate.researchStatus;
+    const noEvidenceLabel = researchStatus && AI_PREP_NO_EVIDENCE_STATUS_LABELS[researchStatus];
+    if (noEvidenceLabel) return { text: `${noEvidenceLabel} — Bereit zur Prüfung`, tone: 'warning' };
+    return { text: 'Bereit zur Prüfung', tone: 'success' };
+  }
+  return { text: '', tone: 'muted' };
+}
+
 // Isomorphic export: `module` does not exist in a browser <script> tag,
 // so this is inert there -- only Node's require() sees it.
 if (typeof module !== 'undefined' && module.exports) {
@@ -611,5 +649,7 @@ if (typeof module !== 'undefined' && module.exports) {
     runSequentialPreparation,
     getPrepReadyResultIndices,
     getPrepSummary,
+    AI_PREP_NO_EVIDENCE_STATUS_LABELS,
+    getPrepRowStatusLabel,
   };
 }

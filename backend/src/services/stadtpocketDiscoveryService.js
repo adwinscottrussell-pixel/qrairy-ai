@@ -20,23 +20,27 @@
  * "<category> in <city>, <country>" query with no radius (Nearby
  * Search requires a radius, which we do not have or want here).
  *
- * FieldMask / cost tier (Step 4) -- deliberately Pro-tier ONLY:
+ * FieldMask / cost tier (Step 4, revised Phase 1H.4.1) --
  *   places.id, places.displayName, places.formattedAddress,
- *   places.location, places.types, places.addressComponents
- * These are Places API Text Search PRO SKU fields ($32/1000 requests,
- * 5,000 free events/month). places.websiteUri and
- * places.nationalPhoneNumber require the separate, more expensive
- * ENTERPRISE SKU ($35/1000 requests, only 1,000 free events/month) --
- * NOT requested here. That is not an oversight: this phase's own
- * architecture is "cheap discovery -> human selection -> deeper
- * enrichment only for selected businesses," and Phase 1G's existing
- * website-scraping research already exists as exactly that enrichment
- * step for whichever candidates a manager actually selects. Paying the
- * Enterprise rate on every one of ~10 discovery candidates just to
- * pre-fill a website field that Phase 1G would re-derive from the
- * business's own site anyway is the "automatically request higher-cost
- * fields" this phase was explicitly told not to do. `website` is
- * therefore always null on a DiscoveryCandidate.
+ *   places.location, places.types, places.addressComponents,
+ *   places.websiteUri
+ * The first six are Places API Text Search PRO SKU fields ($32/1000
+ * requests, 5,000 free events/month). places.websiteUri requires the
+ * separate, more expensive ENTERPRISE SKU ($35/1000 requests, only
+ * 1,000 free events/month) -- Phase 1H.2 deliberately left it out on
+ * cost grounds, but a real Ulm/Fitness test (Phase 1H.4.1) proved
+ * Phase 1G's own research pipeline needs a real website to do anything
+ * useful at all: TopFit Ulm has a real, known site
+ * (https://www.topfit.fitness/ulm/), yet without websiteUri the
+ * discovery candidate reached research with website: null and produced
+ * "keine Website angegeben" -- research never even had a URL to try.
+ * That defeats this phase's own "Google Places -> candidate.website ->
+ * Phase 1G research -> Firecrawl/Anthropic" design, so websiteUri is
+ * now requested -- the ONE additional field genuinely required, not a
+ * blanket upgrade (nationalPhoneNumber is still never requested).
+ * `nationalPhoneNumber` does not change the SKU further since
+ * websiteUri already puts every request on Enterprise; it remains
+ * unrequested simply because nothing downstream needs it yet.
  *
  * Storage/caching (Step 12): DiscoveryCandidate is transient -- no
  * Prisma model, no migration, nothing here is written to the database.
@@ -58,6 +62,13 @@
 const prisma = require('../utils/prismaClient');
 const { authorizeLocationAccess } = require('./stadtpocketManagerService');
 const { checkForDuplicateListing } = require('./stadtpocketDuplicateService');
+// Reused, not reimplemented -- this is the EXACT same "Ulm != Neu-Ulm"
+// normalized-equality rule Phase 1G's own multi-location city filter
+// (splitLocationCandidates) already established and this codebase
+// already relies on: strip a leading postal code, lowercase, compare
+// with strict ===, never substring-match ("ulm" must never match
+// inside "neu-ulm").
+const { normalizeCityName } = require('./stadtpocketResearchService');
 
 class StadtpocketDiscoveryError extends Error {
   constructor(message, status = 400) {
@@ -78,7 +89,7 @@ const DEFAULT_COUNTRY = 'Germany';
 
 const PLACES_ENDPOINT = 'https://places.googleapis.com/v1/places:searchText';
 const PLACES_TIMEOUT_MS = 10000;
-const FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.addressComponents';
+const FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.addressComponents,places.websiteUri';
 
 const PROVIDER_STATUS = {
   OK: 'ok',
@@ -134,7 +145,7 @@ function toCandidate(place) {
   const location = place.location;
   return {
     name: (place.displayName && place.displayName.text) || null,
-    website: null, // see this file's header comment -- Enterprise-SKU-only field, never requested at discovery time
+    website: place.websiteUri || null,
     address: place.formattedAddress || null,
     city: extractAddressComponent(addressComponents, 'locality'),
     postalCode: extractAddressComponent(addressComponents, 'postal_code'),
@@ -265,7 +276,7 @@ async function discoverBusinesses({ locationId, scope, category, quantity, fetch
   const providerResult = await callGooglePlacesTextSearch(query, validQuantity, { fetchImpl });
 
   if (providerResult.status !== PROVIDER_STATUS.OK) {
-    return { status: providerResult.status, candidates: [] };
+    return { status: providerResult.status, candidates: [], rejectedOutOfCity: 0 };
   }
 
   // Step 9 -- dedupe the PROVIDER'S OWN response before anything else.
@@ -287,12 +298,31 @@ async function discoverBusinesses({ locationId, scope, category, quantity, fetch
     deduped.push(candidate);
   }
 
+  // Phase 1H.4.1 -- exact-city filter, BEFORE the duplicate check (no
+  // point spending a DB read on a candidate about to be discarded
+  // anyway). Reuses normalizeCityName's exact, non-substring equality
+  // (see the import comment above): "Ulm" never matches "Neu-Ulm". A
+  // candidate whose own locality is missing/unresolvable is rejected
+  // too, same "cannot safely determine relevance, never guess" posture
+  // stadtpocketResearchService.js's own multi-location filter already
+  // uses -- never included on the benefit of the doubt.
+  const normalizedTargetCity = normalizeCityName(cityName);
+  const inCity = [];
+  let rejectedOutOfCity = 0;
+  for (const candidate of deduped) {
+    if (candidate.city && normalizeCityName(candidate.city) === normalizedTargetCity) {
+      inCity.push(candidate);
+    } else {
+      rejectedOutOfCity += 1;
+    }
+  }
+
   // Step 8 -- reuse the EXISTING duplicate service (never a second
   // engine) against StadtPocket's own data, per surviving candidate.
   // Read-only; matches checkForDuplicateListing's own contract exactly
   // -- never mutates anything.
   const candidates = [];
-  for (const candidate of deduped) {
+  for (const candidate of inCity) {
     const dup = await checkForDuplicateListing({
       locationId,
       businessName: candidate.name,
@@ -303,7 +333,12 @@ async function discoverBusinesses({ locationId, scope, category, quantity, fetch
     candidates.push({ ...candidate, duplicateStatus: dup.status });
   }
 
-  return { status: PROVIDER_STATUS.OK, candidates };
+  // Never fabricates replacements to reach `quantity` -- candidates is
+  // simply whatever survives real, honest filtering, even if that is
+  // fewer than requested. rejectedOutOfCity lets the Admin see WHY
+  // (e.g. "10 gefunden, 4 außerhalb von Ulm ausgeschlossen") instead of
+  // silently wondering why fewer than requested came back.
+  return { status: PROVIDER_STATUS.OK, candidates, rejectedOutOfCity };
 }
 
 module.exports = {

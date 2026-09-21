@@ -2195,14 +2195,22 @@
     if (!prep) { workspace.innerHTML = ''; return; }
 
     const total = prep.results.length;
+    const TONE_COLOR = { success: 'var(--success)', warning: 'var(--coral)', danger: 'var(--danger)', muted: null };
+    const TONE_ICON = { success: '✓ ', warning: '⚠ ', danger: '⚠ ', muted: '' };
     const rows = prep.results.map((r, i) => {
-      let statusHtml;
-      if (r.draftCreated) statusHtml = '<span style="color:var(--success)">✓ Entwurf erstellt</span>';
-      else if (r.status === 'pending') statusHtml = '<span class="muted">Wartet…</span>';
-      else if (r.status === 'preparing') statusHtml = '<span class="muted">Wird recherchiert…</span>';
-      else if (r.status === 'ready') statusHtml = '<span style="color:var(--success)">✓ Bereit zur Prüfung</span>';
-      else statusHtml = `<span style="color:var(--danger)">⚠ Recherche nicht abgeschlossen${r.error ? ': ' + escapeHtml(r.error) : ''}</span>` +
-        ` <button class="ghost small" type="button" onclick="retryPrepCandidate(${i})" ${prep.processing ? 'disabled' : ''}>Erneut versuchen</button>`;
+      // getPrepRowStatusLabel (js/stadtpocket-ai-research.js) is the
+      // single source of truth for this text -- in particular, a
+      // 'ready' result whose underlying research found no usable
+      // evidence (no-source, website-unreachable, ...) is NEVER shown
+      // as a plain, undifferentiated "Bereit zur Prüfung" success
+      // checkmark (Phase 1H.4.1 Problem 3).
+      const { text, tone } = getPrepRowStatusLabel(r);
+      const color = TONE_COLOR[tone];
+      let statusHtml = `<span${color ? ` style="color:${color}"` : ' class="muted"'}>${TONE_ICON[tone]}${escapeHtml(text)}</span>`;
+      if (r.status === 'failed') {
+        statusHtml += (r.error ? `: ${escapeHtml(r.error)}` : '') +
+          ` <button class="ghost small" type="button" onclick="retryPrepCandidate(${i})" ${prep.processing ? 'disabled' : ''}>Erneut versuchen</button>`;
+      }
       return `
         <div class="card city-row" style="cursor:default">
           <div>
