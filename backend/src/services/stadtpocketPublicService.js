@@ -329,6 +329,13 @@ async function getCityBusiness(citySlug, listingSlug) {
 module.exports = {
   listCityBusinesses,
   getCityBusiness,
+  // Phase 2B.1a — reused as-is by stadtpocketAssistantService.js for the
+  // exact same server-side "resolve :citySlug to a real, active city
+  // Location row" step every public StadtPocket route already does here
+  // internally. Exported (not duplicated) specifically so a future city
+  // Assistant for Stuttgart/München reuses this one resolution rule
+  // rather than a second, possibly-drifting copy of it.
+  findCityLocation,
   // exported for direct unit testing only
   toListItem,
   toLocationItem,
