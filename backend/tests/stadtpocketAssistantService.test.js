@@ -236,6 +236,13 @@ test('14d. the system prompt explicitly forbids calling a search_city_places res
   assert.ok(/search_city_places result.*NOT a StadtPocket partner|NOT a StadtPocket partner/i.test(prompt));
 });
 
+test('14e. (Phase 2B.2.1) the system prompt tells the model to describe search_city_places as its own stadtweite (city-wide) search, never a generic Google search', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/stadtweite/i.test(prompt));
+  assert.ok(/NEVER a generic "Google-Suche"|NEVER.*generic.*Google-Suche/i.test(prompt));
+  assert.ok(/allgemeine Google-Suche/i.test(prompt));
+});
+
 test('15. the system prompt forbids claiming an external business is a StadtPocket partner', () => {
   const prompt = buildSystemPrompt('Ulm');
   assert.ok(/StadtPocket partner/i.test(prompt));
