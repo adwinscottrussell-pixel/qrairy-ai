@@ -2,12 +2,14 @@
 
 ## Last Updated
 
-2026-09-20 — StadtPocket AI Business Discovery (Phase 1H.2/1H.3) checkpoint
-appended below. Everything above this note that still says 2026-09-15
-predates that work and has not been re-verified against current state in
-this pass — trust the dated sections lower in this file (in particular
-"StadtPocket AI Business Discovery" and "Next Task") over the older
-material near the top where they conflict.
+2026-09-24 — StadtPocket City Assistant Phase 2B.2 (Google Places
+whole-city discovery) checkpoint appended below, now LIVE VERIFIED on
+`preview/stadtpocket-phase6d-admin`. Everything above this note that
+still says 2026-09-15/2026-09-20 predates that work and has not been
+re-verified against current state in this pass — trust the dated
+sections lower in this file (in particular "StadtPocket City Assistant
+— Phase 2B.2" and "StadtPocket AI Business Discovery" checkpoints, and
+"Next Task") over the older material near the top where they conflict.
 
 ## Repository
 
@@ -425,8 +427,79 @@ context before resuming.**
   and archive (unpublish) a live listing; Bäckerei Staib and Café
   Brettle were never modified by this work.
 
+## StadtPocket City Assistant — Phase 2B.2 Google Places Staging Checkpoint (2026-09-24)
+
+**PHASE 2B.2 — GOOGLE PLACES WHOLE-CITY DISCOVERY: VERIFIED**
+
+Architecture:
+
+```
+City Assistant → Claude tool selection → search_city_places
+  → existing Google Places Text Search (stadtpocketDiscoveryService.js,
+    reused, not duplicated) → normalized external place results
+  → frontend result cards
+```
+
+Verified live query (real founder browser test against the live
+CITY HOMEPAGE Assistant): "Ich suche ein italienisches Restaurant in
+Ulm." Returned real external Ulm places (e.g. Del Tufo – La vera Pizza
+Napoletana, L'Osteria, Tanivera Pizza e Pasta).
+
+Verified behavior:
+- real external Ulm places returned (not fabricated)
+- external businesses clearly distinguished from StadtPocket partners
+  ("Extern" badge)
+- `origin: "external"`
+- `partnerStatus: "none"`
+- Google Maps attribution displayed on each external card
+- no fabricated StadtPocket partnership
+- CITY HOMEPAGE Assistant UI unchanged otherwise (no redesign)
+- `PassSection` unchanged
+- all five Business Experience screens unchanged
+
+Four current Assistant tools: `search_stadtpocket_businesses`,
+`search_stadtpocket_offers`, `search_stadtpocket_events`,
+`search_city_places`.
+
+Commits (backend, `preview/stadtpocket-phase6d-admin`):
+`6e4a654bb25936c0de144f9766e104113387017c` — "feat: add Google Places to
+City Assistant" (adds `search_city_places`; reuses
+`stadtpocketDiscoveryService.callGooglePlacesTextSearch`/`toCandidate`
+unchanged; caps 5 results, `pageSize: 5`, no secondary Details/Photos
+call; trusted server-resolved city only, never model-supplied).
+Companion frontend commit (`stadtpocket-web`,
+`preview/phase6e-start-screen-api`):
+`27fb4f1f2e900c0a673e3d57d0fbd9e706f64635` — "feat: render external City
+Assistant places".
+
+Continuity note: an earlier automated verification request made
+mid-session (before the founder's own successful manual browser test
+above) returned an empty/old-style response with no evidence
+`search_city_places` had executed — most likely explained by Railway
+staging still finishing its redeploy of `6e4a654` at that moment (and/or
+the Google Cloud Billing block noted in the 2026-09-20 Discovery
+checkpoint below, if not yet fully cleared at that exact instant). No
+second automated verification call was made per instruction; the
+founder's own later manual test is the authoritative confirmation this
+checkpoint records.
+
+Known PRESENTATION POLISH for later, explicitly NOT part of Phase 2B.2:
+1. Convert raw Google category labels (e.g. `italian_restaurant`,
+   `coffee_shop`) into human-readable German labels.
+2. Replace wording such as "über die allgemeine Google-Suche gefunden"
+   with wording that accurately reflects the Google Places-backed
+   city-wide search.
+
 ## Recent History
 
+- 2026-09-24 — StadtPocket City Assistant Phase 2B.2: Google Places
+  whole-city discovery (`search_city_places`, the 4th Assistant tool)
+  LIVE VERIFIED via a real founder browser test on the CITY HOMEPAGE
+  Assistant -- see full checkpoint section above. Backend
+  `6e4a654bb25936c0de144f9766e104113387017c`, frontend (stadtpocket-web)
+  `27fb4f1f2e900c0a673e3d57d0fbd9e706f64635`, both pushed to their
+  respective preview branches only; `origin/main` untouched in both
+  repos.
 - 2026-09-20 — StadtPocket AI Business Discovery (Phase 1H.2/1H.3),
   Railway trust-proxy fix, and safe Google Places diagnostics -- see
   full checkpoint section above. Real discovery test blocked on Google
