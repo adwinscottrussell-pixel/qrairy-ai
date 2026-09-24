@@ -1,18 +1,25 @@
 // ============================================================
 // stadtpocketAssistantTools.test.js — StadtPocket City Assistant,
-// Phase 2B.1b. Exercises the REAL stadtpocketPublicService.js business/
-// offer logic (via a mocked Prisma, same require.cache convention as
+// Phase 2B.1b (StadtPocket tools) + Phase 2B.2 (search_city_places).
+// Exercises the REAL stadtpocketPublicService.js business/offer logic
+// (via a mocked Prisma, same require.cache convention as
 // tests/stadtpocketPublic.test.js) to genuinely prove "reuse, don't
 // duplicate" -- these tests fail if the tools layer ever stops calling
 // the real service. stadtpocketEventsService is mocked wholesale
 // (its own fetchCityEvents() talks to a real external feed with no
 // injectable fetchImpl reaching this layer) so no real network call is
 // ever made -- same "mock the whole dependency module" convention as
-// tests/stadtpocketResearchRoutes.test.js.
+// tests/stadtpocketResearchRoutes.test.js. stadtpocketDiscoveryService
+// is mocked the SAME way, but only at its network boundary
+// (callGooglePlacesTextSearch) -- its real toCandidate/DEFAULT_COUNTRY/
+// PROVIDER_STATUS exports are kept and reused, so these tests genuinely
+// prove the tools layer calls the REAL raw-Google-object parser, not a
+// duplicate one, while still making zero real HTTP calls.
 //
 // No real Anthropic, Google Places, or Firecrawl call is possible from
-// this file -- none of those are referenced anywhere in
-// stadtpocketAssistantTools.js or stadtpocketPublicService.js.
+// this file -- the only network-shaped function
+// (callGooglePlacesTextSearch) is replaced with a fake before
+// stadtpocketAssistantTools.js is ever required.
 //
 // Run: node tests/stadtpocketAssistantTools.test.js
 // ============================================================
@@ -23,6 +30,7 @@ function resolve(...parts) { return require.resolve(path.join(__dirname, '..', .
 
 const prismaClientPath = resolve('src', 'utils', 'prismaClient.js');
 const eventsServicePath = resolve('src', 'services', 'stadtpocketEventsService.js');
+const discoveryServicePath = resolve('src', 'services', 'stadtpocketDiscoveryService.js');
 
 const ULM = { id: 'loc_ulm', name: 'Ulm', slug: 'ulm', type: 'city', status: 'active' };
 
@@ -86,22 +94,58 @@ require.cache[eventsServicePath] = {
   },
 };
 
+// Only the network boundary is faked -- toCandidate/DEFAULT_COUNTRY/
+// PROVIDER_STATUS are the REAL exports (prismaClient is already mocked
+// above, so this real require is safe: nothing in it touches prisma
+// except resolveCityName, which the Assistant tools layer never calls).
+const realDiscoveryService = require('../src/services/stadtpocketDiscoveryService');
+let placesResult = { status: realDiscoveryService.PROVIDER_STATUS.OK, places: [] };
+let capturedPlacesCall = null;
+require.cache[discoveryServicePath] = {
+  id: discoveryServicePath, filename: discoveryServicePath, loaded: true,
+  exports: {
+    ...realDiscoveryService,
+    callGooglePlacesTextSearch: async (query, quantity) => {
+      capturedPlacesCall = { query, quantity };
+      return placesResult;
+    },
+  },
+};
+
 const {
   TOOL_DEFINITIONS,
   executeTool,
   MAX_BUSINESS_RESULTS,
   MAX_OFFER_RESULTS,
   MAX_EVENT_RESULTS,
+  MAX_PLACE_RESULTS,
 } = require('../src/services/stadtpocketAssistantTools');
+
+function place(id, name, address, lat, lng, types, website) {
+  return {
+    id,
+    displayName: { text: name },
+    formattedAddress: address,
+    location: lat !== undefined && lng !== undefined ? { latitude: lat, longitude: lng } : undefined,
+    types: types || undefined,
+    websiteUri: website || undefined,
+  };
+}
 
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
 
-test('1. exactly three tools are defined, matching the approved names', () => {
+test('1. exactly four tools are defined, matching the approved names', () => {
   assert.deepEqual(
     TOOL_DEFINITIONS.map((t) => t.name).sort(),
-    ['search_stadtpocket_businesses', 'search_stadtpocket_events', 'search_stadtpocket_offers']
+    ['search_city_places', 'search_stadtpocket_businesses', 'search_stadtpocket_events', 'search_stadtpocket_offers']
   );
+});
+
+test('1b. search_city_places requires a query, and exposes no other model-controlled parameter', () => {
+  const tool = TOOL_DEFINITIONS.find((t) => t.name === 'search_city_places');
+  assert.deepEqual(Object.keys(tool.input_schema.properties), ['query']);
+  assert.deepEqual(tool.input_schema.required, ['query']);
 });
 
 test('2. no tool definition exposes a city/citySlug argument', () => {
@@ -274,6 +318,129 @@ test('20. null args never crash a tool', async () => {
   eventsShouldThrow = false;
   eventsResult = { city: 'ulm', events: [] };
   const outcome = await executeTool('search_stadtpocket_events', 'ulm', null);
+  assert.deepEqual(outcome.results, []);
+});
+
+// ── search_city_places (Phase 2B.2 -- reused stadtpocketDiscoveryService.callGooglePlacesTextSearch/toCandidate) ──
+function resetPlaces() {
+  placesResult = { status: realDiscoveryService.PROVIDER_STATUS.OK, places: [] };
+  capturedPlacesCall = null;
+}
+
+test('21. a real place is returned tagged origin: external, partnerStatus: none', async () => {
+  resetPlaces();
+  placesResult.places = [place('ChIJ001', 'Trattoria da Marco', 'Hafengasse 3, 89073 Ulm', 48.4, 9.99, ['italian_restaurant', 'restaurant'], 'https://trattoria-da-marco.example')];
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'italienisches Restaurant' });
+  assert.equal(outcome.results.length, 1);
+  const r = outcome.results[0];
+  assert.equal(r.type, 'place');
+  assert.equal(r.origin, 'external');
+  assert.equal(r.partnerStatus, 'none');
+  assert.equal(r.id, 'ChIJ001');
+  assert.equal(r.name, 'Trattoria da Marco');
+  assert.equal(r.subLabel, 'italian_restaurant');
+  assert.equal(r.address, 'Hafengasse 3, 89073 Ulm');
+  assert.equal(r.latitude, 48.4);
+  assert.equal(r.longitude, 9.99);
+  assert.equal(r.url, 'https://trattoria-da-marco.example');
+});
+
+test('22. the trusted server-resolved city NAME (not the model, not just the slug) reaches Google as "<query> in <city>, Germany"', async () => {
+  resetPlaces();
+  await executeTool('search_city_places', 'ulm', { query: 'Friseur' });
+  assert.equal(capturedPlacesCall.query, 'Friseur in Ulm, Germany');
+});
+
+test('23. the natural-language query argument is passed through to the discovery service unmodified', async () => {
+  resetPlaces();
+  await executeTool('search_city_places', 'ulm', { query: 'coffee' });
+  assert.ok(capturedPlacesCall.query.startsWith('coffee in '));
+});
+
+test('24. Google is asked for exactly MAX_PLACE_RESULTS, never more', async () => {
+  resetPlaces();
+  await executeTool('search_city_places', 'ulm', { query: 'Optiker' });
+  assert.equal(capturedPlacesCall.quantity, MAX_PLACE_RESULTS);
+});
+
+test('25. a model-supplied city/citySlug smuggled into tool args is ignored -- the trusted server city is still used', async () => {
+  resetPlaces();
+  await executeTool('search_city_places', 'ulm', { query: 'Schuhe', citySlug: 'berlin', city: 'Berlin' });
+  assert.ok(capturedPlacesCall.query.includes('Ulm'), `expected the trusted city (Ulm) in the query, got: ${capturedPlacesCall.query}`);
+  assert.ok(!capturedPlacesCall.query.includes('Berlin'));
+});
+
+test('26. missing optional fields (no address/coordinates/website) are never fabricated', async () => {
+  resetPlaces();
+  placesResult.places = [{ id: 'ChIJ002', displayName: { text: 'Blumenladen Ulm' } }];
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Blumenladen' });
+  const r = outcome.results[0];
+  assert.equal(r.name, 'Blumenladen Ulm');
+  assert.equal(r.address, undefined);
+  assert.equal(r.latitude, undefined);
+  assert.equal(r.longitude, undefined);
+  assert.equal(r.url, undefined);
+  assert.equal(r.subLabel, undefined); // no category and no address -- never a fabricated placeholder
+});
+
+test('27. source is exactly Google Places, only when there are results', async () => {
+  resetPlaces();
+  placesResult.places = [place('ChIJ003', 'Optiker Seedorf', 'Neue Straße 1, Ulm', 48.4, 9.99, ['optician'])];
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Optiker' });
+  assert.deepEqual(outcome.sources, [{ type: 'external', label: 'Google Places' }]);
+});
+
+test('28. zero real results is an honest empty outcome, no source, no error', async () => {
+  resetPlaces();
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Ufologie-Museum' });
+  assert.deepEqual(outcome.results, []);
+  assert.deepEqual(outcome.sources, []);
+  assert.equal(outcome.error, undefined);
+});
+
+test('29. results are capped at MAX_PLACE_RESULTS even if the provider returns more', async () => {
+  resetPlaces();
+  placesResult.places = Array.from({ length: MAX_PLACE_RESULTS + 5 }, (_, i) => place(`ChIJ${i}`, `Place ${i}`, 'Ulm', 48.4, 9.99, ['store']));
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Geschäft' });
+  assert.equal(outcome.results.length, MAX_PLACE_RESULTS);
+});
+
+test('30. a provider failure (UNAVAILABLE -- timeout/rejected/malformed) resolves to an honest empty result, never a crash', async () => {
+  resetPlaces();
+  placesResult = { status: realDiscoveryService.PROVIDER_STATUS.UNAVAILABLE, places: [] };
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Fitnessstudio' });
+  assert.deepEqual(outcome.results, []);
+  assert.deepEqual(outcome.sources, []);
+  assert.ok(outcome.error);
+});
+
+test('31. a missing GOOGLE_PLACES_API_KEY (NOT_CONFIGURED) resolves to an honest empty result, never a crash', async () => {
+  resetPlaces();
+  placesResult = { status: realDiscoveryService.PROVIDER_STATUS.NOT_CONFIGURED, places: [] };
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Fitnessstudio' });
+  assert.deepEqual(outcome.results, []);
+  assert.ok(outcome.error);
+});
+
+test('32. a malformed provider record (no displayName/name) is dropped, never crashes, never a placeholder name', async () => {
+  resetPlaces();
+  placesResult.places = [{ id: 'ChIJ004' /* no displayName at all */ }, place('ChIJ005', 'Real Place', 'Ulm', 48.4, 9.99, ['store'])];
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 'Geschäft' });
+  assert.equal(outcome.results.length, 1);
+  assert.equal(outcome.results[0].name, 'Real Place');
+});
+
+test('33. a missing/empty query never calls Google at all -- cost control, never a garbage search', async () => {
+  resetPlaces();
+  const outcome = await executeTool('search_city_places', 'ulm', {});
+  assert.equal(capturedPlacesCall, null);
+  assert.deepEqual(outcome.results, []);
+});
+
+test('34. a non-string query never calls Google, never crashes', async () => {
+  resetPlaces();
+  const outcome = await executeTool('search_city_places', 'ulm', { query: 12345 });
+  assert.equal(capturedPlacesCall, null);
   assert.deepEqual(outcome.results, []);
 });
 

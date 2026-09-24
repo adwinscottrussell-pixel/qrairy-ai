@@ -216,12 +216,24 @@ test('14. the system prompt names all three StadtPocket tools and says StadtPock
   assert.ok(prompt.includes('search_stadtpocket_offers'));
   assert.ok(prompt.includes('search_stadtpocket_events'));
   assert.ok(/not.*every|not every|NOT every/i.test(prompt) || /almost certainly NOT/i.test(prompt));
-  assert.ok(/not connected yet/i.test(prompt));
 });
 
-test('14b. the system prompt tells the model Google Places is not connected and must not be simulated', () => {
+test('14b. (Phase 2B.2) the system prompt names search_city_places as the real Google-Places-backed broader discovery tool, and tells the model when to prefer it vs. StadtPocket', () => {
   const prompt = buildSystemPrompt('Ulm');
+  assert.ok(prompt.includes('search_city_places'));
   assert.ok(/Google Places/i.test(prompt));
+  assert.ok(/broader.*discovery|broader city.?wide discovery/i.test(prompt));
+  assert.ok(/prefer the StadtPocket tools/i.test(prompt));
+});
+
+test('14c. the system prompt still says transport/parking/web-search are unavailable (search_city_places does NOT cover those)', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/transport, parking, or general web-search/i.test(prompt));
+});
+
+test('14d. the system prompt explicitly forbids calling a search_city_places result a StadtPocket partner', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/search_city_places result.*NOT a StadtPocket partner|NOT a StadtPocket partner/i.test(prompt));
 });
 
 test('15. the system prompt forbids claiming an external business is a StadtPocket partner', () => {
@@ -461,6 +473,52 @@ test("37. a model-supplied citySlug/city smuggled into tool input is ignored -- 
   ]);
   await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
   assert.equal(toolCalls[0].citySlug, 'ulm');
+});
+
+// ── Phase 2B.2 -- search_city_places coexisting with a StadtPocket tool ──
+test('38. search_city_places can coexist with a StadtPocket tool in the same conversation, results/sources from both are combined', async () => {
+  resetToolMock();
+  nextToolOutcomes = {
+    search_stadtpocket_businesses: {
+      results: [{ type: 'business', origin: 'stadtpocket', partnerStatus: 'partner', slug: 'cafe-brettle', name: 'Café Brettle' }],
+      sources: [{ type: 'stadtpocket', label: 'StadtPocket' }],
+    },
+    search_city_places: {
+      results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Trattoria da Marco', subLabel: 'italian_restaurant' }],
+      sources: [{ type: 'external', label: 'Google Places' }],
+    },
+  };
+  const client = scriptedClient([
+    toolUseMessage('search_stadtpocket_businesses', {}),
+    toolUseMessage('search_city_places', { query: 'italienisches Restaurant' }),
+    textMessage('Café Brettle ist StadtPocket-Partner; für italienisches Essen gibt es auch Trattoria da Marco.'),
+  ]);
+  const result = await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
+  assert.equal(toolCalls.length, 2);
+  assert.deepEqual(toolCalls.map((c) => c.name), ['search_stadtpocket_businesses', 'search_city_places']);
+  assert.equal(result.results.length, 2);
+  const place = result.results.find((r) => r.type === 'place');
+  assert.equal(place.origin, 'external');
+  assert.equal(place.partnerStatus, 'none');
+  const business = result.results.find((r) => r.type === 'business');
+  assert.equal(business.origin, 'stadtpocket');
+  assert.equal(business.partnerStatus, 'partner');
+  assert.deepEqual(result.sources, [{ type: 'stadtpocket', label: 'StadtPocket' }, { type: 'external', label: 'Google Places' }]);
+});
+
+test('39. the existing 3-iteration cap still applies when search_city_places is the tool being repeatedly requested', async () => {
+  resetToolMock();
+  nextToolOutcomes = {
+    search_city_places: {
+      results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'X' }],
+      sources: [{ type: 'external', label: 'Google Places' }],
+    },
+  };
+  let calls = 0;
+  const client = { messages: { create: async () => { calls += 1; return toolUseMessage('search_city_places', { query: 'x' }); } } };
+  const result = await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
+  assert.equal(calls, MAX_TOOL_ITERATIONS);
+  assert.equal(result.text, buildFallbackResponse().text);
 });
 
 // ── runner ──────────────────────────────────────────────────────
