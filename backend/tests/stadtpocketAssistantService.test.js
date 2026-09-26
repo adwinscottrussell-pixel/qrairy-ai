@@ -70,6 +70,7 @@ const {
   buildFallbackResponse,
   callClaudeMessage,
   runOrchestration,
+  summarizeForModel,
   MAX_QUESTION_LENGTH,
   MAX_HISTORY_ITEMS,
   MAX_TOOL_ITERATIONS,
@@ -241,6 +242,44 @@ test('14e. (Phase 2B.2.1) the system prompt tells the model to describe search_c
   assert.ok(/stadtweite/i.test(prompt));
   assert.ok(/NEVER a generic "Google-Suche"|NEVER.*generic.*Google-Suche/i.test(prompt));
   assert.ok(/allgemeine Google-Suche/i.test(prompt));
+});
+
+test('14f. (conversational context) the system prompt tells the model it may resolve a follow-up reference from a bracketed history recap, without fabricating missing detail', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/Zuvor gefundene Ergebnisse/i.test(prompt));
+  assert.ok(/davon/i.test(prompt));
+  assert.ok(/NEVER invent a detail|never invent a detail/i.test(prompt));
+});
+
+test('14g. (conversational context) the system prompt tells the model to ask a clarifying question when the previous turn is not enough, rather than guess', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/ask a short clarifying question/i.test(prompt));
+});
+
+// ── summarizeForModel (what Claude actually sees about a tool result) ──
+test('16a. a place result summary now includes address, so location-based follow-ups (e.g. "in der Innenstadt?") are answerable', () => {
+  const summary = summarizeForModel({
+    results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Trattoria da Marco', subLabel: 'italian_restaurant', address: 'Hafengasse 3, 89073 Ulm' }],
+    sources: [],
+  });
+  assert.deepEqual(summary.items[0], { name: 'Trattoria da Marco', category: 'italian_restaurant', address: 'Hafengasse 3, 89073 Ulm', partner: false });
+});
+
+test('16b. a place result with no real address never gets a fabricated one', () => {
+  const summary = summarizeForModel({
+    results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ002', name: 'No Address Place' }],
+    sources: [],
+  });
+  assert.equal(summary.items[0].address, undefined);
+});
+
+test('16c. summarizeForModel never includes opening-hours/rating fields for a place -- that data does not exist anywhere in this pipeline (FIELD_MASK never requests it), so it must never be fabricated', () => {
+  const summary = summarizeForModel({
+    results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ003', name: 'X', address: 'Y' }],
+    sources: [],
+  });
+  const keys = Object.keys(summary.items[0]);
+  assert.deepEqual(keys.sort(), ['address', 'category', 'name', 'partner']);
 });
 
 test('15. the system prompt forbids claiming an external business is a StadtPocket partner', () => {
