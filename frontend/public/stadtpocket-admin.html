@@ -1039,6 +1039,9 @@
     </div>
     <div id="loyalty-banner"></div>
     <div id="loyalty-workspace"></div>
+    <!-- Step 3A -- staff manual stamping. Populated only while a program
+         is connected (renderConnectedProgram); cleared otherwise. -->
+    <div id="stamp-workspace"></div>
     <div id="loyalty-picker" class="card section-card" style="display:none;margin-top:14px">
       <label>QRAIVY-Stempelkarte auswählen</label>
       <select id="loyalty-picker-select"></select>
@@ -3277,6 +3280,7 @@
     document.getElementById('loyalty-picker').style.display = 'none';
     document.getElementById('loyalty-diagnostic').style.display = (window.__stadtpocketRole === 'global_admin') ? '' : 'none';
     document.getElementById('loyalty-diagnostic-result').innerHTML = '';
+    document.getElementById('stamp-workspace').innerHTML = '';
     banner('loyalty-banner', 'info', '');
     el.innerHTML = '<p class="muted">Lade…</p>';
 
@@ -3359,6 +3363,114 @@
         </div>
       </div>
     `;
+    renderStampWorkspace(program);
+  }
+
+  // ── Stempelkarte: staff manual stamping (Step 3A) ─────────────────
+  // Manual Pass.serialNumber entry only -- no camera/QR scanning yet
+  // (added later, once this is proven end-to-end). This page submits
+  // ONLY the customer's Pass.serialNumber to the authenticated manager
+  // endpoint; the backend alone resolves the canonical Customer,
+  // business/location authorization, and stamp state. Never receives,
+  // stores, or displays a Customer.id -- and never fabricates a
+  // customer name, since an anonymous StadtPocket customer may not
+  // have one at all.
+  let currentStampCustomerSerial = null;
+
+  function renderStampWorkspace(program) {
+    currentStampCustomerSerial = null;
+    document.getElementById('stamp-workspace').innerHTML = `
+      <div class="card section-card" style="margin-top:14px">
+        <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">Kunden-Pass</p>
+        <p class="muted" style="margin:0 0 12px">Pass-Code der Kundin/des Kunden eingeben, um den Stempelstand zu prüfen.</p>
+        <div id="stamp-banner"></div>
+        <input type="text" id="stamp-pass-input" placeholder="Pass-Code eingeben" autocomplete="off"
+               style="width:100%;box-sizing:border-box;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:var(--surface-card-alt);color:var(--text-primary)" />
+        <div class="actions">
+          <button class="primary" type="button" id="stamp-lookup-btn" onclick="lookupCustomerPass()">Kunde prüfen</button>
+        </div>
+        <div id="stamp-customer-result" style="margin-top:14px"></div>
+      </div>
+    `;
+  }
+
+  function stampErrorMessage(res) {
+    if (res.status === 429) return 'Diese Kundin/dieser Kunde wurde schon vor Kurzem gestempelt. Bitte kurz warten.';
+    if (res.status === 404) return 'Ungültiger Pass-Code.';
+    if (res.status === 403) return 'Keine Berechtigung für dieses Geschäft.';
+    if (res.status === 400) return (res.body && res.body.error) || 'Stempelkarte ist nicht aktiv.';
+    return 'Ein Fehler ist aufgetreten. Bitte erneut versuchen.';
+  }
+
+  async function lookupCustomerPass() {
+    const input = document.getElementById('stamp-pass-input');
+    const passSerialNumber = (input.value || '').trim();
+    if (!passSerialNumber) {
+      banner('stamp-banner', 'error', 'Bitte einen Pass-Code eingeben.');
+      return;
+    }
+    const btn = document.getElementById('stamp-lookup-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Prüfe…';
+    banner('stamp-banner', 'info', '');
+    document.getElementById('stamp-customer-result').innerHTML = '';
+
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/lookup`, {
+      method: 'POST',
+      body: { passSerialNumber },
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Kunde prüfen';
+
+    if (!res.ok) {
+      banner('stamp-banner', 'error', stampErrorMessage(res));
+      return;
+    }
+
+    currentStampCustomerSerial = passSerialNumber;
+    renderStampCustomerFound(res.body);
+  }
+
+  function renderStampCustomerFound(data) {
+    document.getElementById('stamp-customer-result').innerHTML = `
+      <div class="section-card" style="padding:14px;border-radius:12px;background:var(--surface-card-alt)">
+        <p style="margin:0 0 6px;font-weight:700;color:var(--text-primary)">Kunde gefunden</p>
+        <p class="muted" style="margin:0 0 2px">Stempelstand</p>
+        <p id="stamp-current-count" style="margin:0 0 6px;font-size:20px;font-weight:700;color:var(--text-primary)">${escapeHtml(String(data.stampCount))} / ${escapeHtml(String(data.requiredStamps))} Stempel</p>
+        <p class="muted" style="margin:0 0 14px">Belohnung: ${escapeHtml(data.rewardName)}</p>
+        <div class="actions">
+          <button class="primary" type="button" id="stamp-add-btn" onclick="addStampForCurrentCustomer()">+ 1 Stempel hinzufügen</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function addStampForCurrentCustomer() {
+    if (!currentStampCustomerSerial) return;
+    const btn = document.getElementById('stamp-add-btn');
+    if (btn.disabled) return; // guards against a double-click firing before disabled takes effect
+    btn.disabled = true;
+    btn.textContent = 'Wird gestempelt…';
+    banner('stamp-banner', 'info', '');
+
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/stamp`, {
+      method: 'POST',
+      body: { passSerialNumber: currentStampCustomerSerial },
+    });
+
+    if (!res.ok) {
+      btn.disabled = false;
+      btn.textContent = '+ 1 Stempel hinzufügen';
+      banner('stamp-banner', 'error', stampErrorMessage(res));
+      return; // a successfully displayed prior balance is left exactly as-is
+    }
+
+    banner('stamp-banner', 'success', '✓ Stempel hinzugefügt');
+    document.getElementById('stamp-current-count').textContent = `${res.body.stampCount} / ${res.body.requiredStamps} Stempel`;
+    btn.disabled = false;
+    btn.textContent = '+ 1 Stempel hinzufügen';
   }
 
   // "Stempelkarte einrichten" CTA (honest-empty-state primary action).

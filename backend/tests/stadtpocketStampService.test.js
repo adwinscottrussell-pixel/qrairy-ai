@@ -157,7 +157,7 @@ const mockPrisma = {
 
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
 
-const { applyStaffStamp } = require('../src/services/stadtpocketStampService');
+const { applyStaffStamp, lookupPassForStamping } = require('../src/services/stadtpocketStampService');
 const { StadtpocketManagerError } = require('../src/services/stadtpocketManagerService');
 
 const GLOBAL_ADMIN = { userId: 'admin1', isGlobalAdmin: true };
@@ -412,6 +412,116 @@ test('existing getBridgeState/authorizeLocationAccess behavior for a Stempelkart
   assert.equal(state.program.slug, 'baeckerei-staib');
   assert.equal(state.program.requiredStamps, 8);
   assert.equal(state.program.rewardTitle, 'Free Coffee');
+});
+
+// ── lookupPassForStamping (Step 3A — read-only "Kunde prüfen") ──
+
+test('lookup: valid Pass with an EXISTING Staib LoyaltyCustomer returns the correct real balance', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+  await applyStaffStamp(ULM, 'll_staib', ulmManager, 'sp_customer1'); // real prior stamp
+
+  const result = await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  assert.equal(result.found, true);
+  assert.equal(result.stampCount, 1);
+  assert.equal(result.requiredStamps, 8);
+  assert.equal(result.rewardName, 'Free Coffee');
+  assert.equal(result.businessName, 'Bäckerei Staib');
+});
+
+test('lookup: valid Pass with NO Staib LoyaltyCustomer yet -> found true, stampCount 0', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_never_stamped', 'sp_fresh_customer');
+
+  const result = await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_fresh_customer');
+  assert.equal(result.found, true);
+  assert.equal(result.stampCount, 0);
+  assert.equal(result.requiredStamps, 8);
+});
+
+test('lookup: invalid/unknown Pass.serialNumber -> safe not-found error, no customer info leaked', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+
+  const err = await expectError(() => lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_does_not_exist'), 404);
+  assert.equal(err.message, 'Invalid pass.');
+});
+
+test('lookup: a real Pass row that is not a StadtPocket canonical customer Pass -> same generic 404', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  passRows.push({ id: 'pass_old', serialNumber: 'sqr-someslug', slug: 'someslug', passTypeId: 'pass.com.qraivy.wallet', createdAt: nextTimestamp() });
+
+  const err = await expectError(() => lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sqr-someslug'), 404);
+  assert.equal(err.message, 'Invalid pass.');
+});
+
+test('lookup: unauthorized location/staff -> rejected (403), never reaches pass/customer data', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+
+  await expectError(() => lookupPassForStamping(ULM, 'll_staib', stuttgartManager, 'sp_customer1'), 403);
+});
+
+test('lookup: loyalty disabled for this business -> rejected (400)', async () => {
+  resetFixtures();
+  addListingLocation({ loyaltyLandingPageId: 'lp_staib' });
+  addLandingPage();
+  addStampSettings({ enabled: false });
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+
+  await expectError(() => lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1'), 400);
+});
+
+test('lookup creates NO LoyaltyCustomer row, even for a customer who never stamped here before', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_never_stamped', 'sp_fresh_customer');
+
+  await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_fresh_customer');
+  assert.equal(loyaltyCustomerRows.length, 0);
+});
+
+test('lookup creates NO StampEntry row', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+  await applyStaffStamp(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  const stampEntryCountBefore = stampEntryRows.length;
+
+  await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  assert.equal(stampEntryRows.length, stampEntryCountBefore);
+});
+
+test('lookup changes NO stamp counters or timestamps on an existing LoyaltyCustomer, even called repeatedly', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+  await applyStaffStamp(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  const before = { ...loyaltyCustomerRows[0] };
+
+  await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+
+  assert.deepEqual(loyaltyCustomerRows[0], before);
+});
+
+test('lookup never triggers or is affected by the stamping cooldown -- repeated lookups right after a real stamp all succeed', async () => {
+  resetFixtures();
+  setUpConnectedStaib();
+  addStadtPocketCustomerWithPass('cust_1', 'sp_customer1');
+  await applyStaffStamp(ULM, 'll_staib', ulmManager, 'sp_customer1');
+
+  // Immediately after a real stamp (still well inside the 1-hour
+  // cooldown) -- a lookup must still succeed; only the mutating POST is
+  // cooldown-gated, never the read-only GET.
+  const result = await lookupPassForStamping(ULM, 'll_staib', ulmManager, 'sp_customer1');
+  assert.equal(result.found, true);
+  assert.equal(result.stampCount, 1);
 });
 
 // ── runner ────────────────────────────────────────────────────

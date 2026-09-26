@@ -161,4 +161,68 @@ async function applyStaffStamp(locationId, listingLocationId, scope, passSerialN
   };
 }
 
-module.exports = { applyStaffStamp, STAMP_COOLDOWN_MS };
+/**
+ * Read-only lookup: given a Pass.serialNumber, resolve the corresponding
+ * StadtPocket customer's CURRENT loyalty balance at this business,
+ * without applying a stamp or touching any mutable state. Backs the
+ * staff UI's "Kunde prüfen" step -- deliberately a separate function
+ * from applyStaffStamp, never a shared code path: reusing the mutating
+ * function here would either double-count a stamp or spuriously trigger
+ * its cooldown before staff have actually decided to stamp.
+ *
+ * Never creates a LoyaltyCustomer row, never writes a StampEntry, never
+ * touches stampCount/totalStamps/lastStampAt/rewardReady/rewardsEarned.
+ * A customer who has never stamped at this business yet is reported as
+ * `stampCount: 0, found: true` -- "found" reflects a valid, resolvable
+ * StadtPocket Pass, not whether a loyalty membership row already
+ * exists. Same authorization/validation chain as applyStaffStamp
+ * (getBridgeState -> authorizeLocationAccess, pass/customer
+ * resolution), and the same generic "Invalid pass." (404) for every
+ * invalid-pass case, so this cannot be used to probe which serials
+ * exist. passSerialNumber is never logged.
+ *
+ * @param {string} locationId
+ * @param {string} listingLocationId
+ * @param {Object} scope
+ * @param {string} passSerialNumber
+ * @returns {Promise<{found: true, businessName: string, stampCount: number, requiredStamps: number, rewardName: string}>}
+ *   Never includes customerId, ownerUserId, CustomerIdentity ids, or the
+ *   internal Pass database id.
+ */
+async function lookupPassForStamping(locationId, listingLocationId, scope, passSerialNumber) {
+  const bridgeState = await getBridgeState(locationId, listingLocationId, scope);
+  if (!bridgeState.connected) {
+    throw new StadtpocketManagerError('Loyalty is not enabled for this business.', 400);
+  }
+  const { slug, businessName, requiredStamps, rewardTitle } = bridgeState.program;
+
+  if (!isPlausiblePassSerial(passSerialNumber)) {
+    throw new StadtpocketManagerError('Invalid pass.', 404);
+  }
+
+  const pass = await prisma.pass.findUnique({ where: { serialNumber: passSerialNumber } });
+  if (!pass) {
+    throw new StadtpocketManagerError('Invalid pass.', 404);
+  }
+
+  const customerId = await resolveCustomerIdForPassSerial(passSerialNumber);
+  if (!customerId) {
+    // Same generic message as "not found" -- never distinguished, same
+    // posture as applyStaffStamp's identical check.
+    throw new StadtpocketManagerError('Invalid pass.', 404);
+  }
+
+  const loyaltyCustomer = await prisma.loyaltyCustomer.findUnique({
+    where: { slug_customerId: { slug, customerId } },
+  });
+
+  return {
+    found: true,
+    businessName,
+    stampCount: loyaltyCustomer ? loyaltyCustomer.stampCount : 0,
+    requiredStamps,
+    rewardName: rewardTitle,
+  };
+}
+
+module.exports = { applyStaffStamp, lookupPassForStamping, STAMP_COOLDOWN_MS };

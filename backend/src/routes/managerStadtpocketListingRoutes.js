@@ -330,6 +330,25 @@ async function handleStaffStamp(req, res) {
   }
 }
 
+// Read-only sibling of handleStaffStamp -- backs the staff UI's "Kunde
+// prüfen" step. Never mutates LoyaltyCustomer/StampEntry (see
+// lookupPassForStamping's own header comment). Deliberately POST with
+// the serial in the body, not GET with a query string -- a
+// Pass.serialNumber is a real customer identifier, and query strings
+// are far more likely to be captured by proxy/CDN/server access logs
+// (URL+query, not body) than a POST body is. Still genuinely read-only
+// despite the POST verb -- lookupPassForStamping's own contract is
+// unchanged.
+async function handleLookupPassForStamping(req, res) {
+  try {
+    const passSerialNumber = req.body && typeof req.body.passSerialNumber === 'string' ? req.body.passSerialNumber : null;
+    const result = await stampService.lookupPassForStamping(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope, passSerialNumber);
+    return res.json(result);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/lookup POST');
+  }
+}
+
 // City-scoped list + create.
 router.get('/listings/:locationId', requireStadtpocketWriteScope, handleListListings);
 router.post('/listings/:locationId', requireStadtpocketWriteScope, handleInitializeDraft);
@@ -367,6 +386,7 @@ router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocke
 router.post('/listings/:locationId/:listingLocationId/loyalty/setup', requireStadtpocketWriteScope, handleSetupLoyalty);
 router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
 router.get('/listings/:locationId/:listingLocationId/loyalty/linkage-check', requireStadtpocketWriteScope, handleCheckExistingLinkage);
+router.post('/listings/:locationId/:listingLocationId/loyalty/lookup', requireStadtpocketWriteScope, handleLookupPassForStamping);
 router.post('/listings/:locationId/:listingLocationId/loyalty/stamp', requireStadtpocketWriteScope, handleStaffStamp);
 
 module.exports = router;
@@ -393,3 +413,4 @@ module.exports.handleSetupLoyalty = handleSetupLoyalty; // exported for direct u
 module.exports.handleCheckExistingLinkage = handleCheckExistingLinkage; // exported for direct unit testing only
 module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only
 module.exports.handleStaffStamp = handleStaffStamp; // exported for direct unit testing only
+module.exports.handleLookupPassForStamping = handleLookupPassForStamping; // exported for direct unit testing only
