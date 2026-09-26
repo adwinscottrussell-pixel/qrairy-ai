@@ -1,10 +1,11 @@
 /**
  * stadtpocketAssistantTools.js — StadtPocket City Assistant, Phase
  * 2B.1b (StadtPocket-only tools) + Phase 2B.2 (search_city_places,
- * whole-city discovery via Google Places). The tool-execution layer:
- * the four tool definitions Claude may call (Anthropic Messages API
- * `tools` shape) plus the backend code that actually runs one when
- * requested.
+ * whole-city discovery via Google Places) + Phase 2B.3
+ * (get_city_place_details, on-demand Google Place Details for a
+ * previously-found external place). The tool-execution layer: the five
+ * tool definitions Claude may call (Anthropic Messages API `tools`
+ * shape) plus the backend code that actually runs one when requested.
  * ─────────────────────────────────────────────────────────────
  * REUSE, NEVER DUPLICATE: every tool below is a thin wrapper around
  * services this codebase already has and already trusts --
@@ -28,7 +29,7 @@
  * TRUST BOUNDARY: every executor takes citySlug as its own first,
  * explicit argument, supplied only by stadtpocketAssistantService.js
  * from the ALREADY server-resolved city (findCityLocation()'s result).
- * None of the four tool input_schema definitions below expose a city/
+ * None of the five tool input_schema definitions below expose a city/
  * citySlug parameter to the model at all -- Claude has no argument slot
  * to put one in, so there is no field to ignore-if-present; the trusted
  * city is structurally the only one that can ever reach these
@@ -37,6 +38,9 @@
  * not by a runtime check that could be forgotten. search_city_places
  * re-resolves the city NAME (not just the slug) from that same trusted
  * citySlug via findCityLocation() -- see executeSearchPlaces below.
+ * get_city_place_details ignores citySlug entirely (Place Details is a
+ * global Google lookup by id, not city-scoped) but keeps the same
+ * signature for executeTool()'s uniform dispatch.
  *
  * RESULT SHAPE: every result object executeTool() returns is already
  * tagged `origin`/`partnerStatus` by this file's own code -- never left
@@ -81,7 +85,13 @@ const { fetchCityEvents } = require('./stadtpocketEventsService');
 // second, DIFFERENT-shaped consumer of that same output
 // (toPlaceResult below) -- it does not touch, wrap, or duplicate the
 // HTTP call itself.
-const { callGooglePlacesTextSearch, toCandidate, DEFAULT_COUNTRY, PROVIDER_STATUS: PLACES_PROVIDER_STATUS } = require('./stadtpocketDiscoveryService');
+const {
+  callGooglePlacesTextSearch,
+  callGooglePlaceDetails,
+  toCandidate,
+  DEFAULT_COUNTRY,
+  PROVIDER_STATUS: PLACES_PROVIDER_STATUS,
+} = require('./stadtpocketDiscoveryService');
 
 // Hard ceilings applied at execution time, before results ever reach
 // Claude's context -- independent of, and always at least as strict
@@ -158,6 +168,22 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ['query'],
+    },
+  },
+  {
+    name: 'get_city_place_details',
+    description:
+      "Fetches live details -- current opening status, today's hours, phone number, rating, and a Google Maps directions link -- for ONE specific place search_city_places already found in this conversation, identified by its real Google place id. Use it only when a follow-up genuinely needs that detail (e.g. 'Hat es heute geöffnet?', 'Wann schließt es heute?', 'Wie lautet die Telefonnummer?', 'Wie komme ich dorthin?') -- never call it automatically for every search result. The placeId MUST be a real id you were actually given -- from a search_city_places tool result, or from the conversation history's own bracketed recap -- NEVER invented. This is for a Google-discovered EXTERN place only: a StadtPocket partner has no Google place id and must never be looked up this way, and this tool can never turn an external business into a StadtPocket partner.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        placeId: {
+          type: 'string',
+          description:
+            "The real Google place id of a place already found via search_city_places (or shown in the conversation's own recap, as '[id: ...]') -- never a name, never invented, never a StadtPocket business's own slug.",
+        },
+      },
+      required: ['placeId'],
     },
   },
 ];
@@ -348,11 +374,102 @@ async function executeSearchPlaces(citySlug, args = {}) {
   return { results, sources: results.length ? [{ type: 'external', label: 'Google Places' }] : [] };
 }
 
+// Google's weekdayDescriptions[] (Places API New) is Monday-first
+// (index 0 = "Monday: ..."). JS's Date#getDay() is Sunday-first
+// (0 = Sunday). This converts once so "today's" line is picked
+// SERVER-SIDE from the real current date -- never left for Claude to
+// guess which of the 7 lines is "today" (an LLM has no reliable,
+// verified notion of the current date on its own).
+function extractTodayHours(weekdayDescriptions) {
+  if (!Array.isArray(weekdayDescriptions) || weekdayDescriptions.length !== 7) return undefined;
+  const jsDay = new Date().getDay(); // 0=Sun..6=Sat
+  const mondayFirstIndex = (jsDay + 6) % 7; // 0=Mon..6=Sun
+  return weekdayDescriptions[mondayFirstIndex] || undefined;
+}
+
+// Google's own, free, no-API-key, non-billable Maps URLs scheme
+// (verified current 2026-09-26) -- NOT a Places API call, does not
+// touch GOOGLE_PLACES_API_KEY or any SKU/billing surface at all. Per
+// Google's own docs, destination_place_id requires destination to also
+// be set, so real coordinates are always included alongside the id for
+// precision. This is a deep LINK the user follows into Google Maps --
+// never StadtPocket computing or claiming to compute a route, travel
+// time, or transit plan itself.
+function buildDirectionsUrl(latitude, longitude, placeId) {
+  const params = new URLSearchParams({
+    api: '1',
+    destination: `${latitude},${longitude}`,
+    destination_place_id: placeId,
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+// Maps ONE real Places API (New) Place Details response onto the SAME
+// `type: 'place'` Assistant result contract toPlaceResult() already
+// produces for a search_city_places hit -- `origin`/`partnerStatus` are
+// the same hardcoded literals, never Claude-assigned, and this can
+// never turn an external place into a StadtPocket partner (StadtPocket
+// results never reach this function at all -- they have no Google
+// place id to look up). Every field is included only when Google
+// actually returned it -- a business with no listed phone/rating/hours
+// simply omits that field here, never a fabricated placeholder value.
+function toPlaceDetailsResult(placeId, place) {
+  if (!place) return null;
+  const result = {
+    type: 'place',
+    origin: 'external',
+    partnerStatus: 'none',
+    id: placeId,
+  };
+  if (place.displayName && place.displayName.text) result.name = place.displayName.text;
+
+  const openingHours = place.currentOpeningHours;
+  if (openingHours && typeof openingHours.openNow === 'boolean') result.openNow = openingHours.openNow;
+  const todayHours = openingHours && extractTodayHours(openingHours.weekdayDescriptions);
+  if (todayHours) result.todayHours = todayHours;
+
+  if (place.nationalPhoneNumber) result.phone = place.nationalPhoneNumber;
+  if (typeof place.rating === 'number') result.rating = place.rating;
+  if (typeof place.userRatingCount === 'number') result.ratingCount = place.userRatingCount;
+
+  const location = place.location;
+  if (location && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+    result.directionsUrl = buildDirectionsUrl(location.latitude, location.longitude, placeId);
+  }
+
+  return result;
+}
+
+async function executeGetPlaceDetails(citySlug, args = {}) {
+  // citySlug is intentionally unused -- Place Details is a global
+  // Google lookup by id, not city-scoped -- but the executor keeps the
+  // same (citySlug, args) signature every other tool uses, for
+  // executeTool()'s uniform dispatch.
+  const placeId = stringArgOrUndefined(args.placeId);
+  if (!placeId) return { results: [], sources: [] }; // no real id to look up -- never call Google with a garbage/empty one
+
+  const providerResult = await callGooglePlaceDetails(placeId);
+  if (providerResult.status !== PLACES_PROVIDER_STATUS.OK) {
+    // Covers NOT_CONFIGURED, a genuine provider failure, AND an
+    // unknown/malformed placeId (Google returns a non-2xx for that) --
+    // callGooglePlaceDetails' own never-throws contract already turned
+    // every one of those into this one honest shape; never a raw
+    // Google error, never a fabricated "found nothing" success.
+    return { results: [], sources: [], error: 'details for this place are temporarily unavailable' };
+  }
+
+  const mapped = toPlaceDetailsResult(placeId, providerResult.place);
+  if (!mapped) return { results: [], sources: [] };
+
+  return { results: [mapped], sources: [{ type: 'external', label: 'Google Places' }] };
+}
+
 const TOOL_EXECUTORS = {
   search_stadtpocket_businesses: executeSearchBusinesses,
   search_stadtpocket_offers: executeSearchOffers,
   search_stadtpocket_events: executeSearchEvents,
   search_city_places: executeSearchPlaces,
+  get_city_place_details: executeGetPlaceDetails,
 };
 
 /**
@@ -390,6 +507,10 @@ module.exports = {
   executeSearchOffers,
   executeSearchEvents,
   executeSearchPlaces,
+  executeGetPlaceDetails,
   toPlaceResult,
+  toPlaceDetailsResult,
+  extractTodayHours,
+  buildDirectionsUrl,
   matchesQuery,
 };

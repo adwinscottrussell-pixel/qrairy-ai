@@ -101,6 +101,8 @@ require.cache[eventsServicePath] = {
 const realDiscoveryService = require('../src/services/stadtpocketDiscoveryService');
 let placesResult = { status: realDiscoveryService.PROVIDER_STATUS.OK, places: [] };
 let capturedPlacesCall = null;
+let placeDetailsResult = { status: realDiscoveryService.PROVIDER_STATUS.OK, place: null };
+let capturedPlaceDetailsCall = null;
 require.cache[discoveryServicePath] = {
   id: discoveryServicePath, filename: discoveryServicePath, loaded: true,
   exports: {
@@ -108,6 +110,10 @@ require.cache[discoveryServicePath] = {
     callGooglePlacesTextSearch: async (query, quantity) => {
       capturedPlacesCall = { query, quantity };
       return placesResult;
+    },
+    callGooglePlaceDetails: async (placeId) => {
+      capturedPlaceDetailsCall = { placeId };
+      return placeDetailsResult;
     },
   },
 };
@@ -119,7 +125,27 @@ const {
   MAX_OFFER_RESULTS,
   MAX_EVENT_RESULTS,
   MAX_PLACE_RESULTS,
+  toPlaceDetailsResult,
+  extractTodayHours,
+  buildDirectionsUrl,
 } = require('../src/services/stadtpocketAssistantTools');
+
+// Raw Place Details (New) response fixture builder -- only the fields
+// PLACE_DETAILS_FIELD_MASK actually requests.
+function placeDetails({ id, name, openNow, weekdayDescriptions, phone, rating, ratingCount, lat, lng } = {}) {
+  const details = { id };
+  if (name !== undefined) details.displayName = { text: name };
+  if (openNow !== undefined || weekdayDescriptions !== undefined) {
+    details.currentOpeningHours = {};
+    if (openNow !== undefined) details.currentOpeningHours.openNow = openNow;
+    if (weekdayDescriptions !== undefined) details.currentOpeningHours.weekdayDescriptions = weekdayDescriptions;
+  }
+  if (phone !== undefined) details.nationalPhoneNumber = phone;
+  if (rating !== undefined) details.rating = rating;
+  if (ratingCount !== undefined) details.userRatingCount = ratingCount;
+  if (lat !== undefined && lng !== undefined) details.location = { latitude: lat, longitude: lng };
+  return details;
+}
 
 function place(id, name, address, lat, lng, types, website) {
   return {
@@ -135,11 +161,19 @@ function place(id, name, address, lat, lng, types, website) {
 const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
 
-test('1. exactly four tools are defined, matching the approved names', () => {
+test('1. exactly five tools are defined, matching the approved names', () => {
   assert.deepEqual(
     TOOL_DEFINITIONS.map((t) => t.name).sort(),
-    ['search_city_places', 'search_stadtpocket_businesses', 'search_stadtpocket_events', 'search_stadtpocket_offers']
+    ['get_city_place_details', 'search_city_places', 'search_stadtpocket_businesses', 'search_stadtpocket_events', 'search_stadtpocket_offers']
   );
+});
+
+test('1c. get_city_place_details requires only placeId, and exposes no other model-controlled parameter', () => {
+  const tool = TOOL_DEFINITIONS.find((t) => t.name === 'get_city_place_details');
+  assert.deepEqual(Object.keys(tool.input_schema.properties), ['placeId']);
+  assert.deepEqual(tool.input_schema.required, ['placeId']);
+  assert.ok(!('city' in tool.input_schema.properties));
+  assert.ok(!('citySlug' in tool.input_schema.properties));
 });
 
 test('1b. search_city_places requires a query, and exposes no other model-controlled parameter', () => {
@@ -442,6 +476,157 @@ test('34. a non-string query never calls Google, never crashes', async () => {
   const outcome = await executeTool('search_city_places', 'ulm', { query: 12345 });
   assert.equal(capturedPlacesCall, null);
   assert.deepEqual(outcome.results, []);
+});
+
+// ── get_city_place_details (Phase 2B.3 -- reused stadtpocketDiscoveryService.callGooglePlaceDetails) ──
+function resetPlaceDetails() {
+  placeDetailsResult = { status: realDiscoveryService.PROVIDER_STATUS.OK, place: null };
+  capturedPlaceDetailsCall = null;
+}
+
+test('extractTodayHours picks the correct Monday-first index for today, regardless of which day the test runs', () => {
+  const weekdayDescriptions = ['Mo: A', 'Di: B', 'Mi: C', 'Do: D', 'Fr: E', 'Sa: F', 'So: G'];
+  const jsDay = new Date().getDay();
+  const expectedIndex = (jsDay + 6) % 7;
+  assert.equal(extractTodayHours(weekdayDescriptions), weekdayDescriptions[expectedIndex]);
+});
+
+test('extractTodayHours returns undefined for a malformed/short/missing list -- never guesses', () => {
+  assert.equal(extractTodayHours(['only one']), undefined);
+  assert.equal(extractTodayHours(null), undefined);
+  assert.equal(extractTodayHours(undefined), undefined);
+});
+
+test('buildDirectionsUrl builds the documented, verified Google Maps directions deep link (destination + destination_place_id, api=1)', () => {
+  const url = buildDirectionsUrl(48.4, 9.99, 'ChIJ001');
+  assert.ok(url.startsWith('https://www.google.com/maps/dir/?'));
+  const params = new URL(url).searchParams;
+  assert.equal(params.get('api'), '1');
+  assert.equal(params.get('destination'), '48.4,9.99');
+  assert.equal(params.get('destination_place_id'), 'ChIJ001');
+});
+
+test('toPlaceDetailsResult maps a full response correctly, tagged origin: external / partnerStatus: none', () => {
+  const raw = placeDetails({
+    id: 'ChIJ001', name: 'Del Tufo',
+    openNow: true,
+    weekdayDescriptions: ['Mo: 11–22', 'Di: 11–22', 'Mi: 11–22', 'Do: 11–22', 'Fr: 11–23', 'Sa: 11–23', 'So: 12–22'],
+    phone: '+49 731 123456', rating: 4.5, ratingCount: 120, lat: 48.4, lng: 9.99,
+  });
+  const result = toPlaceDetailsResult('ChIJ001', raw);
+  assert.equal(result.type, 'place');
+  assert.equal(result.origin, 'external');
+  assert.equal(result.partnerStatus, 'none');
+  assert.equal(result.id, 'ChIJ001');
+  assert.equal(result.name, 'Del Tufo');
+  assert.equal(result.openNow, true);
+  assert.equal(result.phone, '+49 731 123456');
+  assert.equal(result.rating, 4.5);
+  assert.equal(result.ratingCount, 120);
+  assert.ok(result.todayHours);
+  assert.ok(result.directionsUrl.includes('ChIJ001'));
+});
+
+test('toPlaceDetailsResult never fabricates a field Google did not return', () => {
+  const raw = placeDetails({ id: 'ChIJ002', name: 'No Details Place' });
+  const result = toPlaceDetailsResult('ChIJ002', raw);
+  assert.equal(result.openNow, undefined);
+  assert.equal(result.todayHours, undefined);
+  assert.equal(result.phone, undefined);
+  assert.equal(result.rating, undefined);
+  assert.equal(result.ratingCount, undefined);
+  assert.equal(result.directionsUrl, undefined); // no location returned -- no link fabricated
+});
+
+test('toPlaceDetailsResult returns null for a null place (never a fabricated result)', () => {
+  assert.equal(toPlaceDetailsResult('ChIJ003', null), null);
+});
+
+test('35. get_city_place_details returns real details tagged origin: external, partnerStatus: none', async () => {
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ001', name: 'Del Tufo', openNow: true, phone: '+49 731 123456', rating: 4.5, ratingCount: 120, lat: 48.4, lng: 9.99 });
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  assert.equal(outcome.results.length, 1);
+  const r = outcome.results[0];
+  assert.equal(r.origin, 'external');
+  assert.equal(r.partnerStatus, 'none');
+  assert.equal(r.openNow, true);
+  assert.equal(r.phone, '+49 731 123456');
+  assert.equal(r.rating, 4.5);
+  assert.equal(r.ratingCount, 120);
+  assert.ok(r.directionsUrl);
+});
+
+test('36. the real placeId argument is passed through to the discovery service unmodified', async () => {
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ999' });
+  await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ999' });
+  assert.equal(capturedPlaceDetailsCall.placeId, 'ChIJ999');
+});
+
+test('37. source is exactly Google Places', async () => {
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ001', name: 'X' });
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  assert.deepEqual(outcome.sources, [{ type: 'external', label: 'Google Places' }]);
+});
+
+test('38. missing optional fields are never fabricated through the full executeTool path', async () => {
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ001', name: 'Minimal Place' });
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  const r = outcome.results[0];
+  assert.equal(r.openNow, undefined);
+  assert.equal(r.phone, undefined);
+  assert.equal(r.rating, undefined);
+  assert.equal(r.directionsUrl, undefined);
+});
+
+test('39. a provider failure resolves to an honest empty result, never a crash', async () => {
+  resetPlaceDetails();
+  placeDetailsResult = { status: realDiscoveryService.PROVIDER_STATUS.UNAVAILABLE, place: null };
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  assert.deepEqual(outcome.results, []);
+  assert.ok(outcome.error);
+});
+
+test('40. a missing GOOGLE_PLACES_API_KEY (NOT_CONFIGURED) resolves to an honest empty result, never a crash', async () => {
+  resetPlaceDetails();
+  placeDetailsResult = { status: realDiscoveryService.PROVIDER_STATUS.NOT_CONFIGURED, place: null };
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  assert.deepEqual(outcome.results, []);
+  assert.ok(outcome.error);
+});
+
+test('41. an unknown/malformed placeId (Google returns non-2xx -> UNAVAILABLE) is handled safely, never a crash', async () => {
+  resetPlaceDetails();
+  placeDetailsResult = { status: realDiscoveryService.PROVIDER_STATUS.UNAVAILABLE, place: null };
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 'not-a-real-id' });
+  assert.deepEqual(outcome.results, []);
+});
+
+test('42. a missing/empty placeId never calls Google at all', async () => {
+  resetPlaceDetails();
+  const outcome = await executeTool('get_city_place_details', 'ulm', {});
+  assert.equal(capturedPlaceDetailsCall, null);
+  assert.deepEqual(outcome.results, []);
+});
+
+test('43. a non-string placeId never calls Google, never crashes', async () => {
+  resetPlaceDetails();
+  const outcome = await executeTool('get_city_place_details', 'ulm', { placeId: 12345 });
+  assert.equal(capturedPlaceDetailsCall, null);
+  assert.deepEqual(outcome.results, []);
+});
+
+test('44. citySlug is irrelevant/unused -- get_city_place_details works identically regardless of city (Place Details is a global lookup)', async () => {
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ001', name: 'X' });
+  const outcomeUlm = await executeTool('get_city_place_details', 'ulm', { placeId: 'ChIJ001' });
+  resetPlaceDetails();
+  placeDetailsResult.place = placeDetails({ id: 'ChIJ001', name: 'X' });
+  const outcomeStuttgart = await executeTool('get_city_place_details', 'stuttgart', { placeId: 'ChIJ001' });
+  assert.deepEqual(outcomeUlm.results, outcomeStuttgart.results);
 });
 
 // ── runner ──────────────────────────────────────────────────────

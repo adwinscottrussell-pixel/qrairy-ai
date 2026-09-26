@@ -71,6 +71,7 @@ const {
   callClaudeMessage,
   runOrchestration,
   summarizeForModel,
+  addResultDeduped,
   MAX_QUESTION_LENGTH,
   MAX_HISTORY_ITEMS,
   MAX_TOOL_ITERATIONS,
@@ -256,13 +257,51 @@ test('14g. (conversational context) the system prompt tells the model to ask a c
   assert.ok(/ask a short clarifying question/i.test(prompt));
 });
 
+test('14h. (Phase 2B.3) the system prompt names get_city_place_details as the 5th tool and lists what it can answer', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(prompt.includes('get_city_place_details'));
+  assert.ok(/five tools/i.test(prompt));
+  assert.ok(/opening status|opening hours/i.test(prompt));
+});
+
+test('14i. the system prompt forbids inventing a place id -- only a real id from a tool result or the recap may be used', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/NEVER invent (a|one) place id|NEVER invent one/i.test(prompt));
+});
+
+test('14j. the system prompt explicitly forbids using get_city_place_details for a StadtPocket partner (no Google place id exists for one)', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/never for a StadtPocket partner|has no Google place id/i.test(prompt));
+});
+
+test('14k. the system prompt states a place is not a StadtPocket partner no matter how much detail get_city_place_details adds', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/no matter how much detail get_city_place_details adds/i.test(prompt));
+});
+
+test('14l. the system prompt tells the model to be honest when Google does not return a requested detail (no phone/hours/rating), never to guess', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/does not include a detail|never guess, estimate/i.test(prompt));
+});
+
+test('14m. the system prompt explicitly forbids claiming to calculate live routing/traffic/transit -- directions are a Google Maps link only', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/do not calculate live routing/i.test(prompt));
+  assert.ok(/never claim to compute a route/i.test(prompt));
+});
+
+test('14n. the recap-format description in the system prompt now mentions the bracketed [id: ...] convention', () => {
+  const prompt = buildSystemPrompt('Ulm');
+  assert.ok(/\[id: ChIJ/i.test(prompt));
+});
+
 // ── summarizeForModel (what Claude actually sees about a tool result) ──
-test('16a. a place result summary now includes address, so location-based follow-ups (e.g. "in der Innenstadt?") are answerable', () => {
+test('16a. a place result summary now includes address AND id, so location-based follow-ups (e.g. "in der Innenstadt?") are answerable and a real place id survives for get_city_place_details', () => {
   const summary = summarizeForModel({
     results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Trattoria da Marco', subLabel: 'italian_restaurant', address: 'Hafengasse 3, 89073 Ulm' }],
     sources: [],
   });
-  assert.deepEqual(summary.items[0], { name: 'Trattoria da Marco', category: 'italian_restaurant', address: 'Hafengasse 3, 89073 Ulm', partner: false });
+  assert.deepEqual(summary.items[0], { name: 'Trattoria da Marco', category: 'italian_restaurant', address: 'Hafengasse 3, 89073 Ulm', id: 'ChIJ001', partner: false });
 });
 
 test('16b. a place result with no real address never gets a fabricated one', () => {
@@ -273,13 +312,41 @@ test('16b. a place result with no real address never gets a fabricated one', () 
   assert.equal(summary.items[0].address, undefined);
 });
 
-test('16c. summarizeForModel never includes opening-hours/rating fields for a place -- that data does not exist anywhere in this pipeline (FIELD_MASK never requests it), so it must never be fabricated', () => {
+test('16c. a plain search_city_places result (no detail fields) never gets fabricated opening-hours/phone/rating -- that data only ever comes from a real get_city_place_details call, never invented for a bare search hit', () => {
   const summary = summarizeForModel({
     results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ003', name: 'X', address: 'Y' }],
     sources: [],
   });
   const keys = Object.keys(summary.items[0]);
-  assert.deepEqual(keys.sort(), ['address', 'category', 'name', 'partner']);
+  assert.deepEqual(keys.sort(), ['address', 'category', 'id', 'name', 'partner']);
+});
+
+test('16d. (Phase 2B.3) a get_city_place_details result carries its real opening/phone/rating/directions fields through to the model, only when actually present', () => {
+  const summary = summarizeForModel({
+    results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Del Tufo', openNow: true, todayHours: 'Montag: 11:00–22:00 Uhr', phone: '+49 731 123456', rating: 4.5, ratingCount: 120, directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=48.4,9.99&destination_place_id=ChIJ001' }],
+    sources: [],
+  });
+  const item = summary.items[0];
+  assert.equal(item.openNow, true);
+  assert.equal(item.phone, '+49 731 123456');
+  assert.equal(item.rating, 4.5);
+  assert.equal(item.ratingCount, 120);
+  assert.ok(item.directionsUrl.includes('ChIJ001'));
+  assert.equal(item.partner, false);
+});
+
+test('16e. a get_city_place_details result with no phone/rating/hours returned by Google never fabricates those fields for the model either', () => {
+  const summary = summarizeForModel({
+    results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ004', name: 'Minimal' }],
+    sources: [],
+  });
+  const item = summary.items[0];
+  assert.equal(item.openNow, undefined);
+  assert.equal(item.todayHours, undefined);
+  assert.equal(item.phone, undefined);
+  assert.equal(item.rating, undefined);
+  assert.equal(item.ratingCount, undefined);
+  assert.equal(item.directionsUrl, undefined);
 });
 
 test('15. the system prompt forbids claiming an external business is a StadtPocket partner', () => {
@@ -562,6 +629,82 @@ test('39. the existing 3-iteration cap still applies when search_city_places is 
   };
   let calls = 0;
   const client = { messages: { create: async () => { calls += 1; return toolUseMessage('search_city_places', { query: 'x' }); } } };
+  const result = await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
+  assert.equal(calls, MAX_TOOL_ITERATIONS);
+  assert.equal(result.text, buildFallbackResponse().text);
+});
+
+// ── addResultDeduped (Phase 2B.3 -- a details result must REPLACE, not be dropped alongside, an earlier same-place search result) ──
+test('addResultDeduped: a get_city_place_details result for the SAME place id as an earlier search_city_places result REPLACES it, never drops the richer one', () => {
+  const searchHit = { type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Del Tufo', subLabel: 'italian_restaurant' };
+  const detailsHit = { type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Del Tufo', openNow: true, phone: '+49 731 123456' };
+  const results = [];
+  addResultDeduped(results, searchHit);
+  addResultDeduped(results, detailsHit);
+  assert.equal(results.length, 1); // still exactly one entry for this place, never two
+  assert.equal(results[0], detailsHit); // the richer details result won, not the plain search hit
+});
+
+test('addResultDeduped: two genuinely different places both survive (dedup key is per-place, not a blanket single-slot)', () => {
+  const results = [];
+  addResultDeduped(results, { type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'A' });
+  addResultDeduped(results, { type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ002', name: 'B' });
+  assert.equal(results.length, 2);
+});
+
+// ── get_city_place_details orchestration -- coexists with search_city_places, provenance intact ──
+test('40. get_city_place_details can coexist with search_city_places in the same conversation, and its result REPLACES the plainer search hit for the same real place', async () => {
+  resetToolMock();
+  nextToolOutcomes = {
+    search_city_places: {
+      results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Del Tufo', subLabel: 'Italienisches Restaurant' }],
+      sources: [{ type: 'external', label: 'Google Places' }],
+    },
+    get_city_place_details: {
+      results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'Del Tufo', openNow: true, todayHours: 'Montag: 11:00–22:00 Uhr', directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=48.4,9.99&destination_place_id=ChIJ001' }],
+      sources: [{ type: 'external', label: 'Google Places' }],
+    },
+  };
+  const client = scriptedClient([
+    toolUseMessage('search_city_places', { query: 'italienisches Restaurant' }),
+    toolUseMessage('get_city_place_details', { placeId: 'ChIJ001' }),
+    textMessage('Del Tufo hat heute bis 22 Uhr geöffnet.'),
+  ]);
+  const result = await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
+  assert.equal(toolCalls.length, 2);
+  assert.deepEqual(toolCalls.map((c) => c.name), ['search_city_places', 'get_city_place_details']);
+  assert.equal(result.results.length, 1); // the details result replaced the plain search hit, not duplicated alongside it
+  const place = result.results[0];
+  assert.equal(place.origin, 'external');
+  assert.equal(place.partnerStatus, 'none');
+  assert.equal(place.openNow, true);
+  assert.ok(place.directionsUrl);
+  // exactly one Google Places source, deduped, not two identical entries
+  assert.deepEqual(result.sources, [{ type: 'external', label: 'Google Places' }]);
+});
+
+test('41. get_city_place_details is passed the trusted server citySlug like every other tool, even though its own executor ignores it', async () => {
+  resetToolMock();
+  const client = scriptedClient([
+    toolUseMessage('get_city_place_details', { placeId: 'ChIJ001' }),
+    textMessage('ok'),
+  ]);
+  await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
+  assert.equal(toolCalls[0].name, 'get_city_place_details');
+  assert.equal(toolCalls[0].citySlug, 'ulm');
+  assert.deepEqual(toolCalls[0].args, { placeId: 'ChIJ001' });
+});
+
+test('42. the existing 3-iteration cap still applies when get_city_place_details is the tool being repeatedly requested', async () => {
+  resetToolMock();
+  nextToolOutcomes = {
+    get_city_place_details: {
+      results: [{ type: 'place', origin: 'external', partnerStatus: 'none', id: 'ChIJ001', name: 'X', openNow: true }],
+      sources: [{ type: 'external', label: 'Google Places' }],
+    },
+  };
+  let calls = 0;
+  const client = { messages: { create: async () => { calls += 1; return toolUseMessage('get_city_place_details', { placeId: 'ChIJ001' }); } } };
   const result = await answerAssistantQuestion('ulm', { question: 'x' }, { anthropicClient: client });
   assert.equal(calls, MAX_TOOL_ITERATIONS);
   assert.equal(result.text, buildFallbackResponse().text);

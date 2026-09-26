@@ -251,6 +251,103 @@ async function callGooglePlacesTextSearch(query, quantity, { fetchImpl = fetch }
 }
 
 /**
+ * Places API (New) Place Details -- Phase 2B.3. A genuinely SEPARATE,
+ * second real Google request per call (Place Details is not bundled
+ * into Text Search), reused (not duplicated) by the City Assistant's
+ * get_city_place_details tool (stadtpocketAssistantTools.js) -- this
+ * function stays scoped to the raw Google HTTP call + never-throws
+ * status shape, matching callGooglePlacesTextSearch's own contract
+ * exactly; response mapping into the Assistant's own result shape lives
+ * in the tool layer, not here (same separation of concerns as
+ * toCandidate() staying data-shape-agnostic of any one caller).
+ *
+ * FIELD MASK (PLACE_DETAILS_FIELD_MASK below) -- every field on it is
+ * Enterprise SKU except id/displayName/location (Essentials/Pro, but
+ * cost NOTHING extra here since currentOpeningHours/nationalPhoneNumber/
+ * rating/userRatingCount already put the whole request on Enterprise --
+ * Google bills a mixed-tier request at its single highest tier, not
+ * per field, confirmed against Google's own current billing docs).
+ * displayName/location are deliberately requested even though the
+ * Assistant already has them from the original search result, because
+ * (a) that costs nothing extra at this tier and (b) get_city_place_details
+ * only ever receives a bare placeId -- with no other source for them,
+ * omitting them would mean an unlabeled result card and no coordinates
+ * to build a directions link from. Every OTHER already-known field
+ * (formattedAddress, websiteUri, types, addressComponents) is still
+ * skipped -- there is no equivalent functional need for those here.
+ * regularOpeningHours is deliberately skipped too: currentOpeningHours
+ * already reflects the real current week including holiday exceptions,
+ * which is what "is it open / when does it close today" actually needs.
+ * googleMapsUri is skipped -- a dedicated directions deep link is
+ * constructed instead (see buildDirectionsUrl in the tool layer), which
+ * needs no extra Google field and no extra API key/cost (Google's own
+ * Maps URLs scheme, verified current 2026-09-26: no API key required,
+ * not a billable Google Maps Platform request).
+ */
+const PLACE_DETAILS_ENDPOINT_BASE = 'https://places.googleapis.com/v1/places';
+const PLACE_DETAILS_TIMEOUT_MS = 10000;
+const PLACE_DETAILS_FIELD_MASK = 'id,displayName,currentOpeningHours,nationalPhoneNumber,rating,userRatingCount,location';
+
+async function callGooglePlaceDetails(placeId, { fetchImpl = fetch } = {}) {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) return { status: PROVIDER_STATUS.NOT_CONFIGURED, place: null };
+
+  const endpoint = `${PLACE_DETAILS_ENDPOINT_BASE}/${encodeURIComponent(placeId)}`;
+  const startedAt = Date.now();
+  let res;
+  try {
+    res = await fetchImpl(endpoint, {
+      method: 'GET',
+      headers: {
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': PLACE_DETAILS_FIELD_MASK,
+      },
+      signal: AbortSignal.timeout(PLACE_DETAILS_TIMEOUT_MS),
+    });
+  } catch (err) {
+    logDiscoveryEvent('google-place-details-failure', {
+      httpStatus: null,
+      googleStatus: null,
+      googleErrorMessage: err && err.name === 'TimeoutError' ? 'request timed out' : (err && err.message) || 'network error',
+      endpoint: PLACE_DETAILS_ENDPOINT_BASE,
+      elapsedMs: Date.now() - startedAt,
+    });
+    return { status: PROVIDER_STATUS.UNAVAILABLE, place: null };
+  }
+
+  let body = null;
+  let jsonParseFailed = false;
+  try {
+    body = await res.json();
+  } catch {
+    jsonParseFailed = true;
+  }
+
+  if (!res || !res.ok || jsonParseFailed) {
+    const googleError = body && body.error;
+    logDiscoveryEvent('google-place-details-failure', {
+      httpStatus: res ? res.status : null,
+      googleStatus: googleError ? googleError.status || null : null,
+      googleErrorCode: googleError ? googleError.code || null : null,
+      googleErrorMessage: googleError ? googleError.message || null : (jsonParseFailed ? 'response body was not valid JSON' : null),
+      endpoint: PLACE_DETAILS_ENDPOINT_BASE,
+      elapsedMs: Date.now() - startedAt,
+    });
+    // Covers a genuinely unknown/malformed placeId too (Google returns a
+    // non-2xx for that) -- never a crash, never a fabricated "found
+    // nothing" success, just the same honest UNAVAILABLE shape every
+    // other provider failure here already resolves to.
+    return { status: PROVIDER_STATUS.UNAVAILABLE, place: null };
+  }
+
+  logDiscoveryEvent('google-place-details-success', {
+    httpStatus: res.status,
+    elapsedMs: Date.now() - startedAt,
+  });
+  return { status: PROVIDER_STATUS.OK, place: body };
+}
+
+/**
  * discoverBusinesses({ locationId, scope, category, quantity, fetchImpl })
  * Authorizes locationId against scope exactly like every other
  * StadtPocket manager write/read (authorizeLocationAccess -- a City
@@ -351,6 +448,9 @@ module.exports = {
   DEFAULT_COUNTRY,
   PLACES_ENDPOINT,
   FIELD_MASK,
+  PLACE_DETAILS_ENDPOINT_BASE,
+  PLACE_DETAILS_FIELD_MASK,
+  callGooglePlaceDetails,
   // exported for direct unit testing only
   validateCategory,
   validateQuantity,
