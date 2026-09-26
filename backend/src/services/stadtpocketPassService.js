@@ -179,8 +179,30 @@ async function resolveOrCreatePass({ deviceToken } = {}) {
   };
 }
 
+/**
+ * Step 2 addition -- the reverse of resolveOrCreatePass's own linking
+ * step: given a Pass's public serialNumber (e.g. scanned/typed by
+ * authenticated business staff), resolve the canonical StadtPocket
+ * Customer.id it belongs to, or null if this serialNumber is not a
+ * StadtPocket platform Pass at all (e.g. an unrelated/old per-business
+ * QRAIVY Pass, or simply invalid). Never throws on a not-found lookup --
+ * "not found" is a legitimate, expected outcome for an invalid pass, not
+ * a failure.
+ *
+ * @param {string} serialNumber
+ * @returns {Promise<string|null>}
+ */
+async function resolveCustomerIdForPassSerial(serialNumber) {
+  if (typeof serialNumber !== 'string' || !serialNumber) return null;
+  const link = await prisma.customerIdentity.findFirst({
+    where: { ownerUserId: STADTPOCKET_PLATFORM_TENANT_ID, type: PASS_LINK_TYPE, value: serialNumber },
+  });
+  return link ? link.customerId : null;
+}
+
 module.exports = {
   resolveOrCreatePass,
+  resolveCustomerIdForPassSerial,
   isValidDeviceToken,
   generateOpaqueToken,
   STADTPOCKET_PASS_TYPE_ID,

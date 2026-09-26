@@ -28,6 +28,7 @@ const { requireStadtpocketWriteScope } = require('../middleware/stadtpocketManag
 const service = require('../services/stadtpocketManagerService');
 const { uploadStadtPocketHeaderImage } = require('../services/stadtPocketHeaderImageService');
 const loyaltyBridgeService = require('../services/stadtpocketLoyaltyBridgeService');
+const stampService = require('../services/stadtpocketStampService');
 const {
   discoverWebsiteImageCandidates,
   copyWebsiteImageToCloudinary,
@@ -313,6 +314,22 @@ async function handleCheckExistingLinkage(req, res) {
   }
 }
 
+// Working Model Step 2 — staff-initiated stamping. The client sends only
+// the customer's Pass.serialNumber; the backend derives everything else
+// (canonical customer, business/location authorization, loyalty
+// configuration) -- see stadtpocketStampService.js for the full trust
+// chain. Never trusts a client-supplied customerId, stampCount, or
+// business-ownership claim.
+async function handleStaffStamp(req, res) {
+  try {
+    const passSerialNumber = req.body && typeof req.body.passSerialNumber === 'string' ? req.body.passSerialNumber : null;
+    const result = await stampService.applyStaffStamp(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope, passSerialNumber);
+    return res.json(result);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/stamp POST');
+  }
+}
+
 // City-scoped list + create.
 router.get('/listings/:locationId', requireStadtpocketWriteScope, handleListListings);
 router.post('/listings/:locationId', requireStadtpocketWriteScope, handleInitializeDraft);
@@ -350,6 +367,7 @@ router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocke
 router.post('/listings/:locationId/:listingLocationId/loyalty/setup', requireStadtpocketWriteScope, handleSetupLoyalty);
 router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
 router.get('/listings/:locationId/:listingLocationId/loyalty/linkage-check', requireStadtpocketWriteScope, handleCheckExistingLinkage);
+router.post('/listings/:locationId/:listingLocationId/loyalty/stamp', requireStadtpocketWriteScope, handleStaffStamp);
 
 module.exports = router;
 module.exports.handleListListings = handleListListings; // exported for direct unit testing only
@@ -374,3 +392,4 @@ module.exports.handleConnectLoyalty = handleConnectLoyalty; // exported for dire
 module.exports.handleSetupLoyalty = handleSetupLoyalty; // exported for direct unit testing only
 module.exports.handleCheckExistingLinkage = handleCheckExistingLinkage; // exported for direct unit testing only
 module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only
+module.exports.handleStaffStamp = handleStaffStamp; // exported for direct unit testing only
