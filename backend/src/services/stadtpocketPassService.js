@@ -200,9 +200,38 @@ async function resolveCustomerIdForPassSerial(serialNumber) {
   return link ? link.customerId : null;
 }
 
+/**
+ * Customer loyalty read addition -- FIND-ONLY counterpart to
+ * resolveOrCreatePass's identity step: given a customer's own persisted
+ * deviceToken, return the canonical StadtPocket Customer.id it already
+ * belongs to, or null. Deliberately does NOT go through
+ * resolveOrCreateCustomerIdentity(): that mints a new Customer for an
+ * unknown token, and even its existing-identity path writes
+ * (touchExisting updates lastSeenAt/lastActivityAt). This is a single
+ * findUnique -- it never creates a Customer, CustomerIdentity, or Pass,
+ * and never updates any row. A malformed token is rejected before any
+ * database access.
+ *
+ * The returned id is for internal/service use only -- callers must
+ * NEVER include it in an HTTP response.
+ *
+ * @param {string} deviceToken
+ * @returns {Promise<string|null>}
+ */
+async function resolveCustomerIdForDeviceToken(deviceToken) {
+  if (!isValidDeviceToken(deviceToken)) return null;
+  const identity = await prisma.customerIdentity.findUnique({
+    where: {
+      ownerUserId_type_value: { ownerUserId: STADTPOCKET_PLATFORM_TENANT_ID, type: DEVICE_TOKEN_TYPE, value: deviceToken },
+    },
+  });
+  return identity ? identity.customerId : null;
+}
+
 module.exports = {
   resolveOrCreatePass,
   resolveCustomerIdForPassSerial,
+  resolveCustomerIdForDeviceToken,
   isValidDeviceToken,
   generateOpaqueToken,
   STADTPOCKET_PASS_TYPE_ID,
