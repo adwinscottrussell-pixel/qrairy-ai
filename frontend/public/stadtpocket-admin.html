@@ -1118,6 +1118,7 @@
 <script data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript"></script>
 <script src="js/stadtpocket-admin-guard.js"></script>
 <script src="js/stadtpocket-ai-research.js"></script>
+<script src="js/stadtpocket-pass-scanner.js"></script>
 <script>
   // ============================================================
   // stadtpocket-admin.html — StadtPocket Admin, Phase 6D.
@@ -3280,6 +3281,7 @@
     document.getElementById('loyalty-picker').style.display = 'none';
     document.getElementById('loyalty-diagnostic').style.display = (window.__stadtpocketRole === 'global_admin') ? '' : 'none';
     document.getElementById('loyalty-diagnostic-result').innerHTML = '';
+    stopPassScan();
     document.getElementById('stamp-workspace').innerHTML = '';
     banner('loyalty-banner', 'info', '');
     el.innerHTML = '<p class="muted">Lade…</p>';
@@ -3367,8 +3369,10 @@
   }
 
   // ── Stempelkarte: staff manual stamping (Step 3A) ─────────────────
-  // Manual Pass.serialNumber entry only -- no camera/QR scanning yet
-  // (added later, once this is proven end-to-end). This page submits
+  // Pass identification: camera QR scan ("QR-Code scannen", see
+  // js/stadtpocket-pass-scanner.js) OR manual Pass.serialNumber entry --
+  // both end in the SAME lookupCustomerPass() below. A scan only fills
+  // the Pass-Code input and runs that lookup; it never stamps. This page submits
   // ONLY the customer's Pass.serialNumber to the authenticated manager
   // endpoint; the backend alone resolves the canonical Customer,
   // business/location authorization, and stamp state. Never receives,
@@ -3378,12 +3382,25 @@
   let currentStampCustomerSerial = null;
 
   function renderStampWorkspace(program) {
+    stopPassScan();
     currentStampCustomerSerial = null;
     document.getElementById('stamp-workspace').innerHTML = `
       <div class="card section-card" style="margin-top:14px">
         <p style="margin:0 0 4px;font-weight:700;color:var(--text-primary)">Kunden-Pass</p>
-        <p class="muted" style="margin:0 0 12px">Pass-Code der Kundin/des Kunden eingeben, um den Stempelstand zu prüfen.</p>
+        <p class="muted" style="margin:0 0 12px">QR-Code des StadtPocket Pass scannen oder Pass-Code eingeben, um den Stempelstand zu prüfen.</p>
         <div id="stamp-banner"></div>
+        <div class="actions" style="margin-bottom:10px">
+          <button class="primary" type="button" id="stamp-scan-btn" onclick="startPassScan()">QR-Code scannen</button>
+        </div>
+        <div id="stamp-scan-box" style="display:none;margin-bottom:12px">
+          <video id="stamp-scan-video" playsinline muted autoplay
+                 style="display:block;width:100%;max-width:420px;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:#000"></video>
+          <p class="muted" id="stamp-scan-hint" style="margin:8px 0">Pass-QR-Code in den Rahmen halten…</p>
+          <div class="actions">
+            <button type="button" id="stamp-scan-cancel" onclick="cancelPassScan()">Abbrechen</button>
+          </div>
+        </div>
+        <p class="muted" style="margin:0 0 8px;text-align:center">oder</p>
         <input type="text" id="stamp-pass-input" placeholder="Pass-Code eingeben" autocomplete="off"
                style="width:100%;box-sizing:border-box;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:var(--surface-card-alt);color:var(--text-primary)" />
         <div class="actions">
@@ -3393,6 +3410,71 @@
       </div>
     `;
   }
+
+  // ── Camera QR scan (identification only) ────────────────────────
+  // One scanner at a time. On a valid Pass QR the scanner has ALREADY
+  // stopped the camera; the decoded serial is placed into the manual
+  // input and the EXISTING lookupCustomerPass() runs -- the same
+  // authenticated lookup as typing it. No stamp is ever sent from here.
+  let passScanner = null;
+
+  function setScanUi(scanning) {
+    const box = document.getElementById('stamp-scan-box');
+    const btn = document.getElementById('stamp-scan-btn');
+    if (box) box.style.display = scanning ? '' : 'none';
+    if (btn) btn.disabled = scanning;
+  }
+
+  function stopPassScan() {
+    if (passScanner) passScanner.stop();
+    passScanner = null;
+    setScanUi(false);
+  }
+
+  function cancelPassScan() {
+    stopPassScan();
+    const input = document.getElementById('stamp-pass-input');
+    if (input) input.focus();
+  }
+
+  function startPassScan() {
+    const S = window.StadtPocketPassScanner;
+    const video = document.getElementById('stamp-scan-video');
+    if (!S || !video || passScanner) return;
+    banner('stamp-banner', 'info', '');
+    document.getElementById('stamp-customer-result').innerHTML = '';
+    document.getElementById('stamp-scan-hint').textContent = 'Pass-QR-Code in den Rahmen halten…';
+    const md = navigator.mediaDevices;
+    passScanner = S.createPassScanner({
+      video,
+      getUserMedia: md && md.getUserMedia ? (c) => md.getUserMedia(c) : null,
+      getDecoder: () => S.loadJsQr(document, window).then((jsQR) => S.createFrameDecoder(jsQR, document)),
+      onSerial(serial) {
+        passScanner = null;
+        setScanUi(false);
+        const input = document.getElementById('stamp-pass-input');
+        if (!input) return;
+        input.value = serial;
+        lookupCustomerPass();
+      },
+      onInvalid() {
+        const hint = document.getElementById('stamp-scan-hint');
+        if (hint) hint.textContent = 'Das ist kein StadtPocket-Pass-QR-Code. Bitte den Pass der Kundin/des Kunden scannen.';
+      },
+      onError(message) {
+        passScanner = null;
+        setScanUi(false);
+        banner('stamp-banner', 'error', message);
+        const input = document.getElementById('stamp-pass-input');
+        if (input) input.focus();
+      },
+    });
+    setScanUi(true);
+    passScanner.start();
+  }
+
+  // Never leave the camera running when the page is hidden/left.
+  window.addEventListener('pagehide', stopPassScan);
 
   function stampErrorMessage(res) {
     if (res.status === 429) return 'Diese Kundin/dieser Kunde wurde schon vor Kurzem gestempelt. Bitte kurz warten.';
