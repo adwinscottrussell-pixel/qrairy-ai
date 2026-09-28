@@ -187,6 +187,10 @@ test('stepper stays within 2..50 and lowering the goal shows the "Stempel bleibe
   assert.match(dom.els['program-stamps-hint'].textContent, /Gesammelte Stempel bleiben erhalten/);
 });
 
+test('the internal Global-Admin QRAIVY-linkage diagnostic is not part of the business-facing Admin', () => {
+  assert.doesNotMatch(src, /loyalty-diagnostic|checkQraivyLinkage|QRAIVY-Verknüpfung prüfen|linkage-check/);
+});
+
 test('Stempelprogramm never shows customer balances', () => {
   const form = fnSource('renderProgramSettings') + fnSource('refreshProgramForm');
   assert.doesNotMatch(form, /stampCount|Kunde gefunden|Stempelstand/);
