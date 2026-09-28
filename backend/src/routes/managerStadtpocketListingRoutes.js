@@ -339,6 +339,37 @@ async function handleStaffStamp(req, res) {
 // (URL+query, not body) than a POST body is. Still genuinely read-only
 // despite the POST verb -- lookupPassForStamping's own contract is
 // unchanged.
+// Stempelprogramm -- business-level program configuration (enabled /
+// requiredStamps / rewardName) of this storefront's EXISTING loyalty
+// program. See stadtpocketLoyaltyBridgeService.js's getProgramConfig /
+// updateProgramConfig for the authorization and "customer balances are
+// never touched" guarantees; this file is routing only. The body is only
+// { enabled, requiredStamps, rewardName } -- the target program is derived
+// server-side, never from the request.
+async function handleGetProgramConfig(req, res) {
+  try {
+    const config = await loyaltyBridgeService.getProgramConfig(req.params.locationId, req.params.listingLocationId, req.stadtpocketScope);
+    return res.json(config);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/program GET');
+  }
+}
+
+async function handleUpdateProgramConfig(req, res) {
+  try {
+    const body = req.body || {};
+    const config = await loyaltyBridgeService.updateProgramConfig(
+      req.params.locationId,
+      req.params.listingLocationId,
+      req.stadtpocketScope,
+      { enabled: body.enabled, requiredStamps: body.requiredStamps, rewardName: body.rewardName }
+    );
+    return res.json(config);
+  } catch (err) {
+    return handleServiceError(err, res, 'manager/stadtpocket/listings/:locationId/:listingLocationId/loyalty/program PUT');
+  }
+}
+
 async function handleLookupPassForStamping(req, res) {
   try {
     const passSerialNumber = req.body && typeof req.body.passSerialNumber === 'string' ? req.body.passSerialNumber : null;
@@ -386,6 +417,8 @@ router.put('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocke
 router.post('/listings/:locationId/:listingLocationId/loyalty/setup', requireStadtpocketWriteScope, handleSetupLoyalty);
 router.delete('/listings/:locationId/:listingLocationId/loyalty', requireStadtpocketWriteScope, handleDisconnectLoyalty);
 router.get('/listings/:locationId/:listingLocationId/loyalty/linkage-check', requireStadtpocketWriteScope, handleCheckExistingLinkage);
+router.get('/listings/:locationId/:listingLocationId/loyalty/program', requireStadtpocketWriteScope, handleGetProgramConfig);
+router.put('/listings/:locationId/:listingLocationId/loyalty/program', requireStadtpocketWriteScope, handleUpdateProgramConfig);
 router.post('/listings/:locationId/:listingLocationId/loyalty/lookup', requireStadtpocketWriteScope, handleLookupPassForStamping);
 router.post('/listings/:locationId/:listingLocationId/loyalty/stamp', requireStadtpocketWriteScope, handleStaffStamp);
 
@@ -414,3 +447,5 @@ module.exports.handleCheckExistingLinkage = handleCheckExistingLinkage; // expor
 module.exports.handleDisconnectLoyalty = handleDisconnectLoyalty; // exported for direct unit testing only
 module.exports.handleStaffStamp = handleStaffStamp; // exported for direct unit testing only
 module.exports.handleLookupPassForStamping = handleLookupPassForStamping; // exported for direct unit testing only
+module.exports.handleGetProgramConfig = handleGetProgramConfig; // exported for direct unit testing only
+module.exports.handleUpdateProgramConfig = handleUpdateProgramConfig; // exported for direct unit testing only

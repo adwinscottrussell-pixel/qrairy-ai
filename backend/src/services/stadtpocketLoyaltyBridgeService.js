@@ -373,9 +373,88 @@ async function checkExistingQraivyLinkage(locationId, listingLocationId, scope) 
   };
 }
 
+// ── Stempelprogramm: business-level program configuration ────────
+// Manager-scoped read/write of the EXISTING StampSettings row behind this
+// storefront's loyalty bridge -- no second settings model, and never the
+// legacy /lp/stamp/settings writer. Same trust chain as every other
+// StadtPocket manager route: requireStadtpocketWriteScope (route) ->
+// findListingLocationInCityOrThrow (authorizeLocationAccess + the
+// storefront really belongs to that city). The target program is always
+// derived server-side from the storefront's own loyaltyLandingPageId --
+// no slug, landingPageId, or program id is ever accepted from the caller,
+// so one business can never address another business's program.
+//
+// Unlike getBridgeState (which deliberately reports a DISABLED program as
+// "not connected", because stamping/lookup/public/customer reads must
+// treat it as unavailable), this read returns the program whether it is
+// enabled or not -- the Stempelprogramm page must be able to show and
+// re-enable an inactive program. getBridgeState itself is unchanged.
+//
+// Program configuration only: LoyaltyCustomer (stampCount, totalStamps,
+// rewards) and StampEntry are never read or written here, so changing
+// requiredStamps / rewardName / enabled can never reset or alter any
+// customer's balance.
+//
+// Editable only for platform-managed programs (LandingPage.userId null,
+// created by the StadtPocket setup wizard). A connected QRAIVY owner's
+// program is shown read-only (editable: false) and refused on write -- it
+// is managed in that owner's QRAIVY account.
+async function resolveConfiguredProgram(locationId, listingLocationId, scope) {
+  const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
+  if (!listingLocation.loyaltyLandingPageId) return { listingLocation, landingPage: null, settings: null };
+  const landingPage = await prisma.landingPage.findUnique({ where: { id: listingLocation.loyaltyLandingPageId } });
+  if (!landingPage) return { listingLocation, landingPage: null, settings: null };
+  const settings = await prisma.stampSettings.findUnique({ where: { slug: landingPage.slug } });
+  return { listingLocation, landingPage, settings };
+}
+
+function toProgramConfig(listingLocation, landingPage, settings) {
+  if (!landingPage || !settings) return { configured: false };
+  return {
+    configured: true,
+    editable: landingPage.userId === null,
+    program: {
+      enabled: settings.enabled === true,
+      requiredStamps: settings.goal,
+      rewardName: settings.rewardName,
+      businessName: listingLocation.listing.name,
+    },
+  };
+}
+
+async function getProgramConfig(locationId, listingLocationId, scope) {
+  const { listingLocation, landingPage, settings } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
+  return toProgramConfig(listingLocation, landingPage, settings);
+}
+
+async function updateProgramConfig(locationId, listingLocationId, scope, input) {
+  const body = input || {};
+  if (typeof body.enabled !== 'boolean') {
+    throw new StadtpocketManagerError('enabled must be true or false.');
+  }
+  const goal = validateGoal(body.requiredStamps);
+  const rewardName = validateRewardName(body.rewardName);
+
+  const { listingLocation, landingPage, settings } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
+  if (!landingPage || !settings) {
+    throw new StadtpocketManagerError('Für dieses Geschäft ist noch kein Stempelprogramm eingerichtet.', 404);
+  }
+  if (landingPage.userId !== null) {
+    throw new StadtpocketManagerError('Dieses Stempelprogramm wird im QRAIVY-Konto des Geschäfts verwaltet.', 403);
+  }
+
+  const updated = await prisma.stampSettings.update({
+    where: { slug: landingPage.slug },
+    data: { goal, rewardName, enabled: body.enabled },
+  });
+  return toProgramConfig(listingLocation, landingPage, updated);
+}
+
 module.exports = {
   listEligiblePrograms,
   getBridgeState,
+  getProgramConfig,
+  updateProgramConfig,
   connectProgram,
   disconnectProgram,
   createAndConnectProgram,

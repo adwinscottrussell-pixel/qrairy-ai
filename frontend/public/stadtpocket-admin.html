@@ -392,6 +392,12 @@
   .nav-item .nav-icon { width: 18px; text-align: center; flex-shrink: 0; }
   .nav-item.disabled { color: var(--text-tertiary); opacity: 0.42; cursor: not-allowed; }
   .nav-item.disabled:hover { background: transparent; color: var(--text-tertiary); }
+  .nav-group-label { margin: 14px 12px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+  .program-field { margin: 0 0 18px; }
+  .program-field > label { display: block; margin: 0 0 8px; font-weight: 600; color: var(--text-primary); }
+  .program-toggle { display: inline-flex; gap: 8px; }
+  .program-stepper { display: inline-flex; align-items: center; gap: 10px; }
+  .program-stepper .count { min-width: 44px; text-align: center; font-size: 22px; font-weight: 700; color: var(--text-primary); }
   .nav-item .soon-badge { margin-left: auto; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); }
 
   .sidebar-support { margin-top: 16px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; }
@@ -706,7 +712,10 @@
     <div class="nav-item disabled"><span class="nav-icon">⚲</span>Standorte<span class="soon-badge">Bald</span></div>
     <div class="nav-item" id="nav-angebote" onclick="goToOffersList()"><span class="nav-icon">◆</span>Angebote</div>
     <div class="nav-item" id="nav-aktuelles" onclick="goToAktuelles()"><span class="nav-icon">▤</span>Aktuelles</div>
-    <div class="nav-item" id="nav-stempelkarte" onclick="goToStempelkarte()"><span class="nav-icon">▦</span>Stempelkarte</div>
+    <div class="nav-group-label">Loyalty</div>
+    <div class="nav-item" id="nav-stempelprogramm" onclick="goToStempelprogramm()"><span class="nav-icon">▦</span>Stempelprogramm</div>
+    <div class="nav-item" id="nav-kunden-stempeln" onclick="goToKundenStempeln()"><span class="nav-icon">✓</span>Kunden stempeln</div>
+    <div class="nav-item" id="nav-belohnungen" onclick="goToBelohnungen()"><span class="nav-icon">★</span>Belohnungen</div>
     <div class="nav-item disabled"><span class="nav-icon">▧</span>Galerie / Medien<span class="soon-badge">Bald</span></div>
     <div class="nav-item disabled"><span class="nav-icon">▥</span>Statistiken<span class="soon-badge">Bald</span></div>
     <div class="nav-item disabled"><span class="nav-icon">◐</span>Kunden<span class="soon-badge">Bald</span></div>
@@ -1030,18 +1039,20 @@
        stamp counts, customer identity, or wallet state -- the backend
        has nothing of that kind to return to this endpoint in the first
        place. -->
-  <section class="page" id="page-stempelkarte">
+  <!-- LOYALTY is split into three separate destinations (2026-09-28):
+       Stempelprogramm (business-level program configuration, this
+       section), Kunden stempeln (daily counter workflow) and Belohnungen
+       (reward redemption -- next milestone). Stempelprogramm never shows
+       customer data. -->
+  <section class="page" id="page-stempelprogramm">
     <div class="page-heading-row">
       <div>
-        <h1>Stempelkarte</h1>
-        <p class="subtitle">Belohne deine Stammkunden.</p>
+        <h1>Stempelprogramm</h1>
+        <p class="subtitle">Lege fest, wie viele Stempel deine Kunden sammeln und welche Belohnung sie erhalten.</p>
       </div>
     </div>
     <div id="loyalty-banner"></div>
     <div id="loyalty-workspace"></div>
-    <!-- Step 3A -- staff manual stamping. Populated only while a program
-         is connected (renderConnectedProgram); cleared otherwise. -->
-    <div id="stamp-workspace"></div>
     <div id="loyalty-picker" class="card section-card" style="display:none;margin-top:14px">
       <label>QRAIVY-Stempelkarte auswählen</label>
       <select id="loyalty-picker-select"></select>
@@ -1058,6 +1069,36 @@
       <p class="muted" style="margin:0 0 10px">Nur für Global Admin: prüft, ob für dieses Geschäft bereits eine QRAIVY-Verknüpfung existiert (nur lesend).</p>
       <button class="secondary" type="button" id="loyalty-diagnostic-btn" onclick="checkQraivyLinkage()">QRAIVY-Verknüpfung prüfen</button>
       <div id="loyalty-diagnostic-result" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- KUNDEN STEMPELN -- the daily staff counter workflow (QR scan or
+       Pass-Code -> Kunde prüfen -> explicit "+ 1 Stempel"), moved here
+       unchanged from the old Stempelkarte page. No program configuration
+       on this page. -->
+  <section class="page" id="page-kunden-stempeln">
+    <div class="page-heading-row">
+      <div>
+        <h1>Kunden stempeln</h1>
+        <p class="subtitle">StadtPocket Pass scannen oder Pass-Code eingeben und Stempel vergeben.</p>
+      </div>
+    </div>
+    <div id="stamp-workspace"></div>
+  </section>
+
+  <!-- BELOHNUNGEN -- honest placeholder. Reward unlock/redemption is the
+       next milestone; nothing here reads customers or writes anything. -->
+  <section class="page" id="page-belohnungen">
+    <div class="page-heading-row">
+      <div>
+        <h1>Belohnungen</h1>
+        <p class="subtitle">Einlösungen deiner Stammkunden.</p>
+      </div>
+    </div>
+    <div class="card section-card empty-state">
+      <p style="margin:0 0 8px;font-weight:700;color:var(--text-primary)">Belohnungen einlösen – bald verfügbar</p>
+      <p class="muted" style="margin:0 auto;max-width:440px">Sobald eine Kundin oder ein Kunde genug Stempel gesammelt hat, erscheint die Belohnung hier und kann eingelöst werden.</p>
+      <p id="belohnungen-program" class="muted" style="margin:18px 0 0"></p>
     </div>
   </section>
 
@@ -1254,9 +1295,16 @@
       // satisfies without tracking wizard-step state across a reload.
       showPage('page-offers');
       await renderOffersSection();
-    } else if (ctx.pageId === 'page-stempelkarte') {
-      showPage('page-stempelkarte');
+    } else if (ctx.pageId === 'page-stempelprogramm' || ctx.pageId === 'page-stempelkarte') {
+      // 'page-stempelkarte' = a context saved before the LOYALTY split.
+      showPage('page-stempelprogramm');
       await renderLoyaltyWorkspace();
+    } else if (ctx.pageId === 'page-kunden-stempeln') {
+      showPage('page-kunden-stempeln');
+      await renderKundenStempelnWorkspace();
+    } else if (ctx.pageId === 'page-belohnungen') {
+      showPage('page-belohnungen');
+      await renderBelohnungen();
     } else {
       showPage('page-editor');
     }
@@ -1269,10 +1317,11 @@
   // which of the two top-level wrappers is shown, since a City Manager
   // is only ever "inside" the sidebar-driven Business Portal once a
   // specific business is open.
-  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor', 'page-stempelkarte', 'page-aktuelles', 'page-update-editor'];
-  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote', 'page-stempelkarte': 'nav-stempelkarte', 'page-aktuelles': 'nav-aktuelles', 'page-update-editor': 'nav-aktuelles' };
+  const SHELL_PAGES = ['page-editor', 'page-offers', 'page-offer-editor', 'page-stempelprogramm', 'page-kunden-stempeln', 'page-belohnungen', 'page-aktuelles', 'page-update-editor'];
+  const NAV_FOR_PAGE = { 'page-editor': 'nav-profil', 'page-offers': 'nav-angebote', 'page-offer-editor': 'nav-angebote', 'page-stempelprogramm': 'nav-stempelprogramm', 'page-kunden-stempeln': 'nav-kunden-stempeln', 'page-belohnungen': 'nav-belohnungen', 'page-aktuelles': 'nav-aktuelles', 'page-update-editor': 'nav-aktuelles' };
 
   function showPage(id) {
+    if (id !== 'page-kunden-stempeln' && typeof stopPassScan === 'function') stopPassScan();
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 
@@ -1361,7 +1410,12 @@
   function goToOffersList() { showPage('page-offers'); renderOffersSection(); }
   // Stempelkarte (Phase 3A) — its own workspace, sibling of Angebote,
   // same pattern exactly.
-  function goToStempelkarte() { showPage('page-stempelkarte'); renderLoyaltyWorkspace(); }
+  function goToStempelprogramm() { showPage('page-stempelprogramm'); renderLoyaltyWorkspace(); }
+  function goToKundenStempeln() { showPage('page-kunden-stempeln'); renderKundenStempelnWorkspace(); }
+  function goToBelohnungen() { showPage('page-belohnungen'); renderBelohnungen(); }
+  // Kept for any older caller -- the LOYALTY split made Stempelprogramm the
+  // program destination.
+  function goToStempelkarte() { goToStempelprogramm(); }
 
   async function getToken() {
     await window.Clerk.load();
@@ -3282,17 +3336,20 @@
     document.getElementById('loyalty-diagnostic').style.display = (window.__stadtpocketRole === 'global_admin') ? '' : 'none';
     document.getElementById('loyalty-diagnostic-result').innerHTML = '';
     stopPassScan();
-    document.getElementById('stamp-workspace').innerHTML = '';
     banner('loyalty-banner', 'info', '');
     el.innerHTML = '<p class="muted">Lade…</p>';
 
-    const stateRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`);
-    if (!stateRes.ok) {
-      el.innerHTML = '<p class="muted">Fehler beim Laden der Stempelkarte.</p>';
+    // Authoritative program configuration (manager-scoped GET
+    // .../loyalty/program) -- unlike the bridge state it also returns an
+    // INACTIVE program, so a disabled program is shown (and can be
+    // re-enabled) instead of looking like "nothing set up yet".
+    const configRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/program`);
+    if (!configRes.ok) {
+      el.innerHTML = '<p class="muted">Fehler beim Laden des Stempelprogramms.</p>';
       return;
     }
-    if (stateRes.body.connected) {
-      renderConnectedProgram(stateRes.body.program);
+    if (configRes.body.configured) {
+      renderProgramSettings(configRes.body);
       return;
     }
 
@@ -3353,19 +3410,177 @@
     `;
   }
 
-  function renderConnectedProgram(program) {
-    document.getElementById('loyalty-workspace').innerHTML = `
+  // ── Stempelprogramm: program configuration form ─────────────────
+  // Business-level only: status, required stamps, reward. Saves ONLY
+  // { enabled, requiredStamps, rewardName } through the manager-scoped
+  // PUT .../loyalty/program -- never the legacy /lp/stamp/settings route.
+  // Customer balances are never shown or touched here; changing the goal
+  // or reward never resets anyone's collected stamps.
+  const PROGRAM_MIN_STAMPS = 2;
+  const PROGRAM_MAX_STAMPS = 50;
+  const PROGRAM_MAX_REWARD_LENGTH = 80;
+  let programForm = null;
+
+  function renderProgramSettings(config) {
+    const program = config.program;
+    const el = document.getElementById('loyalty-workspace');
+    if (!config.editable) {
+      programForm = null;
+      el.innerHTML = `
+        <div class="card section-card">
+          <span class="status-pill ${program.enabled ? 'published' : 'none'}">${program.enabled ? 'Aktiv' : 'Inaktiv'}</span>
+          <p style="margin:14px 0 2px;font-weight:700;color:var(--text-primary)">${escapeHtml(String(program.requiredStamps))} Stempel</p>
+          <p class="muted" style="margin:0 0 8px">Belohnung: ${escapeHtml(program.rewardName)}</p>
+          <p class="muted" style="margin:0 0 16px">Dieses Stempelprogramm wird im QRAIVY-Konto des Geschäfts verwaltet und kann hier nicht bearbeitet werden.</p>
+          <div class="actions">
+            <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    programForm = {
+      enabled: program.enabled,
+      requiredStamps: program.requiredStamps,
+      rewardName: program.rewardName,
+      savedRequiredStamps: program.requiredStamps,
+    };
+    el.innerHTML = `
       <div class="card section-card">
-        <span class="status-pill published">Aktiv</span>
-        <p style="margin:14px 0 2px;font-weight:700;color:var(--text-primary)">Deine Stempelkarte</p>
-        <p style="margin:0 0 2px;color:var(--text-primary)">${escapeHtml(String(program.requiredStamps))} Stempel</p>
-        <p class="muted" style="margin:0 0 16px">Belohnung: ${escapeHtml(program.rewardTitle)}</p>
+        <div class="program-field">
+          <label>Status</label>
+          <div class="program-toggle">
+            <button type="button" id="program-enabled-on" onclick="setProgramEnabled(true)">Aktiv</button>
+            <button type="button" id="program-enabled-off" onclick="setProgramEnabled(false)">Inaktiv</button>
+          </div>
+          <p class="muted" id="program-enabled-hint" style="margin:8px 0 0"></p>
+        </div>
+        <div class="program-field">
+          <label>Benötigte Stempel</label>
+          <div class="program-stepper">
+            <button class="secondary" type="button" id="program-stamps-minus" onclick="changeProgramStamps(-1)" aria-label="Weniger Stempel">−</button>
+            <span class="count" id="program-stamps-value"></span>
+            <button class="secondary" type="button" id="program-stamps-plus" onclick="changeProgramStamps(1)" aria-label="Mehr Stempel">+</button>
+          </div>
+          <p class="muted" id="program-stamps-hint" style="margin:8px 0 0"></p>
+        </div>
+        <div class="program-field">
+          <label for="program-reward-input">Belohnung</label>
+          <input type="text" id="program-reward-input" maxlength="${PROGRAM_MAX_REWARD_LENGTH}" autocomplete="off"
+                 oninput="programForm && (programForm.rewardName = this.value)"
+                 style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:var(--surface-card-alt);color:var(--text-primary)" />
+        </div>
         <div class="actions">
+          <button class="primary" type="button" id="program-save-btn" onclick="saveProgramSettings()">Änderungen speichern</button>
           <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
         </div>
       </div>
     `;
-    renderStampWorkspace(program);
+    document.getElementById('program-reward-input').value = programForm.rewardName;
+    refreshProgramForm();
+  }
+
+  function refreshProgramForm() {
+    if (!programForm) return;
+    document.getElementById('program-enabled-on').className = programForm.enabled ? 'primary' : 'secondary';
+    document.getElementById('program-enabled-off').className = programForm.enabled ? 'secondary' : 'primary';
+    document.getElementById('program-enabled-hint').textContent = programForm.enabled
+      ? 'Kunden sehen die Stempelkarte und können gestempelt werden.'
+      : 'Inaktiv: Kunden sehen keine Stempelkarte und es kann nicht gestempelt werden. Gesammelte Stempel bleiben erhalten.';
+    document.getElementById('program-stamps-value').textContent = String(programForm.requiredStamps);
+    document.getElementById('program-stamps-minus').disabled = programForm.requiredStamps <= PROGRAM_MIN_STAMPS;
+    document.getElementById('program-stamps-plus').disabled = programForm.requiredStamps >= PROGRAM_MAX_STAMPS;
+    document.getElementById('program-stamps-hint').textContent = programForm.requiredStamps < programForm.savedRequiredStamps
+      ? 'Kunden, die bereits so viele Stempel haben, erreichen ihre Belohnung sofort. Gesammelte Stempel bleiben erhalten.'
+      : 'Gesammelte Stempel deiner Kunden bleiben bei Änderungen erhalten.';
+  }
+
+  function setProgramEnabled(enabled) {
+    if (!programForm) return;
+    programForm.enabled = enabled;
+    refreshProgramForm();
+  }
+
+  function changeProgramStamps(delta) {
+    if (!programForm) return;
+    const next = programForm.requiredStamps + delta;
+    if (next < PROGRAM_MIN_STAMPS || next > PROGRAM_MAX_STAMPS) return;
+    programForm.requiredStamps = next;
+    refreshProgramForm();
+  }
+
+  function programErrorMessage(res) {
+    if (res.status === 403 || res.status === 404) return (res.body && res.body.error) || 'Keine Berechtigung für dieses Stempelprogramm.';
+    if (res.status === 400) return `Bitte Eingaben prüfen: ${PROGRAM_MIN_STAMPS}–${PROGRAM_MAX_STAMPS} Stempel und eine Belohnung mit höchstens ${PROGRAM_MAX_REWARD_LENGTH} Zeichen.`;
+    return 'Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.';
+  }
+
+  async function saveProgramSettings() {
+    if (!programForm) return;
+    const btn = document.getElementById('program-save-btn');
+    if (btn.disabled) return;
+    const rewardName = (programForm.rewardName || '').trim();
+    if (!rewardName || rewardName.length > PROGRAM_MAX_REWARD_LENGTH) {
+      banner('loyalty-banner', 'error', `Bitte eine Belohnung mit höchstens ${PROGRAM_MAX_REWARD_LENGTH} Zeichen eingeben.`);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Speichert…';
+    banner('loyalty-banner', 'info', '');
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/program`, {
+      method: 'PUT',
+      body: { enabled: programForm.enabled, requiredStamps: programForm.requiredStamps, rewardName },
+    });
+    btn.disabled = false;
+    btn.textContent = 'Änderungen speichern';
+    if (!res.ok) {
+      banner('loyalty-banner', 'error', programErrorMessage(res));
+      return;
+    }
+    renderProgramSettings(res.body);
+    banner('loyalty-banner', 'success', '✓ Änderungen gespeichert');
+  }
+
+  // ── Kunden stempeln: loads the ACTIVE program, then the unchanged
+  // staff workspace (renderStampWorkspace below). An inactive or missing
+  // program shows an honest empty state instead of the scanner. ──
+  async function renderKundenStempelnWorkspace() {
+    stopPassScan();
+    const el = document.getElementById('stamp-workspace');
+    el.innerHTML = '<p class="muted">Lade…</p>';
+    const stateRes = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty`);
+    if (!stateRes.ok) {
+      el.innerHTML = '<p class="muted">Fehler beim Laden des Stempelprogramms.</p>';
+      return;
+    }
+    if (!stateRes.body.connected) {
+      el.innerHTML = `
+        <div class="card section-card empty-state">
+          <p style="margin:0 0 8px;font-weight:700;color:var(--text-primary)">Kein aktives Stempelprogramm</p>
+          <p class="muted" style="margin:0 0 20px">Richte das Stempelprogramm ein oder aktiviere es, um Kunden zu stempeln.</p>
+          <button class="primary" type="button" onclick="goToStempelprogramm()">Zum Stempelprogramm</button>
+        </div>
+      `;
+      return;
+    }
+    renderStampWorkspace(stateRes.body.program);
+  }
+
+  // ── Belohnungen: honest placeholder. Only shows the business's own
+  // current reward (read-only, from the program configuration). No
+  // customers, no redemption, no writes. ──
+  async function renderBelohnungen() {
+    const line = document.getElementById('belohnungen-program');
+    line.textContent = '';
+    const res = await api(`/manager/stadtpocket/listings/${currentLocationId}/${currentListingLocationId}/loyalty/program`);
+    if (!res.ok || !res.body.configured) {
+      line.textContent = 'Noch kein Stempelprogramm eingerichtet.';
+      return;
+    }
+    const program = res.body.program;
+    line.textContent = program.enabled
+      ? `Aktuelle Belohnung: ${program.rewardName} nach ${program.requiredStamps} Stempeln.`
+      : 'Das Stempelprogramm ist derzeit inaktiv.';
   }
 
   // ── Stempelkarte: staff manual stamping (Step 3A) ─────────────────
@@ -3512,6 +3727,7 @@
     }
 
     currentStampCustomerSerial = passSerialNumber;
+    input.value = ''; // the Pass-Code is no longer needed on screen once the customer is identified
     renderStampCustomerFound(res.body);
   }
 
@@ -3524,6 +3740,7 @@
         <p class="muted" style="margin:0 0 14px">Belohnung: ${escapeHtml(data.rewardName)}</p>
         <div class="actions">
           <button class="primary" type="button" id="stamp-add-btn" onclick="addStampForCurrentCustomer()">+ 1 Stempel hinzufügen</button>
+          <button class="secondary" type="button" id="stamp-next-btn" onclick="nextCustomer()">Nächster Kunde</button>
         </div>
       </div>
     `;
@@ -3553,6 +3770,21 @@
     document.getElementById('stamp-current-count').textContent = `${res.body.stampCount} / ${res.body.requiredStamps} Stempel`;
     btn.disabled = false;
     btn.textContent = '+ 1 Stempel hinzufügen';
+  }
+
+  // "Nächster Kunde": resets the counter UI for the next customer --
+  // camera, identified customer, Pass-Code input, result and banner. UI
+  // state only: no request, no loyalty data touched.
+  function nextCustomer() {
+    stopPassScan();
+    currentStampCustomerSerial = null;
+    const input = document.getElementById('stamp-pass-input');
+    if (input) input.value = '';
+    const result = document.getElementById('stamp-customer-result');
+    if (result) result.innerHTML = '';
+    banner('stamp-banner', 'info', '');
+    const scanBtn = document.getElementById('stamp-scan-btn');
+    if (scanBtn) scanBtn.focus();
   }
 
   // "Stempelkarte einrichten" CTA (honest-empty-state primary action).
