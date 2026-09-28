@@ -103,7 +103,10 @@ router.get('/redeem/:slug/:token', handleRedeemTap);
 router.post('/redeem/:slug/:token/confirm', handleRedeemTapConfirm);
 // Stamp dashboard API (auth required via frontend)
 router.get('/lp/stamp/token/:slug', handleGetStampToken);
-router.post('/lp/stamp/settings/:slug', handleStampSettings);
+// Security hotfix: writing a program's loyalty settings requires the
+// landing page's authenticated owner (requireAuth here + owner check in
+// handleStampSettings) -- previously this accepted anonymous writes.
+router.post('/lp/stamp/settings/:slug', requireAuth, handleStampSettings);
 router.get('/lp/stamp/settings/:slug', handleGetStampSettings);
 // Serve live landing page (public — no auth)
 router.post('/stamp/:slug/customer', handleCustomerStamp); // per-customer stamp

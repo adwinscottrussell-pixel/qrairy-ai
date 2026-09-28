@@ -2353,6 +2353,16 @@ async function handleGetStampToken(req, res) {
 async function handleStampSettings(req, res) {
   try {
     const { slug } = req.params;
+    // Security hotfix: only the landing page's own authenticated owner may
+    // write its loyalty settings (same rule as loyaltyAdminController's
+    // updateProgram). requireAuth (lpRoutes.js) sets req.userId. An unknown
+    // slug is refused instead of creating settings for it, and a platform-
+    // managed page (userId null, e.g. a StadtPocket program) can never be
+    // written through this route. Field semantics below are unchanged.
+    if (!req.userId) return res.status(401).json({ error: 'Unauthorized.' });
+    const page = await prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } });
+    if (!page) return res.status(404).json({ error: 'Not found' });
+    if (!page.userId || page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
     const { goal, rewardName, enabled } = req.body;
     const settings = await prisma.stampSettings.upsert({
       where: { slug },
