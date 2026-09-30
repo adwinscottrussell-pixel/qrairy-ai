@@ -49,8 +49,8 @@ function resetFixtures() {
 // `listing.name` is the public StadtPocket business name -- read by
 // checkExistingQraivyLinkage as its search term, exactly like the real
 // service does off the real include:{listing:true} relation.
-function addListingLocation({ id = 'll_staib', locationId = ULM, businessLocationId = null, loyaltyLandingPageId = null, listingName = 'Bäckerei Staib' } = {}) {
-  listingLocationRows.push({ id, locationId, businessLocationId, loyaltyLandingPageId, listing: { name: listingName } });
+function addListingLocation({ id = 'll_staib', locationId = ULM, businessLocationId = null, loyaltyLandingPageId = null, listingName = 'Bäckerei Staib', listingId = `lst_${id}` } = {}) {
+  listingLocationRows.push({ id, locationId, businessLocationId, loyaltyLandingPageId, listingId, listing: { id: listingId, name: listingName } });
   return listingLocationRows[listingLocationRows.length - 1];
 }
 
@@ -70,9 +70,22 @@ function addStampSettings({ slug, goal = 10, rewardName = 'Free item', enabled =
   stampSettingsRows.push({ id: `ss_${++seq}`, slug, goal, rewardName, enabled, color: '#ff5a1f' });
 }
 
+function matchLink(ll, where) {
+  const lp = where.loyaltyLandingPageId;
+  if (lp && typeof lp === 'object' && lp.in) { if (!lp.in.includes(ll.loyaltyLandingPageId)) return false; }
+  else if (lp !== undefined && ll.loyaltyLandingPageId !== lp) return false;
+  const li = where.listingId;
+  if (li && typeof li === 'object' && 'not' in li) { if (ll.listingId === li.not) return false; }
+  else if (li !== undefined && ll.listingId !== li) return false;
+  return true;
+}
+
 const mockPrisma = {
   stadtPocketListingLocation: {
     findUnique: async ({ where }) => listingLocationRows.find((ll) => ll.id === where.id) || null,
+    // Isolation queries: { loyaltyLandingPageId, listingId: <id> | { not: <id> } }
+    findFirst: async ({ where }) => listingLocationRows.find((ll) => matchLink(ll, where)) || null,
+    findMany: async ({ where }) => listingLocationRows.filter((ll) => matchLink(ll, where)).map((ll) => ({ loyaltyLandingPageId: ll.loyaltyLandingPageId, listingId: ll.listingId })),
     update: async ({ where, data }) => {
       const ll = listingLocationRows.find((r) => r.id === where.id);
       if (!ll) throw new Error('row not found');

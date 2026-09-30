@@ -65,6 +65,34 @@ function toProgramSummary(landingPage, stampSettings) {
   };
 }
 
+// ── Cross-business isolation (2026-09-30) ─────────────────────────
+// A loyalty program (LandingPage + StampSettings) belongs to exactly ONE
+// StadtPocket listing (business). Storefronts of the SAME listing may
+// share it -- the explicit, supported multi-location case -- but a
+// storefront of ANOTHER listing must never be linked to it: that would
+// make the other business resolve this business's goal, reward and every
+// customer's balance (the LoyaltyCustomer key is the program slug).
+// Enforced here in the service for every caller, Global Admin included;
+// no schema constraint, because same-listing sharing must stay possible.
+
+// A storefront of a DIFFERENT listing already linked to this program, or null.
+async function findForeignProgramLink(client, landingPageId, listingId) {
+  return client.stadtPocketListingLocation.findFirst({
+    where: { loyaltyLandingPageId: landingPageId, listingId: { not: listingId } },
+    select: { id: true },
+  });
+}
+
+// A storefront of the SAME listing already linked to this program, or null.
+async function findSameListingProgramLink(client, landingPageId, listingId) {
+  return client.stadtPocketListingLocation.findFirst({
+    where: { loyaltyLandingPageId: landingPageId, listingId },
+    select: { id: true },
+  });
+}
+
+const FOREIGN_PROGRAM_MESSAGE = 'Dieses Stempelprogramm gehört zu einem anderen Geschäft.';
+
 // The claim link a scoped (non-Global-Admin) caller's eligibility is
 // checked against. Null whenever the listing hasn't been claimed yet
 // (the common case today) — never fabricated, never inferred another way.
@@ -103,8 +131,24 @@ async function listEligiblePrograms(locationId, listingLocationId, scope, query 
   const settingsRows = await prisma.stampSettings.findMany({ where: { slug: { in: slugs }, enabled: true } });
   const settingsBySlug = new Map(settingsRows.map((s) => [s.slug, s]));
 
+  // Isolation: never offer a program linked to ANOTHER listing's
+  // storefront, and never offer a platform-managed program (userId null,
+  // created by the StadtPocket setup wizard for some business) unless it
+  // already belongs to THIS listing -- a Global Admin's unfiltered list
+  // previously offered other StadtPocket businesses' programs as "found".
+  const links = await prisma.stadtPocketListingLocation.findMany({
+    where: { loyaltyLandingPageId: { in: landingPages.map((lp) => lp.id) } },
+    select: { loyaltyLandingPageId: true, listingId: true },
+  });
+  const isEligible = (lp) => {
+    const own = links.filter((l) => l.loyaltyLandingPageId === lp.id);
+    if (own.some((l) => l.listingId !== listingLocation.listingId)) return false;
+    if (lp.userId === null && !own.some((l) => l.listingId === listingLocation.listingId)) return false;
+    return true;
+  };
+
   return landingPages
-    .filter((lp) => settingsBySlug.has(lp.slug))
+    .filter((lp) => settingsBySlug.has(lp.slug) && isEligible(lp))
     .map((lp) => toProgramSummary(lp, settingsBySlug.get(lp.slug)));
 }
 
@@ -149,6 +193,14 @@ async function connectProgram(locationId, listingLocationId, scope, landingPageI
     if (!businessId || landingPage.businessId !== businessId) {
       throw new StadtpocketManagerError('This loyalty program does not belong to this business.', 403);
     }
+  }
+
+  // Isolation -- applies to Global Admin too (see header of this section).
+  if (await findForeignProgramLink(prisma, landingPage.id, listingLocation.listingId)) {
+    throw new StadtpocketManagerError(FOREIGN_PROGRAM_MESSAGE, 409);
+  }
+  if (landingPage.userId === null && !(await findSameListingProgramLink(prisma, landingPage.id, listingLocation.listingId))) {
+    throw new StadtpocketManagerError('Plattform-Stempelprogramme können nur für das eigene Geschäft eingerichtet werden.', 409);
   }
 
   await prisma.stadtPocketListingLocation.update({
@@ -288,6 +340,14 @@ async function createAndConnectProgram(locationId, listingLocationId, scope, inp
       });
     }
 
+    // Isolation: if the program this storefront currently points to (or
+    // the claimed business's page) is also linked to ANOTHER listing,
+    // writing goal/reward here would change that other business's
+    // program. Refuse; the storefront must be disconnected first.
+    if (await findForeignProgramLink(tx, landingPage.id, fresh.listingId)) {
+      throw new StadtpocketManagerError(`${FOREIGN_PROGRAM_MESSAGE} Bitte zuerst trennen und dann ein eigenes Stempelprogramm einrichten.`, 409);
+    }
+
     await tx.stampSettings.upsert({
       where: { slug: landingPage.slug },
       create: { slug: landingPage.slug, goal, rewardName, enabled: true },
@@ -401,18 +461,20 @@ async function checkExistingQraivyLinkage(locationId, listingLocationId, scope) 
 // is managed in that owner's QRAIVY account.
 async function resolveConfiguredProgram(locationId, listingLocationId, scope) {
   const listingLocation = await findListingLocationInCityOrThrow(locationId, listingLocationId, scope);
-  if (!listingLocation.loyaltyLandingPageId) return { listingLocation, landingPage: null, settings: null };
+  if (!listingLocation.loyaltyLandingPageId) return { listingLocation, landingPage: null, settings: null, sharedWithOtherBusiness: false };
   const landingPage = await prisma.landingPage.findUnique({ where: { id: listingLocation.loyaltyLandingPageId } });
-  if (!landingPage) return { listingLocation, landingPage: null, settings: null };
+  if (!landingPage) return { listingLocation, landingPage: null, settings: null, sharedWithOtherBusiness: false };
   const settings = await prisma.stampSettings.findUnique({ where: { slug: landingPage.slug } });
-  return { listingLocation, landingPage, settings };
+  const sharedWithOtherBusiness = !!(await findForeignProgramLink(prisma, landingPage.id, listingLocation.listingId));
+  return { listingLocation, landingPage, settings, sharedWithOtherBusiness };
 }
 
-function toProgramConfig(listingLocation, landingPage, settings) {
+function toProgramConfig(listingLocation, landingPage, settings, sharedWithOtherBusiness = false) {
   if (!landingPage || !settings) return { configured: false };
   return {
     configured: true,
-    editable: landingPage.userId === null,
+    editable: landingPage.userId === null && !sharedWithOtherBusiness,
+    sharedWithOtherBusiness,
     program: {
       enabled: settings.enabled === true,
       requiredStamps: settings.goal,
@@ -423,8 +485,8 @@ function toProgramConfig(listingLocation, landingPage, settings) {
 }
 
 async function getProgramConfig(locationId, listingLocationId, scope) {
-  const { listingLocation, landingPage, settings } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
-  return toProgramConfig(listingLocation, landingPage, settings);
+  const { listingLocation, landingPage, settings, sharedWithOtherBusiness } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
+  return toProgramConfig(listingLocation, landingPage, settings, sharedWithOtherBusiness);
 }
 
 async function updateProgramConfig(locationId, listingLocationId, scope, input) {
@@ -435,9 +497,12 @@ async function updateProgramConfig(locationId, listingLocationId, scope, input) 
   const goal = validateGoal(body.requiredStamps);
   const rewardName = validateRewardName(body.rewardName);
 
-  const { listingLocation, landingPage, settings } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
+  const { listingLocation, landingPage, settings, sharedWithOtherBusiness } = await resolveConfiguredProgram(locationId, listingLocationId, scope);
   if (!landingPage || !settings) {
     throw new StadtpocketManagerError('Für dieses Geschäft ist noch kein Stempelprogramm eingerichtet.', 404);
+  }
+  if (sharedWithOtherBusiness) {
+    throw new StadtpocketManagerError(`${FOREIGN_PROGRAM_MESSAGE} Änderungen hier würden das andere Geschäft betreffen.`, 409);
   }
   if (landingPage.userId !== null) {
     throw new StadtpocketManagerError('Dieses Stempelprogramm wird im QRAIVY-Konto des Geschäfts verwaltet.', 403);

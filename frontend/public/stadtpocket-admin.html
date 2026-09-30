@@ -3421,7 +3421,9 @@
           <span class="status-pill ${program.enabled ? 'published' : 'none'}">${program.enabled ? 'Aktiv' : 'Inaktiv'}</span>
           <p style="margin:14px 0 2px;font-weight:700;color:var(--text-primary)">${escapeHtml(String(program.requiredStamps))} Stempel</p>
           <p class="muted" style="margin:0 0 8px">Belohnung: ${escapeHtml(program.rewardName)}</p>
-          <p class="muted" style="margin:0 0 16px">Dieses Stempelprogramm wird im QRAIVY-Konto des Geschäfts verwaltet und kann hier nicht bearbeitet werden.</p>
+          <p class="muted" style="margin:0 0 16px">${config.sharedWithOtherBusiness
+            ? 'Dieses Geschäft ist mit dem Stempelprogramm eines anderen Geschäfts verbunden. Bitte trennen und ein eigenes Stempelprogramm einrichten.'
+            : 'Dieses Stempelprogramm wird im QRAIVY-Konto des Geschäfts verwaltet und kann hier nicht bearbeitet werden.'}</p>
           <div class="actions">
             <button class="ghost" type="button" onclick="disconnectLoyalty()">Trennen</button>
           </div>

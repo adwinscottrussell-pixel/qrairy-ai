@@ -34,7 +34,7 @@ let db;
 let calls;
 
 function freshDb() {
-  return {
+  return withListingIds({
     locations: [
       { id: 'loc_ulm', slug: 'ulm', type: 'city' },
       { id: 'loc_stuttgart', slug: 'stuttgart', type: 'city' },
@@ -63,7 +63,12 @@ function freshDb() {
       { id: 'ci_2', ownerUserId: PLATFORM, type: 'stadtpocket_pass_serial', value: SERIAL, customerId: CUSTOMER },
     ],
     passes: [{ id: 'pass_1', serialNumber: SERIAL, slug: null }],
-  };
+  });
+}
+
+function withListingIds(d) {
+  d.listingLocations.forEach((l) => { l.listingId = l.listing.id; });
+  return d;
 }
 
 function copy(x) { return x === null || x === undefined ? x : JSON.parse(JSON.stringify(x)); }
@@ -72,6 +77,8 @@ const readers = {
   location: { findUnique: ({ where }) => db.locations.find((l) => l.slug === where.slug) || null },
   stadtPocketListingLocation: {
     findUnique: ({ where }) => db.listingLocations.find((l) => l.id === where.id) || null,
+    findFirst: ({ where }) => db.listingLocations.find((l) => l.loyaltyLandingPageId === where.loyaltyLandingPageId &&
+      (where.listingId && typeof where.listingId === 'object' ? l.listing.id !== where.listingId.not : l.listing.id === where.listingId)) || null,
     findMany: ({ where }) => db.listingLocations
       .filter((ll) => ll.locationId === where.locationId && ll.publicationStatus === where.publicationStatus && ll.listing.slug === where.listing.slug)
       .map((ll) => ({ ...ll, loyaltyLandingPage: db.landingPages.find((lp) => lp.id === ll.loyaltyLandingPageId) || null })),
@@ -154,6 +161,7 @@ test('1. authorized manager reads the authoritative program (no internal ids in 
   assert.deepEqual(res.body, {
     configured: true,
     editable: true,
+    sharedWithOtherBusiness: false,
     program: { enabled: true, requiredStamps: 8, rewardName: 'Free Coffee', businessName: 'Bäckerei Staib' },
   });
   const json = JSON.stringify(res.body);
