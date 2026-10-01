@@ -1,0 +1,85 @@
+/* QDS Layout — Page Structure
+   Extracted from frontend/public/dashboard-shell.css. Values match
+   Dashboard exactly — this is an extraction, not a redesign. Additive
+   only: every class below is new and independent; nothing in
+   dashboard-shell.css is touched or removed, so analytics.html and any
+   other page still sharing that file keeps working unchanged. Wiring
+   Dashboard's own markup onto these classes is a deliberately separate,
+   later step. Not every current value sits on the 4px spacing scale;
+   those are kept as exact raw values rather than rounded, since pixel
+   parity with Dashboard takes priority over token purity throughout
+   this extraction.
+
+   ── A real, pre-existing duplication found during this extraction ──
+   dashboard-shell.css independently defines TWO byte-identical pairs for
+   "page header row" / "page title" / "page subtitle":
+     .page-header / .page-title / .page-subtitle   (dashboard-shell.css:183-192)
+     .dash-header / .dash-title  / .dash-sub        (dashboard-shell.css:416-419)
+   Every property matches exactly between each pair — not a near-miss,
+   an exact duplicate under two names. Dashboard's own main header uses
+   .dash-header/.dash-title/.dash-sub; its Subscribers sub-section header
+   uses .page-header/.page-title instead; analytics.html's main header
+   mixes the two (.page-header wrapper + .dash-title/.dash-sub text) —
+   three different combinations of the same two duplicate systems, all
+   currently live. Converged here into ONE new class each below. */
+
+.qds-page-wrap {
+  max-width: 960px; /* no --qds-* token for content max-width today; matches --dashboard-max-width exactly */
+  margin: 0 auto;
+  padding: 36px var(--qds-space-8); /* 36px has no exact token (32/40 nearest) — kept raw to match --dashboard-padding exactly; 32px horizontal matches --qds-space-8 */
+}
+
+@media (max-width: 640px) {
+  .qds-page-wrap {
+    padding: var(--qds-space-5) var(--qds-space-4); /* matches Dashboard's 20px 16px exactly */
+  }
+}
+
+/* ---------- Page header (converges .page-header + .dash-header) ---------- */
+
+.qds-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px; /* no exact token (24/32 nearest) — kept raw to match Dashboard exactly */
+  gap: var(--qds-space-4); /* matches Dashboard's 16px exactly */
+  flex-wrap: wrap;
+}
+
+/* Converges .page-title + .dash-title. Dashboard's <em> convention for the
+   accent-colored word inside the title (e.g. "Smart QR <em>Dashboard</em>")
+   is preserved as-is — not a new pattern, exactly what both originals do. */
+.qds-page-title {
+  font-family: 'Space Grotesk', sans-serif; /* QDS typography.css has no display/heading-family token — see qds/components/empty-state.css's header comment for the same gap */
+  font-size: 1.6rem; /* no exact --qds-text-* role matches this size (page-title role is 2rem) — kept raw */
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--qds-color-text-primary);
+}
+
+.qds-page-title em {
+  color: var(--qds-color-brand-primary);
+  font-style: normal;
+}
+
+/* Converges .page-subtitle + .dash-sub */
+.qds-page-subtitle {
+  font-family: var(--qds-font-family-primary);
+  font-size: .68rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: var(--qds-color-text-muted);
+  margin-top: 3px; /* no exact token — kept raw */
+}
+
+/* ---------- Page section (a smaller header used to introduce a region
+   within the page, e.g. "Smart QR Pages" above the card grid) ----------
+   Extracted from .sec-hdr (dashboard-shell.css:371-372) — the version
+   Dashboard's own markup actually renders (Smart QR Pages, AI Campaigns
+   section headers). A separate, more fully-specified .section-hdr/
+   .section-title/.section-count triplet also exists in dashboard-shell.css
+   (191-192 region) but is not used by dashboard.html or analytics.html
+   today — not extracted here since it doesn't reflect what Dashboard
+   currently actually looks like; noted for whoever picks this up next. */
+
+.qds-page-section {
+  margin-bottom: 20px; /* no exact token (16/24 nearest) — kept raw, matches .sec-hdr exactly */
+}
