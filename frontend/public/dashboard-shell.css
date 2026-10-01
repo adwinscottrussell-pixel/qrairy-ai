@@ -60,15 +60,20 @@ body { display: flex; min-height: 100vh; background: #0a0a0a; color: #f0f4f8; fo
 .sb-logo-text span { color: var(--dashboard-accent); font-style: italic; }
 #sidebar.collapsed .sb-logo-text { opacity: 0; pointer-events: none; }
 
+/* Fixed (not absolute) so the toggle can straddle the sidebar's right
+   border without being clipped by #sidebar's overflow:hidden. Same top
+   as before; left tracks the expanded/collapsed width so the toggle always
+   overhangs the edge by 3px (equivalent to right:-3px on a 20px toggle).
+   Hidden on mobile below, unchanged. */
 .sb-toggle {
-  position: absolute; top: 15px; right: -10px;
+  position: fixed; top: 15px; left: calc(var(--sidebar-width) - 17px);
   width: 20px; height: 20px; background: var(--dashboard-card-bg);
   border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   color: var(--dashboard-muted); font-size: 10px; transition: all .22s; z-index: 10;
 }
 .sb-toggle:hover { background: var(--dashboard-accent); color: #fff; border-color: var(--dashboard-accent); }
-#sidebar.collapsed .sb-toggle { transform: rotate(180deg); }
+#sidebar.collapsed .sb-toggle { left: calc(var(--sidebar-collapsed-width) - 17px); transform: rotate(180deg); }
 
 .sb-nav {
   flex: 1; overflow-y: auto; overflow-x: hidden;

@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="dashboard-shell.css"/>
 <link rel="stylesheet" href="qds/qds.css"/>
+<link rel="stylesheet" href="qds/layouts/page.css"/>
 
 <link rel="stylesheet" href="onboarding.css"/>
 
@@ -216,7 +217,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
     <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
-    <a href="dashboard.html?section=subscribers" class="sb-item" id="sb-subscribers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_subscribers">Subscribers</span></a>
+    <a href="dashboard.html?section=customers" class="sb-item" id="sb-customers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_customers">Customers</span></a>
     <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
     <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
@@ -535,19 +536,13 @@ async function initDashboard(){
     document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
     sbLoyalty.classList.add('active');
   });
-  // Subscribers sidebar
-  var sbSub = document.getElementById('sb-subscribers');
-  if (sbSub) {
-    sbSub.addEventListener('click', function(e) {
+  // Customers (Kunden) sidebar — primary destination. The legacy
+  // Subscribers page stays reachable via showSection('subscribers').
+  var sbCust = document.getElementById('sb-customers');
+  if (sbCust) {
+    sbCust.addEventListener('click', function(e) {
       e.preventDefault();
-      var mc = document.getElementById('main-content'); if (mc) mc.style.display = 'none';
-      document.querySelectorAll('.dash-section').forEach(function(s){ s.style.display='none'; });
-      document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('active'); });
-      var sec = document.getElementById('section-subscribers'); if (sec) sec.style.display = 'block';
-      sbSub.classList.add('active');
-      var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
-      var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
-      if (window.subLoad) { setTimeout(window.subLoad, 100); }
+      if (window.showSection) window.showSection('customers');
     });
   }
 
@@ -591,14 +586,9 @@ async function initDashboard(){
         if (sec) sec.style.display = 'block';
         var el = document.getElementById('sb-campaigns'); if (el) el.classList.add('active');
         if (typeof window.campInitProgs === 'function') window.campInitProgs();
-      } else if (sectionP === 'subscribers') {
-        var sec = document.getElementById('section-subscribers');
-        if (sec) sec.style.display = 'block';
-        var el = document.getElementById('sb-subscribers'); if (el) el.classList.add('active');
-        var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
-        var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
-        var sbSubEl = document.getElementById('sb-subscribers');
-        if (sbSubEl) sbSubEl.click();
+      } else if (sectionP === 'customers' || sectionP === 'subscribers') {
+        // Kunden, or the legacy Subscribers export page (kept reachable).
+        if (window.showSection) window.showSection(sectionP);
       } else if (sectionP === 'loyalty') {
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
@@ -1067,6 +1057,827 @@ async function initDashboard(){
   }
 
 })();
+</script>
+</div>
+
+<div id="section-customers" class="dash-section" style="display:none;">
+<style>
+/* ============================================================
+   Kunden — canonical Customer view (approved centred dark design).
+   Layout: #customers-page uses the shared .qds-page-wrap
+   (qds/layouts/page.css): max-width 960px, centred, 36px/32px padding.
+   Sidebar offset is scoped to this section only (sibling sections keep
+   their own inline offsets); the existing mobile .dash-section rule
+   above already resets it to 0 on small screens.
+   ============================================================ */
+#section-customers { margin-left: var(--sidebar-width); flex: 1; min-width: 0; min-height: 100vh; transition: margin-left .22s; }
+body.sb-collapsed #section-customers { margin-left: var(--sidebar-collapsed-width); }
+#customers-page * { box-sizing: border-box; }
+
+.cust-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.cust-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--qds-space-3, 12px);
+  flex-wrap: wrap;
+}
+.cust-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cust-search svg {
+  position: absolute;
+  left: 12px;
+  color: var(--dashboard-muted-dim);
+  pointer-events: none;
+}
+.cust-search input {
+  width: 220px;
+  padding: 6px 12px 6px 34px;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: 7px;
+  color: #f0f4f8;
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  outline: none;
+  transition: border-color .18s, background .18s;
+}
+.cust-search input::placeholder { color: var(--dashboard-muted-dim); }
+.cust-search input:focus { border-color: var(--dashboard-accent-border); background: rgba(255,255,255,0.05); }
+
+.cust-filter-wrap { position: relative; }
+.cust-filter-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--qds-radius-md, 8px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  padding: 6px;
+  z-index: 30;
+}
+.cust-filter-menu.open { display: block; }
+.cust-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: .78rem;
+  color: var(--dashboard-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.cust-filter-item:hover { background: rgba(255,255,255,0.04); color: #f0f4f8; }
+.cust-filter-item.active { color: #f0f4f8; }
+.cust-filter-item .check {
+  width: 14px; height: 14px; border-radius: 4px;
+  border: 1px solid var(--dashboard-border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cust-filter-item.active .check { background: var(--dashboard-accent); border-color: var(--dashboard-accent); }
+.cust-filter-item.active .check svg { display: block; }
+.cust-filter-item .check svg { display: none; width: 9px; height: 9px; color: #fff; }
+
+.cust-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) { .cust-kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .cust-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+.cust-kpi-icon {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--qds-radius-md, 8px);
+  background: rgba(255,255,255,0.04);
+  color: var(--dashboard-muted);
+  margin-bottom: var(--qds-space-2, 8px);
+}
+.kpi-card.cust-kpi--accent .cust-kpi-icon { background: var(--dashboard-accent-dim); color: var(--dashboard-accent); }
+
+.cust-row { cursor: pointer; }
+.cust-name-cell { display: flex; align-items: center; gap: var(--qds-space-2, 8px); }
+.cust-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,90,31,0.12);
+  color: var(--dashboard-accent);
+  font-family: var(--font-display);
+  font-size: .78rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cust-name-info .cust-name { font-weight: 600; color: #f0f4f8; }
+.cust-name-info .cust-email { color: var(--dashboard-muted-dim); margin-top: 1px; }
+
+.cust-channels { display: flex; gap: var(--qds-space-1, 4px); }
+.cust-chan-icon {
+  width: 26px; height: 26px; border-radius: var(--qds-radius-md, 8px);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--dashboard-border);
+  color: var(--dashboard-muted-dim);
+}
+.cust-chan-icon.on { color: var(--dashboard-accent); border-color: var(--dashboard-accent-border); background: var(--dashboard-accent-dim); }
+
+  width: 60px; height: 5px; border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.badge-new { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.badge-inactive { background: rgba(255,255,255,0.05); color: var(--dashboard-muted-dim); }
+
+.segment-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--qds-space-3, 12px);
+}
+@media (max-width: 900px) { .segment-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .segment-grid { grid-template-columns: 1fr; } }
+.segment-card {
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--card-radius);
+  padding: var(--qds-space-4, 16px);
+  box-shadow: 0 2px 14px rgba(0,0,0,0.18);
+  transition: border-color .18s, transform .18s;
+}
+.segment-card:hover { border-color: var(--dashboard-border-hover); transform: translateY(-1px); }
+.segment-card-title { font-family: var(--font-display); font-size: .82rem; font-weight: 700; color: #f0f4f8; margin-bottom: 2px; }
+.segment-card-count { font-family: var(--font-mono); font-size: .68rem; color: var(--dashboard-muted); margin-bottom: var(--qds-space-3, 12px); }
+.segment-card-actions { display: flex; gap: var(--qds-space-2, 8px); }
+.segment-card-actions .btn-outline, .segment-card-actions .btn-ghost { padding: 6px 12px; font-size: .68rem; }
+
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  opacity: 0; pointer-events: none; transition: opacity .22s;
+  z-index: 90;
+}
+.drawer-overlay.open { opacity: 1; pointer-events: auto; }
+.cust-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 420px; max-width: 92vw;
+  background: var(--dashboard-card-bg);
+  border-left: 1px solid var(--dashboard-border);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.4);
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.2,.8,.2,1);
+  z-index: 91;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.cust-drawer.open { transform: translateX(0); }
+.drawer-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+.drawer-close {
+  position: absolute; top: 18px; right: 18px;
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--dashboard-border);
+  color: var(--dashboard-muted); cursor: pointer;
+  transition: all .15s;
+}
+.drawer-close:hover { color: #f0f4f8; border-color: var(--dashboard-border-hover); }
+.drawer-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,90,31,0.12); color: var(--dashboard-accent);
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.drawer-name { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: #f0f4f8; }
+.drawer-email { font-size: .8rem; color: var(--dashboard-muted); margin-top: 2px; }
+.drawer-since { font-size: .68rem; color: var(--dashboard-muted-dim); margin-top: 10px; font-family: var(--font-mono); }
+.drawer-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.drawer-actions .btn-primary, .drawer-actions .btn-outline { padding: 8px 14px; font-size: .74rem; }
+
+.drawer-section { margin-top: 26px; }
+.drawer-section-title {
+  font-family: var(--font-mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dashboard-muted-dim); margin-bottom: 12px;
+}
+.drawer-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--dashboard-border); font-size: .78rem; }
+.drawer-row:last-child { border-bottom: none; }
+.drawer-row-label { color: var(--dashboard-muted); display: flex; align-items: center; gap: 8px; }
+.drawer-row-value { color: #f0f4f8; font-weight: 600; }
+.drawer-row-value.ok { color: #22c55e; }
+
+.drawer-loyalty-visual { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.drawer-loyalty-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.drawer-loyalty-bar-fill { height: 100%; background: var(--dashboard-accent); border-radius: 4px; }
+.drawer-loyalty-fraction { font-family: var(--font-mono); font-size: .78rem; color: #f0f4f8; white-space: nowrap; }
+.drawer-loyalty-sub { font-size: .72rem; color: var(--dashboard-muted-dim); }
+
+.drawer-timeline { position: relative; padding-left: 18px; }
+.drawer-timeline::before { content: ''; position: absolute; left: 4px; top: 4px; bottom: 4px; width: 1px; background: var(--dashboard-border); }
+.drawer-tl-item { position: relative; padding-bottom: 16px; }
+.drawer-tl-item:last-child { padding-bottom: 0; }
+.drawer-tl-item::before {
+  content: ''; position: absolute; left: -18px; top: 3px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dashboard-accent); border: 2px solid var(--dashboard-card-bg);
+}
+.drawer-tl-date { font-family: var(--font-mono); font-size: .64rem; color: var(--dashboard-muted-dim); }
+.drawer-tl-text { font-size: .78rem; color: var(--dashboard-muted); margin-top: 2px; }
+
+@media (max-width: 768px) {
+  .cust-drawer { width: 100%; max-width: 100%; }
+}
+
+/* ── Phase A (production) additions ── */
+.cust-loyalty-none { color: var(--dashboard-muted-dim); }
+.cust-legacy-link { display: inline-block; margin-top: 10px; font-family: var(--font-mono); font-size: .66rem; color: var(--dashboard-muted); text-decoration: none; transition: color .15s; }
+.cust-legacy-link:hover { color: var(--dashboard-accent); }
+.cust-soon {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: .54rem; font-weight: 500; letter-spacing: .03em;
+  background: rgba(255,255,255,0.08); color: var(--dashboard-muted); vertical-align: middle; white-space: nowrap;
+}
+#section-customers button[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none; transform: none; }
+#section-customers .state-empty a { color: var(--dashboard-accent); text-decoration: none; }
+.cust-beta {
+  display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+  font-size: .54rem; letter-spacing: .06em; background: rgba(251,191,36,0.12); color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.25); vertical-align: middle;
+}
+.cust-loyalty-warning {
+  font-size: .72rem; color: #fbbf24; background: rgba(251,191,36,0.07);
+  border: 1px solid rgba(251,191,36,0.2); border-radius: 8px; padding: 8px 10px; margin-bottom: 14px;
+}
+</style>
+
+<div id="customers-page" class="qds-page-wrap">
+
+  <!-- ── Page header ── -->
+  <div class="cust-header">
+    <div>
+      <div class="page-title" data-cust-i18n="title">Kunden</div>
+      <div class="page-subtitle" data-cust-i18n="subtitle">Verstehe deine Kunden, bleib in Kontakt und hol sie zurück.</div>
+      <a href="dashboard.html?section=subscribers" class="cust-legacy-link" onclick="if(window.showSection){event.preventDefault();showSection('subscribers');}" data-cust-i18n="subs_export_link">Abonnenten-Export je Seite →</a>
+    </div>
+    <div class="cust-header-actions">
+      <div class="cust-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="custSearch" placeholder="Kunden suchen…" oninput="custApplySearch(this.value)"/>
+      </div>
+      <div class="cust-filter-wrap">
+        <button class="btn-outline" onclick="custToggleFilter()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span data-cust-i18n="filter">Filter</span>
+        </button>
+        <div class="cust-filter-menu" id="custFilterMenu">
+          <div class="cust-filter-item active" data-filter="all" onclick="custSelectFilter('all')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_all">Alle Kunden</span></div>
+          <div class="cust-filter-item" data-filter="email" onclick="custSelectFilter('email')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_email">E-Mail bekannt</span></div>
+          <div class="cust-filter-item" data-filter="push" onclick="custSelectFilter('push')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_push">Push aktiv</span></div>
+          <div class="cust-filter-item" data-filter="wallet" onclick="custSelectFilter('wallet')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_pass">Pass erstellt</span></div>
+          <div class="cust-filter-item" data-filter="loyalty" onclick="custSelectFilter('loyalty')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_loyalty">Treue-Mitglieder</span></div>
+          <div class="cust-filter-item" data-filter="inactive" onclick="custSelectFilter('inactive')"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span data-cust-i18n="f_inactive">Inaktiv (30+ Tage)</span></div>
+        </div>
+      </div>
+      <!-- Not built yet: no Customer export endpoint exists. Disabled, not faked. -->
+      <button class="btn-outline" disabled aria-disabled="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-cust-i18n="export">Export</span><span class="cust-soon" data-cust-i18n="soon">Bald verfügbar</span>
+      </button>
+      <!-- Not built yet: Campaigns cannot target Customer segments. Disabled, not faked. -->
+      <button class="btn-outline" disabled aria-disabled="true"><span data-cust-i18n="create_campaign">Kampagne erstellen</span><span class="cust-soon" data-cust-i18n="soon">Bald verfügbar</span></button>
+    </div>
+  </div>
+
+  <!-- ── Summary cards ── -->
+  <div class="cust-kpi-row">
+    <div class="kpi-card cust-kpi--accent">
+      <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="kpi-val orange" id="custKpiTotal">—</div>
+      <div class="kpi-lbl" data-cust-i18n="kpi_total">Kunden gesamt</div>
+    </div>
+    <div class="kpi-card">
+      <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
+      <div class="kpi-val" id="custKpiEmail">—</div>
+      <div class="kpi-lbl" data-cust-i18n="kpi_email">E-Mail</div>
+    </div>
+    <div class="kpi-card">
+      <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="kpi-val" id="custKpiPush">—</div>
+      <div class="kpi-lbl" data-cust-i18n="kpi_push">Push</div>
+    </div>
+    <div class="kpi-card">
+      <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+      <div class="kpi-val purple" id="custKpiWallet">—</div>
+      <div class="kpi-lbl" data-cust-i18n="kpi_pass">Pass erstellt</div>
+    </div>
+    <div class="kpi-card">
+      <div class="cust-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="kpi-val green" id="custKpiLoyalty">—</div>
+      <div class="kpi-lbl" data-cust-i18n="kpi_loyalty">Treue-Mitglieder</div>
+    </div>
+  </div>
+
+  <!-- ── Customer table ── (no loyalty balance column until the loyalty
+       data consolidation is complete — balances may still be stale) -->
+  <div class="panel" style="margin-bottom:24px;">
+    <div class="panel-hdr">
+      <div class="panel-title" data-cust-i18n="panel_title">Kunden</div>
+      <span class="section-count" id="custRowCount"></span>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table class="data-table">
+        <thead><tr>
+          <th data-cust-i18n="col_customer">Kunde</th><th data-cust-i18n="col_channels">Kanäle</th><th data-cust-i18n="col_last">Letzte Aktivität</th><th data-cust-i18n="col_status">Status</th>
+        </tr></thead>
+        <tbody id="custTableBody"></tbody>
+      </table>
+    </div>
+    <div id="custPager" style="display:none;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--dashboard-border);">
+      <span id="custPagerLabel" style="font-size:.72rem;color:var(--dashboard-muted-dim);font-family:var(--font-mono);"></span>
+      <button class="btn-outline" id="custPagerPrev" style="padding:5px 12px;font-size:.72rem;" onclick="custGoToPage(_custState.page - 1)" data-cust-i18n="prev">Zurück</button>
+      <button class="btn-outline" id="custPagerNext" style="padding:5px 12px;font-size:.72rem;" onclick="custGoToPage(_custState.page + 1)" data-cust-i18n="next">Weiter</button>
+    </div>
+  </div>
+
+  <!-- ── Smart Segments ── -->
+  <div class="section-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div class="section-title" data-cust-i18n="segments">Smarte Segmente</div>
+  </div>
+  <div class="segment-grid">
+    <div class="segment-card">
+      <div class="segment-card-title" data-cust-i18n="seg_inactive">Inaktiv seit 30+ Tagen</div>
+      <div class="segment-card-count" id="custSegInactiveCount">—</div>
+      <div class="segment-card-actions">
+        <button class="btn-outline" onclick="custViewSegment('inactive')" data-cust-i18n="view">Kunden anzeigen</button>
+        <button class="btn-ghost" disabled aria-disabled="true"><span data-cust-i18n="campaign">Kampagne</span><span class="cust-soon" data-cust-i18n="soon">Bald verfügbar</span></button>
+      </div>
+    </div>
+    <div class="segment-card">
+      <div class="segment-card-title" data-cust-i18n="seg_pass">Pass erstellt</div>
+      <div class="segment-card-count" id="custSegWalletCount">—</div>
+      <div class="segment-card-actions">
+        <button class="btn-outline" onclick="custViewSegment('wallet')" data-cust-i18n="view">Kunden anzeigen</button>
+        <button class="btn-ghost" disabled aria-disabled="true"><span data-cust-i18n="campaign">Kampagne</span><span class="cust-soon" data-cust-i18n="soon">Bald verfügbar</span></button>
+      </div>
+    </div>
+    <!-- Reward state depends on loyalty data that is not yet consolidated. -->
+    <div class="segment-card">
+      <div class="segment-card-title" data-cust-i18n="seg_reward">Belohnung bereit</div>
+      <div class="segment-card-count" data-cust-i18n="soon">Bald verfügbar</div>
+      <div class="segment-card-actions">
+        <button class="btn-outline" disabled aria-disabled="true" data-cust-i18n="view">Kunden anzeigen</button>
+      </div>
+    </div>
+    <div class="segment-card">
+      <div class="segment-card-title" data-cust-i18n="seg_engaged">Am aktivsten</div>
+      <div class="segment-card-count" data-cust-i18n="soon">Bald verfügbar</div>
+      <div class="segment-card-actions">
+        <button class="btn-outline" disabled aria-disabled="true" data-cust-i18n="view">Kunden anzeigen</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="drawer-overlay" id="custDrawerOverlay" onclick="custCloseDrawer()"></div>
+<div class="cust-drawer" id="custDrawer">
+  <div class="drawer-scroll" id="custDrawerBody"></div>
+</div>
+
+<script>
+// ============================================================
+// Kunden — reads ONLY the authenticated owner's canonical Customer API
+// (GET /customers/summary, /customers, /customers/:id,
+// /customers/:id/activity). No mock/fixture data; real empty states.
+// Loyalty balances are not shown in the table and never drive the
+// status badge until the loyalty data consolidation is complete.
+// ============================================================
+var CUST_API = window.API_ORIGIN || 'https://api.qraivy.com';
+
+var CUST_I18N = {
+  en: {
+    title: 'Customers', subtitle: 'Understand, engage and bring your customers back.',
+    subs_export_link: 'Subscriber export per page →',
+    search_ph: 'Search customers…', filter: 'Filter',
+    f_all: 'All customers', f_email: 'Email known', f_push: 'Push enabled', f_pass: 'Pass created', f_loyalty: 'Loyalty members', f_inactive: 'Inactive (30+ days)',
+    export: 'Export', create_campaign: 'Create campaign', campaign: 'Campaign', soon: 'Coming soon',
+    kpi_total: 'Total customers', kpi_email: 'Email', kpi_push: 'Push', kpi_pass: 'Pass created', kpi_loyalty: 'Loyalty members',
+    panel_title: 'Customers', col_customer: 'Customer', col_channels: 'Channels', col_last: 'Last activity', col_status: 'Status',
+    prev: 'Prev', next: 'Next', page: 'Page',
+    segments: 'Smart segments', seg_inactive: 'Inactive 30+ days', seg_pass: 'Pass created', seg_reward: 'Reward ready', seg_engaged: 'Most engaged', view: 'View customers',
+    one: 'customer', many: 'customers',
+    st_active: 'Active', st_new: 'New', st_inactive: 'Inactive',
+    loading: 'Loading customers…', loading_detail: 'Loading…',
+    empty_all: 'No customers yet. Customers will appear here as they subscribe, create a Wallet pass, enable notifications or collect stamps.',
+    no_match: 'No customers match this view.', retry: 'Retry',
+    err_rate: 'Too many requests. Please wait a moment and try again.',
+    err_session: 'Your session has expired. Please sign in again.',
+    err_load: "We couldn't load your customers. Please try again.",
+    err_conn: "We couldn't connect. Please check your connection and try again.",
+    unnamed: 'Customer', today: 'Today', yesterday: 'Yesterday', days_ago: '{n} days ago',
+    ch_email: 'Email', ch_push: 'Push', ch_pass: 'Pass created',
+    since: 'Customer since', send_campaign: 'Send campaign', reach: 'Reachability',
+    email_known: 'Known', email_none: 'No email on file', push_on: 'Enabled', push_off: 'Not enabled',
+    wallet: 'Pass', wallet_installed: 'Installed', wallet_pending: 'Pass created, not installed', wallet_none: 'No pass',
+    loyalty: 'Loyalty', beta: 'Beta', loyalty_warning: 'Stamp balance may temporarily differ.', not_enrolled: 'Not enrolled in loyalty',
+    reward_ready: 'Reward ready', stamps_left: '{n} stamp(s) until reward',
+    activity: 'Activity', act_cid: 'First seen', act_email: 'Email captured', act_push_endpoint: 'Subscribed to push', act_wallet_serial: 'Pass created'
+  },
+  de: {
+    title: 'Kunden', subtitle: 'Verstehe deine Kunden, bleib in Kontakt und hol sie zurück.',
+    subs_export_link: 'Abonnenten-Export je Seite →',
+    search_ph: 'Kunden suchen…', filter: 'Filter',
+    f_all: 'Alle Kunden', f_email: 'E-Mail bekannt', f_push: 'Push aktiv', f_pass: 'Pass erstellt', f_loyalty: 'Treue-Mitglieder', f_inactive: 'Inaktiv (30+ Tage)',
+    export: 'Export', create_campaign: 'Kampagne erstellen', campaign: 'Kampagne', soon: 'Bald verfügbar',
+    kpi_total: 'Kunden gesamt', kpi_email: 'E-Mail', kpi_push: 'Push', kpi_pass: 'Pass erstellt', kpi_loyalty: 'Treue-Mitglieder',
+    panel_title: 'Kunden', col_customer: 'Kunde', col_channels: 'Kanäle', col_last: 'Letzte Aktivität', col_status: 'Status',
+    prev: 'Zurück', next: 'Weiter', page: 'Seite',
+    segments: 'Smarte Segmente', seg_inactive: 'Inaktiv seit 30+ Tagen', seg_pass: 'Pass erstellt', seg_reward: 'Belohnung bereit', seg_engaged: 'Am aktivsten', view: 'Kunden anzeigen',
+    one: 'Kunde', many: 'Kunden',
+    st_active: 'Aktiv', st_new: 'Neu', st_inactive: 'Inaktiv',
+    loading: 'Kunden werden geladen…', loading_detail: 'Wird geladen…',
+    empty_all: 'Noch keine Kunden. Kunden erscheinen hier, sobald sie sich anmelden, einen Wallet-Pass erstellen, Benachrichtigungen aktivieren oder Stempel sammeln.',
+    no_match: 'Keine Kunden in dieser Ansicht.', retry: 'Erneut versuchen',
+    err_rate: 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.',
+    err_session: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
+    err_load: 'Deine Kunden konnten nicht geladen werden. Bitte versuche es erneut.',
+    err_conn: 'Keine Verbindung. Bitte prüfe deine Verbindung und versuche es erneut.',
+    unnamed: 'Kunde', today: 'Heute', yesterday: 'Gestern', days_ago: 'vor {n} Tagen',
+    ch_email: 'E-Mail', ch_push: 'Push', ch_pass: 'Pass erstellt',
+    since: 'Kunde seit', send_campaign: 'Kampagne senden', reach: 'Erreichbarkeit',
+    email_known: 'Bekannt', email_none: 'Keine E-Mail hinterlegt', push_on: 'Aktiv', push_off: 'Nicht aktiv',
+    wallet: 'Pass', wallet_installed: 'Installiert', wallet_pending: 'Pass erstellt, nicht installiert', wallet_none: 'Kein Pass',
+    loyalty: 'Treue', beta: 'Beta', loyalty_warning: 'Stempelstand kann vorübergehend abweichen.', not_enrolled: 'Nicht im Treueprogramm',
+    reward_ready: 'Belohnung bereit', stamps_left: 'noch {n} Stempel bis zur Belohnung',
+    activity: 'Aktivität', act_cid: 'Zuerst gesehen', act_email: 'E-Mail erfasst', act_push_endpoint: 'Push abonniert', act_wallet_serial: 'Pass erstellt'
+  }
+};
+function custLang() {
+  var l = window._qraivyLang;
+  if (!l) { try { l = localStorage.getItem('qraivy_lang'); } catch (_) {} }
+  return l === 'en' ? 'en' : 'de';
+}
+function _ct(key, n) {
+  var dict = CUST_I18N[custLang()] || CUST_I18N.de;
+  var s = dict[key] !== undefined ? dict[key] : (CUST_I18N.en[key] || key);
+  return n === undefined ? s : s.replace('{n}', n);
+}
+function custLocale() { return custLang() === 'de' ? 'de-DE' : 'en-GB'; }
+
+var ICON_EMAIL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>';
+var ICON_PUSH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+var ICON_WALLET = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+
+function custEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function custChanIcon(on, label, svg) {
+  return '<span class="cust-chan-icon' + (on ? ' on' : '') + '" title="' + custEsc(label) + (on ? ' ✓' : ' –') + '">' + svg + '</span>';
+}
+
+// ── API helpers ──
+async function _custToken() {
+  try { if (window.Clerk && window.Clerk.session) return await window.Clerk.session.getToken(); } catch (_) {}
+  return null;
+}
+async function _custAuthHeaders() {
+  var t = await _custToken();
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+function _custFriendlyStatusMessage(status) {
+  if (status === 429) return _ct('err_rate');
+  if (status === 401 || status === 403) return _ct('err_session');
+  return _ct('err_load');
+}
+function _custApiError(status, message) { var e = new Error(message); e.isCustApiError = true; e.status = status; return e; }
+async function _custParseResponse(response) {
+  var raw = ''; try { raw = await response.text(); } catch (e) { raw = ''; }
+  var ct = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
+  var data = null;
+  if (raw && (ct.indexOf('json') !== -1 || /^\s*[\{\[]/.test(raw))) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
+  if (!response.ok) throw _custApiError(response.status, _custFriendlyStatusMessage(response.status));
+  return data || {};
+}
+function _custErrorMessage(err) {
+  if (err && err.isCustApiError) return _custFriendlyStatusMessage(err.status);
+  return _ct('err_conn');
+}
+
+// ── Formatting ──
+// displayName is not yet populated by any write path — falls back to the
+// email, then a generic label, never a blank/"null" name.
+function custDisplayName(c) { return c.displayName || c.email || c.primaryEmail || _ct('unnamed'); }
+function custInitials(c) { return (custDisplayName(c) || '?').trim().charAt(0).toUpperCase() || '?'; }
+function custRelativeTime(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  var days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return _ct('today');
+  if (days === 1) return _ct('yesterday');
+  if (days < 30) return _ct('days_ago', days);
+  try { return d.toLocaleDateString(custLocale(), { year: 'numeric', month: 'short', day: 'numeric' }); } catch (_) { return '—'; }
+}
+function custMonthYear(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString(custLocale(), { year: 'numeric', month: 'long' }); } catch (_) { return '—'; }
+}
+// Primary status is derived from activity dates only (same 30-day /
+// 7-day thresholds as the API's presentationStatus) — deliberately NOT
+// from loyalty reward state, which may be stale until consolidation.
+var CUST_STATUS_META = { active: 'badge-live', new: 'badge-new', inactive: 'badge-inactive' };
+function custStatusKey(c) {
+  var now = Date.now();
+  var last = c.lastActivityAt ? new Date(c.lastActivityAt).getTime() : null;
+  if (last === null || isNaN(last) || now - last > 30 * 86400000) return 'inactive';
+  var first = c.firstSeenAt ? new Date(c.firstSeenAt).getTime() : null;
+  if (first !== null && !isNaN(first) && now - first < 7 * 86400000) return 'new';
+  return 'active';
+}
+function custCountLabel(n) { return n + ' ' + (n === 1 ? _ct('one') : _ct('many')); }
+
+// ── State ──
+var _custState = { page: 1, limit: 25, total: 0, totalPages: 1, hasNext: false, segment: null, search: '' };
+var _custSearchDebounceTimer = null;
+var _custListLoadToken = 0; // guards against an older, slower request overwriting a newer one
+var _custLastList = null;    // last successful list response, re-rendered on language change
+var _custLastSummary = null;
+var _custSegCounts = {};
+
+function custShowLoading() {
+  document.getElementById('custTableBody').innerHTML = '<tr><td colspan="4"><div class="state-loading">' + custEsc(_ct('loading')) + '</div></td></tr>';
+  document.getElementById('custPager').style.display = 'none';
+}
+function custShowError(err) {
+  _custLastList = null;
+  document.getElementById('custTableBody').innerHTML = '<tr><td colspan="4"><div class="state-empty">' + custEsc(_custErrorMessage(err)) + ' <a href="#" onclick="event.preventDefault();custLoadList();">' + custEsc(_ct('retry')) + '</a></div></td></tr>';
+  document.getElementById('custPager').style.display = 'none';
+  document.getElementById('custRowCount').textContent = '';
+}
+
+async function custLoadSummary() {
+  try {
+    var headers = await _custAuthHeaders();
+    var d = await _custParseResponse(await fetch(CUST_API + '/customers/summary', { headers: headers }));
+    _custLastSummary = d;
+    var loc = custLocale();
+    document.getElementById('custKpiTotal').textContent = (d.totalCustomers || 0).toLocaleString(loc);
+    document.getElementById('custKpiEmail').textContent = (d.emailCustomers || 0).toLocaleString(loc);
+    document.getElementById('custKpiPush').textContent = (d.pushCustomers || 0).toLocaleString(loc);
+    document.getElementById('custKpiWallet').textContent = (d.walletCustomers || 0).toLocaleString(loc);
+    document.getElementById('custKpiLoyalty').textContent = (d.loyaltyCustomers || 0).toLocaleString(loc);
+  } catch (err) {
+    ['custKpiTotal', 'custKpiEmail', 'custKpiPush', 'custKpiWallet', 'custKpiLoyalty'].forEach(function (id) {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+}
+
+async function custLoadSegmentCounts() {
+  var segs = [
+    { id: 'custSegWalletCount', segment: 'wallet' },
+    { id: 'custSegInactiveCount', segment: 'inactive' }
+  ];
+  var headers = await _custAuthHeaders();
+  segs.forEach(function (s) {
+    fetch(CUST_API + '/customers?limit=1&segment=' + s.segment, { headers: headers })
+      .then(_custParseResponse)
+      .then(function (d) { _custSegCounts[s.id] = d.total || 0; document.getElementById(s.id).textContent = custCountLabel(d.total || 0); })
+      .catch(function () { document.getElementById(s.id).textContent = '—'; });
+  });
+}
+
+function custRenderTable(data) {
+  _custLastList = data;
+  var rows = data.items || [];
+  var count = data.total || 0;
+  document.getElementById('custRowCount').textContent = custCountLabel(count);
+
+  if (!rows.length) {
+    var emptyMsg = (_custState.search || _custState.segment) ? _ct('no_match') : _ct('empty_all');
+    document.getElementById('custTableBody').innerHTML = '<tr><td colspan="4"><div class="state-empty">' + custEsc(emptyMsg) + '</div></td></tr>';
+    document.getElementById('custPager').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('custTableBody').innerHTML = rows.map(function (c) {
+    var ch = c.channels || {};
+    var key = custStatusKey(c);
+    return '<tr class="cust-row" onclick="custOpenDrawer(\'' + custEsc(c.id) + '\')">' +
+      '<td><div class="cust-name-cell"><div class="cust-avatar">' + custEsc(custInitials(c)) + '</div><div class="cust-name-info"><div class="cust-name">' + custEsc(custDisplayName(c)) + '</div><div class="cust-email">' + (c.email && c.displayName ? custEsc(c.email) : '') + '</div></div></div></td>' +
+      '<td><div class="cust-channels">' +
+        custChanIcon(!!ch.email, _ct('ch_email'), ICON_EMAIL) +
+        custChanIcon(!!ch.push, _ct('ch_push'), ICON_PUSH) +
+        custChanIcon(!!ch.wallet, _ct('ch_pass'), ICON_WALLET) +
+      '</div></td>' +
+      '<td style="color:var(--dashboard-muted);font-size:.76rem;">' + custEsc(custRelativeTime(c.lastActivityAt)) + '</td>' +
+      '<td><span class="badge ' + CUST_STATUS_META[key] + '">' + custEsc(_ct('st_' + key)) + '</span></td>' +
+      '</tr>';
+  }).join('');
+
+  var pager = document.getElementById('custPager');
+  if (data.totalPages > 1) {
+    pager.style.display = 'flex';
+    document.getElementById('custPagerLabel').textContent = _ct('page') + ' ' + data.page + ' / ' + data.totalPages;
+    document.getElementById('custPagerPrev').disabled = data.page <= 1;
+    document.getElementById('custPagerNext').disabled = !data.hasNext;
+  } else {
+    pager.style.display = 'none';
+  }
+}
+
+function custLoadList() {
+  custShowLoading();
+  var myToken = ++_custListLoadToken;
+  var params = new URLSearchParams();
+  params.set('page', _custState.page);
+  params.set('limit', _custState.limit);
+  if (_custState.search) params.set('search', _custState.search);
+  if (_custState.segment) params.set('segment', _custState.segment);
+  _custAuthHeaders().then(function (headers) {
+    return fetch(CUST_API + '/customers?' + params.toString(), { headers: headers });
+  }).then(_custParseResponse).then(function (d) {
+    if (myToken !== _custListLoadToken) return;
+    _custState.total = d.total || 0; _custState.totalPages = d.totalPages || 1; _custState.hasNext = !!d.hasNext;
+    custRenderTable(d);
+  }).catch(function (err) {
+    if (myToken !== _custListLoadToken) return;
+    custShowError(err);
+  });
+}
+
+function custGoToPage(p) {
+  if (p < 1 || p > _custState.totalPages) return;
+  _custState.page = p;
+  custLoadList();
+}
+function custApplySearch(v) {
+  clearTimeout(_custSearchDebounceTimer);
+  _custSearchDebounceTimer = setTimeout(function () {
+    _custState.search = v.trim();
+    _custState.page = 1;
+    custLoadList();
+  }, 300);
+}
+function custToggleFilter() {
+  document.getElementById('custFilterMenu').classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var wrap = document.querySelector('.cust-filter-wrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('custFilterMenu').classList.remove('open');
+});
+var FILTER_TO_SEGMENT = { all: null, email: 'email', push: 'push', wallet: 'wallet', loyalty: 'loyalty', inactive: 'inactive' };
+function custSelectFilter(f) {
+  document.querySelectorAll('.cust-filter-item').forEach(function (el) {
+    el.classList.toggle('active', el.getAttribute('data-filter') === f);
+  });
+  document.getElementById('custFilterMenu').classList.remove('open');
+  _custState.segment = FILTER_TO_SEGMENT[f] || null;
+  _custState.page = 1;
+  custLoadList();
+}
+// Segment "View customers" buttons reuse the Filter plumbing.
+function custViewSegment(filterKey) {
+  custSelectFilter(filterKey);
+  var searchEl = document.getElementById('custSearch');
+  if (searchEl) searchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── Detail drawer ──
+function custDrawerReachRow(label, iconSvg, on, onText, offText) {
+  return '<div class="drawer-row"><span class="drawer-row-label">' + iconSvg + custEsc(label) + '</span>' +
+    '<span class="drawer-row-value' + (on ? ' ok' : '') + '">' + custEsc(on ? onText + ' ✓' : offText) + '</span></div>';
+}
+var _custDrawerToken = 0;
+function custOpenDrawer(id) {
+  var myToken = ++_custDrawerToken;
+  document.getElementById('custDrawerBody').innerHTML = '<div class="state-loading">' + custEsc(_ct('loading_detail')) + '</div>';
+  document.getElementById('custDrawer').classList.add('open');
+  document.getElementById('custDrawerOverlay').classList.add('open');
+  _custAuthHeaders().then(function (headers) {
+    return Promise.all([
+      fetch(CUST_API + '/customers/' + encodeURIComponent(id), { headers: headers }).then(_custParseResponse),
+      fetch(CUST_API + '/customers/' + encodeURIComponent(id) + '/activity', { headers: headers }).then(_custParseResponse).catch(function () { return { activity: [] }; })
+    ]);
+  }).then(function (results) {
+    if (myToken !== _custDrawerToken) return;
+    custRenderDrawer(results[0], results[1].activity || []);
+  }).catch(function (err) {
+    if (myToken !== _custDrawerToken) return;
+    document.getElementById('custDrawerBody').innerHTML = '<div class="state-empty">' + custEsc(_custErrorMessage(err)) + '</div>';
+  });
+}
+function custRenderDrawer(c, activity) {
+  var channels = c.channels || {};
+  var email = channels.email || {};
+  var push = channels.push || {};
+  var wallet = channels.wallet || {};
+
+  // Loyalty (Beta): every membership, clearly marked as possibly stale.
+  var memberships = (c.loyalty && c.loyalty.memberships) || [];
+  var loyaltyHtml = '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_ct('loyalty')) +
+    (memberships.length > 1 ? ' (' + memberships.length + ')' : '') + '<span class="cust-beta">' + custEsc(_ct('beta')) + '</span></div>';
+  if (!memberships.length) {
+    loyaltyHtml += '<div class="cust-loyalty-none">' + custEsc(_ct('not_enrolled')) + '</div>';
+  } else {
+    loyaltyHtml += '<div class="cust-loyalty-warning">' + custEsc(_ct('loyalty_warning')) + '</div>' +
+      memberships.map(function (m) {
+        var goal = m.stampGoal || 1;
+        var count = m.stampCount || 0;
+        var pct = Math.min(Math.round((count / goal) * 100), 100);
+        var remaining = goal - count;
+        return '<div style="margin-bottom:14px;">' +
+          (memberships.length > 1 ? '<div style="font-size:.68rem;color:var(--dashboard-muted-dim);margin-bottom:4px;">' + custEsc(m.slug || '') + '</div>' : '') +
+          '<div class="drawer-loyalty-visual"><div class="drawer-loyalty-bar"><div class="drawer-loyalty-bar-fill" style="width:' + pct + '%;"></div></div>' +
+          '<span class="drawer-loyalty-fraction">' + count + ' / ' + goal + '</span></div>' +
+          '<div class="drawer-loyalty-sub">' + custEsc(m.rewardReady ? _ct('reward_ready') : (remaining > 0 ? _ct('stamps_left', remaining) : '')) + '</div>' +
+        '</div>';
+      }).join('');
+  }
+  loyaltyHtml += '</div>';
+
+  var activityHtml = '';
+  if (activity.length) {
+    activityHtml = '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_ct('activity')) + '</div><div class="drawer-timeline">' +
+      activity.map(function (a) {
+        var label = CUST_I18N.en['act_' + a.type] ? _ct('act_' + a.type) : (a.event || '');
+        return '<div class="drawer-tl-item"><div class="drawer-tl-date">' + custEsc(custMonthYear(a.occurredAt)) + '</div><div class="drawer-tl-text">' + custEsc(label) + '</div></div>';
+      }).join('') + '</div></div>';
+  }
+
+  // Wallet keeps the precise distinction: installed (a registered device)
+  // vs. pass created but not installed.
+  var walletOn = !!wallet.installed;
+  var walletText = wallet.installed ? _ct('wallet_installed') : (wallet.passExists ? _ct('wallet_pending') : _ct('wallet_none'));
+
+  document.getElementById('custDrawerBody').innerHTML =
+    '<button class="drawer-close" onclick="custCloseDrawer()" aria-label="Close">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button>' +
+    '<div class="drawer-avatar">' + custEsc(custInitials(c)) + '</div>' +
+    '<div class="drawer-name">' + custEsc(custDisplayName(c)) + '</div>' +
+    (c.primaryEmail ? '<div class="drawer-email">' + custEsc(c.primaryEmail) + '</div>' : '') +
+    '<div class="drawer-since">' + custEsc(_ct('since')) + ' ' + custEsc(custMonthYear(c.firstSeenAt)) + '</div>' +
+    '<div class="drawer-actions">' +
+      '<button class="btn-outline" disabled aria-disabled="true">' + custEsc(_ct('send_campaign')) + '<span class="cust-soon">' + custEsc(_ct('soon')) + '</span></button>' +
+    '</div>' +
+    '<div class="drawer-section"><div class="drawer-section-title">' + custEsc(_ct('reach')) + '</div>' +
+      custDrawerReachRow(_ct('ch_email'), ICON_EMAIL, !!email.known, _ct('email_known'), _ct('email_none')) +
+      custDrawerReachRow(_ct('ch_push'), ICON_PUSH, !!push.subscribed, _ct('push_on'), _ct('push_off')) +
+      '<div class="drawer-row"><span class="drawer-row-label">' + ICON_WALLET + custEsc(_ct('wallet')) + '</span>' +
+        '<span class="drawer-row-value' + (walletOn ? ' ok' : '') + '">' + custEsc(walletText + (walletOn ? ' ✓' : '')) + '</span></div>' +
+    '</div>' +
+    loyaltyHtml +
+    activityHtml;
+}
+function custCloseDrawer() {
+  _custDrawerToken++;
+  document.getElementById('custDrawer').classList.remove('open');
+  document.getElementById('custDrawerOverlay').classList.remove('open');
+}
+
+// ── Language ──
+// Called by the page's applyLang(); re-labels static text and re-renders
+// already-loaded data without refetching.
+window.custApplyLang = function () {
+  document.querySelectorAll('#section-customers [data-cust-i18n]').forEach(function (el) {
+    el.textContent = _ct(el.getAttribute('data-cust-i18n'));
+  });
+  var search = document.getElementById('custSearch');
+  if (search) search.placeholder = _ct('search_ph');
+  if (!window.custPageLoaded) return;
+  if (_custLastList) custRenderTable(_custLastList);
+  Object.keys(_custSegCounts).forEach(function (id) { document.getElementById(id).textContent = custCountLabel(_custSegCounts[id]); });
+  if (_custLastSummary) {
+    var loc = custLocale(), d = _custLastSummary;
+    document.getElementById('custKpiTotal').textContent = (d.totalCustomers || 0).toLocaleString(loc);
+  }
+};
+
+// Loaded on demand from navigation (sidebar, ?section=customers,
+// showSection('customers')) — after initDashboard() has Clerk ready.
+// Idempotent: re-entering just re-shows the current state.
+window.custPageLoaded = false;
+window.custInitPage = function () {
+  window.custApplyLang();
+  if (window.custPageLoaded) return;
+  window.custPageLoaded = true;
+  custShowLoading();
+  custLoadSummary();
+  custLoadList();
+  custLoadSegmentCounts();
+};
 </script>
 </div>
 
@@ -1810,6 +2621,7 @@ window.loadCustList = function(btn) {
       nav_engage: 'Engage',
       nav_campaigns: 'AI Campaigns',
       nav_subscribers: 'Subscribers',
+      nav_customers: 'Customers',
       nav_loyalty: 'Loyalty',
       nav_configure: 'Configure',
       nav_wallet: 'Wallet Passes',
@@ -1891,6 +2703,7 @@ window.loadCustList = function(btn) {
       nav_engage: 'Engagement',
       nav_campaigns: 'KI-Kampagnen',
       nav_subscribers: 'Abonnenten',
+      nav_customers: 'Kunden',
       nav_loyalty: 'Treue',
       nav_configure: 'Konfigurieren',
       nav_wallet: 'Wallet-Pässe',
@@ -1965,6 +2778,7 @@ window.loadCustList = function(btn) {
     if (toggleLabel) toggleLabel.textContent = t.lang_toggle;
     // Update dynamic card content language for future renders
     window._qraivyLang = lang;
+    if (window.custApplyLang) window.custApplyLang();
     // Re-render empty state if visible
     var emptyTitle = document.querySelector('.sqr-empty-title');
     if (emptyTitle) emptyTitle.textContent = t.empty_title;
@@ -2030,9 +2844,9 @@ window.loadCustList = function(btn) {
     <span class="bn-icon">&#x1F3AB;</span>
     <span class="bn-label">Loyalty</span>
   </a>
-  <a href="javascript:void(0)" class="bn-item" id="bn-subs" onclick="if(window.showSection)showSection('subscribers');bnSetActive('bn-subs')">
+  <a href="javascript:void(0)" class="bn-item" id="bn-subs" onclick="if(window.showSection)showSection('customers');bnSetActive('bn-subs')">
     <span class="bn-icon">&#x1F465;</span>
-    <span class="bn-label">Subs</span>
+    <span class="bn-label" data-i18n="nav_customers">Customers</span>
   </a>
   <a href="javascript:void(0)" class="bn-item" id="bn-campaigns" onclick="if(window.showSection)showSection('campaigns');bnSetActive('bn-campaigns')">
     <span class="bn-icon">&#x1F4E3;</span>
@@ -2067,8 +2881,8 @@ function bnSetActive(id) {
 }
 // Real section switcher — shared by sidebar items and bottom nav
 window.showSection = function(sec) {
-  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns' };
+  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', customers:'bn-subs', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
+  var sbIdMap = { loyalty:'sb-loyalty', customers:'sb-customers', subscribers:'sb-customers', campaigns:'sb-campaigns' };
 
   if (sec === 'settings') {
     var mc2 = document.getElementById('main-content');
@@ -2103,6 +2917,7 @@ window.showSection = function(sec) {
       var tp = document.getElementById('subTablePanel'); if (tp) tp.style.display = 'block';
       var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
     }
+    if (sec === 'customers' && typeof window.custInitPage === 'function') window.custInitPage();
     if (sec === 'campaigns' && typeof window.campInitProgs === 'function') window.campInitProgs();
   }
 
@@ -2118,7 +2933,7 @@ window.showSection = function(sec) {
 
 // Set initial active state based on URL
 (function() {
-  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
+  var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', customers:'bn-subs', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
   var urlSec = new URLSearchParams(window.location.search).get('section');
   if (urlSec && sectionMap[urlSec]) bnSetActive(sectionMap[urlSec]);
   else bnSetActive('bn-home');
