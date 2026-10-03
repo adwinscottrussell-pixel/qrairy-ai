@@ -46,6 +46,7 @@ const mockPrisma = {
     },
   },
   qR: { async count() { return 0; } },
+  landingPage: { async count() { return 0; } },
 };
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
 

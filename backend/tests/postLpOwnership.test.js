@@ -142,6 +142,9 @@ test('1. anonymous CREATE of a genuinely new slug succeeds (smart-demo.html patt
 // ── 2. Authenticated CREATE uses the verified identity ──────────────────
 
 test('2. authenticated CREATE of a new slug assigns the verified token identity', async () => {
+  // Phase 2E: a user with no account row is Free (0 Smart QR Pages), so the
+  // creating user needs an explicit plan with Smart QR Page capacity.
+  users['user-a'] = { id: 'user-a', plan: 'starter', subscriptionStatus: 'active' };
   const res = fakeRes();
   await handlePublishLP(fakeReq({ slug: 'new-auth-slug', businessName: 'Auth Biz' }, 'Bearer user-a'), res);
   assert.equal(res.statusCode, 200);

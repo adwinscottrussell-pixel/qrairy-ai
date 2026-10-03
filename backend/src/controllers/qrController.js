@@ -1,4 +1,4 @@
-const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS}=require('../utils/tierSystem');
+const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS,countSmartPages}=require('../utils/tierSystem');
 const plans = require('../config/plans');
 const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
@@ -448,7 +448,8 @@ async function handleDashboard(req, res) {
       const basicLimit = entitlements.basicQrLimit;
       const aiLimit = entitlements.smartPageLimit;
       const qrCount = user.qrs.length;
-      const aiQrCount = await prisma.qR.count({ where: { userId, businessName: { not: null } } });
+      // Smart QR Page usage = owned LandingPages (legacy AI QR records excluded).
+      const aiQrCount = await countSmartPages(userId);
 
       planInfo = {
         plan: resolveEffectivePlan(user),

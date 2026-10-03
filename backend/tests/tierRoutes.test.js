@@ -23,6 +23,8 @@ const srcDir = path.join(__dirname, '..', 'src');
 const prismaClientPath = require.resolve(path.join(srcDir, 'utils', 'prismaClient.js'));
 
 let users = {};
+let legacyAiQrs = 0;
+let smartPagesByUser = {};
 let writes = [];
 const mockPrisma = {
   user: {
@@ -36,7 +38,9 @@ const mockPrisma = {
       return { count: 1 };
     },
   },
-  qR: { async count() { return 0; } },
+  // Legacy AI QR records (never Smart QR Pages) vs owned LandingPages.
+  qR: { async count() { return legacyAiQrs; } },
+  landingPage: { async count({ where }) { return (smartPagesByUser[where.userId] || 0); } },
 };
 require.cache[prismaClientPath] = { id: prismaClientPath, filename: prismaClientPath, loaded: true, exports: mockPrisma };
 
@@ -67,7 +71,7 @@ async function call(h, userId, body = {}) {
 
 const DAY = 24 * 60 * 60 * 1000;
 const tests = [];
-function test(name, fn) { tests.push({ name, fn: async () => { users = {}; writes = []; await fn(); } }); }
+function test(name, fn) { tests.push({ name, fn: async () => { users = {}; writes = []; legacyAiQrs = 0; smartPagesByUser = {}; await fn(); } }); }
 
 const PAID = ['starter', 'starter_annual', 'pro', 'pro_annual', 'business', 'business_annual', 'enterprise'];
 
@@ -150,6 +154,37 @@ test('/tier/trial case/whitespace variants of paid plans are still paid', async 
 test('/tier/trial missing user → 404', async () => {
   const res = await call(trialHandler, 'nobody');
   assert.equal(res.statusCode, 404);
+});
+
+test('/tier/plan Smart QR usage = owned LandingPages; legacy AI QR records ignored', async () => {
+  users.u = { id: 'u', plan: 'trial', trialExpiresAt: new Date(Date.now() + 5 * DAY) };
+  legacyAiQrs = 7;
+  smartPagesByUser.u = 1;
+  const res = await call(planHandler, 'u');
+  assert.equal(res.body.planInfo.aiQrCount, 1);
+  assert.equal(res.body.planInfo.aiLimit, 1);
+  assert.equal(res.body.planInfo.aiRemaining, 0);
+  assert.equal(res.body.planInfo.canCreateAI, false, 'trial with 1 Smart Page has no capacity left');
+});
+
+test('/tier/plan Starter usage 3 of 10 from LandingPages', async () => {
+  users.s = { id: 's', plan: 'starter', subscriptionStatus: 'active' };
+  smartPagesByUser.s = 3;
+  legacyAiQrs = 0;
+  const { planInfo } = (await call(planHandler, 's')).body;
+  assert.equal(planInfo.aiQrCount, 3);
+  assert.equal(planInfo.aiRemaining, 7);
+  assert.equal(planInfo.canCreateAI, true);
+});
+
+test('/tier/trial "Trial active" reports LandingPage usage', async () => {
+  users.u = { id: 'u', plan: 'trial', trialExpiresAt: new Date(Date.now() + 3 * DAY) };
+  smartPagesByUser.u = 1;
+  legacyAiQrs = 4;
+  const res = await call(trialHandler, 'u');
+  assert.equal(res.body.message, 'Trial active');
+  assert.equal(res.body.planInfo.aiQrCount, 1);
+  assert.equal(res.body.planInfo.aiRemaining, 0);
 });
 
 test('/tier/plan and /tier/check keep their response shape', async () => {

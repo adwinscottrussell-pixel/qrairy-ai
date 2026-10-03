@@ -226,6 +226,26 @@ test('buildPlanInfo keeps every legacy key; only isInternal/isKnownPlan added', 
   }
 });
 
+test('buildPlanInfo: canCreateAI = plan includes Smart Pages AND usage below limit', () => {
+  const FUT = new Date(Date.now() + 3 * DAY);
+  const cases = [
+    [{ plan: 'free' }, 0, false],
+    [{ plan: 'trial', trialExpiresAt: FUT }, 0, true],
+    [{ plan: 'trial', trialExpiresAt: FUT }, 1, false],
+    [{ plan: 'starter', subscriptionStatus: 'active' }, 9, true],
+    [{ plan: 'starter_annual', subscriptionStatus: 'active' }, 10, false],
+    [{ plan: 'pro', subscriptionStatus: 'active' }, 999, true],
+    [{ plan: 'business_annual', subscriptionStatus: 'active' }, 999, true],
+    [{ plan: 'enterprise' }, 999, true],
+    [{ plan: 'pro', subscriptionStatus: 'canceled' }, 0, false],
+  ];
+  for (const [user, count, expected] of cases) {
+    assert.equal(buildPlanInfo(user, count).canCreateAI, expected, `${user.plan}/${user.subscriptionStatus || ''} @${count}`);
+  }
+  const t = buildPlanInfo({ plan: 'trial', trialExpiresAt: FUT }, 1);
+  assert.deepEqual([t.aiQrCount, t.aiLimit, t.aiRemaining, t.canCreateAI], [1, 1, 0, false], 'preview account target');
+});
+
 test('buildPlanInfo: aiQrCount echoed; invalid counts do not throw', () => {
   assert.equal(buildPlanInfo({ plan: 'starter' }, 4).aiRemaining, 6);
   assert.equal(buildPlanInfo({ plan: 'starter' }, 4).aiQrCount, 4);

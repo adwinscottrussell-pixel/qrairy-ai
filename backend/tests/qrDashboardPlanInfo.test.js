@@ -40,7 +40,10 @@ const mockPrisma = {
     findMany: async () => qrRows,
     count: async ({ where }) => qrRows.filter(r => (!where.businessName || !!r.businessName)).length,
   },
-  landingPage: { findMany: async () => lpRows },
+  landingPage: {
+    findMany: async () => lpRows,
+    count: async ({ where }) => lpRows.filter(l => l.userId === where.userId).length,
+  },
   subscriber: { groupBy: async () => [{ slug: 'cafe', _count: { id: 4 } }] },
 };
 
@@ -65,13 +68,16 @@ function fakeRes() {
     json(b) { this.body = b; return this; },
   };
 }
-async function dashboardFor(user, { qrs = [], aiQrs = 0 } = {}) {
+async function dashboardFor(user, { qrs = [], aiQrs = 0, lps = 1 } = {}) {
   userRow = { id: 'user_1', phone: null, qrs, ...user };
   qrRows = [
     ...qrs.map((q, i) => ({ id: 'q' + i, userId: 'user_1', originalUrl: 'https://example.invalid', scans: [], subscribers: [], createdAt: new Date(2026, 0, i + 1) })),
     ...Array.from({ length: aiQrs }, (_, i) => ({ id: 'a' + i, userId: 'user_1', businessName: 'Biz ' + i, originalUrl: 'https://example.invalid', scans: [{}], subscribers: [], createdAt: new Date(2026, 1, i + 1) })),
   ];
-  lpRows = [{ id: 'lp1', slug: 'cafe', businessName: 'Cafe', websiteUrl: 'https://cafe.invalid', scanCount: 12, createdAt: new Date(2026, 2, 1) }];
+  // Owned LandingPages = authoritative Smart QR Pages (first one is the 'cafe' page).
+  lpRows = Array.from({ length: lps }, (_, i) => (i === 0
+    ? { id: 'lp1', slug: 'cafe', businessName: 'Cafe', userId: 'user_1', websiteUrl: 'https://cafe.invalid', scanCount: 12, createdAt: new Date(2026, 2, 1) }
+    : { id: 'lp' + (i + 1), slug: 'page-' + i, businessName: 'Page ' + i, userId: 'user_1', websiteUrl: 'https://p.invalid', scanCount: 0, createdAt: new Date(2026, 2, 1 + i) }));
   const res = fakeRes();
   await handleDashboard({ headers: { authorization: 'Bearer user_1' } }, res);
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
@@ -103,7 +109,7 @@ const CASES = [
 
 for (const [label, user, plan, basePlan, isInternal, aiLimit, canUseDynamic] of CASES) {
   test(`planInfo ${label}: plan=${plan}, base=${basePlan}, aiLimit=${aiLimit}`, async () => {
-    const { planInfo } = await dashboardFor(user, { qrs: [{}, {}, {}], aiQrs: 2 });
+    const { planInfo } = await dashboardFor(user, { qrs: [{}, {}, {}], aiQrs: 5, lps: 2 });
     assert.deepEqual(Object.keys(planInfo).sort(), [...LEGACY_KEYS, ...ADDED_KEYS].sort());
     assert.equal(planInfo.plan, plan);
     assert.equal(planInfo.basePlan, basePlan);
@@ -119,18 +125,29 @@ for (const [label, user, plan, basePlan, isInternal, aiLimit, canUseDynamic] of 
   });
 }
 
+test('Smart QR usage counts owned LandingPages; legacy AI QR records do not count', async () => {
+  const onlyLegacy = (await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { aiQrs: 6, lps: 0 })).planInfo;
+  assert.equal(onlyLegacy.aiQrCount, 0, 'legacy AI QR records are not Smart QR Pages');
+  const withPages = (await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { aiQrs: 6, lps: 3 })).planInfo;
+  assert.equal(withPages.aiQrCount, 3, 'each owned LandingPage counts');
+  assert.equal(withPages.qrCount, 0, 'basic QR count unchanged (user.qrs)');
+  assert.equal(withPages.limit, null, 'basic/static QR stays unlimited');
+  const trial = (await dashboardFor({ plan: 'trial', trialExpiresAt: new Date(Date.now() + 3 * DAY) }, { lps: 1 })).planInfo;
+  assert.deepEqual([trial.aiQrCount, trial.aiLimit, trial.canCreateAI], [1, 1, false], 'preview account target');
+});
+
 test('unlimited (null) Smart QR limit never reads as "limit reached", even at high counts', async () => {
   for (const plan of ['pro', 'business_annual', 'enterprise']) {
-    const { planInfo } = await dashboardFor({ plan, subscriptionStatus: plan === 'enterprise' ? null : 'active' }, { aiQrs: 40 });
+    const { planInfo } = await dashboardFor({ plan, subscriptionStatus: plan === 'enterprise' ? null : 'active' }, { aiQrs: 0, lps: 40 });
     assert.equal(planInfo.aiLimit, null, plan);
     assert.equal(planInfo.canCreateAI, true, plan);
   }
 });
 
 test('finite limits: Starter at 10 Smart QR → canCreateAI false; Free at 0 → false', async () => {
-  assert.equal((await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { aiQrs: 10 })).planInfo.canCreateAI, false);
-  assert.equal((await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { aiQrs: 9 })).planInfo.canCreateAI, true);
-  assert.equal((await dashboardFor({ plan: 'free' }, { aiQrs: 0 })).planInfo.canCreateAI, false);
+  assert.equal((await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { lps: 10 })).planInfo.canCreateAI, false);
+  assert.equal((await dashboardFor({ plan: 'starter', subscriptionStatus: 'active' }, { lps: 9 })).planInfo.canCreateAI, true);
+  assert.equal((await dashboardFor({ plan: 'free' }, { lps: 0 })).planInfo.canCreateAI, false);
 });
 
 test('Starter basic QR no longer capped at 10 in the display', async () => {

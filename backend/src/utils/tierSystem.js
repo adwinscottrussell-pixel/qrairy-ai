@@ -101,7 +101,8 @@ function buildPlanInfo(user, aiQrCount = 0) {
     subscriptionStatus:   user.subscriptionStatus || null,
 
     // Capabilities
-    canCreateAI:          caps.canCreateAI,
+    // Smart QR Page capacity: plan includes Smart Pages AND usage below limit.
+    canCreateAI:          caps.canCreateAI && plans.hasCapacity(caps.aiLimit, count),
     canUseDynamic:        caps.canUseDynamic,
     canAccessSmartDash:   caps.canAccessSmartDash,
     canUseAnalytics:      caps.canUseAnalytics,
@@ -155,6 +156,15 @@ function requireCap(cap) {
   };
 }
 
+// ── Smart QR Page usage ───────────────────────────────────────────────────────
+// Authoritative Smart QR Page usage: LandingPage records owned by the user
+// (drafts and StadtPocket-linked pages included). Legacy QR.businessName
+// records and basic/static QR codes are not Smart QR Pages.
+async function countSmartPages(userId) {
+  const prisma = require('./prismaClient');
+  return prisma.landingPage.count({ where: { userId } });
+}
+
 // ── Start trial for a user ────────────────────────────────────────────────────
 // One trial per account: only a user who has never had a trial
 // (trialExpiresAt null) and is not on a recognised paid plan (monthly,
@@ -181,4 +191,5 @@ module.exports = {
   buildPlanInfo,
   requireCap,
   startTrial,
+  countSmartPages,
 };
