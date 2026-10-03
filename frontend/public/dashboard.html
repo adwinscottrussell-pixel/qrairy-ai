@@ -154,6 +154,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
   font-size:1rem;padding:0 4px;flex-shrink:0;transition:color .18s;}
 .dub-close:hover{color:rgba(240,244,248,0.6);}
 </style>
+<script src="js/api-base.js"></script>
 </head>
 <body>
 
@@ -295,7 +296,7 @@ window.QrTier={
   get: function(){ return QRairySession.get(); }
 };
 
-const API_BASE='https://api.qraivy.com';
+const API_BASE=window.QRAIVY_API_BASE||'https://api.qraivy.com';
 
 function toast(msg){
   var t=document.getElementById('cs-toast');
@@ -465,8 +466,8 @@ function renderCards(dashboard){
     var wrap=document.createElement('div');
     wrap.innerHTML=renderSmartQRCard(qrData,{claimed:false});
     var card=wrap.firstElementChild;
-    card.querySelector('.sqr-manage').onclick=function(){window.location.href='smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&manage=true';};
-    card.querySelector('.sqr-open').onclick=function(){window.open(lpUrl,'_blank');};
+    card.querySelector('.sqr-manage').onclick=function(){if(window.qraivyAllowNavigation&&!window.qraivyAllowNavigation('smart-qr-detail.html'))return;window.location.href='smart-qr-detail.html?slug='+encodeURIComponent(slug)+'&manage=true';};
+    card.querySelector('.sqr-open').onclick=function(){if(window.qraivyAllowNavigation&&!window.qraivyAllowNavigation(lpUrl))return;window.open(lpUrl,'_blank');};
     card.querySelector('.sqr-analytics').onclick=function(){window.location.href='analytics.html';};
     grid.appendChild(card);
   });
@@ -656,6 +657,7 @@ async function initDashboard(){
     if (viewBtn) viewBtn.href = pending.hostedUrl;
     if (manBtn) manBtn.onclick = function() {
       const cl = pending.slug || claimSlug;
+      if (window.qraivyAllowNavigation && !window.qraivyAllowNavigation('smart-qr-detail.html')) return;
       window.location.href = 'smart-qr-detail.html?slug=' + encodeURIComponent(cl);
     };
     // Only show success modal once per claimed slug
@@ -937,7 +939,7 @@ async function initDashboard(){
     document.getElementById('subTableBody').innerHTML = '<div class="sub-loading" data-i18n="sub_loading">Loading subscribers…</div>';
     subTok(function(tok) {
       console.log('[Subscribers] got token, fetching summary, tok length:', tok ? tok.length : 0);
-      fetch('https://api.qraivy.com/loyalty/subscribers/summary', {
+      fetch(API_BASE + '/loyalty/subscribers/summary', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -990,7 +992,7 @@ async function initDashboard(){
     document.getElementById('subDetailBody').innerHTML = '<div class="sub-loading">Loading…</div>';
 
     subTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/subscribers/' + slug + '/detail', {
+      fetch(API_BASE + '/loyalty/subscribers/' + slug + '/detail', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1266,7 +1268,7 @@ async function initDashboard(){
     if (!sel || sel.dataset.loaded) return;
     sel.dataset.loaded = '1';
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/programs', {
+      fetch(API_BASE + '/loyalty/programs', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1355,7 +1357,7 @@ async function initDashboard(){
     var btn = document.getElementById('campGenBtn');
     btn.disabled = true; btn.childNodes[btn.childNodes.length-1].textContent = ' Generating…';
     campTok(function(tok) {
-      fetch('https://api.qraivy.com/loyalty/campaign/generate', {
+      fetch(API_BASE + '/loyalty/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify({ type: _trig, goal: goal, offer: offer, tone: _tone, bizName: _biz, rewardName: _reward })
@@ -1387,7 +1389,7 @@ async function initDashboard(){
     var msg = document.getElementById('campSendMsg');
     btn.disabled = true; msg.innerHTML = '';
     campTok(function(tok) {
-      fetch('https://www.qraivy.com/lp/push/' + _slug, {
+      fetch((window.QRAIVY_PUSH_BASE||'https://www.qraivy.com') + '/lp/push/' + _slug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify(Object.assign({ title: title, message: body }, (function(){ var l=(document.getElementById('campLinkUrl')||{}).value||''; if(l.trim()&&!/^https?:\/\//.test(l.trim())) l='https://'+l.trim(); return l.trim()?{linkUrl:l.trim()}:{}; })()))
@@ -1413,7 +1415,7 @@ async function initDashboard(){
     var panel = document.getElementById('campHistPanel');
     var list  = document.getElementById('campHistList');
     campTok(function(tok) {
-      fetch('https://www.qraivy.com/lp/push/' + slug + '/history', {
+      fetch((window.QRAIVY_PUSH_BASE||'https://www.qraivy.com') + '/lp/push/' + slug + '/history', {
         headers: { 'Authorization': 'Bearer ' + tok }
       }).then(function(x){ return x.json(); })
         .then(function(d) {
@@ -1469,7 +1471,7 @@ function _doLoadLoyalty(headers) {
   var list = document.getElementById("ly-pages-list");
   if (!list) return;
   list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
-  fetch("https://api.qraivy.com/loyalty/programs?_=" + Date.now(), { headers: headers })
+  fetch(API_BASE + "/loyalty/programs?_=" + Date.now(), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var programs = (data && data.programs) || [];
@@ -1657,7 +1659,7 @@ window.saveStaffPin = async function(btn) {
   btn.disabled = true;
   try {
     var tok = await window.Clerk.session.getToken();
-    var res = await fetch('https://api.qraivy.com/lp/staff-pin/' + encodeURIComponent(slug), {
+    var res = await fetch(API_BASE + '/lp/staff-pin/' + encodeURIComponent(slug), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
       body: JSON.stringify({ pin: pin })
@@ -1698,7 +1700,7 @@ window.saveLoyaltyEdit = function(btn) {
   try {
     window.Clerk.session.getToken().then(function(t) {
       var body = { rewardName: reward, goal: goal };
-      fetch("https://api.qraivy.com/loyalty/programs/" + id, {
+      fetch(API_BASE + "/loyalty/programs/" + id, {
         method: "PUT",
         headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -1721,7 +1723,7 @@ window.toggleLoyaltyStatus = function(btn) {
   var newStatus = cur === "active" ? "paused" : "active";
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/status", {
+      fetch(API_BASE + "/loyalty/programs/" + id + "/status", {
         method: "PATCH",
         headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
@@ -1748,7 +1750,7 @@ window.loadCustList = function(btn) {
   btn.innerHTML = "&#128101; Loading&#8230;";
   try {
     window.Clerk.session.getToken().then(function(t) {
-      fetch("https://api.qraivy.com/loyalty/programs/" + id + "/customers", {
+      fetch(API_BASE + "/loyalty/programs/" + id + "/customers", {
         headers: { "Authorization": "Bearer " + t }
       }).then(function(r) { return r.json(); }).then(function(d) {
         var custs = d.customers || [];
