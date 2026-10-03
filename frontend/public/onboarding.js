@@ -80,6 +80,24 @@
     var el2=getOrCreateOverlay();
     el2.innerHTML='<div class="qr-modal" style="text-align:center;padding:48px 32px;max-width:420px;margin:auto"><div style="font-size:2.5rem;margin-bottom:16px">🔒</div><h2 style="font-size:1.4rem;font-weight:700;margin-bottom:12px;color:#fff">Page Limit Reached</h2><p style="color:#888;font-size:.9rem;line-height:1.6;margin-bottom:28px">'+(message||'Upgrade your plan to create more Smart QR pages.')+'</p><a href="upgrade.html" style="display:inline-block;padding:14px 32px;background:#ff5a1f;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;font-size:.95rem">Upgrade Plan →</a><br><button onclick="this.closest(&quot;.qr-modal&quot;).parentElement.remove()" style="margin-top:16px;background:none;border:none;color:#555;cursor:pointer;font-size:.85rem">Cancel</button></div>';
   }
+  // ── 14-day trial bridge ─────────────────────────────────────────────────
+  // The account's one application trial starts at the first Smart Landing
+  // Page publish. POST /lp only runs when POST /tier/trial confirms the user
+  // may publish: 200 + ok:true (trial started, trial active, already premium).
+  var TRIAL_URL=(window.QRAIVY_API_BASE||'https://api.qraivy.com')+'/tier/trial';
+  async function ensureTrialForPublish(tok){
+    var r=null,d=null;
+    try{r=await fetch(TRIAL_URL,{method:'POST',headers:{'Authorization':'Bearer '+tok}});}catch(_){return {ok:false,kind:'error'};}
+    try{d=await r.json();}catch(_){}
+    if(r.status===409&&d&&d.code==='trial_already_used')return {ok:false,kind:'used'};
+    if(r.status===409&&d&&d.code==='trial_not_available')return {ok:false,kind:'unavailable'};
+    if(r.status===200&&d&&d.ok===true&&d.planInfo&&typeof d.planInfo==='object')return {ok:true};
+    return {ok:false,kind:'error'};
+  }
+  function showTrialBlocked(title,message,withUpgrade){
+    var el2=getOrCreateOverlay();
+    el2.innerHTML='<div class="qr-modal" style="text-align:center;padding:48px 32px;max-width:420px;margin:auto"><div style="font-size:2.5rem;margin-bottom:16px">🔒</div><h2 style="font-size:1.4rem;font-weight:700;margin-bottom:12px;color:#fff">'+title+'</h2><p style="color:#888;font-size:.9rem;line-height:1.6;margin-bottom:28px">'+message+'</p>'+(withUpgrade?'<a href="upgrade.html" style="display:inline-block;padding:14px 32px;background:#ff5a1f;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;font-size:.95rem">Upgrade Plan →</a><br>':'')+'<button onclick="this.closest(&quot;.qr-modal&quot;).parentElement.remove()" style="margin-top:16px;background:none;border:none;color:#555;cursor:pointer;font-size:.85rem">Cancel</button></div>';
+  }
   function doPublish(u){var el=getOrCreateOverlay();slideOut(el,'fwd',function(){el.innerHTML=publishingHTML();var cb=document.getElementById('qr-close');if(cb)cb.onclick=function(){closeModal(u);};runLoadingAnimation('qr-pub-fill','qr-pub-pct','qr-pub-',6,3200,function(){var kit=LP_KITS[S.selectedUseCase]||LP_KITS['restaurant'];if(!S.slug)S.slug=makeSlug(S.businessName||'qraivy');var slug=S.slug;S.publishedURL='https://www.qraivy.com/lp/'+slug;var lpHTML='';if(window.QRAivyLPGen){lpHTML=window.QRAivyLPGen.generate({useCase:S.selectedUseCase,bizName:S.businessName||'My Business',accent:S.brandColor||kit.accent,logo:S.logo,slug:slug,websiteURL:S.websiteURL||''});}
       (async function(){
         var tok=null;
@@ -87,6 +105,14 @@
           if(window.Clerk&&window.Clerk.session){tok=await window.Clerk.session.getToken();}
           else if(window.Clerk&&window.Clerk.user){var sessions=await window.Clerk.user.getSessions();if(sessions&&sessions[0])tok=await sessions[0].getToken();}
         }catch(_){}
+        // Trial gate: never publish without an authenticated, confirmed trial/plan.
+        if(!tok){showPublishFailure(u,'We could not confirm your sign-in. Please try again.');return;}
+        var trial=await ensureTrialForPublish(tok);
+        if(!trial.ok){
+          if(trial.kind==='used'){showTrialBlocked('Trial already used','Your 14-day trial has already been used. Choose a plan to continue creating Smart QR pages.',true);return;}
+          if(trial.kind==='unavailable'){showTrialBlocked('Trial not available','A trial cannot be started for this account.',false);return;}
+          showPublishFailure(u,'We could not start your 14-day trial. Please try again.');return;
+        }
         // Enrich payload with category config from shared source of truth
         var catCfg=(window.QRAIVY_SMART_QR_CATEGORIES_UTIL&&window.QRAIVY_SMART_QR_CATEGORIES_UTIL.get(S.selectedUseCase))||null;
         var d=null, r=null;
