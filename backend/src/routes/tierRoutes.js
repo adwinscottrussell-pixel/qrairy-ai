@@ -3,6 +3,7 @@ const router  = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const prisma  = require('../utils/prismaClient');
 const { buildPlanInfo, startTrial, resolveEffectivePlan, TRIAL_DURATION_MS } = require('../utils/tierSystem');
+const { normalizePlan, isRecognizedPaidPlan } = require('../config/plans');
 
 router.get('/plan', requireAuth, async (req, res) => {
   try {
@@ -17,10 +18,11 @@ router.post('/trial', requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    const plan = (user.plan || 'free').toLowerCase();
-    if (['starter','pro','starter_annual','pro_annual'].includes(plan))
+    // Any recognised paid plan (monthly, annual, Business or internal
+    // enterprise) is never replaced by an application trial.
+    if (isRecognizedPaidPlan(user.plan))
       return res.json({ ok: true, message: 'Already premium', planInfo: buildPlanInfo(user) });
-    if (plan === 'trial' && user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) {
+    if (normalizePlan(user.plan).isTrial && user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) {
       const c = await prisma.qR.count({ where: { userId: req.userId, businessName: { not: null } } });
       return res.json({ ok: true, message: 'Trial active', planInfo: buildPlanInfo(user, c) });
     }
