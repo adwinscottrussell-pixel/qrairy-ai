@@ -22,9 +22,31 @@ router.post('/trial', requireAuth, async (req, res) => {
     // enterprise) is never replaced by an application trial.
     if (isRecognizedPaidPlan(user.plan))
       return res.json({ ok: true, message: 'Already premium', planInfo: buildPlanInfo(user) });
-    if (normalizePlan(user.plan).isTrial && user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) {
+    const plan = normalizePlan(user.plan);
+    if (plan.isTrial && user.trialExpiresAt && new Date(user.trialExpiresAt) > new Date()) {
       const c = await prisma.qR.count({ where: { userId: req.userId, businessName: { not: null } } });
       return res.json({ ok: true, message: 'Trial active', planInfo: buildPlanInfo(user, c) });
+    }
+    // One trial per account: a populated trialExpiresAt is the durable
+    // "trial already used" marker (never cleared), whatever the plan value.
+    if (user.trialExpiresAt) {
+      return res.status(409).json({
+        ok: false,
+        code: 'trial_already_used',
+        message: 'Trial already used',
+        error: 'Your 14-day trial has already been used. Upgrade to keep using Smart QR features.',
+        planInfo: buildPlanInfo(user),
+      });
+    }
+    // Unrecognised plan values are never overwritten by a trial.
+    if (!plan.known) {
+      return res.status(409).json({
+        ok: false,
+        code: 'trial_not_available',
+        message: 'Trial not available',
+        error: 'A trial cannot be started for this account.',
+        planInfo: buildPlanInfo(user),
+      });
     }
     const updated = await startTrial(req.userId);
     const c = await prisma.qR.count({ where: { userId: req.userId, businessName: { not: null } } });

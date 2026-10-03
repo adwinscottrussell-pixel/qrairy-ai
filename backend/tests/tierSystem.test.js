@@ -37,6 +37,7 @@ const mockPrisma = {
       const u = users[where.id];
       if (!u) return { count: 0 };
       if (where.plan && where.plan.notIn && where.plan.notIn.includes(u.plan)) return { count: 0 };
+      if ('trialExpiresAt' in where && where.trialExpiresAt === null && u.trialExpiresAt != null) return { count: 0 };
       Object.assign(u, data);
       return { count: 1 };
     },

@@ -156,13 +156,15 @@ function requireCap(cap) {
 }
 
 // ── Start trial for a user ────────────────────────────────────────────────────
-// Never overwrites a recognised paid plan (monthly, annual or internal):
-// the conditional update skips those rows and the current record is returned.
+// One trial per account: only a user who has never had a trial
+// (trialExpiresAt null) and is not on a recognised paid plan (monthly,
+// annual or internal) is updated. The conditional update makes this atomic;
+// the current record is returned either way.
 async function startTrial(userId) {
   const prisma = require('./prismaClient');
   const expiresAt = new Date(Date.now() + TRIAL_DURATION_MS);
   await prisma.user.updateMany({
-    where: { id: userId, plan: { notIn: PAID_PLAN_IDS } },
+    where: { id: userId, plan: { notIn: PAID_PLAN_IDS }, trialExpiresAt: null },
     data: {
       plan: 'trial',
       trialExpiresAt: expiresAt,

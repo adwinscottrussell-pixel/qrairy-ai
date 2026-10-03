@@ -30,6 +30,7 @@ const mockPrisma = {
     async updateMany({ where, data }) {
       const u = users[where.id];
       if (!u || (where.plan && where.plan.notIn && where.plan.notIn.includes(u.plan))) return { count: 0 };
+      if ('trialExpiresAt' in where && where.trialExpiresAt === null && u.trialExpiresAt != null) return { count: 0 };
       writes.push({ id: where.id, data });
       Object.assign(u, data);
       return { count: 1 };
@@ -117,18 +118,26 @@ test('/tier/trial active trial: "Trial active", nothing written', async () => {
   assert.equal(users.u.trialExpiresAt, exp);
 });
 
-test('/tier/trial expired trial: restarts (pre-existing behaviour kept)', async () => {
-  users.u = { id: 'u', plan: 'trial', trialExpiresAt: new Date(Date.now() - DAY) };
+test('/tier/trial expired trial: 409 trial_already_used, nothing written', async () => {
+  const exp = new Date(Date.now() - DAY);
+  users.u = { id: 'u', plan: 'trial', trialExpiresAt: exp };
   const res = await call(trialHandler, 'u');
-  assert.equal(res.body.message, 'Trial started');
-  assert.equal(writes.length, 1);
+  assert.equal(res.statusCode, 409);
+  assert.deepEqual(Object.keys(res.body), ['ok', 'code', 'message', 'error', 'planInfo']);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.code, 'trial_already_used');
+  assert.equal(writes.length, 0);
+  assert.equal(users.u.plan, 'trial');
+  assert.equal(users.u.trialExpiresAt, exp);
 });
 
-test('/tier/trial unknown plan: treated as not paid → trial started', async () => {
+test('/tier/trial unknown plan, no trial history: 409 trial_not_available, raw value kept', async () => {
   users.u = { id: 'u', plan: 'gold_lifetime', trialExpiresAt: null };
   const res = await call(trialHandler, 'u');
-  assert.equal(res.body.message, 'Trial started');
-  assert.equal(users.u.plan, 'trial');
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.body.code, 'trial_not_available');
+  assert.equal(users.u.plan, 'gold_lifetime');
+  assert.equal(writes.length, 0);
 });
 
 test('/tier/trial case/whitespace variants of paid plans are still paid', async () => {
