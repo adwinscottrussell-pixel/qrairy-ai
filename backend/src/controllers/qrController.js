@@ -1,4 +1,5 @@
 const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS}=require('../utils/tierSystem');
+const plans = require('../config/plans');
 const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
@@ -429,23 +430,30 @@ async function handleDashboard(req, res) {
     }));
     const allCards = [...dashboard, ...lpCards].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Display-only plan summary from the canonical plan model (null =
+    // unlimited). QR creation/destination enforcement still uses the
+    // legacy tables above until migrated separately.
     let planInfo = null;
     if (userId) {
       const user = await upsertUser(userId);
-      const plan = user.plan || 'free';
-      const basicLimit = PLAN_LIMITS[plan] === Infinity ? null : PLAN_LIMITS[plan];
-      const aiLimit = PLAN_AI_LIMITS[plan] === Infinity ? null : PLAN_AI_LIMITS[plan];
+      const resolved = plans.resolveEffectivePlan(user);
+      const entitlements = plans.getPlanEntitlements(resolved.effectiveBase);
+      const basicLimit = entitlements.basicQrLimit;
+      const aiLimit = entitlements.smartPageLimit;
+      const qrCount = user.qrs.length;
       const aiQrCount = await prisma.qR.count({ where: { userId, businessName: { not: null } } });
 
       planInfo = {
-        plan,
-        qrCount: user.qrs.length,
+        plan: resolveEffectivePlan(user),
+        basePlan: resolved.effectiveBase,
+        isInternal: resolved.effectiveBase !== 'free' && resolved.plan.isInternal,
+        qrCount,
         limit: basicLimit,
         aiQrCount,
         aiLimit,
-        canCreate: basicLimit === null || user.qrs.length < basicLimit,
-        canCreateAI: aiLimit === null || aiQrCount < aiLimit,
-        canUseDynamic: PLAN_DYNAMIC[plan],
+        canCreate: plans.hasCapacity(basicLimit, qrCount),
+        canCreateAI: plans.hasCapacity(aiLimit, aiQrCount),
+        canUseDynamic: entitlements.dynamicQr,
         hasPhone: !!user.phone,
       };
     }
