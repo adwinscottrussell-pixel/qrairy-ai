@@ -2326,13 +2326,73 @@ body.sb-collapsed #section-campaigns{margin-left:var(--sidebar-collapsed-width);
 </script>
 </div>
 
-<div id="section-loyalty" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div style="font-size:1.2rem;font-weight:800;color:#f0f4f8;"><span data-i18n="loy_title">🎟 Loyalty Programs</span></div>
-    <a id="ly-add-prog-btn" href="loyalty-setup.html" style="font-size:.72rem;color:#ff5a1f;text-decoration:none;padding:6px 14px;border:0.5px solid rgba(255,90,31,0.3);border-radius:6px;" data-i18n="loy_add_prog">+ Add program</a>
+<div id="section-loyalty" class="dash-section" style="display:none;">
+<style>
+/* Loyalty — UI-only restyle onto the approved centred Admin layout (Kunden /
+   Analytics / AI Campaigns). Sidebar offset scoped to this section only; the
+   page's existing mobile .dash-section rule still resets it on small screens.
+   Behaviour, API calls, payloads, element IDs and handlers are unchanged. */
+#section-loyalty{margin-left:var(--sidebar-width);flex:1;min-width:0;min-height:100vh;transition:margin-left .22s;}
+body.sb-collapsed #section-loyalty{margin-left:var(--sidebar-collapsed-width);}
+#section-loyalty .ly-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;}
+#section-loyalty .ly-header .btn-outline{text-decoration:none;white-space:nowrap;}
+#ly-pages-list{display:grid;gap:16px;}
+#section-loyalty .ly-card-sub{font-size:.72rem;color:var(--dashboard-muted);margin-top:3px;}
+#section-loyalty .ly-unconfigured{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+#section-loyalty .ly-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;cursor:pointer;font-family:inherit;}
+#section-loyalty .ly-btn.btn-outline{padding:8px 14px;font-size:.74rem;}
+#section-loyalty .ly-btn.btn-primary{padding:9px 16px;font-size:.78rem;}
+#section-loyalty .ly-preview{background:linear-gradient(135deg,#161616,#0d0d0d);border-radius:var(--card-radius-lg,14px);padding:18px 20px;margin-bottom:16px;position:relative;overflow:hidden;}
+#section-loyalty .ly-preview-name{font-size:.95rem;font-weight:700;color:#f0f4f8;margin-bottom:3px;}
+#section-loyalty .ly-preview-sub{font-size:.7rem;color:var(--dashboard-muted);margin-bottom:14px;}
+#section-loyalty .ly-stamps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+#section-loyalty .ly-stamp{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;border:1.5px solid rgba(255,255,255,0.15);}
+#section-loyalty .ly-preview-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.66rem;color:var(--dashboard-muted-dim);}
+#section-loyalty .ly-preview-foot a{text-decoration:none;letter-spacing:.03em;white-space:nowrap;}
+#section-loyalty .ly-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+#section-loyalty .ly-stats .kpi-card{padding:14px 16px;text-align:center;}
+#section-loyalty .ly-stats .kpi-val{font-size:1.4rem;}
+#section-loyalty .ly-progress{height:4px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:18px;overflow:hidden;}
+#section-loyalty .ly-progress > div{height:100%;border-radius:999px;transition:width .5s;}
+#section-loyalty .ly-url-row{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--dashboard-border);border-radius:var(--card-radius,12px);background:rgba(255,255,255,0.02);margin-bottom:10px;}
+#section-loyalty .ly-qr{width:68px;height:68px;background:#fff;border-radius:10px;flex-shrink:0;overflow:hidden;}
+#section-loyalty .ly-qr img{width:68px;height:68px;display:block;}
+#section-loyalty .ly-url-body{flex:1;min-width:0;}
+#section-loyalty .ly-url-label{font-family:var(--font-mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dashboard-muted-dim);margin-bottom:4px;}
+#section-loyalty .ly-url-text{font-family:var(--font-mono);font-size:.62rem;color:var(--dashboard-muted);word-break:break-all;margin-bottom:10px;}
+#section-loyalty .ly-actions{display:flex;gap:8px;flex-wrap:wrap;}
+#section-loyalty .ly-actions .ly-btn{flex:1;min-width:120px;}
+#section-loyalty .ly-btn.ly-redeem{color:#22c55e;border-color:rgba(34,197,94,0.25);}
+#section-loyalty .ly-btn.ly-scan{width:100%;margin-top:4px;padding:10px 14px;color:#ff8c55;border-color:var(--dashboard-accent-border);background:var(--dashboard-accent-dim);}
+#section-loyalty .ly-edit{margin-top:14px;border:1px solid var(--dashboard-border);border-radius:var(--card-radius,12px);padding:16px;background:rgba(255,255,255,0.02);}
+#section-loyalty .ly-edit-title{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dashboard-muted-dim);margin-bottom:12px;}
+#section-loyalty .ly-edit-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+#section-loyalty .ly-edit label{display:block;font-family:var(--font-mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dashboard-muted-dim);margin-bottom:6px;}
+#section-loyalty .ly-input{flex:1;min-width:140px;background:var(--qds-color-surface-2,#1a1a1a);border:1px solid var(--dashboard-border);border-radius:8px;padding:9px 11px;color:#f0f4f8;font-family:inherit;font-size:.78rem;outline:none;}
+#section-loyalty .ly-input:focus{border-color:var(--dashboard-accent);}
+#section-loyalty select.ly-input{flex:0 0 auto;min-width:120px;cursor:pointer;}
+#section-loyalty .ly-ok{font-size:.7rem;color:#22c55e;display:none;}
+#section-loyalty .ly-cust{margin-top:14px;}
+#section-loyalty .ly-cust-toggle{width:100%;}
+#section-loyalty .ly-cust .data-table-wrap{margin-top:8px;overflow-x:auto;}
+#section-loyalty .ly-cust .data-table td,#section-loyalty .ly-cust .data-table th{padding:10px 14px;}
+@media (max-width:640px){
+  #section-loyalty .ly-stats{gap:8px;}
+  #section-loyalty .ly-stats .kpi-card{padding:12px 8px;}
+  #section-loyalty .ly-url-row{flex-direction:column;align-items:flex-start;}
+}
+</style>
+
+<div class="qds-page-wrap">
+  <div class="ly-header">
+    <div>
+      <div class="page-title"><span data-i18n="loy_title">🎟 Loyalty Programs</span></div>
+      <div class="page-subtitle" data-i18n="loy_gdpr">Anonymous stamp tracking — GDPR compliant</div>
+    </div>
+    <a id="ly-add-prog-btn" href="loyalty-setup.html" class="btn-outline" data-i18n="loy_add_prog">+ Add program</a>
   </div>
-  <div style="font-size:.75rem;color:rgba(240,244,248,0.5);margin-bottom:20px;" data-i18n="loy_gdpr">Anonymous stamp tracking — GDPR compliant</div>
-  <div id="ly-pages-list" style="display:grid;gap:16px;max-width:720px;"></div>
+  <div id="ly-pages-list"></div>
+</div>
 </div>
 
 <script>
@@ -2352,20 +2412,20 @@ function loadLoyaltyDashboard() {
 function _doLoadLoyalty(headers) {
   var list = document.getElementById("ly-pages-list");
   if (!list) return;
-  list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;padding:20px;\">Loading…</div>";
+  list.innerHTML = "<div class=\"state-loading\">Loading…</div>";
   fetch(API_BASE + "/loyalty/programs?_=" + Date.now(), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var programs = (data && data.programs) || [];
       if (!programs.length) {
-        list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);font-size:.85rem;text-align:center;padding:40px;\">No loyalty programs yet. <a href=\"loyalty-setup.html\" style=\"color:#ff5a1f;text-decoration:none;\">Set one up →</a></div>";
+        list.innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">🎟</div><div class=\"empty-title\">No loyalty programs yet.</div><a class=\"empty-cta\" href=\"loyalty-setup.html\">Set one up →</a></div>";
         return;
       }
       list.innerHTML = "";
       programs.forEach(function(p) { list.appendChild(_lyBuildCard(p)); });
     })
     .catch(function() {
-      list.innerHTML = "<div style=\"color:rgba(240,244,248,0.4);padding:20px;\">Error loading loyalty data.</div>";
+      list.innerHTML = "<div class=\"empty-state compact\"><div class=\"empty-title\">Error loading loyalty data.</div></div>";
     });
 }
 
@@ -2388,19 +2448,19 @@ function _lyCardPreview(p, color) {
   var circles = "";
   for (var i = 0; i < goal; i++) {
     if (i < p.currentStamps) {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;background:" + _lyRgba(color,0.85) + ";border:1.5px solid " + color + ";display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;'>✓</div>";
+      circles += "<div class='ly-stamp' style='background:" + _lyRgba(color,0.85) + ";border-color:" + color + ";'>✓</div>";
     } else {
-      circles += "<div style='width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);'></div>";
+      circles += "<div class='ly-stamp'></div>";
     }
   }
-  return "<div id='ly-preview-" + p.id + "' style='background:linear-gradient(135deg,#1c1c1c,#111);border:1px solid " + _lyRgba(color,0.3) + ";border-radius:14px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;'>" +
+  return "<div id='ly-preview-" + p.id + "' class='ly-preview' style='border:1px solid " + _lyRgba(color,0.3) + ";'>" +
     "<div style='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg," + color + ",transparent);'></div>" +
-    "<div style='font-size:.95rem;font-weight:600;color:#f0ece0;margin-bottom:3px;'>" + _lyEsc(p.businessName || p.slug) + "</div>" +
-    "<div style='font-size:.65rem;color:rgba(240,244,248,0.35);margin-bottom:14px;'>" + (_lang==="de" ? "Sammle " + goal + " Stempel — erhalte " : "Collect " + goal + " stamps — get a ") + _lyEsc(p.rewardText || "Free item") + "</div>" +
-    "<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;'>" + circles + "</div>" +
-    "<div style='display:flex;justify-content:space-between;align-items:center;'>" +
-      "<div style='font-size:.6rem;color:rgba(240,244,248,0.25);'>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
-      "<a href='https://qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='font-size:.6rem;color:" + color + ";text-decoration:none;letter-spacing:.03em;'>"+ (_lang==="de"?"Karte ansehen":"View card") +" ↗</a>" +
+    "<div class='ly-preview-name'>" + _lyEsc(p.businessName || p.slug) + "</div>" +
+    "<div class='ly-preview-sub'>" + (_lang==="de" ? "Sammle " + goal + " Stempel — erhalte " : "Collect " + goal + " stamps — get a ") + _lyEsc(p.rewardText || "Free item") + "</div>" +
+    "<div class='ly-stamps'>" + circles + "</div>" +
+    "<div class='ly-preview-foot'>" +
+      "<div>" + p.currentStamps + " of " + goal + " stamps collected</div>" +
+      "<a href='https://qraivy.com/lp/card/" + _lyEsc(p.slug) + "' target='_blank' style='color:" + color + ";'>"+ (_lang==="de"?"Karte ansehen":"View card") +" ↗</a>" +
     "</div>" +
   "</div>";
 }
@@ -2415,115 +2475,118 @@ function _lyBuildCard(p) {
   el.id = "ly-card-" + p.id;
   var pct = p.stampGoal ? Math.min(100, Math.round(p.currentStamps / p.stampGoal * 100)) : 0;
   var color = p.color || "#ff5a1f";
-  var badgeStyle, badgeTxt;
+  var badgeClass, badgeTxt;
   if (!p.hasLoyaltyConfig) {
-    badgeStyle = "background:rgba(255,90,31,0.12);color:#ff8c55;border:0.5px solid rgba(255,90,31,0.25);";
+    badgeClass = "badge-ai";
     badgeTxt = "<span data-i18n='loy_not_setup'>not set up</span>";
   } else if (p.status === "active") {
-    badgeStyle = "background:rgba(34,197,94,0.12);color:#22c55e;border:0.5px solid rgba(34,197,94,0.25);";
+    badgeClass = "badge-success";
     badgeTxt = "<span data-i18n='loy_active'>● active</span>";
   } else {
-    badgeStyle = "background:rgba(255,255,255,0.05);color:#8b949e;border:0.5px solid rgba(255,255,255,0.1);";
+    badgeClass = "badge-free";
     badgeTxt = "<span data-i18n='loy_paused'>⏸ paused</span>";
   }
-  el.style.cssText = "background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;";
+  el.className = "panel";
   var goalOpts = [5,8,10,12,15].map(function(n) {
     return "<option value=\"" + n + "\"" + (n === p.stampGoal ? " selected" : "") + ">" + n + " stamps</option>";
   }).join("");
 
   var h = "";
   // Header
-  h += "<div style=\"display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;\">";
+  h += "<div class=\"panel-hdr\">";
   h +=   "<div>";
-  h +=     "<div style=\"font-size:1rem;font-weight:700;color:#f0f4f8;\">" + _lyEsc(p.businessName || p.slug) + "</div>";
-  h +=     "<div style=\"font-size:.7rem;color:rgba(240,244,248,0.4);margin-top:2px;\">";
+  h +=     "<div class=\"panel-title\">" + _lyEsc(p.businessName || p.slug) + "</div>";
+  h +=     "<div class=\"ly-card-sub\">";
   h +=       p.hasLoyaltyConfig ? (_lyEsc(p.rewardText || "Free item") + " after " + p.stampGoal + " stamps") : "Loyalty not configured";
   h +=     "</div>";
   h +=   "</div>";
-  h +=   "<span style=\"" + badgeStyle + "border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:700;\">" + badgeTxt + "</span>";
+  h +=   "<span class=\"badge " + badgeClass + "\">" + badgeTxt + "</span>";
   h += "</div>";
+  h += "<div class=\"panel-body\">";
 
   if (p.hasLoyaltyConfig) {
     // Visual card preview (uses program color)
     h += _lyCardPreview(p, color);
     // Stats
-    h += "<div style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;\">";
+    h += "<div class=\"ly-stats\">";
     h += _lyStat(_lang==="de"?"Aktuell":"Current", p.currentStamps, color);
     h += _lyStat(_lang==="de"?"Gesamt":"All-time", p.totalStampsIssued, "#f0f4f8");
     h += _lyStat(_lang==="de"?"Eingeloest":"Redeemed", p.rewardsRedeemed, "#f0f4f8");
     h += "</div>";
     // Progress bar
-    h += "<div style=\"height:3px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:14px;overflow:hidden;\">";
-    h += "<div style=\"height:100%;background:" + color + ";border-radius:999px;width:" + pct + "%;transition:width 0.5s;\"></div></div>";
+    h += "<div class=\"ly-progress\">";
+    h += "<div style=\"background:" + color + ";width:" + pct + "%;\"></div></div>";
     // QR + NFC URL + actions
-    h += "<div style=\"display:flex;gap:10px;align-items:center;\">";
-    h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
+    h += "<div class=\"ly-url-row\">";
+    h +=   "<div class=\"ly-qr\">";
     if (p.nfcUrl) {
       h += "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.nfcUrl) + "\" style=\"width:68px;height:68px;\">";
     }
     h +=   "</div>";
-    h +=   "<div style=\"flex:1;min-width:0;\">";
-    h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.nfcUrl || "—") + "</div>";
-    h +=     "<div style=\"display:flex;gap:6px;flex-wrap:wrap;\">";
-    h +=       "<button id=\"ly-copybtn-" + p.id + "\" data-url=\"" + _lyEsc(p.nfcUrl || "") + "\" data-id=\"" + p.id + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"flex:1;padding:8px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;color:#f0f4f8;font-size:.7rem;cursor:pointer;min-width:90px;\">" + (_lang==="de"?"NFC-URL kopieren":"Copy NFC URL") + "</button>";
-    h +=       "<button data-id=\"" + p.id + "\" onclick=\"window.toggleLoyaltyEdit(this)\" style=\"padding:8px 10px;background:transparent;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(240,244,248,0.35);font-size:.7rem;cursor:pointer;\" title=\"Edit program\">" + (_lang==="de"?"&#9881; Bearbeiten":"&#9881; Edit") + "</button>";
+    h +=   "<div class=\"ly-url-body\">";
+    h +=     "<div class=\"ly-url-text\">" + _lyEsc(p.nfcUrl || "—") + "</div>";
+    h +=     "<div class=\"ly-actions\">";
+    h +=       "<button id=\"ly-copybtn-" + p.id + "\" data-url=\"" + _lyEsc(p.nfcUrl || "") + "\" data-id=\"" + p.id + "\" onclick=\"window.copyLoyaltyUrl(this)\" class=\"btn-outline ly-btn\">" + (_lang==="de"?"NFC-URL kopieren":"Copy NFC URL") + "</button>";
+    h +=       "<button data-id=\"" + p.id + "\" onclick=\"window.toggleLoyaltyEdit(this)\" class=\"btn-ghost ly-btn\" title=\"Edit program\">" + (_lang==="de"?"&#9881; Bearbeiten":"&#9881; Edit") + "</button>";
     h +=     "</div>";
     h +=   "</div>";
     h += "</div>";
     // Second physical NFC tag — staff tap a customer's phone on this to redeem their reward
     if (p.redeemUrl) {
-      h += "<div style=\"display:flex;gap:10px;align-items:center;margin-top:10px;\">";
-      h +=   "<div style=\"width:68px;height:68px;background:rgba(255,255,255,0.06);border-radius:10px;flex-shrink:0;overflow:hidden;\">";
+      h += "<div class=\"ly-url-row\">";
+      h +=   "<div class=\"ly-qr\">";
       h +=     "<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=68x68&data=" + encodeURIComponent(p.redeemUrl) + "\" style=\"width:68px;height:68px;\">";
       h +=   "</div>";
-      h +=   "<div style=\"flex:1;min-width:0;\">";
-      h +=     "<div style=\"font-size:.52rem;color:rgba(240,244,248,0.3);font-family:monospace;word-break:break-all;margin-bottom:8px;\">" + _lyEsc(p.redeemUrl) + "</div>";
-      h +=     "<button data-url=\"" + _lyEsc(p.redeemUrl) + "\" onclick=\"window.copyLoyaltyUrl(this)\" style=\"width:100%;padding:8px;background:rgba(34,197,94,0.08);border:0.5px solid rgba(34,197,94,0.2);border-radius:8px;color:#22c55e;font-size:.7rem;font-weight:600;cursor:pointer;\">" + (_lang==="de"?"🎁 Einlöse-URL kopieren":"🎁 Copy Redeem URL") + "</button>";
+      h +=   "<div class=\"ly-url-body\">";
+      h +=     "<div class=\"ly-url-text\">" + _lyEsc(p.redeemUrl) + "</div>";
+      h +=     "<button data-url=\"" + _lyEsc(p.redeemUrl) + "\" onclick=\"window.copyLoyaltyUrl(this)\" class=\"btn-outline ly-btn ly-redeem\" style=\"width:100%;\">" + (_lang==="de"?"🎁 Einlöse-URL kopieren":"🎁 Copy Redeem URL") + "</button>";
       h +=   "</div>";
       h += "</div>";
     }
     // Staff stamp scanner — links to the camera-based scanner page
-    h += "<a href=\"stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\" style=\"display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.25);border-radius:8px;color:#ff8c55;font-size:.75rem;font-weight:600;text-decoration:none;\">📷 " + (_lang==="de"?"Kunden-Pass scannen & stempeln":"Scan customer pass to stamp") + "</a>";
+    h += "<a href=\"stamp-scanner.html?slug=" + encodeURIComponent(p.slug) + "\" class=\"btn-outline ly-btn ly-scan\">📷 " + (_lang==="de"?"Kunden-Pass scannen & stempeln":"Scan customer pass to stamp") + "</a>";
     // Inline edit panel
-    h += "<div id=\"ly-edit-" + p.id + "\" style=\"display:none;margin-top:12px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:10px;padding:13px;\">";
-    h +=   "<div style=\"font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:10px;\">Edit program</div>";
-    h +=   "<div style=\"display:flex;gap:8px;margin-bottom:10px;\">";
-    h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
-    h +=     "<select id=\"ly-eg-" + p.id + "\" style=\"background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px;color:#f0f4f8;font-size:.75rem;cursor:pointer;outline:none;\">" + goalOpts + "</select>";
+    h += "<div id=\"ly-edit-" + p.id + "\" class=\"ly-edit\" style=\"display:none;\">";
+    h +=   "<div class=\"ly-edit-title\">Edit program</div>";
+    h +=   "<div class=\"ly-edit-row\">";
+    h +=     "<input id=\"ly-er-" + p.id + "\" value=\"" + _lyEsc(p.rewardText || "") + "\" placeholder=\"Reward name\" class=\"ly-input\" />";
+    h +=     "<select id=\"ly-eg-" + p.id + "\" class=\"ly-input\">" + goalOpts + "</select>";
     h +=   "</div>";
-    h +=   "<div style=\"margin-bottom:10px;\"><label style=\"display:block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:6px;\">Staff PIN (4-6 digits)</label>";
-    h +=   "<div style=\"display:flex;gap:8px;\">";
-    h +=     "<input id=\"ly-pin-" + p.id + "\" type=\"number\" min=\"1000\" max=\"999999\" placeholder=\"e.g. 1234\" style=\"flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:8px 10px;color:#f0f4f8;font-family:inherit;font-size:.75rem;outline:none;\" />";
-    h +=     "<button data-id=\"" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.saveStaffPin(this)\" style=\"padding:8px 14px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:7px;color:#ff8c55;font-size:.72rem;cursor:pointer;white-space:nowrap;\">Set PIN</button>";
-    h +=   "</div><span id=\"ly-pin-status-" + p.id + "\" style=\"font-size:.65rem;color:#22c55e;display:none;\">✓ PIN saved</span></div>";
-    h +=   "<div style=\"display:flex;gap:8px;align-items:center;\">";
-    h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" style=\"padding:8px 16px;background:#ff5a1f;border:none;border-radius:7px;color:#fff;font-size:.72rem;cursor:pointer;\">Save</button>";
-    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" style=\"padding:8px 14px;background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;color:rgba(240,244,248,0.4);font-size:.72rem;cursor:pointer;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
-    h +=     "<span id=\"ly-saved-" + p.id + "\" style=\"font-size:.68rem;color:#22c55e;display:none;\">✓ Saved</span>";
+    h +=   "<div style=\"margin-bottom:12px;\"><label>Staff PIN (4-6 digits)</label>";
+    h +=   "<div class=\"ly-edit-row\" style=\"margin-bottom:0;\">";
+    h +=     "<input id=\"ly-pin-" + p.id + "\" type=\"number\" min=\"1000\" max=\"999999\" placeholder=\"e.g. 1234\" class=\"ly-input\" />";
+    h +=     "<button data-id=\"" + p.id + "\" data-slug=\"" + _lyEsc(p.slug) + "\" onclick=\"window.saveStaffPin(this)\" class=\"btn-outline ly-btn\" style=\"white-space:nowrap;\">Set PIN</button>";
+    h +=   "</div><span id=\"ly-pin-status-" + p.id + "\" class=\"ly-ok\">✓ PIN saved</span></div>";
+    h +=   "<div class=\"ly-actions\" style=\"align-items:center;\">";
+    h +=     "<button data-id=\"" + p.id + "\" onclick=\"window.saveLoyaltyEdit(this)\" class=\"btn-primary ly-btn\" style=\"flex:0 0 auto;min-width:0;\">Save</button>";
+    h +=     "<button data-id=\"" + p.id + "\" data-status=\"" + (p.status || "active") + "\" onclick=\"window.toggleLoyaltyStatus(this)\" class=\"btn-outline ly-btn\" style=\"flex:0 0 auto;min-width:0;\">" + (p.status === "active" ? "<span data-i18n='loy_pause'>Pause</span>" : "<span data-i18n='loy_activate'>Activate</span>") + "</button>";
+    h +=     "<span id=\"ly-saved-" + p.id + "\" class=\"ly-ok\">✓ Saved</span>";
     h +=   "</div>";
     h += "</div>";
   } else {
-    h += "<a href=\"loyalty-setup.html\" style=\"display:block;text-align:center;padding:10px;margin-top:10px;background:rgba(255,90,31,0.08);border:0.5px solid rgba(255,90,31,0.18);border-radius:8px;color:#ff8c55;font-size:.75rem;text-decoration:none;\">" + (_lang==="de"?"+ Treueprogramm aktivieren":"+ Enable loyalty for this page") + "</a>";
+    h += "<div class=\"ly-unconfigured\">";
+    h +=   "<a href=\"loyalty-setup.html\" class=\"btn-primary ly-btn\">" + (_lang==="de"?"+ Treueprogramm aktivieren":"+ Enable loyalty for this page") + "</a>";
+    h += "</div>";
   }
 
   // STEP3_CUST_LIST: customer list section
   if (p.hasLoyaltyConfig) {
-    h += "<div style=\"margin-top:12px;\">";
+    h += "<div class=\"ly-cust\">";
     h += "<button data-id=\"" + p.id + "\" onclick=\"window.loadCustList(this)\"" +
-         " style=\"width:100%;padding:8px;background:transparent;border:0.5px solid rgba(255,255,255,0.07);" +
-         "border-radius:8px;color:rgba(240,244,248,0.35);font-size:.68rem;cursor:pointer;\">" +
+         " class=\"btn-ghost ly-btn ly-cust-toggle\">" +
          "&#128101; " + (_lang==="de"?"Kunden":"Customers") + "</button>";
-    h += "<div id=\"cust-list-" + p.id + "\" style=\"display:none;margin-top:8px;\"></div>";
+    h += "<div id=\"cust-list-" + p.id + "\" style=\"display:none;\"></div>";
     h += "</div>";
   }
+  h += "</div>";
   el.innerHTML = h;
   return el;
 }
 
 function _lyStat(label, val, color) {
-  return "<div style=\"background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;text-align:center;\">" +
-    "<div style=\"font-size:.52rem;text-transform:uppercase;letter-spacing:.07em;color:rgba(240,244,248,0.35);margin-bottom:3px;\">" + label + "</div>" +
-    "<div style=\"font-size:1.3rem;font-weight:800;color:" + color + ";\">" + val + "</div>" +
+  return "<div class=\"kpi-card\">" +
+    "<div class=\"kpi-val\" style=\"color:" + color + ";\">" + val + "</div>" +
+    "<div class=\"kpi-lbl\">" + label + "</div>" +
   "</div>";
 }
 
@@ -2638,7 +2701,7 @@ window.loadCustList = function(btn) {
         var custs = d.customers || [];
         btn.innerHTML = "&#128101; " + custs.length + " customer" + (custs.length !== 1 ? "s" : "");
         if (!custs.length) {
-          container.innerHTML = "<div style=\"padding:12px;text-align:center;font-size:.72rem;color:rgba(240,244,248,0.3);\">No customers yet</div>";
+          container.innerHTML = "<div class=\"state-empty\">No customers yet</div>";
           container.style.display = "block";
           return;
         }
@@ -2648,19 +2711,16 @@ window.loadCustList = function(btn) {
           var reward = c.rewardReady ? " <span style=\"color:#22c55e;\">&#10003; Ready</span>" : "";
           var when = c.lastStampAt ? new Date(c.lastStampAt).toLocaleDateString() : "—";
           var prog = c.stampCount + "/" + c.goal;
-          rows += "<div style=\"display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.05);font-size:.68rem;\">" +
-            "<span style=\"font-size:.85rem;\">" + icon + "</span>" +
-            "<span style=\"flex:1;color:rgba(240,244,248,0.5);font-family:monospace;\">" + _lyEsc(c.maskedId) + "</span>" +
-            "<span style=\"color:#ff5a1f;font-weight:700;\">" + prog + "</span>" +
-            reward +
-            "<span style=\"color:rgba(240,244,248,0.25);margin-left:auto;\">" + when + "</span>" +
-          "</div>";
+          rows += "<tr>" +
+            "<td><span style=\"font-size:.85rem;margin-right:8px;\">" + icon + "</span>" + _lyEsc(c.maskedId) + "</td>" +
+            "<td><span style=\"color:var(--dashboard-accent);font-weight:700;\">" + prog + "</span>" + reward + "</td>" +
+            "<td>" + when + "</td>" +
+          "</tr>";
         });
         container.innerHTML =
-          "<div style=\"background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;\">" +
-          "<div style=\"display:flex;justify-content:space-between;padding:7px 10px;border-bottom:0.5px solid rgba(255,255,255,0.07);font-size:.6rem;color:rgba(240,244,248,0.25);letter-spacing:.06em;\">" +
-          "<span>CUSTOMER</span><span>STAMPS</span><span>DATE</span></div>" +
-          rows + "</div>";
+          "<div class=\"data-table-wrap\"><table class=\"data-table\">" +
+          "<thead><tr><th>CUSTOMER</th><th>STAMPS</th><th>DATE</th></tr></thead>" +
+          "<tbody>" + rows + "</tbody></table></div>";
         container.style.display = "block";
       }).catch(function() { btn.innerHTML = "&#128101; Customers"; });
     });
