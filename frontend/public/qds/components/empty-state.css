@@ -1,0 +1,114 @@
+/* QDS Component — Empty State
+   Extracted from frontend/public/dashboard-shell.css:304-311 (.empty-state/
+   .empty-icon/.empty-title/.empty-sub, default + .compact variant). Values
+   match Dashboard exactly. Additive only — see qds/layouts/page.css's
+   header comment for the shared rationale.
+
+   The CTA button that Dashboard's .empty-cta currently defines (306-320)
+   is deliberately NOT re-extracted here — it's a primary/lg Button
+   (padding, min-height:44px, radius, hover color all match
+   qds/components/button.css's existing --primary --lg variant already).
+   Re-defining it inside this file would be exactly the kind of duplicate
+   component CSS this whole effort exists to eliminate; a future wiring
+   pass should compose an empty state's CTA slot from the existing Button
+   component, not a new one-off style. That's also the answer for "action
+   area" — it's the CTA slot above, already covered by Button, not a
+   distinct new region to build.
+
+   Error state: not a distinct visual variant. Checked every
+   _lyErrorMessage(err) call site in dashboard.html (1591, 1842, 1920,
+   2044) — every one of them renders inside .empty-state.compact, exactly
+   the --compact variant already extracted below. Dashboard has no
+   visually distinct "failed to load" treatment from "nothing here yet" —
+   they're the same component with different text. Documenting this
+   rather than inventing a new --error variant that doesn't exist.
+
+   Loading state: a real, separate, heavily-used pattern — Dashboard uses
+   .state-loading 10 times, distinct from the icon+title+sub shape above
+   (plain, small, inline text, no icon). Extracted below as its own class
+   alongside two siblings defined next to it in the source
+   (dashboard-shell.css:323-325): .state-empty (a lighter-weight "no
+   results" text, distinct from the full .qds-empty-state) and
+   .state-coming ("coming soon" inline text). All three are genuinely
+   real, distinctly-purposed Dashboard patterns, not invented to round out
+   a set. */
+
+.qds-empty-state {
+  text-align: center;
+  padding: 64px 24px; /* 64px matches --qds-space-16 exactly; 24px matches --qds-space-6 exactly */
+  border: 1px dashed var(--qds-color-border-subtle);
+  border-radius: 14px; /* no exact --qds-radius-* token (lg=12/xl=16 nearest) — kept raw, matches --card-radius-lg */
+}
+
+.qds-empty-state--compact {
+  padding: 32px 20px; /* 32px matches --qds-space-8 exactly; 20px matches --qds-space-5 exactly */
+  border-style: solid;
+  background: var(--qds-color-surface-1);
+}
+
+.qds-empty-state__icon {
+  font-size: 2.4rem; /* no exact --qds-text-* role matches this size — kept raw */
+  margin-bottom: 14px; /* no exact token (12/16 nearest) — kept raw */
+  opacity: .35;
+}
+
+.qds-empty-state--compact .qds-empty-state__icon {
+  font-size: 1.8rem; /* kept raw, no exact token */
+  margin-bottom: 10px; /* no exact token (8/12 nearest) — kept raw */
+}
+
+.qds-empty-state__title {
+  font-family: 'Space Grotesk', sans-serif; /* QDS typography.css has NO display/heading-family token today (only --qds-font-family-primary = Inter, and -mono = DM Mono) — Dashboard's --font-display is Space Grotesk, used for every heading/title. Using --qds-font-family-primary here would silently swap the typeface. Kept as Dashboard's literal value; flagging the missing foundation token as a real gap, not inventing one to fill it. */
+  font-size: 1.1rem; /* no exact --qds-text-* role matches this size — kept raw */
+  font-weight: var(--qds-font-weight-bold);
+  color: var(--qds-color-text-primary);
+  margin-bottom: 7px; /* no exact token (space-1=4/space-2=8 nearest) — kept raw */
+}
+
+.qds-empty-state--compact .qds-empty-state__title {
+  font-size: .92rem; /* kept raw, no exact token */
+}
+
+.qds-empty-state__sub {
+  font-family: var(--qds-font-family-primary);
+  font-size: .72rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: var(--qds-color-text-muted);
+  margin-bottom: var(--qds-space-6); /* matches Dashboard's 24px exactly */
+  line-height: 1.65;
+  max-width: 360px; /* no --qds-* token for content width — kept raw */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.qds-empty-state--compact .qds-empty-state__sub {
+  margin-bottom: var(--qds-space-4); /* matches Dashboard's 16px exactly */
+}
+
+/* ---------- Loading / lightweight empty / coming-soon text ----------
+   Extracted from dashboard-shell.css:323-325. Distinct from
+   .qds-empty-state above — no icon, no card shape, just small inline
+   status text used inside an already-visible container while data loads
+   or when a smaller panel has nothing to show. */
+
+.qds-state-loading {
+  font-family: var(--qds-font-family-primary);
+  font-size: .78rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: var(--qds-color-text-muted);
+  padding: var(--qds-space-4) 0; /* matches Dashboard's 16px exactly */
+}
+
+.qds-state-empty {
+  font-family: var(--qds-font-family-primary);
+  font-size: .72rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: #5a6b7a; /* no --qds-* token for this "dimmer muted" tier — kept raw, matches --dashboard-muted-dim */
+  text-align: center;
+  padding: var(--qds-space-5) 0; /* matches Dashboard's 20px exactly */
+}
+
+.qds-state-coming {
+  font-family: var(--qds-font-family-primary);
+  font-size: .6rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: #5a6b7a; /* no --qds-* token — kept raw, matches --dashboard-muted-dim */
+  text-align: center;
+  padding: 6px 0; /* no exact token (4/8 nearest) — kept raw */
+}

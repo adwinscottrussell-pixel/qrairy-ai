@@ -1,0 +1,159 @@
+/* QDS Component — Table
+   Extracted from frontend/public/dashboard-shell.css:266-272 (.data-table-wrap
+   /.data-table). Chosen as the canonical source over analytics-page.css's
+   .perf-table, which duplicates the same sortable-header/hover pattern
+   under different class names (see QDS_COMPONENT_CATALOG_v1.md #24).
+   Values match Dashboard exactly. Additive only — see qds/layouts/page.css's
+   header comment for the shared rationale.
+
+   Where Dashboard actually renders this: only inside the Subscribers
+   section (dashboard.html:876, 926) — the same section already flagged
+   (QDS_DASHBOARD_MIGRATION_PLAN_v1.md §6/§9) as using a scoped light-theme
+   <style> block inconsistent with QDS's dark-authored tokens. The values
+   below are extracted faithfully from the dark .data-table definition in
+   dashboard-shell.css regardless — wiring this component into that
+   specific light-themed section is a separate, still-blocked decision,
+   not something this extraction resolves.
+
+   Several current values have no exact match on the QDS scales (14px wrap
+   radius, .58rem header size, .72rem cell size, the "muted-dim" header
+   text tier, and three distinct low-alpha overlay tints used for the
+   header background / cell border / row hover) — kept as exact raw values
+   rather than rounded or substituted, per the same pixel-parity-over-
+   token-purity approach used throughout this extraction.
+
+   Two requested behaviors checked directly and not present in Dashboard,
+   reported rather than invented:
+   - Responsive overflow: .data-table-wrap uses overflow:hidden (clips,
+     does not scroll). Only analytics-page.css's separate .perf-table-wrap
+     has overflow-x:auto — that's an Analytics-only rule, not something
+     Dashboard's own table does, so it isn't extracted here.
+   - Empty-row handling: Dashboard has no "no results" <tr> inside the
+     table. When there's no data (dashboard.html:871-873,
+     subTableBody), the entire table wrapper's content is replaced with a
+     full .qds-empty-state (icon/title/sub/CTA), not a table row. That's
+     the existing Empty State component being reused in a table context,
+     not a distinct table-owned pattern — nothing new needed here. */
+
+.qds-table-wrap {
+  background: var(--qds-color-surface-1);
+  border: 1px solid var(--qds-color-border-subtle);
+  border-radius: 14px; /* no exact --qds-radius-* token (lg=12/xl=16 nearest) — kept raw, matches --card-radius-lg */
+  overflow: hidden;
+}
+
+/* ---------- Scrollable variant ----------
+   STOP-and-extend case, found migrating Analytics: analytics-page.css's
+   .perf-table-wrap is otherwise byte-for-byte identical to the base rule
+   above (confirmed against Dashboard's actual current values) EXCEPT it
+   adds overflow-x:auto + -webkit-overflow-scrolling:touch, because its
+   table has a real min-width and needs to scroll on narrow viewports.
+   Dashboard's own .data-table usage has no such need (no min-width, never
+   overflows). Rather than change the base rule's overflow behavior for
+   every consumer, or hack an inline style onto Analytics' markup, this is
+   an explicit opt-in modifier — extending the component, not the page. */
+.qds-table-wrap--scroll {
+  /* The base rule's overflow:hidden shorthand sets both axes; Analytics'
+     original .perf-table-wrap only ever set overflow-x (leaving
+     overflow-y at the browser default of visible) — overflow-y is reset
+     back to that default here so this modifier fully matches the
+     original on both axes, not just the horizontal one. */
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Nested variant ----------
+   STOP-and-extend case, found migrating Subscribers: a table sometimes
+   sits inside an existing qds-surface (qds-surface--flush-body, see
+   surface.css) rather than standing alone on the page. The base rule's
+   own background/border/radius would then draw a second card nested
+   inside the surface's — this modifier cancels exactly those three
+   properties so the table sits flush against its parent surface with no
+   visible seam, while everything else about .qds-table-wrap (and its
+   children — th/td/sort-icon styling, the responsive 640px padding
+   override) is untouched. overflow is deliberately left alone: the base
+   rule's overflow:hidden is harmless here (the parent surface already
+   clips corners via its own overflow:hidden) and --scroll still composes
+   normally on top when horizontal scroll is also needed — always use
+   qds-table-wrap qds-table-wrap--nested together, plus qds-table-wrap
+   --scroll if the table needs to scroll, exactly like the standalone
+   pattern. This does not change the standalone (non-nested) appearance
+   at all — .qds-table-wrap's own rule above is untouched. */
+.qds-table-wrap--nested {
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.qds-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.qds-table th {
+  font-family: var(--qds-font-family-mono);
+  font-size: .58rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: #5a6b7a; /* no --qds-* token for this "dimmer muted" tier — kept raw, matches --dashboard-muted-dim */
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: var(--qds-space-3) var(--qds-space-4); /* matches Dashboard's 12px 16px exactly */
+  text-align: left;
+  border-bottom: 1px solid var(--qds-color-border-subtle);
+  background: rgba(255, 255, 255, 0.02); /* no --qds-* token for this faint overlay tint — kept raw */
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.qds-table th:hover {
+  color: var(--qds-color-text-primary);
+}
+
+/* ---------- Sortable header ----------
+   STOP-and-extend case, found migrating Analytics: sortable th headers
+   (analytics-page.css's .sort-icon/.sorted) exist only on Analytics'
+   table today — Dashboard's own .data-table usage (Subscribers section)
+   has no sorting at all, confirmed by grep. Genuinely missing table
+   functionality, not something to hack into Analytics locally. */
+.qds-table__sort-icon {
+  opacity: .4;
+  margin-left: var(--qds-space-1); /* matches Dashboard's 4px exactly */
+}
+
+.qds-table th.qds-table__th--sorted .qds-table__sort-icon {
+  opacity: 1;
+  color: var(--qds-color-brand-primary);
+}
+
+.qds-table td {
+  padding: var(--qds-space-3) var(--qds-space-4); /* matches Dashboard's 12px 16px exactly */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04); /* no --qds-* token — kept raw, distinct from border-subtle's 0.07 */
+  font-family: var(--qds-font-family-mono);
+  font-size: .72rem; /* no exact --qds-text-* role matches this size — kept raw */
+  color: var(--qds-color-text-muted);
+  vertical-align: middle;
+}
+
+.qds-table tr:last-child td {
+  border-bottom: none;
+}
+
+.qds-table tr:hover td {
+  background: rgba(255, 90, 31, 0.02); /* no --qds-* token for this faint brand tint — kept raw */
+  color: var(--qds-color-text-primary);
+}
+
+/* STOP-and-extend case, found migrating Analytics: below 640px, cell
+   padding tightens from 12px 16px to 10px 12px. Confirmed absent from
+   Dashboard's own .data-table (no 640px override anywhere in
+   dashboard-shell.css for it) — genuinely missing responsive behavior on
+   this component, needed because Analytics' table has more columns and
+   less room at narrow widths. Same 640px breakpoint QDS already uses
+   elsewhere (.qds-page-wrap, .qds-toolbar__search). */
+@media (max-width: 640px) {
+  .qds-table th,
+  .qds-table td {
+    padding: 10px 12px; /* no exact tokens for either value — kept raw, matches Dashboard's original exactly */
+  }
+}

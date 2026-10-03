@@ -1,0 +1,70 @@
+/* QDS Layout — Responsive Grids
+   Extracted from frontend/public/dashboard-shell.css's three near-identical
+   responsive grid patterns:
+     .kpi-row      (dashboard-shell.css:213-214) — 4 → 2 columns @700px
+     .chart-grid   (dashboard-shell.css:357-358) — 2 → 1 column  @760px
+     .metrics-grid (dashboard-shell.css:361-362) — 2 → 1 column  @760px
+
+   Additive only — see qds/layouts/page.css's header comment for the same
+   rationale. Dashboard's existing .kpi-row/.chart-grid/.metrics-grid rules
+   are untouched; these new .qds-grid--* classes sit alongside them,
+   unconsumed by any current markup, ready for a later wiring pass.
+
+   Not every current value sits on the 4px spacing scale (the 10px kpi-row
+   gap and the 14px chart/metrics gap do not); kept as exact raw values
+   rather than rounded, matching the same pixel-parity-over-token-purity
+   approach used throughout this extraction. The two breakpoints (700px,
+   760px) are themselves non-standard — neither matches a documented
+   --qds-breakpoint-* token (768px tablet is the nearest) — kept exactly
+   as Dashboard defines them today; unifying them onto the standard
+   breakpoint would change collapse behavior by 8-60px of viewport width,
+   which is a design decision, not an extraction. */
+
+.qds-grid--kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px; /* no exact --qds-space-* token (8/12 nearest) — kept raw to match Dashboard exactly */
+  margin-bottom: var(--qds-space-8); /* matches Dashboard's 32px exactly */
+}
+
+@media (max-width: 700px) {
+  .qds-grid--kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.qds-grid--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px; /* no exact --qds-space-* token (12/16 nearest) — kept raw, matches --dashboard-gap exactly */
+  margin-bottom: 28px; /* no exact --qds-space-* token (24/32 nearest) — kept raw to match Dashboard exactly */
+}
+
+@media (max-width: 760px) {
+  .qds-grid--split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Extracted from .sqr-grid (dashboard-shell.css:370) — Dashboard's Smart QR
+   card grid, the one real "auto-grid" (auto-fill, item-driven column
+   count) pattern actually used by dashboard.html today. No fixed
+   breakpoint — columns reflow continuously by container width, which is
+   the whole point of auto-fill and not something to convert to a
+   step-breakpoint pattern. */
+.qds-grid--auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* 300px min-width has no --qds-* token — kept raw to match Dashboard exactly */
+  gap: 14px; /* no exact --qds-space-* token (12/16 nearest) — kept raw, matches --dashboard-gap exactly */
+}
+
+/* ---------- grid-2 / grid-3 / grid-4 ----------
+   Not added in this pass. Searched dashboard.html and analytics.html for
+   a genuine, currently-used 3- or 4-column CONTENT grid beyond the two
+   patterns above: the only 3-column grid found (.sqr-actions,
+   dashboard-shell.css:409) is a fused, divider-bordered button toolbar,
+   not a content grid — building a generic "grid-3" from it would
+   misrepresent what it actually is (a Toolbar/Button-group concern, not
+   Layout). No 4-column content grid exists outside .kpi-row itself. Per
+   "no random gaps, no invented values," these are left out rather than
+   fabricated from an unrelated pattern or an arbitrary gap value. */
