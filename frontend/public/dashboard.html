@@ -1978,6 +1978,8 @@ window.loadCustList = function(btn) {
     if (emptySub) emptySub.textContent = t.empty_sub;
     var emptyBtn = document.querySelector('.sqr-empty .btn-create');
     if (emptyBtn) emptyBtn.textContent = t.empty_btn;
+    // Re-render Billing & Plans (js/billing.js) in the new language
+    if (window.qraivyBilling) window.qraivyBilling.render();
   }
 
   window.toggleLang = function() {

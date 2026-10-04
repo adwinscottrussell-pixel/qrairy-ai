@@ -28,13 +28,13 @@
       billedAnnually: 'billed annually',
       billedMonthly: 'billed monthly',
       noCharge: 'No charge',
+      planFree: 'Free',
       badgeCurrent: 'Current plan',
       badgeInternal: 'Internal account',
       badgeTrial: 'Trial',
       badgeAnnual: 'Annual',
       badgeMonthly: 'Monthly',
       badgePastDue: 'Payment issue',
-      badgeEnded: 'Ended',
       trialLeft: function (n) { return n === 1 ? '1 day left' : n + ' days left'; },
       trialEnds: function (d) { return 'ends ' + d; },
       trialEnded: 'Your trial has ended.',
@@ -57,50 +57,50 @@
       comingSoon: 'Available in the next step',
     },
     de: {
-      subtitle: 'Dein Plan, dein Abo und deine Smart-QR-Page-Limits.',
+      subtitle: 'Dein Tarif, Abonnement und deine Smart-QR-Seiten-Limits.',
       loading: 'Abrechnungsdaten werden geladen…',
-      error: 'Abrechnungsdaten konnten nicht geladen werden. Bitte erneut versuchen.',
+      error: 'Abrechnungsdaten konnten nicht geladen werden. Bitte versuche es erneut.',
       retry: 'Erneut versuchen',
       signedOut: 'Bitte melde dich an, um die Abrechnung zu sehen.',
-      unavailable: 'Abrechnung ist in dieser Umgebung nicht verfügbar. Die Pläne dienen nur zur Übersicht.',
-      currentPlanLabel: 'Aktueller Plan',
+      unavailable: 'Die Abrechnung ist in dieser Umgebung nicht verfügbar. Die Tarife werden nur zur Information angezeigt.',
+      currentPlanLabel: 'Aktueller Tarif',
       monthly: 'Monatlich',
       annual: 'Jährlich',
       perMonth: '/ Monat',
       billedAnnually: 'jährliche Abrechnung',
       billedMonthly: 'monatliche Abrechnung',
-      noCharge: 'Keine Kosten',
-      badgeCurrent: 'Aktueller Plan',
+      noCharge: 'Kostenlos',
+      planFree: 'Kostenlos',
+      badgeCurrent: 'Aktueller Tarif',
       badgeInternal: 'Internes Konto',
       badgeTrial: 'Testphase',
       badgeAnnual: 'Jährlich',
       badgeMonthly: 'Monatlich',
       badgePastDue: 'Zahlungsproblem',
-      badgeEnded: 'Beendet',
-      trialLeft: function (n) { return n === 1 ? 'noch 1 Tag' : 'noch ' + n + ' Tage'; },
+      trialLeft: function (n) { return n === 1 ? 'Noch 1 Tag' : 'Noch ' + n + ' Tage'; },
       trialEnds: function (d) { return 'endet am ' + d; },
       trialEnded: 'Deine Testphase ist beendet.',
-      subEnded: 'Dein Abo ist beendet.',
+      subEnded: 'Dein Abonnement ist beendet.',
       pastDue: 'Zahlung fehlgeschlagen — bitte aktualisiere deine Zahlungsmethode.',
       renews: function (d) { return 'Verlängert sich am ' + d; },
       cancels: function (d) { return 'Endet am ' + d; },
       internalNote: 'Von QRAIVY verwaltet — keine Abrechnung erforderlich.',
-      smartPagesNone: 'Keine Smart QR Pages',
-      smartPagesN: function (n) { return n === 1 ? '1 Smart QR Page' : n + ' Smart QR Pages'; },
-      smartPagesUnlimited: 'Unbegrenzte Smart QR Pages',
+      smartPagesNone: 'Keine Smart-QR-Seiten',
+      smartPagesN: function (n) { return n === 1 ? '1 Smart-QR-Seite' : n + ' Smart-QR-Seiten'; },
+      smartPagesUnlimited: 'Unbegrenzte Smart-QR-Seiten',
       basicUnlimited: 'Unbegrenzte Basis-QR-Codes',
       basicN: function (n) { return n + ' Basis-QR-Codes'; },
       dynamicQr: 'Dynamische QR-Codes',
-      actionCurrent: 'Aktueller Plan',
-      actionAfterTrial: 'Nach der Testphase',
+      actionCurrent: 'Aktueller Tarif',
+      actionAfterTrial: 'Nach deiner Testphase',
       actionUpgrade: function (n) { return 'Upgrade auf ' + n; },
       actionChoose: function (n) { return n + ' wählen'; },
-      actionManage: 'Abo verwalten',
+      actionManage: 'Abonnement verwalten',
       comingSoon: 'Im nächsten Schritt verfügbar',
     },
   };
 
-  var state = { data: null, interval: 'monthly', loading: false };
+  var state = { data: null, interval: 'monthly', loading: false, message: null };
 
   function lang() { return window._qraivyLang === 'de' ? 'de' : 'en'; }
   function t(key) { var v = T[lang()][key]; return v !== undefined ? v : T.en[key]; }
@@ -144,17 +144,23 @@
     };
   }
 
+  // Display name: Free is localized; Starter/Pro/Business are product names
+  // taken unchanged from the canonical catalogue.
+  function displayName(p) { return p.id === 'free' ? t('planFree') : p.name; }
   function planName(id) {
     var list = (state.data && state.data.plans) || [];
-    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].name;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return displayName(list[i]);
     return id;
   }
 
   // ── Rendering ──────────────────────────────────────────────
-  function renderMessage(text, withRetry) {
+  function renderMessage(key, withRetry) {
     var r = root(); if (!r) return;
+    state.message = { key: key, retry: !!withRetry };
     r.innerHTML = '';
-    var box = el('div', 'bl-message', text);
+    var sub = document.getElementById('billing-subtitle');
+    if (sub) sub.textContent = t('subtitle');
+    var box = el('div', 'bl-message', t(key));
     if (withRetry) {
       var b = el('button', 'bl-btn bl-btn--secondary', t('retry'));
       b.type = 'button';
@@ -242,21 +248,21 @@
     if (p.id === s.currentId) return disabledButton(t('actionCurrent'), 'ghost', false);
     var paid = !!(p.checkoutPlans && (p.checkoutPlans.monthly || p.checkoutPlans.annual));
     if (s.trial) {
-      return paid ? disabledButton(t('actionChoose')(p.name), 'primary', d.stripeConfigured)
+      return paid ? disabledButton(t('actionChoose')(displayName(p)), 'primary', d.stripeConfigured)
                   : disabledButton(t('actionAfterTrial'), 'ghost', false);
     }
     if (s.subscriber) {
       // Plan changes for subscribers go through the Stripe portal; Free is not a direct downgrade.
       return paid ? disabledButton(t('actionManage'), 'secondary', d.stripeConfigured) : null;
     }
-    return paid ? disabledButton(t('actionUpgrade')(p.name), 'primary', d.stripeConfigured) : null;
+    return paid ? disabledButton(t('actionUpgrade')(displayName(p)), 'primary', d.stripeConfigured) : null;
   }
 
   function renderCard(p, d, s) {
     var current = p.id === s.currentId;
     var card = el('article', 'bl-card' + (current ? ' is-current' : ''));
     var head = el('div', 'bl-card__head');
-    head.appendChild(el('h3', 'bl-card__name', p.name));
+    head.appendChild(el('h3', 'bl-card__name', displayName(p)));
     if (current) head.appendChild(badge(s.internal ? t('badgeInternal') : t('badgeCurrent'), 'accent'));
     card.appendChild(head);
 
@@ -283,7 +289,9 @@
 
   function render() {
     var r = root(); var d = state.data;
-    if (!r || !d) return;
+    if (!r) return;
+    if (!d) { if (state.message) renderMessage(state.message.key, state.message.retry); return; }
+    state.message = null;
     var s = accountState(d);
     r.innerHTML = '';
 
@@ -311,12 +319,12 @@
   async function load() {
     if (!root() || state.loading) return;
     state.loading = true;
-    renderMessage(t('loading'));
+    renderMessage('loading');
     try {
       if (!window.Clerk) throw new Error('Clerk unavailable');
       if (!window.Clerk.loaded && typeof window.Clerk.load === 'function') await window.Clerk.load();
       var token = window.Clerk.session ? await window.Clerk.session.getToken() : null;
-      if (!token) { renderMessage(t('signedOut')); return; }
+      if (!token) { renderMessage('signedOut'); return; }
       var res = await fetch(apiBase() + '/stripe/status', { headers: { Authorization: 'Bearer ' + token } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       state.data = await res.json();
@@ -324,7 +332,7 @@
       render();
     } catch (err) {
       console.error('[billing] load failed:', err && err.message);
-      renderMessage(t('error'), true);
+      renderMessage('error', true);
     } finally {
       state.loading = false;
     }
