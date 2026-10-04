@@ -1469,7 +1469,7 @@ body.sb-collapsed #section-customers { margin-left: var(--sidebar-collapsed-widt
 // Loyalty balances are not shown in the table and never drive the
 // status badge until the loyalty data consolidation is complete.
 // ============================================================
-var CUST_API = window.API_ORIGIN || 'https://api.qraivy.com';
+var CUST_API = window.QRAIVY_API_BASE || 'https://api.qraivy.com'; // same resolver as the rest of the dashboard
 
 var CUST_I18N = {
   en: {
