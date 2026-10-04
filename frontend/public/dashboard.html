@@ -1992,11 +1992,13 @@ window.loadCustList = function(btn) {
 })();
 </script>
 <!-- Billing & Plans Section (rendered by js/billing.js) -->
-<div id="section-billing" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
-  <div class="bl-page">
-    <div class="bl-hdr">
-      <h2 data-i18n="nav_billing">Billing &amp; Plans</h2>
-      <p id="billing-subtitle"></p>
+<div id="section-billing" class="dash-section" style="display:none;">
+  <div class="page-wrap">
+    <div class="dash-header">
+      <div>
+        <h2 class="dash-title" data-i18n="nav_billing">Billing &amp; Plans</h2>
+        <div class="dash-sub" id="billing-subtitle"></div>
+      </div>
     </div>
     <div id="billing-root"></div>
   </div>
