@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="dashboard-shell.css"/>
 <link rel="stylesheet" href="qds/qds.css"/>
+<link rel="stylesheet" href="billing.css"/>
 
 <link rel="stylesheet" href="onboarding.css"/>
 
@@ -222,7 +223,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
     <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
-    <a href="upgrade.html" class="sb-item"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
+    <a href="dashboard.html?section=billing" class="sb-item" id="sb-billing"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
     <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
   </nav>
   <div class="sb-footer">
@@ -604,6 +605,8 @@ async function initDashboard(){
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
         var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
+      } else if (sectionP === 'billing' && typeof window.showSection === 'function') {
+        window.showSection('billing');
       } else {
         // Unknown section param - show main dashboard
         if (mc) mc.style.display = 'block';
@@ -618,6 +621,7 @@ async function initDashboard(){
   type="text/javascript">
 </script>
 <script src="js/qraivy-lang.js"></script><script src="js/session.js"></script>
+<script src="js/billing.js"></script>
 <script src="js/auth-guard.js"></script>
 <script src="js/landing-section-registry.js"></script>
 <script src="js/landing-page-renderer.js"></script>
@@ -1987,6 +1991,17 @@ window.loadCustList = function(btn) {
 
 })();
 </script>
+<!-- Billing & Plans Section (rendered by js/billing.js) -->
+<div id="section-billing" class="dash-section" style="display:none;padding:24px;margin-left:var(--sidebar-width,240px);">
+  <div class="bl-page">
+    <div class="bl-hdr">
+      <h2 data-i18n="nav_billing">Billing &amp; Plans</h2>
+      <p id="billing-subtitle"></p>
+    </div>
+    <div id="billing-root"></div>
+  </div>
+</div>
+
 <!-- Mobile Settings Section -->
 <div id="section-settings" class="dash-section" style="display:none;padding:24px;margin-left:0;">
   <h2 style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:24px;" data-i18n="nav_settings">Settings</h2>
@@ -2070,7 +2085,7 @@ function bnSetActive(id) {
 // Real section switcher — shared by sidebar items and bottom nav
 window.showSection = function(sec) {
   var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns' };
+  var sbIdMap = { loyalty:'sb-loyalty', subscribers:'sb-subscribers', campaigns:'sb-campaigns', billing:'sb-billing' };
 
   if (sec === 'settings') {
     var mc2 = document.getElementById('main-content');
@@ -2106,6 +2121,7 @@ window.showSection = function(sec) {
       var dp = document.getElementById('subDetailPanel'); if (dp) dp.style.display = 'none';
     }
     if (sec === 'campaigns' && typeof window.campInitProgs === 'function') window.campInitProgs();
+    if (sec === 'billing' && window.qraivyBilling) window.qraivyBilling.load();
   }
 
   // Close mobile sidebar drawer if open

@@ -1,0 +1,100 @@
+/* ============================================================
+   billing.css — Admin "Billing & Plans" section (#section-billing).
+   Scoped to the section; uses dashboard-shell.css tokens only.
+   ============================================================ */
+
+/* body is a flex container in the shell: let the section take the full row */
+#section-billing { flex: 1; min-width: 0; }
+#section-billing .bl-page { width: 100%; max-width: var(--dashboard-max-width, 960px); }
+
+#section-billing .bl-hdr { margin-bottom: 20px; }
+#section-billing .bl-hdr h2 {
+  font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700;
+  color: #f0f4f8; margin: 0 0 4px;
+}
+#section-billing .bl-hdr p { font-size: .85rem; color: var(--dashboard-muted); margin: 0; }
+
+/* Messages / notices */
+#section-billing .bl-message {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 16px 18px; border: 1px solid var(--dashboard-border); border-radius: var(--card-radius);
+  background: var(--dashboard-card-bg); color: var(--dashboard-muted); font-size: .85rem;
+}
+#section-billing .bl-notice {
+  padding: 12px 16px; margin-bottom: 14px; border-radius: var(--card-radius);
+  border: 1px solid var(--dashboard-border); background: rgba(255,255,255,0.03);
+  color: var(--dashboard-muted); font-size: .8rem;
+}
+
+/* Account status */
+#section-billing .bl-status {
+  padding: 18px 20px; margin-bottom: 18px; border-radius: var(--card-radius-lg);
+  border: 1px solid var(--dashboard-border); background: var(--dashboard-card-bg);
+}
+#section-billing .bl-status__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+#section-billing .bl-status__label {
+  font-family: var(--font-mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dashboard-muted-dim); margin-bottom: 6px;
+}
+#section-billing .bl-status__name {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: #f0f4f8;
+}
+#section-billing .bl-status__detail { margin-top: 6px; font-size: .8rem; color: var(--dashboard-muted); }
+
+/* Badges */
+#section-billing .bl-badge {
+  display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: .6rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid var(--dashboard-border); color: var(--dashboard-muted); background: rgba(255,255,255,0.03);
+}
+#section-billing .bl-badge--accent { color: var(--dashboard-accent); border-color: var(--dashboard-accent-border); background: var(--dashboard-accent-dim); }
+#section-billing .bl-badge--warning { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+
+/* Monthly / Annual selector */
+#section-billing .bl-bar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+#section-billing .bl-toggle {
+  display: inline-flex; padding: 3px; border-radius: 999px;
+  border: 1px solid var(--dashboard-border); background: var(--dashboard-card-bg);
+}
+#section-billing .bl-toggle__btn {
+  border: 0; background: transparent; color: var(--dashboard-muted); cursor: pointer;
+  padding: 6px 14px; border-radius: 999px; font-family: var(--font-body); font-size: .78rem; font-weight: 500;
+}
+#section-billing .bl-toggle__btn.is-active { background: var(--dashboard-accent-dim); color: var(--dashboard-accent); }
+#section-billing .bl-toggle__btn:focus-visible { outline: 2px solid var(--dashboard-accent); outline-offset: 2px; }
+
+/* Plan cards: 2 x 2 */
+#section-billing .bl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--dashboard-gap, 14px); }
+@media (max-width: 700px) { #section-billing .bl-grid { grid-template-columns: 1fr; } }
+
+#section-billing .bl-card {
+  display: flex; flex-direction: column; padding: 18px 20px; border-radius: var(--card-radius-lg);
+  border: 1px solid var(--dashboard-border); background: var(--dashboard-card-bg);
+}
+#section-billing .bl-card.is-current { border-color: var(--dashboard-accent); box-shadow: 0 0 0 1px var(--dashboard-accent-border) inset; }
+#section-billing .bl-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+#section-billing .bl-card__name { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: #f0f4f8; margin: 0; }
+#section-billing .bl-card__price { display: flex; align-items: baseline; gap: 6px; }
+#section-billing .bl-card__amount { font-family: var(--font-heading); font-size: 1.7rem; font-weight: 700; color: #f0f4f8; }
+#section-billing .bl-card__per { font-size: .8rem; color: var(--dashboard-muted); }
+#section-billing .bl-card__billing { margin-top: 2px; font-size: .72rem; color: var(--dashboard-muted-dim); }
+#section-billing .bl-card__features { list-style: none; margin: 14px 0 0; padding: 0; flex: 1; }
+#section-billing .bl-card__features li {
+  position: relative; padding-left: 16px; margin-bottom: 6px; font-size: .82rem; color: #d6dde5;
+}
+#section-billing .bl-card__features li::before { content: '✓'; position: absolute; left: 0; color: var(--dashboard-accent); font-size: .75rem; }
+#section-billing .bl-card__foot { margin-top: 16px; }
+
+/* Buttons */
+#section-billing .bl-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 100%;
+  padding: 9px 14px; border-radius: 9px; font-family: var(--font-body); font-size: .8rem; font-weight: 600;
+  border: 1px solid transparent; cursor: pointer;
+}
+#section-billing .bl-status .bl-btn { width: auto; }
+#section-billing .bl-btn--primary { background: var(--dashboard-accent); color: #fff; }
+#section-billing .bl-btn--secondary { background: transparent; color: #f0f4f8; border-color: rgba(255,255,255,0.14); }
+#section-billing .bl-btn--ghost { background: rgba(255,255,255,0.03); color: var(--dashboard-muted); border-color: var(--dashboard-border); }
+#section-billing .bl-btn:disabled { cursor: not-allowed; opacity: .55; }
+#section-billing .bl-btn--ghost:disabled { opacity: 1; }

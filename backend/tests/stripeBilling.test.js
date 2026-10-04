@@ -437,7 +437,67 @@ test('portal: unchanged — 400 without customer; {url} with return_url dashboar
 
 // ── /stripe/status shape ─────────────────────────────────────
 const LEGACY_STATUS_KEYS = ['plan', 'basePlan', 'aiLimit', 'canCreateAI', 'canUseDynamic', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus'];
-const ADDED_STATUS_KEYS = ['isAnnual', 'isInternal', 'isTrial', 'trialExpiresAt', 'hasStripeCustomer', 'hasSubscription', 'stripeConfigured', 'portalAvailable', 'subscription'];
+const ADDED_STATUS_KEYS = ['isAnnual', 'isInternal', 'isTrial', 'trialExpiresAt', 'hasStripeCustomer', 'hasSubscription', 'stripeConfigured', 'portalAvailable', 'subscription', 'plans'];
+
+// ── Phase 2G: read-only canonical plan catalogue ─────────────
+const PLAN_ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans'];
+
+test('2G plans: exactly free/starter/pro/business in order; no trial, enterprise or annual entries', async () => {
+  configure();
+  users.u = { id: 'u', plan: 'free' };
+  const { plans: list } = (await status('u')).body;
+  assert.deepEqual(list.map((p) => p.id), ['free', 'starter', 'pro', 'business']);
+  assert.deepEqual(list.map((p) => p.id), [...plans.PUBLIC_BASE_PLANS]);
+  for (const p of list) assert.deepEqual(Object.keys(p), PLAN_ENTRY_KEYS, p.id);
+});
+
+test('2G plans: every value derived from the canonical model (names, prices, limits, capabilities)', async () => {
+  configure();
+  users.u = { id: 'u', plan: 'pro', subscriptionStatus: 'active' };
+  const { plans: list } = (await status('u')).body;
+  for (const p of list) {
+    const e = plans.getPlanEntitlements(p.id);
+    assert.equal(p.name, plans.PLAN_NAMES[p.id]);
+    assert.equal(p.currency, 'EUR');
+    assert.equal(p.monthlyPrice, plans.DISPLAY_PRICES_EUR[p.id].monthly);
+    assert.equal(p.annualMonthlyPrice, plans.DISPLAY_PRICES_EUR[p.id].annualMonthly);
+    assert.equal(p.smartPageLimit, e.smartPageLimit);
+    assert.equal(p.basicQrLimit, e.basicQrLimit);
+    assert.equal(p.dynamicQr, e.dynamicQr);
+  }
+  // spot-check the canonical values the cards will show
+  const byId = Object.fromEntries(list.map((p) => [p.id, p]));
+  assert.deepEqual([byId.free.smartPageLimit, byId.starter.smartPageLimit, byId.pro.smartPageLimit, byId.business.smartPageLimit], [0, 10, null, null]);
+  assert.ok(list.every((p) => p.basicQrLimit === null), 'basic QR unlimited everywhere');
+  assert.ok(!list.some((p) => 'walletPasses' in p || 'aiChat' in p || 'campaigns' in p), 'no unenforced/marketing capabilities');
+});
+
+test('2G plans: checkout plan IDs only where purchasable; Free has none; enterprise never offered', async () => {
+  configure();
+  users.u = { id: 'u', plan: 'free' };
+  const { plans: list } = (await status('u')).body;
+  const byId = Object.fromEntries(list.map((p) => [p.id, p]));
+  assert.deepEqual(byId.free.checkoutPlans, { monthly: null, annual: null });
+  assert.deepEqual(byId.starter.checkoutPlans, { monthly: 'starter', annual: 'starter_annual' });
+  assert.deepEqual(byId.pro.checkoutPlans, { monthly: 'pro', annual: 'pro_annual' });
+  assert.deepEqual(byId.business.checkoutPlans, { monthly: 'business', annual: 'business_annual' });
+  const offered = list.flatMap((p) => Object.values(p.checkoutPlans)).filter(Boolean);
+  assert.ok(offered.every((id) => plans.isPurchasable(id)));
+  assert.ok(!JSON.stringify(list).includes('enterprise'));
+});
+
+test('2G plans: same catalogue for every account state, with or without Stripe configured', async () => {
+  configure();
+  users.a = { id: 'a', plan: 'enterprise' };
+  users.b = { id: 'b', plan: 'trial', trialExpiresAt: new Date(Date.now() + 864e5) };
+  const ref = JSON.stringify((await status('a')).body.plans);
+  assert.equal(JSON.stringify((await status('b')).body.plans), ref);
+  assert.equal(JSON.stringify((await status('missing')).body.plans), ref);
+  delete process.env.STRIPE_SECRET_KEY;
+  const s = (await status('b')).body;
+  assert.equal(s.stripeConfigured, false);
+  assert.equal(JSON.stringify(s.plans), ref);
+});
 
 test('status: legacy keys kept, additive keys added; annual paid subscriber with live period details', async () => {
   configure();
