@@ -261,15 +261,32 @@ async function handleWebhook(req, res) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        await prisma.user.updateMany({
+        // Internal accounts (enterprise = internal Business) are not
+        // Stripe-driven: plan and status are kept (a 'cancelled' status would
+        // resolve them to Free). Only a reference to this exact, now-deleted
+        // subscription is cleared.
+        const owners = await prisma.user.findMany({
           where: { stripeCustomerId: customerId },
-          data: {
-            plan: 'free',
-            stripeSubscriptionId: null,
-            subscriptionStatus: 'cancelled',
-          },
+          select: { id: true, plan: true, stripeSubscriptionId: true },
         });
-        console.log(`⚠️ Subscription cancelled: customer ${customerId} → free`);
+        for (const owner of owners) {
+          if (plans.normalizePlan(owner.plan).isInternal) {
+            if (owner.stripeSubscriptionId && owner.stripeSubscriptionId === subscription.id) {
+              await prisma.user.update({ where: { id: owner.id }, data: { stripeSubscriptionId: null } });
+            }
+            console.log(`ℹ️ Subscription cancelled: internal account kept (customer ${customerId})`);
+            continue;
+          }
+          await prisma.user.update({
+            where: { id: owner.id },
+            data: {
+              plan: 'free',
+              stripeSubscriptionId: null,
+              subscriptionStatus: 'cancelled',
+            },
+          });
+          console.log(`⚠️ Subscription cancelled: customer ${customerId} → free`);
+        }
         break;
       }
 

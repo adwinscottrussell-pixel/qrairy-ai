@@ -44,7 +44,8 @@ const mockPrisma = {
   user: {
     async findUnique({ where: { id } }) { return users[id] ? { ...users[id] } : null; },
     async findMany({ where: { stripeCustomerId } }) {
-      return Object.values(users).filter((u) => u.stripeCustomerId === stripeCustomerId).map((u) => ({ id: u.id, plan: u.plan }));
+      return Object.values(users).filter((u) => u.stripeCustomerId === stripeCustomerId)
+        .map((u) => ({ id: u.id, plan: u.plan, stripeSubscriptionId: u.stripeSubscriptionId }));
     },
     async update({ where: { id }, data }) { users[id] = { ...users[id], ...data }; return users[id]; },
     async updateMany({ where: { stripeCustomerId }, data }) {
@@ -261,6 +262,50 @@ test('F7: non-internal subscription.updated unchanged (monthly + annual, plan + 
   await webhook(subUpdated('cus_m', 'price_test_business_y', 'trialing'));
   assert.deepEqual([users.m.plan, users.m.subscriptionStatus], ['business_annual', 'trialing']);
   assert.equal((await webhook(subUpdated('cus_nobody', 'price_test_pro_m'))).statusCode, 200, 'no matching user → no-op');
+});
+
+// ── F8. Internal plans protected from subscription.deleted ───
+const subDeleted = (customer, id = 'sub_1') => ({ type: 'customer.subscription.deleted', data: { object: { id, customer } } });
+
+test('F8: internal + subscription.deleted → not Free; plan/status kept; entitlement intact (resolve + /stripe/status)', async () => {
+  configure();
+  for (const raw of ['enterprise', 'Enterprise', '  ENTERPRISE ']) {
+    users.e = { id: 'e', plan: raw, subscriptionStatus: null, stripeCustomerId: 'cus_e', stripeSubscriptionId: 'sub_1' };
+    assert.equal((await webhook(subDeleted('cus_e'))).statusCode, 200);
+    assert.equal(users.e.plan, raw, `${JSON.stringify(raw)} preserved`);
+    assert.equal(users.e.subscriptionStatus, null, 'no cancelled status written');
+    assert.equal(users.e.stripeSubscriptionId, null, 'reference to the deleted subscription cleared');
+    assert.equal(plans.resolveEffectivePlan(users.e).effectiveBase, 'business');
+    const s = (await status('e')).body;
+    assert.deepEqual([s.basePlan, s.isInternal, s.aiLimit, s.canUseDynamic, s.hasSubscription], ['business', true, null, true, false]);
+  }
+});
+
+test('F8: internal account keeps a different subscription ID when another subscription is deleted', async () => {
+  configure();
+  users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: 'active', stripeCustomerId: 'cus_e', stripeSubscriptionId: 'sub_other' };
+  await webhook(subDeleted('cus_e', 'sub_1'));
+  assert.deepEqual([users.e.plan, users.e.subscriptionStatus, users.e.stripeSubscriptionId], ['enterprise', 'active', 'sub_other']);
+});
+
+test('F8: normal paid accounts — deletion still downgrades to free / cancelled / ID cleared', async () => {
+  configure();
+  for (const p of ['starter', 'pro_annual', 'business']) {
+    users.n = { id: 'n', plan: p, subscriptionStatus: 'active', stripeCustomerId: 'cus_n', stripeSubscriptionId: 'sub_1' };
+    await webhook(subDeleted('cus_n'));
+    assert.deepEqual([users.n.plan, users.n.stripeSubscriptionId, users.n.subscriptionStatus], ['free', null, 'cancelled'], p);
+    assert.equal(plans.resolveEffectivePlan(users.n).effectiveBase, 'free');
+  }
+});
+
+test('F8: shared customer — internal row preserved, normal row downgraded', async () => {
+  configure();
+  users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: null, stripeCustomerId: 'cus_x', stripeSubscriptionId: 'sub_1' };
+  users.n = { id: 'n', plan: 'pro', subscriptionStatus: 'active', stripeCustomerId: 'cus_x', stripeSubscriptionId: 'sub_1' };
+  await webhook(subDeleted('cus_x'));
+  assert.deepEqual([users.e.plan, users.e.subscriptionStatus], ['enterprise', null]);
+  assert.deepEqual([users.n.plan, users.n.subscriptionStatus], ['free', 'cancelled']);
+  assert.equal((await webhook(subDeleted('cus_nobody'))).statusCode, 200, 'no matching user → no-op');
 });
 
 // ── 11. Unknown price ────────────────────────────────────────
