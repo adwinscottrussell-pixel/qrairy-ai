@@ -29,7 +29,7 @@ const plans = require('../src/config/plans');
 const publicPlanRoutes = require('../src/routes/publicPlanRoutes');
 const { handleSubscriptionStatus } = require('../src/controllers/stripeController');
 
-const ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans'];
+const ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans', 'comingSoon'];
 const FORBIDDEN = /stripe|customer|subscription|user|email|status|secret|trial|enterprise|internal|token|price_/i;
 
 let server; let base;
@@ -91,6 +91,10 @@ test('canonical prices and limits match config/plans.js exactly', async () => {
   const byId = Object.fromEntries(list.map((p) => [p.id, p]));
   assert.deepEqual(byId.free.checkoutPlans, { monthly: null, annual: null });
   assert.deepEqual(byId.pro.checkoutPlans, { monthly: 'pro', annual: 'pro_annual' });
+  // Business is coming soon: no checkout plans for new purchases; canonical price kept.
+  assert.deepEqual(byId.business.checkoutPlans, { monthly: null, annual: null });
+  assert.deepEqual(list.map((p) => p.comingSoon), [false, false, false, true]);
+  assert.equal(byId.business.monthlyPrice, plans.DISPLAY_PRICES_EUR.business.monthly);
 });
 
 test('response is exactly the canonical getPublicPlanCatalogue()', async () => {

@@ -1,10 +1,21 @@
 // ============================================================
 // billing.js — Admin "Billing & Plans" section (#section-billing).
 //
-// Phase 2G Step 1: read-only. Renders account/billing status and the four
-// canonical plan cards from GET /stripe/status (plan catalogue included),
-// so no prices or limits are defined here. Checkout and portal actions are
-// rendered but intentionally not wired yet.
+// Renders account/billing status and the four canonical plan cards from
+// GET /stripe/status (plan catalogue included), so no prices, limits or
+// Stripe Price IDs are defined here.
+//
+// Billing Step 2:
+//   - ?plan=<starter|starter_annual|pro|pro_annual> (homepage handoff)
+//     preselects the card and billing period; any other value is ignored.
+//   - Starter/Pro purchase buttons call the existing POST /stripe/checkout;
+//     subscribers use POST /stripe/portal. Buttons are active only when the
+//     backend reports checkoutEnabled (production gate).
+//   - Business is "coming soon" (catalogue comingSoon) and never purchasable
+//     here; existing Business/internal accounts still show their status.
+//   - ?checkout=success re-reads /stripe/status until the webhook has
+//     applied the plan (the success return itself grants nothing);
+//     ?checkout=cancelled keeps the selection for a retry.
 //
 // Uses hasStripeCustomer / hasSubscription — never the raw Stripe IDs.
 // ============================================================
@@ -12,6 +23,11 @@
   'use strict';
 
   var REVOKED = ['canceled', 'cancelled', 'unpaid', 'incomplete_expired'];
+  // The only selections the public flow may hand over (also validated
+  // against the server catalogue's checkoutPlans before use).
+  var PUBLIC_SELECTIONS = ['starter', 'starter_annual', 'pro', 'pro_annual'];
+  var POLL_INTERVAL_MS = 2500;
+  var POLL_ATTEMPTS = 8;
 
   var T = {
     en: {
@@ -29,7 +45,11 @@
       billedMonthly: 'billed monthly',
       noCharge: 'No charge',
       planFree: 'Free',
+      planComingSoon: 'Coming Soon',
+      businessTagline: 'For growing businesses and advanced automation.',
+      internalIncluded: 'Included',
       badgeCurrent: 'Current plan',
+      badgeSelected: 'Selected',
       badgeInternal: 'Internal account',
       badgeTrial: 'Trial',
       badgeAnnual: 'Annual',
@@ -48,13 +68,21 @@
       smartPagesUnlimited: 'Unlimited Smart QR Pages',
       basicUnlimited: 'Unlimited basic QR codes',
       basicN: function (n) { return n + ' basic QR codes'; },
-      dynamicQr: 'Dynamic QR codes',
       actionCurrent: 'Current plan',
       actionAfterTrial: 'After your trial',
       actionUpgrade: function (n) { return 'Upgrade to ' + n; },
       actionChoose: function (n) { return 'Choose ' + n; },
       actionManage: 'Manage subscription',
-      comingSoon: 'Available in the next step',
+      redirecting: 'Redirecting to secure checkout…',
+      checkoutNotOpen: 'Checkout is not open yet.',
+      noticeSuccessPending: 'Payment received — activating your subscription…',
+      noticeSuccessActive: function (n) { return 'Your ' + n + ' subscription is active.'; },
+      noticeSuccessDelayed: 'Your payment is being processed. Your plan will update shortly — refresh this page in a moment.',
+      noticeCancelled: 'Checkout cancelled — no payment was made. You can try again any time.',
+      noticeHasSub: 'You already have a subscription. Use Manage subscription to change your plan.',
+      noticeInternal: 'This account is managed by QRAIVY and cannot purchase a plan.',
+      noticeCheckoutError: 'Checkout could not be started. Please try again.',
+      noticePortalError: 'The billing portal could not be opened. Please try again.',
     },
     de: {
       subtitle: 'Dein Tarif, Abonnement und deine Smart-QR-Seiten-Limits.',
@@ -71,7 +99,11 @@
       billedMonthly: 'monatliche Abrechnung',
       noCharge: 'Kostenlos',
       planFree: 'Kostenlos',
+      planComingSoon: 'Demnächst',
+      businessTagline: 'Für wachsende Unternehmen und erweiterte Automatisierung.',
+      internalIncluded: 'Inklusive',
       badgeCurrent: 'Aktueller Tarif',
+      badgeSelected: 'Ausgewählt',
       badgeInternal: 'Internes Konto',
       badgeTrial: 'Testphase',
       badgeAnnual: 'Jährlich',
@@ -90,17 +122,32 @@
       smartPagesUnlimited: 'Unbegrenzte Smart-QR-Seiten',
       basicUnlimited: 'Unbegrenzte Basis-QR-Codes',
       basicN: function (n) { return n + ' Basis-QR-Codes'; },
-      dynamicQr: 'Dynamische QR-Codes',
       actionCurrent: 'Aktueller Tarif',
       actionAfterTrial: 'Nach deiner Testphase',
       actionUpgrade: function (n) { return 'Upgrade auf ' + n; },
       actionChoose: function (n) { return n + ' wählen'; },
       actionManage: 'Abonnement verwalten',
-      comingSoon: 'Im nächsten Schritt verfügbar',
+      redirecting: 'Weiterleitung zum sicheren Checkout…',
+      checkoutNotOpen: 'Der Checkout ist noch nicht freigeschaltet.',
+      noticeSuccessPending: 'Zahlung erhalten — dein Abonnement wird aktiviert…',
+      noticeSuccessActive: function (n) { return 'Dein ' + n + '-Abonnement ist aktiv.'; },
+      noticeSuccessDelayed: 'Deine Zahlung wird verarbeitet. Dein Tarif wird in Kürze aktualisiert — lade die Seite gleich neu.',
+      noticeCancelled: 'Checkout abgebrochen — es wurde keine Zahlung durchgeführt. Du kannst es jederzeit erneut versuchen.',
+      noticeHasSub: 'Du hast bereits ein Abonnement. Ändere deinen Tarif über „Abonnement verwalten“.',
+      noticeInternal: 'Dieses Konto wird von QRAIVY verwaltet und kann keinen Tarif kaufen.',
+      noticeCheckoutError: 'Der Checkout konnte nicht gestartet werden. Bitte versuche es erneut.',
+      noticePortalError: 'Das Abrechnungsportal konnte nicht geöffnet werden. Bitte versuche es erneut.',
     },
   };
 
-  var state = { data: null, interval: 'monthly', loading: false, message: null };
+  var state = {
+    data: null, interval: 'monthly', loading: false, message: null,
+    intent: null,      // { plan, checkout } read once from the URL
+    selected: null,    // plan id (starter|pro) chosen via the homepage handoff
+    notice: null,      // { key, arg, variant }
+    busy: false,       // a checkout/portal request is in flight
+    polling: false,
+  };
 
   function lang() { return window._qraivyLang === 'de' ? 'de' : 'en'; }
   function t(key) { var v = T[lang()][key]; return v !== undefined ? v : T.en[key]; }
@@ -128,6 +175,39 @@
     } catch (e) { return '€' + amount; }
   }
 
+  // ── URL handoff (read once; parameters removed afterwards) ──
+  function readIntent() {
+    var q;
+    try { q = new URLSearchParams(window.location.search); } catch (e) { return { plan: null, checkout: null }; }
+    var plan = q.get('plan');
+    var checkout = q.get('checkout');
+    return {
+      plan: PUBLIC_SELECTIONS.indexOf(plan) !== -1 ? plan : null,
+      checkout: checkout === 'success' || checkout === 'cancelled' ? checkout : null,
+    };
+  }
+
+  function clearIntentFromUrl() {
+    try {
+      var url = new URL(window.location.href);
+      if (!url.searchParams.has('plan') && !url.searchParams.has('checkout')) return;
+      url.searchParams.delete('plan');
+      url.searchParams.delete('checkout');
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    } catch (e) { /* non-critical */ }
+  }
+
+  // Find the catalogue plan offering this checkout plan id (server truth).
+  function catalogueSelection(planId) {
+    var list = (state.data && state.data.plans) || [];
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i].checkoutPlans || {};
+      if (c.monthly === planId) return { id: list[i].id, interval: 'monthly' };
+      if (c.annual === planId) return { id: list[i].id, interval: 'annual' };
+    }
+    return null;
+  }
+
   // ── Account state derived from /stripe/status (canonical fields) ──
   function accountState(d) {
     var status = typeof d.subscriptionStatus === 'string' ? d.subscriptionStatus.toLowerCase() : null;
@@ -138,9 +218,11 @@
       trialEnded: !d.isTrial && String(d.plan || '').trim().toLowerCase() === 'trial',
       // Card marked current: none during a trial; Business for internal accounts.
       currentId: d.isTrial ? null : (d.isInternal ? 'business' : d.basePlan),
+      paid: paidBase,
       subscriber: paidBase && !d.isInternal && !!d.hasSubscription,
       pastDue: paidBase && status === 'past_due',
       ended: !!d.hasStripeCustomer && status !== null && REVOKED.indexOf(status) !== -1,
+      canAct: !!d.checkoutEnabled,
     };
   }
 
@@ -151,6 +233,61 @@
     var list = (state.data && state.data.plans) || [];
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return displayName(list[i]);
     return id;
+  }
+
+  // ── Authenticated API calls ────────────────────────────────
+  async function token() {
+    if (!window.Clerk) throw new Error('Clerk unavailable');
+    if (!window.Clerk.loaded && typeof window.Clerk.load === 'function') await window.Clerk.load();
+    return window.Clerk.session ? window.Clerk.session.getToken() : null;
+  }
+
+  async function api(method, path, body) {
+    var tok = await token();
+    if (!tok) return { status: 401, body: null };
+    var res = await fetch(apiBase() + path, {
+      method: method,
+      headers: Object.assign({ Authorization: 'Bearer ' + tok }, body ? { 'Content-Type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    var json = null;
+    try { json = await res.json(); } catch (e) { /* empty body */ }
+    return { status: res.status, body: json };
+  }
+
+  function navigate(url) { window.location.assign(url); }
+
+  async function startCheckout(planId) {
+    // Defence in depth: only the public selections ever leave the browser.
+    if (state.busy || PUBLIC_SELECTIONS.indexOf(planId) === -1) return;
+    state.busy = true; state.notice = { key: 'redirecting', variant: 'info' }; render();
+    var r;
+    try { r = await api('POST', '/stripe/checkout', { plan: planId }); } catch (e) { r = { status: 0, body: null }; }
+    if (r.status === 200 && r.body && typeof r.body.url === 'string' && /^https:\/\//.test(r.body.url)) {
+      navigate(r.body.url);
+      return;
+    }
+    state.busy = false;
+    var err = r.body && r.body.error;
+    if (r.status === 409 && err === 'subscription_exists') state.notice = { key: 'noticeHasSub', variant: 'warning' };
+    else if (r.status === 409 && err === 'internal_account') state.notice = { key: 'noticeInternal', variant: 'warning' };
+    else if (r.status === 403) state.notice = { key: 'checkoutNotOpen', variant: 'warning' };
+    else state.notice = { key: 'noticeCheckoutError', variant: 'error' };
+    render();
+  }
+
+  async function openPortal() {
+    if (state.busy) return;
+    state.busy = true; render();
+    var r;
+    try { r = await api('POST', '/stripe/portal'); } catch (e) { r = { status: 0, body: null }; }
+    if (r.status === 200 && r.body && typeof r.body.url === 'string' && /^https:\/\//.test(r.body.url)) {
+      navigate(r.body.url);
+      return;
+    }
+    state.busy = false;
+    state.notice = r.status === 403 ? { key: 'checkoutNotOpen', variant: 'warning' } : { key: 'noticePortalError', variant: 'error' };
+    render();
   }
 
   // ── Rendering ──────────────────────────────────────────────
@@ -172,13 +309,26 @@
 
   function badge(text, variant) { return el('span', 'bl-badge' + (variant ? ' bl-badge--' + variant : ''), text); }
 
-  function disabledButton(label, variant, configured) {
+  // Action button: active only when the backend allows checkout/portal.
+  function actionButton(label, variant, canAct, onClick) {
     var b = el('button', 'bl-btn bl-btn--' + variant, label);
     b.type = 'button';
-    b.disabled = true;
-    b.setAttribute('aria-disabled', 'true');
-    if (configured) b.title = t('comingSoon');
+    var enabled = !!(canAct && onClick) && !state.busy;
+    b.disabled = !enabled;
+    b.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    if (!canAct && onClick) b.title = t('checkoutNotOpen');
+    if (enabled) b.addEventListener('click', onClick);
     return b;
+  }
+  function inertButton(label, variant) { return actionButton(label, variant, false, null); }
+
+  function renderNotice() {
+    if (!state.notice) return null;
+    var n = state.notice;
+    var text = typeof t(n.key) === 'function' ? t(n.key)(n.arg) : t(n.key);
+    var box = el('div', 'bl-alert bl-alert--' + (n.variant || 'info'), text);
+    box.setAttribute('role', n.variant === 'error' || n.variant === 'warning' ? 'alert' : 'status');
+    return box;
   }
 
   function renderStatus(d, s) {
@@ -212,9 +362,9 @@
     details.forEach(function (line) { left.appendChild(el('div', 'bl-status__detail', line)); });
     top.appendChild(left);
 
-    // Manage subscription: for Stripe customers (never internal accounts).
+    // Manage subscription (Stripe portal): Stripe customers only, never internal accounts.
     if (d.hasStripeCustomer && !s.internal) {
-      top.appendChild(disabledButton(t('actionManage'), s.pastDue ? 'primary' : 'secondary', d.stripeConfigured));
+      top.appendChild(actionButton(t('actionManage'), s.pastDue ? 'primary' : 'secondary', s.canAct && d.portalAvailable, openPortal));
     }
     box.appendChild(top);
     return box;
@@ -233,50 +383,69 @@
     return wrap;
   }
 
+  // Customer-facing benefits: only capabilities usable today (no Dynamic QR yet).
   function featureLines(p) {
     var lines = [];
     if (p.smartPageLimit === null) lines.push(t('smartPagesUnlimited'));
     else if (p.smartPageLimit === 0) lines.push(t('smartPagesNone'));
     else lines.push(t('smartPagesN')(p.smartPageLimit));
     lines.push(p.basicQrLimit === null ? t('basicUnlimited') : t('basicN')(p.basicQrLimit));
-    if (p.dynamicQr) lines.push(t('dynamicQr'));
     return lines;
   }
 
+  function checkoutPlanFor(p) {
+    var c = p.checkoutPlans || {};
+    var id = c[state.interval];
+    return PUBLIC_SELECTIONS.indexOf(id) !== -1 ? id : null;  // no annual→monthly fallback
+  }
+
   function cardAction(p, d, s) {
-    if (s.internal) return null;                               // internal: no purchase actions
-    if (p.id === s.currentId) return disabledButton(t('actionCurrent'), 'ghost', false);
-    var paid = !!(p.checkoutPlans && (p.checkoutPlans.monthly || p.checkoutPlans.annual));
-    if (s.trial) {
-      return paid ? disabledButton(t('actionChoose')(displayName(p)), 'primary', d.stripeConfigured)
-                  : disabledButton(t('actionAfterTrial'), 'ghost', false);
+    if (s.internal) return null;                                    // internal: never purchases
+    if (p.id === s.currentId) return inertButton(t('actionCurrent'), 'ghost');
+    if (p.comingSoon) return null;                                  // Business: coming soon
+    var offered = !!(p.checkoutPlans && (p.checkoutPlans.monthly || p.checkoutPlans.annual));
+    if (!offered) return s.trial ? inertButton(t('actionAfterTrial'), 'ghost') : null;  // Free
+    if (s.subscriber || s.pastDue) {
+      // Plan changes go through the Stripe portal — never a second subscription.
+      return actionButton(t('actionManage'), 'secondary', s.canAct && d.portalAvailable, openPortal);
     }
-    if (s.subscriber) {
-      // Plan changes for subscribers go through the Stripe portal; Free is not a direct downgrade.
-      return paid ? disabledButton(t('actionManage'), 'secondary', d.stripeConfigured) : null;
-    }
-    return paid ? disabledButton(t('actionUpgrade')(displayName(p)), 'primary', d.stripeConfigured) : null;
+    var planId = checkoutPlanFor(p);
+    var label = s.trial ? t('actionChoose')(displayName(p)) : t('actionUpgrade')(displayName(p));
+    return actionButton(label, 'primary', s.canAct, planId ? function () { startCheckout(planId); } : null);
   }
 
   function renderCard(p, d, s) {
     var current = p.id === s.currentId;
-    var card = el('article', 'bl-card' + (current ? ' is-current' : ''));
+    var soon = !!p.comingSoon && !current;
+    var selected = !current && !soon && state.selected === p.id;
+    var card = el('article', 'bl-card' + (current ? ' is-current' : '') + (selected ? ' is-selected' : '') + (soon ? ' bl-card--soon' : ''));
+    card.setAttribute('data-plan', p.id);
     var head = el('div', 'bl-card__head');
     head.appendChild(el('h3', 'bl-card__name', displayName(p)));
     if (current) head.appendChild(badge(s.internal ? t('badgeInternal') : t('badgeCurrent'), 'accent'));
+    else if (selected) head.appendChild(badge(t('badgeSelected'), 'accent'));
     card.appendChild(head);
 
+    var price = el('div', 'bl-card__price');
+    if (soon) {
+      price.appendChild(el('span', 'bl-card__amount bl-card__amount--soon', t('planComingSoon')));
+      card.appendChild(price);
+      card.appendChild(el('div', 'bl-card__billing', ' '));
+      card.appendChild(el('p', 'bl-card__tagline', t('businessTagline')));
+      return card;
+    }
     var annual = state.interval === 'annual';
     var amount = annual ? p.annualMonthlyPrice : p.monthlyPrice;
-    var price = el('div', 'bl-card__price');
-    if (amount === 0) {
-      price.appendChild(el('span', 'bl-card__amount', fmtPrice(0, p.currency)));
+    if (current && s.internal) {
+      price.appendChild(el('span', 'bl-card__amount bl-card__amount--soon', t('internalIncluded')));
+      card.appendChild(price);
+      card.appendChild(el('div', 'bl-card__billing', ' '));
     } else {
       price.appendChild(el('span', 'bl-card__amount', fmtPrice(amount, p.currency)));
-      price.appendChild(el('span', 'bl-card__per', t('perMonth')));
+      if (amount !== 0) price.appendChild(el('span', 'bl-card__per', t('perMonth')));
+      card.appendChild(price);
+      card.appendChild(el('div', 'bl-card__billing', amount === 0 ? t('noCharge') : (annual ? t('billedAnnually') : t('billedMonthly'))));
     }
-    card.appendChild(price);
-    card.appendChild(el('div', 'bl-card__billing', amount === 0 ? t('noCharge') : (annual ? t('billedAnnually') : t('billedMonthly'))));
 
     var ul = el('ul', 'bl-card__features');
     featureLines(p).forEach(function (line) { ul.appendChild(el('li', null, line)); });
@@ -299,6 +468,8 @@
     if (sub) sub.textContent = t('subtitle');
 
     if (!d.stripeConfigured) r.appendChild(el('div', 'bl-notice', t('unavailable')));
+    var notice = renderNotice();
+    if (notice) r.appendChild(notice);
     r.appendChild(renderStatus(d, s));
 
     if (!Array.isArray(d.plans) || !d.plans.length) {
@@ -316,20 +487,60 @@
   }
 
   // ── Data ───────────────────────────────────────────────────
+  async function fetchStatus() {
+    var r = await api('GET', '/stripe/status');
+    if (r.status === 401) return { signedOut: true };
+    if (r.status !== 200 || !r.body) throw new Error('HTTP ' + r.status);
+    return { data: r.body };
+  }
+
+  function applyIntent() {
+    var intent = state.intent || {};
+    // Only accounts that can start a new purchase get the handoff selection
+    // (internal accounts never buy; subscribers change plans in the portal).
+    var acct = accountState(state.data);
+    var canBuy = !acct.internal && !acct.subscriber && !acct.pastDue;
+    var sel = intent.plan && canBuy ? catalogueSelection(intent.plan) : null;
+    if (sel) { state.selected = sel.id; state.interval = sel.interval; }
+    else state.interval = state.data.isAnnual ? 'annual' : 'monthly';
+    if (intent.checkout === 'cancelled') state.notice = { key: 'noticeCancelled', variant: 'info' };
+    if (intent.checkout === 'success') state.notice = { key: 'noticeSuccessPending', variant: 'success' };
+  }
+
+  // After a successful checkout return, wait for the webhook to apply the plan.
+  async function pollForActivation() {
+    if (state.polling) return;
+    state.polling = true;
+    for (var i = 0; i < POLL_ATTEMPTS; i++) {
+      var s = accountState(state.data);
+      if (s.subscriber && !s.pastDue) {
+        state.notice = { key: 'noticeSuccessActive', arg: planName(s.currentId), variant: 'success' };
+        state.selected = null;
+        render();
+        state.polling = false;
+        return;
+      }
+      await new Promise(function (r) { setTimeout(r, POLL_INTERVAL_MS); });
+      try { var res = await fetchStatus(); if (res.data) { state.data = res.data; render(); } } catch (e) { /* keep waiting */ }
+    }
+    state.notice = { key: 'noticeSuccessDelayed', variant: 'info' };
+    render();
+    state.polling = false;
+  }
+
   async function load() {
     if (!root() || state.loading) return;
     state.loading = true;
+    if (!state.intent) { state.intent = readIntent(); clearIntentFromUrl(); }
     renderMessage('loading');
     try {
-      if (!window.Clerk) throw new Error('Clerk unavailable');
-      if (!window.Clerk.loaded && typeof window.Clerk.load === 'function') await window.Clerk.load();
-      var token = window.Clerk.session ? await window.Clerk.session.getToken() : null;
-      if (!token) { renderMessage('signedOut'); return; }
-      var res = await fetch(apiBase() + '/stripe/status', { headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      state.data = await res.json();
-      state.interval = state.data.isAnnual ? 'annual' : 'monthly';
+      var res = await fetchStatus();
+      if (res.signedOut) { renderMessage('signedOut'); return; }
+      state.data = res.data;
+      applyIntent();
       render();
+      if (state.intent.checkout === 'success') pollForActivation();
+      state.intent = { plan: null, checkout: null };  // consumed
     } catch (err) {
       console.error('[billing] load failed:', err && err.message);
       renderMessage('error', true);

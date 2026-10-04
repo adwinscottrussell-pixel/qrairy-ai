@@ -27,8 +27,9 @@
 
   // Resolve the login redirect path relative to current page
   function getLoginUrl() {
-    var path = window.location.pathname;
-    // Normalise to root-relative
+    // Keep the query string (e.g. ?section=billing&plan=pro) so the selected
+    // plan survives sign-in; login.html accepts only same-site paths.
+    var path = window.location.pathname.replace(/^\/+/, '') + window.location.search;
     return LOGIN_URL + '?redirect=' + encodeURIComponent(path);
   }
 

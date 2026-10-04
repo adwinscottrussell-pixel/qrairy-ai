@@ -28,6 +28,23 @@ function isRevokedStatus(status) {
     plans.REVOKING_SUBSCRIPTION_STATUSES.includes(status.trim().toLowerCase());
 }
 
+// Checkout gate (Railway variables; opening it needs no code deploy):
+//   BILLING_CHECKOUT_ENABLED=true        → checkout + portal for every user
+//   BILLING_CHECKOUT_USER_IDS=id1,id2    → only these users (controlled test)
+// Neither set → disabled for everyone.
+function checkoutAllowedFor(userId) {
+  if (String(process.env.BILLING_CHECKOUT_ENABLED || '').trim().toLowerCase() === 'true') return true;
+  const ids = String(process.env.BILLING_CHECKOUT_USER_IDS || '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  return typeof userId === 'string' && ids.includes(userId);
+}
+const CHECKOUT_DISABLED = { error: 'checkout_disabled', message: 'Checkout is not available yet.' };
+
+// Stripe returns customers to Admin Billing (environment via FRONTEND_URL).
+function billingUrl(query) {
+  return `${process.env.FRONTEND_URL}/dashboard.html?section=billing${query ? '&' + query : ''}`;
+}
+
 // ─── POST /stripe/checkout ────────────────────────────────────
 // Creates a Stripe Checkout session and returns the URL
 async function handleCreateCheckout(req, res) {
@@ -35,8 +52,14 @@ async function handleCreateCheckout(req, res) {
     const { plan } = req.body;
     const userId = req.userId;
 
-    if (!plans.isPurchasable(plan)) {
+    // New purchases: Starter/Pro (monthly or annual) only. Free, Business
+    // (coming soon), enterprise/internal and unknown values are rejected.
+    if (!plans.isPublicCheckoutPlan(plan)) {
       return res.status(400).json({ error: 'Invalid plan.' });
+    }
+
+    if (!checkoutAllowedFor(userId)) {
+      return res.status(403).json(CHECKOUT_DISABLED);
     }
 
     const priceId = plans.stripePriceIdForPlan(plan);
@@ -82,8 +105,10 @@ async function handleCreateCheckout(req, res) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.FRONTEND_URL}/dashboard.html?upgrade=success&plan=${plan}`,
-      cancel_url: `${process.env.FRONTEND_URL}/pricing.html?upgrade=cancelled`,
+      // The success return only triggers a status refresh; the webhook
+      // grants the plan.
+      success_url: billingUrl(`checkout=success&plan=${plan}`),
+      cancel_url: billingUrl(`checkout=cancelled&plan=${plan}`),
       metadata: { userId, plan },
       subscription_data: {
         metadata: { userId, plan },
@@ -102,6 +127,9 @@ async function handleCreateCheckout(req, res) {
 async function handleCustomerPortal(req, res) {
   try {
     const userId = req.userId;
+    if (!checkoutAllowedFor(userId)) {
+      return res.status(403).json(CHECKOUT_DISABLED);
+    }
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user?.stripeCustomerId) {
@@ -110,7 +138,7 @@ async function handleCustomerPortal(req, res) {
 
     const session = await getStripe().billingPortal.sessions.create({
       customer: user.stripeCustomerId,
-      return_url: `${process.env.FRONTEND_URL}/dashboard.html`,
+      return_url: billingUrl(''),
     });
 
     return res.status(200).json({ url: session.url });
@@ -172,6 +200,7 @@ async function handleSubscriptionStatus(req, res) {
       hasSubscription,
       stripeConfigured,
       portalAvailable: stripeConfigured && hasStripeCustomer,
+      checkoutEnabled: stripeConfigured && checkoutAllowedFor(userId),
       subscription: stripeConfigured && hasSubscription
         ? await readSubscriptionDetails(user.stripeSubscriptionId)
         : null,

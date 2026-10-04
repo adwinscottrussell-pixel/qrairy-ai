@@ -31,16 +31,26 @@
   </div>
 
   <script>
+    // Return target after sign-in/sign-up: only a same-site relative path
+    // (e.g. "dashboard.html?section=billing&plan=pro_annual"); anything with
+    // a scheme, protocol-relative or backslash form falls back to the
+    // dashboard, so ?redirect= can never send users off-site.
+    function _safeRedirect(raw) {
+      let r = typeof raw === 'string' ? raw.trim() : '';
+      if (!r || /^[a-z][a-z0-9+.-]*:/i.test(r) || r.indexOf('//') === 0 || r.indexOf('\\') !== -1) return 'dashboard.html';
+      r = r.replace(/^\/+/, '');
+      return r || 'dashboard.html';
+    }
     async function initClerk() {
       await window.Clerk.load();
+      const _rp = _safeRedirect(new URLSearchParams(window.location.search).get('redirect'));
       if (window.Clerk.user) {
-        const _r = new URLSearchParams(window.location.search).get('redirect');
-        window.location.href = _r || 'dashboard.html';
+        window.location.href = _rp;
         return;
       }
-      const _rp = new URLSearchParams(window.location.search).get('redirect');
-      const _base = 'https://www.qraivy.com/';
-      const _target = _rp ? _base + _rp : _base + 'dashboard.html';
+      // Production returns to www; plan-preview stays on its own host.
+      const _base = window.location.hostname === 'plan-preview.qraivy.com' ? window.location.origin + '/' : 'https://www.qraivy.com/';
+      const _target = _base + _rp;
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,
         afterSignUpUrl: _target,

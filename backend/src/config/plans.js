@@ -38,6 +38,13 @@ const PURCHASABLE_PLAN_IDS = Object.freeze([
   'starter_annual', 'pro_annual', 'business_annual',
 ]);
 
+// Plan IDs a NEW customer can buy through Stripe Checkout today. Business
+// stays purchasable in the model (existing subscriptions keep their price
+// mapping and entitlements) but is "coming soon" for new purchases.
+const PUBLIC_CHECKOUT_PLAN_IDS = Object.freeze([
+  'starter', 'starter_annual', 'pro', 'pro_annual',
+]);
+
 // ── Entitlements ────────────────────────────────────────────
 // Keys:
 //   basicQrLimit     basic (non-AI) QR codes; null = unlimited
@@ -252,6 +259,11 @@ function isPurchasable(planId) {
   return typeof planId === 'string' && PURCHASABLE_PLAN_IDS.includes(planId);
 }
 
+// True only for plans a new customer may check out now (see above).
+function isPublicCheckoutPlan(planId) {
+  return isPurchasable(planId) && PUBLIC_CHECKOUT_PLAN_IDS.includes(planId);
+}
+
 function stripePriceEnvVar(planId) {
   return isPurchasable(planId) ? STRIPE_PRICE_ENV_VARS[planId] : null;
 }
@@ -289,12 +301,15 @@ function planIdForStripePrice(priceId, env = process.env) {
 // The single catalogue used by both the public homepage (GET /public/plans)
 // and Admin Billing (GET /stripe/status). Public base plans only — never
 // trial or internal aliases — with display prices and enforced limits.
-// Checkout plan IDs are listed only where the plan is purchasable.
+// Checkout plan IDs are listed only where a new customer can buy the plan;
+// a paid plan without any is "comingSoon".
 function getPublicPlanCatalogue() {
   return PUBLIC_BASE_PLANS.map((id) => {
     const entitlements = getPlanEntitlements(id);
     const price = DISPLAY_PRICES_EUR[id];
     const annualId = `${id}_annual`;
+    const monthlyCheckout = isPublicCheckoutPlan(id) ? id : null;
+    const annualCheckout = isPublicCheckoutPlan(annualId) ? annualId : null;
     return {
       id,
       name: PLAN_NAMES[id],
@@ -305,9 +320,10 @@ function getPublicPlanCatalogue() {
       basicQrLimit: entitlements.basicQrLimit,     // null = unlimited
       dynamicQr: entitlements.dynamicQr,
       checkoutPlans: {
-        monthly: isPurchasable(id) ? id : null,
-        annual: isPurchasable(annualId) ? annualId : null,
+        monthly: monthlyCheckout,
+        annual: annualCheckout,
       },
+      comingSoon: isPaidBase(id) && !monthlyCheckout && !annualCheckout,
     };
   });
 }
@@ -319,6 +335,7 @@ module.exports = {
   TRIAL_PLAN_ID,
   INTERNAL_PLAN_ALIASES,
   PURCHASABLE_PLAN_IDS,
+  PUBLIC_CHECKOUT_PLAN_IDS,
   // Entitlements & metadata
   ENTITLEMENTS,
   DISPLAY_PRICES_EUR,
@@ -339,6 +356,7 @@ module.exports = {
   // Stripe mapping
   STRIPE_PRICE_ENV_VARS,
   isPurchasable,
+  isPublicCheckoutPlan,
   stripePriceEnvVar,
   stripePriceIdForPlan,
   buildStripePriceToPlanMap,

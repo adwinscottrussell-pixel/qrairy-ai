@@ -32,7 +32,7 @@ const PRICES = {
   STRIPE_PRICE_PRO_ANNUAL: 'price_test_pro_y',
   STRIPE_PRICE_BUSINESS_ANNUAL: 'price_test_business_y',
 };
-const ENV_KEYS = [...Object.keys(PRICES), 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'FRONTEND_URL'];
+const ENV_KEYS = [...Object.keys(PRICES), 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'FRONTEND_URL', 'BILLING_CHECKOUT_ENABLED', 'BILLING_CHECKOUT_USER_IDS'];
 for (const k of ENV_KEYS) delete process.env[k];
 
 // ── Mocks ────────────────────────────────────────────────────
@@ -86,7 +86,8 @@ const subUpdated = (customer, priceId, st = 'active') => ({
 });
 
 function configure() {
-  Object.assign(process.env, PRICES, { STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake', FRONTEND_URL: 'https://app.example.invalid' });
+  Object.assign(process.env, PRICES, { STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake', FRONTEND_URL: 'https://app.example.invalid', BILLING_CHECKOUT_ENABLED: 'true' });
+  delete process.env.BILLING_CHECKOUT_USER_IDS;
 }
 
 const tests = [];
@@ -112,9 +113,11 @@ test('lazy Stripe init: controller loaded and /stripe/status works without STRIP
 
 test('lazy Stripe init: checkout without Stripe config fails cleanly (no crash)', async () => {
   users.u = { id: 'u', plan: 'free' };
+  process.env.BILLING_CHECKOUT_ENABLED = 'true';
   const res = await checkout('u', 'starter');
   assert.equal(res.statusCode, 400);
   assert.deepEqual(res.body, { error: 'Plan price not configured.' });
+  delete process.env.BILLING_CHECKOUT_ENABLED;
 });
 
 // ── 1–6. Mapping, both directions ────────────────────────────
@@ -128,12 +131,18 @@ for (const [planId, priceId] of MAP) {
     configure();
     assert.equal(plans.stripePriceIdForPlan(planId), priceId);
     assert.equal(plans.planIdForStripePrice(priceId), planId);
-    // checkout sends that exact price
     users.u = { id: 'u', plan: 'free', email: 'x@example.invalid' };
     const res = await checkout('u', planId);
-    assert.equal(res.statusCode, 200, JSON.stringify(res.body));
-    assert.deepEqual(calls.sessions[0].line_items, [{ price: priceId, quantity: 1 }]);
-    assert.deepEqual(calls.sessions[0].metadata, { userId: 'u', plan: planId });
+    if (plans.normalizePlan(planId).base === 'business') {
+      // Business is coming soon: no new checkout, but existing subscriptions still map back.
+      assert.equal(res.statusCode, 400, JSON.stringify(res.body));
+      assert.equal(calls.sessions.length + calls.customers.length, 0);
+    } else {
+      // checkout sends that exact price
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      assert.deepEqual(calls.sessions[0].line_items, [{ price: priceId, quantity: 1 }]);
+      assert.deepEqual(calls.sessions[0].metadata, { userId: 'u', plan: planId });
+    }
     // webhook maps it back
     users.w = { id: 'w', plan: 'free', stripeCustomerId: 'cus_w' };
     assert.equal((await webhook(subUpdated('cus_w', priceId))).statusCode, 200);
@@ -203,9 +212,12 @@ test('enterprise is not purchasable: checkout plan "enterprise" → 400, no Stri
 test('internal enterprise account cannot start a checkout (409 internal_account); stored plan untouched', async () => {
   configure();
   users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: null };
-  const res = await checkout('e', 'business');
-  assert.equal(res.statusCode, 409);
-  assert.equal(res.body.error, 'internal_account');
+  for (const p of ['starter', 'pro_annual']) {
+    const res = await checkout('e', p);
+    assert.equal(res.statusCode, 409, p);
+    assert.equal(res.body.error, 'internal_account');
+  }
+  assert.equal((await checkout('e', 'business')).statusCode, 400, 'Business is not a new-purchase plan, internal or not');
   assert.equal(calls.customers.length + calls.sessions.length, 0);
   assert.equal(users.e.plan, 'enterprise');
   const s = (await status('e')).body;
@@ -345,6 +357,97 @@ test('F9: normal accounts — checkout.session.completed unchanged (free, trial,
   }
 });
 
+// ── Step 2: new-purchase allowlist (Starter/Pro only) ────────
+test('Step 2: checkout accepts exactly starter, starter_annual, pro, pro_annual with their own prices', async () => {
+  configure();
+  const expected = { starter: 'price_test_starter_m', starter_annual: 'price_test_starter_y', pro: 'price_test_pro_m', pro_annual: 'price_test_pro_y' };
+  for (const [plan, price] of Object.entries(expected)) {
+    users.u = { id: 'u', plan: 'free' }; calls.sessions = [];
+    const res = await checkout('u', plan);
+    assert.equal(res.statusCode, 200, plan + ' ' + JSON.stringify(res.body));
+    assert.deepEqual(calls.sessions[0].line_items, [{ price, quantity: 1 }], plan);
+    assert.equal(calls.sessions[0].success_url, 'https://app.example.invalid/dashboard.html?section=billing&checkout=success&plan=' + plan);
+    assert.equal(calls.sessions[0].cancel_url, 'https://app.example.invalid/dashboard.html?section=billing&checkout=cancelled&plan=' + plan);
+  }
+  assert.deepEqual([...plans.PUBLIC_CHECKOUT_PLAN_IDS].sort(), ['pro', 'pro_annual', 'starter', 'starter_annual']);
+});
+
+test('Step 2: business, business_annual, free, trial, enterprise and unknown → 400, no Stripe call (gate open)', async () => {
+  configure();
+  users.u = { id: 'u', plan: 'free' };
+  for (const p of ['business', 'business_annual', 'free', 'trial', 'enterprise', 'internal', 'pro_monthly', 'Starter', '', null]) {
+    const res = await checkout('u', p);
+    assert.equal(res.statusCode, 400, String(p));
+    assert.deepEqual(res.body, { error: 'Invalid plan.' });
+  }
+  assert.equal(calls.customers.length + calls.sessions.length, 0);
+});
+
+test('Step 2: Business stays rejected for new checkout even with the gate closed (plan check first)', async () => {
+  configure(); delete process.env.BILLING_CHECKOUT_ENABLED;
+  users.u = { id: 'u', plan: 'free' };
+  assert.equal((await checkout('u', 'business')).statusCode, 400);
+  assert.equal((await checkout('u', 'starter')).statusCode, 403);
+});
+
+test('Step 2: existing Business subscriber keeps Business (status, webhook mapping, portal) — only new purchase blocked', async () => {
+  configure();
+  users.b = { id: 'b', plan: 'business_annual', subscriptionStatus: 'active', stripeCustomerId: 'cus_b', stripeSubscriptionId: 'sub_b' };
+  const s = (await status('b')).body;
+  assert.deepEqual([s.basePlan, s.isInternal, s.isAnnual, s.aiLimit, s.hasSubscription], ['business', false, true, null, true]);
+  await webhook({ type: 'customer.subscription.updated', data: { object: { id: 'sub_b', customer: 'cus_b', status: 'active', items: { data: [{ price: { id: 'price_test_business_m' } }] } } } });
+  assert.equal(users.b.plan, 'business', 'Business price still maps for existing subscriptions');
+  assert.equal((await portal('b')).statusCode, 200, 'existing subscriber can manage via portal');
+  assert.equal((await checkout('b', 'pro')).statusCode, 409, 'a second subscription is still blocked');
+});
+
+// ── Step 2: production checkout gate ─────────────────────────
+test('Step 2 gate: unset → checkout and portal 403 checkout_disabled; status checkoutEnabled false; no Stripe call', async () => {
+  configure(); delete process.env.BILLING_CHECKOUT_ENABLED;
+  users.u = { id: 'u', plan: 'free', stripeCustomerId: 'cus_u' };
+  for (const p of ['starter', 'starter_annual', 'pro', 'pro_annual']) {
+    const res = await checkout('u', p);
+    assert.equal(res.statusCode, 403, p);
+    assert.deepEqual(res.body, { error: 'checkout_disabled', message: 'Checkout is not available yet.' });
+  }
+  assert.equal((await portal('u')).statusCode, 403);
+  assert.equal((await status('u')).body.checkoutEnabled, false);
+  assert.equal(calls.customers.length + calls.sessions.length + calls.portals.length, 0);
+});
+
+test('Step 2 gate: BILLING_CHECKOUT_USER_IDS allows only the listed test account', async () => {
+  configure(); delete process.env.BILLING_CHECKOUT_ENABLED;
+  process.env.BILLING_CHECKOUT_USER_IDS = ' user_test_1 , user_other ';
+  users.user_test_1 = { id: 'user_test_1', plan: 'free' };
+  users.someone = { id: 'someone', plan: 'free' };
+  assert.equal((await checkout('user_test_1', 'starter')).statusCode, 200);
+  assert.equal((await checkout('someone', 'starter')).statusCode, 403);
+  assert.equal((await status('user_test_1')).body.checkoutEnabled, true);
+  assert.equal((await status('someone')).body.checkoutEnabled, false);
+});
+
+test('Step 2 gate: BILLING_CHECKOUT_ENABLED=true opens checkout for everyone; any other value keeps it closed', async () => {
+  configure();
+  for (const v of ['true', 'TRUE', ' true ']) { process.env.BILLING_CHECKOUT_ENABLED = v; users.u = { id: 'u', plan: 'free' }; assert.equal((await checkout('u', 'pro')).statusCode, 200, JSON.stringify(v)); }
+  for (const v of ['1', 'yes', 'false', '']) { process.env.BILLING_CHECKOUT_ENABLED = v; users.u = { id: 'u', plan: 'free' }; assert.equal((await checkout('u', 'pro')).statusCode, 403, JSON.stringify(v)); }
+});
+
+test('Step 2 gate: checkoutEnabled false when Stripe is not configured, even if the gate is open', async () => {
+  configure(); delete process.env.STRIPE_SECRET_KEY;
+  users.u = { id: 'u', plan: 'free' };
+  const s = (await status('u')).body;
+  assert.deepEqual([s.stripeConfigured, s.checkoutEnabled], [false, false]);
+});
+
+test('Step 2: missing configured Starter monthly price → 400, never another price', async () => {
+  configure(); delete process.env.STRIPE_PRICE_STARTER;
+  users.u = { id: 'u', plan: 'free' };
+  const res = await checkout('u', 'starter');
+  assert.deepEqual([res.statusCode, res.body.error], [400, 'Plan price not configured.']);
+  assert.equal(calls.sessions.length, 0);
+  assert.equal((await checkout('u', 'starter_annual')).statusCode, 200, 'annual unaffected');
+});
+
 // ── 11. Unknown price ────────────────────────────────────────
 test('unknown price ID: no plan assigned; status still recorded', async () => {
   configure();
@@ -369,8 +472,8 @@ test('checkout monthly: creates customer once, stores it, returns {url, sessionI
   const s = calls.sessions[0];
   assert.equal(s.mode, 'subscription');
   assert.equal(s.customer, 'cus_new');
-  assert.equal(s.success_url, 'https://app.example.invalid/dashboard.html?upgrade=success&plan=pro');
-  assert.equal(s.cancel_url, 'https://app.example.invalid/pricing.html?upgrade=cancelled');
+  assert.equal(s.success_url, 'https://app.example.invalid/dashboard.html?section=billing&checkout=success&plan=pro');
+  assert.equal(s.cancel_url, 'https://app.example.invalid/dashboard.html?section=billing&checkout=cancelled&plan=pro');
   assert.deepEqual(s.subscription_data, { metadata: { userId: 'u', plan: 'pro' } });
   assert.equal(s.trial_period_days, undefined, 'no Stripe trial');
 });
@@ -378,11 +481,11 @@ test('checkout monthly: creates customer once, stores it, returns {url, sessionI
 test('checkout annual: existing customer reused; annual price sent', async () => {
   configure();
   users.u = { id: 'u', plan: 'trial', trialExpiresAt: new Date(Date.now() + 864e5), stripeCustomerId: 'cus_old' };
-  const res = await checkout('u', 'business_annual');
+  const res = await checkout('u', 'pro_annual');
   assert.equal(res.statusCode, 200);
   assert.equal(calls.customers.length, 0);
   assert.equal(calls.sessions[0].customer, 'cus_old');
-  assert.deepEqual(calls.sessions[0].line_items, [{ price: 'price_test_business_y', quantity: 1 }]);
+  assert.deepEqual(calls.sessions[0].line_items, [{ price: 'price_test_pro_y', quantity: 1 }]);
 });
 
 test('checkout annual with annual price unset → 400, never falls back to the monthly price', async () => {
@@ -423,7 +526,7 @@ test('webhook: bad signature → 400, no DB writes', async () => {
 });
 
 // ── 14. Portal ───────────────────────────────────────────────
-test('portal: unchanged — 400 without customer; {url} with return_url dashboard', async () => {
+test('portal: 400 without customer; {url} returning to Admin Billing', async () => {
   configure();
   users.n = { id: 'n', plan: 'free' };
   const none = await portal('n');
@@ -432,15 +535,15 @@ test('portal: unchanged — 400 without customer; {url} with return_url dashboar
   users.y = { id: 'y', plan: 'pro', stripeCustomerId: 'cus_y' };
   const ok = await portal('y');
   assert.deepEqual(ok.body, { url: 'https://portal.example.invalid/p' });
-  assert.deepEqual(calls.portals[0], { customer: 'cus_y', return_url: 'https://app.example.invalid/dashboard.html' });
+  assert.deepEqual(calls.portals[0], { customer: 'cus_y', return_url: 'https://app.example.invalid/dashboard.html?section=billing' });
 });
 
 // ── /stripe/status shape ─────────────────────────────────────
 const LEGACY_STATUS_KEYS = ['plan', 'basePlan', 'aiLimit', 'canCreateAI', 'canUseDynamic', 'stripeCustomerId', 'stripeSubscriptionId', 'subscriptionStatus'];
-const ADDED_STATUS_KEYS = ['isAnnual', 'isInternal', 'isTrial', 'trialExpiresAt', 'hasStripeCustomer', 'hasSubscription', 'stripeConfigured', 'portalAvailable', 'subscription', 'plans'];
+const ADDED_STATUS_KEYS = ['isAnnual', 'isInternal', 'isTrial', 'trialExpiresAt', 'hasStripeCustomer', 'hasSubscription', 'stripeConfigured', 'portalAvailable', 'checkoutEnabled', 'subscription', 'plans'];
 
 // ── Phase 2G: read-only canonical plan catalogue ─────────────
-const PLAN_ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans'];
+const PLAN_ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans', 'comingSoon'];
 
 test('2G plans: exactly free/starter/pro/business in order; no trial, enterprise or annual entries', async () => {
   configure();
@@ -472,7 +575,7 @@ test('2G plans: every value derived from the canonical model (names, prices, lim
   assert.ok(!list.some((p) => 'walletPasses' in p || 'aiChat' in p || 'campaigns' in p), 'no unenforced/marketing capabilities');
 });
 
-test('2G plans: checkout plan IDs only where purchasable; Free has none; enterprise never offered', async () => {
+test('plans: checkout plan IDs only for new-purchase plans (Starter/Pro); Free none; Business coming soon; enterprise never offered', async () => {
   configure();
   users.u = { id: 'u', plan: 'free' };
   const { plans: list } = (await status('u')).body;
@@ -480,9 +583,12 @@ test('2G plans: checkout plan IDs only where purchasable; Free has none; enterpr
   assert.deepEqual(byId.free.checkoutPlans, { monthly: null, annual: null });
   assert.deepEqual(byId.starter.checkoutPlans, { monthly: 'starter', annual: 'starter_annual' });
   assert.deepEqual(byId.pro.checkoutPlans, { monthly: 'pro', annual: 'pro_annual' });
-  assert.deepEqual(byId.business.checkoutPlans, { monthly: 'business', annual: 'business_annual' });
+  assert.deepEqual(byId.business.checkoutPlans, { monthly: null, annual: null });
+  assert.deepEqual(list.map((p) => [p.id, p.comingSoon]), [['free', false], ['starter', false], ['pro', false], ['business', true]]);
+  assert.equal(byId.business.monthlyPrice, plans.DISPLAY_PRICES_EUR.business.monthly, 'canonical Business price unchanged');
   const offered = list.flatMap((p) => Object.values(p.checkoutPlans)).filter(Boolean);
-  assert.ok(offered.every((id) => plans.isPurchasable(id)));
+  assert.deepEqual(offered.sort(), ['pro', 'pro_annual', 'starter', 'starter_annual']);
+  assert.ok(offered.every((id) => plans.isPublicCheckoutPlan(id)));
   assert.ok(!JSON.stringify(list).includes('enterprise'));
 });
 
