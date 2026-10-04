@@ -209,6 +209,22 @@ async function handleWebhook(req, res) {
         const plan = session.metadata?.plan;
 
         if (userId && plan) {
+          // Internal accounts (enterprise = internal Business) are not
+          // Stripe-driven: a completed checkout never replaces their plan or
+          // status; only the Stripe references are stored so the resulting
+          // subscription stays manageable (portal / cancellation).
+          const owner = await prisma.user.findUnique({ where: { id: userId } });
+          if (owner && plans.normalizePlan(owner.plan).isInternal) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                stripeCustomerId: session.customer,
+                stripeSubscriptionId: session.subscription,
+              },
+            });
+            console.log(`ℹ️ Checkout completed: internal account kept (user ${userId})`);
+            break;
+          }
           await prisma.user.update({
             where: { id: userId },
             data: {

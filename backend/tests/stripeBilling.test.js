@@ -308,6 +308,43 @@ test('F8: shared customer — internal row preserved, normal row downgraded', as
   assert.equal((await webhook(subDeleted('cus_nobody'))).statusCode, 200, 'no matching user → no-op');
 });
 
+// ── F9. Internal plans protected from checkout.session.completed ─
+const sessionCompleted = (userId, plan) => ({ type: 'checkout.session.completed', data: { object: { metadata: { userId, plan }, customer: 'cus_9', subscription: 'sub_9' } } });
+
+test('F9: internal + checkout.session.completed → plan/status kept, Stripe IDs stored, entitlement intact', async () => {
+  configure();
+  for (const raw of ['enterprise', 'Enterprise', '  ENTERPRISE ']) {
+    for (const bought of ['business', 'starter_annual']) {
+      users.e = { id: 'e', plan: raw, subscriptionStatus: null };
+      assert.equal((await webhook(sessionCompleted('e', bought))).statusCode, 200);
+      assert.deepEqual([users.e.plan, users.e.subscriptionStatus], [raw, null], `${JSON.stringify(raw)} / ${bought}`);
+      assert.deepEqual([users.e.stripeCustomerId, users.e.stripeSubscriptionId], ['cus_9', 'sub_9']);
+      assert.equal(plans.resolveEffectivePlan(users.e).effectiveBase, 'business');
+      const s = (await status('e')).body;
+      assert.deepEqual([s.plan, s.basePlan, s.isInternal, s.aiLimit], [raw, 'business', true, null]);
+    }
+  }
+});
+
+test('F9: after protected checkout, later updated/deleted events still cannot change the internal plan', async () => {
+  configure();
+  users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: null };
+  await webhook(sessionCompleted('e', 'pro'));
+  await webhook({ type: 'customer.subscription.updated', data: { object: { id: 'sub_9', customer: 'cus_9', status: 'canceled', items: { data: [{ price: { id: 'price_test_pro_m' } }] } } } });
+  await webhook({ type: 'customer.subscription.deleted', data: { object: { id: 'sub_9', customer: 'cus_9' } } });
+  assert.deepEqual([users.e.plan, users.e.subscriptionStatus, users.e.stripeSubscriptionId], ['enterprise', null, null]);
+  assert.equal(plans.resolveEffectivePlan(users.e).effectiveBase, 'business');
+});
+
+test('F9: normal accounts — checkout.session.completed unchanged (free, trial, missing-row behaviour)', async () => {
+  configure();
+  for (const start of [{ plan: 'free' }, { plan: 'trial', trialExpiresAt: new Date(Date.now() + 864e5) }, { plan: 'pro', subscriptionStatus: 'canceled' }]) {
+    users.u = { id: 'u', ...start };
+    await webhook(sessionCompleted('u', 'pro_annual'));
+    assert.deepEqual([users.u.plan, users.u.subscriptionStatus, users.u.stripeCustomerId, users.u.stripeSubscriptionId], ['pro_annual', 'active', 'cus_9', 'sub_9'], start.plan);
+  }
+});
+
 // ── 11. Unknown price ────────────────────────────────────────
 test('unknown price ID: no plan assigned; status still recorded', async () => {
   configure();
