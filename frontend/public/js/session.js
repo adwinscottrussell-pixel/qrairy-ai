@@ -17,7 +17,7 @@ const QRairySession = (function () {
   };
   var ROUTES = {
     public:{ home:'/', pricing:'/pricing.html', freeQr:'/qr/free.html', login:'/login.html' },
-    app:{ dashboard:'/dashboard.html', analytics:'/analytics.html', upgrade:'/upgrade.html' },
+    app:{ dashboard:'/dashboard.html', analytics:'/analytics.html', upgrade:'/dashboard.html?section=billing' },
     admin:{ overview:'/admin.html' },
   };
   var _session = {

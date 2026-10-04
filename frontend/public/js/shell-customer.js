@@ -54,7 +54,7 @@
     {
       group: 'Account',
       items: [
-        { id: 'nav-billing',     label: 'Billing & Plans', icon: '\ud83d\udcb3', href: '/upgrade.html' },
+        { id: 'nav-billing',     label: 'Billing & Plans', icon: '\ud83d\udcb3', href: '/dashboard.html?section=billing' },
         { id: 'nav-settings',    label: 'Settings',        icon: '\u2699', href: '/dashboard.html' },
       ]
     }

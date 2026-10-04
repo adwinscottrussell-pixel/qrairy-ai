@@ -27,7 +27,7 @@
       { href: 'loyalty-setup.html', icon: '🃏', label: 'Loyalty Cards' },
     ]},
     { section: 'ACCOUNT', items: [
-      { href: 'pricing.html', icon: '💳', label: 'Billing & Plans', planBadge: true },
+      { href: 'dashboard.html?section=billing', icon: '💳', label: 'Billing & Plans', planBadge: true },
       { href: '#',            icon: '?',  label: 'Help & Docs' },
     ]},
   ];
