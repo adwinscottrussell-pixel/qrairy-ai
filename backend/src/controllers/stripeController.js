@@ -233,16 +233,25 @@ async function handleWebhook(req, res) {
         if (customerId) {
           // Status is always recorded; the plan changes only for a known price,
           // so an unknown price can never assign a paid plan.
-          const data = {
-            stripeSubscriptionId: subscription.id,
-            subscriptionStatus: subscription.status,
-          };
-          if (plan) data.plan = plan;
-          await prisma.user.updateMany({
+          // Internal accounts (enterprise = internal Business) are not
+          // Stripe-driven: their plan is never overwritten and Stripe's status
+          // is not stored (a revoking status would resolve them to Free);
+          // only the subscription ID is synchronized.
+          const owners = await prisma.user.findMany({
             where: { stripeCustomerId: customerId },
-            data,
+            select: { id: true, plan: true },
           });
-          console.log(`✅ Subscription updated: customer ${customerId} → ${plan || 'plan unchanged (unmapped price)'} [${subscription.status}]`);
+          for (const owner of owners) {
+            const data = { stripeSubscriptionId: subscription.id };
+            if (plans.normalizePlan(owner.plan).isInternal) {
+              console.log(`ℹ️ Subscription updated: internal account kept (customer ${customerId}) [${subscription.status}]`);
+            } else {
+              data.subscriptionStatus = subscription.status;
+              if (plan) data.plan = plan;
+              console.log(`✅ Subscription updated: customer ${customerId} → ${plan || 'plan unchanged (unmapped price)'} [${subscription.status}]`);
+            }
+            await prisma.user.update({ where: { id: owner.id }, data });
+          }
         }
         break;
       }

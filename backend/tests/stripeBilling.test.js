@@ -43,6 +43,9 @@ let retrieveImpl = null;
 const mockPrisma = {
   user: {
     async findUnique({ where: { id } }) { return users[id] ? { ...users[id] } : null; },
+    async findMany({ where: { stripeCustomerId } }) {
+      return Object.values(users).filter((u) => u.stripeCustomerId === stripeCustomerId).map((u) => ({ id: u.id, plan: u.plan }));
+    },
     async update({ where: { id }, data }) { users[id] = { ...users[id], ...data }; return users[id]; },
     async updateMany({ where: { stripeCustomerId }, data }) {
       let count = 0;
@@ -206,6 +209,58 @@ test('internal enterprise account cannot start a checkout (409 internal_account)
   assert.equal(users.e.plan, 'enterprise');
   const s = (await status('e')).body;
   assert.deepEqual([s.plan, s.basePlan, s.isInternal, s.aiLimit, s.canUseDynamic], ['enterprise', 'business', true, null, true]);
+});
+
+// ── F7. Internal plans protected from subscription.updated ───
+test('F7: internal enterprise + known paid price → plan and entitlement unchanged; subscription ID synced', async () => {
+  configure();
+  for (const raw of ['enterprise', 'Enterprise ']) {
+    users.e = { id: 'e', plan: raw, subscriptionStatus: null, stripeCustomerId: 'cus_e', stripeSubscriptionId: null };
+    const res = await webhook(subUpdated('cus_e', 'price_test_starter_m', 'active'));
+    assert.equal(res.statusCode, 200);
+    assert.equal(users.e.plan, raw, 'internal plan preserved');
+    assert.equal(users.e.stripeSubscriptionId, 'sub_1', 'subscription ID synchronized');
+    assert.equal(users.e.subscriptionStatus, null, 'Stripe status not stored on internal accounts');
+    assert.equal(plans.resolveEffectivePlan(users.e).effectiveBase, 'business');
+  }
+});
+
+test('F7: revoking Stripe status never downgrades an internal account', async () => {
+  configure();
+  for (const st of ['canceled', 'cancelled', 'unpaid', 'incomplete_expired']) {
+    users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: null, stripeCustomerId: 'cus_e' };
+    await webhook(subUpdated('cus_e', 'price_test_business_y', st));
+    assert.deepEqual([users.e.plan, users.e.subscriptionStatus], ['enterprise', null], st);
+    const s = (await status('e')).body;
+    assert.deepEqual([s.basePlan, s.isInternal, s.aiLimit], ['business', true, null], st);
+  }
+});
+
+test('F7: unknown price on an internal account → plan unchanged (F2 protection kept)', async () => {
+  configure();
+  users.e = { id: 'e', plan: 'enterprise', stripeCustomerId: 'cus_e' };
+  await webhook(subUpdated('cus_e', 'price_unknown', 'active'));
+  assert.equal(users.e.plan, 'enterprise');
+  assert.equal(users.e.stripeSubscriptionId, 'sub_1');
+});
+
+test('F7: shared customer — internal row preserved, normal row updated as before', async () => {
+  configure();
+  users.e = { id: 'e', plan: 'enterprise', subscriptionStatus: null, stripeCustomerId: 'cus_x' };
+  users.n = { id: 'n', plan: 'starter', subscriptionStatus: 'active', stripeCustomerId: 'cus_x' };
+  await webhook(subUpdated('cus_x', 'price_test_pro_y', 'past_due'));
+  assert.deepEqual([users.e.plan, users.e.subscriptionStatus, users.e.stripeSubscriptionId], ['enterprise', null, 'sub_1']);
+  assert.deepEqual([users.n.plan, users.n.subscriptionStatus, users.n.stripeSubscriptionId], ['pro_annual', 'past_due', 'sub_1']);
+});
+
+test('F7: non-internal subscription.updated unchanged (monthly + annual, plan + status + ID)', async () => {
+  configure();
+  users.m = { id: 'm', plan: 'free', stripeCustomerId: 'cus_m' };
+  await webhook(subUpdated('cus_m', 'price_test_business_m', 'active'));
+  assert.deepEqual([users.m.plan, users.m.subscriptionStatus, users.m.stripeSubscriptionId], ['business', 'active', 'sub_1']);
+  await webhook(subUpdated('cus_m', 'price_test_business_y', 'trialing'));
+  assert.deepEqual([users.m.plan, users.m.subscriptionStatus], ['business_annual', 'trialing']);
+  assert.equal((await webhook(subUpdated('cus_nobody', 'price_test_pro_m'))).statusCode, 200, 'no matching user → no-op');
 });
 
 // ── 11. Unknown price ────────────────────────────────────────
