@@ -1,4 +1,5 @@
-const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS}=require('../utils/tierSystem');
+const {buildPlanInfo,resolveEffectivePlan,PLAN_CAPS,countSmartPages}=require('../utils/tierSystem');
+const plans = require('../config/plans');
 const { createQR, getQRById } = require('../services/qrService');
 const { logScan } = require('../services/scanService');
 const { decideRedirectUrl } = require('../agents/redirectAgent');
@@ -82,17 +83,23 @@ async function handleCreateQR(req, res) {
     }
 
     const userId = await getUserFromToken(req.headers.authorization);
-    let userPlan = 'free';
+    let user = null;
     let userQrCount = 0;
+    if (userId) {
+      user = await upsertUser(userId);
+      userQrCount = user.qrs.length;
+    }
+
+    // Canonical effective plan (trial expiry, subscription status, annual
+    // variants, internal enterprise). Anonymous requests resolve to Free.
+    // Limits use null = unlimited and are checked with plans.hasCapacity.
+    const userPlan = resolveEffectivePlan(user);
+    const effectiveBase = plans.resolveEffectivePlan(user).effectiveBase;
+    const entitlements = plans.getPlanEntitlements(effectiveBase);
 
     if (userId) {
-      const user = await upsertUser(userId);
-      userPlan = user.plan || 'free';
-      userQrCount = user.qrs.length;
-
-      // Check basic QR limit (free is now unlimited, so this mainly guards starter at 10)
-      const basicLimit = PLAN_LIMITS[userPlan];
-      if (basicLimit !== Infinity && userQrCount >= basicLimit) {
+      const basicLimit = entitlements.basicQrLimit;
+      if (!plans.hasCapacity(basicLimit, userQrCount)) {
         return res.status(403).json({
           error: `You have reached your ${userPlan} plan limit of ${basicLimit} QR codes. Please upgrade to create more.`,
           upgrade: true,
@@ -102,9 +109,11 @@ async function handleCreateQR(req, res) {
       }
     }
 
-    // ── Gate: businessName requires Starter or Pro ──────────────────────────
+    // ── Gate: legacy AI QR (businessName) ───────────────────────────────────
+    // Legacy compatibility path: counted on its own QR.businessName records,
+    // separately from LandingPage-based Smart QR Pages.
     if (businessName) {
-      const aiLimit = PLAN_AI_LIMITS[userPlan];
+      const aiLimit = entitlements.smartPageLimit;
       if (aiLimit === 0) {
         return res.status(403).json({
           error: 'AI landing pages require a Starter or Pro plan. Basic QR codes are always free.',
@@ -113,14 +122,13 @@ async function handleCreateQR(req, res) {
           upgradeFeature: 'ai_landing_page',
         });
       }
-      // Starter: count how many AI QRs they already have
-      if (aiLimit !== Infinity) {
+      if (aiLimit !== null) {
         const aiQrCount = await prisma.qR.count({
           where: { userId, businessName: { not: null } },
         });
-        if (aiQrCount >= aiLimit) {
+        if (!plans.hasCapacity(aiLimit, aiQrCount)) {
           return res.status(403).json({
-            error: `You've used all ${aiLimit} AI landing pages on your Starter plan. Upgrade to Pro for unlimited.`,
+            error: `You've used all ${aiLimit} AI landing pages on your ${plans.PLAN_NAMES[effectiveBase]} plan. Upgrade to Pro for unlimited.`,
             upgrade: true,
             plan: userPlan,
             upgradeFeature: 'ai_landing_page_limit',
@@ -130,7 +138,7 @@ async function handleCreateQR(req, res) {
     }
 
     // ── Gate: Dynamic QR requires Pro ──────────────────────────────────────
-    if (isDynamic && !PLAN_DYNAMIC[userPlan]) {
+    if (isDynamic && !entitlements.dynamicQr) {
       return res.status(403).json({
         error: 'Dynamic QR codes are a Pro feature. Upgrade to Pro to print once and update the destination forever.',
         upgrade: true,
@@ -182,7 +190,7 @@ async function handleUpdateDestination(req, res) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized.' });
 
     const user = await upsertUser(userId);
-    if (!PLAN_DYNAMIC[user.plan]) {
+    if (!plans.getEntitlements(user).dynamicQr) {
       return res.status(403).json({
         error: 'Dynamic QR destination editing requires a Pro plan.',
         upgrade: true,
@@ -429,23 +437,31 @@ async function handleDashboard(req, res) {
     }));
     const allCards = [...dashboard, ...lpCards].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Display-only plan summary from the canonical plan model (null =
+    // unlimited). QR creation/destination enforcement still uses the
+    // legacy tables above until migrated separately.
     let planInfo = null;
     if (userId) {
       const user = await upsertUser(userId);
-      const plan = user.plan || 'free';
-      const basicLimit = PLAN_LIMITS[plan] === Infinity ? null : PLAN_LIMITS[plan];
-      const aiLimit = PLAN_AI_LIMITS[plan] === Infinity ? null : PLAN_AI_LIMITS[plan];
-      const aiQrCount = await prisma.qR.count({ where: { userId, businessName: { not: null } } });
+      const resolved = plans.resolveEffectivePlan(user);
+      const entitlements = plans.getPlanEntitlements(resolved.effectiveBase);
+      const basicLimit = entitlements.basicQrLimit;
+      const aiLimit = entitlements.smartPageLimit;
+      const qrCount = user.qrs.length;
+      // Smart QR Page usage = owned LandingPages (legacy AI QR records excluded).
+      const aiQrCount = await countSmartPages(userId);
 
       planInfo = {
-        plan,
-        qrCount: user.qrs.length,
+        plan: resolveEffectivePlan(user),
+        basePlan: resolved.effectiveBase,
+        isInternal: resolved.effectiveBase !== 'free' && resolved.plan.isInternal,
+        qrCount,
         limit: basicLimit,
         aiQrCount,
         aiLimit,
-        canCreate: basicLimit === null || user.qrs.length < basicLimit,
-        canCreateAI: aiLimit === null || aiQrCount < aiLimit,
-        canUseDynamic: PLAN_DYNAMIC[plan],
+        canCreate: plans.hasCapacity(basicLimit, qrCount),
+        canCreateAI: plans.hasCapacity(aiLimit, aiQrCount),
+        canUseDynamic: entitlements.dynamicQr,
         hasPhone: !!user.phone,
       };
     }

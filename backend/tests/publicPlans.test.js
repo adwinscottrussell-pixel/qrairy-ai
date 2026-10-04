@@ -4,10 +4,12 @@
 //  - Public, read-only, unauthenticated; served over real HTTP below.
 //  - Exactly the four public plans (free, starter, pro, business), in
 //    canonical order; never trial or the internal enterprise alias.
-//  - Every value comes from config/plans.js (getPublicPlanCatalogue).
+//  - Every value comes from config/plans.js (getPublicPlanCatalogue) and is
+//    identical to the catalogue Admin Billing receives in GET /stripe/status.
 //  - No account, Stripe, user or environment fields.
 //
-// No DB, Stripe or network beyond localhost.
+// Prisma and the `stripe` package are mocked via require.cache for the
+// /stripe/status comparison; no DB, Stripe or network beyond localhost.
 //
 // Run: node tests/publicPlans.test.js
 // ============================================================
@@ -17,11 +19,15 @@ const http = require('http');
 const fs = require('fs');
 
 function resolve(...parts) { return require.resolve(path.join(__dirname, '..', ...parts)); }
+const seed = (p, exports) => { require.cache[p] = { id: p, filename: p, loaded: true, exports }; };
 
+seed(resolve('src', 'utils', 'prismaClient.js'), { user: { findUnique: async () => ({ id: 'u', plan: 'enterprise' }) } });
+seed(require.resolve('stripe'), () => { throw new Error('Stripe must not be constructed'); });
 
 const express = require('express');
 const plans = require('../src/config/plans');
 const publicPlanRoutes = require('../src/routes/publicPlanRoutes');
+const { handleSubscriptionStatus } = require('../src/controllers/stripeController');
 
 const ENTRY_KEYS = ['id', 'name', 'currency', 'monthlyPrice', 'annualMonthlyPrice', 'smartPageLimit', 'basicQrLimit', 'dynamicQr', 'checkoutPlans'];
 const FORBIDDEN = /stripe|customer|subscription|user|email|status|secret|trial|enterprise|internal|token|price_/i;
@@ -89,6 +95,14 @@ test('canonical prices and limits match config/plans.js exactly', async () => {
 
 test('response is exactly the canonical getPublicPlanCatalogue()', async () => {
   const pub = (await get('/public/plans')).json.plans;
+  assert.deepEqual(plans.getPublicPlanCatalogue(), pub);
+});
+
+test('identical to the catalogue in GET /stripe/status (one canonical source)', async () => {
+  const res = { status() { return this; }, json(b) { this.body = b; return this; } };
+  await handleSubscriptionStatus({ userId: 'u' }, res);
+  const pub = (await get('/public/plans')).json.plans;
+  assert.deepEqual(res.body.plans, pub);
   assert.deepEqual(plans.getPublicPlanCatalogue(), pub);
 });
 

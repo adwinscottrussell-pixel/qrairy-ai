@@ -1,7 +1,14 @@
 /**
  * Qraivy Account Tier System
- * Centralised tier definitions, access rules and plan resolution.
+ * Access rules and plan resolution for /tier/* and the frontend session.
+ *
+ * Plan IDs, entitlements, subscription-status policy and trial duration
+ * come from the canonical model in ../config/plans.js. This module adapts
+ * that model to the existing tierSystem API (PLAN_CAPS keys, plan strings
+ * and the buildPlanInfo response shape consumed by frontend js/session.js).
  */
+
+const plans = require('../config/plans');
 
 // ── Tier constants ────────────────────────────────────────────────────────────
 const TIERS = {
@@ -9,124 +16,72 @@ const TIERS = {
   TRIAL:    'trial',
   STARTER:  'starter',
   PRO:      'pro',
-  STARTER_ANNUAL: 'starter_annual',
-  PRO_ANNUAL:     'pro_annual',
+  BUSINESS: 'business',
+  STARTER_ANNUAL:  'starter_annual',
+  PRO_ANNUAL:      'pro_annual',
+  BUSINESS_ANNUAL: 'business_annual',
+  ENTERPRISE:      'enterprise', // internal alias of Business; never sold
 };
 
-// Trial duration in milliseconds (1 hour default, configurable via env)
-const TRIAL_DURATION_MS = parseInt(process.env.TRIAL_DURATION_MS || '3600000', 10);
+// Application trial duration (canonical 14 days; TRIAL_DURATION_MS overrides)
+const TRIAL_DURATION_MS = plans.getTrialDurationMs();
+
+// Recognised paid plan IDs — a trial must never overwrite these.
+const PAID_PLAN_IDS = [...plans.PURCHASABLE_PLAN_IDS, ...Object.keys(plans.INTERNAL_PLAN_ALIASES)];
 
 // ── Plan capabilities ─────────────────────────────────────────────────────────
-const PLAN_CAPS = {
-  free: {
-    canCreateAI:      false,
-    canUseDynamic:    false,
-    canAccessSmartDash: false,
-    canUseAnalytics:  false,
-    canUseWallet:     false,
-    canUsePush:       false,
-    canUseCampaigns:  false,
-    aiLimit:          0,
-    dynamicLimit:     0,
-  },
-  trial: {
-    canCreateAI:      true,
-    canUseDynamic:    false,
-    canAccessSmartDash: true,
-    canUseAnalytics:  true,
-    canUseWallet:     false,
-    canUsePush:       false,
-    canUseCampaigns:  false,
-    aiLimit:          1,   // one Smart QR during trial
-    dynamicLimit:     0,
-  },
-  starter: {
-    canCreateAI:      true,
-    canUseDynamic:    false,
-    canAccessSmartDash: true,
-    canUseAnalytics:  true,
-    canUseWallet:     true,
-    canUsePush:       true,
-    canUseCampaigns:  false,
-    aiLimit:          5,
-    dynamicLimit:     0,
-  },
-  starter_annual: {
-    canCreateAI:      true,
-    canUseDynamic:    false,
-    canAccessSmartDash: true,
-    canUseAnalytics:  true,
-    canUseWallet:     true,
-    canUsePush:       true,
-    canUseCampaigns:  false,
-    aiLimit:          5,
-    dynamicLimit:     0,
-  },
-  pro: {
-    canCreateAI:      true,
-    canUseDynamic:    true,
-    canAccessSmartDash: true,
-    canUseAnalytics:  true,
-    canUseWallet:     true,
-    canUsePush:       true,
-    canUseCampaigns:  true,
-    aiLimit:          null, // unlimited
-    dynamicLimit:     null,
-  },
-  pro_annual: {
-    canCreateAI:      true,
-    canUseDynamic:    true,
-    canAccessSmartDash: true,
-    canUseAnalytics:  true,
-    canUseWallet:     true,
-    canUsePush:       true,
-    canUseCampaigns:  true,
-    aiLimit:          null,
-    dynamicLimit:     null,
-  },
-};
+// Legacy capability shape derived from the canonical entitlements.
+function capsFromEntitlements(e) {
+  return Object.freeze({
+    canCreateAI:        e.smartPageLimit !== 0,
+    canUseDynamic:      e.dynamicQr,
+    canAccessSmartDash: e.smartDashboard,
+    canUseAnalytics:    e.analytics,
+    canUseWallet:       e.walletPasses,
+    canUsePush:         e.push,
+    canUseCampaigns:    e.campaigns,
+    aiLimit:            e.smartPageLimit, // null = unlimited
+    dynamicLimit:       e.dynamicQr ? null : 0,
+  });
+}
+
+// Keyed by every plan string resolveEffectivePlan() can return.
+const PLAN_CAPS = Object.freeze(Object.fromEntries(
+  ['free', 'trial', ...PAID_PLAN_IDS].map(id =>
+    [id, capsFromEntitlements(plans.getPlanEntitlements(plans.normalizePlan(id).base))]),
+));
+
+// Plan string whose entitlements apply: the user's own (known) plan ID,
+// or 'free' when those entitlements do not apply.
+function effectivePlanId(r) {
+  return r.plan.known && r.effectiveBase === r.plan.base ? r.plan.id : 'free';
+}
 
 // ── Resolve effective plan for a user ─────────────────────────────────────────
 /**
- * Given a User record, returns the effective plan string,
- * accounting for trial expiration.
+ * Given a User record, returns the effective plan string: the user's own
+ * plan ID (e.g. 'pro_annual', 'enterprise') when its entitlements apply,
+ * 'trial' during an active trial, otherwise 'free' (expired trial,
+ * revoked subscription or unrecognised plan value).
  */
 function resolveEffectivePlan(user) {
-  const rawPlan = (user.plan || 'free').toLowerCase();
-
-  // If user is on trial, check expiry
-  if (rawPlan === 'trial') {
-    if (user.trialExpiresAt && new Date(user.trialExpiresAt) < new Date()) {
-      return 'free'; // trial expired → downgrade to free
-    }
-    return 'trial';
-  }
-
-  // Stripe-managed subscriptions
-  if (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') {
-    return rawPlan;
-  }
-
-  // If subscription is cancelled/past_due, fall back to free
-  if (user.stripeSubscriptionId && 
-      ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(user.subscriptionStatus)) {
-    return 'free';
-  }
-
-  return rawPlan;
+  const r = plans.resolveEffectivePlan(user);
+  return effectivePlanId(r);
 }
 
 // ── Build planInfo object for frontend ────────────────────────────────────────
 function buildPlanInfo(user, aiQrCount = 0) {
-  const effectivePlan = resolveEffectivePlan(user);
+  const r             = plans.resolveEffectivePlan(user);
+  const effectivePlan = effectivePlanId(r);
   const caps          = PLAN_CAPS[effectivePlan] || PLAN_CAPS.free;
-  const rawPlan       = (user.plan || 'free').toLowerCase();
-  const isTrialExpired = rawPlan === 'trial' && effectivePlan === 'free';
+  const rawPlan       = r.plan.id;
+  const appliesPlan   = effectivePlan !== 'free';
+  const count         = Number.isInteger(aiQrCount) && aiQrCount >= 0 ? aiQrCount : 0;
 
   // Trial time remaining
   let trialExpiresAt = null;
   let trialSecondsRemaining = null;
-  if (rawPlan === 'trial' && user.trialExpiresAt) {
+  if (r.plan.isTrial && user.trialExpiresAt) {
     trialExpiresAt = user.trialExpiresAt;
     const msLeft = new Date(user.trialExpiresAt).getTime() - Date.now();
     trialSecondsRemaining = Math.max(0, Math.floor(msLeft / 1000));
@@ -135,16 +90,19 @@ function buildPlanInfo(user, aiQrCount = 0) {
   return {
     plan:                 effectivePlan,
     rawPlan:              rawPlan,
-    basePlan:             effectivePlan.replace('_annual', ''),
-    isAnnual:             effectivePlan.includes('_annual'),
+    basePlan:             r.effectiveBase,
+    isAnnual:             appliesPlan && r.plan.isAnnual,
     isFree:               effectivePlan === 'free',
     isTrial:              effectivePlan === 'trial',
-    isTrialExpired:       isTrialExpired,
-    isPremium:            ['starter','pro','starter_annual','pro_annual'].includes(effectivePlan),
+    isTrialExpired:       r.isTrialExpired,
+    isPremium:            ['starter', 'pro', 'business'].includes(r.effectiveBase),
+    isInternal:           appliesPlan && r.plan.isInternal,
+    isKnownPlan:          r.plan.known,
     subscriptionStatus:   user.subscriptionStatus || null,
 
     // Capabilities
-    canCreateAI:          caps.canCreateAI,
+    // Smart QR Page capacity: plan includes Smart Pages AND usage below limit.
+    canCreateAI:          caps.canCreateAI && plans.hasCapacity(caps.aiLimit, count),
     canUseDynamic:        caps.canUseDynamic,
     canAccessSmartDash:   caps.canAccessSmartDash,
     canUseAnalytics:      caps.canUseAnalytics,
@@ -155,7 +113,7 @@ function buildPlanInfo(user, aiQrCount = 0) {
     // Limits
     aiLimit:              caps.aiLimit,
     aiQrCount:            aiQrCount,
-    aiRemaining:          caps.aiLimit === null ? null : Math.max(0, caps.aiLimit - aiQrCount),
+    aiRemaining:          plans.remainingCapacity(caps.aiLimit, count),
     dynamicLimit:         caps.dynamicLimit,
 
     // Trial
@@ -198,17 +156,31 @@ function requireCap(cap) {
   };
 }
 
+// ── Smart QR Page usage ───────────────────────────────────────────────────────
+// Authoritative Smart QR Page usage: LandingPage records owned by the user
+// (drafts and StadtPocket-linked pages included). Legacy QR.businessName
+// records and basic/static QR codes are not Smart QR Pages.
+async function countSmartPages(userId) {
+  const prisma = require('./prismaClient');
+  return prisma.landingPage.count({ where: { userId } });
+}
+
 // ── Start trial for a user ────────────────────────────────────────────────────
+// One trial per account: only a user who has never had a trial
+// (trialExpiresAt null) and is not on a recognised paid plan (monthly,
+// annual or internal) is updated. The conditional update makes this atomic;
+// the current record is returned either way.
 async function startTrial(userId) {
   const prisma = require('./prismaClient');
   const expiresAt = new Date(Date.now() + TRIAL_DURATION_MS);
-  return prisma.user.update({
-    where: { id: userId },
+  await prisma.user.updateMany({
+    where: { id: userId, plan: { notIn: PAID_PLAN_IDS }, trialExpiresAt: null },
     data: {
       plan: 'trial',
       trialExpiresAt: expiresAt,
     },
   });
+  return prisma.user.findUnique({ where: { id: userId } });
 }
 
 module.exports = {
@@ -219,4 +191,5 @@ module.exports = {
   buildPlanInfo,
   requireCap,
   startTrial,
+  countSmartPages,
 };

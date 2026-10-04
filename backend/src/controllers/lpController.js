@@ -1,6 +1,8 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
 const prisma = require('../utils/prismaClient');
+const plans = require('../config/plans');
+const { countSmartPages } = require('../utils/tierSystem');
 const https = require('https');
 const { sendWelcomeEmail } = require('../services/emailService');
 // Customer Foundation Phase 2: canonical dual-write, additive only. Never
@@ -1288,16 +1290,20 @@ async function handlePublishLP(req, res) {
     let planLimitResponse = null;
     if (userId) {
       if (!existing) {
-        // This is a NEW page — check plan limits
+        // This is a NEW page — check the canonical Smart QR Page entitlement
+        // (config/plans.js: effective plan after trial expiry / subscription
+        // status, annual = base plan, enterprise = Business; null = unlimited).
+        // A missing User row resolves to Free (0).
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        const plan = user ? user.plan : 'free';
-        const LIMITS = { free: 1, trial: 1, pro: 10, business: 50, enterprise: 999 };
-        const limit = LIMITS[plan] ?? 1;
-        const pageCount = await prisma.landingPage.count({ where: { userId } });
-        if (pageCount >= limit) {
+        const effectiveBase = plans.resolveEffectivePlan(user || {}).effectiveBase;
+        const limit = plans.getPlanEntitlements(effectiveBase).smartPageLimit;
+        const pageCount = await countSmartPages(userId);
+        if (!plans.hasCapacity(limit, pageCount)) {
           planLimitResponse = {
             error: 'plan_limit',
-            message: `Your ${plan} plan allows ${limit} Smart QR page${limit === 1 ? '' : 's'}. Upgrade to create more.`,
+            message: limit === 0
+              ? 'Your Free plan does not include Smart QR Pages. Upgrade to create one.'
+              : `Your ${plans.PLAN_NAMES[effectiveBase]} plan allows ${limit} Smart QR page${limit === 1 ? '' : 's'}. Upgrade to create more.`,
             limit,
             current: pageCount,
             upgrade: true

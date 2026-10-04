@@ -1,23 +1,32 @@
 const prisma = require('../utils/prismaClient');
-const { PLANS } = require('../config/constants');
-const normalizePlan = (p) => p ? p.replace('_annual','') : 'free';
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const plans = require('../config/plans');
 
-// ─── Plan map: Stripe Price ID → internal plan name ──────────
-const PRICE_TO_PLAN = {
-  [process.env.STRIPE_PRICE_STARTER]:  'starter',
-  [process.env.STRIPE_PRICE_PRO]:      'pro',
-  [process.env.STRIPE_PRICE_BUSINESS]: 'business',
-};
+// Constructed lazily, on first actual use, rather than at module load --
+// requiring this controller (part of the unconditional route-require
+// chain in index.js) must never crash the whole process just because
+// STRIPE_SECRET_KEY isn't set in an environment that doesn't need Stripe
+// (e.g. a StadtPocket-only staging backend). The `stripe` npm package
+// itself has no such requirement; only calling it as a constructor does.
+const Stripe = require('stripe');
+let stripeClient = null;
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('Stripe is not configured on this environment (STRIPE_SECRET_KEY missing).');
+  }
+  if (!stripeClient) stripeClient = Stripe(process.env.STRIPE_SECRET_KEY);
+  return stripeClient;
+}
 
-const PLAN_TO_PRICE = {
-  starter:          process.env.STRIPE_PRICE_STARTER,
-  pro:              process.env.STRIPE_PRICE_PRO,
-  business:         process.env.STRIPE_PRICE_BUSINESS,
-  starter_annual:   process.env.STRIPE_PRICE_STARTER_ANNUAL || process.env.STRIPE_PRICE_STARTER,
-  pro_annual:       process.env.STRIPE_PRICE_PRO_ANNUAL || process.env.STRIPE_PRICE_PRO,
-  business_annual:  process.env.STRIPE_PRICE_BUSINESS_ANNUAL || process.env.STRIPE_PRICE_BUSINESS,
-};
+// Plan ↔ Stripe Price ID mapping comes from config/plans.js
+// (stripePriceIdForPlan / planIdForStripePrice): monthly and annual,
+// no silent annual→monthly fallback, enterprise never purchasable.
+
+// A subscription in one of these statuses no longer entitles the user
+// (canonical plan model) and does not block a new checkout.
+function isRevokedStatus(status) {
+  return typeof status === 'string' &&
+    plans.REVOKING_SUBSCRIPTION_STATUSES.includes(status.trim().toLowerCase());
+}
 
 // ─── POST /stripe/checkout ────────────────────────────────────
 // Creates a Stripe Checkout session and returns the URL
@@ -26,21 +35,38 @@ async function handleCreateCheckout(req, res) {
     const { plan } = req.body;
     const userId = req.userId;
 
-    if (!['starter', 'pro', 'business', 'starter_annual', 'pro_annual', 'business_annual'].includes(plan)) {
+    if (!plans.isPurchasable(plan)) {
       return res.status(400).json({ error: 'Invalid plan.' });
     }
 
-    const priceId = PLAN_TO_PRICE[plan];
+    const priceId = plans.stripePriceIdForPlan(plan);
     if (!priceId) {
       return res.status(400).json({ error: 'Plan price not configured.' });
     }
 
-    // Get or create Stripe customer
     const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    // Internal accounts (enterprise = internal Business) are never sold a plan.
+    if (user && plans.normalizePlan(user.plan).isInternal) {
+      return res.status(409).json({
+        error: 'internal_account',
+        message: 'This account is managed internally and cannot purchase a plan.',
+      });
+    }
+
+    // One subscription per account: plan changes go through the billing portal.
+    if (user?.stripeSubscriptionId && !isRevokedStatus(user.subscriptionStatus)) {
+      return res.status(409).json({
+        error: 'subscription_exists',
+        message: 'You already have a subscription. Use Manage Billing to change your plan.',
+      });
+    }
+
+    // Get or create Stripe customer
     let customerId = user?.stripeCustomerId;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user?.email || undefined,
         metadata: { userId },
       });
@@ -51,7 +77,7 @@ async function handleCreateCheckout(req, res) {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -82,7 +108,7 @@ async function handleCustomerPortal(req, res) {
       return res.status(400).json({ error: 'No active subscription found.' });
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${process.env.FRONTEND_URL}/dashboard.html`,
     });
@@ -94,6 +120,24 @@ async function handleCustomerPortal(req, res) {
   }
 }
 
+// Renewal / cancellation details read live from Stripe (not stored).
+// Any Stripe error yields null so /stripe/status never fails because of it.
+async function readSubscriptionDetails(subscriptionId) {
+  try {
+    const s = await getStripe().subscriptions.retrieve(subscriptionId);
+    const item = s.items?.data?.[0];
+    const periodEnd = s.current_period_end ?? item?.current_period_end ?? null;
+    return {
+      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+      cancelAtPeriodEnd: !!s.cancel_at_period_end,
+      interval: item?.price?.recurring?.interval || null,
+    };
+  } catch (err) {
+    console.error('readSubscriptionDetails error:', err.message);
+    return null;
+  }
+}
+
 // ─── GET /stripe/status ───────────────────────────────────────
 // Returns current subscription status for the user
 async function handleSubscriptionStatus(req, res) {
@@ -102,17 +146,36 @@ async function handleSubscriptionStatus(req, res) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     const rawPlan = user?.plan || 'free';
-    const base = normalizePlan(rawPlan);
-    const planConfig = PLANS[base] || PLANS['free'];
+    // Canonical effective plan (trial expiry, subscription status,
+    // annual = base, enterprise = internal Business, unknown = Free).
+    const r = plans.resolveEffectivePlan(user || {});
+    const entitlements = plans.getPlanEntitlements(r.effectiveBase);
+    const applies = r.plan.known && r.effectiveBase === r.plan.base;
+    const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
+    const hasStripeCustomer = !!user?.stripeCustomerId;
+    const hasSubscription = !!user?.stripeSubscriptionId;
     return res.status(200).json({
       plan: rawPlan,
-      basePlan: base,
-      aiLimit: planConfig.aiQRLimit === -1 ? null : planConfig.aiQRLimit,
-      canCreateAI: planConfig.aiQRLimit !== 0,
-      canUseDynamic: planConfig.dynamicQR,
+      basePlan: r.effectiveBase,
+      aiLimit: entitlements.smartPageLimit, // null = unlimited
+      canCreateAI: entitlements.smartPageLimit !== 0,
+      canUseDynamic: entitlements.dynamicQr,
       stripeCustomerId: user?.stripeCustomerId || null,
       stripeSubscriptionId: user?.stripeSubscriptionId || null,
       subscriptionStatus: user?.subscriptionStatus || null,
+      // Additive fields for the Billing page
+      isAnnual: applies && r.plan.isAnnual,
+      isInternal: applies && r.plan.isInternal,
+      isTrial: applies && r.plan.isTrial,
+      trialExpiresAt: r.plan.isTrial ? (user?.trialExpiresAt || null) : null,
+      hasStripeCustomer,
+      hasSubscription,
+      stripeConfigured,
+      portalAvailable: stripeConfigured && hasStripeCustomer,
+      subscription: stripeConfigured && hasSubscription
+        ? await readSubscriptionDetails(user.stripeSubscriptionId)
+        : null,
+      plans: plans.getPublicPlanCatalogue(), // same catalogue as GET /public/plans
     });
   } catch (err) {
     console.error('handleSubscriptionStatus error:', err);
@@ -127,7 +190,7 @@ async function handleWebhook(req, res) {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       req.body, // raw body required
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
@@ -147,6 +210,22 @@ async function handleWebhook(req, res) {
         const plan = session.metadata?.plan;
 
         if (userId && plan) {
+          // Internal accounts (enterprise = internal Business) are not
+          // Stripe-driven: a completed checkout never replaces their plan or
+          // status; only the Stripe references are stored so the resulting
+          // subscription stays manageable (portal / cancellation).
+          const owner = await prisma.user.findUnique({ where: { id: userId } });
+          if (owner && plans.normalizePlan(owner.plan).isInternal) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                stripeCustomerId: session.customer,
+                stripeSubscriptionId: session.subscription,
+              },
+            });
+            console.log(`ℹ️ Checkout completed: internal account kept (user ${userId})`);
+            break;
+          }
           await prisma.user.update({
             where: { id: userId },
             data: {
@@ -165,19 +244,31 @@ async function handleWebhook(req, res) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const priceId = subscription.items.data[0]?.price?.id;
-        const plan = PRICE_TO_PLAN[priceId];
+        const plan = plans.planIdForStripePrice(priceId); // monthly or annual; null if unknown
         const customerId = subscription.customer;
 
-        if (plan && customerId) {
-          await prisma.user.updateMany({
+        if (customerId) {
+          // Status is always recorded; the plan changes only for a known price,
+          // so an unknown price can never assign a paid plan.
+          // Internal accounts (enterprise = internal Business) are not
+          // Stripe-driven: their plan is never overwritten and Stripe's status
+          // is not stored (a revoking status would resolve them to Free);
+          // only the subscription ID is synchronized.
+          const owners = await prisma.user.findMany({
             where: { stripeCustomerId: customerId },
-            data: {
-              plan,
-              stripeSubscriptionId: subscription.id,
-              subscriptionStatus: subscription.status,
-            },
+            select: { id: true, plan: true },
           });
-          console.log(`✅ Subscription updated: customer ${customerId} → ${plan}`);
+          for (const owner of owners) {
+            const data = { stripeSubscriptionId: subscription.id };
+            if (plans.normalizePlan(owner.plan).isInternal) {
+              console.log(`ℹ️ Subscription updated: internal account kept (customer ${customerId}) [${subscription.status}]`);
+            } else {
+              data.subscriptionStatus = subscription.status;
+              if (plan) data.plan = plan;
+              console.log(`✅ Subscription updated: customer ${customerId} → ${plan || 'plan unchanged (unmapped price)'} [${subscription.status}]`);
+            }
+            await prisma.user.update({ where: { id: owner.id }, data });
+          }
         }
         break;
       }
@@ -187,15 +278,32 @@ async function handleWebhook(req, res) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        await prisma.user.updateMany({
+        // Internal accounts (enterprise = internal Business) are not
+        // Stripe-driven: plan and status are kept (a 'cancelled' status would
+        // resolve them to Free). Only a reference to this exact, now-deleted
+        // subscription is cleared.
+        const owners = await prisma.user.findMany({
           where: { stripeCustomerId: customerId },
-          data: {
-            plan: 'free',
-            stripeSubscriptionId: null,
-            subscriptionStatus: 'cancelled',
-          },
+          select: { id: true, plan: true, stripeSubscriptionId: true },
         });
-        console.log(`⚠️ Subscription cancelled: customer ${customerId} → free`);
+        for (const owner of owners) {
+          if (plans.normalizePlan(owner.plan).isInternal) {
+            if (owner.stripeSubscriptionId && owner.stripeSubscriptionId === subscription.id) {
+              await prisma.user.update({ where: { id: owner.id }, data: { stripeSubscriptionId: null } });
+            }
+            console.log(`ℹ️ Subscription cancelled: internal account kept (customer ${customerId})`);
+            continue;
+          }
+          await prisma.user.update({
+            where: { id: owner.id },
+            data: {
+              plan: 'free',
+              stripeSubscriptionId: null,
+              subscriptionStatus: 'cancelled',
+            },
+          });
+          console.log(`⚠️ Subscription cancelled: customer ${customerId} → free`);
+        }
         break;
       }
 
