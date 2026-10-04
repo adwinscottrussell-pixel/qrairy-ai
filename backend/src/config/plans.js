@@ -285,6 +285,33 @@ function planIdForStripePrice(priceId, env = process.env) {
   return buildStripePriceToPlanMap(env).get(priceId.trim()) || null;
 }
 
+// ── Public plan catalogue (pure; safe to expose publicly) ──────────────
+// The single catalogue used by both the public homepage (GET /public/plans)
+// and Admin Billing (GET /stripe/status). Public base plans only — never
+// trial or internal aliases — with display prices and enforced limits.
+// Checkout plan IDs are listed only where the plan is purchasable.
+function getPublicPlanCatalogue() {
+  return PUBLIC_BASE_PLANS.map((id) => {
+    const entitlements = getPlanEntitlements(id);
+    const price = DISPLAY_PRICES_EUR[id];
+    const annualId = `${id}_annual`;
+    return {
+      id,
+      name: PLAN_NAMES[id],
+      currency: 'EUR',
+      monthlyPrice: price.monthly,
+      annualMonthlyPrice: price.annualMonthly,
+      smartPageLimit: entitlements.smartPageLimit, // null = unlimited
+      basicQrLimit: entitlements.basicQrLimit,     // null = unlimited
+      dynamicQr: entitlements.dynamicQr,
+      checkoutPlans: {
+        monthly: isPurchasable(id) ? id : null,
+        annual: isPurchasable(annualId) ? annualId : null,
+      },
+    };
+  });
+}
+
 module.exports = {
   // IDs
   PUBLIC_BASE_PLANS,
@@ -316,4 +343,6 @@ module.exports = {
   stripePriceIdForPlan,
   buildStripePriceToPlanMap,
   planIdForStripePrice,
+  // Public catalogue
+  getPublicPlanCatalogue,
 };

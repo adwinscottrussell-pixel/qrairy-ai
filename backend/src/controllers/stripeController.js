@@ -138,31 +138,6 @@ async function readSubscriptionDetails(subscriptionId) {
   }
 }
 
-// Read-only plan catalogue for the Billing page, derived entirely from the
-// canonical model (public plans, display prices, entitlements). Checkout
-// plan IDs are listed only where the canonical model makes them purchasable.
-function billingPlanCatalogue() {
-  return plans.PUBLIC_BASE_PLANS.map((id) => {
-    const entitlements = plans.getPlanEntitlements(id);
-    const price = plans.DISPLAY_PRICES_EUR[id];
-    const annualId = `${id}_annual`;
-    return {
-      id,
-      name: plans.PLAN_NAMES[id],
-      currency: 'EUR',
-      monthlyPrice: price.monthly,
-      annualMonthlyPrice: price.annualMonthly,
-      smartPageLimit: entitlements.smartPageLimit, // null = unlimited
-      basicQrLimit: entitlements.basicQrLimit,     // null = unlimited
-      dynamicQr: entitlements.dynamicQr,
-      checkoutPlans: {
-        monthly: plans.isPurchasable(id) ? id : null,
-        annual: plans.isPurchasable(annualId) ? annualId : null,
-      },
-    };
-  });
-}
-
 // ─── GET /stripe/status ───────────────────────────────────────
 // Returns current subscription status for the user
 async function handleSubscriptionStatus(req, res) {
@@ -200,7 +175,7 @@ async function handleSubscriptionStatus(req, res) {
       subscription: stripeConfigured && hasSubscription
         ? await readSubscriptionDetails(user.stripeSubscriptionId)
         : null,
-      plans: billingPlanCatalogue(),
+      plans: plans.getPublicPlanCatalogue(), // same catalogue as GET /public/plans
     });
   } catch (err) {
     console.error('handleSubscriptionStatus error:', err);

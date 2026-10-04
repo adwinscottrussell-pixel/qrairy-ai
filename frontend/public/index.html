@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>/* Plan Preview safety guard: this page still calls the production API, so it never runs on plan-preview.qraivy.com. */if(location.hostname==='plan-preview.qraivy.com'){location.replace('/dashboard.html');document.write('<plaintext style="display:none">');}</script>
+<!-- Plan Preview: this page makes no production API calls. js/api-base.js
+     (loaded below) points the pricing fetch at the preview API and, on
+     plan-preview.qraivy.com only, blocks the production live-demo link. -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIVY — AI Customer Engagement & Dynamic QR Codes</title>
@@ -48,6 +50,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=Manrope:wght@400;500;600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/homepage-qds-tokens.css" />
   <script src="js/qraivy-lang.js"></script>
+  <script src="js/api-base.js"></script>
   <style>
     :root {
       --bg: #080b10;
@@ -711,11 +714,68 @@
     .footer-link:hover { color: var(--accent); }
     .footer-copy { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); }
 
+    /* ── PRICING (dark) — homepage tokens; data from GET /public/plans ── */
+    .qh-pricing {
+      position: relative; background: var(--bg); padding: var(--qds-space-20) 0;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 80px; /* fixed nav (71px desktop and mobile) + breathing room */
+    }
+    .qh-pricing-container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .qh-pricing-head { text-align: center; max-width: 640px; margin: 0 auto var(--qds-space-8); }
+    .qh-pricing-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--qds-space-3); }
+    .qh-pricing-headline { font-family: 'Inter', var(--font-body); font-size: clamp(1.7rem, 3.2vw, 2.5rem); font-weight: 800; line-height: 1.18; letter-spacing: -0.01em; color: var(--text); }
+    .qh-pricing-sub { font-family: var(--font-body); font-size: 1.02rem; line-height: 1.6; color: var(--text-mid); margin-top: var(--qds-space-3); }
+    .qh-pricing-toggle-wrap { display: flex; justify-content: center; margin-bottom: var(--qds-space-10); }
+    .qh-pricing-toggle {
+      display: inline-flex; align-items: center; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--qds-color-border-subtle); border-radius: 999px; padding: 3px;
+    }
+    .qh-pricing-toggle-btn {
+      font-family: var(--qds-font-family-primary); font-size: 0.8rem; font-weight: 700;
+      padding: 7px 18px; border: 0; border-radius: 999px; background: transparent;
+      color: var(--text-mid); cursor: pointer; transition: all 0.15s;
+    }
+    .qh-pricing-toggle-btn.is-active { background: var(--accent); color: #fff; }
+    .qh-pricing-toggle-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+    .qh-pricing-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--qds-space-4); min-height: 380px; }
+    .qh-pricing-card {
+      display: flex; flex-direction: column; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: var(--qds-radius-xl); padding: var(--qds-space-6);
+    }
+    .qh-pricing-name { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .qh-pricing-price { display: flex; align-items: baseline; gap: 6px; margin-top: var(--qds-space-4); }
+    .qh-pricing-amount { font-family: 'Inter', var(--font-body); font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+    .qh-pricing-per { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-mid); }
+    .qh-pricing-billing { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-dim); margin-top: 2px; min-height: 1em; }
+    .qh-pricing-features { list-style: none; margin: var(--qds-space-5) 0 var(--qds-space-6); padding: 0; flex: 1; }
+    .qh-pricing-features li { position: relative; padding-left: 20px; margin-bottom: var(--qds-space-2); font-family: var(--font-body); font-size: 0.88rem; line-height: 1.45; color: var(--text); }
+    .qh-pricing-features li::before { content: '\2713'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+    .qh-pricing-cta {
+      display: block; text-align: center; padding: 11px 16px; border-radius: var(--qds-radius-md);
+      font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; text-decoration: none;
+      color: var(--text); border: 1px solid var(--border2); background: transparent; transition: all 0.18s;
+    }
+    .qh-pricing-cta:hover { border-color: var(--text-mid); }
+    .qh-pricing-cta--paid { color: var(--accent2); border-color: rgba(255,90,31,0.45); background: rgba(255,90,31,0.08); }
+    .qh-pricing-cta--paid:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .qh-pricing-cta:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+    .qh-pricing-status { grid-column: 1 / -1; text-align: center; padding: var(--qds-space-10) 0; font-family: var(--font-body); font-size: 0.92rem; color: var(--text-mid); }
+    @media (max-width: 1023px) { .qh-pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 767px) {
+      .qh-pricing { padding: var(--qds-space-16) 0; }
+      .qh-pricing-container { padding: 0 20px; }
+      .qh-pricing-grid { grid-template-columns: 1fr; }
+    }
+    /* Anchor navigation (Preise -> #pricing) is instant for reduced motion. */
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
     /* ── RESPONSIVE ── */
     @media(max-width: 768px) {
       nav { padding: 12px 20px; }
       .nav-logo { font-size: 0.85rem; }
       .nav-links .nav-link:not(.nav-cta) { display: none; }
+      /* Preise stays reachable on mobile (anchor to #pricing). */
+      .nav-links .nav-link.nav-link--pricing { display: inline-block; padding: 7px 8px; }
       footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
     }
     /* Extra-small phones: 360-480px */
@@ -784,7 +844,7 @@
     <div class="nav-links">
       <a href="qr/free.html" class="nav-link" data-flow="free" data-i18n="nav_free_qr" onclick="try{sessionStorage.setItem('qraivy_flow_type','free_qr')}catch(e){}">Free QR</a>
       <a href="smart-demo.html" class="nav-link" data-flow="smart" data-i18n="nav_smart_qr">Smart QR</a>
-      <a href="pricing.html" class="nav-link" data-i18n="nav_pricing">Pricing</a>
+      <a href="#pricing" class="nav-link nav-link--pricing" data-i18n="nav_pricing">Pricing</a>
       <button type="button" class="lang-toggle" id="langToggle" aria-label="Switch language">
         <span class="lang-toggle-opt" data-lang-opt="en">EN</span><span class="lang-toggle-opt" data-lang-opt="de">DE</span>
       </button>
@@ -1174,6 +1234,26 @@
     </div>
   </section>
 
+  <!-- PRICING — dark section. Plans, prices and limits come from
+       GET /public/plans (the same canonical catalogue Admin Billing uses)
+       and are rendered by js/home-pricing.js; none are written here. -->
+  <section class="qh-pricing" id="pricing" aria-labelledby="qhPricingHeadline">
+    <div class="qh-pricing-container">
+      <div class="qh-pricing-head">
+        <div class="qh-pricing-eyebrow" data-i18n="pricing_eyebrow">PRICING</div>
+        <h2 class="qh-pricing-headline" id="qhPricingHeadline" data-i18n="pricing_headline">The right plan for your business.</h2>
+        <p class="qh-pricing-sub" data-i18n="pricing_sub">Start free. Upgrade as your business grows.</p>
+      </div>
+      <div class="qh-pricing-toggle-wrap">
+        <div class="qh-pricing-toggle" id="qhPricingToggle" role="group">
+          <button type="button" class="qh-pricing-toggle-btn is-active" data-interval="monthly" aria-pressed="true" data-i18n="pricing_monthly">Monthly</button>
+          <button type="button" class="qh-pricing-toggle-btn" data-interval="annual" aria-pressed="false" data-i18n="pricing_annual">Annual</button>
+        </div>
+      </div>
+      <div class="qh-pricing-grid" id="qhPricingGrid" aria-live="polite"></div>
+    </div>
+  </section>
+
   <!-- LIVE DEMO — isolated preview experiment, sits between the retention
        loop and the footer. Not part of .qh-s4; safe to remove as a single
        block. QR destination: https://www.qraivy.com/lp/auchevaldiner-sp2 -->
@@ -1197,7 +1277,7 @@
     <a href="index.html" class="footer-logo">QR<span>Aivy</span></a>
     <div class="footer-links">
       <a href="#features" class="footer-link" data-i18n="footer_features">Features</a>
-      <a href="pricing.html" class="footer-link" data-i18n="nav_pricing">Pricing</a>
+      <a href="#pricing" class="footer-link" data-i18n="nav_pricing">Pricing</a>
       <a href="support.html" class="footer-link" data-i18n="footer_faq">FAQ</a>
       <a href="login.html" class="footer-link" data-i18n="footer_login">Login</a>
       <a href="login.html" class="footer-link" data-i18n="footer_signup">Sign Up</a>
@@ -1226,6 +1306,7 @@
     async function initNav() {
       await window.Clerk.load();
       updateNavAuthText();
+      if (window.qhPricing) window.qhPricing.render(); // signed-in CTA targets
     }
   </script>
 
@@ -1240,6 +1321,17 @@
   <script>
     var QH_T = {
       en: {
+        pricing_eyebrow: 'PRICING', pricing_headline: 'The right plan for your business.',
+        pricing_sub: 'Start free. Upgrade as your business grows.',
+        pricing_toggle_label: 'Billing period', pricing_monthly: 'Monthly', pricing_annual: 'Annual',
+        pricing_per_month: '/ month', pricing_billed_monthly: 'billed monthly', pricing_billed_annually: 'billed annually',
+        pricing_plan_free: 'Free',
+        pricing_sp_none: 'No Smart QR Pages', pricing_sp_one: '1 Smart QR Page', pricing_sp_n: '{n} Smart QR Pages',
+        pricing_sp_unlimited: 'Unlimited Smart QR Pages',
+        pricing_basic_unlimited: 'Unlimited basic QR codes', pricing_basic_n: '{n} basic QR codes',
+        pricing_dynamic: 'Dynamic QR codes',
+        pricing_cta_free: 'Start free', pricing_cta_choose: 'Choose {plan}',
+        pricing_loading: 'Loading plans…', pricing_unavailable: 'Pricing is currently unavailable. Please try again later.',
         nav_free_qr: 'Free QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Pricing',
         nav_login: 'Log in', nav_cta_smart: 'Create Smart QR',
         nav_dashboard: 'Dashboard', nav_go_dashboard: 'Go to Dashboard →',
@@ -1319,6 +1411,17 @@
         footer_copy: '© 2026 QRAivy. Built with Node · Express · Prisma · PostgreSQL'
       },
       de: {
+        pricing_eyebrow: 'PREISE', pricing_headline: 'Der passende Tarif für dein Unternehmen.',
+        pricing_sub: 'Starte kostenlos. Wechsle, wenn dein Unternehmen wächst.',
+        pricing_toggle_label: 'Abrechnungszeitraum', pricing_monthly: 'Monatlich', pricing_annual: 'Jährlich',
+        pricing_per_month: '/ Monat', pricing_billed_monthly: 'monatliche Abrechnung', pricing_billed_annually: 'jährliche Abrechnung',
+        pricing_plan_free: 'Kostenlos',
+        pricing_sp_none: 'Keine Smart-QR-Seiten', pricing_sp_one: '1 Smart-QR-Seite', pricing_sp_n: '{n} Smart-QR-Seiten',
+        pricing_sp_unlimited: 'Unbegrenzte Smart-QR-Seiten',
+        pricing_basic_unlimited: 'Unbegrenzte Basis-QR-Codes', pricing_basic_n: '{n} Basis-QR-Codes',
+        pricing_dynamic: 'Dynamische QR-Codes',
+        pricing_cta_free: 'Kostenlos starten', pricing_cta_choose: '{plan} wählen',
+        pricing_loading: 'Tarife werden geladen…', pricing_unavailable: 'Die Preise sind derzeit nicht verfügbar. Bitte versuche es später erneut.',
         nav_free_qr: 'Gratis QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Preise',
         nav_login: 'Anmelden', nav_cta_smart: 'Smart QR erstellen',
         nav_dashboard: 'Dashboard', nav_go_dashboard: 'Zum Dashboard →',
@@ -1425,6 +1528,7 @@
       document.documentElement.setAttribute('lang', lang);
       window.setQraivyLang(lang);
       updateNavAuthText();
+      if (window.qhPricing) window.qhPricing.render();
     }
 
     if (qhLangToggle) {
@@ -1442,6 +1546,7 @@
     type="text/javascript"
     onload="initNav()"
   ></script>
+  <script src="js/home-pricing.js"></script>
   <script src="js/router.js"></script>
 </body>
 </html>
