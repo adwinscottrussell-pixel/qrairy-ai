@@ -759,6 +759,10 @@
     .qh-pricing-cta--paid { color: var(--accent2); border-color: rgba(255,90,31,0.45); background: rgba(255,90,31,0.08); }
     .qh-pricing-cta--paid:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
     .qh-pricing-cta:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+    /* Upcoming tier (presentation only): no price, no features, no CTA. */
+    .qh-pricing-card--soon { border-style: dashed; border-color: var(--border2); }
+    .qh-pricing-amount--soon { font-size: 1.6rem; color: var(--text-mid); }
+    .qh-pricing-tagline { margin-top: var(--qds-space-5); font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5; color: var(--text-mid); }
     .qh-pricing-status { grid-column: 1 / -1; text-align: center; padding: var(--qds-space-10) 0; font-family: var(--font-body); font-size: 0.92rem; color: var(--text-mid); }
     @media (max-width: 1023px) { .qh-pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 767px) {
@@ -1329,7 +1333,8 @@
         pricing_sp_none: 'No Smart QR Pages', pricing_sp_one: '1 Smart QR Page', pricing_sp_n: '{n} Smart QR Pages',
         pricing_sp_unlimited: 'Unlimited Smart QR Pages',
         pricing_basic_unlimited: 'Unlimited basic QR codes', pricing_basic_n: '{n} basic QR codes',
-        pricing_dynamic: 'Dynamic QR codes',
+        pricing_coming_soon: 'Coming Soon',
+        pricing_business_tagline: 'For growing businesses and advanced automation.',
         pricing_cta_free: 'Start free', pricing_cta_choose: 'Choose {plan}',
         pricing_loading: 'Loading plans…', pricing_unavailable: 'Pricing is currently unavailable. Please try again later.',
         nav_free_qr: 'Free QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Pricing',
@@ -1419,7 +1424,8 @@
         pricing_sp_none: 'Keine Smart-QR-Seiten', pricing_sp_one: '1 Smart-QR-Seite', pricing_sp_n: '{n} Smart-QR-Seiten',
         pricing_sp_unlimited: 'Unbegrenzte Smart-QR-Seiten',
         pricing_basic_unlimited: 'Unbegrenzte Basis-QR-Codes', pricing_basic_n: '{n} Basis-QR-Codes',
-        pricing_dynamic: 'Dynamische QR-Codes',
+        pricing_coming_soon: 'Demnächst',
+        pricing_business_tagline: 'Für wachsende Unternehmen und erweiterte Automatisierung.',
         pricing_cta_free: 'Kostenlos starten', pricing_cta_choose: '{plan} wählen',
         pricing_loading: 'Tarife werden geladen…', pricing_unavailable: 'Die Preise sind derzeit nicht verfügbar. Bitte versuche es später erneut.',
         nav_free_qr: 'Gratis QR', nav_smart_qr: 'Smart QR', nav_pricing: 'Preise',

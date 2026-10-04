@@ -8,13 +8,21 @@
 //
 // CTAs do not start Stripe checkout. They use the existing account flow
 // (login.html → dashboard) and carry the selected paid plan to Admin
-// Billing as ?plan=<starter|pro|business>[_annual] for the later
-// authenticated checkout step.
+// Billing as ?plan=<starter|pro>[_annual] for the later authenticated
+// checkout step.
+//
+// Presentation only: plans listed in COMING_SOON stay in the catalogue but
+// are shown as an upcoming tier — no price, no feature list, no purchase
+// CTA. Feature lines show only capabilities customers can use today.
 // ============================================================
 (function () {
   'use strict';
 
   var state = { plans: null, interval: 'monthly', failed: false, aligned: false };
+
+  // Homepage presentation: Business is a future tier and not purchasable yet.
+  var COMING_SOON = ['business'];
+  function isComingSoon(p) { return COMING_SOON.indexOf(p.id) !== -1; }
 
   function lang() { return window.QRAIVY_LANGUAGE === 'de' ? 'de' : 'en'; }
   function t(key) {
@@ -51,7 +59,7 @@
     else if (p.smartPageLimit === 1) lines.push(t('pricing_sp_one'));
     else lines.push(fill(t('pricing_sp_n'), { n: p.smartPageLimit }));
     lines.push(p.basicQrLimit === null ? t('pricing_basic_unlimited') : fill(t('pricing_basic_n'), { n: p.basicQrLimit }));
-    if (p.dynamicQr) lines.push(t('pricing_dynamic'));
+    // Dynamic QR is not listed: no customer-facing workflow exists yet.
     return lines;
   }
 
@@ -64,7 +72,20 @@
     return signedIn ? target : 'login.html?redirect=' + encodeURIComponent(target);
   }
 
+  function renderComingSoonCard(p) {
+    var card = el('article', 'qh-pricing-card qh-pricing-card--soon');
+    card.setAttribute('aria-label', displayName(p) + ' — ' + t('pricing_coming_soon'));
+    card.appendChild(el('h3', 'qh-pricing-name', displayName(p)));
+    var price = el('div', 'qh-pricing-price');
+    price.appendChild(el('span', 'qh-pricing-amount qh-pricing-amount--soon', t('pricing_coming_soon')));
+    card.appendChild(price);
+    card.appendChild(el('div', 'qh-pricing-billing', ' '));
+    card.appendChild(el('p', 'qh-pricing-tagline', t('pricing_business_tagline')));
+    return card;
+  }
+
   function renderCard(p) {
+    if (isComingSoon(p)) return renderComingSoonCard(p);
     var paid = !!(p.checkoutPlans && (p.checkoutPlans.monthly || p.checkoutPlans.annual));
     var annual = state.interval === 'annual';
     var amount = annual ? p.annualMonthlyPrice : p.monthlyPrice;
