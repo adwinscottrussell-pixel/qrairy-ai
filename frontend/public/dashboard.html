@@ -89,7 +89,9 @@
 .claim-success-overlay.show{display:flex;}
 body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 @media(max-width:768px){.claim-success-overlay{margin-left:0 !important;}}
-@media(max-width:768px){.dash-section{margin-left:0 !important;padding:64px 14px 100px !important;}}
+/* Mobile: the last content must scroll clear of the fixed bottom nav (62px)
+   and the + button above it (16px gap + 58px), i.e. 136px + safe area. */
+@media(max-width:768px){.dash-section{margin-left:0 !important;padding:64px 14px calc(152px + env(safe-area-inset-bottom,0px)) !important;}#main-content{padding-bottom:calc(152px + env(safe-area-inset-bottom,0px));}}
 .claim-success-modal {
   background:#111110;border:0.5px solid rgba(255,78,0,0.25);
   border-radius:20px;padding:44px 36px;text-align:center;
