@@ -1,5 +1,5 @@
 // QRAIVY Admin shell — canonical sidebar labels (EN/DE), language selector
-// and Settings action for every logged-in business Admin page.
+// and mobile menu for every logged-in business Admin page.
 //
 // Not a separate translation framework: the language state is the one in
 // js/qraivy-lang.js (window.QRAIVY_LANGUAGE / setQraivyLang, localStorage
@@ -20,8 +20,7 @@
       role_owner: 'Business Owner', nav_signout: 'Sign Out',
       shell_language: 'Language', shell_navigate: 'Navigate',
       bn_home: 'Home', bn_pages: 'Pages', bn_campaigns: 'Campaigns',
-      lang_current: 'English', lang_switch: 'Switch to Deutsch',
-      settings_soon: 'Settings — coming soon.'
+      lang_current: 'English', lang_switch: 'Switch to Deutsch'
     },
     de: {
       nav_main: 'Hauptmenü', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
@@ -32,8 +31,7 @@
       role_owner: 'Unternehmensinhaber', nav_signout: 'Abmelden',
       shell_language: 'Sprache', shell_navigate: 'Navigation',
       bn_home: 'Start', bn_pages: 'Seiten', bn_campaigns: 'Kampagnen',
-      lang_current: 'Deutsch', lang_switch: 'Zu Englisch wechseln',
-      settings_soon: 'Einstellungen — in Kürze verfügbar.'
+      lang_current: 'Deutsch', lang_switch: 'Zu Englisch wechseln'
     }
   };
 
@@ -81,13 +79,21 @@
     toast._h = setTimeout(function () { box.style.display = 'none'; }, 2800);
   }
 
+  // Mobile: the menu button opens the canonical sidebar as a drawer; the
+  // overlay or Escape closes it. (Idempotent with pages' own handlers.)
+  function bindMobile() {
+    var sb = document.getElementById('sidebar');
+    var btn = document.getElementById('mob-btn');
+    var ov = document.getElementById('sb-overlay');
+    if (!sb || !btn) return;
+    function close() { sb.classList.remove('mob-open'); if (ov) ov.classList.remove('on'); }
+    btn.addEventListener('click', function () { sb.classList.add('mob-open'); if (ov) ov.classList.add('on'); });
+    if (ov) ov.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  }
+
   function init() {
-    // Settings has no page yet: one localized "coming soon" on every page.
-    var s = document.getElementById('sb-settings');
-    if (s && !s.getAttribute('data-shell-bound')) {
-      s.setAttribute('data-shell-bound', '1');
-      s.addEventListener('click', function (e) { e.preventDefault(); toast(t('settings_soon')); });
-    }
+    bindMobile();
     apply(lang());
   }
 

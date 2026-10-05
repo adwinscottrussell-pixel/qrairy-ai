@@ -89,7 +89,7 @@
 .claim-success-overlay.show{display:flex;}
 body.sb-collapsed .claim-success-overlay{margin-left:56px;}
 @media(max-width:768px){.claim-success-overlay{margin-left:0 !important;}}
-@media(max-width:768px){.dash-section{margin-left:0 !important;padding:16px 14px 100px !important;}}
+@media(max-width:768px){.dash-section{margin-left:0 !important;padding:64px 14px 100px !important;}}
 .claim-success-modal {
   background:#111110;border:0.5px solid rgba(255,78,0,0.25);
   border-radius:20px;padding:44px 36px;text-align:center;
@@ -215,7 +215,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <a href="dashboard.html" class="sb-item active"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
     <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
-    <a href="dashboard.html" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge" style="display:none">0</span></a>
+    <a href="dashboard.html?section=sqr" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge" style="display:none">0</span></a>
     <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
     <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
@@ -225,7 +225,7 @@ body.sb-collapsed .claim-success-overlay{margin-left:56px;}
     <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
     <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
     <a href="dashboard.html?section=billing" class="sb-item" id="sb-billing"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
-    <a href="#" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
+    <a href="dashboard.html?section=settings" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
@@ -522,7 +522,12 @@ async function initDashboard(){
   var overlay=document.getElementById('sb-overlay');
   if(mobBtn)mobBtn.addEventListener('click',function(){sidebar.classList.add('mob-open');overlay.classList.add('on');});
   if(overlay)overlay.addEventListener('click',function(){sidebar.classList.remove('mob-open');overlay.classList.remove('on');});
-  // Settings (sb-settings) is handled by js/admin-shell.js
+  // Smart QR Pages and Settings share the dashboard's existing views; the
+  // sidebar highlight follows the destination the user chose.
+  ['sqr', 'settings'].forEach(function(sec){
+    var el=document.getElementById(sec==='sqr'?'sb-smart-pages':'sb-settings');
+    if(el)el.addEventListener('click',function(e){e.preventDefault();if(window.showSection)window.showSection(sec);});
+  });
 
   var sbLoyalty = document.getElementById('sb-loyalty');
   if (sbLoyalty) sbLoyalty.addEventListener('click', function(e) {
@@ -563,10 +568,12 @@ async function initDashboard(){
     var btnCreate=document.getElementById('btn-create-sqr');
   if(btnCreate)btnCreate.addEventListener('click',launchOnboarding);
   var sbCreate=document.getElementById('sb-create-sqr');
-  if(sbCreate)sbCreate.addEventListener('click',function(e){e.preventDefault();launchOnboarding();});
+  function sbActivateCreate(){document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('active');});if(sbCreate)sbCreate.classList.add('active');}
+  if(sbCreate)sbCreate.addEventListener('click',function(e){e.preventDefault();sbActivateCreate();launchOnboarding();});
   QrTier.loadPlan().catch(function(){});
   var launchP=new URLSearchParams(window.location.search).get('launch');
   if(launchP==='onboarding'){
+    sbActivateCreate();
     setTimeout(function(){if(window.qrairyOnboarding)window.qrairyOnboarding.reopen(window._userId);},600);
   }else{
     if(window.qrairyOnboarding)window.qrairyOnboarding.init(window._userId);
@@ -592,8 +599,8 @@ async function initDashboard(){
         var sec = document.getElementById('section-loyalty');
         if (sec) { sec.style.display = 'block'; loadLoyaltyDashboard(); }
         var el = document.getElementById('sb-loyalty'); if (el) el.classList.add('active');
-      } else if (sectionP === 'billing' && typeof window.showSection === 'function') {
-        window.showSection('billing');
+      } else if ((sectionP === 'billing' || sectionP === 'sqr' || sectionP === 'settings') && typeof window.showSection === 'function') {
+        window.showSection(sectionP);
       } else {
         // Unknown section param - show main dashboard
         if (mc) mc.style.display = 'block';
@@ -2981,7 +2988,12 @@ window.loadCustList = function(btn) {
 </div>
 
 <!-- Mobile Settings Section -->
-<div id="section-settings" class="dash-section" style="display:none;padding:24px;margin-left:0;">
+<style>
+#section-settings{margin-left:var(--sidebar-width);min-height:100vh;transition:margin-left .22s;}
+body.sb-collapsed #section-settings{margin-left:var(--sidebar-collapsed-width);}
+#section-settings > div, #section-settings > button{max-width:640px;}
+</style>
+<div id="section-settings" class="dash-section" style="display:none;padding:24px;">
   <h2 style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:24px;" data-i18n="nav_settings">Settings</h2>
 
   <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:16px;">
@@ -3063,12 +3075,17 @@ function bnSetActive(id) {
 // Real section switcher — shared by sidebar items and bottom nav
 window.showSection = function(sec) {
   var sectionMap = { sqr:'bn-pages', loyalty:'bn-loyalty', customers:'bn-subs', subscribers:'bn-subs', campaigns:'bn-campaigns', settings:'bn-settings' };
-  var sbIdMap = { loyalty:'sb-loyalty', customers:'sb-customers', subscribers:'sb-customers', campaigns:'sb-campaigns', billing:'sb-billing' };
+  var sbIdMap = { sqr:'sb-smart-pages', loyalty:'sb-loyalty', customers:'sb-customers', subscribers:'sb-customers', campaigns:'sb-campaigns', billing:'sb-billing', settings:'sb-settings' };
 
   if (sec === 'settings') {
     var mc2 = document.getElementById('main-content');
     if (mc2) mc2.style.display = 'none';
     document.querySelectorAll('.dash-section').forEach(function(s) { s.style.display = 'none'; });
+    document.querySelectorAll('.sb-item').forEach(function(i) { i.classList.remove('active'); });
+    var sbSet = document.getElementById('sb-settings'); if (sbSet) sbSet.classList.add('active');
+    var sbD = document.getElementById('sidebar'); if (sbD) sbD.classList.remove('mob-open');
+    var ovD = document.getElementById('sb-overlay'); if (ovD) ovD.classList.remove('on');
+    bnSetActive('bn-settings');
     var sset = document.getElementById('section-settings');
     if (sset) sset.style.display = 'block';
     // Language label/button: js/admin-shell.js
@@ -3082,6 +3099,8 @@ window.showSection = function(sec) {
 
   if (sec === 'sqr' || !sec) {
     if (mc) mc.style.display = 'block';
+    var sqrEl = sec === 'sqr' && document.getElementById('sb-smart-pages');
+    if (sqrEl) sqrEl.classList.add('active');
   } else {
     if (mc) mc.style.display = 'none';
     var target = document.getElementById('section-' + sec);

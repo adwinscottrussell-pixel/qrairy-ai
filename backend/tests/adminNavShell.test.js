@@ -51,6 +51,9 @@ for (const [page, active] of Object.entries(ACTIVE)) {
     if (!active) assert.equal(m.length, 0);
     else { assert.equal(m.length, 1); assert.ok(m[0].includes(active), m[0]); }
   });
+  if (page !== 'designer-saved.html') test(page + ': mobile menu button follows the sidebar', () => {
+    assert.ok(src.slice(src.indexOf(block) + block.length).trimStart().startsWith('<button id="mob-btn">'));
+  });
   test(page + ': loads qraivy-lang.js before admin-shell.js', () => {
     const a = src.indexOf('src="js/qraivy-lang.js"'), b = src.indexOf('src="js/admin-shell.js"');
     assert.ok(a !== -1 && b !== -1 && a < b);
@@ -62,9 +65,9 @@ test('canonical menu: groups, items and destinations', () => {
   assert.deepEqual(items, ['nav_main', 'nav_dashboard', 'nav_analytics', 'nav_smartpages', 'nav_sqrpages', 'nav_createnew',
     'nav_engage', 'nav_campaigns', 'nav_customers', 'nav_loyalty', 'nav_configure', 'nav_wallet', 'nav_account', 'nav_billing', 'nav_settings', 'nav_signout']);
   const hrefs = [...canonical.matchAll(/<a href="([^"]*)" class="sb-item/g)].map((m) => m[1]);
-  assert.deepEqual(hrefs, ['dashboard.html', 'analytics.html', 'dashboard.html', 'dashboard.html?launch=onboarding',
+  assert.deepEqual(hrefs, ['dashboard.html', 'analytics.html', 'dashboard.html?section=sqr', 'dashboard.html?launch=onboarding',
     'dashboard.html?section=campaigns', 'dashboard.html?section=customers', 'dashboard.html?section=loyalty',
-    'wallet-pass-studio.html', 'dashboard.html?section=billing', '#']);
+    'wallet-pass-studio.html', 'dashboard.html?section=billing', 'dashboard.html?section=settings']);
   assert.ok(canonical.includes('id="sb-username"') && canonical.includes('id="lang-toggle"') && canonical.includes('id="sb-signout"'));
 });
 
@@ -75,7 +78,7 @@ test('admin-shell.js: EN and DE cover the same keys, incl. every sidebar key', (
   const keys = [...canonical.matchAll(/data-i18n="([a-z_]+)"/g)].map((m) => m[1]);
   for (const lang of ['en', 'de']) {
     sandbox.window.QRAIVY_LANGUAGE = lang;
-    for (const k of keys.concat(['lang_current', 'lang_switch', 'settings_soon'])) assert.ok(shell.t(k), lang + ' missing ' + k);
+    for (const k of keys.concat(['lang_current', 'lang_switch'])) assert.ok(shell.t(k), lang + ' missing ' + k);
   }
   sandbox.window.QRAIVY_LANGUAGE = 'de';
   assert.equal(shell.t('nav_loyalty'), 'Treue');

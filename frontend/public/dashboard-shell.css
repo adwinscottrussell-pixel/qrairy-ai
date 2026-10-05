@@ -652,8 +652,10 @@ p, span, label, input, textarea, select, button,
 
 @media (max-width: 768px) {
   #bottom-nav { display: flex; }
-  #mob-btn { display: none !important; }
-  #main-content { padding-top: 0 !important; padding-bottom: 80px; }
+  /* The menu button (canonical sidebar drawer) stays the mobile menu on
+     every Admin page; the bottom nav is an extra shortcut bar. */
+  #sidebar.mob-open ~ #mob-btn { display: none !important; }
+  #main-content { padding-bottom: 80px; }
   .page-wrap { padding: 16px 14px; }
 }
 
