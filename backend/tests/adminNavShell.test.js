@@ -95,6 +95,17 @@ test('dashboard Loyalty strings exist in EN and DE', () => {
   assert.ok(!/"Loyalty not configured"|>not set up</.test(src), 'hard-coded English Loyalty state remains');
 });
 
+test('Settings: every label is a shell key defined in EN and DE; Sign Out reuses the sidebar', () => {
+  const src = read('dashboard.html');
+  const sec = src.slice(src.indexOf('<div id="section-settings"'), src.indexOf('<!-- Bottom Nav'));
+  const shellSrc = read('js/admin-shell.js');
+  const keys = [...new Set([...sec.matchAll(/data-i18n="([a-z_]+)"/g)].map((m) => m[1]))];
+  assert.ok(keys.includes('settings_sub') && keys.includes('settings_prefs'));
+  for (const k of keys) assert.equal((shellSrc.match(new RegExp('\\b' + k + ':', 'g')) || []).length, 2, k);
+  assert.ok(sec.includes('id="mob-lang-label"') && sec.includes('id="mob-lang-btn"'));
+  assert.ok(!/handleSignOut/.test(src), 'undefined handleSignOut() still referenced');
+});
+
 test('no Admin upgrade action points at upgrade.html / pricing.html', () => {
   const files = ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html',
     'smart-qr-detail.html', 'qr-free-dashboard.html', 'onboarding.js', 'js/shell-customer.js', 'js/billing.js', 'js/home-pricing.js'];

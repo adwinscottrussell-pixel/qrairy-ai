@@ -20,7 +20,10 @@
       role_owner: 'Business Owner', nav_signout: 'Sign Out',
       shell_language: 'Language', shell_navigate: 'Navigate',
       bn_home: 'Home', bn_pages: 'Pages', bn_campaigns: 'Campaigns',
-      lang_current: 'English', lang_switch: 'Switch to Deutsch'
+      lang_current: 'English', lang_switch: 'Switch to Deutsch',
+      settings_sub: 'Manage your account and preferences.', settings_prefs: 'Preferences',
+      settings_lang_current: 'Current language', settings_quick: 'Quick Links',
+      settings_signed_in: 'Signed in as', settings_role: 'Role'
     },
     de: {
       nav_main: 'Hauptmenü', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
@@ -31,7 +34,10 @@
       role_owner: 'Unternehmensinhaber', nav_signout: 'Abmelden',
       shell_language: 'Sprache', shell_navigate: 'Navigation',
       bn_home: 'Start', bn_pages: 'Seiten', bn_campaigns: 'Kampagnen',
-      lang_current: 'Deutsch', lang_switch: 'Zu Englisch wechseln'
+      lang_current: 'Deutsch', lang_switch: 'Zu Englisch wechseln',
+      settings_sub: 'Verwalte dein Konto und deine Präferenzen.', settings_prefs: 'Präferenzen',
+      settings_lang_current: 'Aktuelle Sprache', settings_quick: 'Schnellzugriff',
+      settings_signed_in: 'Angemeldet als', settings_role: 'Rolle'
     }
   };
 

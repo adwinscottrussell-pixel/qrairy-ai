@@ -2987,41 +2987,96 @@ window.loadCustList = function(btn) {
   </div>
 </div>
 
-<!-- Mobile Settings Section -->
+<!-- Settings Section -->
 <style>
-#section-settings{margin-left:var(--sidebar-width);min-height:100vh;transition:margin-left .22s;}
+/* Settings — same geometry as Billing & Plans (billing.css): sidebar offset,
+   centred .page-wrap, .dash-header, .panel cards. Mobile keeps the shared
+   .dash-section rule above. */
+#section-settings{flex:1;min-width:0;margin-left:var(--sidebar-width);transition:margin-left .22s;}
 body.sb-collapsed #section-settings{margin-left:var(--sidebar-collapsed-width);}
-#section-settings > div, #section-settings > button{max-width:640px;}
+@media (max-width:768px){#section-settings .page-wrap{padding:0;}}
+#section-settings .st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dashboard-gap);}
+#section-settings .st-wide{grid-column:1 / -1;}
+@media (max-width:860px){#section-settings .st-grid{grid-template-columns:minmax(0,1fr);}}
+#section-settings .st-label{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dashboard-muted-dim);margin-bottom:6px;}
+#section-settings .st-value{font-size:.9rem;font-weight:600;color:#f0f4f8;overflow-wrap:anywhere;}
+#section-settings .st-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+#section-settings .st-row + .st-row{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.05);}
+#section-settings .btn-outline{font-family:inherit;cursor:pointer;}
+#section-settings .st-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+@media (max-width:640px){#section-settings .st-links{grid-template-columns:minmax(0,1fr);}}
+#section-settings .st-link{display:flex;align-items:center;gap:12px;padding:16px 20px;text-decoration:none;color:#f0f4f8;font-size:.85rem;font-weight:500;transition:background .15s,color .15s;}
+#section-settings .st-link + .st-link{border-left:1px solid rgba(255,255,255,0.05);}
+@media (max-width:640px){#section-settings .st-link + .st-link{border-left:0;border-top:1px solid rgba(255,255,255,0.05);}}
+#section-settings .st-link:hover{background:rgba(255,255,255,0.03);color:#ff8c55;}
+#section-settings .st-link-icon{width:32px;height:32px;flex:0 0 32px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,90,31,0.08);border:1px solid rgba(255,90,31,0.18);font-size:.95rem;}
+#section-settings .st-link-arrow{margin-left:auto;color:var(--dashboard-muted-dim);}
 </style>
-<div id="section-settings" class="dash-section" style="display:none;padding:24px;">
-  <h2 style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:24px;" data-i18n="nav_settings">Settings</h2>
-
-  <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:16px;">
-    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#555;" data-i18n="shell_language">Language</div>
-    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:.85rem;color:#f0f4f8;" id="mob-lang-label">English</span>
-      <button onclick="toggleLang()" style="padding:8px 18px;background:rgba(255,90,31,0.1);border:0.5px solid rgba(255,90,31,0.3);border-radius:8px;color:#ff8c55;font-size:.78rem;cursor:pointer;" id="mob-lang-btn">Switch to Deutsch</button>
+<div id="section-settings" class="dash-section" style="display:none;">
+  <div class="page-wrap">
+    <div class="dash-header">
+      <div>
+        <h2 class="dash-title" data-i18n="nav_settings">Settings</h2>
+        <div class="dash-sub" data-i18n="settings_sub">Manage your account and preferences.</div>
+      </div>
+    </div>
+    <div class="st-grid">
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title" data-i18n="settings_prefs">Preferences</div></div>
+        <div class="panel-body">
+          <div class="st-row">
+            <div>
+              <div class="st-label" data-i18n="settings_lang_current">Current language</div>
+              <div class="st-value" id="mob-lang-label">English</div>
+            </div>
+            <button type="button" class="btn-outline" id="mob-lang-btn" onclick="toggleLang()">Switch to Deutsch</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title" data-i18n="nav_account">Account</div></div>
+        <div class="panel-body">
+          <div class="st-row">
+            <div>
+              <div class="st-label" data-i18n="settings_signed_in">Signed in as</div>
+              <div class="st-value" id="st-identity">&#x2014;</div>
+            </div>
+          </div>
+          <div class="st-row">
+            <div>
+              <div class="st-label" data-i18n="settings_role">Role</div>
+              <div class="st-value" data-i18n="role_owner">Business Owner</div>
+            </div>
+            <button type="button" class="btn-outline" id="st-signout" data-i18n="nav_signout">Sign Out</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel st-wide">
+        <div class="panel-hdr"><div class="panel-title" data-i18n="settings_quick">Quick Links</div></div>
+        <div class="st-links">
+          <a href="wallet-pass-studio.html" class="st-link"><span class="st-link-icon">&#x1F4B3;</span><span data-i18n="nav_wallet">Wallet Passes</span><span class="st-link-arrow">&#x2192;</span></a>
+          <a href="analytics.html" class="st-link"><span class="st-link-icon">&#x2197;</span><span data-i18n="nav_analytics">Analytics</span><span class="st-link-arrow">&#x2192;</span></a>
+          <a href="dashboard.html?section=billing" class="st-link"><span class="st-link-icon">&#x1F4B3;</span><span data-i18n="nav_billing">Billing &amp; Plans</span><span class="st-link-arrow">&#x2192;</span></a>
+        </div>
+      </div>
     </div>
   </div>
-
-  <div style="background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:16px;">
-    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#555;" data-i18n="shell_navigate">Navigate</div>
-    <a href="wallet-pass-studio.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:1.1rem;">&#x1F4B3;</span>
-      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_wallet">Wallet Passes</span>
-    </a>
-    <a href="analytics.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:1.1rem;">&#x2197;</span>
-      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_analytics">Analytics</span>
-    </a>
-    <a href="dashboard.html?section=billing" style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;">
-      <span style="font-size:1.1rem;">&#x1F4B3;</span>
-      <span style="font-size:.85rem;color:#f0f4f8;" data-i18n="nav_billing">Billing &amp; Plans</span>
-    </a>
-  </div>
-
-  <button onclick="handleSignOut()" style="width:100%;padding:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(240,244,248,0.5);font-size:.85rem;cursor:pointer;font-family:inherit;" data-i18n="nav_signout">Sign Out</button>
 </div>
+<script>
+// Settings: identity from the signed-in Clerk user (same source as the
+// sidebar); Sign Out reuses the sidebar's handler.
+(function(){
+  function fillIdentity(){
+    var u = window.Clerk && window.Clerk.user, el = document.getElementById('st-identity');
+    if (!u || !el) return;
+    var email = (u.primaryEmailAddress && u.primaryEmailAddress.emailAddress) || (u.emailAddresses && u.emailAddresses[0] && u.emailAddresses[0].emailAddress) || '';
+    el.textContent = email || u.fullName || u.firstName || '—';
+  }
+  var so = document.getElementById('st-signout');
+  if (so) so.addEventListener('click', function(){ var s = document.getElementById('sb-signout'); if (s) s.click(); });
+  window._qraivySettingsFill = fillIdentity;
+})();
+</script>
 
 <!-- Bottom Nav (mobile only) -->
 <nav id="bottom-nav">
@@ -3088,6 +3143,7 @@ window.showSection = function(sec) {
     bnSetActive('bn-settings');
     var sset = document.getElementById('section-settings');
     if (sset) sset.style.display = 'block';
+    if (window._qraivySettingsFill) window._qraivySettingsFill();
     // Language label/button: js/admin-shell.js
     if (window.QraivyShell) window.QraivyShell.apply(window.QraivyShell.lang());
     return;
