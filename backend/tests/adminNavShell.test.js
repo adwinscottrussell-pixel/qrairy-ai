@@ -106,6 +106,16 @@ test('Settings: every label is a shell key defined in EN and DE; Sign Out reuses
   assert.ok(!/handleSignOut/.test(src), 'undefined handleSignOut() still referenced');
 });
 
+test('mobile shell: no floating + button, no iOS zoom fields, page locked under the drawer', () => {
+  for (const page of Object.keys(ACTIVE)) assert.ok(!/id="fab-main"/.test(read(page)), page + ' still renders the floating + button');
+  const css = read('dashboard-shell.css');
+  const mob = css.slice(css.indexOf('#sidebar.mob-open ~ #mob-btn'));
+  assert.ok(/@media \(max-width: 768px\) and \(pointer: coarse\) \{\s*input, select, textarea \{ font-size: 16px !important; \}/.test(css), 'mobile fields must be 16px (iOS zoom)');
+  assert.ok(/html, body \{ overflow-x: hidden; \}/.test(mob));
+  assert.ok(/MutationObserver\(sync\)/.test(read('js/admin-shell.js')), 'drawer scroll lock missing');
+  assert.ok(/\.cust-drawer \{ visibility: hidden;/.test(read('dashboard.html')), 'closed Customers drawer must be hidden on mobile');
+});
+
 test('no Admin upgrade action points at upgrade.html / pricing.html', () => {
   const files = ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html',
     'smart-qr-detail.html', 'qr-free-dashboard.html', 'onboarding.js', 'js/shell-customer.js', 'js/billing.js', 'js/home-pricing.js'];

@@ -656,7 +656,24 @@ p, span, label, input, textarea, select, button,
      every Admin page; the bottom nav is an extra shortcut bar. */
   #sidebar.mob-open ~ #mob-btn { display: none !important; }
   #main-content { padding-bottom: 80px; }
+  /* The app is exactly viewport-wide; off-canvas drawers must never make
+     it pannable sideways (clip keeps position: sticky working). */
+  html, body { overflow-x: hidden; }
+  @supports (overflow: clip) { html, body { overflow-x: clip; } }
+  #sidebar, .sb-overlay { overscroll-behavior: contain; }
+  .sb-overlay { touch-action: none; }
+  /* The open drawer (and its dimming overlay) sit above the bottom nav,
+     and the drawer fits the visible viewport so its footer (language,
+     Sign Out) is never under the browser toolbar or the bottom nav. */
+  #sidebar { z-index: 230; }
+  .sb-overlay { z-index: 225; }
+  @supports (height: 100dvh) { #sidebar { height: 100dvh; } }
   .page-wrap { padding: 16px 14px; }
+}
+/* iOS Safari zooms into any focused field under 16px, after which the page
+   pans sideways; on touch phones fields stay at 16px. */
+@media (max-width: 768px) and (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
 }
 
 /* ── Premium polish: spacing, shadow, typography ──────────────────────────── */

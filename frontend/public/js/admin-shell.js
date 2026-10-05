@@ -96,6 +96,24 @@
     btn.addEventListener('click', function () { sb.classList.add('mob-open'); if (ov) ov.classList.add('on'); });
     if (ov) ov.addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    // While the drawer is open the page underneath stays put: the body is
+    // pinned at its scroll position (iOS ignores overflow:hidden alone) and
+    // restored on close. Follows the class, so every page's own open/close
+    // handlers are covered.
+    var lockedY = null;
+    function sync() {
+      var open = sb.classList.contains('mob-open');
+      var bs = document.body.style;
+      if (open && lockedY === null) {
+        lockedY = window.scrollY || 0;
+        bs.position = 'fixed'; bs.top = -lockedY + 'px'; bs.left = '0'; bs.right = '0'; bs.width = '100%';
+      } else if (!open && lockedY !== null) {
+        bs.position = ''; bs.top = ''; bs.left = ''; bs.right = ''; bs.width = '';
+        window.scrollTo(0, lockedY);
+        lockedY = null;
+      }
+    }
+    if (window.MutationObserver) new MutationObserver(sync).observe(sb, { attributes: true, attributeFilter: ['class'] });
   }
 
   function init() {
