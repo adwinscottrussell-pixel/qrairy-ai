@@ -25,3 +25,11 @@
 .mc-row-val { font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 600; color: #f0f4f8; }
 .mc-footer { font-family: 'Inter', sans-serif; font-size: .6rem; color: #4a5568; margin-top: 10px; }
 
+/* Charts must be able to shrink. Grid items default to min-width:auto, and
+   Chart.js writes a fixed px width onto each canvas, so once a chart was
+   drawn wider (rotation, late viewport settle, resize) it held its card and
+   the whole grid column at that width; Chart.js's responsive resize then
+   never saw a narrower container. min-width:0 lets the cards follow the
+   column and the canvases follow the cards. */
+.qds-grid--split > * { min-width: 0; }
+.chart-wrap canvas { max-width: 100%; }

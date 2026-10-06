@@ -116,6 +116,12 @@ test('mobile shell: no floating + button, no iOS zoom fields, page locked under 
   assert.ok(/\.cust-drawer \{ visibility: hidden;/.test(read('dashboard.html')), 'closed Customers drawer must be hidden on mobile');
 });
 
+test('analytics: chart cards can shrink with the grid column (Chart.js fixed canvas width)', () => {
+  const css = read('analytics-page.css');
+  assert.ok(/\.qds-grid--split > \* \{ min-width: 0; \}/.test(css));
+  assert.ok(/\.chart-wrap canvas \{ max-width: 100%; \}/.test(css));
+});
+
 test('no Admin upgrade action points at upgrade.html / pricing.html', () => {
   const files = ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html',
     'smart-qr-detail.html', 'qr-free-dashboard.html', 'onboarding.js', 'js/shell-customer.js', 'js/billing.js', 'js/home-pricing.js'];
