@@ -435,7 +435,8 @@
     function getUrl() {
       var slug = new URLSearchParams(window.location.search).get('slug');
       var s = window.QRAIVY_EDITOR_STATE;
-      return (s && s.hostedUrl) || window._sqd_hostedUrl || (slug ? 'https://qraivy.com/lp/' + slug : window.location.href);
+      if (slug) return 'https://qraivy.com/lp/' + slug;   // the page in the address bar owns this QR
+      return (s && s.hostedUrl) || window._sqd_hostedUrl || window.location.href;
     }
     window.QRAIVY_QR_READY = function(url) { renderQR(); };
 
@@ -1404,23 +1405,28 @@ async function initPage() {
   const params = new URLSearchParams(window.location.search);
   const slug   = params.get('slug');
 
-  // Read from localStorage first (instant hydration)
+  // Read from localStorage first (instant hydration). The stored demo claim
+  // belongs to ONE page: it may only hydrate that page. Using it for any
+  // other ?slug= showed the claimed page's name, URL and QR on a different
+  // Smart QR (e.g. Global lux Travel's Manage page encoding another page).
   let pending = null;
   try {
-    pending = JSON.parse(localStorage.getItem('qraivy_active_claim') || null)
-           || JSON.parse(localStorage.getItem('qraivy_pending_demo') || null);
+    const stored = JSON.parse(localStorage.getItem('qraivy_active_claim') || null)
+                || JSON.parse(localStorage.getItem('qraivy_pending_demo') || null);
+    if (stored && (!slug || stored.slug === slug)) pending = stored;
   } catch(e) {}
 
-  // If slug in URL, try to fetch from API
+  // If slug in URL, fetch the page record (JSON). /lp/:slug serves the HTML
+  // page itself, so it can never be parsed here.
   if (slug) {
     try {
       let _apiToken = '';
       try { if(window.Clerk && window.Clerk.session) _apiToken = await window.Clerk.session.getToken() || ''; } catch(_){}
-      const res  = await fetch(`https://www.qraivy.com/lp/${slug}`, {
+      const res  = await fetch(`${window.QRAIVY_API_BASE || 'https://api.qraivy.com'}/api/lp/${encodeURIComponent(slug)}`, {
         headers: _apiToken ? { Authorization: 'Bearer ' + _apiToken } : {}
       });
       const data = await res.json();
-      if (data && data.slug) {
+      if (data && data.slug === slug) {
         pending = {
           slug:         data.slug,
           businessName: data.businessName,
@@ -1446,7 +1452,8 @@ async function initPage() {
     return;
   }
 
-  const hostedUrl = (pending.hostedUrl || `https://qraivy.com/lp/${pending.slug}`);
+  // The QR destination is always derived from this page's own slug.
+  const hostedUrl = pending.slug ? `https://qraivy.com/lp/${pending.slug}` : pending.hostedUrl;
   const qrSrc     = `https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=${encodeURIComponent(hostedUrl)}&color=1a1a1a&bgcolor=ffffff&margin=6`;
 
   // ── Populate hero ─────────────────────────────────────────────────────
