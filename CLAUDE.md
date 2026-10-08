@@ -3,6 +3,8 @@
 AI-powered QR code SaaS: dynamic QR codes, smart landing pages, loyalty, wallet
 passes, push notifications.
 
+**Before starting any task, read `PROJECT_BOUNDARIES.md` (repo root) — QRAIVY ⟷ StadtPocket boundaries, mandatory.**
+
 This file is loaded automatically at the start of every Claude Code session in
 this repo. Personal/local overrides live in `QRAIVY.local.md` (gitignored) and
 are merged on top of this file.
