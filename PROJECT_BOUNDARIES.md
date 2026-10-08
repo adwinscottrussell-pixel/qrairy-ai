@@ -2,7 +2,9 @@
 
 Founder-approved 2026-10-08. An identical copy lives in both repositories:
 
-- `qrairy.ai` → branch `preview/stadtpocket-phase6d-admin`
+- `qrairy.ai` → branches `preview/stadtpocket-phase6d-admin`,
+  `preview/admin-nav-standardization`, `preview/plan-consolidation`,
+  `preview/billing-step2`
 - `stadtpocket-web` → branch `preview/phase6e-start-screen-api`
 
 If the two copies differ, stop and ask. These rules override convenience,
