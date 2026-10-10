@@ -576,6 +576,11 @@
       display: flex; align-items: center; justify-content: center; overflow: hidden;
     }
     .qh-s4-step-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .qh-s4-ai-label {
+      position: absolute; top: 8px; left: 8px; z-index: 1; pointer-events: none;
+      padding: 3px 8px; border-radius: 999px; background: rgba(17, 17, 17, 0.78); color: #fff;
+      font-family: 'Inter', var(--font-body); font-size: 0.6875rem; font-weight: 600; line-height: 1.3; letter-spacing: 0.02em; white-space: nowrap;
+    }
     .qh-s4-step-desc { font-family: var(--font-body); font-size: 0.82rem; line-height: 1.5; color: var(--qh-s4-text-mid); text-align: center; margin-top: var(--qds-space-8); }
     .qh-s4-arrow {
       position: absolute; left: 50%; top: 100%; margin-top: 10px; transform: translate(-50%, 0);
@@ -1140,6 +1145,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">1</div><div class="qh-s4-step-label" data-i18n="s4_step1_label">VISIT</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-visit-en.png" data-src-de="images/section4/customer-loop-visit-de.png" src="images/section4/customer-loop-visit-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step1_desc">A customer visits your business.</p>
@@ -1149,6 +1155,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">2</div><div class="qh-s4-step-label" data-i18n="s4_step2_label">JOIN</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-join-en.png" data-src-de="images/section4/customer-loop-join-de.png" src="images/section4/customer-loop-join-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step2_desc">They scan, discover and join in seconds.</p>
@@ -1158,6 +1165,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">3</div><div class="qh-s4-step-label" data-i18n="s4_step3_label">WALLET</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-wallet-en.png" data-src-de="images/section4/customer-loop-wallet-de.png" src="images/section4/customer-loop-wallet-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step3_desc">They save your loyalty pass to their wallet.</p>
@@ -1167,6 +1175,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">4</div><div class="qh-s4-step-label" data-i18n="s4_step4_label">RETURN</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-return-en.png" data-src-de="images/section4/customer-loop-return-de.png" src="images/section4/customer-loop-return-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step4_desc">You send deals and reminders they care about.</p>
@@ -1176,6 +1185,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">5</div><div class="qh-s4-step-label" data-i18n="s4_step5_label">REWARD</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-reward-en.png" data-src-de="images/section4/customer-loop-reward-de.png" src="images/section4/customer-loop-reward-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
             <div class="qh-s4-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg></div>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step5_desc">They return, redeem and feel appreciated.</p>
@@ -1185,6 +1195,7 @@
           <div class="qh-s4-step-head"><div class="qh-s4-step-number">6</div><div class="qh-s4-step-label" data-i18n="s4_step6_label">RETURN AGAIN</div></div>
           <div class="qh-s4-step-card-wrap">
             <div class="qh-s4-step-card"><img data-src-en="images/section4/customer-loop-return-again-en.png" data-src-de="images/section4/customer-loop-return-again-de.png" src="images/section4/customer-loop-return-again-en.png" alt="" aria-hidden="true" loading="lazy" /></div>
+            <span class="qh-s4-ai-label"><span aria-hidden="true">AI · KI-generiert</span><span class="qh-sr-only" data-i18n="s4_ai_label_sr">AI-generated image</span></span>
           </div>
           <p class="qh-s4-step-desc" data-i18n="s4_step6_desc">They come back again. And again.</p>
         </div>
@@ -1406,6 +1417,7 @@
         s4_step4_label: 'RETURN', s4_step4_desc: 'You send deals and reminders they care about.',
         s4_step5_label: 'REWARD', s4_step5_desc: 'They return, redeem and feel appreciated.',
         s4_step6_label: 'RETURN AGAIN', s4_step6_desc: 'They come back again. And again.',
+        s4_ai_label_sr: 'AI-generated image',
         s4_outcome_pre: 'QRAIVY turns a ', s4_outcome_accent: 'one-time visitor', s4_outcome_post: ' into a customer you can reach again.',
         s4_cta: 'Build My Customer Loop',
         s4_panel_headline: 'Ready to build your customer engagement platform?',
@@ -1497,6 +1509,7 @@
         s4_step4_label: 'RÜCKKEHR', s4_step4_desc: 'Du sendest relevante Angebote und Erinnerungen.',
         s4_step5_label: 'BELOHNUNG', s4_step5_desc: 'Er kommt zurück, löst seine Belohnung ein und fühlt sich wertgeschätzt.',
         s4_step6_label: 'WIEDERKOMMEN', s4_step6_desc: 'Er kommt wieder. Und wieder.',
+        s4_ai_label_sr: 'KI-generiertes Bild',
         s4_outcome_pre: 'QRAIVY macht aus einem ', s4_outcome_accent: 'einmaligen Besucher', s4_outcome_post: ' einen Kunden, den du wieder erreichen kannst.',
         s4_cta: 'Meinen Kundenkreislauf erstellen',
         s4_panel_headline: 'Bereit, deine Kundenbindungsplattform zu erstellen?',
