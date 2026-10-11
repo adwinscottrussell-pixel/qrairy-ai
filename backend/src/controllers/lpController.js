@@ -1,5 +1,6 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
+const { setVoiceAudioUrl } = require('../services/lpSectionsPatch');
 const prisma = require('../utils/prismaClient');
 const plans = require('../config/plans');
 const { countSmartPages } = require('../utils/tierSystem');
@@ -1453,9 +1454,12 @@ async function handlePublishLP(req, res) {
                 const vs = (merged.voice && merged.voice.voiceKey) || (_lang === 'de' ? 'anna_de' : 'sarah');
                 const ct = (merged.voice && merged.voice.customText) || null;
                 const audioUrl = await generateAndUploadVoice(businessName, slug, vs, ct);
-                merged.voice = Object.assign({}, merged.voice || {}, { audioUrl });
-                await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(merged) } });
-                console.log('[Voice] Generated for', slug, audioUrl);
+                // Generation takes seconds. The URL is added to whatever is
+                // saved NOW, not written back with the copy read before it.
+                const _saved = await setVoiceAudioUrl(slug, audioUrl);
+                pageCache.delByPrefix('lp:' + slug);
+                if (_saved.applied) console.log('[Voice] Generated for', slug, audioUrl);
+                else console.error('[Voice] Generated but not saved for', slug, '(' + _saved.reason + ')');
               } catch(ve) { console.error('[Voice] Error:', ve.message); }
             }
           }
@@ -1476,9 +1480,12 @@ async function handlePublishLP(req, res) {
         const ct = (cs.voice && cs.voice.customText) || null;
         const bizName = currentPage.businessName || slug;
         const audioUrl = await generateAndUploadVoice(bizName, slug, vs, ct);
-        cs.voice = Object.assign({}, cs.voice || {}, { audioUrl });
-        await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(cs) } });
-        console.log('[Voice] Generated on publish for', slug, audioUrl);
+        // Same rule as above: only voice.audioUrl is added, on top of the
+        // latest saved state, so an edit made meanwhile is never lost.
+        const _saved = await setVoiceAudioUrl(slug, audioUrl);
+        pageCache.delByPrefix('lp:' + slug);
+        if (_saved.applied) console.log('[Voice] Generated on publish for', slug, audioUrl);
+        else console.error('[Voice] Generated on publish but not saved for', slug, '(' + _saved.reason + ')');
       } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
     });
     return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id });
@@ -2490,7 +2497,9 @@ function renderPremiumLP(page) {
       tagline: 'Smart Landing Page', visitWebsite: 'Visit Website', learnMore: 'Learn More',
       whatCanIDo: 'What can I do here?', stayInLoop: 'Stay in the loop',
       subscribeBtn: 'Subscribe →',
-      personalWelcome: 'Personal welcome message', tapToListen: 'Tap to listen — unlocks AI assistant',
+      personalWelcome: 'Personal welcome message', tapToListen: 'Tap to listen',
+      voicePlaying: 'Playing…', voicePlayed: 'Welcome message played ✓', voiceToast: '▶ Playing welcome message…',
+      voiceTapAgain: 'Tap again to play', voiceUnavailable: 'The welcome message is not available right now.',
       aiAssistant: 'AI Assistant', askAnything: 'Ask anything…',
       tapWelcome: 'Tap welcome to activate', subscribeDesc: 'Subscribe for updates, exclusive offers and early access from ',
       gdpr: 'I agree to receive marketing messages from ', gdprSuffix: '. I can unsubscribe at any time.',
@@ -2502,7 +2511,9 @@ function renderPremiumLP(page) {
       tagline: 'Smarte Landingpage', visitWebsite: 'Website besuchen', learnMore: 'Mehr erfahren',
       whatCanIDo: 'Was kann ich hier tun?', stayInLoop: 'Bleiben Sie informiert',
       subscribeBtn: 'Abonnieren →',
-      personalWelcome: 'Persönliche Willkommensnachricht', tapToListen: 'Tippen zum Anhören — aktiviert KI-Assistent',
+      personalWelcome: 'Persönliche Willkommensnachricht', tapToListen: 'Tippen zum Anhören',
+      voicePlaying: 'Wird abgespielt …', voicePlayed: 'Willkommensnachricht abgespielt ✓', voiceToast: '▶ Willkommensnachricht wird abgespielt …',
+      voiceTapAgain: 'Zum Abspielen erneut tippen', voiceUnavailable: 'Die Willkommensnachricht ist gerade nicht verfügbar.',
       aiAssistant: 'KI-Assistent', askAnything: 'Fragen Sie etwas…',
       tapWelcome: 'Willkommensnachricht antippen', subscribeDesc: 'Abonnieren Sie für Updates, exklusive Angebote und Frühzugang von ',
       gdpr: 'Ich erkläre mich einverstanden, Marketingmitteilungen von ', gdprSuffix: ' zu erhalten. Ich kann mich jederzeit abmelden.',
@@ -2557,6 +2568,28 @@ function renderPremiumLP(page) {
   const sv = storedSections.voice || {};
   const sa = storedSections.ai    || {};
   const sl = storedSections.loop  || {};
+
+  // ── Voice welcome: what the editor saves is what the page shows ──
+  // The editor (smart-qr-detail.html) writes voice.enabled, voice.title and
+  // voice.description, plus settings.voiceEnabled from its Settings tab.
+  // This renderer used to look only at voice.active / playerTitle /
+  // playerSubtitle, which nothing ever writes, so none of those controls
+  // had any effect on the live page. All of them are honoured now; the old
+  // keys still work for any page that carries them.
+  const _escText = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const _pageSettings = (storedSections.settings && typeof storedSections.settings === 'object') ? storedSections.settings : {};
+  const voiceEnabled = sv.enabled !== false && sv.active !== false && _pageSettings.voiceEnabled !== false;
+  // No audio, no player: a Play button that cannot play is worse than none.
+  // The section appears by itself once the welcome audio exists.
+  const voiceAudioUrl = (typeof sv.audioUrl === 'string' && /^https:\/\//.test(sv.audioUrl)) ? sv.audioUrl : '';
+  const showVoice = voiceEnabled && !!voiceAudioUrl;
+  // 'Voice Welcome' is the editor's untouched placeholder title, saved on
+  // every page whether or not the owner typed anything; it is not a title
+  // the owner chose, so the localized default stays in place for it.
+  const _ownVoiceTitle = (typeof sv.title === 'string' && sv.title.trim() && sv.title.trim() !== 'Voice Welcome') ? sv.title.trim() : '';
+  const _ownVoiceSub = (typeof sv.description === 'string' && sv.description.trim()) ? sv.description.trim() : '';
+  const voiceTitle = _escText(sv.playerTitle || _ownVoiceTitle || t.personalWelcome);
+  const voiceSubtitle = _escText(sv.playerSubtitle || _ownVoiceSub || t.tapToListen);
 
   const headline = sh.aiTitle  || sh.title    || ('Welcome to ' + bizName);
   const sub      = sh.aiSubtitle || sh.subtitle || 'Visit us, explore what we offer, and stay connected.';
@@ -2801,7 +2834,7 @@ input,textarea,button{font-family:inherit}
 </div>
 
 <!-- AUDIO -->
-${sv.active !== false ? `
+${showVoice ? `
 <div class="section">
   <div style="font-size:10px;font-weight:600;color:#999;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5v6M6 3v10M9 6v4M12 4v8"/></svg>
@@ -2812,8 +2845,8 @@ ${sv.active !== false ? `
       <svg width="14" height="14" viewBox="0 0 16 16" fill="#fff"><path d="M5 3l9 5-9 5V3z"/></svg>
     </div>
     <div style="flex:1;min-width:0;">
-      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${sv.playerTitle || t.personalWelcome}</div>
-      <div style="font-size:12px;color:#555;">${sv.playerSubtitle || t.tapToListen}</div>
+      <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:3px;">${voiceTitle}</div>
+      <div id="audio-sub" style="font-size:12px;color:#555;">${voiceSubtitle}</div>
     </div>
     <div style="display:flex;align-items:center;gap:2px;height:28px;">${waveBars}</div>
   </div>
@@ -2830,12 +2863,11 @@ ${sa.active !== false ? `
         <span style="font-size:13px;font-weight:600;color:#0a0a0a;">${t.aiAssistant}</span>
         <span style="font-size:12px;color:#555;">— Online</span>
       </div>
-      <span style="font-size:10px;font-weight:600;color:#666;letter-spacing:.05em;text-transform:uppercase;">${t.tapWelcome}</span>
     </div>
     <div id="chat-msgs" style="padding:16px;min-height:80px;display:flex;flex-direction:column;gap:8px;">
       <div style="background:#f2f2f2;border-radius:0 12px 12px 12px;padding:11px 14px;font-size:13px;color:#0a0a0a;line-height:1.55;display:inline-block;max-width:88%;">${lang === 'de' ? '✦ Hallo 👋 Ich bin der KI-Assistent für ' + bizName + '. Fragen Sie mich nach Öffnungszeiten, Angeboten oder anderen Infos.' : '✦ Hi 👋 I\'m the AI concierge for ' + bizName + '. Ask me about hours, menu, or anything else.'}</div>
     </div>
-    <div id="chat-input-area" style="display:flex;align-items:center;border-top:1px solid #e8e8e8;opacity:0.4;pointer-events:none;" title="Play welcome message to activate">
+    <div id="chat-input-area" style="display:flex;align-items:center;border-top:1px solid #e8e8e8;">
       <input id="chat-input" placeholder="${t.askAnything}" style="flex:1;border:none;outline:none;padding:13px 16px;font-size:14px;color:#0a0a0a;background:transparent;" onkeydown="if(event.key==='Enter')sendChat()">
       <button onclick="sendChat()" style="width:36px;height:36px;border-radius:50%;background:#f2f2f2;border:none;cursor:pointer;margin-right:8px;display:flex;align-items:center;justify-content:center;transition:background .15s;" onmouseover="this.style.background='#e8e8e8'" onmouseout="this.style.background='#f2f2f2'">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><path d="M14 2L2 8l5 2 2 5 5-13z"/></svg>
@@ -2976,32 +3008,58 @@ ${SLUG_CID_HELPER_JS}
   window.openExternal = function() {
     if (_currentCardUrl) window.open(_currentCardUrl, '_blank');
   };
+  // The assistant never waits for this: playing the welcome is optional.
+  // Every failure ends in a plain message and a player that can be tried
+  // again -- nothing here pretends audio is playing when it is not.
+  var VOICE_TXT = ${JSON.stringify({ idle: sv.playerSubtitle || _ownVoiceSub || t.tapToListen, playing: t.voicePlaying, played: t.voicePlayed, toast: t.voiceToast, tapAgain: t.voiceTapAgain, unavailable: t.voiceUnavailable }).replace(/</g, '\\u003c')};
   window.playAudio = function(el) {
-    var audioUrl = '${sv.audioUrl || ""}';
-    if (!audioUrl) { toast('No audio available yet'); return; }
+    var audioUrl = ${JSON.stringify(voiceAudioUrl).replace(/</g, '\\u003c')};
+    var subEl = document.getElementById('audio-sub');
+    function setSub(text) { if (subEl) subEl.textContent = text; }
+    function stopBars() { document.querySelectorAll('.wave-bar').forEach(function(b) { b.style.animation='none'; b.style.background='#d0d0d0'; }); }
+    if (!audioUrl) { toast(VOICE_TXT.unavailable); return; }
     if (window._premiumAudio) { window._premiumAudio.pause(); window._premiumAudio = null; }
     var audio = new Audio(audioUrl);
     window._premiumAudio = audio;
-    var subEl = el.querySelector('div > div:last-child');
-    if (subEl) subEl.textContent = 'Playing…';
-    audio.play().then(function() {
-      toast('▶ Playing welcome message…');
-      // Unlock chat
-      var chatArea = document.getElementById('chat-input-area');
-      if (chatArea) { chatArea.style.opacity='1'; chatArea.style.pointerEvents='auto'; chatArea.removeAttribute('title'); }
+    var failed = false;
+    function unavailable() {
+      if (failed) return;
+      failed = true;
+      stopBars();
+      setSub(VOICE_TXT.unavailable);
+      toast(VOICE_TXT.unavailable);
+      if (window._premiumAudio === audio) window._premiumAudio = null;
+    }
+    // The file is missing, blocked or not playable.
+    audio.onerror = unavailable;
+    audio.onended = function() {
+      if (failed) return;
+      setSub(VOICE_TXT.played);
+      stopBars();
+      if (window._premiumAudio === audio) window._premiumAudio = null;
+    };
+    var started = audio.play();
+    if (!started || typeof started.then !== 'function') return;
+    started.then(function() {
+      if (failed) return;
+      setSub(VOICE_TXT.playing);
+      toast(VOICE_TXT.toast);
       // Animate wave bars
       document.querySelectorAll('.wave-bar').forEach(function(b, i) {
         b.style.background = '#0a0a0a';
         b.style.animation = 'waveBar ' + (0.6 + (i%3)*0.15).toFixed(2) + 's ease-in-out ' + (i*0.05).toFixed(2) + 's infinite';
       });
-    }).catch(function() {
-      toast('Tap again to play');
+    }).catch(function(err) {
+      // The browser asked for another tap (autoplay policy): that is not a
+      // broken file, so the player simply stays ready.
+      if (err && err.name === 'NotAllowedError') {
+        setSub(VOICE_TXT.idle);
+        toast(VOICE_TXT.tapAgain);
+        if (window._premiumAudio === audio) window._premiumAudio = null;
+        return;
+      }
+      unavailable();
     });
-    audio.onended = function() {
-      if (subEl) subEl.textContent = 'Welcome message played ✓';
-      document.querySelectorAll('.wave-bar').forEach(function(b) { b.style.animation='none'; b.style.background='#d0d0d0'; });
-      window._premiumAudio = null;
-    };
   };
 
   // ── AI Chat ──
