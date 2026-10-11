@@ -40,6 +40,22 @@ app.use(cors({
   credentials: true
 }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
+
+// Staging only (APP_ENV=staging). Production never mounts this and its
+// routes are untouched. Loading stagingPolicy validates the staging
+// settings and stops a misconfigured staging server from starting; the
+// gate then answers only the few requests staging exists for.
+const stagingPolicy = require('./config/stagingPolicy');
+if (stagingPolicy.isStaging) {
+  const { createStagingGate } = require('./middleware/stagingGate');
+  const stagingPrisma = require('./utils/prismaClient');
+  app.use(createStagingGate({
+    allowedUserIds: stagingPolicy.policy.allowedUserIds,
+    findPageOwner: (slug) => stagingPrisma.landingPage.findUnique({ where: { slug }, select: { userId: true } }),
+  }));
+  console.log('[staging] gate active:', stagingPolicy.policy.allowedUserIds.length, 'allowed account(s), recording ceiling', stagingPolicy.policy.recordingCeiling);
+}
+
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0' }));

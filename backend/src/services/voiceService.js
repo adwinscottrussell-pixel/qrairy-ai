@@ -1,5 +1,8 @@
 const https = require("https");
 const { v2: cloudinary } = require("cloudinary");
+// "qraivy-voices" in production. A staging server stores its audio in its
+// own folder, which can never be a production folder (config/stagingPolicy.js).
+const { voiceAudioFolder } = require("../config/stagingPolicy");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -79,7 +82,7 @@ async function synthesizeAndUploadVoice({ slug, text, lang, fingerprint }) {
   const publicId = fingerprint ? `voice-${slug}-${fingerprint}` : `voice-${slug}`;
   const uploadResult = await new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder: "qraivy-voices", public_id: publicId, overwrite: true, format: "mp3" },
+      { resource_type: "video", folder: voiceAudioFolder, public_id: publicId, overwrite: true, format: "mp3" },
       (error, result) => { if (error) reject(error); else resolve(result); }
     );
     uploadStream.end(audioBuffer);

@@ -70,6 +70,11 @@ async function handleVoicePreview(req, res) {
     try {
       audioUrl = await voice.recordPreview(slug, greeting);
     } catch (err) {
+      // Staging only: the staging-wide recording ceiling, or its counter
+      // could not be verified. Either way nothing was recorded.
+      if (err && err.code === 'STAGING_CEILING') {
+        return res.status(429).json({ error: 'Staging audio limit reached. No more audio is generated on staging.', code: 'staging_ceiling' });
+      }
       console.error('[Voice] Preview failed for', slug + ':', err && err.message);
       return res.status(502).json({ error: 'The audio could not be generated. Please try again.', code: 'generation_failed' });
     }

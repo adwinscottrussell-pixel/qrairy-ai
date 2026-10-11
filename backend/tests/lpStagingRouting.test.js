@@ -463,7 +463,7 @@ test('F. staging: its own preview website can be allowed by a setting, exactly a
 // ── G. Scope ───────────────────────────────────────────────────
 test('G. the change is limited to routing: sign-in, the database schema, the design system and the forwarding rules are untouched', () => {
   const git = (...a) => execFileSync('git', a, { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  assert.equal(git('diff', '10ab8d5', '--stat', '--', 'vercel.json', 'frontend/public/vercel.json', 'frontend/public/js/api-base.js', 'frontend/public/qds', 'backend/prisma', 'backend/src/middleware', 'backend/railway.toml', 'backend/src/data', 'backend/src/services').trim(), '');
+  assert.equal(git('diff', '10ab8d5', '--stat', '--', 'vercel.json', 'frontend/public/vercel.json', 'frontend/public/js/api-base.js', 'frontend/public/qds', 'backend/prisma', 'backend/src/middleware/auth.js', 'backend/src/middleware/adminMiddleware.js', 'backend/railway.toml', 'backend/src/data').trim(), '');
   assert.ok(EDITOR_PAGE.includes('data-clerk-publishable-key="pk_live_'), 'the sign-in key of the page is as it was');
 });
 

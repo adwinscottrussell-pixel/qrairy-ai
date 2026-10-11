@@ -35,6 +35,7 @@ const { defaultGreeting, voiceLanguage, GREETING_MAX_LENGTH, VOICE_LANGUAGES } =
 const { standardVoice, synthesizeAndUploadVoice } = require('./voiceService');
 const { patchLandingPageSections } = require('./lpSectionsPatch');
 const { pageCache } = require('../utils/pageCache');
+const { reserveRecording } = require('./stagingVoiceBudget');
 
 // Fields of sections.voice that only the server may set. A save never
 // takes them from the request: the editor sends back whatever it loaded,
@@ -181,7 +182,11 @@ function record(slug, greeting) {
   const key = slug + ':' + greeting.fingerprint;
   const running = recordings.get(key);
   if (running) return running;
-  const promise = synthesizeAndUploadVoice({ slug, text: greeting.text, lang: greeting.lang, fingerprint: greeting.fingerprint })
+  // On staging one unit of the staging-wide ceiling is taken first, and no
+  // call is made if that fails. In production this resolves immediately.
+  const promise = Promise.resolve()
+    .then(() => reserveRecording())
+    .then(() => synthesizeAndUploadVoice({ slug, text: greeting.text, lang: greeting.lang, fingerprint: greeting.fingerprint }))
     .finally(() => { recordings.delete(key); });
   recordings.set(key, promise);
   return promise;
