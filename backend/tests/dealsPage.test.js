@@ -82,28 +82,86 @@ test('no other Admin page was changed to link here yet', () => {
 });
 
 // ── Preview-only guarantees ────────────────────────────────────
-test('talks to no backend and stores no deal data', () => {
-  for (const banned of ['fetch(', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'QRAIVY_API_BASE', 'api-base.js', 'api.qraivy.com', 'sessionStorage', 'indexedDB', 'cloudinary']) {
-    assert.ok(!page.includes(banned), 'found ' + banned);
-  }
+test('talks only to the Deals API, as the signed-in owner', () => {
+  assert.ok(page.includes('<script src="js/api-base.js"></script>'), 'uses the shared API base resolver');
+  assert.match(page, /var API_BASE = String\(window\.QRAIVY_API_BASE == null \? 'https:\/\/api\.qraivy\.com' : window\.QRAIVY_API_BASE\)/);
+  // One request helper; every call goes through it with the Clerk token.
+  assert.equal((page.match(/\bfetch\(/g) || []).length, 1, 'exactly one fetch call site');
+  assert.match(page, /res = await fetch\(API_BASE \+ path, opts\);/);
+  assert.match(page, /headers: \{ Authorization: 'Bearer ' \+ token \}/);
+  const calls = [...page.matchAll(/api\('(GET|POST|PUT|DELETE)', ('[^']*')/g)].map((m) => m[1] + ' ' + m[2]);
+  assert.deepEqual([...new Set(calls)].sort(), ["DELETE '/deals/'", "GET '/deals'", "POST '/deals'", "POST '/deals/'", "PUT '/deals/'"]);
+  for (const suffix of ["'/draft'", "'/publish'", "'/archive'", "'/image'"]) assert.ok(page.includes('encodeURIComponent(' ) && page.includes(suffix), suffix);
+  for (const banned of ['XMLHttpRequest', 'sendBeacon', 'WebSocket', 'cloudinary']) assert.ok(!page.includes(banned), 'found ' + banned);
+});
+
+test('keeps no deal data in browser storage and never shows an unsaved upload as saved', () => {
+  for (const banned of ['sessionStorage', 'indexedDB', 'FileReader', 'createObjectURL', 'dataUrl']) assert.ok(!page.includes(banned), 'found ' + banned);
   const stored = [...page.matchAll(/localStorage\.setItem\('([^']+)'/g)].map((m) => m[1]).sort();
   assert.deepEqual(stored, ['qraivy_lang', 'sb-collapsed']);
+  // The image becomes the deal's image only from the server's answer.
+  assert.match(page, /var res = await api\('POST', '\/deals\/' \+ encodeURIComponent\(draft\.id\) \+ '\/image', form\);\s+draft\.image = imageFromServer\(res\.deal\.image\);/);
 });
 
-test('is labelled as a preview: banner, per-card tag and both final actions', () => {
-  assert.match(page, /class="deal-preview-banner" role="note"/);
+test('waits for the signed-in session before the first request', () => {
+  assert.match(page, /window\.QraivyDeals = \{ start: loadDeals \};/);
+  const init = page.slice(page.indexOf('async function initDeals()'));
+  assert.ok(init.indexOf("if (!window.Clerk.user) { window.location.href = 'login.html'; return; }") < init.indexOf('window.QraivyDeals.start();'));
+  assert.equal((page.match(/QraivyDeals\.start\(\)/g) || []).length, 1);
+});
+
+test('one action at a time: a running request blocks duplicates and shows a loading state', () => {
+  assert.match(page, /async function runBusy\(btn, fn\) \{\s+if \(busy\) return undefined;\s+busy = true; setButtonBusy\(btn, true\);/);
+  assert.match(page, /btn\.classList\.add\('qds-btn--loading'\); btn\.setAttribute\('aria-busy', 'true'\); btn\.disabled = true;/);
+  for (const guard of ['async function goTo(n, btn) {\n    if (busy) return;', 'async function commit(status, btn) {\n    if (busy) return;', 'if (!file || busy) return;']) {
+    assert.ok(page.includes(guard), guard);
+  }
+});
+
+test('shows loading, empty, error and saved states', () => {
+  for (const id of ['deal-loading', 'deal-load-error', 'deal-retry-btn', 'deal-empty', 'deal-alert', 'deal-upload-status', 'deal-published-note']) {
+    assert.ok(page.includes('id="' + id + '"'), id);
+  }
+  assert.match(page, /id="deal-alert" role="alert" hidden/);
   const t = dictionary();
   for (const lang of ['en', 'de']) {
-    assert.match(t[lang].s4_save, /\((preview|Vorschau)\)$/i);
-    assert.match(t[lang].s4_publish, /\((preview|Vorschau)\)$/i);
-    assert.ok(t[lang].dl_banner_text && t[lang].dl_local && t[lang].s4_note && t[lang].s2_note);
+    for (const k of ['dl_loading', 'dl_load_error_title', 'dl_retry', 'e_network', 'e_server', 'e_save_detail', 'e_gone', 'e_img_storage', 'e_img_upload', 's2_uploading', 'toast_draft', 'toast_published', 'toast_archived', 'toast_deleted', 'dl_unpublished', 'db_published_note']) {
+      assert.ok(t[lang][k], lang + '.' + k);
+    }
   }
-  assert.match(page, /qds-badge--warning">' \+ esc\(t\('dl_local'\)\)/);
 });
 
-test('starts empty: no sample deals are baked into the page', () => {
+test('never claims a published deal is visible to customers', () => {
+  assert.match(page, /class="deal-preview-banner" role="note"/);
+  const t = dictionary();
+  assert.match(t.en.dl_banner_text, /not shown to your customers yet/);
+  assert.match(t.en.s4_note, /not shown to your customers yet/);
+  assert.match(t.de.dl_banner_text, /noch nicht angezeigt/);
+  assert.match(t.de.s4_note, /noch nicht angezeigt/);
+  for (const lang of ['en', 'de']) {
+    const all = Object.values(t[lang]).join(' | ');
+    assert.ok(!/is (now )?live|now visible|customers can (now )?see|ist (jetzt )?live|jetzt sichtbar|Kunden sehen (ihn|den Deal) jetzt/i.test(all), lang + ' claims visibility');
+    assert.ok(!/preview only|nur vorschau|\((preview|vorschau)\)/i.test(all), lang + ' still calls the page a preview');
+  }
+  assert.ok(!/href="[^"]*\/(deal|d)\//.test(page), 'no link to a public deal page');
+});
+
+test('the list is whatever the server returned: no sample deals are baked into the page', () => {
   assert.match(page, /var deals = \[\];/);
+  assert.match(page, /deals = \(data\.deals \|\| \[\]\)\.map\(fromServer\);/);
   assert.match(page, /<div class="deal-list" id="deal-list" hidden><\/div>/);
+});
+
+test('hidden list states are really hidden (loading skeleton, list, empty, error never overlap)', () => {
+  // .deal-list sets display:grid, which would beat the hidden attribute.
+  assert.ok(css.includes('.deal-list[hidden] { display: none; }'));
+  assert.ok(page.includes("$('deal-loading').hidden = loadState !== 'loading';"));
+  assert.ok(page.includes("list.hidden = loadState !== 'ready' || deals.length === 0;"));
+});
+
+test('status badges come from the server: draft, published, scheduled, expired, archived', () => {
+  assert.match(page, /function displayStatus\(d\) \{ return d\.displayStatus \|\| d\.status \|\| 'draft'; \}/);
+  assert.match(page, /var STATUS_BADGE = \{ draft: 'neutral', published: 'success', archived: 'neutral-dim', expired: 'warning', scheduled: 'info' \};/);
 });
 
 // ── Bilingual ──────────────────────────────────────────────────
@@ -205,15 +263,43 @@ test('the page loads the starter catalog', () => {
   assert.ok(page.includes('<script src="js/deal-starter-images.js"></script>'));
 });
 
-test('catalog: 18 images in six categories of three, bilingual', () => {
+// The first 18 images as approved and committed in Phase B1 (d508e2e).
+// Pinned here, independently of the catalog, so neither a file nor its
+// catalog entry can change unnoticed when later images are added.
+const ORIGINAL_18 = {
+  'bakery-croissants-01': '7450b0d7bca77efbf0108a288ac07f2c5a092a4544a0f3c0e517288881f4f69f',
+  'bakery-bread-01': '580b626cf390ad11215a331ff598902e8d44ec52adb7bcbdca081f520edb0094',
+  'bakery-coffee-01': '3e451a238d7700c50502f37a296b37ceda9fa4038eeda3a699ddc77e7cb4fe49',
+  'restaurant-meal-01': '4bdee6d3a24c0e47fb106da9f2c9e79d5111b5003028c79feb1c5c2b66461a85',
+  'restaurant-table-01': '62e89f021be54767319c63db6c8cc6964728e387045a5816fe88a34536d16680',
+  'restaurant-fresh-01': 'a1082831a81189018077a075362f07e7bc1397a9f655b144fa2c2558073432f6',
+  'fashion-boutique-01': 'c645f5fa9221352ccc43c7e561f290c59472965e064005725631a619f4419a4a',
+  'fashion-rack-01': '80fe716ed8cb17dfd6b5a25ef6f817c8355900c651746361fd7b79f1f5f328e2',
+  'fashion-lifestyle-01': '4da1734d4d9bb2c9c71eada8ed52b1dbfcce2e3fd626e160eef17a1409894596',
+  'beauty-spa-01': 'c9a00c4473e59ed50e637d03ab477ad57530ac19c663dbc4e41130ced7539b2d',
+  'beauty-skincare-01': '6244eba8a5d2c51a441f3d8b2613b35838f24e0b1abbf3ff5341ed9dca8dd6ed',
+  'beauty-salon-01': 'dfe6780b47d2f1d021a7412bd279f792f0ad43f80fc747c11c97ad5977c3f3a0',
+  'fitness-gym-01': '08623143e781f133e25467ed1e17768bc64b013747818cb688c7d667515ce477',
+  'fitness-training-01': '58a4af2380d209e35c96238f47e6ff66af6cf98f18fb3eeb0f478cd491606525',
+  'fitness-active-01': '30952cf74270781e992afdb9b387c5edfc014051ca1644d354379453310d9627',
+  'general-optician-01': '187f9bd64a22651674d1effe4f7938d7f07782f57ee37655c3268cc8fcb34661',
+  'general-foodtruck-01': 'c784577b7d89ca36d31c917d612e3f7cff59e09daec716650d5b9a0c81a553f4',
+  'general-flower-01': '81ea581b41c91792887cfb18b3d587cbe9d0a352a8d79477df6ecf15afc324c7',
+};
+
+test('catalog: 22 images in seven categories, bilingual', () => {
   const c = catalog();
-  assert.equal(c.images.length, 18);
-  assert.deepEqual(c.categories.map((k) => k.id), ['bakery-cafe', 'restaurant', 'fashion-retail', 'beauty-wellness', 'fitness-sport', 'general-local']);
+  assert.equal(c.images.length, 22);
+  assert.deepEqual(c.categories.map((k) => k.id), ['bakery-cafe', 'restaurant', 'fashion-retail', 'beauty-wellness', 'fitness-sport', 'general-local', 'travel-tourism']);
   for (const k of c.categories) {
-    assert.equal(c.images.filter((i) => i.category === k.id).length, 3, k.id);
+    assert.equal(c.images.filter((i) => i.category === k.id).length, k.id === 'travel-tourism' ? 4 : 3, k.id);
     assert.ok(k.label.en && k.label.de, k.id + ' label');
   }
-  assert.equal(new Set(c.images.map((i) => i.id)).size, 18, 'ids are unique');
+  const travel = c.categories[6];
+  assert.deepEqual([travel.label.en, travel.label.de], ['Travel & Tourism', 'Reisen & Tourismus']);
+  assert.deepEqual(c.images.filter((i) => i.category === 'travel-tourism').map((i) => i.id),
+    ['travel-greece-01', 'travel-maldives-01', 'travel-france-01', 'travel-turkey-01']);
+  assert.equal(new Set(c.images.map((i) => i.id)).size, 22, 'ids are unique');
   for (const i of c.images) assert.ok(i.label.en && i.label.de && i.file === i.id + '.jpg', i.id);
 });
 
@@ -230,12 +316,47 @@ test('catalog: every file is the unaltered approved original, 1200x900 (4:3) JPE
   }
 });
 
+test('catalog: the first 18 images and their entries are unchanged', () => {
+  const crypto = require('crypto');
+  const c = catalog();
+  assert.deepEqual(c.images.slice(0, 18).map((i) => i.id), Object.keys(ORIGINAL_18), 'same 18, same order');
+  for (const i of c.images.slice(0, 18)) {
+    assert.equal(i.origin.sha256, ORIGINAL_18[i.id], i.id + ' catalog checksum');
+    const buf = fs.readFileSync(path.join(PUB, c.basePath, i.file));
+    assert.equal(crypto.createHash('sha256').update(buf).digest('hex'), ORIGINAL_18[i.id], i.file + ' file');
+  }
+});
+
 test('catalog: origin is recorded per image, and every starter image is marked AI-generated', () => {
   const c = catalog();
   assert.equal(c.aiLabel, 'AI · KI-generiert');
   for (const i of c.images) {
     assert.equal(i.origin.type, 'ai_generated', i.id);
-    assert.ok(i.origin.sourceMaster && /^[0-9a-f]{64}$/.test(i.origin.sha256), i.id);
+    assert.ok((i.origin.sourceMaster || i.origin.sourceFile) && /^[0-9a-f]{64}$/.test(i.origin.sha256), i.id);
+  }
+});
+
+test('the two withheld travel pictures are in neither the catalog, the folder nor the server list', () => {
+  const c = catalog();
+  const serverList = fs.readFileSync(path.join(__dirname, '..', 'src', 'data', 'dealImages.js'), 'utf8');
+  const files = fs.readdirSync(path.join(PUB, c.basePath));
+  for (const name of ['dubai', 'thailand']) {
+    assert.ok(!c.images.some((i) => i.id.includes(name) || i.file.includes(name)), name + ' in catalog');
+    assert.ok(!files.some((f) => f.includes(name)), name + ' file in starter folder');
+    assert.ok(!new RegExp("id: '[^']*" + name).test(serverList), name + ' in server list');
+  }
+  assert.equal(files.length, 22);
+});
+
+test('catalog: travel images state what is known about their origin and leave the rest explicitly unknown', () => {
+  const c = catalog();
+  for (const i of c.images.filter((x) => x.category === 'travel-tourism')) {
+    assert.equal(i.origin.sourcePackage, 'qraivy_travel_images.zip', i.id);
+    assert.equal(i.origin.receivedOn, '2026-10-11', i.id);
+    assert.ok(i.origin.sourceFile.endsWith('.jpg'), i.id);
+    // Not recorded by the source: present as null, never guessed.
+    assert.ok('generator' in i.origin && i.origin.generator === null, i.id + ' generator');
+    assert.ok('generatedOn' in i.origin && i.origin.generatedOn === null, i.id + ' generatedOn');
   }
 });
 
@@ -272,6 +393,53 @@ test('a half-typed date is reported, never silently read as "no date"', () => {
   assert.match(page, /partial\[k\] = !el\.value && !!\(el\.validity && el\.validity\.badInput\);/);
   const t = dictionary();
   for (const lang of ['en', 'de']) assert.ok(t[lang].e_date_incomplete && t[lang].e_time_needs_date && t[lang].e_end_before && t[lang].e_end_past);
+});
+
+// ── Prices ─────────────────────────────────────────────────────
+// fmtMoney() is run for real (it is self-contained apart from locale()).
+function moneyFormatter(lang) {
+  const start = page.indexOf('  function fmtMoney(n, currency) {');
+  const end = page.indexOf('  // Two offer lines are "the same suggestion"');
+  assert.ok(start !== -1 && end > start, 'fmtMoney not found');
+  return vm.runInNewContext('(function () { function locale() { return ' + JSON.stringify(lang === 'de' ? 'de-DE' : 'en-GB') + '; }\n' + page.slice(start, end) + '\nreturn fmtMoney; })()', { Intl });
+}
+
+test('prices have a space between currency symbol and amount, in English and German', () => {
+  const en = moneyFormatter('en'), de = moneyFormatter('de');
+  assert.equal(en(1500, 'USD'), 'US$ 1,500.00');
+  assert.equal(en(5.9, 'EUR'), '€ 5.90');
+  assert.equal(en(499, 'GBP'), '£ 499.00');
+  assert.equal(en(1500, 'CHF'), 'CHF 1,500.00');
+  assert.equal(de(1500, 'USD'), '1.500,00 $');
+  assert.equal(de(5.9, 'EUR'), '5,90 €');
+  assert.equal(de(499, 'GBP'), '499,00 £');
+  assert.equal(de(1500, 'CHF'), '1.500,00 CHF');
+  assert.equal(en(5.9), '€ 5.90', 'EUR when no currency is given');
+});
+
+test('price formatting never changes the amount or the currency, and uses ordinary spaces only', () => {
+  for (const lang of ['en', 'de']) {
+    const f = moneyFormatter(lang);
+    for (const currency of ['EUR', 'USD', 'GBP', 'CHF']) {
+      for (const amount of [0.01, 5.9, 499, 1500, 1234567.89]) {
+        const text = f(amount, currency);
+        const plain = new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB', { style: 'currency', currency }).format(amount);
+        assert.equal(text.replace(/\s/g, ''), plain.replace(/\s/g, ''), lang + ' ' + currency + ' ' + amount + ': only spacing may differ');
+        assert.ok(!/[\u00A0\u202F]/.test(text) && !/ {2}/.test(text) && text === text.trim(), JSON.stringify(text));
+        assert.equal((text.match(/ /g) || []).length, 1, 'exactly one space: ' + JSON.stringify(text));
+      }
+    }
+  }
+});
+
+test('the same offer line is used on cards, in the live preview and in the review', () => {
+  assert.ok(page.includes("'<div class=\"deal-card__offer\">' + esc(offerLine(d)) + '</div>' +"), 'cards');
+  assert.ok(page.includes("$('deal-pv-offer').textContent = offerLine(d) || t('pv_ph_offer');"), 'live preview');
+  assert.ok(page.includes("['rv_offer', d.offerText.trim() ? esc(offerLine(d)) : none, 1],"), 'review');
+  // The price chip and the review's details line come from the same formatter.
+  assert.equal((page.match(/fmtMoney\(/g) || []).length, 4, 'one definition + suggestion, chip, details');
+  // What is sent to the server is the form's text and the numeric price, never a reformatted number.
+  assert.ok(page.includes("if (raw !== '') details[f.key] = f.kind === 'number' ? num(raw) : raw;"));
 });
 
 // ── Design system ──────────────────────────────────────────────

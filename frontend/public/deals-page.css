@@ -38,6 +38,8 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 280px: no token — smallest readable card width */
   gap: var(--qds-space-4);
 }
+/* display:grid above would otherwise override the hidden attribute. */
+.deal-list[hidden] { display: none; }
 .deal-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .deal-card__media {
   aspect-ratio: 4 / 3;
@@ -405,3 +407,21 @@
 }
 
 .deal-summary-line[hidden] { display: none; }
+
+/* ── Saving, loading and error states (Phase C1) ─────────────── */
+.deal-alert {
+  padding: var(--qds-space-3) var(--qds-space-4);
+  border: 1px solid var(--qds-color-danger);
+  border-radius: var(--qds-radius-md);
+  background: rgba(239, 68, 68, 0.08); /* no --qds-* token for this alpha — danger tint */
+  color: var(--qds-color-text-primary);
+  font-size: var(--qds-text-body-sm-size);
+  line-height: var(--qds-text-body-sm-line-height);
+  overflow-wrap: anywhere;
+}
+.deal-alert[hidden], .deal-note[hidden] { display: none; }
+.deal-card-skeleton { aspect-ratio: 4 / 5; min-height: 240px; } /* 240px: no token — roughly one deal card */
+.deal-upload__status { margin-top: var(--qds-space-2); font-size: var(--qds-text-caption-size); color: var(--qds-color-text-secondary); }
+.deal-upload__status[hidden] { display: none; }
+.deal-upload--busy { opacity: 0.6; cursor: progress; }
+.deal-busy .deal-step, .deal-busy .deal-starter, .deal-busy .deal-swatch { cursor: progress; }

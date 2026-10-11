@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="deals-page.css"/>
   <script src="js/qraivy-lang.js"></script>
   <script src="js/admin-shell.js"></script>
+  <script src="js/api-base.js"></script>
   <script src="js/deal-starter-images.js"></script>
 </head>
 <body>
@@ -66,11 +67,12 @@
   <main>
     <div class="qds-page-wrap">
 
-      <!-- Phase B1: visual foundation only. Nothing on this page talks to
-           the backend; every deal lives in this browser tab's memory. -->
+      <!-- Deals are real and saved through /deals (dealRoutes.js). What does
+           NOT exist yet is any customer-facing display, and the page says so:
+           "published" here never means "publicly visible". -->
       <div class="deal-preview-banner" role="note">
-        <span class="deal-preview-banner__tag" data-i18n="dl_banner_tag">Preview</span>
-        <span data-i18n="dl_banner_text">Visual prototype only. Deals you create here stay in this browser tab, are not saved to your account and are never shown to customers.</span>
+        <span class="deal-preview-banner__tag" data-i18n="dl_banner_tag">Note</span>
+        <span data-i18n="dl_banner_text">Deals are saved to your account. Publishing marks a deal as ready, but deals are not shown to your customers yet: the landing page display is still being built.</span>
       </div>
 
       <!-- ═══ LIST VIEW ═══ -->
@@ -83,9 +85,23 @@
           <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-create-btn" data-i18n="dl_create">Create deal</button>
         </div>
 
+        <div class="deal-list" id="deal-loading" aria-busy="true">
+          <div class="qds-skeleton qds-skeleton--card deal-card-skeleton"></div>
+          <div class="qds-skeleton qds-skeleton--card deal-card-skeleton"></div>
+          <div class="qds-skeleton qds-skeleton--card deal-card-skeleton"></div>
+          <span class="deal-sr-only" data-i18n="dl_loading">Loading your deals…</span>
+        </div>
+
+        <div class="qds-empty-state" id="deal-load-error" role="alert" hidden>
+          <div class="qds-empty-state__icon" aria-hidden="true">&#x26A0;</div>
+          <div class="qds-empty-state__title" data-i18n="dl_load_error_title">Your deals could not be loaded</div>
+          <div class="qds-empty-state__sub" id="deal-load-error-sub" data-i18n="dl_load_error_sub">Check your connection and try again.</div>
+          <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" id="deal-retry-btn" data-i18n="dl_retry">Try again</button>
+        </div>
+
         <div class="deal-list" id="deal-list" hidden></div>
 
-        <div class="qds-empty-state" id="deal-empty">
+        <div class="qds-empty-state" id="deal-empty" hidden>
           <div class="qds-empty-state__icon" aria-hidden="true">&#x1F3F7;</div>
           <div class="qds-empty-state__title" data-i18n="dl_empty_title">No deals yet</div>
           <div class="qds-empty-state__sub" data-i18n="dl_empty_sub">Build your first deal in four short steps. You can review everything before it goes anywhere.</div>
@@ -114,6 +130,8 @@
 
         <div class="deal-layout">
           <div class="deal-form">
+            <div class="deal-alert" id="deal-alert" role="alert" hidden></div>
+            <p class="deal-note" id="deal-published-note" data-i18n="db_published_note" hidden>This deal is published. Changes you save stay a draft until you publish again.</p>
 
             <!-- STEP 1 — CONTENT -->
             <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="1">
@@ -244,6 +262,7 @@
                     <span class="deal-upload__hint" data-i18n="s2_drop_hint">PNG, JPG or WebP, up to 5 MB</span>
                   </label>
                   <p class="qds-field__message" id="err-image" hidden></p>
+                  <p class="deal-upload__status" id="deal-upload-status" role="status" data-i18n="s2_uploading" hidden>Uploading your picture…</p>
                 </div>
               </div>
 
@@ -251,7 +270,7 @@
                 <div class="deal-swatches" id="deal-swatches"></div>
               </div>
 
-              <p class="deal-note" data-i18n="s2_note">Preview only: a picture you upload is displayed from your device and is not sent anywhere.</p>
+              <p class="deal-note" data-i18n="s2_note">A picture you upload is stored with your deal and cropped to 4:3.</p>
 
               <div class="deal-nav">
                 <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
@@ -325,13 +344,13 @@
 
               <ul class="deal-issues" id="deal-issues" hidden></ul>
 
-              <p class="deal-note" data-i18n="s4_note">Preview only: “Save draft” and “Publish” change the status on this screen. Nothing is saved to your account, sent to customers or placed on a landing page.</p>
+              <p class="deal-note" data-i18n="s4_note">Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.</p>
 
               <div class="deal-nav">
                 <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
                 <div class="deal-nav__end">
-                  <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" id="deal-save-draft" data-i18n="s4_save">Save draft (preview)</button>
-                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-publish" data-i18n="s4_publish">Publish (preview)</button>
+                  <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" id="deal-save-draft" data-i18n="s4_save">Save draft</button>
+                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-publish" data-i18n="s4_publish">Publish</button>
                 </div>
               </div>
             </div>
@@ -360,16 +379,18 @@
 
     </div>
   </main>
-  <footer class="dash-footer"><span data-i18n="dl_footer">QRAIVY — Deals · Preview</span></footer>
+  <footer class="dash-footer"><span data-i18n="dl_footer">QRAIVY — Deals</span></footer>
 </div>
 
 <script>
 // ============================================================
-// Deals — Phase B1 visual foundation.
-// Local state only: no fetch, no API base, no storage of deal data.
+// Deals — Phase C1: the Deal Builder on the real Deals API.
+// Every deal is loaded from and saved to /deals (routes/dealRoutes.js),
+// as the signed-in owner (Clerk token). Nothing about a deal is kept in
+// browser storage: what the list shows is what the server returned.
 // Field names, the six offer types and the validation limits mirror
-// backend/src/services/dealService.js so the later API wiring changes
-// where the data goes, not how this screen works.
+// backend/src/services/dealService.js; the server validates again and
+// has the last word.
 // ============================================================
 (function () {
   'use strict';
@@ -415,16 +436,16 @@
 
   var _t = {
     en: {
-      dl_banner_tag: 'Preview',
-      dl_banner_text: 'Visual prototype only. Deals you create here stay in this browser tab, are not saved to your account and are never shown to customers.',
+      dl_banner_tag: 'Note',
+      dl_banner_text: 'Deals are saved to your account. Publishing marks a deal as ready, but deals are not shown to your customers yet: the landing page display is still being built.',
       dl_title: 'Deals', dl_title_em: '& Promotions',
       dl_sub: 'Create an offer once and show it on your Smart Landing Pages.',
       dl_create: 'Create deal', dl_create_first: 'Create your first deal',
       dl_empty_title: 'No deals yet',
       dl_empty_sub: 'Build your first deal in four short steps. You can review everything before it goes anywhere.',
-      dl_footer: 'QRAIVY — Deals · Preview',
-      dl_local: 'Local preview', dl_edit: 'Edit', dl_archive: 'Archive', dl_delete: 'Delete',
-      dl_confirm_delete: 'Delete this deal from the preview?',
+      dl_footer: 'QRAIVY — Deals',
+      dl_edit: 'Edit', dl_archive: 'Archive', dl_delete: 'Delete',
+      dl_confirm_delete: 'Delete this deal permanently?',
       st_draft: 'Draft', st_published: 'Published', st_archived: 'Archived', st_expired: 'Expired', st_scheduled: 'Scheduled',
       db_back: '← All deals', db_title_new: 'Create deal', db_title_edit: 'Edit deal',
       db_step1: 'Content', db_step2: 'Image', db_step3: 'Schedule', db_step4: 'Review',
@@ -450,8 +471,8 @@
       s2_ai_note: 'All starter images are AI-generated. They carry the label “AI · KI-generiert” wherever they are shown, including to your customers.',
       ai_label_sr: 'AI-generated image',
       s2_drop: 'Drop an image here or click to choose', s2_drop_hint: 'PNG, JPG or WebP, up to 5 MB',
-      s2_remove: 'Remove image', s2_note: 'Preview only: a picture you upload is displayed from your device and is not sent anywhere.',
-      s2_info_upload: 'Your picture: {name} ({size})', s2_info_bg: 'Background: {name}', s2_info_starter: 'Starter image: {name} (AI-generated)',
+      s2_remove: 'Remove image', s2_note: 'A picture you upload is stored with your deal and cropped to 4:3.',
+      s2_info_upload: 'Your uploaded picture', s2_info_bg: 'Background: {name}', s2_info_starter: 'Starter image: {name} (AI-generated)',
       bg_ember: 'Ember', bg_sunrise: 'Sunrise', bg_night: 'Night', bg_slate: 'Slate', bg_forest: 'Forest', bg_ocean: 'Ocean', bg_plum: 'Plum', bg_sand: 'Sand',
       s3_title: 'When is the deal valid?', s3_lead: 'Dates are optional. Add a time only if the deal starts or ends at a specific hour; otherwise it runs for the whole day.',
       s3_start_date: 'Start date', s3_start_time: 'Start time', s3_end_date: 'End date', s3_end_time: 'End time',
@@ -461,10 +482,10 @@
       sum_range: 'Valid from {start} until {end}.',
       pv_valid_none: 'No end date', pv_valid_from: 'From {start}', pv_valid_until: 'Until {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Review your deal', s4_lead: 'Check every detail. Use Edit to jump back to a step.',
-      s4_note: 'Preview only: “Save draft” and “Publish” change the status on this screen. Nothing is saved to your account, sent to customers or placed on a landing page.',
-      s4_save: 'Save draft (preview)', s4_publish: 'Publish (preview)',
+      s4_note: 'Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.',
+      s4_save: 'Save draft', s4_publish: 'Publish',
       rv_type: 'Deal type', rv_details: 'Details', rv_title: 'Title', rv_offer: 'Offer line', rv_desc: 'Description', rv_image: 'Image', rv_period: 'Period',
-      rv_edit: 'Edit', rv_none: 'Not set', rv_no_image: 'No image', rv_image_upload: 'Your picture ({name})', rv_image_bg: 'Background “{name}”', rv_image_starter: 'Starter image “{name}” (AI-generated)',
+      rv_edit: 'Edit', rv_none: 'Not set', rv_no_image: 'No image', rv_image_upload: 'Your uploaded picture', rv_image_bg: 'Background “{name}”', rv_image_starter: 'Starter image “{name}” (AI-generated)',
       pv_label: 'Live preview', pv_page: 'On your Smart Landing Page',
       pv_note: 'Example of how the deal could look. The final appearance on your page may differ.',
       pv_ph_title: 'Your deal title', pv_ph_offer: 'Your offer line', pv_no_image: 'No image',
@@ -477,25 +498,38 @@
       e_type: 'Choose a deal type.', e_required: 'This field is required.',
       e_number: 'Enter a number.', e_min: 'Must be at least {min}.', e_max: 'Must be at most {max}.',
       e_title: 'Give the deal a title.', e_offer: 'Write the offer line.',
-      e_img_type: 'Use a PNG, JPG or WebP image.', e_img_size: 'The image is larger than 5 MB.', e_img_read: 'The image could not be read.',
+      e_img_type: 'Use a PNG, JPG or WebP image.', e_img_size: 'The image is larger than 5 MB.', 
       e_end_before: 'The end must be after the start.', e_end_past: 'The end is in the past. A deal that has already ended cannot be published.',
       e_date_incomplete: 'This entry is incomplete. Fill in every part or clear the field.', e_time_needs_date: 'Add a date for this time.',
       is_step1: 'Content is incomplete.', is_step3: 'The schedule needs attention.',
-      toast_draft: 'Draft kept in this preview only', toast_published: 'Marked as published in this preview only',
-      toast_archived: 'Archived in this preview', toast_deleted: 'Removed from this preview',
+      toast_draft: 'Draft saved', toast_published: 'Deal published',
+      toast_archived: 'Deal archived', toast_deleted: 'Deal deleted',
+      dl_unpublished: 'Unpublished changes',
+      dl_loading: 'Loading your deals…',
+      dl_load_error_title: 'Your deals could not be loaded',
+      dl_load_error_sub: 'Check your connection and try again.',
+      dl_retry: 'Try again',
+      db_published_note: 'This deal is published. Changes you save stay a draft until you publish again.',
+      s2_uploading: 'Uploading your picture…',
+      e_network: 'Could not reach the server. Check your connection and try again.',
+      e_server: 'Something went wrong on our side. Please try again.',
+      e_save_detail: 'Could not save: {detail}',
+      e_gone: 'This deal no longer exists.',
+      e_img_storage: 'Image upload is not available right now. Please try again later.',
+      e_img_upload: 'The picture could not be uploaded. Please try again.',
       lang_toggle: 'Deutsch'
     },
     de: {
-      dl_banner_tag: 'Vorschau',
-      dl_banner_text: 'Nur ein visueller Prototyp. Hier erstellte Deals bleiben in diesem Browser-Tab, werden nicht in deinem Konto gespeichert und Kunden nie angezeigt.',
+      dl_banner_tag: 'Hinweis',
+      dl_banner_text: 'Deals werden in deinem Konto gespeichert. Mit dem Veröffentlichen ist ein Deal fertig, er wird deinen Kunden aber noch nicht angezeigt: Die Anzeige auf der Landingpage ist noch in Arbeit.',
       dl_title: 'Deals', dl_title_em: '& Aktionen',
       dl_sub: 'Erstelle ein Angebot einmal und zeige es auf deinen Smart Landingpages.',
       dl_create: 'Deal erstellen', dl_create_first: 'Ersten Deal erstellen',
       dl_empty_title: 'Noch keine Deals',
       dl_empty_sub: 'Erstelle deinen ersten Deal in vier kurzen Schritten. Du prüfst alles, bevor irgendetwas veröffentlicht wird.',
-      dl_footer: 'QRAIVY — Deals · Vorschau',
-      dl_local: 'Lokale Vorschau', dl_edit: 'Bearbeiten', dl_archive: 'Archivieren', dl_delete: 'Löschen',
-      dl_confirm_delete: 'Diesen Deal aus der Vorschau löschen?',
+      dl_footer: 'QRAIVY — Deals',
+      dl_edit: 'Bearbeiten', dl_archive: 'Archivieren', dl_delete: 'Löschen',
+      dl_confirm_delete: 'Diesen Deal endgültig löschen?',
       st_draft: 'Entwurf', st_published: 'Veröffentlicht', st_archived: 'Archiviert', st_expired: 'Abgelaufen', st_scheduled: 'Geplant',
       db_back: '← Alle Deals', db_title_new: 'Deal erstellen', db_title_edit: 'Deal bearbeiten',
       db_step1: 'Inhalt', db_step2: 'Bild', db_step3: 'Zeitraum', db_step4: 'Überprüfen',
@@ -521,8 +555,8 @@
       s2_ai_note: 'Alle Vorlagen sind KI-generiert. Sie tragen überall, wo sie gezeigt werden, den Hinweis „AI · KI-generiert“ – auch gegenüber deinen Kunden.',
       ai_label_sr: 'KI-generiertes Bild',
       s2_drop: 'Bild hierher ziehen oder klicken', s2_drop_hint: 'PNG, JPG oder WebP, bis 5 MB',
-      s2_remove: 'Bild entfernen', s2_note: 'Nur Vorschau: Ein hochgeladenes Bild wird von deinem Gerät angezeigt und nirgendwohin gesendet.',
-      s2_info_upload: 'Dein Bild: {name} ({size})', s2_info_bg: 'Hintergrund: {name}', s2_info_starter: 'Vorlage: {name} (KI-generiert)',
+      s2_remove: 'Bild entfernen', s2_note: 'Ein hochgeladenes Bild wird mit deinem Deal gespeichert und auf 4:3 zugeschnitten.',
+      s2_info_upload: 'Dein hochgeladenes Bild', s2_info_bg: 'Hintergrund: {name}', s2_info_starter: 'Vorlage: {name} (KI-generiert)',
       bg_ember: 'Glut', bg_sunrise: 'Sonnenaufgang', bg_night: 'Nacht', bg_slate: 'Schiefer', bg_forest: 'Wald', bg_ocean: 'Ozean', bg_plum: 'Pflaume', bg_sand: 'Sand',
       s3_title: 'Wann gilt der Deal?', s3_lead: 'Die Angaben sind optional. Gib eine Uhrzeit nur an, wenn der Deal zu einer bestimmten Stunde beginnt oder endet; sonst gilt er den ganzen Tag.',
       s3_start_date: 'Startdatum', s3_start_time: 'Startzeit', s3_end_date: 'Enddatum', s3_end_time: 'Endzeit',
@@ -532,10 +566,10 @@
       sum_range: 'Gültig von {start} bis {end}.',
       pv_valid_none: 'Kein Enddatum', pv_valid_from: 'Ab {start}', pv_valid_until: 'Bis {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Deal überprüfen', s4_lead: 'Prüfe alle Angaben. Mit „Bearbeiten“ springst du zum jeweiligen Schritt zurück.',
-      s4_note: 'Nur Vorschau: „Entwurf speichern“ und „Veröffentlichen“ ändern den Status auf diesem Bildschirm. Nichts wird in deinem Konto gespeichert, an Kunden gesendet oder auf einer Landingpage platziert.',
-      s4_save: 'Entwurf speichern (Vorschau)', s4_publish: 'Veröffentlichen (Vorschau)',
+      s4_note: 'Mit dem Veröffentlichen ist dieser Deal fertig. Er wird deinen Kunden noch nicht angezeigt: Die Anzeige auf der Landingpage ist noch in Arbeit.',
+      s4_save: 'Entwurf speichern', s4_publish: 'Veröffentlichen',
       rv_type: 'Deal-Art', rv_details: 'Details', rv_title: 'Titel', rv_offer: 'Angebotszeile', rv_desc: 'Beschreibung', rv_image: 'Bild', rv_period: 'Zeitraum',
-      rv_edit: 'Bearbeiten', rv_none: 'Nicht angegeben', rv_no_image: 'Kein Bild', rv_image_upload: 'Dein Bild ({name})', rv_image_bg: 'Hintergrund „{name}“', rv_image_starter: 'Vorlage „{name}“ (KI-generiert)',
+      rv_edit: 'Bearbeiten', rv_none: 'Nicht angegeben', rv_no_image: 'Kein Bild', rv_image_upload: 'Dein hochgeladenes Bild', rv_image_bg: 'Hintergrund „{name}“', rv_image_starter: 'Vorlage „{name}“ (KI-generiert)',
       pv_label: 'Live-Vorschau', pv_page: 'Auf deiner Smart Landingpage',
       pv_note: 'Beispiel, wie der Deal aussehen könnte. Die endgültige Darstellung auf deiner Seite kann abweichen.',
       pv_ph_title: 'Dein Deal-Titel', pv_ph_offer: 'Deine Angebotszeile', pv_no_image: 'Kein Bild',
@@ -548,12 +582,25 @@
       e_type: 'Wähle eine Deal-Art.', e_required: 'Dieses Feld ist erforderlich.',
       e_number: 'Gib eine Zahl ein.', e_min: 'Mindestens {min}.', e_max: 'Höchstens {max}.',
       e_title: 'Gib dem Deal einen Titel.', e_offer: 'Schreibe die Angebotszeile.',
-      e_img_type: 'Verwende ein PNG-, JPG- oder WebP-Bild.', e_img_size: 'Das Bild ist größer als 5 MB.', e_img_read: 'Das Bild konnte nicht gelesen werden.',
+      e_img_type: 'Verwende ein PNG-, JPG- oder WebP-Bild.', e_img_size: 'Das Bild ist größer als 5 MB.', 
       e_end_before: 'Das Ende muss nach dem Beginn liegen.', e_end_past: 'Das Ende liegt in der Vergangenheit. Ein bereits beendeter Deal kann nicht veröffentlicht werden.',
       e_date_incomplete: 'Diese Angabe ist unvollständig. Fülle alle Teile aus oder leere das Feld.', e_time_needs_date: 'Gib zu dieser Uhrzeit ein Datum an.',
       is_step1: 'Der Inhalt ist unvollständig.', is_step3: 'Der Zeitraum muss korrigiert werden.',
-      toast_draft: 'Entwurf nur in dieser Vorschau behalten', toast_published: 'Nur in dieser Vorschau als veröffentlicht markiert',
-      toast_archived: 'In dieser Vorschau archiviert', toast_deleted: 'Aus dieser Vorschau entfernt',
+      toast_draft: 'Entwurf gespeichert', toast_published: 'Deal veröffentlicht',
+      toast_archived: 'Deal archiviert', toast_deleted: 'Deal gelöscht',
+      dl_unpublished: 'Unveröffentlichte Änderungen',
+      dl_loading: 'Deine Deals werden geladen …',
+      dl_load_error_title: 'Deine Deals konnten nicht geladen werden',
+      dl_load_error_sub: 'Prüfe deine Verbindung und versuche es erneut.',
+      dl_retry: 'Erneut versuchen',
+      db_published_note: 'Dieser Deal ist veröffentlicht. Gespeicherte Änderungen bleiben ein Entwurf, bis du erneut veröffentlichst.',
+      s2_uploading: 'Dein Bild wird hochgeladen …',
+      e_network: 'Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.',
+      e_server: 'Bei uns ist etwas schiefgelaufen. Bitte versuche es erneut.',
+      e_save_detail: 'Speichern nicht möglich: {detail}',
+      e_gone: 'Diesen Deal gibt es nicht mehr.',
+      e_img_storage: 'Der Bild-Upload ist gerade nicht verfügbar. Bitte versuche es später erneut.',
+      e_img_upload: 'Das Bild konnte nicht hochgeladen werden. Bitte versuche es erneut.',
       lang_toggle: 'English'
     }
   };
@@ -595,18 +642,131 @@
     var opts = d[which + 'Time'] ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' };
     return new Intl.DateTimeFormat(locale(), opts).format(at);
   }
+  // A price always has a space between the currency symbol and the amount,
+  // in both languages: "US$ 1,500.00", "€ 5.90" (en) and "1.500,00 $",
+  // "5,90 €" (de). The browser's own formatter supplies digits, separators
+  // and symbol; only the gap is made uniform -- where it puts the symbol
+  // directly against the number a space is added, and the non-breaking
+  // spaces it uses elsewhere become ordinary ones, so the same price is the
+  // same text everywhere it is shown or stored. The amount and the currency
+  // code themselves are never changed here.
   function fmtMoney(n, currency) {
-    try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: currency || 'EUR' }).format(n); }
-    catch (e) { return n + ' ' + (currency || 'EUR'); }
+    try {
+      var parts = new Intl.NumberFormat(locale(), { style: 'currency', currency: currency || 'EUR' }).formatToParts(n);
+      var out = '';
+      parts.forEach(function (part, i) {
+        var prev = parts[i - 1];
+        if (prev && (part.type === 'currency') !== (prev.type === 'currency') && part.type !== 'literal' && prev.type !== 'literal') out += ' ';
+        out += part.value;
+      });
+      return out.replace(/[\u00A0\u202F]/g, ' ');
+    } catch (e) { return n + ' ' + (currency || 'EUR'); }
   }
-  function fmtSize(bytes) {
-    return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  // Two offer lines are "the same suggestion" if they differ only in spacing.
+  function sameText(a, b) { return String(a).replace(/[\s\u00A0\u202F]/g, '') === String(b).replace(/[\s\u00A0\u202F]/g, ''); }
+  // The offer line as shown on a card, in the preview and in the review. A
+  // line that is still the automatic suggestion is shown in today's format
+  // even if it was saved before the spacing existed ("Only US$1,500.00");
+  // a line the owner wrote themselves is shown exactly as written.
+  function offerLine(d) {
+    var text = String(d.offerText || '').trim(), sg = suggestion(d);
+    return text && sg && sameText(text, sg) ? sg : text;
   }
   function num(v) { var s = String(v == null ? '' : v).trim().replace(',', '.'); return s === '' ? null : Number(s); }
   function toast(msg) { if (window.QraivyShell && window.QraivyShell.toast) window.QraivyShell.toast(msg); }
 
-  // ── State (this tab's memory only) ───────────────────────────
+  // ── API ──────────────────────────────────────────────────────
+  // Same base resolver as the dashboard (js/api-base.js) and the same
+  // Clerk bearer token every other Admin page sends.
+  var API_BASE = String(window.QRAIVY_API_BASE == null ? 'https://api.qraivy.com' : window.QRAIVY_API_BASE).replace(/\/$/, '');
+  function ApiError(status, message) { this.status = status; this.message = message || ''; }
+  async function api(method, path, body) {
+    var res, data;
+    try {
+      if (!window.Clerk || !window.Clerk.session) throw new ApiError(401);
+      var token = await window.Clerk.session.getToken();
+      var opts = { method: method, headers: { Authorization: 'Bearer ' + token } };
+      if (typeof FormData !== 'undefined' && body instanceof FormData) opts.body = body;
+      else if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+      res = await fetch(API_BASE + path, opts);
+    } catch (e) {
+      if (e instanceof ApiError) { if (e.status === 401) window.location.href = 'login.html'; throw e; }
+      throw new ApiError(0);                       // never reached the server
+    }
+    try { data = await res.json(); } catch (e) { data = {}; }
+    if (res.status === 401) { window.location.href = 'login.html'; throw new ApiError(401); }
+    if (!res.ok) throw new ApiError(res.status, data && data.error);
+    return data;
+  }
+  // The server's own message is shown only for a rejected input (400/409);
+  // it is written for the owner. Everything else gets a general message.
+  function errorText(err) {
+    if (!(err instanceof ApiError)) return t('e_server');
+    if (err.status === 0) return t('e_network');
+    if (err.status === 404) return t('e_gone');
+    if ((err.status === 400 || err.status === 409) && err.message) return t('e_save_detail', { detail: err.message });
+    return t('e_server');
+  }
+
+  // ── Server <-> form mapping ──────────────────────────────────
+  // The form keeps a date and an optional time as two strings; the server
+  // keeps one instant. "No time" is stored as the edge of the day (start
+  // 00:00:00, end 23:59:59) and read back as "no time" again.
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function splitWhen(iso, which) {
+    var at = iso ? new Date(iso) : null;
+    if (!at || isNaN(at.getTime())) return { date: '', time: '' };
+    var wholeDay = which === 'end'
+      ? at.getHours() === 23 && at.getMinutes() === 59 && at.getSeconds() === 59
+      : at.getHours() === 0 && at.getMinutes() === 0 && at.getSeconds() === 0;
+    return { date: at.getFullYear() + '-' + pad2(at.getMonth() + 1) + '-' + pad2(at.getDate()), time: wholeDay ? '' : pad2(at.getHours()) + ':' + pad2(at.getMinutes()) };
+  }
+  function imageFromServer(img) {
+    if (!img || typeof img !== 'object') return null;
+    if (img.source === 'starter') return { source: 'starter', id: img.starterId, aiGenerated: img.aiGenerated === true };
+    if (img.source === 'background') return { source: 'background', id: img.backgroundId };
+    return img.url ? { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height } : null;
+  }
+  function imageToServer(img) {
+    if (!img) return null;
+    if (img.source === 'starter') return { source: 'starter', starterId: img.id };
+    if (img.source === 'background') return { source: 'background', backgroundId: img.id };
+    return { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height };
+  }
+  function fromServer(sd) {
+    var d = emptyDeal();
+    d.id = sd.dealId; d.status = sd.status; d.displayStatus = sd.displayStatus || sd.status;
+    d.hasUnpublishedChanges = !!sd.hasUnpublishedChanges; d.publishedAt = sd.publishedAt || null;
+    d.offerType = sd.offerType || null;
+    Object.keys(sd.offerDetails || {}).forEach(function (k) { if (sd.offerDetails[k] != null) d.offerDetails[k] = String(sd.offerDetails[k]); });
+    d.title = sd.title || ''; d.offerText = sd.offerText || ''; d.description = sd.description || '';
+    d.image = imageFromServer(sd.image);
+    var st = splitWhen(sd.startsAt, 'start'), en = splitWhen(sd.endsAt, 'end');
+    d.startDate = st.date; d.startTime = st.time; d.endDate = en.date; d.endTime = en.time;
+    return d;
+  }
+  function toServer(d) {
+    var details = null;
+    if (d.offerType && d.offerType !== 'custom') {
+      details = {};
+      (TYPE_FIELDS[d.offerType] || []).forEach(function (f) {
+        var raw = String(d.offerDetails[f.key] == null ? '' : d.offerDetails[f.key]).trim();
+        if (raw !== '') details[f.key] = f.kind === 'number' ? num(raw) : raw;
+      });
+    }
+    var st = moment(d, 'start'), en = moment(d, 'end');
+    return {
+      title: d.title.trim(), offerText: d.offerText.trim(), description: d.description.trim() || null,
+      offerType: d.offerType, offerDetails: details, image: imageToServer(d.image),
+      startsAt: st ? st.toISOString() : null, endsAt: en ? en.toISOString() : null
+    };
+  }
+
+  // ── State ────────────────────────────────────────────────────
+  // `deals` is always the server's list; `draft` is the form's working copy.
   var deals = [];
+  var loadState = 'loading'; // loading | ready | error
+  var busy = false;          // one request-driven action at a time
   var draft = null;       // the deal being edited (a working copy)
   var editingId = null;   // id of the list entry being edited, or null for a new one
   var step = 1;
@@ -614,10 +774,9 @@
   var offerAuto = true;   // offer line still follows the suggestion
   var imageTab = 'upload';
   var showErrors = { 1: false, 3: false };
-  var seq = 0;
 
   function emptyDeal() {
-    return { id: null, status: 'draft', publishedAt: null, offerType: null, offerDetails: {}, title: '', offerText: '', description: '', image: null, startDate: '', startTime: '', endDate: '', endTime: '' };
+    return { id: null, status: 'draft', displayStatus: 'draft', hasUnpublishedChanges: false, publishedAt: null, offerType: null, offerDetails: {}, title: '', offerText: '', description: '', image: null, startDate: '', startTime: '', endDate: '', endTime: '' };
   }
   function cloneDeal(d) {
     var c = {}; Object.keys(d).forEach(function (k) { c[k] = d[k]; });
@@ -676,7 +835,7 @@
   }
   function imageCss(image) {
     if (!image) return '';
-    if (image.source === 'uploaded') return 'url("' + image.dataUrl + '")';
+    if (image.source === 'uploaded') return image.url ? 'url("' + String(image.url).replace(/["\\\n]/g, '') + '")' : '';
     if (image.source === 'starter') { var st = starterById(image.id); return st ? 'url("' + STARTERS.basePath + st.file + '")' : ''; }
     var bg = BACKGROUNDS.filter(function (b) { return b.id === image.id; })[0];
     return bg ? bg.css : '';
@@ -687,6 +846,9 @@
   // make no such claim.
   function isAiImage(image) {
     if (!image || image.source !== 'starter') return false;
+    // Either source is enough: the server stamps aiGenerated on a stored
+    // starter image, and the catalog knows it before anything is saved.
+    if (image.aiGenerated === true) return true;
     var st = starterById(image.id);
     return !!(st && st.origin && st.origin.type === 'ai_generated');
   }
@@ -695,20 +857,15 @@
   }
   function imageName(image) {
     if (!image) return '';
-    if (image.source === 'uploaded') return image.name;
+    if (image.source === 'uploaded') return t('s2_info_upload');
     if (image.source === 'starter') { var st = starterById(image.id); return st ? (st.label[_lang] || st.label.en) : image.id; }
     return t('bg_' + image.id);
   }
 
-  // Display status: "expired" and "scheduled" are computed from the dates,
-  // never stored -- same rule as mergeDealState() in dealService.js.
-  function displayStatus(d) {
-    if (d.status !== 'published') return d.status;
-    var now = Date.now(), s = moment(d, 'start'), e = moment(d, 'end');
-    if (e && e.getTime() < now) return 'expired';
-    if (s && s.getTime() > now) return 'scheduled';
-    return 'published';
-  }
+  // Display status comes from the server (liveStatus() in dealService.js):
+  // draft, published, scheduled, expired or archived, judged from what is
+  // actually published -- never recomputed here from unsaved form fields.
+  function displayStatus(d) { return d.displayStatus || d.status || 'draft'; }
   var STATUS_BADGE = { draft: 'neutral', published: 'success', archived: 'neutral-dim', expired: 'warning', scheduled: 'info' };
   function statusBadge(d) {
     var s = displayStatus(d);
@@ -826,7 +983,7 @@
     var hasText = !!(d.title.trim() || d.offerText.trim());
     $('deal-pv').classList.toggle('deal-pv--placeholder', !hasText);
     $('deal-pv-title').textContent = d.title.trim() || t('pv_ph_title');
-    $('deal-pv-offer').textContent = d.offerText.trim() || t('pv_ph_offer');
+    $('deal-pv-offer').textContent = offerLine(d) || t('pv_ph_offer');
     var desc = $('deal-pv-desc');
     desc.textContent = d.description.trim(); desc.hidden = !d.description.trim();
     $('deal-pv-valid').textContent = validity(d, 'pv_valid');
@@ -864,7 +1021,7 @@
       $('deal-image-thumb').style.backgroundImage = imageCss(img);
       $('deal-image-ai').hidden = !isAiImage(img);
       $('deal-image-info').textContent = img.source === 'uploaded'
-        ? t('s2_info_upload', { name: img.name, size: fmtSize(img.size) })
+        ? t('s2_info_upload')
         : t(img.source === 'starter' ? 's2_info_starter' : 's2_info_bg', { name: imageName(img) });
     }
     ['starter', 'upload', 'background'].forEach(function (name) {
@@ -893,12 +1050,12 @@
   function renderReview() {
     var d = draft, none = '<span class="deal-review__value--empty">' + esc(t('rv_none')) + '</span>';
     var imgText = !d.image ? '<span class="deal-review__value--empty">' + esc(t('rv_no_image')) + '</span>'
-      : esc(t(d.image.source === 'uploaded' ? 'rv_image_upload' : (d.image.source === 'starter' ? 'rv_image_starter' : 'rv_image_bg'), { name: imageName(d.image) }));
+      : esc(d.image.source === 'uploaded' ? t('rv_image_upload') : t(d.image.source === 'starter' ? 'rv_image_starter' : 'rv_image_bg', { name: imageName(d.image) }));
     var rows = [
       ['rv_type', d.offerType ? esc(t('type_' + d.offerType)) : none, 1],
       ['rv_details', detailsText(d) ? esc(detailsText(d)) : none, 1, d.offerType === 'custom' || !d.offerType],
       ['rv_title', d.title.trim() ? esc(d.title.trim()) : none, 1],
-      ['rv_offer', d.offerText.trim() ? esc(d.offerText.trim()) : none, 1],
+      ['rv_offer', d.offerText.trim() ? esc(offerLine(d)) : none, 1],
       ['rv_desc', d.description.trim() ? esc(d.description.trim()).replace(/\n/g, '<br>') : none, 1],
       ['rv_image', imgText, 2],
       ['rv_period', esc(validity(d, 'sum')), 3]
@@ -934,6 +1091,7 @@
     var s = displayStatus(draft), badge = $('deal-status-badge');
     badge.className = 'qds-badge qds-badge--' + STATUS_BADGE[s];
     badge.textContent = t('st_' + s);
+    $('deal-published-note').hidden = draft.status !== 'published';
     renderSteps();
     renderCounters();
     paintContentErrors();
@@ -945,24 +1103,87 @@
 
   function renderList() {
     var list = $('deal-list');
-    list.hidden = deals.length === 0;
-    $('deal-empty').hidden = deals.length > 0;
+    $('deal-loading').hidden = loadState !== 'loading';
+    $('deal-load-error').hidden = loadState !== 'error';
+    list.hidden = loadState !== 'ready' || deals.length === 0;
+    $('deal-empty').hidden = loadState !== 'ready' || deals.length > 0;
     list.innerHTML = deals.map(function (d) {
-      var css = imageCss(d.image), archived = d.status === 'archived';
+      var css = imageCss(d.image), archived = d.status === 'archived', id = esc(d.id);
       return '<article class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--elevation-raised deal-card">' +
         '<div class="deal-card__media"' + (css ? ' style="background-image:' + esc(css) + '"' : '') + '>' + (isAiImage(d.image) ? aiLabelHtml() : '') + '</div>' +
         '<div class="deal-card__body">' +
-          '<div class="deal-card__badges">' + statusBadge(d) + '<span class="qds-badge qds-badge--warning">' + esc(t('dl_local')) + '</span></div>' +
+          '<div class="deal-card__badges">' + statusBadge(d) +
+            (d.status === 'published' && d.hasUnpublishedChanges ? '<span class="qds-badge qds-badge--warning">' + esc(t('dl_unpublished')) + '</span>' : '') + '</div>' +
           '<div class="deal-card__title">' + esc(d.title) + '</div>' +
-          '<div class="deal-card__offer">' + esc(d.offerText) + '</div>' +
+          '<div class="deal-card__offer">' + esc(offerLine(d)) + '</div>' +
           '<div class="deal-card__meta">' + esc(validity(d, 'pv_valid')) + '</div>' +
         '</div>' +
         '<div class="deal-card__actions">' +
-          (archived ? '' : '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-edit="' + d.id + '">' + esc(t('dl_edit')) + '</button>') +
-          (archived ? '' : '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-archive="' + d.id + '">' + esc(t('dl_archive')) + '</button>') +
-          '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-delete="' + d.id + '">' + esc(t('dl_delete')) + '</button>' +
+          (archived ? '' : '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-edit="' + id + '">' + esc(t('dl_edit')) + '</button>') +
+          (archived ? '' : '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-archive="' + id + '">' + esc(t('dl_archive')) + '</button>') +
+          '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-delete="' + id + '">' + esc(t('dl_delete')) + '</button>' +
         '</div></article>';
     }).join('');
+  }
+
+  async function loadDeals() {
+    loadState = 'loading'; renderList();
+    try {
+      var data = await api('GET', '/deals');
+      deals = (data.deals || []).map(fromServer);
+      loadState = 'ready';
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return;
+      loadState = 'error';
+      $('deal-load-error-sub').textContent = err instanceof ApiError && err.status === 0 ? t('dl_load_error_sub') : t('e_server');
+    }
+    renderList();
+  }
+
+  // ── Busy state: one action at a time, visibly ────────────────
+  // While a request runs, the button that started it shows the QDS loading
+  // state and every other action is inert, so a second click or a second
+  // button can never send a duplicate.
+  function setButtonBusy(btn, on) {
+    if (!btn) return;
+    if (on) {
+      btn.setAttribute('data-label', btn.textContent);
+      btn.innerHTML = '<span class="qds-btn__content">' + esc(btn.textContent) + '</span><span class="qds-btn__spinner" aria-hidden="true"></span>';
+      btn.classList.add('qds-btn--loading'); btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+    } else {
+      btn.textContent = btn.getAttribute('data-label') || btn.textContent;
+      btn.removeAttribute('data-label'); btn.classList.remove('qds-btn--loading'); btn.removeAttribute('aria-busy'); btn.disabled = false;
+    }
+  }
+  async function runBusy(btn, fn) {
+    if (busy) return undefined;
+    busy = true; setButtonBusy(btn, true);
+    document.body.classList.add('deal-busy');
+    try { return await fn(); }
+    finally {
+      busy = false; setButtonBusy(btn, false); document.body.classList.remove('deal-busy');
+      if (draft && step === 4 && !$('deal-builder-view').hidden) renderReview();
+    }
+  }
+  function showAlert(message) { var box = $('deal-alert'); box.textContent = message || ''; box.hidden = !message; if (message) box.scrollIntoView({ block: 'nearest' }); }
+
+  // Writes the form to the server: creates the draft on first save, then
+  // saves every field. Returns true when the server has it.
+  async function persist() {
+    showAlert('');
+    try {
+      var payload = toServer(draft), res;
+      if (!draft.id) {
+        res = await api('POST', '/deals', { title: payload.title, offerText: payload.offerText, offerType: payload.offerType });
+        draft.id = res.deal.dealId; editingId = draft.id;
+      }
+      res = await api('PUT', '/deals/' + encodeURIComponent(draft.id) + '/draft', payload);
+      draft.status = res.deal.status; draft.displayStatus = res.deal.displayStatus; draft.hasUnpublishedChanges = !!res.deal.hasUnpublishedChanges;
+      return true;
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) showAlert(errorText(err));
+      return false;
+    }
   }
 
   // ── Navigation between views and steps ───────────────────────
@@ -986,16 +1207,21 @@
     draft = deal ? cloneDeal(deal) : emptyDeal();
     step = 1;
     reached = deal ? 4 : 1;
-    offerAuto = !deal || draft.offerText === suggestion(draft);
+    offerAuto = !deal || sameText(draft.offerText, suggestion(draft));
+    if (deal && offerAuto && suggestion(draft)) draft.offerText = suggestion(draft);
     imageTab = draft.image ? (draft.image.source === 'uploaded' ? 'upload' : draft.image.source) : 'starter';
     showErrors = { 1: false, 3: false };
     fillForm();
+    showAlert('');
+    setUploading(false);
     showView('builder');
     renderBuilder();
   }
-  function goTo(n) {
+  // Moving forward saves first: each completed step is on the server
+  // before the next one opens. Moving back never needs a request.
+  async function goTo(n, btn) {
+    if (busy) return;
     if (n > step) {
-      // Moving forward: every step in between must be valid.
       if (step <= 1 && n > 1) {
         showErrors[1] = true;
         if (Object.keys(paintContentErrors()).length) { step = 1; renderBuilder(); focusFirstError(); return; }
@@ -1005,6 +1231,10 @@
         // A past end date does not block the review: it can still be kept as a draft.
         if (sch.blocking) { step = 3; renderBuilder(); focusFirstError(); return; }
       }
+      // Never send dates the form itself already knows are wrong.
+      if (validateSchedule(draft).blocking) { step = 3; reached = Math.max(reached, 3); renderBuilder(); focusFirstError(); return; }
+      var saved = await runBusy(btn, persist);
+      if (!saved) { renderBuilder(); return; }
     }
     step = n;
     if (n > reached) reached = n;
@@ -1017,42 +1247,64 @@
     var el = document.querySelector('.deal-panel:not([hidden]) .qds-field--error input, .deal-panel:not([hidden]) .qds-field--error textarea');
     if (el) el.focus();
   }
-  function closeBuilder() { draft = null; editingId = null; renderList(); showView('list'); }
+  function closeBuilder() { if (busy) return; draft = null; editingId = null; showAlert(''); showView('list'); loadDeals(); }
 
-  function commit(status) {
+  // Save draft / Publish from the review step. The list is reloaded from
+  // the server afterwards, so it shows what was really stored.
+  async function commit(status, btn) {
+    if (busy) return;
     showErrors[1] = true;
     if (Object.keys(validateContent(draft)).length) { goTo(1); return; }
     var sch = validateSchedule(draft);
     if (sch.blocking || (status === 'published' && sch.endPastOnly)) { step = 3; reached = Math.max(reached, 3); renderBuilder(); focusFirstError(); return; }
-    var saved = cloneDeal(draft);
-    saved.title = saved.title.trim(); saved.offerText = saved.offerText.trim(); saved.description = saved.description.trim();
-    if (status === 'published') { saved.status = 'published'; saved.publishedAt = new Date().toISOString(); }
-    else if (saved.status !== 'published') saved.status = 'draft';
-    if (editingId) {
-      deals = deals.map(function (d) { return d.id === editingId ? saved : d; });
-    } else {
-      seq += 1; saved.id = 'local-' + seq;
-      deals.unshift(saved);
-    }
+    var done = await runBusy(btn, async function () {
+      if (!(await persist())) return false;
+      if (status !== 'published') return true;
+      try { await api('POST', '/deals/' + encodeURIComponent(draft.id) + '/publish'); return true; }
+      catch (err) { if (!(err instanceof ApiError && err.status === 401)) showAlert(errorText(err)); return false; }
+    });
+    if (!done) return;
     closeBuilder();
     toast(t(status === 'published' ? 'toast_published' : 'toast_draft'));
   }
 
-  // ── Image handling (local only; nothing leaves the device) ───
-  function takeFile(file) {
-    if (!file) return;
+  // ── Image upload ─────────────────────────────────────────────
+  // The picture is sent to the server and only becomes the deal's image
+  // once the server has stored it and answered. A file that merely sits in
+  // this browser is never shown as if it were saved.
+  function setUploading(on) {
+    $('deal-upload-status').hidden = !on;
+    $('deal-image-file').disabled = on;
+    $('deal-upload').classList.toggle('deal-upload--busy', on);
+  }
+  async function takeFile(file) {
+    if (!file || busy) return;
     // Cleared straight away so choosing the same file again still fires "change".
     $('deal-image-file').value = '';
     if (IMAGE_TYPES.indexOf(file.type) === -1) { setError('field-image', 'err-image', t('e_img_type')); return; }
     if (file.size > IMAGE_MAX_BYTES) { setError('field-image', 'err-image', t('e_img_size')); return; }
-    var reader = new FileReader();
-    reader.onload = function () {
-      setError('field-image', 'err-image', '');
-      draft.image = { source: 'uploaded', dataUrl: String(reader.result), name: file.name, size: file.size };
-      renderImageStep(); renderPreview();
-    };
-    reader.onerror = function () { setError('field-image', 'err-image', t('e_img_read')); };
-    reader.readAsDataURL(file);
+    setError('field-image', 'err-image', '');
+    await runBusy(null, async function () {
+      setUploading(true);
+      try {
+        // The upload needs a deal to belong to; step 1 has normally created it.
+        if (!draft.id && !(await persist())) return;
+        var form = new FormData();
+        form.append('image', file);
+        var res = await api('POST', '/deals/' + encodeURIComponent(draft.id) + '/image', form);
+        draft.image = imageFromServer(res.deal.image);
+        draft.status = res.deal.status; draft.displayStatus = res.deal.displayStatus; draft.hasUnpublishedChanges = !!res.deal.hasUnpublishedChanges;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) return;
+        var msg = !(err instanceof ApiError) ? t('e_img_upload')
+          : err.status === 0 ? t('e_network')
+          : err.status === 503 ? t('e_img_storage')
+          : err.status === 400 && err.message ? err.message
+          : t('e_img_upload');
+        setError('field-image', 'err-image', msg);
+      } finally { setUploading(false); }
+    });
+    renderImageStep(); renderPreview();
   }
 
   // ── Events ───────────────────────────────────────────────────
@@ -1060,25 +1312,38 @@
     $('deal-create-btn').addEventListener('click', function () { openBuilder(null); });
     $('deal-empty-create-btn').addEventListener('click', function () { openBuilder(null); });
     $('deal-back-btn').addEventListener('click', closeBuilder);
+    $('deal-retry-btn').addEventListener('click', loadDeals);
 
     $('deal-list').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
       var id = btn.getAttribute('data-edit') || btn.getAttribute('data-archive') || btn.getAttribute('data-delete');
       var deal = deals.filter(function (d) { return d.id === id; })[0]; if (!deal) return;
-      if (btn.hasAttribute('data-edit')) openBuilder(deal);
-      else if (btn.hasAttribute('data-archive')) { deal.status = 'archived'; renderList(); toast(t('toast_archived')); }
-      else if (window.confirm(t('dl_confirm_delete'))) { deals = deals.filter(function (d) { return d.id !== id; }); renderList(); toast(t('toast_deleted')); }
+      if (busy) return;
+      if (btn.hasAttribute('data-edit')) { openBuilder(deal); return; }
+      var archive = btn.hasAttribute('data-archive');
+      if (!archive && !window.confirm(t('dl_confirm_delete'))) return;
+      runBusy(btn, async function () {
+        try {
+          if (archive) await api('POST', '/deals/' + encodeURIComponent(id) + '/archive');
+          else await api('DELETE', '/deals/' + encodeURIComponent(id));
+          toast(t(archive ? 'toast_archived' : 'toast_deleted'));
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 401) return;
+          toast(errorText(err));
+        }
+      }).then(loadDeals);
     });
 
     $('deal-steps').addEventListener('click', function (e) {
       var btn = e.target.closest('.deal-step'); if (!btn || btn.disabled) return;
-      goTo(Number(btn.getAttribute('data-step')));
+      goTo(Number(btn.getAttribute('data-step')), null);
     });
 
     $('deal-builder-view').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
       var action = btn.getAttribute('data-action');
-      if (action === 'next') goTo(step + 1);
+      if (busy) return;
+      if (action === 'next') goTo(step + 1, btn);
       else if (action === 'back') goTo(step - 1);
       else if (action === 'cancel') closeBuilder();
       else if (btn.hasAttribute('data-goto')) goTo(Number(btn.getAttribute('data-goto')));
@@ -1117,7 +1382,7 @@
     $('deal-title').addEventListener('input', function (e) { draft.title = e.target.value; renderCounters(); paintContentErrors(); renderPreview(); });
     $('deal-offerText').addEventListener('input', function (e) {
       draft.offerText = e.target.value;
-      offerAuto = e.target.value === '' || e.target.value === suggestion(draft);
+      offerAuto = e.target.value === '' || sameText(e.target.value, suggestion(draft));
       renderCounters(); paintContentErrors(); renderPreview();
     });
     $('deal-description').addEventListener('input', function (e) { draft.description = e.target.value; renderCounters(); renderPreview(); });
@@ -1142,8 +1407,8 @@
     drop.addEventListener('drop', function (e) { takeFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
     $('deal-image-remove').addEventListener('click', function () { draft.image = null; $('deal-image-file').value = ''; renderImageStep(); renderPreview(); });
 
-    $('deal-save-draft').addEventListener('click', function () { commit('draft'); });
-    $('deal-publish').addEventListener('click', function () { commit('published'); });
+    $('deal-save-draft').addEventListener('click', function () { commit('draft', $('deal-save-draft')); });
+    $('deal-publish').addEventListener('click', function () { commit('published', $('deal-publish')); });
   }
 
   // ── Language (same mechanism as analytics.html) ──────────────
@@ -1178,6 +1443,10 @@
     applyLang(_lang);
     renderPreview();
   });
+
+  // Called by initDeals() once Clerk has confirmed the signed-in owner:
+  // no request is made before there is a session to make it with.
+  window.QraivyDeals = { start: loadDeals };
 })();
 
 // ── Account shell (same sign-in gate and sidebar wiring as analytics.html) ──
@@ -1192,6 +1461,8 @@ async function initDeals() {
   document.getElementById('sb-signout').addEventListener('click', async e => {
     e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
   });
+
+  window.QraivyDeals.start();
 }
 (function () {
   // Sidebar collapse (desktop). The mobile drawer is bound by js/admin-shell.js.

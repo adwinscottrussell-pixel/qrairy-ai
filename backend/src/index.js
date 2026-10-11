@@ -20,6 +20,7 @@ const lpRoutes   = require('./routes/lpRoutes');
 const tierRoutes = require('./routes/tierRoutes');
 const loyaltyAdminRoutes = require('./routes/loyaltyAdminRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const dealRoutes = require('./routes/dealRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 
@@ -66,6 +67,7 @@ app.use('/', lpRoutes);
 app.use('/tier', tierRoutes);
 app.use('/loyalty', loyaltyAdminRoutes);
 app.use('/customers', customerRoutes);
+app.use('/deals', dealRoutes);
 app.use(errorHandler);
 
 app.listen(PORT, () => {

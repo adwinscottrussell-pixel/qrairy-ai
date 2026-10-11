@@ -1,19 +1,35 @@
 // ============================================================
 // deal-starter-images.js — QRAIVY Deal Builder starter-image catalog.
 //
-// The 18 founder-approved starter images (six categories, three each),
-// 1200 x 900 px, 4:3, JPEG. Files live in images/deals/starter/ and are
-// byte-identical copies of the approved package
-// "stadtpocket_angebote_starter_18_FINAL" (2026-09-10); each entry's
-// sha256 below is the checksum of that original, so any later change to
-// a file is detectable (tests/dealsPage.test.js checks it).
+// 22 starter images in seven categories, 1200 x 900 px, 4:3, JPEG. Files
+// live in images/deals/starter/ and are byte-identical copies of what the
+// founder supplied, in two packages:
+//   - 18 images, six categories of three: approved package
+//     "stadtpocket_angebote_starter_18_FINAL" (2026-09-10)
+//   - 4 images, Travel & Tourism: from "qraivy_travel_images.zip"
+//     (2026-10-11), copied under the catalog's naming pattern;
+//     origin.sourceFile keeps each file's name inside that package
+//
+// NOT INCLUDED: that travel package holds six pictures. Two were withheld
+// from this catalog by founder decision on 2026-10-11 and are neither
+// listed here nor present in images/deals/starter/:
+//   - dubai_uae.jpg   shows a recognisable real hotel as its main subject
+//   - thailand.jpg    has lettering on the boat hulls
+// Their originals remain in the supplied package. If replacements are
+// added later they get new ids (travel-dubai-02, ...), never these files
+// under a reused id.
+// Each entry's sha256 is the checksum of the supplied original, so any
+// later change to a file is detectable (tests/dealsPage.test.js checks it).
 //
 // ORIGIN — kept per image for customer-facing disclosure later:
 // every image here is AI-generated (origin.type 'ai_generated').
 // origin.sourceMaster is the generator's own master file name as recorded
-// in the package manifest. The package records no generator name, date or
-// licence text, and the files carry no embedded provenance metadata, so
-// none is stated here. Wherever one of these images is shown, the visible
+// in the first package's manifest. Neither package records a generator
+// name, generation date or licence text, and no file carries embedded
+// provenance metadata, so none is stated here: for the travel images
+// origin.generator and origin.generatedOn are explicitly null (unknown,
+// to be filled in once confirmed), and origin.receivedOn is only the date
+// the files were handed over, not the date they were made. Wherever one of these images is shown, the visible
 // label "AI · KI-generiert" must be shown with it (EU AI Act Art. 50);
 // the Deal Builder reads origin.type to decide that, never a file name.
 //
@@ -30,7 +46,8 @@ window.QRAIVY_DEAL_STARTER_IMAGES = {
     { id: 'fashion-retail', label: { en: 'Fashion & Retail', de: 'Mode & Einzelhandel' } },
     { id: 'beauty-wellness', label: { en: 'Beauty & Wellness', de: 'Beauty & Wellness' } },
     { id: 'fitness-sport', label: { en: 'Fitness & Sport', de: 'Fitness & Sport' } },
-    { id: 'general-local', label: { en: 'General / Local Business', de: 'Allgemein / Lokales Geschäft' } }
+    { id: 'general-local', label: { en: 'General / Local Business', de: 'Allgemein / Lokales Geschäft' } },
+    { id: 'travel-tourism', label: { en: 'Travel & Tourism', de: 'Reisen & Tourismus' } }
   ],
   images: [
     { id: 'bakery-croissants-01', category: 'bakery-cafe', file: 'bakery-croissants-01.jpg', width: 1200, height: 900,
@@ -86,6 +103,18 @@ window.QRAIVY_DEAL_STARTER_IMAGES = {
       origin: { type: 'ai_generated', sourceMaster: 'outdoor_urban_food_truck_scene_candid_street_phot.png (text-cleaned exact approved master)', sha256: 'c784577b7d89ca36d31c917d612e3f7cff59e09daec716650d5b9a0c81a553f4' } },
     { id: 'general-flower-01', category: 'general-local', file: 'general-flower-01.jpg', width: 1200, height: 900,
       label: { en: 'Flowers & joy', de: 'Blumen & Freude' },
-      origin: { type: 'ai_generated', sourceMaster: 'wide_bright_naturalistic_photo_of_a_flower_shop.png', sha256: '81ea581b41c91792887cfb18b3d587cbe9d0a352a8d79477df6ecf15afc324c7' } }
+      origin: { type: 'ai_generated', sourceMaster: 'wide_bright_naturalistic_photo_of_a_flower_shop.png', sha256: '81ea581b41c91792887cfb18b3d587cbe9d0a352a8d79477df6ecf15afc324c7' } },
+    { id: 'travel-greece-01', category: 'travel-tourism', file: 'travel-greece-01.jpg', width: 1200, height: 900,
+      label: { en: 'Greece – Santorini', de: 'Griechenland – Santorini' },
+      origin: { type: 'ai_generated', sourceFile: 'greece_santorini.jpg', sourcePackage: 'qraivy_travel_images.zip', receivedOn: '2026-10-11', generator: null, generatedOn: null, sha256: '5fb825bea0717f4cddc180156f488612e040d0125950c61ac4fb4b3258bba0a5' } },
+    { id: 'travel-maldives-01', category: 'travel-tourism', file: 'travel-maldives-01.jpg', width: 1200, height: 900,
+      label: { en: 'Maldives', de: 'Malediven' },
+      origin: { type: 'ai_generated', sourceFile: 'maldives.jpg', sourcePackage: 'qraivy_travel_images.zip', receivedOn: '2026-10-11', generator: null, generatedOn: null, sha256: '9b9a5c2de2bd5f82ffc0930022480e26f787e870bd2fbb2811ea5ce6d97bc512' } },
+    { id: 'travel-france-01', category: 'travel-tourism', file: 'travel-france-01.jpg', width: 1200, height: 900,
+      label: { en: 'France – Paris', de: 'Frankreich – Paris' },
+      origin: { type: 'ai_generated', sourceFile: 'france_paris.jpg', sourcePackage: 'qraivy_travel_images.zip', receivedOn: '2026-10-11', generator: null, generatedOn: null, sha256: '974ea16c69b62a52c9f3486943fcb7bb9e1475e7f0f199eedbbc90394f22f94f' } },
+    { id: 'travel-turkey-01', category: 'travel-tourism', file: 'travel-turkey-01.jpg', width: 1200, height: 900,
+      label: { en: 'Turkey – Mediterranean', de: 'Türkei – Mittelmeerküste' },
+      origin: { type: 'ai_generated', sourceFile: 'turkey_mediterranean.jpg', sourcePackage: 'qraivy_travel_images.zip', receivedOn: '2026-10-11', generator: null, generatedOn: null, sha256: '62b866f3f36a072d55d09ff591fa6b1e408a0c9ecc645335ecf3ffa71097baaf' } }
   ]
 };

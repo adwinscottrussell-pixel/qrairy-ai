@@ -1,9 +1,8 @@
 /**
  * dealService.js — QRAIVY Deals foundation, Phase A1.
  * ─────────────────────────────────────────────────────────────
- * Backend-only foundation: database models + service layer +
- * ownership checks. No route file consumes this yet -- this module is
- * exported for direct unit testing only in this phase.
+ * Database models + service layer + ownership checks. Consumed by
+ * controllers/dealController.js (routes/dealRoutes.js, mounted at /deals).
  *
  * "Create once, distribute everywhere": a Deal carries the content of
  * one offer; a DealPlacement says where that same deal is shown. Nothing
@@ -24,6 +23,7 @@
  */
 
 const prisma = require('../utils/prismaClient');
+const { DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
 
 class DealError extends Error {
   constructor(message, status = 400) {
@@ -38,30 +38,63 @@ const DEAL_FIELDS = ['title', 'description', 'offerText', 'offerType', 'offerDet
 // Plain string allow-lists, this schema's existing no-enum convention --
 // adding a value later is a one-line change here, no migration.
 const OFFER_TYPES = ['percentage_discount', 'two_for_one', 'fixed_price', 'free_bonus', 'upgrade', 'custom'];
-const DEAL_IMAGE_SOURCES = ['uploaded', 'starter', 'ai_generated'];
+const DEAL_IMAGE_SOURCES = ['uploaded', 'starter', 'background'];
 const DEAL_STATUSES = ['draft', 'published', 'archived'];
 
 // Only channels with a real, ownership-checkable target are accepted.
 // push / wallet / others are added here when their phase is built.
 const DEAL_PLACEMENT_CHANNELS = ['landing_page'];
 
+// Same limits the Deal Builder shows as character counters. Enforced here
+// so they hold for every caller, not only for that one screen.
+const DEAL_TEXT_LIMITS = { title: 80, offerText: 120, description: 400, detail: 60 };
+function checkLength(value, fieldName, max) {
+  if (value.length > max) throw new DealError(`${fieldName} must be at most ${max} characters.`);
+  return value;
+}
+
 // ── Low-level validators ────────────────────────────────────────
-// Shape/origin check only, no network round-trip. The image must sit on
-// this deployment's own Cloudinary cloud; restricting it further to a
-// dedicated deals folder belongs to the upload phase, which decides that
-// folder.
+// Shape/origin check only, no network round-trip. An uploaded image must
+// sit on this deployment's own Cloudinary cloud, inside the deals folder
+// dealImageUploadService.js writes to -- so a URL to some other picture
+// can never be attached to a deal by editing a request.
 function isTrustedDealImage(url, publicId) {
   if (typeof url !== 'string' || typeof publicId !== 'string' || !publicId) return false;
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   if (!cloudName) return false;
   if (!url.startsWith(`https://res.cloudinary.com/${cloudName}/image/upload/`)) return false;
+  if (!publicId.startsWith(`${DEAL_IMAGE_FOLDER}/`)) return false;
   return url.includes(publicId);
 }
 
+// A deal image is exactly one of three kinds (see data/dealImages.js).
+// Whatever the caller sends is rebuilt here from scratch: only the fields
+// of that kind survive, and facts the server owns -- above all whether a
+// starter image is AI-generated -- come from the server's own catalog.
+// An image stored without a source is an upload (the only kind that
+// existed before sources were introduced).
 function checkDealImage(image) {
   if (!image || typeof image !== 'object' || Array.isArray(image)) {
     throw new DealError('image must be an object, or null to remove it.');
   }
+  const source = image.source == null ? 'uploaded' : image.source;
+  if (typeof source !== 'string' || !DEAL_IMAGE_SOURCES.includes(source)) {
+    throw new DealError(`image.source must be one of: ${DEAL_IMAGE_SOURCES.join(', ')}.`);
+  }
+
+  if (source === 'starter') {
+    const starter = typeof image.starterId === 'string' ? findDealStarterImage(image.starterId.trim()) : null;
+    if (!starter) throw new DealError('image.starterId is not a known starter image.');
+    // aiGenerated is stamped from the catalog and can never be sent as false.
+    return { source: 'starter', starterId: starter.id, aiGenerated: starter.origin === 'ai_generated' };
+  }
+
+  if (source === 'background') {
+    const id = typeof image.backgroundId === 'string' ? image.backgroundId.trim() : '';
+    if (!DEAL_BACKGROUNDS.includes(id)) throw new DealError('image.backgroundId is not a known background.');
+    return { source: 'background', backgroundId: id };
+  }
+
   if (typeof image.url !== 'string' || !image.url.trim() || typeof image.publicId !== 'string' || !image.publicId.trim()) {
     throw new DealError('image.url and image.publicId are required.');
   }
@@ -78,23 +111,7 @@ function checkDealImage(image) {
     height = Number(image.height);
     if (!Number.isFinite(height) || height <= 0) throw new DealError('image.height must be a positive number.');
   }
-  // source is optional and never inferred: an image without it stays
-  // source: null rather than getting a fabricated default.
-  let source = null;
-  if (image.source != null) {
-    if (typeof image.source !== 'string' || !DEAL_IMAGE_SOURCES.includes(image.source)) {
-      throw new DealError(`image.source must be one of: ${DEAL_IMAGE_SOURCES.join(', ')}.`);
-    }
-    source = image.source;
-  }
-  let starterId = null;
-  if (image.starterId != null) {
-    if (typeof image.starterId !== 'string' || !image.starterId.trim()) {
-      throw new DealError('image.starterId must be a non-empty string, or omitted.');
-    }
-    starterId = image.starterId.trim();
-  }
-  return { url: image.url.trim(), publicId: image.publicId.trim(), width, height, source, starterId };
+  return { source: 'uploaded', url: image.url.trim(), publicId: image.publicId.trim(), width, height };
 }
 
 function checkOfferType(offerType) {
@@ -135,7 +152,7 @@ function checkOfferDetails(offerType, offerDetails) {
     if (typeof offerDetails[key] !== 'string' || !offerDetails[key].trim()) {
       throw new DealError(`offerDetails.${key} must be a non-empty string, or omitted/null.`);
     }
-    return offerDetails[key].trim();
+    return checkLength(offerDetails[key].trim(), `offerDetails.${key}`, DEAL_TEXT_LIMITS.detail);
   };
   const rejectExtraKeys = (allowed) => {
     const extra = Object.keys(offerDetails).filter((k) => !allowed.includes(k));
@@ -247,19 +264,19 @@ function validateDealDraftPayload(body, currentOfferType = null) {
     if (typeof src.title !== 'string' || !src.title.trim()) {
       throw new DealError('title must be a non-empty string.');
     }
-    fields.title = src.title.trim();
+    fields.title = checkLength(src.title.trim(), 'title', DEAL_TEXT_LIMITS.title);
   }
   if ('description' in src) {
     if (src.description !== null && (typeof src.description !== 'string' || !src.description.trim())) {
       throw new DealError('description must be a non-empty string, or null to clear it.');
     }
-    fields.description = src.description === null ? null : src.description.trim();
+    fields.description = src.description === null ? null : checkLength(src.description.trim(), 'description', DEAL_TEXT_LIMITS.description);
   }
   if ('offerText' in src) {
     if (typeof src.offerText !== 'string' || !src.offerText.trim()) {
       throw new DealError('offerText must be a non-empty string.');
     }
-    fields.offerText = src.offerText.trim();
+    fields.offerText = checkLength(src.offerText.trim(), 'offerText', DEAL_TEXT_LIMITS.offerText);
   }
   if ('offerType' in src) {
     fields.offerType = checkOfferType(src.offerType);
@@ -317,6 +334,19 @@ async function resolveOwnedBusinessId(ownerUserId, businessId) {
   return business.id;
 }
 
+// What the deal IS right now, judged from its published (live) columns
+// only: "scheduled" and "expired" are computed from the live dates, never
+// stored, and pending draft edits never change them -- an owner trying a
+// new end date in a draft has not un-published anything.
+function liveStatus(deal, now = Date.now()) {
+  if (deal.status !== 'published') return deal.status;
+  const startsAt = toDateOrNull(deal.startsAt);
+  const endsAt = toDateOrNull(deal.endsAt);
+  if (endsAt != null && endsAt.getTime() < now) return 'expired';
+  if (startsAt != null && startsAt.getTime() > now) return 'scheduled';
+  return 'published';
+}
+
 // ── Read: editable state (draft merged over live, per field) ──────
 // isExpired is always computed here, never stored: endsAt already
 // carries that fact, and a second status value could go stale.
@@ -329,7 +359,10 @@ function mergeDealState(deal) {
     dealId: deal.id,
     businessId: deal.businessId || null,
     status: deal.status,
+    displayStatus: liveStatus(deal),
     publishedAt: deal.publishedAt,
+    createdAt: deal.createdAt || null,
+    updatedAt: deal.updatedAt || null,
     title: pick('title', deal.title),
     description: pick('description', deal.description),
     offerText: pick('offerText', deal.offerText),
@@ -386,8 +419,10 @@ async function createDealDraft(ownerUserId, body) {
     if (typeof src.description !== 'string' || !src.description.trim()) {
       throw new DealError('description must be a non-empty string, or null to clear it.');
     }
-    description = src.description.trim();
+    description = checkLength(src.description.trim(), 'description', DEAL_TEXT_LIMITS.description);
   }
+  checkLength(src.title.trim(), 'title', DEAL_TEXT_LIMITS.title);
+  checkLength(src.offerText.trim(), 'offerText', DEAL_TEXT_LIMITS.offerText);
   const offerType = 'offerType' in src ? checkOfferType(src.offerType) : null;
   const startsAt = 'startsAt' in src ? parseDealDate(src.startsAt, 'startsAt') : null;
   const endsAt = 'endsAt' in src ? parseDealDate(src.endsAt, 'endsAt') : null;
@@ -653,6 +688,8 @@ module.exports = {
   parseDealDate,
   toDateOrNull,
   isTrustedDealImage,
+  liveStatus,
+  DEAL_TEXT_LIMITS,
   OFFER_TYPES,
   DEAL_IMAGE_SOURCES,
   DEAL_STATUSES,

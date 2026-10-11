@@ -446,7 +446,7 @@ test('E. a trusted image is normalized to metadata only', async () => {
   resetFixtures();
   const deal = await newDeal();
   const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...TRUSTED_IMAGE, width: '1200', height: 900, source: 'uploaded' } });
-  assert.deepEqual(state.image, { ...TRUSTED_IMAGE, width: 1200, height: 900, source: 'uploaded', starterId: null });
+  assert.deepEqual(state.image, { source: 'uploaded', ...TRUSTED_IMAGE, width: 1200, height: 900 });
   const cleared = await service.saveDealDraft(ANNA, deal.dealId, { image: null });
   assert.equal(cleared.image, null);
 });
@@ -466,8 +466,8 @@ test('E. images from another host, another cloud, or with a mismatched publicId 
   }
 });
 
-test('E. image width/height/source/starterId are validated; nothing is trusted without a configured cloud', () => {
-  for (const extra of [{ width: 0 }, { height: -5 }, { width: 'wide' }, { source: 'stock' }, { starterId: '  ' }]) {
+test('E. image width/height/source are validated; nothing is trusted without a configured cloud', () => {
+  for (const extra of [{ width: 0 }, { height: -5 }, { width: 'wide' }, { source: 'stock' }, { source: 'ai_generated' }]) {
     assert.ok(throwsSync(() => service.checkDealImage({ ...TRUSTED_IMAGE, ...extra })) instanceof service.DealError, JSON.stringify(extra));
   }
   const prev = process.env.CLOUDINARY_CLOUD_NAME;
@@ -477,6 +477,54 @@ test('E. image width/height/source/starterId are validated; nothing is trusted w
   } finally {
     process.env.CLOUDINARY_CLOUD_NAME = prev;
   }
+});
+
+test('E. an uploaded image must sit in the deals folder, not merely on our cloud', () => {
+  const elsewhere = { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/qraivy-logos/logo-x.png', publicId: 'qraivy-logos/logo-x' };
+  assert.equal(service.isTrustedDealImage(elsewhere.url, elsewhere.publicId), false);
+  assert.ok(throwsSync(() => service.checkDealImage(elsewhere)) instanceof service.DealError);
+  assert.equal(service.isTrustedDealImage(TRUSTED_IMAGE.url, TRUSTED_IMAGE.publicId), true);
+});
+
+test('E. a starter image is stored by id, and its AI origin is stamped by the server', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { source: 'starter', starterId: 'bakery-coffee-01' } });
+  assert.deepEqual(state.image, { source: 'starter', starterId: 'bakery-coffee-01', aiGenerated: true });
+  // A client cannot strip the disclosure, nor smuggle a URL in alongside.
+  const forged = service.checkDealImage({ source: 'starter', starterId: 'travel-greece-01', aiGenerated: false, url: 'https://evil.example.com/x.jpg', publicId: 'x' });
+  assert.deepEqual(forged, { source: 'starter', starterId: 'travel-greece-01', aiGenerated: true });
+  for (const bad of [{ source: 'starter' }, { source: 'starter', starterId: 'no-such-image' }, { source: 'starter', starterId: 7 }]) {
+    assert.ok(throwsSync(() => service.checkDealImage(bad)) instanceof service.DealError, JSON.stringify(bad));
+  }
+});
+
+test('E. every catalog starter image is accepted and marked AI-generated', () => {
+  const { DEAL_STARTER_IMAGES } = require('../src/data/dealImages');
+  assert.equal(DEAL_STARTER_IMAGES.length, 22);
+  for (const i of DEAL_STARTER_IMAGES) {
+    assert.deepEqual(service.checkDealImage({ source: 'starter', starterId: i.id }), { source: 'starter', starterId: i.id, aiGenerated: true });
+  }
+});
+
+test('E. a plain background is stored by id from the allow-list', () => {
+  assert.deepEqual(service.checkDealImage({ source: 'background', backgroundId: 'ocean', url: 'https://evil.example.com' }), { source: 'background', backgroundId: 'ocean' });
+  for (const bad of [{ source: 'background' }, { source: 'background', backgroundId: 'neon' }, { source: 'background', backgroundId: 3 }]) {
+    assert.ok(throwsSync(() => service.checkDealImage(bad)) instanceof service.DealError, JSON.stringify(bad));
+  }
+});
+
+test('E. starter and background images survive publish and stay as stored', async () => {
+  resetFixtures();
+  const a = await newDeal();
+  await service.saveDealDraft(ANNA, a.dealId, { image: { source: 'starter', starterId: 'general-flower-01' } });
+  dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
+  const published = await service.publishDeal(ANNA, a.dealId);
+  assert.deepEqual(published.image, { source: 'starter', starterId: 'general-flower-01', aiGenerated: true });
+  assert.deepEqual(dealRows[0].image, { source: 'starter', starterId: 'general-flower-01', aiGenerated: true });
+  const b = await newDeal(ANNA, { title: 'B' });
+  await service.saveDealDraft(ANNA, b.dealId, { image: { source: 'background', backgroundId: 'plum' } });
+  assert.deepEqual((await service.publishDeal(ANNA, b.dealId)).image, { source: 'background', backgroundId: 'plum' });
 });
 
 // ── F. Publish ─────────────────────────────────────────────────
@@ -548,6 +596,50 @@ test('F. isExpired is computed from endsAt, never stored', async () => {
   assert.equal(state.isExpired, true);
   assert.equal(state.status, 'published');
   assert.equal('isExpired' in dealRows[0], false);
+});
+
+test('F. displayStatus: draft, published, scheduled, expired and archived, from the live dates only', async () => {
+  resetFixtures();
+  const draft = await newDeal();
+  assert.equal(draft.displayStatus, 'draft');
+
+  const live = await newDeal(ANNA, { title: 'Live' });
+  assert.equal((await service.publishDeal(ANNA, live.dealId)).displayStatus, 'published');
+
+  const scheduled = await newDeal(ANNA, { title: 'Later', startsAt: FUTURE, endsAt: FAR_FUTURE });
+  assert.equal((await service.publishDeal(ANNA, scheduled.dealId)).displayStatus, 'scheduled');
+
+  const expiring = await newDeal(ANNA, { title: 'Ending', endsAt: FUTURE });
+  await service.publishDeal(ANNA, expiring.dealId);
+  dealRows.find((d) => d.id === expiring.dealId).endsAt = new Date(Date.now() - 1000);
+  const expired = await service.getDealState(ANNA, expiring.dealId);
+  assert.equal(expired.displayStatus, 'expired');
+  assert.equal(expired.status, 'published', 'the stored status is untouched');
+
+  // A pending draft edit does not change what is live.
+  await service.saveDealDraft(ANNA, live.dealId, { startsAt: FUTURE });
+  const edited = await service.getDealState(ANNA, live.dealId);
+  assert.equal(edited.displayStatus, 'published');
+  assert.equal(edited.hasUnpublishedChanges, true);
+
+  assert.equal((await service.archiveDeal(ANNA, scheduled.dealId)).displayStatus, 'archived');
+});
+
+test('F. text length limits are enforced on create and on save-draft', async () => {
+  resetFixtures();
+  assert.deepEqual(service.DEAL_TEXT_LIMITS, { title: 80, offerText: 120, description: 400, detail: 60 });
+  const long = (n) => 'x'.repeat(n);
+  for (const body of [{ title: long(81), offerText: 'o' }, { title: 't', offerText: long(121) }, { title: 't', offerText: 'o', description: long(401) }]) {
+    const err = await throwsAsync(() => service.createDealDraft(ANNA, body));
+    assert.match(err.message, /at most \d+ characters/, Object.keys(body).join(','));
+  }
+  assert.equal(dealRows.length, 0);
+  const deal = await service.createDealDraft(ANNA, { title: long(80), offerText: long(120), description: long(400), offerType: 'free_bonus' });
+  for (const body of [{ title: long(81) }, { offerText: long(121) }, { description: long(401) }, { offerDetails: { freeItem: long(61) } }]) {
+    const err = await throwsAsync(() => service.saveDealDraft(ANNA, deal.dealId, body));
+    assert.match(err.message, /at most \d+ characters/, Object.keys(body).join(','));
+  }
+  assert.deepEqual((await service.saveDealDraft(ANNA, deal.dealId, { offerDetails: { freeItem: long(60) } })).offerDetails, { freeItem: long(60), minPurchase: null });
 });
 
 // ── G. Archive / delete ────────────────────────────────────────
@@ -724,7 +816,7 @@ test('I. the migration is additive only: two new tables, nothing altered or drop
 
 test('I. dealService has no StadtPocket dependency', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
-  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient']);
+  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../data/dealImages']);
   assert.doesNotMatch(src, /prisma\.stadtPocket|tx\.stadtPocket|listingLocationId/);
 });
 
