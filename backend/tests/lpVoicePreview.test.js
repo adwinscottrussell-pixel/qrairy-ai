@@ -573,7 +573,7 @@ function editorHarness({ voiceState = {}, uiLang = 'en', token = 'tok-owner' } =
   FakeAudio.prototype.addEventListener = function (ev, fn) { this.listeners[ev] = fn; };
   FakeAudio.prototype.play = function () { this.paused = false; return Promise.resolve(); };
   FakeAudio.prototype.pause = function () { this.paused = true; };
-  const win = { SmartEditor: { state }, _qraivyLang: uiLang, Audio: FakeAudio, Clerk: token ? { session: { getToken: () => Promise.resolve(token) } } : undefined };
+  const win = { SmartEditor: { state }, _qraivyLang: uiLang, Audio: FakeAudio, Clerk: token ? { session: { getToken: () => Promise.resolve(token) } } : undefined, location: { hostname: 'www.qraivy.com', href: 'https://www.qraivy.com/smart-qr-detail.html' } };
   const ctx = {
     window: win, document: { getElementById: (id) => els[id] || null },
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
@@ -585,6 +585,9 @@ function editorHarness({ voiceState = {}, uiLang = 'en', token = 'tok-owner' } =
       fetches.push(f); return p;
     },
   };
+  // the page loads its API routing first (production here: nothing is rerouted)
+  vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'staging-config.js'), 'utf8'), ctx);
+  vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'lp-routing.js'), 'utf8'), ctx);
   vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'voice-greetings.js'), 'utf8'), ctx);
   vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'voice-greeting-editor.js'), 'utf8'), ctx);
   const api = win.QRAIVY_VOICE_GREETING;
@@ -806,10 +809,11 @@ test('K. V3 deletes no audio file anywhere', () => {
   }
 });
 
-test('K. the editor page, the phone mockup and the QRAIVY Design System are unchanged by V3', () => {
+test('K. the QRAIVY Design System, the greetings and the database schema are unchanged since V2', () => {
+  // (the editor page itself is compared with production in lpVoiceGreetings.test.js)
   const { execFileSync } = require('child_process');
   const git = (...a) => execFileSync('git', a, { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  assert.equal(git('diff', 'd7f28e5', '--stat', '--', 'frontend/public/smart-qr-detail.html', 'frontend/public/qds', 'frontend/public/js/voice-greetings.js', 'backend/src/data/voiceGreetings.js', 'backend/prisma').trim(), '');
+  assert.equal(git('diff', 'd7f28e5', '--stat', '--', 'frontend/public/qds', 'frontend/public/js/voice-greetings.js', 'backend/src/data/voiceGreetings.js', 'backend/prisma').trim(), '');
 });
 
 // ── runner ──────────────────────────────────────────────────────

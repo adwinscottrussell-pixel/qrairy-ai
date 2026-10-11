@@ -689,12 +689,15 @@ function editorHarness({ useCase = 'restaurant', businessName = 'Casa Lumi', voi
   const state = { slug: 'casa-lumi-ab1', voice: Object.assign({ language: 'en', voiceKey: 'sarah', customText: '', customGreeting: {} }, voiceState), _db: { useCase, businessName } };
   let dirty = 0;
   const ctx = {
-    window: { SmartEditor: { state }, _qraivyLang: uiLang },
+    window: { SmartEditor: { state }, _qraivyLang: uiLang, location: { hostname: 'www.qraivy.com', href: 'https://www.qraivy.com/smart-qr-detail.html' } },
     document: { getElementById: (id) => els[id] || null },
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
     Date, JSON, encodeURIComponent,
     fetch: (url) => { let resolveFn; const p = new Promise((r) => { resolveFn = r; }); fetches.push({ url, respond: (page) => resolveFn({ ok: true, json: async () => page }) }); return p; },
   };
+  // the page loads its API routing first (production here: nothing is rerouted)
+  vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'staging-config.js'), 'utf8'), ctx);
+  vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'lp-routing.js'), 'utf8'), ctx);
   vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'voice-greetings.js'), 'utf8'), ctx);
   vm.runInNewContext(fs.readFileSync(path.join(PUB, 'js', 'voice-greeting-editor.js'), 'utf8'), ctx);
   const api = ctx.window.QRAIVY_VOICE_GREETING;
@@ -734,7 +737,14 @@ test('F. the editor page loads the greeting data and field script before the edi
   assert.ok(a !== -1 && b > a && c > b);
   const { execFileSync } = require('child_process');
   const before = execFileSync('git', ['show', 'origin/main:frontend/public/smart-qr-detail.html'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
-  assert.equal(editorPage.replace('<script src="js/voice-greetings.js"></script>\n<script src="js/voice-greeting-editor.js"></script>\n', ''), before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
+  // Apart from the voice scripts, the only other difference from production
+  // is the API routing switch (tests/lpStagingRouting.test.js): three lines
+  // in <head>, and the phone preview's address passing through it.
+  const withoutVoice = editorPage.replace('<script src="js/voice-greetings.js"></script>\n<script src="js/voice-greeting-editor.js"></script>\n', '');
+  const routingHead = withoutVoice.slice(withoutVoice.indexOf('<script src="js/staging-config.js"></script>'), withoutVoice.indexOf('<meta charset="UTF-8"/>'));
+  assert.equal(routingHead.split('\n').length - 1, 3);
+  const withoutRouting = withoutVoice.replace(routingHead, '').replace('iframeEl.src = window.QRAIVY_ROUTING.url(_iframeSlug ? ', 'iframeEl.src = _iframeSlug ? ').replace('"&preview=1")));', '"&preview=1"));');
+  assert.equal(withoutRouting, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
 });
 
 test('F. the editor script hooks the field into load, draft restore, render, language change and publish', () => {
@@ -854,8 +864,8 @@ test('F. German editor: German status texts', () => {
 
 // ── G. The phone preview shows the real published page ─────────
 test('G. the phone preview is the published page itself, not a copy', () => {
-  assert.match(editorPage, /iframeEl\.src = _iframeSlug \? \('https:\/\/api\.qraivy\.com\/lp\/' \+ _iframeSlug \+ '\?preview=1&t=' \+ Date\.now\(\)\)/);
-  assert.ok(smartEditor.includes("var _newSrc='https://api.qraivy.com/lp/'+encodeURIComponent(SE.slug)+'?preview=1&t='+Date.now();iframe.src='';setTimeout(function(){iframe.src=_newSrc;},600);"), 'after publishing the editor reloads the real page, as before');
+  assert.match(editorPage, /iframeEl\.src = window\.QRAIVY_ROUTING\.url\(_iframeSlug \? \('https:\/\/api\.qraivy\.com\/lp\/' \+ _iframeSlug \+ '\?preview=1&t=' \+ Date\.now\(\)\)/);
+  assert.ok(smartEditor.includes("var _newSrc=window.QRAIVY_ROUTING.url('https://api.qraivy.com/lp/'+encodeURIComponent(SE.slug)+'?preview=1&t='+Date.now());iframe.src='';setTimeout(function(){iframe.src=_newSrc;},600);"), 'after publishing the editor reloads the real page, as before');
 });
 
 test('G. with no new audio on its way there is nothing to wait for', () => {

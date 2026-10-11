@@ -27,12 +27,25 @@ const STATIC_ALLOWED_ORIGINS = ['https://www.qraivy.com', 'https://qraivy.com', 
 const QRAIVY_VERCEL_PREVIEW_HOST_SUFFIX =
   process.env.VERCEL_PREVIEW_HOST_SUFFIX || '-adwinscottrussell-5957s-projects.vercel.app';
 
+// Further exact origins, for an isolated staging backend whose frontend is
+// served from its own preview hostname: EXTRA_ALLOWED_ORIGINS, a comma
+// separated list of full https origins. Unset (production) adds nothing.
+// Only exact https origins are accepted -- no wildcards, no paths.
+function parseExtraOrigins(value) {
+  return String(value || '').split(',').map((s) => s.trim()).filter(Boolean).filter((entry) => {
+    if (entry.includes('*')) return false;
+    try { const u = new URL(entry); return u.protocol === 'https:' && u.origin === entry; } catch (e) { return false; }
+  });
+}
+const EXTRA_ALLOWED_ORIGINS = parseExtraOrigins(process.env.EXTRA_ALLOWED_ORIGINS);
+
 function isAllowedOrigin(origin) {
   // No Origin header at all -- not a cross-origin browser request (curl,
   // server-to-server, uptime checks). Nothing for CORS to enforce here;
   // matches the previous array-based config's behavior for these callers.
   if (!origin) return true;
   if (STATIC_ALLOWED_ORIGINS.includes(origin)) return true;
+  if (EXTRA_ALLOWED_ORIGINS.includes(origin)) return true;
   try {
     const { protocol, hostname } = new URL(origin);
     return protocol === 'https:' && hostname.endsWith(QRAIVY_VERCEL_PREVIEW_HOST_SUFFIX);
@@ -41,4 +54,4 @@ function isAllowedOrigin(origin) {
   }
 }
 
-module.exports = { isAllowedOrigin, STATIC_ALLOWED_ORIGINS, QRAIVY_VERCEL_PREVIEW_HOST_SUFFIX };
+module.exports = { isAllowedOrigin, STATIC_ALLOWED_ORIGINS, QRAIVY_VERCEL_PREVIEW_HOST_SUFFIX, EXTRA_ALLOWED_ORIGINS, parseExtraOrigins };

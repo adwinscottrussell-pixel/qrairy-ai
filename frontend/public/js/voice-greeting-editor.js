@@ -279,7 +279,7 @@
   function reloadPreview() {
     var iframe = $(IDS.iframe), slug = state() && state().slug;
     if (!iframe || !slug) return;
-    iframe.src = API + '/lp/' + encodeURIComponent(slug) + '?preview=1&t=' + Date.now();
+    iframe.src = window.QRAIVY_ROUTING.url(API + '/lp/' + encodeURIComponent(slug) + '?preview=1&t=' + Date.now());
   }
   // `data` is the answer of POST /lp. opts.skipReload: the caller has
   // already reloaded the preview itself.
