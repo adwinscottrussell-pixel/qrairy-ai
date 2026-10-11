@@ -9,7 +9,9 @@
  * What lives in sections.voice:
  *   owner-controlled   enabled, title, description, voiceLanguage,
  *                      customGreeting { en?, de? }
- *   server-controlled  audioUrl, audioFor, audioLang
+ *   server-controlled  audioUrl, audioFor, audioLang      (published)
+ *                      previewUrl, previewFor, previewLang (latest preview)
+ *                      previewCache { fingerprint: address } (recent previews)
  *
  * audioFor is a fingerprint of everything that determines a recording:
  * voice id, model, voice settings and the exact text. Audio is current
@@ -17,6 +19,13 @@
  * That one comparison is the whole regeneration rule -- editing the
  * hero, a button or the theme never changes it, so those saves never
  * cost a text-to-speech call.
+ *
+ * Preview audio (the editor's "listen before publishing") is kept apart
+ * from published audio: it is stored under preview*, never under audio*,
+ * so nothing a visitor hears changes before Publish. Every recording is a
+ * file named after its fingerprint, so a preview and the published audio
+ * of the same greeting are the same file, and Publish adopts a matching
+ * preview instead of paying for the recording a second time.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -30,7 +39,9 @@ const { pageCache } = require('../utils/pageCache');
 // Fields of sections.voice that only the server may set. A save never
 // takes them from the request: the editor sends back whatever it loaded,
 // which may be older than the audio generated since.
-const SERVER_VOICE_FIELDS = ['audioUrl', 'audioFor', 'audioLang'];
+const SERVER_VOICE_FIELDS = ['audioUrl', 'audioFor', 'audioLang', 'previewUrl', 'previewFor', 'previewLang', 'previewCache'];
+// How many recent preview recordings a page remembers for reuse.
+const PREVIEW_CACHE_SIZE = 10;
 
 function parseSections(page) {
   if (!page || !page.sections) return {};
@@ -138,6 +149,72 @@ function mergeVoiceOnSave(incomingVoice, existingVoice) {
   return merged;
 }
 
+// The greeting an owner is looking at in the editor, which may not be
+// saved yet: the text in the field for the selected language, or the
+// standard greeting of that language when the field is empty.
+function previewGreeting(page, { language, text } = {}) {
+  const lang = voiceLanguage(language);
+  const standard = cleanGreeting(defaultGreeting(page.useCase, lang, page.businessName || page.slug));
+  const spoken = cleanGreeting(text) || standard;
+  return { lang, text: spoken, isCustom: spoken !== standard, standard, fingerprint: voiceFingerprint(standardVoice(lang), spoken) };
+}
+
+// A recording that already exists for this fingerprint, if any: the
+// published audio, or the last preview.
+function existingAudioFor(sections, fingerprint) {
+  const voice = sections.voice || {};
+  const usable = (url) => typeof url === 'string' && /^https:\/\//.test(url);
+  if (usable(voice.audioUrl) && voice.audioFor === fingerprint) return { audioUrl: voice.audioUrl, source: 'published' };
+  if (usable(voice.previewUrl) && voice.previewFor === fingerprint) return { audioUrl: voice.previewUrl, source: 'preview' };
+  const cache = (voice.previewCache && typeof voice.previewCache === 'object' && !Array.isArray(voice.previewCache)) ? voice.previewCache : {};
+  if (Object.prototype.hasOwnProperty.call(cache, fingerprint) && usable(cache[fingerprint])) return { audioUrl: cache[fingerprint], source: 'preview' };
+  return null;
+}
+
+// ── Recording ──────────────────────────────────────────────────
+// One text-to-speech call per recording at a time, whoever asks: two
+// preview requests, or a preview and a Publish, for the same greeting of
+// the same page share one call and one result.
+const recordings = new Map(); // slug + ':' + fingerprint -> promise of the audio address
+function recordingInFlight(slug, fingerprint) { return recordings.has(slug + ':' + fingerprint); }
+function record(slug, greeting) {
+  const key = slug + ':' + greeting.fingerprint;
+  const running = recordings.get(key);
+  if (running) return running;
+  const promise = synthesizeAndUploadVoice({ slug, text: greeting.text, lang: greeting.lang, fingerprint: greeting.fingerprint })
+    .finally(() => { recordings.delete(key); });
+  recordings.set(key, promise);
+  return promise;
+}
+
+// ── Preview ────────────────────────────────────────────────────
+// Which preview request is the newest for each page. A recording that
+// finishes after a newer one was requested is still returned to whoever
+// asked for it, but it is not stored as the page's preview: the newest
+// request decides what the page's preview is.
+const previewSeq = new Map(); // slug -> number
+function stampPreviewRequest(slug) { const n = (previewSeq.get(slug) || 0) + 1; previewSeq.set(slug, n); return n; }
+
+// Records the greeting for the editor and remembers it as the page's
+// preview. Never touches audioUrl / audioFor. Throws if recording fails.
+async function recordPreview(slug, greeting) {
+  const seq = stampPreviewRequest(slug);
+  const audioUrl = await record(slug, greeting);
+  const newest = previewSeq.get(slug) === seq;
+  await patchLandingPageSections(slug, (fresh) => {
+    const current = fresh.voice || {};
+    // Every finished recording is remembered for reuse (the oldest drop
+    // out); only the newest request becomes "the" preview.
+    const old = (current.previewCache && typeof current.previewCache === 'object' && !Array.isArray(current.previewCache)) ? current.previewCache : {};
+    const entries = Object.entries(old).filter(([k]) => k !== greeting.fingerprint).concat([[greeting.fingerprint, audioUrl]]).slice(-PREVIEW_CACHE_SIZE);
+    const next = Object.assign({}, current, { previewCache: Object.fromEntries(entries) });
+    if (newest) Object.assign(next, { previewUrl: audioUrl, previewFor: greeting.fingerprint, previewLang: greeting.lang });
+    fresh.voice = next;
+    return fresh;
+  });
+  return audioUrl;
+}
+
 // ── Generation ─────────────────────────────────────────────────
 // One run per page at a time. A second request for the same page while a
 // run is in flight does not start another text-to-speech call; it asks
@@ -155,7 +232,10 @@ async function generateOnce(slug) {
   if (!greeting.text) return { generated: false, reason: 'no_text' };
   if (audioIsCurrent(sections, greeting)) return { generated: false, reason: 'current' };
 
-  const audioUrl = await synthesizeAndUploadVoice({ slug, text: greeting.text, lang: greeting.lang });
+  // A preview of exactly this greeting was already recorded in the
+  // editor: publish that recording instead of making it again.
+  const reusable = existingAudioFor(sections, greeting.fingerprint);
+  const audioUrl = reusable ? reusable.audioUrl : await record(slug, greeting);
 
   // Stored on top of whatever is saved NOW (see lpSectionsPatch.js), and
   // only if this recording is still the right one: if the owner changed
@@ -169,8 +249,8 @@ async function generateOnce(slug) {
     return fresh;
   });
   pageCache.delByPrefix('lp:' + slug);
-  if (saved.applied) return { generated: true, audioUrl, fingerprint: greeting.fingerprint, lang: greeting.lang };
-  return { generated: true, stored: false, reason: stale ? 'superseded' : saved.reason };
+  if (saved.applied) return { generated: true, reused: !!reusable, audioUrl, fingerprint: greeting.fingerprint, lang: greeting.lang };
+  return { generated: true, reused: !!reusable, stored: false, reason: stale ? 'superseded' : saved.reason };
 }
 
 // Makes the page's audio match its greeting. Never throws: a failure is
@@ -191,7 +271,7 @@ function ensureVoiceAudio(slug) {
         if (result.generated && result.stored === false && result.reason === 'superseded') continue;
         if (!state.again) break;
       }
-      if (result.generated && result.stored !== false) console.log('[Voice] Generated for', slug, '(' + result.lang + ')');
+      if (result.generated && result.stored !== false) console.log('[Voice] ' + (result.reused ? 'Published existing preview for' : 'Generated for'), slug, '(' + result.lang + ')');
       else if (result.generated) console.error('[Voice] Generated but not stored for', slug, '(' + result.reason + ')');
     } catch (err) {
       console.error('[Voice] Error for', slug + ':', err && err.message);
@@ -216,4 +296,9 @@ module.exports = {
   audioIsCurrent,
   mergeVoiceOnSave,
   ensureVoiceAudio,
+  parseSections,
+  previewGreeting,
+  existingAudioFor,
+  recordingInFlight,
+  recordPreview,
 };

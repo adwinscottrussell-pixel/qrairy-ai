@@ -36,7 +36,12 @@ function standardVoice(lang) {
 // Speaks `text` in the standard voice of `lang`, stores the MP3 and
 // returns its address. Throws if speech or storage fails -- the caller
 // decides what a failure means; nothing here returns a placeholder.
-async function synthesizeAndUploadVoice({ slug, text, lang }) {
+//
+// `fingerprint` (see lpVoiceService.voiceFingerprint) names the file after
+// what it is a recording of: voice-<slug>-<fingerprint>. A recording of a
+// different greeting therefore goes to a different file and never
+// replaces one a published page is still playing.
+async function synthesizeAndUploadVoice({ slug, text, lang, fingerprint }) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
   if (typeof text !== "string" || !text.trim()) throw new Error("No greeting text to speak");
@@ -69,12 +74,12 @@ async function synthesizeAndUploadVoice({ slug, text, lang }) {
     req.end();
   });
 
-  // One file per page, replaced in place. Cloudinary's returned address
-  // carries a new version number each time, so a regenerated greeting is
-  // never served from a cached copy of the old one.
+  // Nothing is ever deleted here. A file is only written again under the
+  // same name when it is the same recording (same fingerprint).
+  const publicId = fingerprint ? `voice-${slug}-${fingerprint}` : `voice-${slug}`;
   const uploadResult = await new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder: "qraivy-voices", public_id: `voice-${slug}`, overwrite: true, format: "mp3" },
+      { resource_type: "video", folder: "qraivy-voices", public_id: publicId, overwrite: true, format: "mp3" },
       (error, result) => { if (error) reject(error); else resolve(result); }
     );
     uploadStream.end(audioBuffer);

@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
+const { handleVoicePreview } = require('../controllers/lpVoiceController');
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
@@ -116,6 +117,8 @@ router.get('/lp/:slug', handleServeLP);
 // AI chat endpoint
 router.post('/lp/chat', handleChatLP);
 // Push notification endpoint
+// Voice tab of the editor: listen to the greeting before publishing.
+router.post('/lp/voice/preview/:slug', requireAuth, handleVoicePreview);
 router.post('/lp/push/:slug', requireAuth, handleSendPush);
 router.get('/lp/push/:slug/count', handlePushCount);
 router.get('/lp/push/:slug/history', handlePushHistory);
