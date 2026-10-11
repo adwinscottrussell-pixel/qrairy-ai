@@ -442,6 +442,7 @@ model Business {
   members           BusinessMember[]
   businessLocations BusinessLocation[]
   landingPages      LandingPage[]
+  deals             Deal[]
 
   // Reverse side of StadtPocketListing.businessId — additive, optional.
   // A StadtPocketListing exists and is independently publishable with NO
@@ -754,4 +755,96 @@ model StadtPocketListingLocation {
 
   @@index([listingId])
   @@index([locationId])
+}
+
+// ============================================================
+// QRAIVY Deals — Phase A1 foundation (2026-10-11). Additive only.
+//
+// "Create once, distribute everywhere": a Deal holds the content of one
+// offer and nothing about where it is shown. Every distribution target
+// (a landing page today; push, wallet and others later) is one
+// DealPlacement row pointing at the same Deal, so a deal is never
+// copied per channel or per location.
+//
+// Modelled on StadtPocketOffer's validated draft/publish design, but a
+// separate QRAIVY-owned model: no StadtPocket id, relation or scope is
+// reused here. Not related to the unmerged Deal/DealClaim draft on
+// preview/sprint-2d-smart-qr-renderer (bound each deal to one
+// landingPageSlug), which this replaces.
+// ============================================================
+model Deal {
+  id String @id @default(cuid())
+
+  // Ownership anchor: the Clerk user id of the account that owns this
+  // deal, the same value as LandingPage.userId / Customer.ownerUserId.
+  // Every read and write in dealService.js is scoped by this field.
+  ownerUserId String
+
+  // Optional link to the Business entity, same posture as
+  // LandingPage.businessId: never required, never the ownership check.
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+
+  title       String
+  description String?
+  offerText   String
+
+  // Plain free-text discriminator (percentage_discount | two_for_one |
+  // fixed_price | free_bonus | upgrade | custom), this schema's existing
+  // no-enum convention. offerDetails holds only the structured values of
+  // that type (see checkOfferDetails in dealService.js), never a copy of
+  // offerText.
+  offerType    String?
+  offerDetails Json?
+
+  // Image metadata only: { url, publicId, width, height, source }.
+  image Json?
+
+  status String @default("draft") // draft | published | archived
+
+  startsAt    DateTime?
+  endsAt      DateTime?
+  publishedAt DateTime? // set on every successful publish
+
+  // Pending edits. The scalar columns above are the published source of
+  // truth; draftData is never read by a public-facing code path.
+  draftData Json?
+
+  createdBy String // Clerk user id of whoever created this deal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  placements DealPlacement[]
+
+  @@index([ownerUserId])
+  @@index([businessId])
+  @@index([status])
+}
+
+// One distribution target of one Deal. `channel` is a plain string
+// allow-list (see DEAL_PLACEMENT_CHANNELS in dealService.js);
+// `targetRef` identifies the target inside that channel (for
+// "landing_page": LandingPage.slug). A deal shown on three landing
+// pages is one Deal with three placements.
+//
+// A placement is publicly relevant only while BOTH its own status and
+// its Deal's status are "published" and the deal is not expired;
+// nothing here duplicates the deal's content or dates.
+model DealPlacement {
+  id     String @id @default(cuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  channel   String
+  targetRef String
+
+  status      String    @default("draft") // draft | published | archived
+  publishedAt DateTime? // set on every successful placement publish
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([dealId, channel, targetRef])
+  @@index([channel, targetRef])
 }
