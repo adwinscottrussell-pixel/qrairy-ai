@@ -7,37 +7,42 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const VOICES = {
-  sarah:   { id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah - Warm & Professional", lang: "en" },
-  laura:   { id: "FGY2WhTYpPnrIDTdsKH5", label: "Laura - Enthusiastic & Friendly", lang: "en" },
-  charlie: { id: "IKne3meq5aSn9XLyUdCD", label: "Charlie - Deep & Confident", lang: "en" },
-  george:  { id: "JBFqnCBsd6RMkjVDRZzb", label: "George - Captivating Storyteller", lang: "en" },
-  river:   { id: "SAz9YHcvj6GT2YYXdXww", label: "River - Calm & Informative", lang: "en" },
-  anna_de: { id: "XB0fDUnXU5powFXDhCwa", label: "Charlotte - Natural German Female", lang: "de" },
-  max_de:  { id: "iP95p4xoKVk53GoZ742B", label: "Chris - Natural German Male", lang: "de" },
-  lena_de: { id: "pFZP5JQG7iQjIQuC4Bku", label: "Lena - Warm German Female", lang: "de" },
+// One standard voice per language. Every welcome greeting is spoken by
+// the voice of its language -- an English greeting is never read by the
+// German voice or the other way round.
+//
+// Both ids are the ones this service has always used as its defaults
+// ("sarah" for English, "anna_de" for German). `model` and `settings`
+// are part of what makes a recording what it is, so they are included in
+// the audio fingerprint (see lpVoiceService.voiceFingerprint): changing
+// any of them here regenerates audio on each page's next save.
+const STANDARD_VOICES = {
+  en: {
+    key: "sarah", id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah - Warm & Professional",
+    model: "eleven_turbo_v2",
+    settings: { stability: 0.5, similarity_boost: 0.75 },
+  },
+  de: {
+    key: "anna_de", id: "XB0fDUnXU5powFXDhCwa", label: "Charlotte - Natural German Female",
+    model: "eleven_multilingual_v2",
+    settings: { stability: 0.65, similarity_boost: 0.80, style: 0.3, use_speaker_boost: true },
+  },
 };
 
-const DEFAULT_TEXT = {
-  en: (bizName) => "Welcome to " + bizName + "! Thanks for stopping by - we have got something special waiting for you. Explore our latest products and services, and chat with our AI assistant below for anything you need. And do not forget to allow notifications so you never miss our latest deals and drops. See you inside!",
-  de: (bizName) => "Willkommen bei " + bizName + "! Es freut uns, dass Sie da sind – wir haben etwas Besonderes für Sie. Entdecken Sie unsere neuesten Produkte und Dienstleistungen und chatten Sie mit unserem KI-Assistenten. Vergessen Sie nicht, Benachrichtigungen zu erlauben, damit Sie keine Angebote verpassen. Bis gleich!",
-};
+function standardVoice(lang) {
+  return lang === "de" ? STANDARD_VOICES.de : STANDARD_VOICES.en;
+}
 
-async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customText = null) {
+// Speaks `text` in the standard voice of `lang`, stores the MP3 and
+// returns its address. Throws if speech or storage fails -- the caller
+// decides what a failure means; nothing here returns a placeholder.
+async function synthesizeAndUploadVoice({ slug, text, lang }) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
+  if (typeof text !== "string" || !text.trim()) throw new Error("No greeting text to speak");
 
-  const voice = VOICES[voiceKey] || VOICES.sarah;
-  const lang = voice.lang || "en";
-  const textFn = DEFAULT_TEXT[lang] || DEFAULT_TEXT.en;
-  const cleanName = bizName.replace(/^Welcome to /i,"").replace(/^Welcome /i,"").replace(/^https?:\/\//i,"").replace(/\/.*$/,"").replace(/\.(de|com|net|org|io)$/i,"").trim();
-  const text = customText || textFn(cleanName);
-
-  const body = JSON.stringify({
-    text,
-    model_id: lang === 'de' ? 'eleven_multilingual_v2' : 'eleven_turbo_v2',
-    voice_settings: lang === 'de' ? { stability: 0.65, similarity_boost: 0.80, style: 0.3, use_speaker_boost: true } : { stability: 0.5, similarity_boost: 0.75 }
-  });
+  const voice = standardVoice(lang);
+  const body = JSON.stringify({ text, model_id: voice.model, voice_settings: voice.settings });
 
   const audioBuffer = await new Promise((resolve, reject) => {
     const options = {
@@ -64,6 +69,9 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
     req.end();
   });
 
+  // One file per page, replaced in place. Cloudinary's returned address
+  // carries a new version number each time, so a regenerated greeting is
+  // never served from a cached copy of the old one.
   const uploadResult = await new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "video", folder: "qraivy-voices", public_id: `voice-${slug}`, overwrite: true, format: "mp3" },
@@ -75,6 +83,4 @@ async function generateAndUploadVoice(bizName, slug, voiceKey = "sarah", customT
   return uploadResult.secure_url;
 }
 
-module.exports = { generateAndUploadVoice, VOICES };
-
-
+module.exports = { synthesizeAndUploadVoice, standardVoice, STANDARD_VOICES };

@@ -1,6 +1,6 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
-const { setVoiceAudioUrl } = require('../services/lpSectionsPatch');
+const { mergeVoiceOnSave, ensureVoiceAudio, effectiveGreeting, audioIsCurrent } = require('../services/lpVoiceService');
 const prisma = require('../utils/prismaClient');
 const plans = require('../config/plans');
 const { countSmartPages } = require('../utils/tierSystem');
@@ -1321,6 +1321,7 @@ async function handlePublishLP(req, res) {
     // (reuses `existing`, already fetched above for the ownership gate --
     // no second lookup needed).
     let mergedSections = sections || {};
+    let _existingVoice = null;
     if (existing && existing.sections) {
       try {
         const existingS = JSON.parse(existing.sections);
@@ -1331,10 +1332,17 @@ async function handlePublishLP(req, res) {
           mergedSections.hero = Object.assign({ aiTitle: existingS.hero.aiTitle, aiSubtitle: existingS.hero.aiSubtitle }, mergedSections.hero);
           if (mergedSections.hero.badge !== undefined) { /* badge from payload kept */ } else if (existingS.hero.badge) { mergedSections.hero.badge = existingS.hero.badge; }
         }
-        if (existingS.voice && existingS.voice.audioUrl && mergedSections.voice) {
-          mergedSections.voice = Object.assign({ audioUrl: existingS.voice.audioUrl }, mergedSections.voice);
-        }
+        _existingVoice = existingS.voice;
       } catch(_) {}
+    }
+    // Voice: the audio fields (audioUrl, audioFor, audioLang) are the
+    // server's and always come from what is stored, never from the request
+    // -- the editor sends back whatever it loaded, which can be older than
+    // the audio generated since. Custom greetings are cleaned, and a
+    // request that does not mention them keeps the stored ones.
+    {
+      const _voice = mergeVoiceOnSave(mergedSections.voice, _existingVoice);
+      if (_voice !== undefined) mergedSections.voice = _voice;
     }
 
 
@@ -1447,48 +1455,31 @@ async function handlePublishLP(req, res) {
               pageCache.delByPrefix('stamp:' + slug);
               console.log('[Firecrawl] Auto-generated LP for', slug);
 
-              // Generate voice welcome message
-              try {
-                const { generateAndUploadVoice } = require('../services/voiceService');
-                const _lang = merged.language || 'en';
-                const vs = (merged.voice && merged.voice.voiceKey) || (_lang === 'de' ? 'anna_de' : 'sarah');
-                const ct = (merged.voice && merged.voice.customText) || null;
-                const audioUrl = await generateAndUploadVoice(businessName, slug, vs, ct);
-                // Generation takes seconds. The URL is added to whatever is
-                // saved NOW, not written back with the copy read before it.
-                const _saved = await setVoiceAudioUrl(slug, audioUrl);
-                pageCache.delByPrefix('lp:' + slug);
-                if (_saved.applied) console.log('[Voice] Generated for', slug, audioUrl);
-                else console.error('[Voice] Generated but not saved for', slug, '(' + _saved.reason + ')');
-              } catch(ve) { console.error('[Voice] Error:', ve.message); }
+              // The page's name and industry may just have been filled in:
+              // make sure the welcome audio matches. Shares one run with the
+              // job below (lpVoiceService.ensureVoiceAudio never runs twice
+              // for the same page at once), and never throws.
+              await ensureVoiceAudio(slug);
             }
           }
         } catch(e) { console.error('[Firecrawl] Error:', e.message); }
       });
     }
-    // Generate voice if not already generated
-    setImmediate(async () => {
-      try {
-        const currentPage = await prisma.landingPage.findUnique({ where: { slug } });
-        if (!currentPage) return;
-        const cs = currentPage.sections ? JSON.parse(currentPage.sections) : {};
-        // Only generate voice if not already present
-        if (cs.voice && cs.voice.audioUrl) { console.log('[Voice] Already exists, skipping'); return; }
-        const { generateAndUploadVoice } = require('../services/voiceService');
-        const _csLang = cs.language || 'en';
-        const vs = (cs.voice && cs.voice.voiceKey) || (_csLang === 'de' ? 'anna_de' : 'sarah');
-        const ct = (cs.voice && cs.voice.customText) || null;
-        const bizName = currentPage.businessName || slug;
-        const audioUrl = await generateAndUploadVoice(bizName, slug, vs, ct);
-        // Same rule as above: only voice.audioUrl is added, on top of the
-        // latest saved state, so an edit made meanwhile is never lost.
-        const _saved = await setVoiceAudioUrl(slug, audioUrl);
-        pageCache.delByPrefix('lp:' + slug);
-        if (_saved.applied) console.log('[Voice] Generated on publish for', slug, audioUrl);
-        else console.error('[Voice] Generated on publish but not saved for', slug, '(' + _saved.reason + ')');
-      } catch(ve) { console.error('[Voice] Publish error:', ve.message); }
-    });
-    return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id });
+    // Welcome audio: generated in the background when, and only when, what
+    // should be spoken differs from what the stored audio was made from
+    // (new page, changed greeting, changed language) and Voice is on. A
+    // save that changes anything else costs no text-to-speech call.
+    setImmediate(() => { ensureVoiceAudio(slug); });
+
+    // Tells the editor whether new audio is on its way and how to
+    // recognise it (voice.audioFor on the saved page becomes audioFor).
+    let _voiceInfo = null;
+    try {
+      const _g = effectiveGreeting(page);
+      const _sec = page.sections ? JSON.parse(page.sections) : {};
+      _voiceInfo = { enabled: _g.enabled, lang: _g.lang, isCustom: _g.isCustom, audioFor: _g.fingerprint, pending: _g.enabled && !!_g.text && !audioIsCurrent(_sec, _g) };
+    } catch (_) {}
+    return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id, voice: _voiceInfo });
   } catch (err) {
     console.error('[LP] publish error:', err);
     return res.status(500).json({ error: err.message });

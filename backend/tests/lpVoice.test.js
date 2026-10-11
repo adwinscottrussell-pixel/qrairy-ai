@@ -327,15 +327,19 @@ test('3. a page with no sections yet gets them created with just the audio addre
   assert.deepEqual(JSON.parse(landingPages[slug].sections), { voice: { audioUrl: AUDIO } });
 });
 
-test('3. both background jobs in the controller save through the safe patch and refresh the page cache', () => {
-  const src = fs.readFileSync(resolve('src', 'controllers', 'lpController.js'), 'utf8').replace(/\r\n/g, '\n');
-  assert.ok(src.includes("const { setVoiceAudioUrl } = require('../services/lpSectionsPatch');"));
-  const calls = src.match(/const _saved = await setVoiceAudioUrl\(slug, audioUrl\);\n\s+pageCache\.delByPrefix\('lp:' \+ slug\);/g) || [];
-  assert.equal(calls.length, 2, 'after AI generation and on publish');
-  // The stale whole-object writes are gone.
-  assert.ok(!/merged\.voice = Object\.assign\(\{\}, merged\.voice \|\| \{\}, \{ audioUrl \}\);/.test(src));
-  assert.ok(!/cs\.voice = Object\.assign\(\{\}, cs\.voice \|\| \{\}, \{ audioUrl \}\);/.test(src));
-  assert.equal((src.match(/generateAndUploadVoice\(/g) || []).length, 2, 'no third generation path was added');
+test('3. background audio is stored only through the safe patch, and the page cache is refreshed', () => {
+  // Since Phase V2 both jobs go through lpVoiceService.ensureVoiceAudio
+  // (behaviour covered in tests/lpVoiceGreetings.test.js); what must stay
+  // true is that nothing writes a stale whole copy of sections back.
+  const controller = fs.readFileSync(resolve('src', 'controllers', 'lpController.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert.ok(!/merged\.voice = Object\.assign\(\{\}, merged\.voice \|\| \{\}, \{ audioUrl \}\);/.test(controller));
+  assert.ok(!/cs\.voice = Object\.assign\(\{\}, cs\.voice \|\| \{\}, \{ audioUrl \}\);/.test(controller));
+  assert.ok(!/generateAndUploadVoice|synthesizeAndUploadVoice/.test(controller), 'the controller makes no text-to-speech call of its own');
+  assert.equal((controller.match(/ensureVoiceAudio\(slug\)/g) || []).length, 2, 'after AI generation and after every save');
+  const service = fs.readFileSync(resolve('src', 'services', 'lpVoiceService.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(service, /const saved = await patchLandingPageSections\(slug, \(fresh, freshPage\) => \{/);
+  assert.match(service, /pageCache\.delByPrefix\('lp:' \+ slug\);/);
+  assert.ok(!/prisma\.landingPage\.(update|upsert|updateMany)\(/.test(service), 'the service never writes sections directly');
 });
 
 // ── 6. AI and Voice are independent ────────────────────────────
@@ -420,16 +424,17 @@ test('7. a generated file that could not be saved leaves the page as it was', as
 
 test('7. both generation jobs catch their own failures and never fail the save that started them', () => {
   const src = fs.readFileSync(resolve('src', 'controllers', 'lpController.js'), 'utf8').replace(/\r\n/g, '\n');
-  // Each call sits in a try whose catch only logs.
-  assert.match(src, /const audioUrl = await generateAndUploadVoice\(businessName, slug, vs, ct\);[\s\S]{0,700}?\} catch\(ve\) \{ console\.error\('\[Voice\] Error:', ve\.message\); \}/);
-  assert.match(src, /const audioUrl = await generateAndUploadVoice\(bizName, slug, vs, ct\);[\s\S]{0,700}?\} catch\(ve\) \{ console\.error\('\[Voice\] Publish error:', ve\.message\); \}/);
-  // The publish job runs after the response is on its way, not before it.
-  const job = src.indexOf('// Generate voice if not already generated');
-  const reply = src.indexOf("return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id });");
+  // The job (lpVoiceService.ensureVoiceAudio, since Phase V2) catches
+  // everything itself: its whole run is inside one try whose catch logs.
+  const service = fs.readFileSync(resolve('src', 'services', 'lpVoiceService.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(service, /\} catch \(err\) \{\n\s+console\.error\('\[Voice\] Error for', slug \+ ':', err && err\.message\);/);
+  assert.match(service, /\/\/ Makes the page's audio match its greeting\. Never throws:/);
+  // After a save it runs once the response is on its way, not before it.
+  const job = src.indexOf('setImmediate(() => { ensureVoiceAudio(slug); });');
+  const reply = src.indexOf("return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id, voice: _voiceInfo });");
   assert.ok(job !== -1 && reply > job);
-  assert.match(src.slice(job, reply), /^\s*\/\/ Generate voice if not already generated\n\s*setImmediate\(async \(\) => \{/);
-  // A saved-but-not-applied result is reported, not silently treated as success.
-  assert.equal((src.match(/else console\.error\('\[Voice\] Generated[^']*but not saved for', slug/g) || []).length, 2);
+  // A recording that could not be stored is reported, not treated as success.
+  assert.match(service, /else if \(result\.generated\) console\.error\('\[Voice\] Generated but not stored for', slug/);
 });
 
 // ── Nothing else on the page changed ───────────────────────────
