@@ -81,3 +81,22 @@ Deliberate, manual, staging only:
 ```
 UPDATE "StagingVoiceUsage" SET "used" = 0 WHERE "id" = 1;
 ```
+
+## Vercel: which branch the Voice staging project deploys
+
+This is a setting of the new Voice staging Vercel project only, entered
+in its dashboard (Settings -> Build and Deployment -> Ignored Build
+Step -> Custom). It is never in `vercel.json`: that file is read by
+every Vercel project connected to this repository, including the
+existing QRAIVY project, which must keep deploying all its branches.
+
+Paste exactly the one line in `staging/vercel-ignored-build-step.txt`.
+
+Vercel's convention is inverted: exit code 1 builds, exit code 0 skips.
+The command builds `preview/lp-voice-social` and skips everything else,
+including the case where Vercel provides no branch name. It applies to
+production and preview deployments alike.
+
+It only governs deployments triggered by a Git push. It does not stop
+someone with access from deploying another branch by hand in the
+dashboard or with the Vercel CLI.
