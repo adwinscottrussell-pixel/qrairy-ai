@@ -1,5 +1,13 @@
 {
   "outputDirectory": "frontend/public",
+  "redirects": [
+    { "source": "/(.*/.*\\.html.*)", "has": [{"type": "host", "value": "voice-preview\\.qraivy\\.com"}], "destination": "/staging-blocked.html", "permanent": false },
+    { "source": "/(.*\\.\\..*)", "has": [{"type": "host", "value": "voice-preview\\.qraivy\\.com"}], "destination": "/staging-blocked.html", "permanent": false },
+    { "source": "/((?!smart-qr-detail\\.html|login\\.html|staging-blocked\\.html|smart-editor\\.js|dashboard-shell\\.css|js/|favicon|robots\\.txt).*)", "has": [{"type": "host", "value": "voice-preview\\.qraivy\\.com"}], "destination": "/staging-blocked.html", "permanent": false }
+  ],
+  "headers": [
+    { "source": "/(.*)", "has": [{"type": "host", "value": "voice-preview\\.qraivy\\.com"}], "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"},{"key": "Cache-Control", "value": "no-store"}] }
+  ],
   "rewrites": [
     { "source": "/lp/:path*", "destination": "https://api.qraivy.com/lp/:path*" },
     { "source": "/stamp/:path*", "destination": "https://api.qraivy.com/stamp/:path*" },

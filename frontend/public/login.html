@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QRAIRY.AI — Sign In</title>
   <meta name="robots" content="noindex, nofollow" />
+  <script src="js/staging-config.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
   <style>
@@ -48,8 +49,12 @@
         window.location.href = _rp;
         return;
       }
-      // Production returns to www; plan-preview stays on its own host.
-      const _base = window.location.hostname === 'plan-preview.qraivy.com' ? window.location.origin + '/' : 'https://www.qraivy.com/';
+      // Production returns to www; plan-preview stays on its own host, and
+      // so does a staging host (js/staging-config.js) -- signing in there
+      // must not carry the session over to the production site.
+      const _stagingHosts = (window.QRAIVY_STAGING_CONFIG && Array.isArray(window.QRAIVY_STAGING_CONFIG.hosts)) ? window.QRAIVY_STAGING_CONFIG.hosts : [];
+      const _ownHost = window.location.hostname === 'plan-preview.qraivy.com' || _stagingHosts.indexOf(window.location.hostname) !== -1;
+      const _base = _ownHost ? window.location.origin + '/' : 'https://www.qraivy.com/';
       const _target = _base + _rp;
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
         afterSignInUrl: _target,
