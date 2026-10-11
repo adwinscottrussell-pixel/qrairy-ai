@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deals — Qraivy</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="dashboard-shell.css"/>
+  <link rel="stylesheet" href="qds/qds.css"/>
+  <link rel="stylesheet" href="deals-page.css"/>
+  <script src="js/qraivy-lang.js"></script>
+  <script src="js/admin-shell.js"></script>
+  <script src="js/deal-starter-images.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">Q</div>
+    <div class="sb-logo-text">QR<span>Aivy</span></div>
+  </div>
+  <button class="sb-toggle" id="sb-toggle">&#x2039;</button>
+  <nav class="sb-nav">
+    <div class="sb-group" data-i18n="nav_main">Main</div>
+    <a href="dashboard.html" class="sb-item"><span class="sb-icon">&#x229E;</span><span class="sb-label" data-i18n="nav_dashboard">Dashboard</span></a>
+    <a href="analytics.html" class="sb-item"><span class="sb-icon">&#x2197;</span><span class="sb-label" data-i18n="nav_analytics">Analytics</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_smartpages">Smart Pages</div>
+    <a href="dashboard.html?section=sqr" class="sb-item" id="sb-smart-pages"><span class="sb-icon">&#x2B21;</span><span class="sb-label" data-i18n="nav_sqrpages">Smart QR Pages</span><span class="sb-badge" id="sqr-count-badge" style="display:none">0</span></a>
+    <a href="dashboard.html?launch=onboarding" class="sb-item" id="sb-create-sqr"><span class="sb-icon">&#xFF0B;</span><span class="sb-label" data-i18n="nav_createnew">Create New QR</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_engage">Engage</div>
+    <a href="dashboard.html?section=campaigns" class="sb-item" id="sb-campaigns"><span class="sb-icon">&#x1F4E3;</span><span class="sb-label" data-i18n="nav_campaigns">AI Campaigns</span></a>
+    <a href="dashboard.html?section=customers" class="sb-item" id="sb-customers"><span class="sb-icon">&#x1F465;</span><span class="sb-label" data-i18n="nav_customers">Customers</span></a>
+    <a href="dashboard.html?section=loyalty" class="sb-item" id="sb-loyalty"><span class="sb-icon">&#x1F3AB;</span><span class="sb-label" data-i18n="nav_loyalty">Loyalty</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_configure">Configure</div>
+    <a href="wallet-pass-studio.html" class="sb-item" id="sb-wallet"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_wallet">Wallet Passes</span></a>
+    <div class="sb-group" style="margin-top:4px" data-i18n="nav_account">Account</div>
+    <a href="dashboard.html?section=billing" class="sb-item" id="sb-billing"><span class="sb-icon">&#x1F4B3;</span><span class="sb-label" data-i18n="nav_billing">Billing &amp; Plans</span></a>
+    <a href="dashboard.html?section=settings" class="sb-item" id="sb-settings"><span class="sb-icon">&#x2699;</span><span class="sb-label" data-i18n="nav_settings">Settings</span></a>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sb-username">Loading&#x2026;</div>
+        <div class="sb-user-role" data-i18n="role_owner">Business Owner</div>
+      </div>
+    </div>
+    <div style="padding:6px 12px 2px;">
+      <button id="lang-toggle" onclick="toggleLang()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(240,244,248,0.5);font-size:.72rem;font-family:inherit;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:7px;" onmouseover="this.style.background='rgba(255,255,255,0.09)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:.8rem;">🌐</span>
+        <span id="lang-toggle-label">Deutsch</span>
+      </button>
+    </div>
+    <div class="sb-divider"></div>
+    <a href="#" class="sb-signout" id="sb-signout"><span class="sb-icon">&#x2192;</span><span class="sb-label" data-i18n="nav_signout">Sign Out</span></a>
+  </div>
+</div>
+
+<button id="mob-btn">☰</button>
+<div class="sb-overlay" id="sb-overlay"></div>
+
+<div id="main-content">
+  <main>
+    <div class="qds-page-wrap">
+
+      <!-- Phase B1: visual foundation only. Nothing on this page talks to
+           the backend; every deal lives in this browser tab's memory. -->
+      <div class="deal-preview-banner" role="note">
+        <span class="deal-preview-banner__tag" data-i18n="dl_banner_tag">Preview</span>
+        <span data-i18n="dl_banner_text">Visual prototype only. Deals you create here stay in this browser tab, are not saved to your account and are never shown to customers.</span>
+      </div>
+
+      <!-- ═══ LIST VIEW ═══ -->
+      <section id="deal-list-view" aria-labelledby="deal-list-title">
+        <div class="qds-page-header">
+          <div>
+            <h1 class="qds-page-title" id="deal-list-title"><span data-i18n="dl_title">Deals</span> <em data-i18n="dl_title_em">&amp; Promotions</em></h1>
+            <div class="qds-page-subtitle" data-i18n="dl_sub">Create an offer once and show it on your Smart Landing Pages.</div>
+          </div>
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-create-btn" data-i18n="dl_create">Create deal</button>
+        </div>
+
+        <div class="deal-list" id="deal-list" hidden></div>
+
+        <div class="qds-empty-state" id="deal-empty">
+          <div class="qds-empty-state__icon" aria-hidden="true">&#x1F3F7;</div>
+          <div class="qds-empty-state__title" data-i18n="dl_empty_title">No deals yet</div>
+          <div class="qds-empty-state__sub" data-i18n="dl_empty_sub">Build your first deal in four short steps. You can review everything before it goes anywhere.</div>
+          <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-empty-create-btn" data-i18n="dl_create_first">Create your first deal</button>
+        </div>
+      </section>
+
+      <!-- ═══ BUILDER VIEW ═══ -->
+      <section id="deal-builder-view" aria-labelledby="deal-builder-title" hidden>
+        <div class="deal-back">
+          <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" id="deal-back-btn" data-i18n="db_back">&#x2190; All deals</button>
+        </div>
+        <div class="qds-page-header">
+          <div class="deal-builder-head">
+            <h1 class="qds-page-title" id="deal-builder-title" data-i18n="db_title_new">Create deal</h1>
+            <span class="qds-badge qds-badge--neutral" id="deal-status-badge">Draft</span>
+          </div>
+        </div>
+
+        <ol class="deal-steps" id="deal-steps" aria-label="Steps">
+          <li><button class="deal-step" type="button" data-step="1"><span class="deal-step__num">1</span><span class="deal-step__label" data-i18n="db_step1">Content</span></button></li>
+          <li><button class="deal-step" type="button" data-step="2"><span class="deal-step__num">2</span><span class="deal-step__label" data-i18n="db_step2">Image</span></button></li>
+          <li><button class="deal-step" type="button" data-step="3"><span class="deal-step__num">3</span><span class="deal-step__label" data-i18n="db_step3">Schedule</span></button></li>
+          <li><button class="deal-step" type="button" data-step="4"><span class="deal-step__num">4</span><span class="deal-step__label" data-i18n="db_step4">Review</span></button></li>
+        </ol>
+
+        <div class="deal-layout">
+          <div class="deal-form">
+
+            <!-- STEP 1 — CONTENT -->
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="1">
+              <div>
+                <h2 class="deal-panel__title" data-i18n="s1_title">What kind of deal is it?</h2>
+                <p class="deal-panel__lead" data-i18n="s1_lead">Pick a type, then describe the offer in your own words.</p>
+              </div>
+
+              <div class="qds-field qds-field--group" id="field-type">
+                <span class="qds-field__label" id="deal-type-label"><span data-i18n="s1_type">Deal type</span> <span class="qds-field__required" aria-hidden="true">*</span></span>
+                <div class="deal-type-grid" role="radiogroup" aria-labelledby="deal-type-label" aria-required="true">
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="percentage_discount" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_percentage_discount">Percentage off</span><span class="deal-type-example" data-i18n="type_percentage_discount_ex">e.g. 20% off</span></span>
+                    </span>
+                  </label>
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="two_for_one" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="8" height="12" rx="1.5"/><rect x="13" y="8" width="8" height="12" rx="1.5"/><path d="M7 5v3M17 5v3"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_two_for_one">2 for 1</span><span class="deal-type-example" data-i18n="type_two_for_one_ex">e.g. buy 1, get 1 free</span></span>
+                    </span>
+                  </label>
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="fixed_price" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_fixed_price">Fixed price</span><span class="deal-type-example" data-i18n="type_fixed_price_ex">e.g. only 5.90</span></span>
+                    </span>
+                  </label>
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="free_bonus" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_free_bonus">Free extra</span><span class="deal-type-example" data-i18n="type_free_bonus_ex">e.g. a free coffee</span></span>
+                    </span>
+                  </label>
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="upgrade" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 4-4 4 4"/><path d="M12 16V8"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_upgrade">Upgrade</span><span class="deal-type-example" data-i18n="type_upgrade_ex">e.g. large for the price of small</span></span>
+                    </span>
+                  </label>
+                  <label class="qds-radio qds-radio--tile qds-surface qds-surface--default qds-surface--interactive qds-surface--padding-sm">
+                    <input class="qds-radio__control" type="radio" name="deal-type" value="custom" />
+                    <span class="qds-radio__tile-content">
+                      <span class="qds-radio__preview" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+                      <span class="qds-radio__label"><span data-i18n="type_custom">Your own offer</span><span class="deal-type-example" data-i18n="type_custom_ex">free wording</span></span>
+                    </span>
+                  </label>
+                </div>
+                <p class="qds-field__message" id="err-type" hidden></p>
+              </div>
+
+              <!-- Type-specific fields, rendered by renderTypeFields() -->
+              <div id="deal-type-fields" class="deal-row" hidden></div>
+
+              <div class="qds-field" id="field-title">
+                <label class="qds-field__label" for="deal-title"><span data-i18n="s1_f_title">Title</span> <span class="qds-field__required" aria-hidden="true">*</span></label>
+                <div class="qds-input qds-input--md">
+                  <input class="qds-input__control" id="deal-title" type="text" maxlength="80" autocomplete="off" data-i18n-placeholder="s1_f_title_ph" placeholder="e.g. Free Coffee Friday" aria-describedby="err-title cnt-title" />
+                </div>
+                <p class="qds-field__message" id="err-title" hidden></p>
+                <span class="qds-field__counter" id="cnt-title">0 / 80</span>
+              </div>
+
+              <div class="qds-field" id="field-offerText">
+                <label class="qds-field__label" for="deal-offerText"><span data-i18n="s1_f_offer">Offer line</span> <span class="qds-field__required" aria-hidden="true">*</span></label>
+                <p class="qds-field__description" id="desc-offerText" data-i18n="s1_f_offer_desc">The one line customers read first. We suggest one from the deal type; change it freely.</p>
+                <div class="qds-input qds-input--md">
+                  <input class="qds-input__control" id="deal-offerText" type="text" maxlength="120" autocomplete="off" aria-describedby="desc-offerText err-offerText cnt-offerText" />
+                </div>
+                <p class="qds-field__message" id="err-offerText" hidden></p>
+                <span class="qds-field__counter" id="cnt-offerText">0 / 120</span>
+              </div>
+
+              <div class="qds-field" id="field-description">
+                <label class="qds-field__label" for="deal-description"><span data-i18n="s1_f_desc">Description</span> <span class="qds-field__optional" data-i18n="opt">(optional)</span></label>
+                <div class="qds-textarea">
+                  <textarea class="qds-textarea__control" id="deal-description" rows="3" maxlength="400" data-i18n-placeholder="s1_f_desc_ph" placeholder="Conditions, what is included, how to redeem…" aria-describedby="cnt-description"></textarea>
+                </div>
+                <span class="qds-field__counter" id="cnt-description">0 / 400</span>
+              </div>
+
+              <div class="deal-nav">
+                <button class="qds-btn qds-btn--ghost qds-btn--md" type="button" data-action="cancel" data-i18n="nav_cancel">Cancel</button>
+                <div class="deal-nav__end">
+                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" data-action="next" data-i18n="nav_next_image">Next: Image</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 2 — IMAGE -->
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="2" hidden>
+              <div>
+                <h2 class="deal-panel__title" data-i18n="s2_title">Add an image</h2>
+                <p class="deal-panel__lead" data-i18n="s2_lead">Optional. Choose a starter image, upload your own picture or pick a plain background. Images are shown in 4:3.</p>
+              </div>
+
+              <div class="deal-image-current" id="deal-image-current" hidden>
+                <div class="deal-image-current__thumb" id="deal-image-thumb"><span class="deal-ai-label" id="deal-image-ai" hidden><span aria-hidden="true">AI · KI-generiert</span><span class="deal-sr-only" data-i18n="ai_label_sr">AI-generated image</span></span></div>
+                <div class="deal-image-current__info">
+                  <span id="deal-image-info"></span>
+                  <div><button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" id="deal-image-remove" data-i18n="s2_remove">Remove image</button></div>
+                </div>
+              </div>
+
+              <div class="deal-tabs" role="tablist" aria-label="Image source">
+                <button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" role="tab" id="tab-starter" aria-controls="pane-starter" aria-selected="true" data-tab="starter" data-i18n="s2_tab_starter">Starter images</button>
+                <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" role="tab" id="tab-upload" aria-controls="pane-upload" aria-selected="false" data-tab="upload" data-i18n="s2_tab_upload">Upload your own</button>
+                <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" role="tab" id="tab-background" aria-controls="pane-background" aria-selected="false" data-tab="background" data-i18n="s2_tab_bg">Choose a background</button>
+              </div>
+
+              <div id="pane-starter" role="tabpanel" aria-labelledby="tab-starter">
+                <div class="deal-starter-gallery" id="deal-starter-gallery"></div>
+                <p class="deal-note" data-i18n="s2_ai_note">All starter images are AI-generated. They carry the label “AI · KI-generiert” wherever they are shown, including to your customers.</p>
+              </div>
+
+              <div id="pane-upload" role="tabpanel" aria-labelledby="tab-upload" hidden>
+                <div class="qds-field" id="field-image">
+                  <label class="deal-upload" id="deal-upload" for="deal-image-file">
+                    <input class="deal-upload__input" id="deal-image-file" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="err-image" />
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <strong data-i18n="s2_drop">Drop an image here or click to choose</strong>
+                    <span class="deal-upload__hint" data-i18n="s2_drop_hint">PNG, JPG or WebP, up to 5 MB</span>
+                  </label>
+                  <p class="qds-field__message" id="err-image" hidden></p>
+                </div>
+              </div>
+
+              <div id="pane-background" role="tabpanel" aria-labelledby="tab-background" hidden>
+                <div class="deal-swatches" id="deal-swatches"></div>
+              </div>
+
+              <p class="deal-note" data-i18n="s2_note">Preview only: a picture you upload is displayed from your device and is not sent anywhere.</p>
+
+              <div class="deal-nav">
+                <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
+                <div class="deal-nav__end">
+                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" data-action="next" data-i18n="nav_next_schedule">Next: Schedule</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 3 — SCHEDULE -->
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="3" hidden>
+              <div>
+                <h2 class="deal-panel__title" data-i18n="s3_title">When is the deal valid?</h2>
+                <p class="deal-panel__lead" data-i18n="s3_lead">Dates are optional. Add a time only if the deal starts or ends at a specific hour; otherwise it runs for the whole day.</p>
+              </div>
+
+              <!-- Date and time are separate fields on purpose: a combined
+                   datetime-local field reports an empty value until BOTH parts
+                   are filled, so a date entered without a time was lost. -->
+              <div class="deal-row">
+                <div class="qds-field" id="field-startDate">
+                  <label class="qds-field__label" for="deal-startDate"><span data-i18n="s3_start_date">Start date</span> <span class="qds-field__optional" data-i18n="opt">(optional)</span></label>
+                  <div class="qds-input qds-input--md">
+                    <input class="qds-input__control" id="deal-startDate" type="date" data-when="startDate" aria-describedby="err-startDate" />
+                  </div>
+                  <p class="qds-field__message" id="err-startDate" hidden></p>
+                </div>
+                <div class="qds-field" id="field-startTime">
+                  <label class="qds-field__label" for="deal-startTime"><span data-i18n="s3_start_time">Start time</span> <span class="qds-field__optional" data-i18n="opt">(optional)</span></label>
+                  <div class="qds-input qds-input--md">
+                    <input class="qds-input__control" id="deal-startTime" type="time" data-when="startTime" aria-describedby="err-startTime" />
+                  </div>
+                  <p class="qds-field__message" id="err-startTime" hidden></p>
+                </div>
+              </div>
+              <div class="deal-row">
+                <div class="qds-field" id="field-endDate">
+                  <label class="qds-field__label" for="deal-endDate"><span data-i18n="s3_end_date">End date</span> <span class="qds-field__optional" data-i18n="opt">(optional)</span></label>
+                  <div class="qds-input qds-input--md">
+                    <input class="qds-input__control" id="deal-endDate" type="date" data-when="endDate" aria-describedby="err-endDate" />
+                  </div>
+                  <p class="qds-field__message" id="err-endDate" hidden></p>
+                </div>
+                <div class="qds-field" id="field-endTime">
+                  <label class="qds-field__label" for="deal-endTime"><span data-i18n="s3_end_time">End time</span> <span class="qds-field__optional" data-i18n="opt">(optional)</span></label>
+                  <div class="qds-input qds-input--md">
+                    <input class="qds-input__control" id="deal-endTime" type="time" data-when="endTime" aria-describedby="err-endTime" />
+                  </div>
+                  <p class="qds-field__message" id="err-endTime" hidden></p>
+                </div>
+              </div>
+
+              <div class="deal-summary-line" id="deal-schedule-summary" aria-live="polite"></div>
+
+              <div class="deal-nav">
+                <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
+                <div class="deal-nav__end">
+                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" data-action="next" data-i18n="nav_next_review">Next: Review</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 4 — REVIEW -->
+            <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="4" hidden>
+              <div>
+                <h2 class="deal-panel__title" data-i18n="s4_title">Review your deal</h2>
+                <p class="deal-panel__lead" data-i18n="s4_lead">Check every detail. Use Edit to jump back to a step.</p>
+              </div>
+
+              <div class="deal-review" id="deal-review"></div>
+
+              <ul class="deal-issues" id="deal-issues" hidden></ul>
+
+              <p class="deal-note" data-i18n="s4_note">Preview only: “Save draft” and “Publish” change the status on this screen. Nothing is saved to your account, sent to customers or placed on a landing page.</p>
+
+              <div class="deal-nav">
+                <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
+                <div class="deal-nav__end">
+                  <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" id="deal-save-draft" data-i18n="s4_save">Save draft (preview)</button>
+                  <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-publish" data-i18n="s4_publish">Publish (preview)</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- LIVE PREVIEW -->
+          <aside class="deal-preview" aria-labelledby="deal-preview-label">
+            <div class="deal-preview__label" id="deal-preview-label" data-i18n="pv_label">Live preview</div>
+            <div class="deal-phone">
+              <div class="deal-phone__page" data-i18n="pv_page">On your Smart Landing Page</div>
+              <div class="deal-pv" id="deal-pv">
+                <div class="deal-pv__media" id="deal-pv-media"><span class="deal-pv__chip" id="deal-pv-chip" hidden></span><span class="deal-ai-label" id="deal-pv-ai" hidden><span aria-hidden="true">AI · KI-generiert</span><span class="deal-sr-only" data-i18n="ai_label_sr">AI-generated image</span></span></div>
+                <div class="deal-pv__body">
+                  <div class="deal-pv__title" id="deal-pv-title"></div>
+                  <div class="deal-pv__offer" id="deal-pv-offer"></div>
+                  <div class="deal-pv__desc" id="deal-pv-desc" hidden></div>
+                  <div class="deal-pv__valid" id="deal-pv-valid"></div>
+                </div>
+              </div>
+            </div>
+            <p class="deal-preview__note" data-i18n="pv_note">Example of how the deal could look. The final appearance on your page may differ.</p>
+          </aside>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  <footer class="dash-footer"><span data-i18n="dl_footer">QRAIVY — Deals · Preview</span></footer>
+</div>
+
+<script>
+// ============================================================
+// Deals — Phase B1 visual foundation.
+// Local state only: no fetch, no API base, no storage of deal data.
+// Field names, the six offer types and the validation limits mirror
+// backend/src/services/dealService.js so the later API wiring changes
+// where the data goes, not how this screen works.
+// ============================================================
+(function () {
+  'use strict';
+
+  var OFFER_TYPES = ['percentage_discount', 'two_for_one', 'fixed_price', 'free_bonus', 'upgrade', 'custom'];
+  var CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'];
+  var IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  var IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+  // Type-specific fields: same keys and required/optional split as
+  // checkOfferDetails() in dealService.js. `custom` has none by design.
+  var TYPE_FIELDS = {
+    percentage_discount: [{ key: 'percentOff', kind: 'number', required: true, min: 1, max: 100, step: '1', ph: '20' }],
+    two_for_one: [
+      { key: 'buyQty', kind: 'number', required: true, min: 1, step: '1', ph: '1' },
+      { key: 'freeQty', kind: 'number', required: true, min: 1, step: '1', ph: '1' }
+    ],
+    fixed_price: [
+      { key: 'price', kind: 'number', required: true, min: 0.01, step: '0.01', ph: '5.90' },
+      { key: 'currency', kind: 'select', options: CURRENCIES }
+    ],
+    free_bonus: [{ key: 'freeItem', kind: 'text' }, { key: 'minPurchase', kind: 'text' }],
+    upgrade: [{ key: 'fromLabel', kind: 'text' }, { key: 'toLabel', kind: 'text' }],
+    custom: []
+  };
+
+  // Neutral, QRAIVY-made backgrounds (plain CSS gradients, no photos).
+  var BACKGROUNDS = [
+    { id: 'ember', css: 'linear-gradient(135deg, #ff5a1f 0%, #e6490f 100%)' },
+    { id: 'sunrise', css: 'linear-gradient(135deg, #f59e0b 0%, #ff5a1f 100%)' },
+    { id: 'night', css: 'linear-gradient(135deg, #232323 0%, #0a0a0a 100%)' },
+    { id: 'slate', css: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)' },
+    { id: 'forest', css: 'linear-gradient(135deg, #22c55e 0%, #166534 100%)' },
+    { id: 'ocean', css: 'linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%)' },
+    { id: 'plum', css: 'linear-gradient(135deg, #a855f7 0%, #581c87 100%)' },
+    { id: 'sand', css: 'linear-gradient(135deg, #f0ece0 0%, #c8c8c0 100%)' }
+  ];
+
+  // Starter images: js/deal-starter-images.js (data only). Missing file =
+  // empty gallery, never an error.
+  var STARTERS = window.QRAIVY_DEAL_STARTER_IMAGES || { basePath: '', categories: [], images: [] };
+  function starterById(id) { return STARTERS.images.filter(function (i) { return i.id === id; })[0] || null; }
+
+  var _t = {
+    en: {
+      dl_banner_tag: 'Preview',
+      dl_banner_text: 'Visual prototype only. Deals you create here stay in this browser tab, are not saved to your account and are never shown to customers.',
+      dl_title: 'Deals', dl_title_em: '& Promotions',
+      dl_sub: 'Create an offer once and show it on your Smart Landing Pages.',
+      dl_create: 'Create deal', dl_create_first: 'Create your first deal',
+      dl_empty_title: 'No deals yet',
+      dl_empty_sub: 'Build your first deal in four short steps. You can review everything before it goes anywhere.',
+      dl_footer: 'QRAIVY — Deals · Preview',
+      dl_local: 'Local preview', dl_edit: 'Edit', dl_archive: 'Archive', dl_delete: 'Delete',
+      dl_confirm_delete: 'Delete this deal from the preview?',
+      st_draft: 'Draft', st_published: 'Published', st_archived: 'Archived', st_expired: 'Expired', st_scheduled: 'Scheduled',
+      db_back: '← All deals', db_title_new: 'Create deal', db_title_edit: 'Edit deal',
+      db_step1: 'Content', db_step2: 'Image', db_step3: 'Schedule', db_step4: 'Review',
+      s1_title: 'What kind of deal is it?', s1_lead: 'Pick a type, then describe the offer in your own words.',
+      s1_type: 'Deal type',
+      type_percentage_discount: 'Percentage off', type_percentage_discount_ex: 'e.g. 20% off',
+      type_two_for_one: '2 for 1', type_two_for_one_ex: 'e.g. buy 1, get 1 free',
+      type_fixed_price: 'Fixed price', type_fixed_price_ex: 'e.g. only 5.90',
+      type_free_bonus: 'Free extra', type_free_bonus_ex: 'e.g. a free coffee',
+      type_upgrade: 'Upgrade', type_upgrade_ex: 'e.g. large for the price of small',
+      type_custom: 'Your own offer', type_custom_ex: 'free wording',
+      f_percentOff: 'Discount in percent', f_buyQty: 'Buy (quantity)', f_freeQty: 'Free on top (quantity)',
+      f_price: 'Price', f_currency: 'Currency', f_freeItem: 'What is free?', f_minPurchase: 'Minimum purchase',
+      f_fromLabel: 'Upgrade from', f_toLabel: 'Upgrade to',
+      ph_freeItem: 'e.g. 1 coffee', ph_minPurchase: 'e.g. from 10 €', ph_fromLabel: 'e.g. Standard', ph_toLabel: 'e.g. Premium',
+      s1_f_title: 'Title', s1_f_title_ph: 'e.g. Free Coffee Friday',
+      s1_f_offer: 'Offer line', s1_f_offer_desc: 'The one line customers read first. We suggest one from the deal type; change it freely.',
+      s1_f_desc: 'Description', s1_f_desc_ph: 'Conditions, what is included, how to redeem…',
+      opt: '(optional)',
+      nav_cancel: 'Cancel', nav_back: 'Back', nav_next_image: 'Next: Image', nav_next_schedule: 'Next: Schedule', nav_next_review: 'Next: Review',
+      s2_title: 'Add an image', s2_lead: 'Optional. Choose a starter image, upload your own picture or pick a plain background. Images are shown in 4:3.',
+      s2_tab_starter: 'Starter images', s2_tab_upload: 'Upload your own', s2_tab_bg: 'Plain background',
+      s2_ai_note: 'All starter images are AI-generated. They carry the label “AI · KI-generiert” wherever they are shown, including to your customers.',
+      ai_label_sr: 'AI-generated image',
+      s2_drop: 'Drop an image here or click to choose', s2_drop_hint: 'PNG, JPG or WebP, up to 5 MB',
+      s2_remove: 'Remove image', s2_note: 'Preview only: a picture you upload is displayed from your device and is not sent anywhere.',
+      s2_info_upload: 'Your picture: {name} ({size})', s2_info_bg: 'Background: {name}', s2_info_starter: 'Starter image: {name} (AI-generated)',
+      bg_ember: 'Ember', bg_sunrise: 'Sunrise', bg_night: 'Night', bg_slate: 'Slate', bg_forest: 'Forest', bg_ocean: 'Ocean', bg_plum: 'Plum', bg_sand: 'Sand',
+      s3_title: 'When is the deal valid?', s3_lead: 'Dates are optional. Add a time only if the deal starts or ends at a specific hour; otherwise it runs for the whole day.',
+      s3_start_date: 'Start date', s3_start_time: 'Start time', s3_end_date: 'End date', s3_end_time: 'End time',
+      sum_none: 'No time limit: the deal is valid until you archive it.',
+      sum_from: 'Valid from {start}, with no end date.',
+      sum_until: 'Valid until {end}.',
+      sum_range: 'Valid from {start} until {end}.',
+      pv_valid_none: 'No end date', pv_valid_from: 'From {start}', pv_valid_until: 'Until {end}', pv_valid_range: '{start} – {end}',
+      s4_title: 'Review your deal', s4_lead: 'Check every detail. Use Edit to jump back to a step.',
+      s4_note: 'Preview only: “Save draft” and “Publish” change the status on this screen. Nothing is saved to your account, sent to customers or placed on a landing page.',
+      s4_save: 'Save draft (preview)', s4_publish: 'Publish (preview)',
+      rv_type: 'Deal type', rv_details: 'Details', rv_title: 'Title', rv_offer: 'Offer line', rv_desc: 'Description', rv_image: 'Image', rv_period: 'Period',
+      rv_edit: 'Edit', rv_none: 'Not set', rv_no_image: 'No image', rv_image_upload: 'Your picture ({name})', rv_image_bg: 'Background “{name}”', rv_image_starter: 'Starter image “{name}” (AI-generated)',
+      pv_label: 'Live preview', pv_page: 'On your Smart Landing Page',
+      pv_note: 'Example of how the deal could look. The final appearance on your page may differ.',
+      pv_ph_title: 'Your deal title', pv_ph_offer: 'Your offer line', pv_no_image: 'No image',
+      chip_free: 'Free', chip_upgrade: 'Upgrade', chip_x_for_y: '{total} for {buy}',
+      sg_percentage_discount: '{n}% off', sg_percentage_discount_blank: 'Discount',
+      sg_two_for_one: 'Buy {buy}, get {free} free', sg_fixed_price: 'Only {price}', sg_fixed_price_blank: 'Special price',
+      sg_free_bonus: '{item} free', sg_free_bonus_blank: 'Free extra', sg_free_bonus_min: '{item} free {min}',
+      sg_upgrade: 'Free upgrade to {to}', sg_upgrade_blank: 'Free upgrade',
+      d_from_to: '{from} → {to}',
+      e_type: 'Choose a deal type.', e_required: 'This field is required.',
+      e_number: 'Enter a number.', e_min: 'Must be at least {min}.', e_max: 'Must be at most {max}.',
+      e_title: 'Give the deal a title.', e_offer: 'Write the offer line.',
+      e_img_type: 'Use a PNG, JPG or WebP image.', e_img_size: 'The image is larger than 5 MB.', e_img_read: 'The image could not be read.',
+      e_end_before: 'The end must be after the start.', e_end_past: 'The end is in the past. A deal that has already ended cannot be published.',
+      e_date_incomplete: 'This entry is incomplete. Fill in every part or clear the field.', e_time_needs_date: 'Add a date for this time.',
+      is_step1: 'Content is incomplete.', is_step3: 'The schedule needs attention.',
+      toast_draft: 'Draft kept in this preview only', toast_published: 'Marked as published in this preview only',
+      toast_archived: 'Archived in this preview', toast_deleted: 'Removed from this preview',
+      lang_toggle: 'Deutsch'
+    },
+    de: {
+      dl_banner_tag: 'Vorschau',
+      dl_banner_text: 'Nur ein visueller Prototyp. Hier erstellte Deals bleiben in diesem Browser-Tab, werden nicht in deinem Konto gespeichert und Kunden nie angezeigt.',
+      dl_title: 'Deals', dl_title_em: '& Aktionen',
+      dl_sub: 'Erstelle ein Angebot einmal und zeige es auf deinen Smart Landingpages.',
+      dl_create: 'Deal erstellen', dl_create_first: 'Ersten Deal erstellen',
+      dl_empty_title: 'Noch keine Deals',
+      dl_empty_sub: 'Erstelle deinen ersten Deal in vier kurzen Schritten. Du prüfst alles, bevor irgendetwas veröffentlicht wird.',
+      dl_footer: 'QRAIVY — Deals · Vorschau',
+      dl_local: 'Lokale Vorschau', dl_edit: 'Bearbeiten', dl_archive: 'Archivieren', dl_delete: 'Löschen',
+      dl_confirm_delete: 'Diesen Deal aus der Vorschau löschen?',
+      st_draft: 'Entwurf', st_published: 'Veröffentlicht', st_archived: 'Archiviert', st_expired: 'Abgelaufen', st_scheduled: 'Geplant',
+      db_back: '← Alle Deals', db_title_new: 'Deal erstellen', db_title_edit: 'Deal bearbeiten',
+      db_step1: 'Inhalt', db_step2: 'Bild', db_step3: 'Zeitraum', db_step4: 'Überprüfen',
+      s1_title: 'Was für ein Deal ist es?', s1_lead: 'Wähle eine Art und beschreibe das Angebot in deinen eigenen Worten.',
+      s1_type: 'Deal-Art',
+      type_percentage_discount: 'Prozent-Rabatt', type_percentage_discount_ex: 'z. B. 20 % Rabatt',
+      type_two_for_one: '2 für 1', type_two_for_one_ex: 'z. B. 1 kaufen, 1 gratis',
+      type_fixed_price: 'Festpreis', type_fixed_price_ex: 'z. B. nur 5,90',
+      type_free_bonus: 'Gratis-Zugabe', type_free_bonus_ex: 'z. B. ein Kaffee gratis',
+      type_upgrade: 'Upgrade', type_upgrade_ex: 'z. B. Groß zum Preis von Klein',
+      type_custom: 'Eigenes Angebot', type_custom_ex: 'freie Formulierung',
+      f_percentOff: 'Rabatt in Prozent', f_buyQty: 'Kaufen (Anzahl)', f_freeQty: 'Gratis dazu (Anzahl)',
+      f_price: 'Preis', f_currency: 'Währung', f_freeItem: 'Was ist gratis?', f_minPurchase: 'Mindestbestellung',
+      f_fromLabel: 'Upgrade von', f_toLabel: 'Upgrade auf',
+      ph_freeItem: 'z. B. 1 Kaffee', ph_minPurchase: 'z. B. ab 10 €', ph_fromLabel: 'z. B. Standard', ph_toLabel: 'z. B. Premium',
+      s1_f_title: 'Titel', s1_f_title_ph: 'z. B. Gratis-Kaffee am Freitag',
+      s1_f_offer: 'Angebotszeile', s1_f_offer_desc: 'Die Zeile, die Kunden zuerst lesen. Wir schlagen eine passend zur Deal-Art vor; du kannst sie frei ändern.',
+      s1_f_desc: 'Beschreibung', s1_f_desc_ph: 'Bedingungen, was enthalten ist, wie eingelöst wird …',
+      opt: '(optional)',
+      nav_cancel: 'Abbrechen', nav_back: 'Zurück', nav_next_image: 'Weiter: Bild', nav_next_schedule: 'Weiter: Zeitraum', nav_next_review: 'Weiter: Überprüfen',
+      s2_title: 'Bild hinzufügen', s2_lead: 'Optional. Wähle eine Vorlage, lade ein eigenes Bild hoch oder nimm einen einfarbigen Hintergrund. Bilder werden im Format 4:3 gezeigt.',
+      s2_tab_starter: 'Vorlagen', s2_tab_upload: 'Eigenes Bild hochladen', s2_tab_bg: 'Einfarbiger Hintergrund',
+      s2_ai_note: 'Alle Vorlagen sind KI-generiert. Sie tragen überall, wo sie gezeigt werden, den Hinweis „AI · KI-generiert“ – auch gegenüber deinen Kunden.',
+      ai_label_sr: 'KI-generiertes Bild',
+      s2_drop: 'Bild hierher ziehen oder klicken', s2_drop_hint: 'PNG, JPG oder WebP, bis 5 MB',
+      s2_remove: 'Bild entfernen', s2_note: 'Nur Vorschau: Ein hochgeladenes Bild wird von deinem Gerät angezeigt und nirgendwohin gesendet.',
+      s2_info_upload: 'Dein Bild: {name} ({size})', s2_info_bg: 'Hintergrund: {name}', s2_info_starter: 'Vorlage: {name} (KI-generiert)',
+      bg_ember: 'Glut', bg_sunrise: 'Sonnenaufgang', bg_night: 'Nacht', bg_slate: 'Schiefer', bg_forest: 'Wald', bg_ocean: 'Ozean', bg_plum: 'Pflaume', bg_sand: 'Sand',
+      s3_title: 'Wann gilt der Deal?', s3_lead: 'Die Angaben sind optional. Gib eine Uhrzeit nur an, wenn der Deal zu einer bestimmten Stunde beginnt oder endet; sonst gilt er den ganzen Tag.',
+      s3_start_date: 'Startdatum', s3_start_time: 'Startzeit', s3_end_date: 'Enddatum', s3_end_time: 'Endzeit',
+      sum_none: 'Ohne zeitliche Begrenzung: Der Deal gilt, bis du ihn archivierst.',
+      sum_from: 'Gültig ab {start}, ohne Enddatum.',
+      sum_until: 'Gültig bis {end}.',
+      sum_range: 'Gültig von {start} bis {end}.',
+      pv_valid_none: 'Kein Enddatum', pv_valid_from: 'Ab {start}', pv_valid_until: 'Bis {end}', pv_valid_range: '{start} – {end}',
+      s4_title: 'Deal überprüfen', s4_lead: 'Prüfe alle Angaben. Mit „Bearbeiten“ springst du zum jeweiligen Schritt zurück.',
+      s4_note: 'Nur Vorschau: „Entwurf speichern“ und „Veröffentlichen“ ändern den Status auf diesem Bildschirm. Nichts wird in deinem Konto gespeichert, an Kunden gesendet oder auf einer Landingpage platziert.',
+      s4_save: 'Entwurf speichern (Vorschau)', s4_publish: 'Veröffentlichen (Vorschau)',
+      rv_type: 'Deal-Art', rv_details: 'Details', rv_title: 'Titel', rv_offer: 'Angebotszeile', rv_desc: 'Beschreibung', rv_image: 'Bild', rv_period: 'Zeitraum',
+      rv_edit: 'Bearbeiten', rv_none: 'Nicht angegeben', rv_no_image: 'Kein Bild', rv_image_upload: 'Dein Bild ({name})', rv_image_bg: 'Hintergrund „{name}“', rv_image_starter: 'Vorlage „{name}“ (KI-generiert)',
+      pv_label: 'Live-Vorschau', pv_page: 'Auf deiner Smart Landingpage',
+      pv_note: 'Beispiel, wie der Deal aussehen könnte. Die endgültige Darstellung auf deiner Seite kann abweichen.',
+      pv_ph_title: 'Dein Deal-Titel', pv_ph_offer: 'Deine Angebotszeile', pv_no_image: 'Kein Bild',
+      chip_free: 'Gratis', chip_upgrade: 'Upgrade', chip_x_for_y: '{total} für {buy}',
+      sg_percentage_discount: '{n} % Rabatt', sg_percentage_discount_blank: 'Rabatt',
+      sg_two_for_one: '{buy} kaufen, {free} gratis', sg_fixed_price: 'Nur {price}', sg_fixed_price_blank: 'Sonderpreis',
+      sg_free_bonus: '{item} gratis', sg_free_bonus_blank: 'Gratis-Zugabe', sg_free_bonus_min: '{item} gratis {min}',
+      sg_upgrade: 'Kostenloses Upgrade auf {to}', sg_upgrade_blank: 'Kostenloses Upgrade',
+      d_from_to: '{from} → {to}',
+      e_type: 'Wähle eine Deal-Art.', e_required: 'Dieses Feld ist erforderlich.',
+      e_number: 'Gib eine Zahl ein.', e_min: 'Mindestens {min}.', e_max: 'Höchstens {max}.',
+      e_title: 'Gib dem Deal einen Titel.', e_offer: 'Schreibe die Angebotszeile.',
+      e_img_type: 'Verwende ein PNG-, JPG- oder WebP-Bild.', e_img_size: 'Das Bild ist größer als 5 MB.', e_img_read: 'Das Bild konnte nicht gelesen werden.',
+      e_end_before: 'Das Ende muss nach dem Beginn liegen.', e_end_past: 'Das Ende liegt in der Vergangenheit. Ein bereits beendeter Deal kann nicht veröffentlicht werden.',
+      e_date_incomplete: 'Diese Angabe ist unvollständig. Fülle alle Teile aus oder leere das Feld.', e_time_needs_date: 'Gib zu dieser Uhrzeit ein Datum an.',
+      is_step1: 'Der Inhalt ist unvollständig.', is_step3: 'Der Zeitraum muss korrigiert werden.',
+      toast_draft: 'Entwurf nur in dieser Vorschau behalten', toast_published: 'Nur in dieser Vorschau als veröffentlicht markiert',
+      toast_archived: 'In dieser Vorschau archiviert', toast_deleted: 'Aus dieser Vorschau entfernt',
+      lang_toggle: 'English'
+    }
+  };
+
+  var _lang = window.QRAIVY_LANGUAGE === 'de' ? 'de' : 'en';
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function t(key, vars) {
+    var d = _t[_lang] || _t.en;
+    var s = Object.prototype.hasOwnProperty.call(d, key) ? d[key] : (_t.en[key] !== undefined ? _t.en[key] : key);
+    if (vars) Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(vars[k]); });
+    return s;
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function locale() { return _lang === 'de' ? 'de-DE' : 'en-GB'; }
+  // A deal's start/end is a date plus an optional time, kept as the two
+  // strings the inputs produce ('2030-05-31', '18:00'). Without a time the
+  // start counts from 00:00 and the end runs to 23:59:59 of that day.
+  // Built from numbers, never parsed from a string, so the result is the
+  // user's own local day in every browser.
+  function moment(d, which) {
+    var date = d[which + 'Date'], time = d[which + 'Time'];
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+    if (!m) return null;
+    var tm = /^(\d{2}):(\d{2})/.exec(time || '');
+    var end = which === 'end';
+    var out = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), tm ? Number(tm[1]) : (end ? 23 : 0), tm ? Number(tm[2]) : (end ? 59 : 0), tm ? 0 : (end ? 59 : 0));
+    return isNaN(out.getTime()) ? null : out;
+  }
+  // Shows the time only when the user gave one.
+  function fmtWhen(d, which) {
+    var at = moment(d, which);
+    if (!at) return '';
+    var opts = d[which + 'Time'] ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' };
+    return new Intl.DateTimeFormat(locale(), opts).format(at);
+  }
+  function fmtMoney(n, currency) {
+    try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: currency || 'EUR' }).format(n); }
+    catch (e) { return n + ' ' + (currency || 'EUR'); }
+  }
+  function fmtSize(bytes) {
+    return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  }
+  function num(v) { var s = String(v == null ? '' : v).trim().replace(',', '.'); return s === '' ? null : Number(s); }
+  function toast(msg) { if (window.QraivyShell && window.QraivyShell.toast) window.QraivyShell.toast(msg); }
+
+  // ── State (this tab's memory only) ───────────────────────────
+  var deals = [];
+  var draft = null;       // the deal being edited (a working copy)
+  var editingId = null;   // id of the list entry being edited, or null for a new one
+  var step = 1;
+  var reached = 1;        // furthest step the user has validly reached
+  var offerAuto = true;   // offer line still follows the suggestion
+  var imageTab = 'upload';
+  var showErrors = { 1: false, 3: false };
+  var seq = 0;
+
+  function emptyDeal() {
+    return { id: null, status: 'draft', publishedAt: null, offerType: null, offerDetails: {}, title: '', offerText: '', description: '', image: null, startDate: '', startTime: '', endDate: '', endTime: '' };
+  }
+  function cloneDeal(d) {
+    var c = {}; Object.keys(d).forEach(function (k) { c[k] = d[k]; });
+    c.offerDetails = {}; Object.keys(d.offerDetails || {}).forEach(function (k) { c.offerDetails[k] = d.offerDetails[k]; });
+    c.image = d.image ? Object.assign({}, d.image) : null;
+    return c;
+  }
+
+  // ── Derived text ─────────────────────────────────────────────
+  function suggestion(d) {
+    var o = d.offerDetails || {};
+    switch (d.offerType) {
+      case 'percentage_discount': { var n = num(o.percentOff); return n ? t('sg_percentage_discount', { n: n }) : t('sg_percentage_discount_blank'); }
+      case 'two_for_one': return t('sg_two_for_one', { buy: num(o.buyQty) || 1, free: num(o.freeQty) || 1 });
+      case 'fixed_price': { var p = num(o.price); return p ? t('sg_fixed_price', { price: fmtMoney(p, o.currency) }) : t('sg_fixed_price_blank'); }
+      case 'free_bonus': {
+        var item = (o.freeItem || '').trim(), min = (o.minPurchase || '').trim();
+        if (!item) return t('sg_free_bonus_blank');
+        return min ? t('sg_free_bonus_min', { item: item, min: min }) : t('sg_free_bonus', { item: item });
+      }
+      case 'upgrade': { var to = (o.toLabel || '').trim(); return to ? t('sg_upgrade', { to: to }) : t('sg_upgrade_blank'); }
+      default: return '';
+    }
+  }
+  function chip(d) {
+    var o = d.offerDetails || {};
+    switch (d.offerType) {
+      case 'percentage_discount': { var n = num(o.percentOff); return n ? '-' + n + '%' : ''; }
+      case 'two_for_one': { var b = num(o.buyQty) || 1, f = num(o.freeQty) || 1; return t('chip_x_for_y', { total: b + f, buy: b }); }
+      case 'fixed_price': { var p = num(o.price); return p ? fmtMoney(p, o.currency) : ''; }
+      case 'free_bonus': return t('chip_free');
+      case 'upgrade': return t('chip_upgrade');
+      default: return '';
+    }
+  }
+  function detailsText(d) {
+    var o = d.offerDetails || {};
+    switch (d.offerType) {
+      case 'percentage_discount': return num(o.percentOff) ? num(o.percentOff) + ' %' : '';
+      case 'two_for_one': return t('sg_two_for_one', { buy: num(o.buyQty) || 1, free: num(o.freeQty) || 1 });
+      case 'fixed_price': return num(o.price) ? fmtMoney(num(o.price), o.currency) : '';
+      case 'free_bonus': return [(o.freeItem || '').trim(), (o.minPurchase || '').trim()].filter(Boolean).join(' · ');
+      case 'upgrade': {
+        var from = (o.fromLabel || '').trim(), to = (o.toLabel || '').trim();
+        return from && to ? t('d_from_to', { from: from, to: to }) : (from || to);
+      }
+      default: return '';
+    }
+  }
+  function validity(d, prefix) {
+    var s = fmtWhen(d, 'start'), e = fmtWhen(d, 'end');
+    if (s && e) return t(prefix + '_range', { start: s, end: e });
+    if (e) return t(prefix + '_until', { end: e });
+    if (s) return t(prefix + '_from', { start: s });
+    return t(prefix + '_none');
+  }
+  function imageCss(image) {
+    if (!image) return '';
+    if (image.source === 'uploaded') return 'url("' + image.dataUrl + '")';
+    if (image.source === 'starter') { var st = starterById(image.id); return st ? 'url("' + STARTERS.basePath + st.file + '")' : ''; }
+    var bg = BACKGROUNDS.filter(function (b) { return b.id === image.id; })[0];
+    return bg ? bg.css : '';
+  }
+  // Origin travels with the choice: a starter image is AI-generated when
+  // the catalog says so (origin.type), and every place that shows it must
+  // show the "AI · KI-generiert" label too. Uploads and plain backgrounds
+  // make no such claim.
+  function isAiImage(image) {
+    if (!image || image.source !== 'starter') return false;
+    var st = starterById(image.id);
+    return !!(st && st.origin && st.origin.type === 'ai_generated');
+  }
+  function aiLabelHtml() {
+    return '<span class="deal-ai-label"><span aria-hidden="true">' + esc(STARTERS.aiLabel || 'AI · KI-generiert') + '</span><span class="deal-sr-only">' + esc(t('ai_label_sr')) + '</span></span>';
+  }
+  function imageName(image) {
+    if (!image) return '';
+    if (image.source === 'uploaded') return image.name;
+    if (image.source === 'starter') { var st = starterById(image.id); return st ? (st.label[_lang] || st.label.en) : image.id; }
+    return t('bg_' + image.id);
+  }
+
+  // Display status: "expired" and "scheduled" are computed from the dates,
+  // never stored -- same rule as mergeDealState() in dealService.js.
+  function displayStatus(d) {
+    if (d.status !== 'published') return d.status;
+    var now = Date.now(), s = moment(d, 'start'), e = moment(d, 'end');
+    if (e && e.getTime() < now) return 'expired';
+    if (s && s.getTime() > now) return 'scheduled';
+    return 'published';
+  }
+  var STATUS_BADGE = { draft: 'neutral', published: 'success', archived: 'neutral-dim', expired: 'warning', scheduled: 'info' };
+  function statusBadge(d) {
+    var s = displayStatus(d);
+    return '<span class="qds-badge qds-badge--' + STATUS_BADGE[s] + '">' + esc(t('st_' + s)) + '</span>';
+  }
+
+  // ── Validation (mirrors dealService.js) ──────────────────────
+  function validateContent(d) {
+    var errs = {};
+    if (!d.offerType || OFFER_TYPES.indexOf(d.offerType) === -1) errs.type = t('e_type');
+    (TYPE_FIELDS[d.offerType] || []).forEach(function (f) {
+      if (f.kind !== 'number') return;
+      var raw = String(d.offerDetails[f.key] == null ? '' : d.offerDetails[f.key]).trim();
+      if (raw === '') { if (f.required) errs[f.key] = t('e_required'); return; }
+      var n = num(raw);
+      if (!isFinite(n)) errs[f.key] = t('e_number');
+      else if (f.min != null && n < f.min) errs[f.key] = t('e_min', { min: f.min });
+      else if (f.max != null && n > f.max) errs[f.key] = t('e_max', { max: f.max });
+    });
+    if (!d.title.trim()) errs.title = t('e_title');
+    if (!d.offerText.trim()) errs.offerText = t('e_offer');
+    return errs;
+  }
+  // Which date/time inputs currently hold a half-typed value (the browser
+  // reports those as '' with validity.badInput). Never treated as "empty".
+  var partial = { startDate: false, startTime: false, endDate: false, endTime: false };
+
+  // Errors are keyed by the input they belong to. `blocking` is false only
+  // when the single problem is an end in the past: that can still be kept
+  // as a draft, it just cannot be published (same rule as publishDeal()).
+  function validateSchedule(d) {
+    var errs = {}, blocking = false;
+    ['start', 'end'].forEach(function (w) {
+      if (partial[w + 'Date']) { errs[w + 'Date'] = t('e_date_incomplete'); blocking = true; }
+      if (partial[w + 'Time']) { errs[w + 'Time'] = t('e_date_incomplete'); blocking = true; }
+      else if (d[w + 'Time'] && !d[w + 'Date'] && !partial[w + 'Date']) { errs[w + 'Date'] = t('e_time_needs_date'); blocking = true; }
+    });
+    var st = moment(d, 'start'), en = moment(d, 'end');
+    if (!errs.endDate && !errs.endTime && en) {
+      if (st && en.getTime() <= st.getTime()) { errs[d.endDate === d.startDate ? 'endTime' : 'endDate'] = t('e_end_before'); blocking = true; }
+      else if (en.getTime() <= Date.now()) { errs.endDate = t('e_end_past'); errs.endPastOnly = !blocking; }
+    }
+    errs.blocking = blocking;
+    return errs;
+  }
+  var WHEN_FIELDS = ['startDate', 'startTime', 'endDate', 'endTime'];
+  function scheduleIssues(errs) { return WHEN_FIELDS.filter(function (k) { return errs[k]; }).map(function (k) { return errs[k]; }); }
+  function setError(fieldId, msgId, message) {
+    var field = $(fieldId), msg = $(msgId);
+    if (!field || !msg) return;
+    field.classList.toggle('qds-field--error', !!message);
+    var box = field.querySelector('.qds-input, .qds-textarea, .qds-select');
+    if (box) ['qds-input', 'qds-textarea', 'qds-select'].forEach(function (c) { if (box.classList.contains(c)) box.classList.toggle(c + '--error', !!message); });
+    var ctl = field.querySelector('input:not([type=radio]), textarea, select');
+    if (ctl) { if (message) ctl.setAttribute('aria-invalid', 'true'); else ctl.removeAttribute('aria-invalid'); }
+    msg.textContent = message || '';
+    msg.hidden = !message;
+  }
+  function paintContentErrors() {
+    var errs = showErrors[1] ? validateContent(draft) : {};
+    setError('field-type', 'err-type', errs.type);
+    setError('field-title', 'err-title', errs.title);
+    setError('field-offerText', 'err-offerText', errs.offerText);
+    (TYPE_FIELDS[draft.offerType] || []).forEach(function (f) { setError('field-d-' + f.key, 'err-d-' + f.key, errs[f.key]); });
+    return errs;
+  }
+  function paintScheduleErrors() {
+    // Date order is always shown as soon as it is wrong; nothing here is "required".
+    var errs = validateSchedule(draft);
+    WHEN_FIELDS.forEach(function (k) { setError('field-' + k, 'err-' + k, errs[k]); });
+    return errs;
+  }
+
+  // ── Rendering ────────────────────────────────────────────────
+  function renderTypeFields() {
+    var box = $('deal-type-fields');
+    var fields = TYPE_FIELDS[draft.offerType] || [];
+    box.hidden = fields.length === 0;
+    box.innerHTML = fields.map(function (f) {
+      var id = 'deal-d-' + f.key, val = draft.offerDetails[f.key] == null ? '' : draft.offerDetails[f.key];
+      var label = '<label class="qds-field__label" for="' + id + '">' + esc(t('f_' + f.key)) +
+        (f.required ? ' <span class="qds-field__required" aria-hidden="true">*</span>' : (f.kind === 'text' ? ' <span class="qds-field__optional">' + esc(t('opt')) + '</span>' : '')) + '</label>';
+      var control;
+      if (f.kind === 'select') {
+        control = '<div class="qds-select qds-select--md"><select class="qds-select__control" id="' + id + '" data-detail="' + f.key + '">' +
+          f.options.map(function (o) { return '<option value="' + o + '"' + ((val || 'EUR') === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+          '</select><svg class="qds-select__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></div>';
+      } else if (f.kind === 'number') {
+        control = '<div class="qds-input qds-input--md qds-input--monospace"><input class="qds-input__control" id="' + id + '" data-detail="' + f.key + '" type="number" inputmode="decimal"' +
+          (f.min != null ? ' min="' + f.min + '"' : '') + (f.max != null ? ' max="' + f.max + '"' : '') + ' step="' + f.step + '" placeholder="' + esc(f.ph) + '" value="' + esc(val) + '" aria-describedby="err-d-' + f.key + '" /></div>';
+      } else {
+        control = '<div class="qds-input qds-input--md"><input class="qds-input__control" id="' + id + '" data-detail="' + f.key + '" type="text" maxlength="60" autocomplete="off" placeholder="' + esc(t('ph_' + f.key)) + '" value="' + esc(val) + '" /></div>';
+      }
+      return '<div class="qds-field" id="field-d-' + f.key + '">' + label + control + '<p class="qds-field__message" id="err-d-' + f.key + '" hidden></p></div>';
+    }).join('');
+  }
+
+  function renderCounters() {
+    [['deal-title', 'cnt-title', 80], ['deal-offerText', 'cnt-offerText', 120], ['deal-description', 'cnt-description', 400]].forEach(function (c) {
+      $(c[1]).textContent = $(c[0]).value.length + ' / ' + c[2];
+    });
+  }
+
+  function renderPreview() {
+    var d = draft || emptyDeal();
+    var media = $('deal-pv-media'), css = imageCss(d.image), chipEl = $('deal-pv-chip');
+    media.style.backgroundImage = css;
+    media.classList.toggle('deal-pv__media--empty', !css);
+    var noImg = media.querySelector('[data-noimg]');
+    if (!css && !noImg) { noImg = document.createElement('span'); noImg.setAttribute('data-noimg', ''); media.appendChild(noImg); }
+    if (noImg) { noImg.textContent = t('pv_no_image'); noImg.hidden = !!css; }
+    var c = chip(d);
+    chipEl.textContent = c; chipEl.hidden = !c;
+    $('deal-pv-ai').hidden = !isAiImage(d.image);
+    var hasText = !!(d.title.trim() || d.offerText.trim());
+    $('deal-pv').classList.toggle('deal-pv--placeholder', !hasText);
+    $('deal-pv-title').textContent = d.title.trim() || t('pv_ph_title');
+    $('deal-pv-offer').textContent = d.offerText.trim() || t('pv_ph_offer');
+    var desc = $('deal-pv-desc');
+    desc.textContent = d.description.trim(); desc.hidden = !d.description.trim();
+    $('deal-pv-valid').textContent = validity(d, 'pv_valid');
+  }
+
+  var galleryLang = null;
+  function renderStarterGallery() {
+    var box = $('deal-starter-gallery'), img = draft.image;
+    if (galleryLang !== _lang) {
+      // Built once per language; selection is then only a state change, so
+      // the 18 thumbnails are not re-created on every click.
+      box.innerHTML = STARTERS.categories.map(function (cat) {
+        var items = STARTERS.images.filter(function (i) { return i.category === cat.id; });
+        if (!items.length) return '';
+        return '<div class="deal-starter-cat"><h3 class="deal-starter-cat__title">' + esc(cat.label[_lang] || cat.label.en) + '</h3><div class="deal-starters">' +
+          items.map(function (i) {
+            var name = i.label[_lang] || i.label.en;
+            return '<button class="deal-starter" type="button" data-starter="' + esc(i.id) + '" aria-pressed="false">' +
+              '<span class="deal-starter__media"><img src="' + esc(STARTERS.basePath + i.file) + '" alt="" width="' + i.width + '" height="' + i.height + '" loading="lazy" decoding="async" />' +
+              (i.origin && i.origin.type === 'ai_generated' ? aiLabelHtml() : '') + '</span>' +
+              '<span class="deal-starter__name">' + esc(name) + '</span></button>';
+          }).join('') + '</div></div>';
+      }).join('');
+      galleryLang = _lang;
+    }
+    box.querySelectorAll('.deal-starter').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', img && img.source === 'starter' && img.id === btn.getAttribute('data-starter') ? 'true' : 'false');
+    });
+  }
+
+  function renderImageStep() {
+    var cur = $('deal-image-current'), img = draft.image;
+    cur.hidden = !img;
+    if (img) {
+      $('deal-image-thumb').style.backgroundImage = imageCss(img);
+      $('deal-image-ai').hidden = !isAiImage(img);
+      $('deal-image-info').textContent = img.source === 'uploaded'
+        ? t('s2_info_upload', { name: img.name, size: fmtSize(img.size) })
+        : t(img.source === 'starter' ? 's2_info_starter' : 's2_info_bg', { name: imageName(img) });
+    }
+    ['starter', 'upload', 'background'].forEach(function (name) {
+      var on = imageTab === name, tab = $('tab-' + name);
+      $('pane-' + name).hidden = !on;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.classList.toggle('qds-btn--secondary', on);
+      tab.classList.toggle('qds-btn--ghost', !on);
+    });
+    renderStarterGallery();
+    $('deal-swatches').innerHTML = BACKGROUNDS.map(function (b) {
+      var on = img && img.source === 'background' && img.id === b.id;
+      return '<button class="deal-swatch" type="button" data-bg="' + b.id + '" aria-pressed="' + (on ? 'true' : 'false') + '" style="background:' + b.css + '">' +
+        '<span class="deal-swatch__name">' + esc(t('bg_' + b.id)) + '</span></button>';
+    }).join('');
+  }
+
+  function renderSchedule() {
+    var errs = paintScheduleErrors();
+    // While an entry is wrong or half-typed the summary would describe
+    // something the user did not mean, so it steps aside for the message.
+    $('deal-schedule-summary').hidden = !!errs.blocking;
+    $('deal-schedule-summary').textContent = validity(draft, 'sum');
+  }
+
+  function renderReview() {
+    var d = draft, none = '<span class="deal-review__value--empty">' + esc(t('rv_none')) + '</span>';
+    var imgText = !d.image ? '<span class="deal-review__value--empty">' + esc(t('rv_no_image')) + '</span>'
+      : esc(t(d.image.source === 'uploaded' ? 'rv_image_upload' : (d.image.source === 'starter' ? 'rv_image_starter' : 'rv_image_bg'), { name: imageName(d.image) }));
+    var rows = [
+      ['rv_type', d.offerType ? esc(t('type_' + d.offerType)) : none, 1],
+      ['rv_details', detailsText(d) ? esc(detailsText(d)) : none, 1, d.offerType === 'custom' || !d.offerType],
+      ['rv_title', d.title.trim() ? esc(d.title.trim()) : none, 1],
+      ['rv_offer', d.offerText.trim() ? esc(d.offerText.trim()) : none, 1],
+      ['rv_desc', d.description.trim() ? esc(d.description.trim()).replace(/\n/g, '<br>') : none, 1],
+      ['rv_image', imgText, 2],
+      ['rv_period', esc(validity(d, 'sum')), 3]
+    ];
+    $('deal-review').innerHTML = rows.filter(function (r) { return !r[3]; }).map(function (r) {
+      return '<div class="deal-review__row"><div class="deal-review__label">' + esc(t(r[0])) + '</div><div class="deal-review__value">' + r[1] + '</div>' +
+        '<button class="qds-btn qds-btn--link qds-btn--sm" type="button" data-goto="' + r[2] + '">' + esc(t('rv_edit')) + '</button></div>';
+    }).join('');
+    var issues = [];
+    if (Object.keys(validateContent(d)).length) issues.push(t('is_step1'));
+    var sch = validateSchedule(d);
+    scheduleIssues(sch).forEach(function (m) { issues.push(m); });
+    var list = $('deal-issues');
+    list.innerHTML = issues.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('');
+    list.hidden = issues.length === 0;
+    $('deal-publish').disabled = issues.length > 0;
+    $('deal-save-draft').disabled = Object.keys(validateContent(d)).length > 0;
+  }
+
+  function renderSteps() {
+    document.querySelectorAll('#deal-steps .deal-step').forEach(function (btn) {
+      var n = Number(btn.getAttribute('data-step'));
+      if (n === step) btn.setAttribute('aria-current', 'step'); else btn.removeAttribute('aria-current');
+      btn.classList.toggle('deal-step--done', n < step);
+      btn.disabled = n > reached;
+    });
+    document.querySelectorAll('.deal-panel').forEach(function (p) { p.hidden = Number(p.getAttribute('data-panel')) !== step; });
+  }
+
+  function renderBuilder() {
+    if (!draft) return;
+    $('deal-builder-title').textContent = t(editingId ? 'db_title_edit' : 'db_title_new');
+    var s = displayStatus(draft), badge = $('deal-status-badge');
+    badge.className = 'qds-badge qds-badge--' + STATUS_BADGE[s];
+    badge.textContent = t('st_' + s);
+    renderSteps();
+    renderCounters();
+    paintContentErrors();
+    renderImageStep();
+    renderSchedule();
+    if (step === 4) renderReview();
+    renderPreview();
+  }
+
+  function renderList() {
+    var list = $('deal-list');
+    list.hidden = deals.length === 0;
+    $('deal-empty').hidden = deals.length > 0;
+    list.innerHTML = deals.map(function (d) {
+      var css = imageCss(d.image), archived = d.status === 'archived';
+      return '<article class="qds-surface qds-surface--default qds-surface--padding-none qds-surface--elevation-raised deal-card">' +
+        '<div class="deal-card__media"' + (css ? ' style="background-image:' + esc(css) + '"' : '') + '>' + (isAiImage(d.image) ? aiLabelHtml() : '') + '</div>' +
+        '<div class="deal-card__body">' +
+          '<div class="deal-card__badges">' + statusBadge(d) + '<span class="qds-badge qds-badge--warning">' + esc(t('dl_local')) + '</span></div>' +
+          '<div class="deal-card__title">' + esc(d.title) + '</div>' +
+          '<div class="deal-card__offer">' + esc(d.offerText) + '</div>' +
+          '<div class="deal-card__meta">' + esc(validity(d, 'pv_valid')) + '</div>' +
+        '</div>' +
+        '<div class="deal-card__actions">' +
+          (archived ? '' : '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-edit="' + d.id + '">' + esc(t('dl_edit')) + '</button>') +
+          (archived ? '' : '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-archive="' + d.id + '">' + esc(t('dl_archive')) + '</button>') +
+          '<button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" data-delete="' + d.id + '">' + esc(t('dl_delete')) + '</button>' +
+        '</div></article>';
+    }).join('');
+  }
+
+  // ── Navigation between views and steps ───────────────────────
+  function showView(name) {
+    $('deal-list-view').hidden = name !== 'list';
+    $('deal-builder-view').hidden = name !== 'builder';
+    window.scrollTo(0, 0);
+  }
+  function fillForm() {
+    document.querySelectorAll('input[name="deal-type"]').forEach(function (r) { r.checked = r.value === draft.offerType; });
+    $('deal-title').value = draft.title;
+    $('deal-offerText').value = draft.offerText;
+    $('deal-description').value = draft.description;
+    WHEN_FIELDS.forEach(function (k) { $('deal-' + k).value = draft[k]; partial[k] = false; });
+    $('deal-image-file').value = '';
+    setError('field-image', 'err-image', '');
+    renderTypeFields();
+  }
+  function openBuilder(deal) {
+    editingId = deal ? deal.id : null;
+    draft = deal ? cloneDeal(deal) : emptyDeal();
+    step = 1;
+    reached = deal ? 4 : 1;
+    offerAuto = !deal || draft.offerText === suggestion(draft);
+    imageTab = draft.image ? (draft.image.source === 'uploaded' ? 'upload' : draft.image.source) : 'starter';
+    showErrors = { 1: false, 3: false };
+    fillForm();
+    showView('builder');
+    renderBuilder();
+  }
+  function goTo(n) {
+    if (n > step) {
+      // Moving forward: every step in between must be valid.
+      if (step <= 1 && n > 1) {
+        showErrors[1] = true;
+        if (Object.keys(paintContentErrors()).length) { step = 1; renderBuilder(); focusFirstError(); return; }
+      }
+      if (step <= 3 && n > 3) {
+        var sch = validateSchedule(draft);
+        // A past end date does not block the review: it can still be kept as a draft.
+        if (sch.blocking) { step = 3; renderBuilder(); focusFirstError(); return; }
+      }
+    }
+    step = n;
+    if (n > reached) reached = n;
+    renderBuilder();
+    var title = document.querySelector('.deal-panel[data-panel="' + n + '"] .deal-panel__title');
+    if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
+    $('deal-builder-view').scrollIntoView({ block: 'start' });
+  }
+  function focusFirstError() {
+    var el = document.querySelector('.deal-panel:not([hidden]) .qds-field--error input, .deal-panel:not([hidden]) .qds-field--error textarea');
+    if (el) el.focus();
+  }
+  function closeBuilder() { draft = null; editingId = null; renderList(); showView('list'); }
+
+  function commit(status) {
+    showErrors[1] = true;
+    if (Object.keys(validateContent(draft)).length) { goTo(1); return; }
+    var sch = validateSchedule(draft);
+    if (sch.blocking || (status === 'published' && sch.endPastOnly)) { step = 3; reached = Math.max(reached, 3); renderBuilder(); focusFirstError(); return; }
+    var saved = cloneDeal(draft);
+    saved.title = saved.title.trim(); saved.offerText = saved.offerText.trim(); saved.description = saved.description.trim();
+    if (status === 'published') { saved.status = 'published'; saved.publishedAt = new Date().toISOString(); }
+    else if (saved.status !== 'published') saved.status = 'draft';
+    if (editingId) {
+      deals = deals.map(function (d) { return d.id === editingId ? saved : d; });
+    } else {
+      seq += 1; saved.id = 'local-' + seq;
+      deals.unshift(saved);
+    }
+    closeBuilder();
+    toast(t(status === 'published' ? 'toast_published' : 'toast_draft'));
+  }
+
+  // ── Image handling (local only; nothing leaves the device) ───
+  function takeFile(file) {
+    if (!file) return;
+    // Cleared straight away so choosing the same file again still fires "change".
+    $('deal-image-file').value = '';
+    if (IMAGE_TYPES.indexOf(file.type) === -1) { setError('field-image', 'err-image', t('e_img_type')); return; }
+    if (file.size > IMAGE_MAX_BYTES) { setError('field-image', 'err-image', t('e_img_size')); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      setError('field-image', 'err-image', '');
+      draft.image = { source: 'uploaded', dataUrl: String(reader.result), name: file.name, size: file.size };
+      renderImageStep(); renderPreview();
+    };
+    reader.onerror = function () { setError('field-image', 'err-image', t('e_img_read')); };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Events ───────────────────────────────────────────────────
+  function bind() {
+    $('deal-create-btn').addEventListener('click', function () { openBuilder(null); });
+    $('deal-empty-create-btn').addEventListener('click', function () { openBuilder(null); });
+    $('deal-back-btn').addEventListener('click', closeBuilder);
+
+    $('deal-list').addEventListener('click', function (e) {
+      var btn = e.target.closest('button'); if (!btn) return;
+      var id = btn.getAttribute('data-edit') || btn.getAttribute('data-archive') || btn.getAttribute('data-delete');
+      var deal = deals.filter(function (d) { return d.id === id; })[0]; if (!deal) return;
+      if (btn.hasAttribute('data-edit')) openBuilder(deal);
+      else if (btn.hasAttribute('data-archive')) { deal.status = 'archived'; renderList(); toast(t('toast_archived')); }
+      else if (window.confirm(t('dl_confirm_delete'))) { deals = deals.filter(function (d) { return d.id !== id; }); renderList(); toast(t('toast_deleted')); }
+    });
+
+    $('deal-steps').addEventListener('click', function (e) {
+      var btn = e.target.closest('.deal-step'); if (!btn || btn.disabled) return;
+      goTo(Number(btn.getAttribute('data-step')));
+    });
+
+    $('deal-builder-view').addEventListener('click', function (e) {
+      var btn = e.target.closest('button'); if (!btn) return;
+      var action = btn.getAttribute('data-action');
+      if (action === 'next') goTo(step + 1);
+      else if (action === 'back') goTo(step - 1);
+      else if (action === 'cancel') closeBuilder();
+      else if (btn.hasAttribute('data-goto')) goTo(Number(btn.getAttribute('data-goto')));
+      else if (btn.hasAttribute('data-tab')) { imageTab = btn.getAttribute('data-tab'); renderImageStep(); }
+      else if (btn.hasAttribute('data-starter')) {
+        draft.image = { source: 'starter', id: btn.getAttribute('data-starter') };
+        setError('field-image', 'err-image', '');
+        renderImageStep(); renderPreview();
+      }
+      else if (btn.hasAttribute('data-bg')) {
+        draft.image = { source: 'background', id: btn.getAttribute('data-bg') };
+        setError('field-image', 'err-image', '');
+        renderImageStep(); renderPreview();
+      }
+    });
+
+    document.querySelectorAll('input[name="deal-type"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        if (!r.checked || draft.offerType === r.value) return;
+        // Details always belong to the current type -- same rule as saveDealDraft().
+        draft.offerType = r.value;
+        draft.offerDetails = r.value === 'fixed_price' ? { currency: 'EUR' } : {};
+        renderTypeFields();
+        if (offerAuto) { draft.offerText = suggestion(draft); $('deal-offerText').value = draft.offerText; }
+        renderBuilder();
+      });
+    });
+
+    $('deal-type-fields').addEventListener('input', function (e) {
+      var key = e.target.getAttribute('data-detail'); if (!key) return;
+      draft.offerDetails[key] = e.target.value;
+      if (offerAuto) { draft.offerText = suggestion(draft); $('deal-offerText').value = draft.offerText; }
+      renderCounters(); paintContentErrors(); renderPreview();
+    });
+
+    $('deal-title').addEventListener('input', function (e) { draft.title = e.target.value; renderCounters(); paintContentErrors(); renderPreview(); });
+    $('deal-offerText').addEventListener('input', function (e) {
+      draft.offerText = e.target.value;
+      offerAuto = e.target.value === '' || e.target.value === suggestion(draft);
+      renderCounters(); paintContentErrors(); renderPreview();
+    });
+    $('deal-description').addEventListener('input', function (e) { draft.description = e.target.value; renderCounters(); renderPreview(); });
+
+    // Both events: some browsers report a picked date on "change" only.
+    WHEN_FIELDS.forEach(function (k) {
+      var el = $('deal-' + k);
+      var read = function () {
+        draft[k] = el.value;
+        partial[k] = !el.value && !!(el.validity && el.validity.badInput);
+        renderSchedule(); renderPreview();
+      };
+      el.addEventListener('input', read);
+      el.addEventListener('change', read);
+      el.addEventListener('blur', read);
+    });
+
+    $('deal-image-file').addEventListener('change', function (e) { takeFile(e.target.files && e.target.files[0]); });
+    var drop = $('deal-upload');
+    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('deal-upload--over'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('deal-upload--over'); }); });
+    drop.addEventListener('drop', function (e) { takeFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
+    $('deal-image-remove').addEventListener('click', function () { draft.image = null; $('deal-image-file').value = ''; renderImageStep(); renderPreview(); });
+
+    $('deal-save-draft').addEventListener('click', function () { commit('draft'); });
+    $('deal-publish').addEventListener('click', function () { commit('published'); });
+  }
+
+  // ── Language (same mechanism as analytics.html) ──────────────
+  function applyLang(lang) {
+    var previousSuggestion = draft ? suggestion(draft) : '';
+    _lang = lang === 'de' ? 'de' : 'en';
+    try { localStorage.setItem('qraivy_lang', _lang); } catch (e) {}
+    var d = _t[_lang];
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      if (d[key] !== undefined) el.textContent = d[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n-placeholder');
+      if (d[key] !== undefined) el.placeholder = d[key];
+    });
+    window._qraivyLang = _lang;
+    // Shell labels + language selector: js/admin-shell.js
+    if (window.QraivyShell) window.QraivyShell.apply(_lang);
+    // Dynamic parts carry translated text of their own.
+    if (draft) {
+      if (offerAuto && draft.offerText === previousSuggestion) { draft.offerText = suggestion(draft); $('deal-offerText').value = draft.offerText; }
+      renderTypeFields();
+      renderBuilder();
+    }
+    renderList();
+  }
+  window.toggleLang = function () { applyLang(_lang === 'en' ? 'de' : 'en'); };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    bind();
+    applyLang(_lang);
+    renderPreview();
+  });
+})();
+
+// ── Account shell (same sign-in gate and sidebar wiring as analytics.html) ──
+async function initDeals() {
+  await window.Clerk.load();
+  await new Promise(r => setTimeout(r, 400));
+  if (!window.Clerk.user) { window.location.href = 'login.html'; return; }
+
+  const name = window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0].emailAddress;
+  document.getElementById('sb-username').textContent = name;
+  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('sb-signout').addEventListener('click', async e => {
+    e.preventDefault(); await window.Clerk.signOut(); window.location.href = 'login.html';
+  });
+}
+(function () {
+  // Sidebar collapse (desktop). The mobile drawer is bound by js/admin-shell.js.
+  const sidebar = document.getElementById('sidebar');
+  const sbToggle = document.getElementById('sb-toggle');
+  if (!sidebar || !sbToggle) return;
+  if (localStorage.getItem('sb-collapsed') === 'true') { sidebar.classList.add('collapsed'); document.body.classList.add('sb-collapsed'); }
+  sbToggle.addEventListener('click', () => {
+    const c = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sb-collapsed', c);
+    localStorage.setItem('sb-collapsed', c);
+  });
+})();
+</script>
+<script
+  data-clerk-publishable-key="pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ"
+  src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"
+  onload="initDeals()"
+></script>
+</body>
+</html>
