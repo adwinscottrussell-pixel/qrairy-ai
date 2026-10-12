@@ -22,6 +22,19 @@
  *                                    best; the folder rule protects
  *                                    production audio either way.
  *
+ *
+ * Sign-in is verified with Clerk's PUBLIC key only, so staging holds no
+ * Clerk secret (utils/clerkVerify.js):
+ *
+ *   CLERK_JWT_KEY                    required. The Clerk instance's public
+ *                                    verification key (PEM, RSA 2048).
+ *   STAGING_CLERK_ISSUER             required. The Clerk instance tokens
+ *                                    must come from, e.g. https://clerk.example.com
+ *   STAGING_CLERK_AUTHORIZED_PARTIES required. Comma separated https
+ *                                    origins of the staging site(s) a
+ *                                    token must have been issued for.
+ *   CLERK_SECRET_KEY                 must NOT be set.
+ *
  * And none of the settings that let the server contact customers or take
  * money may be present (FORBIDDEN_SETTINGS): email, web push, Apple push,
  * wallet passes, payments.
@@ -29,6 +42,42 @@
  * See middleware/stagingGate.js for the request-level rules.
  * ─────────────────────────────────────────────────────────────
  */
+
+const crypto = require('crypto');
+
+// Exact https origin, nothing else: no path, no wildcard.
+function isHttpsOrigin(value) {
+  if (String(value).includes('*')) return false;
+  try { const u = new URL(value); return u.protocol === 'https:' && u.origin === value; } catch (_) { return false; }
+}
+
+// Reads the sign-in verification settings. Adds to `problems`; returns the
+// values to verify with, or null. Never includes a setting's value in a message.
+function readClerkVerification(env, problems) {
+  if (String(env.CLERK_SECRET_KEY || '').trim()) problems.push('CLERK_SECRET_KEY must not exist on a staging server. Staging verifies sign-ins with the public key (CLERK_JWT_KEY).');
+
+  let jwtKey = null;
+  const pem = String(env.CLERK_JWT_KEY || '').replace(/\\n/g, '\n').trim();
+  if (!pem) problems.push('CLERK_JWT_KEY is required on staging: the Clerk public verification key (PEM).');
+  else if (/PRIVATE KEY/.test(pem)) problems.push('CLERK_JWT_KEY must be a PUBLIC key. A private key was supplied.');
+  else {
+    try {
+      const key = crypto.createPublicKey(pem);
+      if (key.asymmetricKeyType !== 'rsa' || key.asymmetricKeyDetails.modulusLength !== 2048) throw new Error('unsupported key');
+      jwtKey = key.export({ type: 'spki', format: 'pem' }).trim();
+    } catch (_) { problems.push('CLERK_JWT_KEY is not a valid RSA 2048 public key in PEM format.'); }
+  }
+
+  const issuer = String(env.STAGING_CLERK_ISSUER || '').trim();
+  if (!issuer) problems.push('STAGING_CLERK_ISSUER is required on staging: the https address of the Clerk instance.');
+  else if (!isHttpsOrigin(issuer)) problems.push('STAGING_CLERK_ISSUER must be an https origin only, without a path.');
+
+  const parties = String(env.STAGING_CLERK_AUTHORIZED_PARTIES || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!parties.length) problems.push('STAGING_CLERK_AUTHORIZED_PARTIES is required on staging: the https origin(s) of the staging site.');
+  else if (!parties.every(isHttpsOrigin)) problems.push('STAGING_CLERK_AUTHORIZED_PARTIES may only contain exact https origins.');
+
+  return Object.freeze({ jwtKey, issuer, authorizedParties: Object.freeze(parties) });
+}
 
 // Storage folders production writes to. Staging may never use them.
 const PRODUCTION_STORAGE_FOLDERS = ['qraivy-voices', 'qraivy-logos', 'qraivy-wallet-strips', 'qraivy-deals'];
@@ -74,6 +123,8 @@ function loadStagingPolicy(env = process.env) {
 
   if (!String(env.CLOUDINARY_CLOUD_NAME || '').trim()) problems.push('CLOUDINARY_CLOUD_NAME is required on staging.');
 
+  const clerk = readClerkVerification(env, problems);
+
   const present = FORBIDDEN_SETTINGS.filter((name) => String(env[name] || '').trim());
   if (present.length) problems.push('These settings must not exist on a staging server (customer communication or payments): ' + present.join(', ') + '.');
 
@@ -83,6 +134,7 @@ function loadStagingPolicy(env = process.env) {
     allowedUserIds: Object.freeze(ids.slice()),
     recordingCeiling: ceiling,
     voiceAudioFolder: folder,
+    clerk,
   });
 }
 

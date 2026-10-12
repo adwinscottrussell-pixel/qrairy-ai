@@ -245,7 +245,10 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
   const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js').map((f) => 'frontend/public/js/' + f);
-  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/smart-qr-detail.html', 'frontend/public/smart-editor.js', 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/src', 'backend/prisma', 'backend/railway.toml').trim(), '');
+  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/smart-qr-detail.html', 'frontend/public/smart-editor.js', 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/prisma', 'backend/railway.toml').trim(), '');
+  // Backend code: this step's own commit changed none. (Later steps do change it:
+  // staging sign-in verification, see lpStagingClerkAuth.test.js.)
+  assert.equal(git('diff', 'a642477', '9572bed', '--stat', '--', 'backend/src').trim(), '');
 });
 
 // ── runner ──────────────────────────────────────────────────────

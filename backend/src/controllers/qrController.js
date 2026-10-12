@@ -13,13 +13,13 @@ const PLAN_AI_LIMITS = { free: 0, starter: 10, pro: null, pro_annual: null, busi
 const PLAN_DYNAMIC = { free: false, starter: false, starter_annual: false, pro: true, pro_annual: true, business: true, business_annual: true };
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
-const { verifyToken } = require('@clerk/backend');
+const { verifyClerkToken } = require('../utils/clerkVerify');
 
 async function getUserFromToken(authHeader) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.split(' ')[1];
-    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
+    const payload = await verifyClerkToken(token);
     return payload.sub || null;
   } catch (err) {
     console.error('Token verify error:', err.message);

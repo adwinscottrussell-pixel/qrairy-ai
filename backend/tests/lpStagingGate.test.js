@@ -40,6 +40,12 @@ const STAGING_ENV = {
   STAGING_VOICE_RECORDING_CEILING: '25',
   VOICE_AUDIO_FOLDER: 'qraivy-voices-staging',
   CLOUDINARY_CLOUD_NAME: 'staging-cloud-example',
+  // Sign-in is verified with a public key; a staging server holds no Clerk secret
+  // (covered in lpStagingClerkAuth.test.js). The empty value removes boot()'s placeholder.
+  CLERK_SECRET_KEY: '',
+  CLERK_JWT_KEY: require('crypto').generateKeyPairSync('rsa', { modulusLength: 2048, publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } }).publicKey,
+  STAGING_CLERK_ISSUER: 'https://clerk.voice-staging.example',
+  STAGING_CLERK_AUTHORIZED_PARTIES: 'https://voice-preview.voice-staging.example',
 };
 
 const tests = [];
@@ -62,7 +68,8 @@ test('A. production: no policy, nothing validated, whatever else is set', () => 
 
 test('A. staging with every setting right is accepted', () => {
   const p = loadStagingPolicy(STAGING_ENV);
-  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging' });
+  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging',
+    clerk: { jwtKey: STAGING_ENV.CLERK_JWT_KEY.trim(), issuer: 'https://clerk.voice-staging.example', authorizedParties: ['https://voice-preview.voice-staging.example'] } });
   assert.ok(Object.isFrozen(p) && Object.isFrozen(p.allowedUserIds));
 });
 
