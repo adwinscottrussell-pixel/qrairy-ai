@@ -1,6 +1,6 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
-const { mergeVoiceOnSave, ensureVoiceAudio, effectiveGreeting, audioIsCurrent } = require('../services/lpVoiceService');
+const { mergeVoiceOnSave, ensureVoiceAudio, effectiveGreeting, audioIsCurrent, audioIsPlayable, flagVoiceOnSave, publishVoiceStatus } = require('../services/lpVoiceService');
 const prisma = require('../utils/prismaClient');
 const plans = require('../config/plans');
 const publicOrigins = require('../config/publicOrigins');
@@ -1376,6 +1376,15 @@ async function handlePublishLP(req, res) {
       ? { logoUrl: (mergedSections.logo && mergedSections.logo.url) || logoUrl || null }
       : (logoUrl ? { logoUrl } : {});
 
+    // Welcome audio that is not a recording of the greeting being saved is
+    // marked stale in this same write, so visitors never hear the old audio
+    // with the new greeting. The mark is removed only when the right
+    // recording is attached (lpVoiceService.attachAudio). A field this
+    // request does not send keeps its stored value, hence the fallbacks.
+    try {
+      flagVoiceOnSave({ slug, businessName, useCase: useCase !== undefined ? useCase : (existing ? existing.useCase : null) }, mergedSections);
+    } catch (_) {}
+
     const baseUpsertArgs = {
       where: { slug },
       // Security fix — userId is intentionally NOT in `update`: ownership
@@ -1474,11 +1483,14 @@ async function handlePublishLP(req, res) {
 
     // Tells the editor whether new audio is on its way and how to
     // recognise it (voice.audioFor on the saved page becomes audioFor).
+    // status says it outright: off, ready, pending, or limited when a
+    // recording limit means no audio will be made for this greeting now.
+    // A recording that fails later is noted on the page (voice.audioError).
     let _voiceInfo = null;
     try {
       const _g = effectiveGreeting(page);
       const _sec = page.sections ? JSON.parse(page.sections) : {};
-      _voiceInfo = { enabled: _g.enabled, lang: _g.lang, isCustom: _g.isCustom, audioFor: _g.fingerprint, pending: _g.enabled && !!_g.text && !audioIsCurrent(_sec, _g) };
+      _voiceInfo = Object.assign({ enabled: _g.enabled, lang: _g.lang, isCustom: _g.isCustom, audioFor: _g.fingerprint, pending: _g.enabled && !!_g.text && !audioIsCurrent(_sec, _g) }, publishVoiceStatus(page, _sec));
     } catch (_) {}
     return res.json({ ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: page.id, voice: _voiceInfo });
   } catch (err) {
@@ -2574,7 +2586,12 @@ function renderPremiumLP(page) {
   // No audio, no player: a Play button that cannot play is worse than none.
   // The section appears by itself once the welcome audio exists.
   const voiceAudioUrl = (typeof sv.audioUrl === 'string' && /^https:\/\//.test(sv.audioUrl)) ? sv.audioUrl : '';
-  const showVoice = voiceEnabled && !!voiceAudioUrl;
+  // Audio that is not a recording of the page's current greeting is not
+  // played either (marked stale by a save, or its fingerprint no longer
+  // matches): the player returns once the right recording is attached.
+  let voiceAudioFresh = true;
+  try { voiceAudioFresh = audioIsPlayable(page, storedSections); } catch (_) {}
+  const showVoice = voiceEnabled && !!voiceAudioUrl && voiceAudioFresh;
   // 'Voice Welcome' is the editor's untouched placeholder title, saved on
   // every page whether or not the owner typed anything; it is not a title
   // the owner chose, so the localized default stays in place for it.

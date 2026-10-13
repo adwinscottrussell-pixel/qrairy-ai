@@ -111,6 +111,7 @@ function reset() {
   landingPages = {}; users = { [OWNER]: { id: OWNER, plan: 'business', subscriptionStatus: 'active' }, [OTHER]: { id: OTHER, plan: 'business', subscriptionStatus: 'active' } };
   tts.calls = []; tts.uploads = []; tts.fail = false; tts.gate = null;
   limiter.resetPreviewLimits();
+  voice.resetRecordings();
 }
 const settle = async () => { for (let i = 0; i < 14; i++) await new Promise((r) => setImmediate(r)); };
 let slugSeq = 0;
@@ -449,14 +450,14 @@ test('G. requests fired together cannot get past the limit', async () => {
   assert.equal(tts.calls.length, 10);
 });
 
-test('G. the per-owner guard: thirty recordings an hour across all of an owner\'s pages', async () => {
+test('G. the per-owner guard: twenty recordings an hour across all of an owner\'s pages', async () => {
   reset();
   const pages = Array.from({ length: 4 }, () => { const s = newSlug(); putPage(s); return s; });
   let ok = 0;
-  for (let i = 0; i < 30; i++) ok += (await preview(pages[i % 4], { language: 'en', text: 'Owner run ' + i + '.', generate: true })).statusCode === 200 ? 1 : 0;
-  assert.equal(ok, 30);
+  for (let i = 0; i < 20; i++) ok += (await preview(pages[i % 4], { language: 'en', text: 'Owner run ' + i + '.', generate: true })).statusCode === 200 ? 1 : 0;
+  assert.equal(ok, 20);
   const over = await preview(pages[3], { language: 'en', text: 'One too many.', generate: true });
-  assert.deepEqual([over.statusCode, over.body.code, tts.calls.length], [429, 'limit_owner', 30]);
+  assert.deepEqual([over.statusCode, over.body.code, tts.calls.length], [429, 'limit_owner', 20]);
   // a different owner is not affected
   const theirs = newSlug(); putPage(theirs, { userId: OTHER });
   assert.equal((await preview(theirs, { language: 'en', text: 'Mine.', generate: true }, { user: OTHER })).statusCode, 200);
@@ -471,12 +472,12 @@ test('G. the limiter itself: windows slide, and the daily owner cap holds', () =
   assert.equal(limiter.takeSlot('p', 'u', t0 + 60 * MIN).ok, true, 'the first one has left the hour');
   assert.equal(limiter.remainingForPage('p', t0 + 60 * MIN), 0);
   limiter.resetPreviewLimits();
-  let taken = 0;                       // 25 an hour over many pages stays under the hourly cap
-  for (let h = 0; h < 5; h++) for (let i = 0; i < 25; i++) taken += limiter.takeSlot('page-' + h + '-' + i, 'u', t0 + h * 61 * MIN + i).ok ? 1 : 0;
-  assert.equal(taken, 100);
-  const day = limiter.takeSlot('fresh-page', 'u', t0 + 5 * 61 * MIN);
+  let taken = 0;                       // 10 an hour over many pages stays under the hourly cap
+  for (let h = 0; h < 4; h++) for (let i = 0; i < 10; i++) taken += limiter.takeSlot('page-' + h + '-' + i, 'u', t0 + h * 61 * MIN + i).ok ? 1 : 0;
+  assert.equal(taken, 40);
+  const day = limiter.takeSlot('fresh-page', 'u', t0 + 4 * 61 * MIN);
   assert.deepEqual([day.ok, day.scope], [false, 'owner']);
-  assert.deepEqual(limiter.PREVIEW_LIMITS, { perPagePerHour: 10, perOwnerPerHour: 30, perOwnerPerDay: 100 });
+  assert.deepEqual(limiter.PREVIEW_LIMITS, { perPagePerHour: 10, perOwnerPerHour: 20, perOwnerPerDay: 40, anonymousPerDay: 20, globalPerDay: 150 });
   limiter.resetPreviewLimits();
 });
 

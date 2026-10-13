@@ -105,7 +105,7 @@ const quiet = (on) => { console.error = on ? () => {} : realError; };
 
 // ── Helpers ──────────────────────────────────────────────────────
 const OWNER = 'user-owner';
-function reset() { landingPages = {}; users = { [OWNER]: { id: OWNER, plan: 'business', subscriptionStatus: 'active' } }; tts.calls = []; tts.fail = false; tts.gate = null; beforeCas = null; }
+function reset() { landingPages = {}; users = { [OWNER]: { id: OWNER, plan: 'business', subscriptionStatus: 'active' } }; tts.calls = []; tts.fail = false; tts.gate = null; beforeCas = null; require('../src/services/voicePreviewLimiter').resetPreviewLimits(); voice.resetRecordings(); }
 const settle = async () => { for (let i = 0; i < 12; i++) await new Promise((r) => setImmediate(r)); };
 let slugSeq = 0;
 const newSlug = () => 'greet-' + (++slugSeq);
@@ -263,12 +263,14 @@ test('B. exactly two standard voices: Sarah for English, Charlotte for German', 
 });
 
 test('B. these are the same two ids the service has always used as its defaults', () => {
-  // Read from the last committed version of the service, not from the new code.
+  // Read from the service as it was before Voice Welcome (production commit
+  // 6b23e2f), not from the new code. A fixed commit, not a branch name: the
+  // comparison stays true after this work itself is on the production branch.
   const { execFileSync } = require('child_process');
-  const before = execFileSync('git', ['show', 'origin/main:backend/src/services/voiceService.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
+  const before = execFileSync('git', ['show', '6b23e2f:backend/src/services/voiceService.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
   assert.match(before, /sarah:\s+\{ id: "EXAVITQu4vr4xnSDxMaL"/);
   assert.match(before, /anna_de: \{ id: "XB0fDUnXU5powFXDhCwa"/);
-  const controllerBefore = execFileSync('git', ['show', 'origin/main:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
+  const controllerBefore = execFileSync('git', ['show', '6b23e2f:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
   assert.match(controllerBefore, /_lang === 'de' \? 'anna_de' : 'sarah'/);
 });
 
@@ -393,11 +395,19 @@ test('D. changing the greeting regenerates, with the new text', async () => {
   const second = sectionsOf(slug).voice;
   assert.notEqual(second.audioUrl, first.audioUrl, 'a new address, so no cached copy of the old greeting');
   assert.notEqual(second.audioFor, first.audioFor);
-  // back to the standard greeting: that is a change too
+  // back to the standard greeting: that is a change too -- the page gets the
+  // standard recording again, but the one already made is used, not paid for twice
   editSections(slug, (s) => { delete s.voice.customGreeting; });
   await voice.ensureVoiceAudio(slug);
+  assert.equal(tts.calls.length, 2);
+  const third = sectionsOf(slug).voice;
+  assert.deepEqual([third.audioUrl, third.audioFor], [first.audioUrl, first.audioFor]);
+  // a process that has not made it before records it
+  voice.resetRecordings();
+  editSections(slug, (s) => { s.voice.customGreeting = { en: 'Hi! Maria here. The oven is on.' }; });
+  await voice.ensureVoiceAudio(slug);
   assert.equal(tts.calls.length, 3);
-  assert.ok(tts.calls[2].body.text.startsWith('Welcome to Casa Lumi!'));
+  assert.equal(tts.calls[2].body.text, 'Hi! Maria here. The oven is on.');
 });
 
 test('D. changing the language regenerates in that language\'s voice; custom texts of both languages are kept', async () => {
@@ -408,9 +418,13 @@ test('D. changing the language regenerates in that language\'s voice; custom tex
   await voice.ensureVoiceAudio(slug);
   editSections(slug, (s) => { s.voice.voiceLanguage = 'de'; });
   await voice.ensureVoiceAudio(slug);
+  const german = sectionsOf(slug).voice;
+  assert.deepEqual([german.audioLang, german.audioFor], ['de', voice.voiceFingerprint(STANDARD_VOICES.de, custom.de)]);
+  // back to English: the English recording made a moment ago is attached again, not made again
   editSections(slug, (s) => { s.voice.voiceLanguage = 'en'; });
   await voice.ensureVoiceAudio(slug);
-  assert.deepEqual(tts.calls.map((c) => [c.voiceId, c.body.text]), [[STANDARD_VOICES.en.id, custom.en], [STANDARD_VOICES.de.id, custom.de], [STANDARD_VOICES.en.id, custom.en]]);
+  assert.deepEqual(tts.calls.map((c) => [c.voiceId, c.body.text]), [[STANDARD_VOICES.en.id, custom.en], [STANDARD_VOICES.de.id, custom.de]]);
+  assert.equal(sectionsOf(slug).voice.audioFor, voice.voiceFingerprint(STANDARD_VOICES.en, custom.en));
   assert.deepEqual(sectionsOf(slug).voice.customGreeting, custom);
   assert.equal(sectionsOf(slug).voice.audioLang, 'en');
 });
@@ -517,7 +531,7 @@ test('D. a save landing between the job\'s read and write is not overwritten', a
   assert.equal(tts.calls.length, 1, 'the recording was still right, so it was kept, not made again');
 });
 
-test('D. generation failure: logged, nothing stored, the page keeps what it had, and the next save tries again', async () => {
+test('D. generation failure: logged, no audio stored, the old recording is kept but no longer played, and the next save tries again', async () => {
   reset();
   const slug = newSlug();
   putPage(slug, { sections: { voice: { voiceLanguage: 'en' } } });
@@ -531,11 +545,20 @@ test('D. generation failure: logged, nothing stored, the page keeps what it had,
   assert.equal(failed.generated, false);
   assert.equal(failed.reason, 'error');
   assert.match(failed.error, /ElevenLabs error/);
-  assert.equal(landingPages[slug].sections, before, 'nothing was written');
-  assert.equal(sectionsOf(slug).voice.audioUrl, good.audioUrl, 'the previous audio is still there');
+  // Nothing the owner saved is touched and the previous recording is not
+  // lost; the page only notes that it is not a recording of the new
+  // greeting (so it is not played) and why there is no new one.
+  const after = sectionsOf(slug).voice;
+  assert.deepEqual([after.audioUrl, after.audioFor, after.audioLang], [good.audioUrl, good.audioFor, good.audioLang], 'the previous audio is still there');
+  assert.equal(after.audioStale, true);
+  assert.deepEqual([after.audioError.code, after.audioError.for], ['failed', voice.voiceFingerprint(STANDARD_VOICES.en, 'New words.')]);
+  const { audioStale, audioError, ...rest } = after;
+  assert.deepEqual({ voice: rest }, JSON.parse(before), 'nothing else was written');
   const retry = await voice.ensureVoiceAudio(slug);
   assert.equal(retry.generated, true);
   assert.equal(tts.calls[tts.calls.length - 1].body.text, 'New words.');
+  const fixed = sectionsOf(slug).voice;
+  assert.deepEqual(['audioStale' in fixed, 'audioError' in fixed, fixed.audioFor], [false, false, voice.voiceFingerprint(STANDARD_VOICES.en, 'New words.')]);
 });
 
 test('D. a missing page or a missing key never throws', async () => {
@@ -736,8 +759,10 @@ test('F. the editor page loads the greeting data and field script before the edi
   const c = editorPage.indexOf('<script src="smart-editor.js"></script>');
   assert.ok(a !== -1 && b > a && c > b);
   const { execFileSync } = require('child_process');
-  const before = execFileSync('git', ['show', 'origin/main:frontend/public/smart-qr-detail.html'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
-  // Apart from the voice scripts, the only other difference from production
+  const before = execFileSync('git', ['show', '6b23e2f:frontend/public/smart-qr-detail.html'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
+  // `before` is the page at production commit 6b23e2f, the last one without
+  // Voice Welcome (a fixed commit, so this holds once the work is promoted).
+  // Apart from the voice scripts, the only other difference from it
   // is the API routing switch (tests/lpStagingRouting.test.js): three lines
   // in <head>, and the phone preview's address passing through it.
   const withoutVoice = editorPage.replace('<script src="js/voice-greetings.js"></script>\n<script src="js/voice-greeting-editor.js"></script>\n', '');

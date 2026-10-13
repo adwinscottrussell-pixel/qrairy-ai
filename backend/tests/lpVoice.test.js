@@ -337,7 +337,7 @@ test('3. background audio is stored only through the safe patch, and the page ca
   assert.ok(!/generateAndUploadVoice|synthesizeAndUploadVoice/.test(controller), 'the controller makes no text-to-speech call of its own');
   assert.equal((controller.match(/ensureVoiceAudio\(slug\)/g) || []).length, 2, 'after AI generation and after every save');
   const service = fs.readFileSync(resolve('src', 'services', 'lpVoiceService.js'), 'utf8').replace(/\r\n/g, '\n');
-  assert.match(service, /const saved = await patchLandingPageSections\(slug, \(fresh, freshPage\) => \{/);
+  assert.match(service, /saved = await patchLandingPageSections\(slug, \(fresh, freshPage\) => \{/);
   assert.match(service, /pageCache\.delByPrefix\('lp:' \+ slug\);/);
   assert.ok(!/prisma\.landingPage\.(update|upsert|updateMany)\(/.test(service), 'the service never writes sections directly');
 });

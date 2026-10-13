@@ -30,8 +30,8 @@
   var API = 'https://api.qraivy.com';
   var IDS = { field: 'se-voice-greeting', status: 'se-voice-greeting-status', count: 'se-voice-greeting-count', reset: 'se-voice-greeting-reset', audio: 'se-voice-audio-status', iframe: 'sqd-iframe' };
   var TXT = {
-    en: { standard: 'Standard greeting for: ', custom: 'Your own greeting', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Artist / Music', event: 'Event', ecommerce: 'Ecommerce', local_business: 'Local Business', fitness: 'Fitness', other: 'Other' }, pending: 'Welcome audio is being updated…', ready: 'Welcome audio updated ✓', slow: 'The welcome audio is taking longer than usual. It will appear on your page when it is ready.', off: 'Voice is switched off for this page, so no audio is generated.' },
-    de: { standard: 'Standardbegrüßung für: ', custom: 'Ihre eigene Begrüßung', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Künstler / Musik', event: 'Event', ecommerce: 'E-Commerce', local_business: 'Lokales Unternehmen', fitness: 'Fitness', other: 'Sonstiges' }, pending: 'Die Willkommens-Audiodatei wird aktualisiert …', ready: 'Willkommens-Audiodatei aktualisiert ✓', slow: 'Die Audiodatei braucht länger als üblich. Sie erscheint auf Ihrer Seite, sobald sie fertig ist.', off: 'Die Sprachausgabe ist für diese Seite ausgeschaltet, daher wird keine Audiodatei erzeugt.' }
+    en: { standard: 'Standard greeting for: ', custom: 'Your own greeting', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Artist / Music', event: 'Event', ecommerce: 'Ecommerce', local_business: 'Local Business', fitness: 'Fitness', other: 'Other' }, pending: 'Welcome audio is being updated…', ready: 'Welcome audio updated ✓', slow: 'The welcome audio is taking longer than usual. It will appear on your page when it is ready.', off: 'Voice is switched off for this page, so no audio is generated.', limited: 'Published. The welcome audio was not updated: the recording limit is reached. Visitors see no audio player until it is updated — please publish again later.', failed: 'Published. The welcome audio could not be recorded. Visitors see no audio player until it is updated — please publish again.' },
+    de: { standard: 'Standardbegrüßung für: ', custom: 'Ihre eigene Begrüßung', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Künstler / Musik', event: 'Event', ecommerce: 'E-Commerce', local_business: 'Lokales Unternehmen', fitness: 'Fitness', other: 'Sonstiges' }, pending: 'Die Willkommens-Audiodatei wird aktualisiert …', ready: 'Willkommens-Audiodatei aktualisiert ✓', slow: 'Die Audiodatei braucht länger als üblich. Sie erscheint auf Ihrer Seite, sobald sie fertig ist.', off: 'Die Sprachausgabe ist für diese Seite ausgeschaltet, daher wird keine Audiodatei erzeugt.', limited: 'Veröffentlicht. Die Willkommens-Audiodatei wurde nicht aktualisiert: Das Aufnahme-Limit ist erreicht. Besucher sehen keinen Audio-Player, bis sie aktualisiert ist — bitte veröffentlichen Sie später erneut.', failed: 'Veröffentlicht. Die Willkommens-Audiodatei konnte nicht aufgenommen werden. Besucher sehen keinen Audio-Player, bis sie aktualisiert ist — bitte veröffentlichen Sie erneut.' }
   };
 
   function G() { return window.QRAIVY_VOICE_GREETINGS; }
@@ -291,6 +291,8 @@
     if (!info) { showAudioStatus(''); return; }
     if (!info.enabled) { showAudioStatus(ui().off); return; }
     if (!info.pending) { showAudioStatus(''); return; }
+    // The server already knows no recording will be made for this greeting now.
+    if (info.status === 'limited') { showAudioStatus(ui().limited, '#f87171'); return; }
     showAudioStatus(ui().pending);
     var slug = state().slug, tries = 0;
     function giveUp() { showAudioStatus(ui().slow, '#f59e0b'); }
@@ -315,6 +317,9 @@
             recheckPreview();
             return;
           }
+          // The recording for this greeting did not happen; the page says why.
+          var failure = sections && sections.voice && sections.voice.audioError;
+          if (failure && failure.for === info.audioFor) { showAudioStatus(failure.code === 'limit' ? ui().limited : ui().failed, '#f87171'); return; }
           if (tries >= 20) { giveUp(); return; }
           setTimeout(poll, 3000);
         })

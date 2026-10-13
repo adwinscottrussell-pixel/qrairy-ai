@@ -10,6 +10,10 @@
  *   owner-controlled   enabled, title, description, voiceLanguage,
  *                      customGreeting { en?, de? }
  *   server-controlled  audioUrl, audioFor, audioLang      (published)
+ *                      audioStale   the stored audio is known not to be a
+ *                                   recording of the saved greeting; the
+ *                                   page does not play it
+ *                      audioError   why the last recording did not happen
  *                      previewUrl, previewFor, previewLang (latest preview)
  *                      previewCache { fingerprint: address } (recent previews)
  *
@@ -36,11 +40,12 @@ const { standardVoice, synthesizeAndUploadVoice } = require('./voiceService');
 const { patchLandingPageSections } = require('./lpSectionsPatch');
 const { pageCache } = require('../utils/pageCache');
 const { reserveRecording } = require('./stagingVoiceBudget');
+const { takeSlot, peekSlot } = require('./voicePreviewLimiter');
 
 // Fields of sections.voice that only the server may set. A save never
 // takes them from the request: the editor sends back whatever it loaded,
 // which may be older than the audio generated since.
-const SERVER_VOICE_FIELDS = ['audioUrl', 'audioFor', 'audioLang', 'previewUrl', 'previewFor', 'previewLang', 'previewCache'];
+const SERVER_VOICE_FIELDS = ['audioUrl', 'audioFor', 'audioLang', 'audioStale', 'audioError', 'previewUrl', 'previewFor', 'previewLang', 'previewCache'];
 // How many recent preview recordings a page remembers for reuse.
 const PREVIEW_CACHE_SIZE = 10;
 
@@ -125,6 +130,36 @@ function audioIsCurrent(sections, greeting) {
   return typeof voice.audioUrl === 'string' && !!voice.audioUrl && voice.audioFor === greeting.fingerprint;
 }
 
+// May a visitor hear the stored audio? Not while it is marked stale, and
+// not when it carries a fingerprint that is no longer the page's greeting.
+// Audio from before fingerprints existed (no audioFor) plays until a save
+// marks it stale.
+function audioIsPlayable(page, sections = parseSections(page)) {
+  const voice = sections.voice || {};
+  if (voice.audioStale) return false;
+  if (typeof voice.audioFor === 'string' && voice.audioFor) return voice.audioFor === effectiveGreeting(page, sections).fingerprint;
+  return true;
+}
+
+// Applied to the sections a save is about to store, for the page as it
+// will be stored. If Voice is on and the stored audio is not a recording
+// of the greeting being saved, the audio is marked stale IN THE SAME
+// WRITE, so there is no moment in which the new greeting is paired with
+// the old audio. This only ever sets the mark: it is removed in one place,
+// when the right recording is attached (attachAudio). A note about an
+// earlier failed recording is dropped, because every save tries again.
+function flagVoiceOnSave(page, sections) {
+  const voice = sections && sections.voice;
+  if (!voice || typeof voice !== 'object' || Array.isArray(voice)) return sections;
+  const next = Object.assign({}, voice);
+  delete next.audioError;
+  const greeting = effectiveGreeting(page, Object.assign({}, sections, { voice: next }));
+  const hasAudio = typeof next.audioUrl === 'string' && !!next.audioUrl;
+  if (greeting.enabled && hasAudio && next.audioFor !== greeting.fingerprint) next.audioStale = true;
+  sections.voice = next;
+  return sections;
+}
+
 // Applied when a page is saved. Returns the voice object to store:
 //   - audio fields always come from what is already stored, never from
 //     the request
@@ -173,24 +208,58 @@ function existingAudioFor(sections, fingerprint) {
 }
 
 // ── Recording ──────────────────────────────────────────────────
-// One text-to-speech call per recording at a time, whoever asks: two
-// preview requests, or a preview and a Publish, for the same greeting of
-// the same page share one call and one result.
+// THE one place a text-to-speech call starts. Preview, Publish and the
+// background jobs after a save all come through here, so the recording
+// limits (voicePreviewLimiter) cannot be bypassed by choosing another way in.
+//
+// One call per recording at a time, whoever asks: two preview requests, or
+// a preview and a Publish, for the same greeting of the same page share
+// one call and one result. Joining a call that is already running, and
+// getting a recording this process has already made, take no slot.
+class RecordingLimitError extends Error {
+  constructor(slot) {
+    super('Recording limit reached (' + slot.scope + ').');
+    this.name = 'RecordingLimitError'; this.code = 'RECORDING_LIMIT'; this.scope = slot.scope; this.retryAfter = slot.retryAfter;
+  }
+}
 const recordings = new Map(); // slug + ':' + fingerprint -> promise of the audio address
+// Recordings this process has made, by the same key. A file is named after
+// its fingerprint and is never deleted, so its address stays valid: a
+// recording that could not be attached to its page (the page kept changing,
+// or the greeting changed and later changed back) is used again instead of
+// being paid for twice.
+const made = new Map();
+const MADE_SIZE = 500;
 function recordingInFlight(slug, fingerprint) { return recordings.has(slug + ':' + fingerprint); }
-function record(slug, greeting) {
+// Is a recording of this greeting available without a new call?
+function recordingAtHand(slug, fingerprint) { return recordings.has(slug + ':' + fingerprint) || made.has(slug + ':' + fingerprint); }
+// `userId` is the page's owner (null for a page without one). Throws a
+// RecordingLimitError, before anything is called, when no slot is free.
+function record(slug, greeting, { userId = null } = {}) {
   const key = slug + ':' + greeting.fingerprint;
   const running = recordings.get(key);
   if (running) return running;
-  // On staging one unit of the staging-wide ceiling is taken first, and no
+  if (made.has(key)) return Promise.resolve(made.get(key));
+  // Check and take in one synchronous step, immediately before the call is
+  // registered: requests arriving together cannot share the last slot.
+  const slot = takeSlot(slug, userId || null);
+  if (!slot.ok) throw new RecordingLimitError(slot);
+  // On staging one unit of the staging-wide ceiling is taken next, and no
   // call is made if that fails. In production this resolves immediately.
   const promise = Promise.resolve()
     .then(() => reserveRecording())
     .then(() => synthesizeAndUploadVoice({ slug, text: greeting.text, lang: greeting.lang, fingerprint: greeting.fingerprint }))
+    .then((audioUrl) => {
+      made.set(key, audioUrl);
+      if (made.size > MADE_SIZE) made.delete(made.keys().next().value);
+      return audioUrl;
+    })
     .finally(() => { recordings.delete(key); });
   recordings.set(key, promise);
   return promise;
 }
+// Tests only.
+function resetRecordings() { recordings.clear(); made.clear(); }
 
 // ── Preview ────────────────────────────────────────────────────
 // Which preview request is the newest for each page. A recording that
@@ -202,9 +271,11 @@ function stampPreviewRequest(slug) { const n = (previewSeq.get(slug) || 0) + 1; 
 
 // Records the greeting for the editor and remembers it as the page's
 // preview. Never touches audioUrl / audioFor. Throws if recording fails.
-async function recordPreview(slug, greeting) {
+async function recordPreview(slug, greeting, { userId = null } = {}) {
+  // Refused by the limits before it counts as the page's newest request.
+  const recording = record(slug, greeting, { userId });
   const seq = stampPreviewRequest(slug);
-  const audioUrl = await record(slug, greeting);
+  const audioUrl = await recording;
   const newest = previewSeq.get(slug) === seq;
   await patchLandingPageSections(slug, (fresh) => {
     const current = fresh.voice || {};
@@ -228,6 +299,58 @@ async function recordPreview(slug, greeting) {
 // more at most, never two in parallel.
 const inFlight = new Map(); // slug -> { again: boolean, promise }
 
+// Attaches a recording to its page, and is the ONLY place the stale mark
+// is removed. It is written on top of whatever is saved NOW (see
+// lpSectionsPatch.js), and only if this recording is still the right one:
+// the greeting is worked out again from the freshly read page and its
+// fingerprint must equal the recording's. A job that finishes after a
+// newer Publish (another greeting, another language, Voice switched off)
+// therefore writes nothing at all -- it can neither attach its outdated
+// audio nor remove the mark the newer save set.
+//
+// The write only succeeds if the page was not touched since it was read.
+// A page that keeps changing (every visit touches it) is tried again here,
+// with the recording already in hand: only the write is repeated, never
+// the paid text-to-speech call.
+const ATTACH_ROUNDS = 4;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function attachAudio(slug, greeting, audioUrl) {
+  let superseded = false, saved = { applied: false, reason: 'conflict' };
+  for (let round = 0; round < ATTACH_ROUNDS; round++) {
+    if (round) await wait(40 * round);
+    superseded = false;
+    saved = await patchLandingPageSections(slug, (fresh, freshPage) => {
+      const now = effectiveGreeting(freshPage, fresh);
+      if (!now.enabled || now.fingerprint !== greeting.fingerprint) { superseded = true; return null; }
+      const next = Object.assign({}, fresh.voice || {}, { audioUrl, audioFor: greeting.fingerprint, audioLang: greeting.lang });
+      delete next.audioStale;
+      delete next.audioError;
+      fresh.voice = next;
+      return fresh;
+    });
+    if (saved.applied || saved.reason !== 'conflict') break;
+  }
+  pageCache.delByPrefix('lp:' + slug);
+  return { applied: !!saved.applied, reason: superseded ? 'superseded' : saved.reason };
+}
+
+// Notes on the page why its greeting has no recording, for the editor to
+// show, and makes sure audio of another greeting is not played meanwhile.
+// Guarded like attachAudio: only for the greeting that is saved now.
+async function noteRecordingFailure(slug, greeting, failure) {
+  try {
+    await patchLandingPageSections(slug, (fresh, freshPage) => {
+      const now = effectiveGreeting(freshPage, fresh);
+      if (!now.enabled || now.fingerprint !== greeting.fingerprint || audioIsCurrent(fresh, now)) return null;
+      const next = Object.assign({}, fresh.voice || {}, { audioError: Object.assign({ for: greeting.fingerprint, at: new Date().toISOString() }, failure) });
+      if (typeof next.audioUrl === 'string' && next.audioUrl) next.audioStale = true;
+      fresh.voice = next;
+      return fresh;
+    });
+    pageCache.delByPrefix('lp:' + slug);
+  } catch (_) { /* the page simply carries no note */ }
+}
+
 async function generateOnce(slug) {
   const page = await prisma.landingPage.findUnique({ where: { slug } });
   if (!page) return { generated: false, reason: 'not_found' };
@@ -235,27 +358,51 @@ async function generateOnce(slug) {
   const greeting = effectiveGreeting(page, sections);
   if (!greeting.enabled) return { generated: false, reason: 'voice_off' };
   if (!greeting.text) return { generated: false, reason: 'no_text' };
-  if (audioIsCurrent(sections, greeting)) return { generated: false, reason: 'current' };
+  const marks = sections.voice || {};
+  if (audioIsCurrent(sections, greeting)) {
+    if (!marks.audioStale && !marks.audioError) return { generated: false, reason: 'current' };
+    // The right audio is attached but still marked (the greeting was changed
+    // and changed back): the mark comes off through the guarded attachment.
+    await attachAudio(slug, greeting, marks.audioUrl);
+    return { generated: false, reason: 'current' };
+  }
 
   // A preview of exactly this greeting was already recorded in the
   // editor: publish that recording instead of making it again.
   const reusable = existingAudioFor(sections, greeting.fingerprint);
-  const audioUrl = reusable ? reusable.audioUrl : await record(slug, greeting);
+  let audioUrl;
+  if (reusable) audioUrl = reusable.audioUrl;
+  else {
+    try {
+      audioUrl = await record(slug, greeting, { userId: page.userId || null });
+    } catch (err) {
+      if (err && err.code === 'RECORDING_LIMIT') {
+        await noteRecordingFailure(slug, greeting, { code: 'limit', scope: err.scope, retryAfter: err.retryAfter });
+        return { generated: false, reason: 'limit', scope: err.scope, retryAfter: err.retryAfter };
+      }
+      await noteRecordingFailure(slug, greeting, { code: err && err.code === 'STAGING_CEILING' ? 'staging_ceiling' : 'failed' });
+      throw err;
+    }
+  }
 
-  // Stored on top of whatever is saved NOW (see lpSectionsPatch.js), and
-  // only if this recording is still the right one: if the owner changed
-  // the greeting, the language, or switched Voice off while it was being
-  // made, it is not attached -- the next run makes the right one.
-  let stale = false;
-  const saved = await patchLandingPageSections(slug, (fresh, freshPage) => {
-    const now = effectiveGreeting(freshPage, fresh);
-    if (!now.enabled || now.fingerprint !== greeting.fingerprint) { stale = true; return null; }
-    fresh.voice = Object.assign({}, fresh.voice || {}, { audioUrl, audioFor: greeting.fingerprint, audioLang: greeting.lang });
-    return fresh;
-  });
-  pageCache.delByPrefix('lp:' + slug);
+  const saved = await attachAudio(slug, greeting, audioUrl);
   if (saved.applied) return { generated: true, reused: !!reusable, audioUrl, fingerprint: greeting.fingerprint, lang: greeting.lang };
-  return { generated: true, reused: !!reusable, stored: false, reason: stale ? 'superseded' : saved.reason };
+  return { generated: true, reused: !!reusable, stored: false, reason: saved.reason };
+}
+
+// What a save can tell the editor straight away about the page's audio:
+//   off      Voice is off, nothing is recorded
+//   ready    the stored audio is a recording of the saved greeting
+//   pending  a recording is on its way (or one that exists is being attached)
+//   limited  no recording will be made now: a recording limit is reached
+// Looks only; the slot itself is taken when the recording starts.
+function publishVoiceStatus(page, sections = parseSections(page)) {
+  const greeting = effectiveGreeting(page, sections);
+  if (!greeting.enabled || !greeting.text) return { status: 'off' };
+  if (audioIsCurrent(sections, greeting)) return { status: 'ready' };
+  if (existingAudioFor(sections, greeting.fingerprint) || recordingAtHand(page.slug, greeting.fingerprint)) return { status: 'pending' };
+  const slot = peekSlot(page.slug, page.userId || null);
+  return slot.ok ? { status: 'pending' } : { status: 'limited', limit: { scope: slot.scope, retryAfter: slot.retryAfter } };
 }
 
 // Makes the page's audio match its greeting. Never throws: a failure is
@@ -272,12 +419,21 @@ function ensureVoiceAudio(slug) {
       // loop here.
       for (let i = 0; i < 3; i++) {
         state.again = false;
-        result = await generateOnce(slug);
+        try {
+          result = await generateOnce(slug);
+        } catch (err) {
+          // A recording that failed for a greeting saved earlier must not
+          // leave a greeting saved meanwhile without its own attempt.
+          if (!state.again || i === 2) throw err;
+          console.error('[Voice] Error for', slug + ':', err && err.message);
+          continue;
+        }
         if (result.generated && result.stored === false && result.reason === 'superseded') continue;
         if (!state.again) break;
       }
       if (result.generated && result.stored !== false) console.log('[Voice] ' + (result.reused ? 'Published existing preview for' : 'Generated for'), slug, '(' + result.lang + ')');
       else if (result.generated) console.error('[Voice] Generated but not stored for', slug, '(' + result.reason + ')');
+      else if (result.reason === 'limit') console.error('[Voice] Recording limit reached for', slug, '(' + result.scope + ')');
     } catch (err) {
       console.error('[Voice] Error for', slug + ':', err && err.message);
       result = { generated: false, reason: 'error', error: err && err.message };
@@ -299,6 +455,11 @@ module.exports = {
   voiceFingerprint,
   effectiveGreeting,
   audioIsCurrent,
+  audioIsPlayable,
+  flagVoiceOnSave,
+  publishVoiceStatus,
+  RecordingLimitError,
+  resetRecordings,
   mergeVoiceOnSave,
   ensureVoiceAudio,
   parseSections,
