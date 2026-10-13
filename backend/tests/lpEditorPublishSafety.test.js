@@ -59,9 +59,10 @@ const settle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise
 const SLUG = 'casa-lumi';
 const CONFIRM_TEXT = 'Publish this page? This will update your live Smart QR page immediately.';
 const LOAD_FAILED_TEXT = 'This page could not be loaded, so nothing can be saved or published. Please reload the page.';
-const DRAFT_SAVED_TEXT = 'Draft saved on this device only - not published.';
+const DRAFT_SAVED_TEXT = 'Draft saved on this device only — not published.';
 const DRAFT_NOT_SAVED_TEXT = 'The draft could not be saved on this device. Nothing was published.';
-const DRAFT_RESTORED_TEXT = 'Local draft restored - not published yet.';
+const DRAFT_RESTORED_TEXT = 'Local draft restored — not published yet.';
+const DRAFT_BUTTON_ID = 'sqd-save-draft-btn-se';
 const DRAFT_SET_ASIDE_TEXT = 'Showing the published page. Your local draft was not applied.';
 const DRAFT_KEY = 'qraivy_se_draft_' + SLUG;
 
@@ -221,7 +222,7 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
     navigator: {},
     Clerk: { session: { getToken: () => Promise.resolve('tok-owner') } },
     confirm(text) { env.confirms.push(text); return env.confirmAnswer; },
-    localStorage: { getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => { if (storageFails) throw new Error('QuotaExceededError'); storage.set(k, String(v)); }, removeItem: (k) => { storage.delete(k); } },
+    localStorage: { getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => { if (storageFails) throw new Error('QuotaExceededError'); env.storageWrites.push(k); storage.set(k, String(v)); }, removeItem: (k) => { storage.delete(k); } },
     // the page's own editor state: its defaults, as smart-qr-detail.html declares them
     QRAIVY_EDITOR_STATE: { pageName: '', slug: '', dirty: false, hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' }, buttons: [],
       sections: { hero: { enabled: true, title: '', subtitle: '', badge: '' }, voice: { enabled: true, title: 'Voice Welcome', description: '', buttonLabel: 'Play' }, ai: { enabled: true, title: 'AI Assistant' }, loop: { enabled: true, title: 'Stay in the loop' }, footer: { enabled: true, businessName: '' }, buttons: [], order: ['hero', 'voice', 'ai', 'buttons', 'loop', 'footer'], theme: { background: 'dark', accentColor: '#ff5a1f' } } },
@@ -249,7 +250,7 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
   };
   env.holdSave = holdSave;
   env.releaseSave = async () => { env.pendingSaves.splice(0).forEach((f) => f()); await settle(); };
-  env.holdLoad = holdLoad; env.pendingLoads = [];
+  env.holdLoad = holdLoad; env.pendingLoads = []; env.storageWrites = [];
   env.releaseLoad = async () => { env.holdLoad = false; env.pendingLoads.splice(0).forEach((f) => f()); await settle(); };
 
   const ctx = vm.createContext({ window, document, localStorage: window.localStorage, fetch: (...a) => window.fetch(...a), console: window.console, navigator: window.navigator,
@@ -1016,6 +1017,99 @@ test('L. rapid clicks while the page is being read, and while the question is op
   assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG, 'POST /lp', 'GET /api/lp/' + SLUG]);
   assert.equal(env.saves().length, 1);
   assert.equal(env.publish2.disabled, false);
+});
+
+// ── M. The Save Draft button of the Smart Editor ───────────────
+test('M. the Smart Editor shows one "Save Draft" button beside Publish; the page\'s older block and its buttons stay hidden', async () => {
+  const env = await openEditor();
+  const b = env.el(DRAFT_BUTTON_ID);
+  assert.ok(b, 'the button exists');
+  assert.equal(b.tagName, 'BUTTON'); assert.equal(b.textContent, 'Save Draft'); assert.equal(b.getAttribute('type'), 'button');
+  assert.match(b.getAttribute('title'), /on this device only\. Nothing is published\./);
+  // in the Smart Editor's bar, directly after Publish
+  assert.equal(b.parentNode, env.publish2.parentNode, 'same bar as Publish');
+  assert.equal(env.publish2.nextSibling, b, 'directly beside Publish');
+  assert.equal(env.document.querySelectorAll('button').filter((x) => /save-draft-btn/.test(x.id) && x.parentNode === env.publish2.parentNode).length, 1, 'exactly one in the bar');
+  assert.equal(env.document.querySelectorAll('button').filter((x) => /save-draft-btn/.test(x.id)).length, 2, 'the page\'s own one (in its hidden block) and this one');
+  // it is not hidden and not inside the older block
+  for (let n = b; n; n = n.parentNode) { assert.notEqual(n.id, 'sqd-edit-section'); assert.ok(!/display\s*:\s*none/.test((n.style && n.style.cssText) || '') && !(n.style && n.style.display === 'none'), 'no hidden ancestor'); }
+  assert.equal(b.disabled, false);
+  // the look: the coral outline next to the solid coral Publish, never wrapping its label
+  assert.match(b.style.cssText, /color:#ff5a1f/); assert.match(b.style.cssText, /border:1px solid rgba\(255,90,31,0\.3\)/); assert.match(b.style.cssText, /white-space:nowrap/); assert.match(b.style.cssText, /flex:0 0 auto/);
+  // room for a sentence in the status line without squeezing Publish
+  assert.equal(env.publish2.style.minWidth, '110px'); assert.equal(env.el('sqd-save-global-status').style.whiteSpace, 'normal');
+  // nothing of the page's older editor was revealed or added
+  assert.equal(env.el('sqd-edit-section').style.display === 'block', false, 'the older block was not opened');
+  assert.equal(env.document.querySelectorAll('button').filter((x) => /^sqd-publish-btn/.test(x.id)).length, 2, 'no additional Publish control');
+  assert.ok(!SMART_EDITOR.includes("getElementById('sqd-edit-section')") && !SMART_EDITOR.includes("$('sqd-edit-section')"), 'the editor script never touches the older block');
+  // starting the editor again does not add a second one
+  await env.window.SmartEditor.reload(); await settle();
+  await env.window.SmartEditor.reload(); await settle();
+  assert.equal(env.document.querySelectorAll('button').filter((x) => x.id === DRAFT_BUTTON_ID).length, 1);
+});
+
+test('M. one click on it: one local save, the feedback text, no request of any kind, and no other handler involved', async () => {
+  const env = await openEditor();
+  const b = env.el(DRAFT_BUTTON_ID);
+  assert.equal(b.onclick, null); assert.equal(b.listeners.length, 0, 'the button carries no handler of its own: the one listener in front handles it');
+  await makeChanges(env);
+  const requestsBefore = env.requests.length; env.storageWrites.length = 0;
+  const r = await env.click(b);
+  assert.ok(r.stoppedAtDocument);
+  assert.deepEqual(env.storageWrites, [DRAFT_KEY], 'exactly one write, to this page\'s draft');
+  assert.equal(env.requests.length, requestsBefore, 'zero requests: no save, no read, no audio');
+  assert.equal(env.status(), DRAFT_SAVED_TEXT);
+  assert.equal(env.status(), 'Draft saved on this device only — not published.');
+  assert.deepEqual(env.legacy, { publish: 0, draft: 0, localDraft: 0 }, 'the page\'s older Save Draft code is not reached');
+  assert.equal(env.confirms.length, 0);
+  const d = env.draft();
+  assert.equal(d.voice.enabled, true); assert.equal(d.voice.language, 'de'); assert.equal(d.hero.title, 'Casa Lumi Ulm');
+  assert.equal(d.voice.customGreeting.de, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  // a click on something inside the button counts as the button
+  const inner = new env.dom.El('span'); b.appendChild(inner);
+  env.storageWrites.length = 0;
+  await env.click(inner);
+  assert.deepEqual(env.storageWrites, [DRAFT_KEY]);
+  assert.equal(env.requests.length, requestsBefore);
+  // the draft survives a reload, and Publish is still one confirmed save
+  const next = await openEditor({ storage: env.storage });
+  assert.equal(next.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(next.el('se-hero-title').value, 'Casa Lumi Ulm'); assert.equal(next.el('se-voice-lang').value, 'de');
+  await next.click(next.publish2);
+  assert.deepEqual(next.confirms, [CONFIRM_TEXT]); assert.equal(next.saves().length, 1);
+  assert.equal(savedSections(next.saves()[0]).hero.title, 'Casa Lumi Ulm');
+});
+
+test('M. the button is disabled until this page has loaded, stays disabled after a failed load, and is not offered where there is no page', async () => {
+  // while the server has not answered yet
+  const loading = await openEditor({ holdLoad: true });
+  const b = loading.el(DRAFT_BUTTON_ID);
+  assert.ok(b, 'shown as soon as the editor starts');
+  assert.equal(b.disabled, true); assert.equal(b.style.opacity, '0.5'); assert.equal(b.style.cursor, 'not-allowed');
+  await loading.click(b); b.disabled = false; await loading.click(b); b.disabled = true;      // even if something enabled it
+  assert.equal(loading.storage.size, 0); assert.equal(loading.saves().length, 0);
+  await loading.releaseLoad();
+  assert.equal(b.disabled, false); assert.equal(b.style.opacity, ''); assert.equal(b.style.cursor, 'pointer');
+  // after every kind of failed load
+  for (const [what, load] of FAILED_LOADS) {
+    const env = await openEditor({ load });
+    const x = env.el(DRAFT_BUTTON_ID);
+    assert.equal(x.disabled, true, what);
+    x.disabled = false; await env.click(x);
+    assert.equal(env.storage.size, 0, what + ': nothing written'); assert.equal(env.saves().length, 0, what);
+    assert.equal(env.status(), LOAD_FAILED_TEXT, what);
+  }
+  // while a publish is running
+  const busy = await openEditor({ holdSave: true });
+  await busy.click(busy.publish2);
+  assert.equal(busy.el(DRAFT_BUTTON_ID).disabled, true);
+  await busy.releaseSave();
+  assert.equal(busy.el(DRAFT_BUTTON_ID).disabled, false);
+  // before the editor has started, and on a page without a Smart Editor page
+  const early = await openEditor({ runInit: false });
+  assert.equal(early.el(DRAFT_BUTTON_ID), null);
+  const none = await openEditor({ slug: '' });
+  assert.equal(none.el(DRAFT_BUTTON_ID), null, 'no button where the Smart Editor has no page');
 });
 
 // ── K. Pages without a Smart Editor page ───────────────────────
