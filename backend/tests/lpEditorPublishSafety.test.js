@@ -240,9 +240,9 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
       if (env.holdLoad) return new Promise((resolve) => { env.pendingLoads.push(() => resolve(reply())); });
       return reply();
     }
-    if (method === 'POST' && /\/lp\/voice\/preview\//.test(u)) return answer(200, { ok: true, status: 'none' });
+    if (method === 'POST' && /\/lp\/voice\/preview\//.test(u)) return answer(200, env.previewAnswer ? env.previewAnswer(req) : { ok: true, status: 'none' });
     if (method === 'POST' && /\/lp$/.test(u)) {
-      const ok = () => answer(200, { ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: 'page-1', voice: { enabled: !!(req.body.sections && req.body.sections.voice && req.body.sections.voice.enabled), pending: false } });
+      const ok = () => answer(200, { ok: true, url: 'https://www.qraivy.com/lp/' + slug, slug, id: 'page-1', voice: env.saveVoice ? env.saveVoice(req) : { enabled: !!(req.body.sections && req.body.sections.voice && req.body.sections.voice.enabled), pending: false } });
       if (!env.holdSave) return ok();
       return new Promise((resolve) => { env.pendingSaves.push(() => resolve(ok())); });
     }
@@ -1124,6 +1124,373 @@ test('K. where there is no page for the Smart Editor (no slug), the buttons are 
   assert.ok(!d.stoppedAtDocument);
   assert.equal(env.legacy.draft, 2, 'the page\'s own Save Draft, untouched');
   assert.equal(env.storage.has(DRAFT_KEY), false);
+});
+
+// ── N. Live or not: the line below the greeting ────────────────
+// Says whether the greeting shown is the one on the live page. It compares
+// the editor with the published page and nothing else, so a draft on this
+// device or a preview recording can never make it say "Live".
+const LIVE_ID = 'se-voice-live-status';
+const AMBER = '#f59e0b', GREEN = '#22d47e', NEUTRAL = 'rgba(240,244,248,0.6)';
+const LIVE_TEXT = {
+  en: {
+    unpublished: 'Not live yet. Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.',
+    live: 'Live ✓ This is the greeting your visitors hear.',
+    pending: 'Published. The welcome audio will be live in a moment.',
+    noaudio: 'Published, but visitors hear no welcome audio yet.',
+    below: ' See the message below.',
+    older: 'Published, but visitors still hear an earlier recording. Click Publish to update the audio to this greeting.',
+    off: 'Voice Welcome is off on your live page.',
+  },
+  de: {
+    unpublished: 'Noch nicht live. Ihre Besucher erhalten weiterhin die veröffentlichte Version. Klicken Sie auf „Veröffentlichen“, um diese Begrüßung live zu schalten. Ein gespeicherter Entwurf oder eine Vorschau veröffentlicht sie nicht.',
+    live: 'Live ✓ Diese Begrüßung hören Ihre Besucher.',
+    pending: 'Veröffentlicht. Die Willkommens-Audiodatei ist gleich live.',
+    noaudio: 'Veröffentlicht, aber Ihre Besucher hören noch keine Willkommens-Audiodatei.',
+    below: ' Siehe Hinweis unten.',
+    older: 'Veröffentlicht, aber Ihre Besucher hören noch eine frühere Aufnahme. Klicken Sie auf „Veröffentlichen“, um die Audiodatei auf diese Begrüßung zu aktualisieren.',
+    off: 'Voice Welcome ist auf Ihrer Live-Seite ausgeschaltet.',
+  },
+};
+const PUBLISHED_GREETING = 'Hello and welcome to Casa Lumi, your table is waiting.';
+// A published page with Voice on and audio that is a recording of its greeting.
+const livePage = (voice = {}, extra = {}) => serverPage(Object.assign({ sections: Object.assign({ voice: Object.assign({ enabled: true, language: 'en', voiceKey: 'sarah', customGreeting: { en: PUBLISHED_GREETING }, audioUrl: 'https://res.cloudinary.example/audio/published.mp3', audioFor: 'fp-published', audioLang: 'en' }, voice) }, extra.sections || {}) }, extra.page || {}));
+const liveLine = (env) => { const el = env.el(LIVE_ID); return el ? { text: el.textContent, color: el.style.color, shown: el.style.display !== 'none' } : null; };
+// The same state read in both interface languages.
+async function inBoth(env, check) {
+  for (const ui of ['en', 'de']) {
+    env.window._qraivyLang = ui;
+    env.window.SmartEditor.renderAll(); await settle();
+    check(LIVE_TEXT[ui], liveLine(env), ui);
+  }
+  env.window._qraivyLang = 'en'; env.window.SmartEditor.renderAll(); await settle();
+}
+const below = (env) => env.el('se-voice-audio-status').textContent;
+
+test('N. the line sits directly below the greeting field, is announced like the other status lines, and the page markup does not carry it', async () => {
+  const env = await openEditor({ load: livePage() });
+  const el = env.el(LIVE_ID);
+  assert.ok(el, 'the line exists');
+  assert.equal(env.document.querySelectorAll('div').filter((x) => x.id === LIVE_ID).length, 1, 'once');
+  assert.deepEqual([el.getAttribute('role'), el.getAttribute('aria-live')], ['status', 'polite']);
+  const siblings = el.parentNode.children, at = siblings.indexOf(el);
+  assert.equal(siblings[at - 2].id, 'se-voice-greeting', 'field ...');
+  assert.ok(siblings[at - 1].querySelector('[id="se-voice-greeting-status"]'), '... its label and count ...');
+  assert.ok(siblings.indexOf(env.el('se-voice-preview')) > at && siblings.indexOf(env.el('se-voice-greeting-reset')) > at, '... then this line, before the preview box');
+  assert.match(el.style.cssText, /font-size:\.72rem;line-height:1\.5;/, 'same size as the preview status line');
+  assert.ok(!SMART_EDITOR.includes(LIVE_ID) && !EDITOR_PAGE.includes(LIVE_ID), 'added by the greeting script itself');
+  // the fixed hint no longer claims the field is what visitors hear
+  assert.ok(!SMART_EDITOR.includes('This is what visitors hear'));
+  assert.ok(SMART_EDITOR.includes('Each language keeps its own text. Your live page and its audio change only when you publish.</p>'));
+});
+
+test('N. Live: the page is published as shown and its audio is a recording of that greeting', async () => {
+  const env = await openEditor({ load: livePage() });
+  assert.equal(env.el('se-voice-greeting').value, PUBLISHED_GREETING);
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color, line.shown], [t.live, GREEN, true], ui));
+  // the standard greeting (nothing custom saved) counts the same way
+  const std = await openEditor({ load: livePage({ customGreeting: undefined }) });
+  await inBoth(std, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.live, GREEN], ui));
+  // German page
+  const de = await openEditor({ load: livePage({ language: 'de', voiceKey: 'anna_de', customGreeting: { de: 'Willkommen bei Casa Lumi.' }, audioLang: 'de' }, { sections: { language: 'de' } }) });
+  assert.equal(de.el('se-voice-lang').value, 'de');
+  await inBoth(de, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.live, GREEN], ui));
+  assert.equal(env.saves().length + std.saves().length + de.saves().length, 0, 'looking saves nothing');
+});
+
+test('N. Not live yet: any change to the text, the language or the Voice switch, until it is published; undoing the change brings Live back', async () => {
+  const env = await openEditor({ load: livePage() });
+  const expectUnpublished = (why) => inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color, line.shown], [t.unpublished, AMBER, true], why + ' / ' + ui));
+  const expectLive = (why) => inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.live, GREEN], why + ' / ' + ui));
+  await env.change('se-voice-greeting', PUBLISHED_GREETING + ' test');
+  await expectUnpublished('text edited');
+  await env.change('se-voice-greeting', PUBLISHED_GREETING);
+  await expectLive('text put back');
+  await env.change('se-voice-greeting', '  ' + PUBLISHED_GREETING + '  \n');
+  await expectLive('extra spaces are not a different greeting');
+  await env.change('se-voice-greeting', PUBLISHED_GREETING);
+  await env.change('se-voice-lang', 'de');
+  await expectUnpublished('language switched');
+  await env.change('se-voice-lang', 'en');
+  await expectLive('language put back');
+  await env.click(env.el('se-voice-enabled'));
+  assert.deepEqual([liveLine(env).text, liveLine(env).color], [LIVE_TEXT.en.unpublished, AMBER], 'at once, on the click itself');
+  await expectUnpublished('Voice switched off in the editor, still on for visitors');
+  await env.click(env.el('se-voice-enabled'));
+  await expectLive('switched on again');
+  assert.equal(env.saves().length, 0, 'none of this published anything');
+});
+
+test('N. a draft saved on this device, and a draft restored after a reload, never read as Live', async () => {
+  const storage = new Map();
+  const env = await openEditor({ load: livePage(), storage });
+  await env.change('se-voice-greeting', 'A new greeting I am still working on.');
+  await env.click(env.el(DRAFT_BUTTON_ID));
+  assert.equal(env.status(), DRAFT_SAVED_TEXT);
+  assert.equal(env.saves().length, 0);
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.unpublished, AMBER], 'after Save Draft / ' + ui));
+  // the browser is reloaded: the draft comes back, the published page is unchanged
+  const again = await openEditor({ load: livePage(), storage });
+  assert.equal(again.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(again.el('se-voice-greeting').value, 'A new greeting I am still working on.');
+  await inBoth(again, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.unpublished, AMBER], 'restored draft / ' + ui));
+  assert.ok(!/Live/.test(liveLine(again).text.slice(0, 5)));
+  // a restored draft of the switch or the language alone is unpublished too
+  const s2 = new Map();
+  const off = await openEditor({ load: livePage(), storage: s2 });
+  await off.click(off.el('se-voice-enabled')); await off.click(off.el(DRAFT_BUTTON_ID));
+  const offAgain = await openEditor({ load: livePage(), storage: s2 });
+  assert.equal(liveLine(offAgain).text, LIVE_TEXT.en.unpublished);
+  // publishing the restored draft is what makes it live
+  await again.click(again.publish2);
+  assert.equal(again.saves().length, 1);
+  assert.equal(savedSections(again.saves()[0]).voice.customGreeting.en, 'A new greeting I am still working on.');
+  await inBoth(again, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.live, GREEN], 'published / ' + ui));
+});
+
+test('N. a preview recording, however well it matches, never reads as Live', async () => {
+  const env = await openEditor({ load: livePage() });
+  env.previewAnswer = (req) => (req.body.generate ? { ok: true, status: 'ready', audioUrl: 'https://res.cloudinary.example/audio/preview-new.mp3', source: 'generated' } : { ok: true, status: 'none' });
+  await env.change('se-voice-greeting', 'Previewed but not published.');
+  await env.click(env.el('se-voice-preview-generate'));
+  assert.equal(env.el('se-voice-preview-status').textContent, 'Preview ready ✓');
+  assert.equal(env.el('se-voice-preview-play').disabled, false, 'the preview can be played');
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.unpublished, AMBER], ui));
+  // typing away and back: the preview status now says what it is -- preview audio
+  await env.change('se-voice-greeting', 'Something else.');
+  await env.change('se-voice-greeting', 'Previewed but not published.');
+  assert.equal(env.el('se-voice-preview-status').textContent, 'Preview audio matches this greeting.');
+  env.window._qraivyLang = 'de'; env.window.SmartEditor.renderAll(); await settle();
+  assert.equal(env.el('se-voice-preview-status').textContent, 'Die Vorschau-Audiodatei passt zu dieser Begrüßung.');
+  assert.equal(liveLine(env).text, LIVE_TEXT.de.unpublished);
+  assert.equal(env.saves().length, 0);
+});
+
+test('N. Published, audio on its way: neutral until the recording is really on the page, then Live', async () => {
+  const env = await openEditor({ load: livePage(), holdSave: true });
+  env.saveVoice = () => ({ enabled: true, pending: true, status: 'pending', audioFor: 'fp-new' });
+  await env.change('se-voice-greeting', 'Brand new words.');
+  await env.click(env.publish2);
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.unpublished, 'not while the save is still out');
+  // the page on the server after the save: new greeting, old audio marked stale
+  env.load = livePage({ customGreeting: { en: 'Brand new words.' }, audioStale: true });
+  await env.releaseSave();
+  assert.equal(env.status(), 'Published');
+  assert.equal(below(env), 'Welcome audio is being updated…');
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.pending, NEUTRAL], ui));
+  // the recording is attached
+  env.load = livePage({ customGreeting: { en: 'Brand new words.' }, audioUrl: 'https://res.cloudinary.example/audio/new.mp3', audioFor: 'fp-new' });
+  await env.runTimers();
+  assert.equal(below(env), 'Welcome audio updated ✓');
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.live, GREEN], ui));
+  // and an edit after that is unpublished again
+  await env.change('se-voice-greeting', 'Brand new words, edited.');
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.unpublished);
+});
+
+test('N. Published, but no audio: when a limit or a failure stopped the recording, with the reason below', async () => {
+  // the server knew at once
+  const limited = await openEditor({ load: livePage() });
+  limited.saveVoice = () => ({ enabled: true, pending: true, status: 'limited', limit: { scope: 'page', retryAfter: 600 }, audioFor: 'fp-new' });
+  await limited.change('se-voice-greeting', 'One greeting too many.');
+  await limited.click(limited.publish2);
+  assert.match(below(limited), /the recording limit is reached/);
+  await inBoth(limited, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.noaudio + t.below, AMBER], ui));
+  // it failed while the editor was waiting
+  const failed = await openEditor({ load: livePage(), holdSave: true });
+  failed.saveVoice = () => ({ enabled: true, pending: true, status: 'pending', audioFor: 'fp-new' });
+  await failed.change('se-voice-greeting', 'This one fails.');
+  await failed.click(failed.publish2);
+  failed.load = livePage({ customGreeting: { en: 'This one fails.' }, audioStale: true, audioError: { code: 'failed', for: 'fp-new' } });
+  await failed.releaseSave();
+  assert.match(below(failed), /could not be recorded/);
+  await inBoth(failed, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.noaudio + t.below, AMBER], ui));
+  // opened later: the page still carries the mark and the reason
+  for (const [code, expected] of [['limit', /the recording limit is reached/], ['failed', /could not be recorded/]]) {
+    const later = await openEditor({ load: livePage({ audioStale: true, audioError: { code, for: 'fp-other' } }) });
+    assert.match(below(later), expected, code);
+    assert.deepEqual([liveLine(later).text, liveLine(later).color], [LIVE_TEXT.en.noaudio + LIVE_TEXT.en.below, AMBER], code);
+  }
+  // a page that simply has no audio yet points at nothing
+  const none = await openEditor({ load: livePage({ audioUrl: undefined, audioFor: undefined }) });
+  await inBoth(none, (t, line, ui) => assert.deepEqual([line.text, line.color, below(none)], [t.noaudio, AMBER, ''], ui));
+});
+
+test('N. audio from before fingerprints is not called Live: visitors hear an earlier recording until the page is published', async () => {
+  const env = await openEditor({ load: livePage({ audioFor: undefined, audioLang: undefined }) });
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.older, AMBER], ui));
+  // a non-https or empty audio address is no audio at all
+  for (const audioUrl of ['', 'http://insecure.example/a.mp3', null]) {
+    const e = await openEditor({ load: livePage({ audioUrl }) });
+    assert.equal(liveLine(e).text, LIVE_TEXT.en.noaudio, String(audioUrl));
+  }
+});
+
+test('N. the earlier-recording line appears only for attached, unmarked audio without a fingerprint -- never for matching, pending, limited or failed audio', async () => {
+  const OLDER = LIVE_TEXT.en.older;
+  const legacy = () => livePage({ audioFor: undefined, audioLang: undefined, audioUrl: 'https://res.cloudinary.example/qraivy-voices/voice-casa-lumi.mp3' });
+  // the one case it is for
+  assert.equal(liveLine(await openEditor({ load: legacy() })).text, OLDER);
+  // everything else a published page can be
+  const others = {
+    'matching audio': livePage(),
+    'audio marked stale, with a fingerprint': livePage({ audioStale: true }),
+    'older audio marked stale (its re-recording was limited)': livePage({ audioFor: undefined, audioStale: true, audioError: { code: 'limit', for: 'fp-x' } }),
+    'older audio marked stale (its re-recording failed)': livePage({ audioFor: undefined, audioStale: true, audioError: { code: 'failed', for: 'fp-x' } }),
+    'no audio': livePage({ audioUrl: undefined, audioFor: undefined }),
+    'older audio, Voice off': livePage({ audioFor: undefined, enabled: false }),
+  };
+  for (const [what, page] of Object.entries(others)) assert.notEqual(liveLine(await openEditor({ load: page })).text, OLDER, what);
+  assert.equal(liveLine(await openEditor({ load: others['older audio marked stale (its re-recording was limited)'] })).text, LIVE_TEXT.en.noaudio + LIVE_TEXT.en.below);
+  assert.equal(liveLine(await openEditor({ load: others['older audio, Voice off'] })).text, LIVE_TEXT.en.off);
+  // with unpublished edits on top it is simply "not live yet"
+  const edited = await openEditor({ load: legacy() });
+  await edited.change('se-voice-greeting', 'Something new.');
+  assert.equal(liveLine(edited).text, LIVE_TEXT.en.unpublished);
+
+  // Publishing such a page: while the new recording is made, when it arrives, and when it is refused -- never the earlier-recording line again
+  const seen = [];
+  const env = await openEditor({ load: legacy(), holdSave: true });
+  env.saveVoice = () => ({ enabled: true, pending: true, status: 'pending', audioFor: 'fp-new' });
+  await env.click(env.publish2);
+  env.load = livePage({ audioFor: undefined, audioStale: true });           // the save marked the old audio stale
+  await env.releaseSave();
+  seen.push(liveLine(env).text);
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.pending);
+  env.load = livePage({ audioUrl: 'https://res.cloudinary.example/audio/new.mp3', audioFor: 'fp-new' });
+  await env.runTimers();
+  seen.push(liveLine(env).text);
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.live);
+  const refused = await openEditor({ load: legacy() });
+  refused.saveVoice = () => ({ enabled: true, pending: true, status: 'limited', limit: { scope: 'owner', retryAfter: 900 }, audioFor: 'fp-new' });
+  await refused.click(refused.publish2);
+  seen.push(liveLine(refused).text);
+  assert.equal(liveLine(refused).text, LIVE_TEXT.en.noaudio + LIVE_TEXT.en.below);
+  assert.ok(seen.every((t) => t !== OLDER));
+});
+
+test('N. limit, failure and a wait that runs out never promise working audio', async () => {
+  // the wording itself
+  const promise = /will be live|in a moment|gleich live|is being updated|wird aktualisiert/i;
+  for (const ui of ['en', 'de']) for (const key of ['noaudio', 'below', 'unpublished', 'off']) assert.ok(!promise.test(LIVE_TEXT[ui][key]), ui + '.' + key);
+  const src = read(PUB, 'js', 'voice-greeting-editor.js');
+  for (const key of ['limited', 'failed']) for (const m of src.matchAll(new RegExp(key + ": '([^']*)'", 'g'))) {
+    if (!/^(Published|Ver)/.test(m[1])) continue;               // the preview control's own short "failed" text is not about the live page
+    assert.ok(!promise.test(m[1]) && !/immediately|sofort|right away|now be/i.test(m[1]), key + ': ' + m[1].slice(0, 60));
+    assert.match(m[1], /Visitors see no audio player until it is updated|Besucher sehen keinen Audio-Player, bis sie aktualisiert ist/, 'says what visitors get meanwhile');
+  }
+  // limited at once, failed while waiting: the line says "no audio", in the warning colour, and stays that way
+  for (const [answer, later] of [[{ status: 'limited' }, null], [{ status: 'pending' }, { code: 'failed' }], [{ status: 'pending' }, { code: 'limit' }], [{ status: 'pending' }, { code: 'staging_ceiling' }]]) {
+    const env = await openEditor({ load: livePage(), holdSave: true });
+    env.saveVoice = () => Object.assign({ enabled: true, pending: true, audioFor: 'fp-new' }, answer);
+    await env.change('se-voice-greeting', 'A greeting that gets no recording.');
+    await env.click(env.publish2);
+    env.load = livePage({ customGreeting: { en: 'A greeting that gets no recording.' }, audioStale: true, audioError: later ? Object.assign({ for: 'fp-new' }, later) : undefined });
+    await env.releaseSave();
+    for (let i = 0; i < 3; i++) { await env.runTimers(); assert.deepEqual([liveLine(env).text, liveLine(env).color], [LIVE_TEXT.en.noaudio + LIVE_TEXT.en.below, AMBER], JSON.stringify([answer, later, i])); }
+    assert.ok(!promise.test(below(env)), below(env));
+  }
+  // nothing arrives and nothing is reported: after the wait the line stops saying the audio is about to be live
+  const env = await openEditor({ load: livePage(), holdSave: true });
+  env.saveVoice = () => ({ enabled: true, pending: true, status: 'pending', audioFor: 'fp-new' });
+  await env.change('se-voice-greeting', 'Still waiting for this one.');
+  await env.click(env.publish2);
+  env.load = livePage({ customGreeting: { en: 'Still waiting for this one.' }, audioStale: true });
+  await env.releaseSave();
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.pending, 'while it is reasonable to expect it');
+  for (let i = 0; i < 25; i++) await env.runTimers();
+  assert.match(below(env), /taking longer than usual/);
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.noaudio + t.below, AMBER], ui));
+  // if it does turn up later, the next load of the page says Live
+  const reopened = await openEditor({ load: livePage({ customGreeting: { en: 'Still waiting for this one.' }, audioUrl: 'https://res.cloudinary.example/audio/late.mp3', audioFor: 'fp-new' }) });
+  assert.equal(liveLine(reopened).text, LIVE_TEXT.en.live);
+});
+
+test('N. Voice off on the live page; switching it on in the editor is an unpublished change', async () => {
+  const env = await openEditor({ load: serverPage() });                       // published with Voice off
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.off, NEUTRAL], ui));
+  await env.click(env.el('se-voice-enabled'));
+  await inBoth(env, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.unpublished, AMBER], ui));
+  // switched off by an older editor's switch counts as off as well
+  const older = await openEditor({ load: livePage({}, { sections: { settings: { voiceEnabled: false } } }) });
+  assert.equal(liveLine(older).text, LIVE_TEXT.en.off);
+  // published off from here
+  const env2 = await openEditor({ load: livePage() });
+  await env2.click(env2.el('se-voice-enabled'));
+  await env2.click(env2.publish2);
+  assert.equal(savedSections(env2.saves()[0]).voice.enabled, false);
+  await inBoth(env2, (t, line, ui) => assert.deepEqual([line.text, line.color], [t.off, NEUTRAL], ui));
+});
+
+test('N. the published language is the one the server speaks: a page whose voice language differs from what the editor shows is not Live', async () => {
+  const env = await openEditor({ load: livePage({ language: 'de', customGreeting: { en: PUBLISHED_GREETING, de: 'Willkommen bei Casa Lumi.' } }, { sections: { language: 'en' } }) });
+  assert.equal(env.el('se-voice-lang').value, 'en', 'the editor shows the page language');
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.unpublished);
+});
+
+test('N. the same words in the other language are a different greeting: another voice speaks them', async () => {
+  const same = 'Casa Lumi. Pasta. Vino.';
+  const env = await openEditor({ load: livePage({ customGreeting: { en: same, de: same } }) });
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.live);
+  await env.change('se-voice-lang', 'de');
+  assert.equal(env.el('se-voice-greeting').value, same, 'the text is identical ...');
+  assert.deepEqual([liveLine(env).text, liveLine(env).color], [LIVE_TEXT.en.unpublished, AMBER], '... the language is not');
+  await env.change('se-voice-lang', 'en');
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.live);
+});
+
+test('N. after a publish, a page that is read again from the server decides: what was saved here is no longer taken for granted', async () => {
+  const env = await openEditor({ load: livePage() });
+  await env.change('se-voice-greeting', 'Published from this editor.');
+  await env.click(env.publish2);
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.live);
+  // meanwhile the page was changed and published somewhere else; the editor loads it again
+  env.load = livePage({ customGreeting: { en: 'Published from another device.' }, audioUrl: 'https://res.cloudinary.example/audio/other.mp3', audioFor: 'fp-other' });
+  await env.window.SmartEditor.reload(); await settle();
+  assert.equal(env.el('se-voice-greeting').value, 'Published from another device.');
+  assert.deepEqual([liveLine(env).text, liveLine(env).color], [LIVE_TEXT.en.live, GREEN], 'the editor shows the published page, so it is Live');
+  // and the same when that newer page has no matching audio
+  env.load = livePage({ customGreeting: { en: 'Published from another device.' }, audioStale: true });
+  await env.window.SmartEditor.reload(); await settle();
+  assert.equal(liveLine(env).text, LIVE_TEXT.en.noaudio);
+});
+
+test('N. nothing is claimed before the page has loaded, after a failed load, or on a page without a slug', async () => {
+  const loading = await openEditor({ load: livePage(), holdLoad: true });
+  const early = liveLine(loading);
+  assert.ok(early === null || (early.text === '' && early.shown === false));
+  await loading.releaseLoad();
+  assert.equal(liveLine(loading).text, LIVE_TEXT.en.live);
+  for (const load of [{ status: 500 }, { reject: true }, { status: 401 }]) {
+    const failed = await openEditor({ load });
+    const line = liveLine(failed);
+    assert.ok(line === null || line.text === '', JSON.stringify(load));
+  }
+  const noSlug = await openEditor({ slug: '' });
+  assert.equal(noSlug.el(LIVE_ID), null);
+});
+
+test('N. Publish and Save Draft send exactly what they sent before this line existed', async () => {
+  const before = execFileSync('git', ['show', 'd4ed842:frontend/public/js/voice-greeting-editor.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
+  const editorBefore = execFileSync('git', ['show', 'd4ed842:frontend/public/smart-editor.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
+  const run = async (old) => {
+    const storage = new Map();
+    const swap = old ? SCRIPTS.map(([f, src]) => [f, f === 'js/voice-greeting-editor.js' ? before : src]) : SCRIPTS;
+    const kept = SCRIPTS.slice(); SCRIPTS.splice(0, SCRIPTS.length, ...swap);
+    try {
+      const env = await openEditor({ load: livePage(), storage, editor: old ? editorBefore : SMART_EDITOR });
+      await env.change('se-voice-greeting', 'Changed for the comparison.');
+      await env.change('se-hero-title', 'Casa Lumi Ulm');
+      await env.click(env.el(DRAFT_BUTTON_ID));
+      const draft = env.draft(); const draftRequests = env.saves().length;
+      await env.click(env.publish2);
+      return { confirms: env.confirms, saves: env.saves().map((r) => ({ url: r.url, headers: r.headers, body: r.body })), draft: Object.assign({}, draft, { savedAt: 0 }), draftRequests, status: env.status(), stored: storage.has(DRAFT_KEY) };
+    } finally { SCRIPTS.splice(0, SCRIPTS.length, ...kept); }
+  };
+  const now = await run(false), then = await run(true);
+  assert.equal(now.saves.length, 1);
+  assert.equal(now.draftRequests, 0, 'Save Draft still sends nothing');
+  assert.deepEqual(JSON.parse(JSON.stringify(now)), JSON.parse(JSON.stringify(then)), 'one confirmation, one identical save, the same local draft');
 });
 
 // ── runner ──────────────────────────────────────────────────────

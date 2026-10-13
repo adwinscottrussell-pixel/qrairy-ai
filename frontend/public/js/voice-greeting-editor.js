@@ -20,6 +20,11 @@
  * separate from published audio; nothing visitors hear changes before
  * Publish.
  *
+ * Directly below the field one line says whether the greeting shown is
+ * the one on the live page ("Live"), or still has to be published. It
+ * compares what the editor shows with the published page only: a draft
+ * saved on this device or a preview recording never makes it say "Live".
+ *
  * After a publish, the phone preview is the real published page. If the
  * server says new audio is being made, the preview is reloaded once more
  * when that audio is actually on the page.
@@ -28,7 +33,7 @@
   'use strict';
 
   var API = 'https://api.qraivy.com';
-  var IDS = { field: 'se-voice-greeting', status: 'se-voice-greeting-status', count: 'se-voice-greeting-count', reset: 'se-voice-greeting-reset', audio: 'se-voice-audio-status', iframe: 'sqd-iframe' };
+  var IDS = { field: 'se-voice-greeting', status: 'se-voice-greeting-status', count: 'se-voice-greeting-count', reset: 'se-voice-greeting-reset', audio: 'se-voice-audio-status', iframe: 'sqd-iframe', live: 'se-voice-live-status' };
   var TXT = {
     en: { standard: 'Standard greeting for: ', custom: 'Your own greeting', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Artist / Music', event: 'Event', ecommerce: 'Ecommerce', local_business: 'Local Business', fitness: 'Fitness', other: 'Other' }, pending: 'Welcome audio is being updated…', ready: 'Welcome audio updated ✓', slow: 'The welcome audio is taking longer than usual. It will appear on your page when it is ready.', off: 'Voice is switched off for this page, so no audio is generated.', limited: 'Published. The welcome audio was not updated: the recording limit is reached. Visitors see no audio player until it is updated — please publish again later.', failed: 'Published. The welcome audio could not be recorded. Visitors see no audio player until it is updated — please publish again.' },
     de: { standard: 'Standardbegrüßung für: ', custom: 'Ihre eigene Begrüßung', industries: { restaurant: 'Restaurant', creator: 'Creator / Influencer', artist: 'Künstler / Musik', event: 'Event', ecommerce: 'E-Commerce', local_business: 'Lokales Unternehmen', fitness: 'Fitness', other: 'Sonstiges' }, pending: 'Die Willkommens-Audiodatei wird aktualisiert …', ready: 'Willkommens-Audiodatei aktualisiert ✓', slow: 'Die Audiodatei braucht länger als üblich. Sie erscheint auf Ihrer Seite, sobald sie fertig ist.', off: 'Die Sprachausgabe ist für diese Seite ausgeschaltet, daher wird keine Audiodatei erzeugt.', limited: 'Veröffentlicht. Die Willkommens-Audiodatei wurde nicht aktualisiert: Das Aufnahme-Limit ist erreicht. Besucher sehen keinen Audio-Player, bis sie aktualisiert ist — bitte veröffentlichen Sie später erneut.', failed: 'Veröffentlicht. Die Willkommens-Audiodatei konnte nicht aufgenommen werden. Besucher sehen keinen Audio-Player, bis sie aktualisiert ist — bitte veröffentlichen Sie erneut.' }
@@ -73,6 +78,7 @@
     if (count) count.textContent = ta.value.length + ' / ' + G().MAX_LENGTH;
     if (status) status.textContent = isCustom ? u.custom : u.standard + (u.industries[G().industryKey(useCase())] || '');
     if (reset) reset.style.display = isCustom ? 'inline-block' : 'none';
+    paintLive();
   }
   // Shows the greeting for the selected language.
   function sync() {
@@ -150,6 +156,100 @@
       hint.style.display = on ? 'none' : 'block';
     }
     paintPreview();
+    paintLive();
+  }
+
+  // ── Live or not ──────────────────────────────────────────────
+  // One line directly below the field: is the greeting shown the one on
+  // the live page? Two things are compared, and nothing else:
+  //   what the editor shows     language, text, the Voice switch
+  //   what is published         the page as the server has it (the record
+  //                             the editor loaded, which it reads again
+  //                             before every publish), or -- after a
+  //                             publish made here -- what was just saved
+  // A draft saved on this device only changes what the editor shows, and a
+  // preview recording changes neither, so neither can ever produce "Live".
+  // "Live" also needs audio that is a recording of the published greeting:
+  // attached, carrying a fingerprint, and not marked stale by the server.
+  var LTXT = {
+    en: {
+      unpublished: 'Not live yet. Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.',
+      live: 'Live \u2713 This is the greeting your visitors hear.',
+      pending: 'Published. The welcome audio will be live in a moment.',
+      noaudio: 'Published, but visitors hear no welcome audio yet.',
+      below: ' See the message below.',
+      older: 'Published, but visitors still hear an earlier recording. Click Publish to update the audio to this greeting.',
+      off: 'Voice Welcome is off on your live page.'
+    },
+    de: {
+      unpublished: 'Noch nicht live. Ihre Besucher erhalten weiterhin die ver\u00f6ffentlichte Version. Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um diese Begr\u00fc\u00dfung live zu schalten. Ein gespeicherter Entwurf oder eine Vorschau ver\u00f6ffentlicht sie nicht.',
+      live: 'Live \u2713 Diese Begr\u00fc\u00dfung h\u00f6ren Ihre Besucher.',
+      pending: 'Ver\u00f6ffentlicht. Die Willkommens-Audiodatei ist gleich live.',
+      noaudio: 'Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch keine Willkommens-Audiodatei.',
+      below: ' Siehe Hinweis unten.',
+      older: 'Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch eine fr\u00fchere Aufnahme. Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um die Audiodatei auf diese Begr\u00fc\u00dfung zu aktualisieren.',
+      off: 'Voice Welcome ist auf Ihrer Live-Seite ausgeschaltet.'
+    }
+  };
+  function ltxt() { return LTXT[window._qraivyLang === 'de' ? 'de' : 'en']; }
+  // What was saved by a publish made in this editor, until the page is read
+  // from the server again (state()._db is then a newer record and wins).
+  var SAVED = null;
+  // The published page, from the record the editor holds. The language and
+  // the text are worked out the way the server does when it speaks.
+  function publishedRecord() {
+    var s = state(), sec = s && s._db && s._db.sections;
+    if (!sec || typeof sec !== 'object') return null;
+    var v = sec.voice && typeof sec.voice === 'object' ? sec.voice : {};
+    var l = (v.language === 'en' || v.language === 'de') ? v.language : ((v.voiceLanguage === 'en' || v.voiceLanguage === 'de') ? v.voiceLanguage : (sec.language === 'de' ? 'de' : 'en'));
+    var own = G().cleanGreeting(v.customGreeting && typeof v.customGreeting === 'object' ? v.customGreeting[l] : '') || G().cleanGreeting(v.customText);
+    var hasAudio = typeof v.audioUrl === 'string' && /^https:\/\//.test(v.audioUrl);
+    var audio = !hasAudio || v.audioStale ? 'none' : ((typeof v.audioFor === 'string' && v.audioFor) ? 'ok' : 'older');
+    return { lang: l, text: own || standard(l), enabled: isVoiceOn(sec), audio: audio, failure: v.audioError && typeof v.audioError === 'object' ? v.audioError : null };
+  }
+  function published() {
+    var s = state();
+    if (SAVED && s && SAVED.db === s._db) return SAVED;
+    SAVED = null;
+    return publishedRecord();
+  }
+  function liveState() {
+    if (!ready()) return '';
+    var pub = published();
+    if (!pub) return '';
+    var now = spoken();
+    if (voiceOn() !== pub.enabled || now.lang !== pub.lang || now.text !== pub.text) return 'unpublished';
+    if (!pub.enabled) return 'off';
+    return { ok: 'live', pending: 'pending', older: 'older' }[pub.audio] || 'noaudio';
+  }
+  // The line itself. It is added by this script, right after the row with
+  // the greeting's label and character count, so the page's markup does not
+  // have to carry it.
+  function liveEl() {
+    var el = $(IDS.live);
+    if (el) return el;
+    var anchor = $(IDS.status), row = anchor && anchor.parentNode;
+    if (!row || !row.parentNode || !document.createElement) return null;
+    el = document.createElement('div');
+    el.id = IDS.live;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.style.cssText = 'display:none;margin-top:8px;font-size:.72rem;line-height:1.5;color:rgba(240,244,248,0.6);';
+    row.parentNode.insertBefore(el, row.nextSibling);
+    return el;
+  }
+  function paintLive() {
+    var el = liveEl(); if (!el) return;
+    var st = liveState(), t = ltxt(), text = st ? t[st] : '';
+    if (st === 'noaudio') {
+      // A page that was loaded with a note of why it has no recording says so below, too.
+      var pub = published(), below = $(IDS.audio);
+      if (pub && pub.failure && below && !below.textContent) showAudioStatus(pub.failure.code === 'limit' ? ui().limited : ui().failed, '#f87171');
+      if (below && below.textContent) text += t.below;
+    }
+    el.textContent = text;
+    el.style.display = text ? 'block' : 'none';
+    el.style.color = st === 'live' ? '#22d47e' : ((st === 'unpublished' || st === 'noaudio' || st === 'older') ? '#f59e0b' : 'rgba(240,244,248,0.6)');
   }
 
   // ── Audio preview ────────────────────────────────────────────
@@ -161,8 +261,8 @@
   // earlier audio is marked outdated and cannot be played as if current.
   var PV = { known: {}, checked: {}, had: false, state: 'idle', message: '', url: '', busyKey: '', seq: 0, audio: null, playing: false };
   var PTXT = {
-    en: { play: 'Play', pause: 'Pause', generate: 'Generate preview', update: 'Update preview', retry: 'Try again', checking: 'Checking audio…', ready: 'Audio matches this greeting.', outdated: 'The greeting has changed — the previous audio is outdated.', none: 'No audio for this greeting yet.', loading: 'Generating audio…', done: 'Preview ready ✓', off: 'Voice Welcome is off — no new audio is generated.', failed: 'The audio could not be generated. Please try again.', limit: 'Preview limit reached for now. Please try again later.', signin: 'Please sign in again to preview the audio.', playfail: 'The audio could not be played.' },
-    de: { play: 'Abspielen', pause: 'Pause', generate: 'Vorschau erzeugen', update: 'Vorschau aktualisieren', retry: 'Erneut versuchen', checking: 'Audio wird geprüft …', ready: 'Die Audiodatei passt zu dieser Begrüßung.', outdated: 'Die Begrüßung wurde geändert — die bisherige Audiodatei ist veraltet.', none: 'Für diese Begrüßung gibt es noch keine Audiodatei.', loading: 'Audio wird erzeugt …', done: 'Vorschau bereit ✓', off: 'Voice Welcome ist aus — es wird keine neue Audiodatei erzeugt.', failed: 'Die Audiodatei konnte nicht erzeugt werden. Bitte versuchen Sie es erneut.', limit: 'Das Vorschau-Limit ist vorerst erreicht. Bitte versuchen Sie es später erneut.', signin: 'Bitte melden Sie sich erneut an, um die Audiodatei anzuhören.', playfail: 'Die Audiodatei konnte nicht abgespielt werden.' }
+    en: { play: 'Play', pause: 'Pause', generate: 'Generate preview', update: 'Update preview', retry: 'Try again', checking: 'Checking audio…', ready: 'Preview audio matches this greeting.', outdated: 'The greeting has changed — the previous audio is outdated.', none: 'No audio for this greeting yet.', loading: 'Generating audio…', done: 'Preview ready ✓', off: 'Voice Welcome is off — no new audio is generated.', failed: 'The audio could not be generated. Please try again.', limit: 'Preview limit reached for now. Please try again later.', signin: 'Please sign in again to preview the audio.', playfail: 'The audio could not be played.' },
+    de: { play: 'Abspielen', pause: 'Pause', generate: 'Vorschau erzeugen', update: 'Vorschau aktualisieren', retry: 'Erneut versuchen', checking: 'Audio wird geprüft …', ready: 'Die Vorschau-Audiodatei passt zu dieser Begrüßung.', outdated: 'Die Begrüßung wurde geändert — die bisherige Audiodatei ist veraltet.', none: 'Für diese Begrüßung gibt es noch keine Audiodatei.', loading: 'Audio wird erzeugt …', done: 'Vorschau bereit ✓', off: 'Voice Welcome ist aus — es wird keine neue Audiodatei erzeugt.', failed: 'Die Audiodatei konnte nicht erzeugt werden. Bitte versuchen Sie es erneut.', limit: 'Das Vorschau-Limit ist vorerst erreicht. Bitte versuchen Sie es später erneut.', signin: 'Bitte melden Sie sich erneut an, um die Audiodatei anzuhören.', playfail: 'Die Audiodatei konnte nicht abgespielt werden.' }
   };
   function ptxt() { return PTXT[window._qraivyLang === 'de' ? 'de' : 'en']; }
   function voiceOn() { var s = state(); return !(s && s.voice && s.voice.enabled === false); }
@@ -288,14 +388,24 @@
     if (!(opts && opts.skipReload)) reloadPreview();
     var info = data && data.voice;
     recheckPreview();
-    if (!info) { showAudioStatus(''); return; }
-    if (!info.enabled) { showAudioStatus(ui().off); return; }
-    if (!info.pending) { showAudioStatus(''); return; }
+    // The save went through: what the editor shows is now what is published.
+    // Whether its audio is live yet is what the server says about it.
+    var saved = null;
+    if (ready()) {
+      var shown = spoken();
+      saved = SAVED = { db: state()._db, lang: shown.lang, text: shown.text, enabled: info ? !!info.enabled : voiceOn(), audio: (info && !info.pending) ? 'ok' : ((info && info.status === 'limited') ? 'none' : 'pending'), failure: null };
+    }
+    function audioIs(what) { if (saved && SAVED === saved) { saved.audio = what; paintLive(); } }
+    if (!info) { showAudioStatus(''); paintLive(); return; }
+    if (!info.enabled) { showAudioStatus(ui().off); paintLive(); return; }
+    if (!info.pending) { showAudioStatus(''); paintLive(); return; }
     // The server already knows no recording will be made for this greeting now.
-    if (info.status === 'limited') { showAudioStatus(ui().limited, '#f87171'); return; }
+    if (info.status === 'limited') { showAudioStatus(ui().limited, '#f87171'); paintLive(); return; }
     showAudioStatus(ui().pending);
+    paintLive();
     var slug = state().slug, tries = 0;
-    function giveUp() { showAudioStatus(ui().slow, '#f59e0b'); }
+    // No result after a minute: the line stops saying the audio is about to be live.
+    function giveUp() { showAudioStatus(ui().slow, '#f59e0b'); audioIs('none'); }
     (function poll() {
       if (token !== pollToken) return;
       tries += 1;
@@ -313,13 +423,14 @@
           try { sections = page && page.sections ? (typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections) : null; } catch (e) {}
           if (sections && sections.voice && sections.voice.audioUrl && sections.voice.audioFor === info.audioFor) {
             showAudioStatus(ui().ready, '#22d47e');
+            audioIs('ok');
             reloadPreview();
             recheckPreview();
             return;
           }
           // The recording for this greeting did not happen; the page says why.
           var failure = sections && sections.voice && sections.voice.audioError;
-          if (failure && failure.for === info.audioFor) { showAudioStatus(failure.code === 'limit' ? ui().limited : ui().failed, '#f87171'); return; }
+          if (failure && failure.for === info.audioFor) { showAudioStatus(failure.code === 'limit' ? ui().limited : ui().failed, '#f87171'); audioIs('none'); return; }
           if (tries >= 20) { giveUp(); return; }
           setTimeout(poll, 3000);
         })

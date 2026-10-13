@@ -632,7 +632,7 @@ test('J. opening the tab looks once for existing audio, with the owner\'s token,
   assert.equal(h.play.disabled, true);
   f.respond(200, { ok: true, status: 'ready', audioUrl: 'https://res.cloudinary.com/test/pub.mp3', source: 'published' });
   await settle();
-  assert.deepEqual([h.status.textContent, h.play.disabled, h.gen.style.display, h.play.textContent], ['Audio matches this greeting.', false, 'none', '▶ Play']);
+  assert.deepEqual([h.status.textContent, h.play.disabled, h.gen.style.display, h.play.textContent], ['Preview audio matches this greeting.', false, 'none', '▶ Play']);
   h.api.sync(); h.api.sync(); await settle();
   assert.equal(h.previews().length, 1, 're-rendering the tab does not ask again');
 });
@@ -653,7 +653,7 @@ test('J. typing never contacts the server; the previous audio is marked outdated
   assert.equal(h.audios[0].paused, true, 'and cannot be started again');
   // typing the old text back restores it without a request
   h.type(STD_EN); await settle();
-  assert.deepEqual([h.status.textContent, h.play.disabled, h.previews().length], ['Audio matches this greeting.', false, 1]);
+  assert.deepEqual([h.status.textContent, h.play.disabled, h.previews().length], ['Preview audio matches this greeting.', false, 1]);
 });
 
 test('J. a page with no audio yet offers "Generate preview"', async () => {
