@@ -14,6 +14,13 @@
 //   - what is saved is what the owner sees: the selected language, the
 //     Voice switch, custom greetings — and every field of the page the
 //     Smart Editor does not edit goes back unchanged
+//   - just before the one save the page is read again: if a field this
+//     editor edits was changed elsewhere the owner decides, if the page
+//     cannot be read nothing is published, and everything this editor does
+//     not edit is saved as the server has it at that moment
+//   - Save Draft sends nothing: it keeps the owner's unfinished changes in
+//     this browser, says so, restores them on the next visit, and never
+//     puts a draft over a newer published page without the owner's say
 //
 // What is real: smart-editor.js, js/voice-greetings.js,
 // js/voice-greeting-editor.js, js/staging-config.js and js/lp-routing.js,
@@ -23,7 +30,8 @@
 // senders are stand-ins that record being called and would send a save.
 // The editor as it was before this change (commit 6846266) is run in the
 // same stand-in page to show the fault and to prove that the one save now
-// sent is, field for field, the save the Smart Editor sent before.
+// sent is, field for field, the save the Smart Editor sent before. For
+// Save Draft the comparison is with commit d20b17f.
 // No network: fetch is a recorder. Every name and address is made up.
 //
 // No test framework dependency. Run: node tests/lpEditorPublishSafety.test.js
@@ -40,6 +48,8 @@ const EDITOR_PAGE = read(PUB, 'smart-qr-detail.html');
 const SMART_EDITOR = read(PUB, 'smart-editor.js');
 // smart-editor.js before the publish-safety change
 const EDITOR_BEFORE = execFileSync('git', ['show', '6846266:frontend/public/smart-editor.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
+// smart-editor.js before Save Draft became a local draft
+const EDITOR_BEFORE_DRAFT_FIX = execFileSync('git', ['show', 'd20b17f:frontend/public/smart-editor.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n');
 const SCRIPTS = ['js/staging-config.js', 'js/lp-routing.js', 'js/voice-greetings.js', 'js/voice-greeting-editor.js'].map((f) => [f, read(PUB, ...f.split('/'))]);
 
 const tests = [];
@@ -49,6 +59,11 @@ const settle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise
 const SLUG = 'casa-lumi';
 const CONFIRM_TEXT = 'Publish this page? This will update your live Smart QR page immediately.';
 const LOAD_FAILED_TEXT = 'This page could not be loaded, so nothing can be saved or published. Please reload the page.';
+const DRAFT_SAVED_TEXT = 'Draft saved on this device only - not published.';
+const DRAFT_NOT_SAVED_TEXT = 'The draft could not be saved on this device. Nothing was published.';
+const DRAFT_RESTORED_TEXT = 'Local draft restored - not published yet.';
+const DRAFT_SET_ASIDE_TEXT = 'Showing the published page. Your local draft was not applied.';
+const DRAFT_KEY = 'qraivy_se_draft_' + SLUG;
 
 // The page as the server has it, including fields the Smart Editor never edits.
 function serverPage(overrides = {}) {
@@ -177,7 +192,9 @@ function inlineOnclick(id) {
 //   load     what GET /api/lp/:slug answers: { status, body } | { reject } | a page object
 //   confirm  what the confirmation dialog returns
 //   holdSave true: POST /lp stays pending until env.releaseSave()
-async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, holdSave = false, lateLegacyWiring = true, runInit = true, editor = SMART_EDITOR } = {}) {
+//   storage  the browser's localStorage (pass the same Map again to "reload the page")
+//   storageFails  true: the browser refuses to store anything
+async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, holdSave = false, lateLegacyWiring = true, runInit = true, editor = SMART_EDITOR, storage = new Map(), storageFails = false, holdLoad = false } = {}) {
   const dom = createDom();
   const { El, document, body } = dom;
   const env = { dom, requests: [], confirms: [], legacy: { publish: 0, draft: 0, localDraft: 0 }, timers: [], confirmAnswer: confirm, load, pendingSaves: [] };
@@ -198,14 +215,13 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
   mk('input', { id: 'hero-title-input' }, tabContent);       // the page's older inputs live here until the Smart Editor replaces them
   mk('iframe', { id: 'sqd-iframe' });
 
-  const storage = new Map();
   const window = {
     location: { hostname: 'www.qraivy.com', origin: 'https://www.qraivy.com', href: 'https://www.qraivy.com/smart-qr-detail.html' + (slug ? '?slug=' + slug : ''), search: slug ? '?slug=' + slug : '' },
     console: { log() {}, info() {}, warn() {}, error() {} },
     navigator: {},
     Clerk: { session: { getToken: () => Promise.resolve('tok-owner') } },
     confirm(text) { env.confirms.push(text); return env.confirmAnswer; },
-    localStorage: { getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => { storage.set(k, String(v)); }, removeItem: (k) => { storage.delete(k); } },
+    localStorage: { getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => { if (storageFails) throw new Error('QuotaExceededError'); storage.set(k, String(v)); }, removeItem: (k) => { storage.delete(k); } },
     // the page's own editor state: its defaults, as smart-qr-detail.html declares them
     QRAIVY_EDITOR_STATE: { pageName: '', slug: '', dirty: false, hero: { title: '', subtitle: '', badgeText: 'Qraivy Smart Page', logoInitial: 'A' }, buttons: [],
       sections: { hero: { enabled: true, title: '', subtitle: '', badge: '' }, voice: { enabled: true, title: 'Voice Welcome', description: '', buttonLabel: 'Play' }, ai: { enabled: true, title: 'AI Assistant' }, loop: { enabled: true, title: 'Stay in the loop' }, footer: { enabled: true, businessName: '' }, buttons: [], order: ['hero', 'voice', 'ai', 'buttons', 'loop', 'footer'], theme: { background: 'dark', accentColor: '#ff5a1f' } } },
@@ -219,8 +235,9 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
     if (method === 'GET' && /\/api\/lp\//.test(u)) {
       const l = env.load;
       if (l && l.reject) return Promise.reject(new TypeError('Failed to fetch'));
-      if (l && typeof l.status === 'number') return answer(l.status, l.body === undefined ? { error: 'x' } : l.body);
-      return answer(200, l);
+      const reply = () => ((l && typeof l.status === 'number') ? answer(l.status, l.body === undefined ? { error: 'x' } : l.body) : answer(200, l));
+      if (env.holdLoad) return new Promise((resolve) => { env.pendingLoads.push(() => resolve(reply())); });
+      return reply();
     }
     if (method === 'POST' && /\/lp\/voice\/preview\//.test(u)) return answer(200, { ok: true, status: 'none' });
     if (method === 'POST' && /\/lp$/.test(u)) {
@@ -232,6 +249,8 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
   };
   env.holdSave = holdSave;
   env.releaseSave = async () => { env.pendingSaves.splice(0).forEach((f) => f()); await settle(); };
+  env.holdLoad = holdLoad; env.pendingLoads = [];
+  env.releaseLoad = async () => { env.holdLoad = false; env.pendingLoads.splice(0).forEach((f) => f()); await settle(); };
 
   const ctx = vm.createContext({ window, document, localStorage: window.localStorage, fetch: (...a) => window.fetch(...a), console: window.console, navigator: window.navigator,
     URL, URLSearchParams, Promise, TypeError, Error, Array, String, Object, JSON, Date, Math, FormData: function () { this.append = () => {}; },
@@ -258,7 +277,8 @@ async function openEditor({ slug = SLUG, load = serverPage(), confirm = true, ho
   vm.runInContext(editor, ctx, { filename: 'smart-editor.js' });
   if (lateLegacyWiring) wireLate();
 
-  Object.assign(env, { window, document, publish1, publish2, publish2Label, draftBtn, tabContent,
+  Object.assign(env, { window, document, publish1, publish2, publish2Label, draftBtn, tabContent, storage,
+    draft: () => (storage.has(DRAFT_KEY) ? JSON.parse(storage.get(DRAFT_KEY)) : null),
     el: (id) => document.getElementById(id),
     status: () => document.getElementById('sqd-save-global-status').textContent,
     saves: () => env.requests.filter((r) => r.method === 'POST' && /\/lp$/.test(r.url)),
@@ -288,11 +308,18 @@ test('A. smart-editor.js: one listener in front of everything, no handler of its
   assert.ok(!/btn\.onclick\s*=/.test(SMART_EDITOR), 'the editor no longer adds a second handler to the buttons');
   assert.ok(SMART_EDITOR.includes('window.SmartEditor={state:SE,publish:requestPublish,reload:init,renderAll:renderAll};window.publishPage=requestPublish;'));
   assert.ok(!/publish:publish\b|window\.publishPage=publish\b/.test(SMART_EDITOR), 'the unguarded publish is not reachable from the page');
-  assert.equal((SMART_EDITOR.match(/window\.confirm\(/g) || []).length, 1, 'one confirmation');
+  assert.equal((SMART_EDITOR.match(/window\.confirm\(PUBLISH_CONFIRM\)/g) || []).length, 1, 'one confirmation for publishing');
+  assert.equal((SMART_EDITOR.match(/window\.confirm\(DRAFT_CONFLICT\)/g) || []).length, 1, 'one question about a draft made from an older version of the page');
+  assert.equal((SMART_EDITOR.match(/window\.confirm\(conflictText\(d\)\)/g) || []).length, 1, 'one question when the page was changed elsewhere before publishing');
+  assert.equal((SMART_EDITOR.match(/window\.confirm\(/g) || []).length, 3, 'and no other dialog');
+  // the one save is only reachable through the check that reads the page again
+  assert.equal((SMART_EDITOR.match(/[^a-zA-Z_]publish\(\)/g) || []).length, 3, 'publish() is defined once and called from two places');
+  assert.ok(SMART_EDITOR.includes("if(guard.state==='off')return publish();"), 'directly only where there is no page');
+  assert.ok(SMART_EDITOR.includes('return checkBeforePublish().then(function(ok){if(!ok)return false;return publish().then('), 'otherwise only after the check');
   // a failed load no longer takes over default values
   assert.ok(!SMART_EDITOR.includes('QRAIVY_EDITOR_STATE fallback') && !/var leg=window\.QRAIVY_EDITOR_STATE/.test(SMART_EDITOR));
   const failure = SMART_EDITOR.slice(SMART_EDITOR.indexOf("console.error('[SE] Backend failed:'"), SMART_EDITOR.indexOf("console.log('[SE] Ready')"));
-  assert.match(failure, /^console\.error\('\[SE\] Backend failed:',e\.message\);guard\.state='failed';paintGuard\(\);showLoadFailed\(\);return;\}guard\.state='ready';paintGuard\(\);renderAll\(\);$/);
+  assert.match(failure, /^console\.error\('\[SE\] Backend failed:',e\.message\);guard\.state='failed';paintGuard\(\);showLoadFailed\(\);return;\}guard\.state='ready';paintGuard\(\);renderAll\(\);if\(restored\)/);
   assert.equal((SMART_EDITOR.match(/guard\.state='ready'/g) || []).length, 1, 'ready is set in exactly one place: after a successful load');
 });
 
@@ -359,7 +386,7 @@ test('D. clicks while a save is running send nothing more and ask nothing more; 
   assert.equal(env.publish2.style.opacity, '0.5');
   // the buttons are disabled; and every other way in is closed as well
   for (let i = 0; i < 5; i++) { await env.click(env.publish2); await env.click(env.publish1); }
-  await env.window.SmartEditor.publish(); await env.window.publishPage();
+  env.window.SmartEditor.publish(); env.window.publishPage(); await settle();
   env.publish2.disabled = false; await env.click(env.publish2); env.publish2.disabled = true;   // even if something re-enabled the button
   await settle();
   assert.equal(env.saves().length, 1, 'still one save');
@@ -447,20 +474,247 @@ test('F. after a failed load, loading again successfully publishes the SERVER\'s
 });
 
 // ── G. Save Draft ──────────────────────────────────────────────
-test('G. Save Draft: blocked until the page has loaded; once it has, it is the page\'s own unchanged behaviour', async () => {
-  const early = await openEditor({ runInit: false });
-  await early.click(early.draftBtn);
-  assert.deepEqual(early.legacy, { publish: 0, draft: 0, localDraft: 0 });
-  assert.equal(early.saves().length, 0);
+// The owner's unfinished changes used in these tests: Voice on, German, an own greeting, a new title.
+async function makeChanges(env) {
+  await env.click(env.el('se-voice-enabled'));
+  await env.change('se-voice-lang', 'de');
+  await env.change('se-voice-greeting', 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+}
+const noSaves = (env, what) => {
+  assert.equal(env.saves().length, 0, what + ': no save request');
+  assert.equal(env.requests.filter((r) => r.method !== 'GET').filter((r) => !/voice\/preview/.test(r.url) || (r.body && r.body.generate === true)).length, 0, what + ': nothing that changes anything on the server, no recording');
+  assert.deepEqual(env.legacy, { publish: 0, draft: 0, localDraft: 0 }, what + ': the page\'s older Save Draft code was not reached');
+};
 
+test('G. before this change, Save Draft on this page sent two saves built from the page\'s older state (d20b17f)', async () => {
+  const env = await openEditor({ editor: EDITOR_BEFORE_DRAFT_FIX });
+  await makeChanges(env);
+  await env.click(env.draftBtn);
+  assert.equal(env.legacy.draft, 2);
+  assert.deepEqual(env.saves().map((x) => x.sender), ['legacy-draft', 'legacy-draft']);
+  assert.ok(env.saves().every((x) => x.body.sections.voice.title === 'Voice Welcome' && x.body.sections.language === undefined), 'the older state, not what the owner sees');
+});
+
+test('G. Save Draft sends nothing: no save, no publishing, no recording — however often it is clicked', async () => {
   const env = await openEditor();
-  const r = await env.click(env.draftBtn);
-  assert.ok(!r.stoppedAtDocument, 'the click is passed through');
-  assert.equal(env.legacy.localDraft, 1);
-  assert.equal(env.legacy.draft, 2, 'the page\'s Save Draft runs as it does today (its inline handler and its listener)');
-  assert.equal(env.legacy.publish, 0);
-  assert.equal(env.confirms.length, 0);
-  assert.ok(env.saves().every((s) => s.sender === 'legacy-draft'), 'the Smart Editor itself sends nothing on Save Draft');
+  const requestsBefore = env.requests.length;
+  for (let i = 0; i < 4; i++) { const r = await env.click(env.draftBtn); assert.ok(r.stoppedAtDocument, 'handled before the page\'s own handlers'); }
+  await makeChanges(env);
+  for (let i = 0; i < 3; i++) await env.click(env.draftBtn);
+  noSaves(env, 'Save Draft');
+  assert.equal(env.requests.slice(requestsBefore).filter((r) => r.method === 'GET').length, 0, 'not even a read');
+  assert.equal(env.confirms.length, 0, 'no dialog');
+  assert.equal(env.status(), DRAFT_SAVED_TEXT, 'the status line says it is local and not published');
+  assert.match(DRAFT_SAVED_TEXT, /this device only/); assert.match(DRAFT_SAVED_TEXT, /not published/);
+});
+
+test('G. the local draft holds the unfinished changes: Voice switch, language, greeting, hero, buttons, style', async () => {
+  const env = await openEditor();
+  await makeChanges(env);
+  await env.click(env.draftBtn);
+  const d = env.draft();
+  assert.equal(d.voice.enabled, true); assert.equal(d.voice.language, 'de'); assert.equal(d.voice.voiceKey, 'anna_de');
+  assert.equal(d.voice.customGreeting.de, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  assert.equal(d.voice.customGreeting.en, 'Hello and welcome to Casa Lumi, your table is waiting.', 'the saved English greeting is kept alongside');
+  assert.equal(d.hero.title, 'Casa Lumi Ulm'); assert.equal(d.hero.subtitle, 'Fresh pasta daily');
+  assert.ok(Array.isArray(d.buttons) && d.buttons.some((x) => x.type === 'instagram' && x.active));
+  assert.equal(d.style.brandColor, '#123456'); assert.equal(d.style.logoUrl, 'https://res.cloudinary.example/logos/casa.png');
+  assert.match(d.base, /^\d+\.[0-9a-f]+$/, 'it remembers which version of the page it was made from');
+  assert.equal(typeof d.savedAt, 'number');
+  // nothing the server owns is in it, and no credentials
+  assert.ok(!/audioUrl|previewCache|tok-owner|Bearer/.test(JSON.stringify(d)));
+});
+
+test('G. reloading the page restores the draft, says it is not published, and one Publish then saves exactly those changes', async () => {
+  const first = await openEditor();
+  await makeChanges(first);
+  await first.click(first.draftBtn);
+  // the page is opened again; the server still has what it had
+  const env = await openEditor({ storage: first.storage });
+  assert.equal(env.confirms.length, 0, 'same version of the page: no question');
+  assert.equal(env.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(env.el('se-voice-enabled').textContent, 'On');
+  assert.equal(env.el('se-voice-lang').value, 'de');
+  assert.equal(env.el('se-voice-greeting').value, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  assert.equal(env.el('se-hero-title').value, 'Casa Lumi Ulm');
+  noSaves(env, 'restoring');
+  // Publish: one confirmation, one save, with the restored values
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT]);
+  assert.equal(env.saves().length, 1);
+  const body = env.saves()[0].body, sec = body.sections;
+  assert.equal(env.saves()[0].sender, 'smart-editor');
+  assert.equal(sec.voice.enabled, true); assert.equal(sec.language, 'de'); assert.equal(sec.voice.language, 'de');
+  assert.equal(sec.voice.customGreeting.de, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  assert.equal(sec.hero.title, 'Casa Lumi Ulm');
+  assert.equal(body.useCase, 'restaurant', 'the industry is the page\'s own (the Smart Editor has no field for it)');
+  assert.deepEqual(sec.loop, JSON.parse(serverPage().sections).loop, 'fields outside the Smart Editor are untouched');
+  // published: the draft is gone, and it is not asked about again
+  assert.equal(env.draft(), null);
+  const again = await openEditor({ storage: env.storage });
+  assert.equal(again.confirms.length, 0); assert.notEqual(again.status(), DRAFT_RESTORED_TEXT);
+});
+
+test('G. unfinished changes are also kept without pressing Save Draft, and survive a reload the same way', async () => {
+  const first = await openEditor();
+  await first.change('se-hero-subtitle', 'Neu am Münsterplatz');
+  assert.equal(first.draft().hero.subtitle, 'Neu am Münsterplatz');
+  const env = await openEditor({ storage: first.storage });
+  assert.equal(env.el('se-hero-subtitle').value, 'Neu am Münsterplatz');
+  assert.equal(env.status(), DRAFT_RESTORED_TEXT);
+  noSaves(env, 'autosave');
+});
+
+test('G. a draft made from an older version of the page is never applied over the newer one without the owner deciding', async () => {
+  const first = await openEditor();
+  await makeChanges(first);
+  await first.click(first.draftBtn);
+  const stored = first.storage.get(DRAFT_KEY);
+  // meanwhile the page was changed and published somewhere else
+  const newer = () => serverPage({ sections: { hero: { title: 'Casa Lumi', subtitle: 'Now with a garden', badge: 'Restaurant' } } });
+
+  // Cancel: the published page is shown, the draft is not applied — and not deleted
+  const keep = await openEditor({ storage: new Map(first.storage), load: newer(), confirm: false });
+  assert.equal(keep.confirms.length, 1); assert.match(keep.confirms[0], /published page has changed since that draft was made/);
+  assert.equal(keep.status(), DRAFT_SET_ASIDE_TEXT);
+  assert.equal(keep.el('se-hero-subtitle').value, 'Now with a garden');
+  assert.equal(keep.el('se-hero-title').value, 'Casa Lumi'); assert.equal(keep.el('se-voice-enabled').textContent, 'Off'); assert.equal(keep.el('se-voice-lang').value, 'en');
+  assert.equal(keep.storage.get(DRAFT_KEY), stored, 'the draft is still there, byte for byte');
+  keep.confirmAnswer = true;
+  await keep.click(keep.publish2);
+  assert.equal(keep.saves().length, 1);
+  assert.equal(keep.saves()[0].body.sections.hero.subtitle, 'Now with a garden'); assert.equal(keep.saves()[0].body.sections.voice.enabled, false);
+
+  // ... and when the owner then starts a new draft, the old one is kept as the previous draft
+  const edit = await openEditor({ storage: new Map(first.storage), load: newer(), confirm: false });
+  await edit.change('se-hero-badge', 'Trattoria');
+  assert.equal(edit.storage.get(DRAFT_KEY + ':previous'), stored, 'nothing was thrown away');
+  assert.equal(edit.draft().hero.badge, 'Trattoria'); assert.equal(edit.draft().hero.subtitle, 'Now with a garden');
+
+  // OK: the owner chooses the draft
+  const take = await openEditor({ storage: new Map(first.storage), load: newer(), confirm: true });
+  assert.equal(take.confirms.length, 1);
+  assert.equal(take.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(take.el('se-hero-title').value, 'Casa Lumi Ulm'); assert.equal(take.el('se-voice-enabled').textContent, 'On');
+  noSaves(take, 'choosing the draft');
+});
+
+test('G. what the server does on its own (visits, preview recordings, attached audio) is not mistaken for a newer version', async () => {
+  const first = await openEditor();
+  await makeChanges(first);
+  await first.click(first.draftBtn);
+  const loaded = JSON.parse(serverPage().sections);
+  const serverSide = serverPage({ scanCount: 4711, updatedAt: '2030-01-01T00:00:00.000Z',
+    sections: { voice: Object.assign({}, loaded.voice, { audioUrl: 'https://res.cloudinary.example/audio/new.mp3', audioFor: 'fp-new', audioLang: 'de', previewUrl: 'https://res.cloudinary.example/audio/p2.mp3', previewFor: 'fp-p2', previewLang: 'de', previewCache: { 'fp-p2': 'https://res.cloudinary.example/audio/p2.mp3' } }) } });
+  const env = await openEditor({ storage: first.storage, load: serverSide });
+  assert.equal(env.confirms.length, 0, 'no question');
+  assert.equal(env.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(env.el('se-hero-title').value, 'Casa Lumi Ulm');
+  // a real change of a Voice setting on the server IS a newer version
+  const changed = await openEditor({ storage: new Map(first.storage), confirm: false, load: serverPage({ sections: { voice: Object.assign({}, loaded.voice, { enabled: true }) } }) });
+  assert.equal(changed.confirms.length, 1);
+  // ... and so is any other field this editor edits
+  for (const sections of [{ language: 'de' }, { buttons: [] }, { theme: { accentColor: '#000000', background: 'dark' } }, { hero: Object.assign({}, loaded.hero, { badge: 'Trattoria' }) }]) {
+    const e = await openEditor({ storage: new Map(first.storage), confirm: false, load: serverPage({ sections }) });
+    assert.equal(e.confirms.length, 1, JSON.stringify(sections));
+  }
+  // What the draft does not contain cannot be overwritten by it, so it raises no question:
+  // the page's name, website and industry, the settings of other parts of the product, a staff
+  // PIN, and everything the website scan generates.
+  const elsewhere = serverPage({ useCase: 'fitness', businessName: 'Casa Lumi Ulm GmbH', websiteUrl: 'https://casalumi-ulm.example',
+    sections: { staffPin: 'hash-of-a-pin', loop: { enabled: true, title: 'Changed elsewhere' }, footer: { businessName: 'Neu GmbH' }, settings: { pageActive: true, voiceEnabled: true, aiEnabled: true },
+      hero: Object.assign({}, loaded.hero, { aiTitle: 'A new scanned title', aiSubtitle: 'A new scanned subtitle' }), featured: [{ enabled: true, icon: 'y', title: 'Scanned', description: 'again' }], businessInfo: { hours: 'changed' }, actionLinks: [], siteContent: 'scanned again', aiGeneratedAt: '2030-01-01T00:00:00.000Z' } });
+  const quiet = await openEditor({ storage: new Map(first.storage), confirm: false, load: elsewhere });
+  assert.equal(quiet.confirms.length, 0);
+  assert.equal(quiet.status(), DRAFT_RESTORED_TEXT);
+});
+
+test('G. a draft stored by the editor before this change (no version in it) is not applied without asking', async () => {
+  const old = new Map([[DRAFT_KEY, JSON.stringify({ hero: { title: 'Old draft title', subtitle: '', badge: '' }, voice: { enabled: true, language: 'de', voiceKey: 'anna_de', customText: '', customGreeting: {} }, buttons: [], style: { brandColor: '#000000', logoUrl: '', walletHeroUrl: '' } })]]);
+  const env = await openEditor({ storage: old, confirm: false });
+  assert.equal(env.confirms.length, 1);
+  assert.equal(env.el('se-hero-title').value, 'Casa Lumi'); assert.equal(env.el('se-voice-enabled').textContent, 'Off');
+  assert.ok(env.storage.has(DRAFT_KEY), 'and it is not deleted');
+});
+
+test('G. before the page has loaded and after a failed load: Save Draft is blocked, writes nothing, and an existing draft is left exactly as it is', async () => {
+  const first = await openEditor();
+  await makeChanges(first);
+  await first.click(first.draftBtn);
+  const stored = first.storage.get(DRAFT_KEY);
+
+  const early = await openEditor({ storage: new Map(first.storage), runInit: false });
+  await early.click(early.draftBtn);
+  noSaves(early, 'before loading');
+  assert.equal(early.storage.get(DRAFT_KEY), stored);
+  assert.equal(early.status(), 'Loading...');
+
+  for (const [what, load] of FAILED_LOADS) {
+    const env = await openEditor({ storage: new Map(first.storage), load });
+    await env.click(env.draftBtn); await env.click(env.draftBtn);
+    noSaves(env, what);
+    assert.equal(env.confirms.length, 0, what + ': no dialog');
+    assert.equal(env.status(), LOAD_FAILED_TEXT, what);
+    assert.equal(env.storage.get(DRAFT_KEY), stored, what + ': the stored draft is untouched');
+    assert.equal(env.storage.has(DRAFT_KEY + ':previous'), false, what);
+    // with no draft stored, a failed load does not create one from default values
+    const empty = await openEditor({ load });
+    await empty.click(empty.draftBtn);
+    assert.equal(empty.storage.size, 0, what + ': nothing written');
+  }
+});
+
+test('G. while the page is still loading, nothing typed into the empty editor can replace a stored draft', async () => {
+  const first = await openEditor();
+  await makeChanges(first);
+  await first.click(first.draftBtn);
+  const stored = first.storage.get(DRAFT_KEY);
+  // the editor has started and shows its (still empty) fields, but the server has not answered yet
+  const env = await openEditor({ storage: first.storage, holdLoad: true });
+  assert.equal(env.loads().length, 1); assert.ok(env.el('se-hero-title'), 'the fields are there');
+  await env.change('se-hero-title', 'typed too early'); await env.change('se-voice-lang', 'en');
+  await env.click(env.draftBtn);
+  assert.equal(env.storage.get(DRAFT_KEY), stored, 'the stored draft is untouched');
+  noSaves(env, 'while loading');
+  // the answer arrives: the stored draft is restored, not the early typing
+  await env.releaseLoad();
+  assert.equal(env.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(env.el('se-hero-title').value, 'Casa Lumi Ulm'); assert.equal(env.el('se-voice-lang').value, 'de');
+  // and with no draft stored, early typing does not create one
+  const fresh = await openEditor({ holdLoad: true });
+  await fresh.change('se-hero-title', 'typed too early');
+  assert.equal(fresh.storage.size, 0);
+});
+
+test('G. if the browser cannot store the draft, the owner is told so — and still nothing is sent', async () => {
+  const env = await openEditor({ storageFails: true });
+  await makeChanges(env);
+  await env.click(env.draftBtn);
+  assert.equal(env.status(), DRAFT_NOT_SAVED_TEXT);
+  noSaves(env, 'storage refused');
+  assert.equal(env.storage.size, 0);
+});
+
+test('G. after publishing, later unfinished changes belong to the newly published version: no question on the next visit', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+  // from the moment it is published, the server has the new title
+  const published = serverPage({ sections: { hero: Object.assign({}, JSON.parse(serverPage().sections).hero, { title: 'Casa Lumi Ulm' }) } });
+  env.load = published;
+  const loadsBefore = env.loads().length;
+  await env.click(env.publish2);
+  assert.equal(env.saves().length, 1);
+  assert.equal(env.loads().length, loadsBefore + 2, 'two reads around the one save: the check before it, and the published version after it');
+  assert.equal(env.draft(), null, 'published: no draft left');
+  // the owner keeps editing after publishing and leaves
+  await env.change('se-hero-badge', 'Trattoria');
+  assert.equal(env.draft().hero.badge, 'Trattoria');
+  const next = await openEditor({ storage: env.storage, load: published });
+  assert.equal(next.confirms.length, 0, 'the draft was made from the published version: no question');
+  assert.equal(next.status(), DRAFT_RESTORED_TEXT);
+  assert.equal(next.el('se-hero-badge').value, 'Trattoria'); assert.equal(next.el('se-hero-title').value, 'Casa Lumi Ulm');
+  assert.equal(env.saves().length + next.saves().length, 1, 'still exactly the one save');
 });
 
 // ── H. Language ────────────────────────────────────────────────
@@ -543,6 +797,227 @@ test('J. the one save now sent is exactly the save the Smart Editor sent before 
   }
 });
 
+// ── L. Reading the page again before publishing ────────────────
+const PUBLISH_CONFLICT_START = 'This page was changed somewhere else after you opened it here.';
+const NOT_PUBLISHED_TEXT = 'Not published. Your changes are kept on this device as a draft.';
+const CHECK_FAILED_TEXT = 'The page could not be checked, so nothing was published. Your changes are kept on this device. Please try again.';
+const LOADED = JSON.parse(serverPage().sections);
+// the order of everything sent after the page was opened
+// a stored draft without the moment it was written
+const draftContent = (raw) => { const d = JSON.parse(raw); delete d.savedAt; return d; };
+const sentSince = (env, from) => env.requests.slice(from).filter((r) => !/voice\/preview/.test(r.url)).map((r) => r.method + ' ' + r.url.replace('https://api.qraivy.com', '').replace(/\?.*$/, ''));
+
+test('L. an unchanged page: one confirmation, the page is read, then the one save — nothing else changes', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+  const from = env.requests.length;
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT], 'no second question');
+  assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG, 'POST /lp', 'GET /api/lp/' + SLUG], 'read, save, read');
+  assert.equal(env.saves().length, 1);
+  assert.equal(env.status(), 'Published');
+  assert.equal(env.requests.filter((r) => r.method === 'GET' && r.headers.Authorization !== 'Bearer tok-owner').length, 0, 'every read is made as the signed-in owner');
+});
+
+test('L. Cancel in the first confirmation: no read and no save', async () => {
+  const env = await openEditor({ confirm: false });
+  const from = env.requests.length;
+  await env.click(env.publish2);
+  assert.deepEqual(sentSince(env, from), []);
+});
+
+const CHANGED_ELSEWHERE = {
+  'hero subtitle': { sections: { hero: Object.assign({}, LOADED.hero, { subtitle: 'Now with a garden' }) } },
+  'hero title': { sections: { hero: Object.assign({}, LOADED.hero, { title: 'Casa Lumi Garden' }) } },
+  'Voice switched on': { sections: { voice: Object.assign({}, LOADED.voice, { enabled: true }) } },
+  'Voice switched off by an older switch': { sections: { settings: Object.assign({}, LOADED.settings, { voiceEnabled: false }) } },
+  'greeting': { sections: { voice: Object.assign({}, LOADED.voice, { customGreeting: { en: 'A different greeting saved elsewhere.' } }) } },
+  'language': { sections: { language: 'de', voice: Object.assign({}, LOADED.voice, { language: 'de', voiceKey: 'anna_de' }) } },
+  'buttons': { sections: { buttons: [{ type: 'facebook', label: 'facebook', url: 'https://facebook.example/x', active: true }] } },
+  'colour': { brandColor: '#000000', sections: { theme: Object.assign({}, LOADED.theme, { accentColor: '#000000' }) } },
+  'logo': { sections: { logo: { url: 'https://res.cloudinary.example/logos/other.png' } } },
+};
+test('L. changed elsewhere in a field this editor edits: a second question — Cancel sends no save and keeps the draft', async () => {
+  for (const [what, change] of Object.entries(CHANGED_ELSEWHERE)) {
+    const env = await openEditor();
+    await env.change('se-hero-badge', 'Trattoria');
+    const draftBefore = env.storage.get(DRAFT_KEY);
+    env.load = serverPage(change);                               // meanwhile, somewhere else
+    let n = 0; env.window.confirm = (text) => { env.confirms.push(text); n += 1; return n === 1; };   // OK to publish, Cancel to the second question
+    const from = env.requests.length;
+    await env.click(env.publish2);
+    assert.equal(env.confirms.length, 2, what);
+    assert.equal(env.confirms[0], CONFIRM_TEXT); assert.ok(env.confirms[1].indexOf(PUBLISH_CONFLICT_START) === 0, what);
+    assert.match(env.confirms[1], /Cancel: do not publish\. Your changes stay on this device as a draft/);
+    assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG], what + ': the read, and nothing after it');
+    assert.equal(env.saves().length, 0, what + ': no save');
+    assert.equal(env.status(), NOT_PUBLISHED_TEXT, what);
+    assert.deepEqual(draftContent(env.storage.get(DRAFT_KEY)), draftContent(draftBefore), what + ': the draft holds exactly what it held, made from the version the owner opened');
+    assert.equal(env.draft().hero.badge, 'Trattoria');
+    assert.equal(env.el('se-hero-badge').value, 'Trattoria', what + ': the editor still shows the owner\'s work');
+    assert.equal(env.publish1.disabled, false); assert.equal(env.publish2.disabled, false);
+    // pressing Publish again asks again: the newer version has still not been seen
+    n = 0;
+    await env.click(env.publish1);
+    assert.equal(env.confirms.length, 4, what + ': asked again');
+    assert.equal(env.saves().length, 0);
+    // on the next visit the draft is not applied over the newer page without asking either
+    const next = await openEditor({ storage: env.storage, load: serverPage(change), confirm: false });
+    assert.equal(next.confirms.length, 1, what);
+  }
+});
+
+test('L. changed elsewhere, and the owner decides to publish anyway: one save with the editor\'s values', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-badge', 'Trattoria');
+  env.load = serverPage(CHANGED_ELSEWHERE['hero subtitle']);
+  const from = env.requests.length;
+  await env.click(env.publish2);                                 // OK, OK
+  assert.equal(env.confirms.length, 2);
+  assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG, 'POST /lp', 'GET /api/lp/' + SLUG]);
+  const s = savedSections(env.saves()[0]);
+  assert.equal(s.hero.badge, 'Trattoria'); assert.equal(s.hero.subtitle, 'Fresh pasta daily', 'the fields of this editor are the editor\'s');
+  assert.equal(env.status(), 'Published');
+  // the published version is now the editor's own: the next publish asks nothing more
+  env.load = serverPage({ sections: { hero: Object.assign({}, LOADED.hero, { badge: 'Trattoria' }) } });
+  await env.window.SmartEditor.reload(); await settle();
+  await env.click(env.publish2);
+  assert.equal(env.confirms.length, 3);
+});
+
+test('L. everything this editor does not edit is saved as it is on the server NOW: staff PIN, loop, footer, settings, name, industry, website', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+  await env.click(env.el('se-voice-enabled'));                   // Voice on
+  await env.change('se-voice-lang', 'de');
+  // while the editor was open: a staff PIN was set, loyalty and other settings changed, the page was renamed
+  const now = serverPage({ businessName: 'Casa Lumi Ulm GmbH', useCase: 'fitness', websiteUrl: 'https://casalumi-ulm.example', template: 'premium',
+    sections: { staffPin: 'hash-of-the-new-pin', loop: { enabled: false, title: 'Changed elsewhere' }, footer: { businessName: 'Casa Lumi Ulm GmbH', footerText: 'Neue Str. 2' }, info: { address: 'Neue Str. 2', phone: '+49 111' },
+      settings: { pageActive: true, voiceEnabled: true, aiEnabled: true, walletEnabled: false }, ai: { enabled: false, title: 'Changed AI title' }, order: ['hero', 'buttons', 'voice'], loyalty: { stampsRequired: 8 } } });
+  env.load = now;
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT], 'none of this is edited here, so there is nothing to ask');
+  assert.equal(env.saves().length, 1);
+  const body = env.saves()[0].body, s = body.sections, fresh = JSON.parse(now.sections);
+  for (const key of ['staffPin', 'loop', 'footer', 'info', 'settings', 'ai', 'order', 'loyalty', 'featured', 'businessInfo', 'actionLinks', 'siteContent', 'aiGenerated', 'crawlLocked']) assert.deepEqual(s[key], fresh[key], key + ' is the server\'s current value');
+  assert.equal(s.staffPin, 'hash-of-the-new-pin');
+  assert.equal(body.businessName, 'Casa Lumi Ulm GmbH'); assert.equal(body.useCase, 'fitness'); assert.equal(body.websiteUrl, 'https://casalumi-ulm.example');
+  // and what the owner did here is in the same save
+  assert.equal(s.hero.title, 'Casa Lumi Ulm'); assert.equal(s.voice.enabled, true); assert.equal(s.language, 'de'); assert.equal(s.voice.language, 'de');
+  assert.deepEqual(s.voice.customGreeting, { en: 'Hello and welcome to Casa Lumi, your table is waiting.' });
+  assert.equal(env.requests.filter((r) => /voice\/preview/.test(r.url) && r.body && r.body.generate === true).length, 0, 'no recording is asked for');
+});
+
+test('L. a page renamed or moved to another industry elsewhere: the standard greeting follows the server, an own greeting stays the owner\'s', async () => {
+  const renamed = serverPage({ businessName: 'Trattoria Lumi', useCase: 'fitness' });
+  // German has no own greeting on this page: the editor shows the standard one
+  const env = await openEditor();
+  await env.change('se-voice-lang', 'de');
+  assert.match(env.el('se-voice-greeting').value, /Casa Lumi/);
+  env.load = renamed;
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT]);
+  let v = savedSections(env.saves()[0]).voice;
+  assert.deepEqual(v.customGreeting, { en: 'Hello and welcome to Casa Lumi, your table is waiting.' }, 'the standard greeting was not frozen as an own text with the old name');
+  assert.equal(env.saves()[0].body.businessName, 'Trattoria Lumi'); assert.equal(env.saves()[0].body.useCase, 'fitness');
+  assert.match(env.el('se-voice-greeting').value, /Trattoria Lumi/, 'and the editor now shows the greeting that will be spoken');
+  // an own German greeting written here is saved exactly as written
+  const own = await openEditor();
+  await own.change('se-voice-lang', 'de');
+  await own.change('se-voice-greeting', 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  own.load = renamed;
+  await own.click(own.publish2);
+  v = savedSections(own.saves()[0]).voice;
+  assert.equal(v.customGreeting.de, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  assert.equal(own.el('se-voice-greeting').value, 'Willkommen bei Casa Lumi. Heute: frische Tagliatelle.');
+  // no recording is requested by publishing in either case
+  for (const e of [env, own]) assert.equal(e.requests.filter((r) => /voice\/preview/.test(r.url) && r.body && r.body.generate === true).length, 0);
+});
+
+test('L. the website scan: what it generates is never a conflict and is never sent back stale — but a badge it changed is put to the owner', async () => {
+  const scanned = (badge) => ({ sections: { hero: Object.assign({}, LOADED.hero, { aiTitle: 'Casa Lumi — fresh pasta in Ulm', aiSubtitle: 'Scanned again', badge }), featured: [{ enabled: true, icon: 'z', title: 'New from the scan', description: 'x' }],
+    businessInfo: { hours: 'Mo-So 10-23', address: 'Hauptstr. 1' }, actionLinks: [{ label: 'Reserve', url: 'https://casalumi.example/reserve' }], siteContent: 'newly scanned text', aiGenerated: true, aiGeneratedAt: '2030-01-01T00:00:00.000Z', crawlLocked: true } });
+  // the scan ran and left the badge as it was
+  const env = await openEditor();
+  await env.change('se-hero-subtitle', 'Neu am Münsterplatz');
+  env.load = serverPage(scanned('Restaurant'));
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT], 'no second question');
+  let s = savedSections(env.saves()[0]); const fresh = JSON.parse(env.load.sections);
+  for (const key of ['featured', 'businessInfo', 'actionLinks', 'siteContent', 'aiGeneratedAt']) assert.deepEqual(s[key], fresh[key], key + ': the scan\'s new value, not the one loaded earlier');
+  assert.equal(s.hero.aiTitle, 'Casa Lumi — fresh pasta in Ulm'); assert.equal(s.hero.aiSubtitle, 'Scanned again');
+  assert.equal(s.hero.subtitle, 'Neu am Münsterplatz');
+  // the scan replaced the badge
+  const b = await openEditor();
+  await b.change('se-hero-badge', 'Trattoria');
+  b.load = serverPage(scanned('Italian Restaurant'));
+  let n = 0; b.window.confirm = (text) => { b.confirms.push(text); n += 1; return n === 1; };
+  await b.click(b.publish2);
+  assert.equal(b.confirms.length, 2);
+  assert.match(b.confirms[1], /The badge on the page is now "Italian Restaurant"; publishing sets it to "Trattoria"\./);
+  assert.match(b.confirms[1], /It may have been changed by the automatic website scan\./);
+  assert.equal(b.saves().length, 0, 'not overwritten without the owner\'s decision');
+  // a badge changed elsewhere without a scan is put to the owner as well, without that remark
+  const c = await openEditor();
+  c.load = serverPage({ sections: { hero: Object.assign({}, LOADED.hero, { badge: 'Bistro' }) } });
+  n = 0; c.window.confirm = (text) => { c.confirms.push(text); n += 1; return n === 1; };
+  await c.click(c.publish2);
+  assert.match(c.confirms[1], /The badge on the page is now "Bistro"; publishing sets it to "Restaurant"\./);
+  assert.ok(!/website scan/.test(c.confirms[1]));
+  assert.equal(c.saves().length, 0);
+});
+
+test('L. visits and the audio the server attaches do not raise a question', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+  env.load = serverPage({ scanCount: 9999, updatedAt: '2030-01-01T00:00:00.000Z', sections: { voice: Object.assign({}, LOADED.voice, { audioUrl: 'https://res.cloudinary.example/audio/new.mp3', audioFor: 'fp-new', audioLang: 'en', previewUrl: 'https://res.cloudinary.example/audio/p9.mp3', previewFor: 'fp-p9', previewLang: 'en', previewCache: { 'fp-p9': 'https://res.cloudinary.example/audio/p9.mp3' } }) } });
+  await env.click(env.publish2);
+  assert.deepEqual(env.confirms, [CONFIRM_TEXT]);
+  assert.equal(env.saves().length, 1);
+});
+
+test('L. if the page cannot be read or is not this page, nothing is published; the changes stay; a later try works', async () => {
+  for (const [what, load] of FAILED_LOADS) {
+    const env = await openEditor();
+    await env.change('se-hero-title', 'Casa Lumi Ulm');
+    const draftBefore = env.storage.get(DRAFT_KEY);
+    const good = env.load; env.load = load;
+    const from = env.requests.length;
+    await env.click(env.publish2);
+    assert.deepEqual(env.confirms, [CONFIRM_TEXT], what);
+    assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG], what + ': the failed read, and no save');
+    assert.equal(env.saves().length, 0, what);
+    assert.equal(env.status(), CHECK_FAILED_TEXT, what);
+    assert.deepEqual(draftContent(env.storage.get(DRAFT_KEY)), draftContent(draftBefore), what + ': the draft holds exactly what it held');
+    assert.equal(env.el('se-hero-title').value, 'Casa Lumi Ulm', what);
+    assert.equal(env.publish2.disabled, false, what + ': the button can be used again');
+    assert.deepEqual(env.legacy, { publish: 0, draft: 0, localDraft: 0 });
+    env.load = good;
+    await env.click(env.publish2);
+    assert.equal(env.saves().length, 1, what + ': works once the page can be read');
+    assert.equal(savedSections(env.saves()[0]).hero.title, 'Casa Lumi Ulm');
+  }
+});
+
+test('L. rapid clicks while the page is being read, and while the question is open: still one read and one save', async () => {
+  const env = await openEditor();
+  await env.change('se-hero-title', 'Casa Lumi Ulm');
+  env.holdLoad = true;
+  const from = env.requests.length;
+  await env.click(env.publish2);
+  assert.equal(env.publish1.disabled, true); assert.equal(env.publish2.disabled, true);
+  assert.equal(env.status(), 'Checking...');
+  for (let i = 0; i < 4; i++) { await env.click(env.publish1); await env.click(env.publish2); }
+  env.window.SmartEditor.publish(); env.window.publishPage(); await settle();
+  env.publish2.disabled = false; await env.click(env.publish2); env.publish2.disabled = true;
+  assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG], 'one read so far, no save yet');
+  assert.equal(env.confirms.length, 1);
+  await env.releaseLoad();
+  assert.deepEqual(sentSince(env, from), ['GET /api/lp/' + SLUG, 'POST /lp', 'GET /api/lp/' + SLUG]);
+  assert.equal(env.saves().length, 1);
+  assert.equal(env.publish2.disabled, false);
+});
+
 // ── K. Pages without a Smart Editor page ───────────────────────
 test('K. where there is no page for the Smart Editor (no slug), the buttons are left entirely to the page, as before', async () => {
   const env = await openEditor({ slug: '' });
@@ -551,8 +1026,10 @@ test('K. where there is no page for the Smart Editor (no slug), the buttons are 
   const r = await env.click(env.publish1);
   assert.ok(!r.stoppedAtDocument);
   assert.equal(env.legacy.publish, 1, 'the page\'s own handler runs');
-  await env.click(env.draftBtn);
-  assert.equal(env.legacy.draft, 2);
+  const d = await env.click(env.draftBtn);
+  assert.ok(!d.stoppedAtDocument);
+  assert.equal(env.legacy.draft, 2, 'the page\'s own Save Draft, untouched');
+  assert.equal(env.storage.has(DRAFT_KEY), false);
 });
 
 // ── runner ──────────────────────────────────────────────────────
