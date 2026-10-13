@@ -32,6 +32,6 @@
  * No credentials belong in this file. It is public.
  */
 window.QRAIVY_STAGING_CONFIG = {
-  hosts: [],
-  api: ''
+  hosts: ['voice-preview.qraivy.com'],
+  api: 'https://qraivy-voice-api-voice-staging.up.railway.app'
 };

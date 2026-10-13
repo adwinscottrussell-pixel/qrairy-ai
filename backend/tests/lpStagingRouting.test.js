@@ -74,19 +74,53 @@ const PRODUCTION_SITES = ['www.qraivy.com', 'qraivy.com', 'preview.qraivy.com', 
 const NOT_API = ['https://clerk.qraivy.com/v1/client', 'https://res.cloudinary.com/x/video/upload/v1/qraivy-voices/a.mp3', 'https://fonts.googleapis.com/css2', 'https://www.qraivy.com/pricing.html', 'https://qraivy.com/icon-192.png', 'https://api.qrserver.com/v1/create-qr-code/'];
 
 // ── A. Production is unchanged ─────────────────────────────────
-test('A. the committed configuration is empty: no staging host, no staging API', () => {
+// The one staging connection this branch is configured for.
+const COMMITTED_STAGING_SITE = 'voice-preview.qraivy.com';
+const COMMITTED_STAGING_API = 'https://qraivy-voice-api-voice-staging.up.railway.app';
+
+test('A. the committed configuration connects exactly one staging host to one staging API; production and unknown hosts are unaffected', () => {
   const b = browser({ hostname: 'www.qraivy.com', useCommittedConfig: true });
-  assert.deepEqual(JSON.parse(JSON.stringify(b.window.QRAIVY_STAGING_CONFIG)), { hosts: [], api: '' });
-  assert.equal(b.routing.mode, 'production');
+  assert.deepEqual(JSON.parse(JSON.stringify(b.window.QRAIVY_STAGING_CONFIG)), { hosts: [COMMITTED_STAGING_SITE], api: COMMITTED_STAGING_API });
+  // every production site: production routing, the browser's own fetch, addresses untouched
+  for (const hostname of PRODUCTION_SITES) {
+    const p = browser({ hostname, useCommittedConfig: true });
+    assert.equal(p.routing.mode, 'production', hostname);
+    assert.equal(p.routing.api, 'https://api.qraivy.com', hostname);
+    assert.equal(p.window.fetch, p.realFetch, hostname);
+    for (const u of PRODUCTION_REQUESTS) assert.equal(p.routing.url(u), u, hostname + ' ' + u);
+  }
+  // the staging host: every production API address goes to the staging API, nowhere else
+  const s = browser({ hostname: COMMITTED_STAGING_SITE, useCommittedConfig: true });
+  assert.equal(s.routing.mode, 'staging');
+  assert.equal(s.routing.api, COMMITTED_STAGING_API);
+  for (const u of PRODUCTION_REQUESTS) assert.ok(s.routing.url(u).indexOf(COMMITTED_STAGING_API + '/') === 0, u + ' -> ' + s.routing.url(u));
+  // any other host stays blocked: nothing falls back to production
+  for (const hostname of ['qraivy-voice-staging.vercel.app', 'localhost', 'plan-preview.qraivy.com', 'some-other-preview.qraivy.com', 'voice-preview.qraivy.com.evil.example', 'xvoice-preview.qraivy.com']) {
+    const u = browser({ hostname, useCommittedConfig: true });
+    assert.equal(u.routing.mode, 'unknown-host', hostname);
+    assert.equal(u.routing.api, '', hostname);
+    for (const req of PRODUCTION_REQUESTS) assert.equal(u.routing.url(req), 'about:blank#qraivy-api-blocked', hostname + ' ' + req);
+  }
 });
 
-test('A. no staging hostname is written in the product code', () => {
+test('A. no staging hostname is written in the product code; the configuration file holds the one connection and nothing else', () => {
   const allowed = 'qrairy-ai-production.up.railway.app';
-  for (const [name, src] of [['lp-routing.js', ROUTING_JS], ['staging-config.js', CONFIG_JS], ['publicOrigins.js', read(SRC, 'config', 'publicOrigins.js')]]) {
+  for (const [name, src] of [['lp-routing.js', ROUTING_JS], ['publicOrigins.js', read(SRC, 'config', 'publicOrigins.js')]]) {
     const hosts = (src.split(allowed).join('').match(/[a-z0-9-]+\.(up\.railway\.app|vercel\.app)/gi) || []);
     assert.deepEqual(hosts, [], name);
     assert.ok(!/staging[a-z0-9-]*\.qraivy\.com|voice[a-z0-9-]*\.qraivy\.com/i.test(src), name);
   }
+  // staging-config.js is the single place a staging address may appear
+  const window = {};
+  vm.runInNewContext(CONFIG_JS, { window });
+  const cfg = JSON.parse(JSON.stringify(window.QRAIVY_STAGING_CONFIG));
+  assert.deepEqual(Object.keys(cfg).sort(), ['api', 'hosts']);
+  assert.deepEqual(cfg.hosts, [COMMITTED_STAGING_SITE]);
+  assert.equal(cfg.api, COMMITTED_STAGING_API);
+  const production = PRODUCTION_SITES.concat(['api.qraivy.com', 'pages.qraivy.com', allowed]);
+  assert.ok(production.indexOf(cfg.hosts[0]) === -1 && production.indexOf(new URL(cfg.api).hostname) === -1);
+  const code = CONFIG_JS.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.deepEqual((code.match(/[a-z0-9-]+(\.[a-z0-9-]+)*\.(up\.railway\.app|vercel\.app|qraivy\.com)/gi) || []).sort(), [COMMITTED_STAGING_SITE, new URL(COMMITTED_STAGING_API).hostname].sort());
 });
 
 test('A. on every production host nothing is touched: same fetch, same addresses', () => {

@@ -309,7 +309,7 @@ test('F. no bypass, no built-in identity, and nothing outside sign-in verificati
   ]);
   // admin, manager and StadtPocket verification are untouched (and unreachable on staging: the gate answers 404 first)
   const changed = execFileSync('git', ['diff', '79c6c86', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
-  for (const f of changed) assert.ok(!/stadtpocket|adminMiddleware|locationManagerAuth|deals|frontend\//i.test(f), 'untouched: ' + f);
+  for (const f of changed) assert.ok(f === 'frontend/public/js/staging-config.js' || !/stadtpocket|adminMiddleware|locationManagerAuth|deals|frontend\//i.test(f), 'untouched: ' + f);
 });
 
 // ── runner ──────────────────────────────────────────────────────
