@@ -173,24 +173,33 @@
   // attached, carrying a fingerprint, and not marked stale by the server.
   var LTXT = {
     en: {
-      unpublished: 'Not live yet. Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.',
-      live: 'Live \u2713 This is the greeting your visitors hear.',
-      pending: 'Published. The welcome audio will be live in a moment.',
-      noaudio: 'Published, but visitors hear no welcome audio yet.',
-      below: ' See the message below.',
-      older: 'Published, but visitors still hear an earlier recording. Click Publish to update the audio to this greeting.',
-      off: 'Voice Welcome is off on your live page.'
+      unpublished: ['Not live yet.', 'Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.'],
+      live: ['Live \u2713', 'This is the greeting your visitors hear.'],
+      pending: ['Published.', 'The welcome audio will be live in a moment.'],
+      noaudio: ['Published, but visitors hear no welcome audio yet.', ''],
+      below: 'See the message below.',
+      older: ['Published, but visitors still hear an earlier recording.', 'Click Publish to update the audio to this greeting.'],
+      off: ['Voice Welcome is off on your live page.', '']
     },
     de: {
-      unpublished: 'Noch nicht live. Ihre Besucher erhalten weiterhin die ver\u00f6ffentlichte Version. Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um diese Begr\u00fc\u00dfung live zu schalten. Ein gespeicherter Entwurf oder eine Vorschau ver\u00f6ffentlicht sie nicht.',
-      live: 'Live \u2713 Diese Begr\u00fc\u00dfung h\u00f6ren Ihre Besucher.',
-      pending: 'Ver\u00f6ffentlicht. Die Willkommens-Audiodatei ist gleich live.',
-      noaudio: 'Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch keine Willkommens-Audiodatei.',
-      below: ' Siehe Hinweis unten.',
-      older: 'Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch eine fr\u00fchere Aufnahme. Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um die Audiodatei auf diese Begr\u00fc\u00dfung zu aktualisieren.',
-      off: 'Voice Welcome ist auf Ihrer Live-Seite ausgeschaltet.'
+      unpublished: ['Noch nicht live.', 'Ihre Besucher erhalten weiterhin die ver\u00f6ffentlichte Version. Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um diese Begr\u00fc\u00dfung live zu schalten. Ein gespeicherter Entwurf oder eine Vorschau ver\u00f6ffentlicht sie nicht.'],
+      live: ['Live \u2713', 'Diese Begr\u00fc\u00dfung h\u00f6ren Ihre Besucher.'],
+      pending: ['Ver\u00f6ffentlicht.', 'Die Willkommens-Audiodatei ist gleich live.'],
+      noaudio: ['Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch keine Willkommens-Audiodatei.', ''],
+      below: 'Siehe Hinweis unten.',
+      older: ['Ver\u00f6ffentlicht, aber Ihre Besucher h\u00f6ren noch eine fr\u00fchere Aufnahme.', 'Klicken Sie auf \u201eVer\u00f6ffentlichen\u201c, um die Audiodatei auf diese Begr\u00fc\u00dfung zu aktualisieren.'],
+      off: ['Voice Welcome ist auf Ihrer Live-Seite ausgeschaltet.', '']
     }
   };
+  // How the panel looks for what it says: a warning (something the owner
+  // should act on or know), a confirmation, or plain information. Colours
+  // are the ones this tab already uses, on the editor's dark background.
+  var TONES = {
+    amber: { bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.38)', head: '#fbbf24', body: '#f0ece0' },
+    green: { bg: 'rgba(34,212,126,0.08)', border: 'rgba(34,212,126,0.32)', head: '#22d47e', body: '#f0ece0' },
+    neutral: { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.10)', head: '#f0ece0', body: 'rgba(240,244,248,0.75)' }
+  };
+  var STATE_TONE = { unpublished: 'amber', noaudio: 'amber', older: 'amber', live: 'green', pending: 'neutral', off: 'neutral' };
   function ltxt() { return LTXT[window._qraivyLang === 'de' ? 'de' : 'en']; }
   // What was saved by a publish made in this editor, until the page is read
   // from the server again (state()._db is then a newer record and wins).
@@ -225,6 +234,8 @@
   // The line itself. It is added by this script, right after the row with
   // the greeting's label and character count, so the page's markup does not
   // have to carry it.
+  // The panel: an information icon, a heading and the rest of the sentence.
+  // It is announced as a status; the icon is decoration only.
   function liveEl() {
     var el = $(IDS.live);
     if (el) return el;
@@ -234,22 +245,49 @@
     el.id = IDS.live;
     el.setAttribute('role', 'status');
     el.setAttribute('aria-live', 'polite');
-    el.style.cssText = 'display:none;margin-top:8px;font-size:.72rem;line-height:1.5;color:rgba(240,244,248,0.6);';
+    el.style.cssText = 'display:none;align-items:flex-start;gap:10px;margin-top:10px;padding:11px 13px;border-radius:8px;border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);font-size:.8rem;line-height:1.55;';
+    var icon = document.createElement('span');
+    icon.id = IDS.live + '-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = 'i';
+    icon.style.cssText = 'flex:0 0 auto;width:18px;height:18px;margin-top:1px;border-radius:50%;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;font-style:normal;line-height:1;';
+    var text = document.createElement('div');
+    text.style.cssText = 'flex:1 1 auto;min-width:0;overflow-wrap:anywhere;';
+    var head = document.createElement('strong');
+    head.id = IDS.live + '-head';
+    head.style.cssText = 'font-weight:700;';
+    var body = document.createElement('span');
+    body.id = IDS.live + '-body';
+    text.appendChild(head);
+    text.appendChild(body);
+    el.appendChild(icon);
+    el.appendChild(text);
     row.parentNode.insertBefore(el, row.nextSibling);
     return el;
   }
   function paintLive() {
     var el = liveEl(); if (!el) return;
-    var st = liveState(), t = ltxt(), text = st ? t[st] : '';
+    var icon = $(IDS.live + '-icon'), head = $(IDS.live + '-head'), body = $(IDS.live + '-body');
+    if (!icon || !head || !body) return;
+    var st = liveState(), t = ltxt(), parts = st ? t[st] : null;
+    var heading = parts ? parts[0] : '', rest = parts ? parts[1] : '';
     if (st === 'noaudio') {
       // A page that was loaded with a note of why it has no recording says so below, too.
       var pub = published(), below = $(IDS.audio);
       if (pub && pub.failure && below && !below.textContent) showAudioStatus(pub.failure.code === 'limit' ? ui().limited : ui().failed, '#f87171');
-      if (below && below.textContent) text += t.below;
+      if (below && below.textContent) rest = t.below;
     }
-    el.textContent = text;
-    el.style.display = text ? 'block' : 'none';
-    el.style.color = st === 'live' ? '#22d47e' : ((st === 'unpublished' || st === 'noaudio' || st === 'older') ? '#f59e0b' : 'rgba(240,244,248,0.6)');
+    var tone = TONES[STATE_TONE[st] || 'neutral'];
+    head.textContent = heading;
+    body.textContent = rest ? ' ' + rest : '';
+    el.style.display = heading ? 'flex' : 'none';
+    el.style.background = tone.bg;
+    el.style.borderColor = tone.border;
+    // A check mark for the confirmation, the information sign for everything else.
+    icon.textContent = st === 'live' ? '✓' : 'i';
+    icon.style.color = tone.head;
+    head.style.color = tone.head;
+    body.style.color = tone.body;
   }
 
   // ── Audio preview ────────────────────────────────────────────

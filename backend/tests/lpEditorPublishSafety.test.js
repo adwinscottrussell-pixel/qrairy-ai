@@ -1131,7 +1131,13 @@ test('K. where there is no page for the Smart Editor (no slug), the buttons are 
 // the editor with the published page and nothing else, so a draft on this
 // device or a preview recording can never make it say "Live".
 const LIVE_ID = 'se-voice-live-status';
-const AMBER = '#f59e0b', GREEN = '#22d47e', NEUTRAL = 'rgba(240,244,248,0.6)';
+// The colour of the panel's heading says which kind of message it is.
+const AMBER = '#fbbf24', GREEN = '#22d47e', NEUTRAL = '#f0ece0';
+const PANEL = {
+  [AMBER]: { background: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.38)', body: '#f0ece0' },
+  [GREEN]: { background: 'rgba(34,212,126,0.08)', border: 'rgba(34,212,126,0.32)', body: '#f0ece0' },
+  [NEUTRAL]: { background: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.10)', body: 'rgba(240,244,248,0.75)' },
+};
 const LIVE_TEXT = {
   en: {
     unpublished: 'Not live yet. Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.',
@@ -1155,7 +1161,13 @@ const LIVE_TEXT = {
 const PUBLISHED_GREETING = 'Hello and welcome to Casa Lumi, your table is waiting.';
 // A published page with Voice on and audio that is a recording of its greeting.
 const livePage = (voice = {}, extra = {}) => serverPage(Object.assign({ sections: Object.assign({ voice: Object.assign({ enabled: true, language: 'en', voiceKey: 'sarah', customGreeting: { en: PUBLISHED_GREETING }, audioUrl: 'https://res.cloudinary.example/audio/published.mp3', audioFor: 'fp-published', audioLang: 'en' }, voice) }, extra.sections || {}) }, extra.page || {}));
-const liveLine = (env) => { const el = env.el(LIVE_ID); return el ? { text: el.textContent, color: el.style.color, shown: el.style.display !== 'none' } : null; };
+// What the panel says (heading + rest, as it reads) and how it looks.
+const liveLine = (env) => {
+  const el = env.el(LIVE_ID); if (!el) return null;
+  const head = env.el(LIVE_ID + '-head'), body = env.el(LIVE_ID + '-body'), icon = env.el(LIVE_ID + '-icon');
+  return { text: head.textContent + body.textContent, heading: head.textContent, rest: body.textContent, color: head.style.color, shown: el.style.display !== 'none',
+    background: el.style.background, border: el.style.borderColor, bodyColor: body.style.color, iconColor: icon.style.color, el, head, body, icon };
+};
 // The same state read in both interface languages.
 async function inBoth(env, check) {
   for (const ui of ['en', 'de']) {
@@ -1177,11 +1189,105 @@ test('N. the line sits directly below the greeting field, is announced like the 
   assert.equal(siblings[at - 2].id, 'se-voice-greeting', 'field ...');
   assert.ok(siblings[at - 1].querySelector('[id="se-voice-greeting-status"]'), '... its label and count ...');
   assert.ok(siblings.indexOf(env.el('se-voice-preview')) > at && siblings.indexOf(env.el('se-voice-greeting-reset')) > at, '... then this line, before the preview box');
-  assert.match(el.style.cssText, /font-size:\.72rem;line-height:1\.5;/, 'same size as the preview status line');
+  assert.ok(siblings[at + 1] && siblings[at + 1].tagName === 'P', 'and the neutral hint follows it');
   assert.ok(!SMART_EDITOR.includes(LIVE_ID) && !EDITOR_PAGE.includes(LIVE_ID), 'added by the greeting script itself');
   // the fixed hint no longer claims the field is what visitors hear
   assert.ok(!SMART_EDITOR.includes('This is what visitors hear'));
   assert.ok(SMART_EDITOR.includes('Each language keeps its own text. Your live page and its audio change only when you publish.</p>'));
+});
+
+test('N. the notice is a rounded panel with an information icon, a bright heading and readable body text', async () => {
+  const env = await openEditor({ load: livePage() });
+  await env.change('se-voice-greeting', PUBLISHED_GREETING + ' test');
+  const line = liveLine(env);
+  // the approved wording, with its first sentence as the heading
+  assert.equal(line.heading, 'Not live yet.');
+  assert.equal(line.rest, ' Visitors still get the published version. Click Publish to make this greeting live. Saving a draft or generating a preview does not publish it.');
+  assert.equal(line.text, LIVE_TEXT.en.unpublished);
+  assert.equal(line.head.tagName, 'STRONG', 'the heading is emphasised for screen readers and sighted users alike');
+  assert.match(line.head.style.cssText, /font-weight:700;/);
+  // a defined panel: dark amber fill, subtle amber border, rounded like the editor's other boxes, with room inside
+  const css = line.el.style.cssText;
+  assert.match(css, /border-radius:8px;/);
+  assert.match(css, /border:1px solid /);
+  assert.match(css, /padding:11px 13px;/);
+  assert.match(css, /margin-top:10px;/);
+  assert.equal(line.shown, true);
+  assert.equal(line.el.style.display, 'flex');
+  assert.deepEqual([line.background, line.border], ['rgba(245,158,11,0.10)', 'rgba(245,158,11,0.38)']);
+  assert.deepEqual([line.color, line.bodyColor, line.iconColor], ['#fbbf24', '#f0ece0', '#fbbf24'], 'bright amber heading and icon, light body text');
+  // not small, not faint
+  const size = Number(/font-size:(\.\d+)rem;/.exec(css)[1]);
+  assert.ok(size >= 0.78, 'at least as large as the editor\'s field text: ' + size);
+  assert.match(css, /line-height:1\.55;/);
+  assert.ok(!/rgba\(240,244,248,0\.[0-6]\d*\)/.test(line.bodyColor), 'body text is not one of the faint hint greys');
+  // wraps instead of overflowing on a narrow screen
+  const wrap = line.head.parentNode;
+  assert.match(wrap.style.cssText, /min-width:0;/);
+  assert.match(wrap.style.cssText, /overflow-wrap:anywhere;/);
+  assert.match(css, /align-items:flex-start;/, 'the icon stays at the first line when the text wraps');
+  assert.ok(!/white-space:nowrap|overflow:hidden|text-overflow/.test(css + wrap.style.cssText));
+  // the icon: on the left, decorative, a fixed small circle
+  assert.equal(line.el.children[0], line.icon);
+  assert.equal(line.el.children[1], wrap);
+  assert.equal(line.icon.getAttribute('aria-hidden'), 'true');
+  assert.equal(line.icon.textContent, 'i');
+  assert.match(line.icon.style.cssText, /flex:0 0 auto;width:18px;height:18px;/);
+  assert.match(line.icon.style.cssText, /border-radius:50%;/);
+  // announced once, as a status
+  assert.deepEqual([line.el.getAttribute('role'), line.el.getAttribute('aria-live')], ['status', 'polite']);
+  assert.equal(env.document.querySelectorAll('[role="status"]').filter((x) => x.id === LIVE_ID).length, 1);
+  // German: the same split
+  env.window._qraivyLang = 'de'; env.window.SmartEditor.renderAll(); await settle();
+  await env.change('se-voice-greeting', PUBLISHED_GREETING + ' test');
+  const de = liveLine(env);
+  assert.equal(de.heading, 'Noch nicht live.');
+  assert.equal(de.rest, ' Ihre Besucher erhalten weiterhin die veröffentlichte Version. Klicken Sie auf „Veröffentlichen“, um diese Begrüßung live zu schalten. Ein gespeicherter Entwurf oder eine Vorschau veröffentlicht sie nicht.');
+});
+
+test('N. each state keeps its meaning in the panel: amber warning, green confirmation, neutral information', async () => {
+  const cases = [
+    ['unpublished', AMBER, async () => { const e = await openEditor({ load: livePage() }); await e.change('se-voice-greeting', 'Edited.'); return e; }, ['Not live yet.', 'Noch nicht live.']],
+    ['live', GREEN, () => openEditor({ load: livePage() }), ['Live ✓', 'Live ✓']],
+    ['noaudio', AMBER, () => openEditor({ load: livePage({ audioStale: true, audioError: { code: 'failed', for: 'fp-x' } }) }), ['Published, but visitors hear no welcome audio yet.', 'Veröffentlicht, aber Ihre Besucher hören noch keine Willkommens-Audiodatei.']],
+    ['older', AMBER, () => openEditor({ load: livePage({ audioFor: undefined }) }), ['Published, but visitors still hear an earlier recording.', 'Veröffentlicht, aber Ihre Besucher hören noch eine frühere Aufnahme.']],
+    ['off', NEUTRAL, () => openEditor({ load: serverPage() }), ['Voice Welcome is off on your live page.', 'Voice Welcome ist auf Ihrer Live-Seite ausgeschaltet.']],
+    ['pending', NEUTRAL, async () => {
+      const e = await openEditor({ load: livePage(), holdSave: true });
+      e.saveVoice = () => ({ enabled: true, pending: true, status: 'pending', audioFor: 'fp-new' });
+      await e.change('se-voice-greeting', 'On its way.'); await e.click(e.publish2);
+      e.load = livePage({ customGreeting: { en: 'On its way.' }, audioStale: true }); await e.releaseSave(); return e;
+    }, ['Published.', 'Veröffentlicht.']],
+  ];
+  for (const [state, tone, open, headings] of cases) {
+    const env = await open();
+    for (const [i, ui] of ['en', 'de'].entries()) {
+      env.window._qraivyLang = ui; env.window.SmartEditor.renderAll(); await settle();
+      const line = liveLine(env);
+      assert.equal(line.heading, headings[i], state + ' / ' + ui);
+      assert.equal(line.text, LIVE_TEXT[ui][state] + (state === 'noaudio' ? LIVE_TEXT[ui].below : ''), state + ' / ' + ui);
+      assert.deepEqual([line.color, line.iconColor, line.background, line.border, line.bodyColor], [tone, tone, PANEL[tone].background, PANEL[tone].border, PANEL[tone].body], state + ' / ' + ui);
+      assert.equal(line.el.style.display, 'flex');
+      // the confirmation carries a check mark; every other state the information sign
+      assert.equal(line.icon.textContent, state === 'live' ? '✓' : 'i', state + ' / ' + ui);
+      assert.equal(line.icon.getAttribute('aria-hidden'), 'true');
+      assert.match(line.icon.style.cssText, /flex:0 0 auto;width:18px;height:18px;/);
+    }
+  }
+  // the icon follows the state as it changes: Live -> edited -> put back
+  const moving = await openEditor({ load: livePage() });
+  assert.equal(liveLine(moving).icon.textContent, '✓');
+  await moving.change('se-voice-greeting', PUBLISHED_GREETING + ' test');
+  assert.equal(liveLine(moving).icon.textContent, 'i');
+  await moving.change('se-voice-greeting', PUBLISHED_GREETING);
+  assert.equal(liveLine(moving).icon.textContent, '✓');
+  assert.equal(liveLine(moving).el.children.length, 2, 'still one icon and one text block');
+  // a state without a second sentence leaves no stray space behind the heading
+  const off = liveLine(await openEditor({ load: serverPage() }));
+  assert.equal(off.rest, '');
+  // the preview status keeps its clearer wording
+  const src = read(PUB, 'js', 'voice-greeting-editor.js');
+  assert.ok(src.includes("ready: 'Preview audio matches this greeting.'") && src.includes("ready: 'Die Vorschau-Audiodatei passt zu dieser Begrüßung.'"));
 });
 
 test('N. Live: the page is published as shown and its audio is a recording of that greeting', async () => {
