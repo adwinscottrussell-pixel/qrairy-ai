@@ -307,9 +307,11 @@ test('F. no bypass, no built-in identity, and nothing outside sign-in verificati
     '-    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });',
     '+    const payload = await verifyClerkToken(token);',
   ]);
-  // admin, manager and StadtPocket verification are untouched (and unreachable on staging: the gate answers 404 first)
-  const changed = execFileSync('git', ['diff', '79c6c86', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
-  for (const f of changed) assert.ok(f === 'frontend/public/js/staging-config.js' || !/stadtpocket|adminMiddleware|locationManagerAuth|deals|frontend\//i.test(f), 'untouched: ' + f);
+  // admin, manager and StadtPocket verification are untouched (and unreachable on staging: the gate answers 404 first).
+  // Compared between the two commits of this step itself (79c6c86 -> 0913d6b), so it describes what the
+  // sign-in change did and keeps holding as later, unrelated work lands on the branch.
+  const changed = execFileSync('git', ['diff', '79c6c86', '0913d6b', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+  for (const f of changed) assert.ok(!/stadtpocket|adminMiddleware|locationManagerAuth|deals|frontend\//i.test(f), 'untouched: ' + f);
 });
 
 // ── runner ──────────────────────────────────────────────────────
