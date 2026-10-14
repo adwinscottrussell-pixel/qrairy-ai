@@ -769,7 +769,21 @@ test('F. the editor page loads the greeting data and field script before the edi
   const routingHead = withoutVoice.slice(withoutVoice.indexOf('<script src="js/staging-config.js"></script>'), withoutVoice.indexOf('<meta charset="UTF-8"/>'));
   assert.equal(routingHead.split('\n').length - 1, 3);
   const withoutRouting = withoutVoice.replace(routingHead, '').replace('iframeEl.src = window.QRAIVY_ROUTING.url(_iframeSlug ? ', 'iframeEl.src = _iframeSlug ? ').replace('"&preview=1")));', '"&preview=1"));');
-  assert.equal(withoutRouting, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
+  // The Admin sidebar (tests/adminNavShell.test.js) is the only other addition: its two
+  // scripts and layout styles in <head>, its markup and the content wrapper at the top of
+  // <body> (which also lost the unused customer-shell attributes), and one line in
+  // applyLang that hands the sidebar labels to the shell.
+  const headStart = withoutRouting.indexOf('<script src="js/qraivy-lang.js"></script>\n');
+  const headEnd = withoutRouting.indexOf('</style>\n', headStart) + '</style>\n'.length;
+  const bodyStart = withoutRouting.indexOf('<body style=');
+  const bodyTagEnd = withoutRouting.indexOf('\n', bodyStart) + 1;
+  const bodyEnd = withoutRouting.indexOf('<div id="main-content">\n') + '<div id="main-content">\n'.length;
+  assert.ok(headStart !== -1 && bodyStart > headEnd && bodyEnd > bodyTagEnd, 'the sidebar additions are where they belong');
+  const withoutSidebar = (withoutRouting.slice(0, headStart) + withoutRouting.slice(headEnd, bodyStart)
+    + withoutRouting.slice(bodyStart, bodyTagEnd).replace('<body style=', '<body data-shell="customer" data-active-nav="nav-pages" style=')
+    + withoutRouting.slice(bodyEnd))
+    .replace('    // Sidebar labels and the language selector come from the Admin shell.\n    if (window.QraivyShell) window.QraivyShell.apply(lang);\n', '');
+  assert.equal(withoutSidebar, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
 });
 
 test('F. the editor script hooks the field into load, draft restore, render, language change and publish', () => {

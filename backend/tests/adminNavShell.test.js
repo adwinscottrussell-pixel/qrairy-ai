@@ -35,6 +35,7 @@ const ACTIVE = {
   'wallet-pass-studio.html': 'id="sb-wallet"',
   'loyalty-setup.html': 'id="sb-loyalty"',
   'designer-saved.html': null,
+  'smart-qr-detail.html': 'id="sb-smart-pages"',
 };
 const canonical = sidebar(read('dashboard.html')).replace(/class="sb-item active"/g, 'class="sb-item"');
 
@@ -114,6 +115,112 @@ test('mobile shell: no floating + button, no iOS zoom fields, page locked under 
   assert.ok(/html, body \{ overflow-x: hidden; \}/.test(mob));
   assert.ok(/MutationObserver\(sync\)/.test(read('js/admin-shell.js')), 'drawer scroll lock missing');
   assert.ok(/\.cust-drawer \{ visibility: hidden;/.test(read('dashboard.html')), 'closed Customers drawer must be hidden on mobile');
+});
+
+const SHELL_PAGES_WITH_OWN_CODE = ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html'];
+
+test('smart-qr-detail.html: uses the shared shell, no second navigation and no copied sidebar code', () => {
+  const src = read('smart-qr-detail.html');
+  assert.ok(!/data-shell=|data-active-nav=/.test(src), 'the unused customer-shell attributes are gone');
+  assert.ok(!/shell-customer\.js|shell-admin\.js|src="sidebar\.js"|sidebar\.css/.test(src), 'no second navigation system');
+  assert.ok(src.indexOf('src="js/admin-shell.js"') < src.indexOf('<body'), 'the shell is loaded in <head>');
+  assert.equal((src.match(/QraivyShell\.bindSidebar\(\)/g) || []).length, 1, 'bound once');
+  const after = src.slice(src.indexOf('<button id="mob-btn">'));
+  assert.ok(after.startsWith('<button id="mob-btn">&#x2630;</button>\n<div class="sb-overlay" id="sb-overlay"></div>\n<script>if (window.QraivyShell && window.QraivyShell.bindSidebar) window.QraivyShell.bindSidebar();</script>\n'), 'bound right after the markup, before the first paint');
+  const order = ['<div id="main-content">', 'id="sqd-topbar"', 'id="sqd-manage-panel"', 'id="sqd-editor-layout-wrap"'].map((x) => after.indexOf(x));
+  assert.ok(order.every((n, i) => n !== -1 && (i === 0 || n > order[i - 1])), 'top bar, QR workspace and editor sit in the content area');
+  assert.ok(!/getElementById\('sb-toggle'\)|getElementById\('sb-signout'\)|'sb-collapsed'/.test(src), 'no copy of the collapse / account / sign-out code');
+  assert.ok(src.includes('    if (window.QraivyShell) window.QraivyShell.apply(lang);\n  }\n\n  window.toggleLang'), 'the page language switch hands sidebar labels to the shell');
+  assert.equal((src.match(/<div id="cs-toast"/g) || []).length, 1, 'the page keeps its own single toast');
+  assert.ok(!SHELL_PAGES_WITH_OWN_CODE.some((p) => read(p).includes('bindSidebar')), 'pages with their own sidebar code do not also call bindSidebar (that would toggle twice)');
+});
+
+test('smart-qr-detail.html: the top bar follows the sidebar; one Dashboard link per width', () => {
+  const src = read('smart-qr-detail.html');
+  const at = src.indexOf('<style id="sqd-admin-shell">');
+  const css = src.slice(at, src.indexOf('</style>', at));
+  assert.ok(css.includes('#sqd-topbar { left: var(--sidebar-width) !important; transition: left .22s; }'));
+  assert.ok(css.includes('body.sb-collapsed #sqd-topbar { left: var(--sidebar-collapsed-width) !important; }'));
+  assert.ok(/#sqd-topbar > div:first-child > a\[href="dashboard\.html"\],\n#sqd-topbar > div:first-child > a\[href="dashboard\.html"\] \+ div \{ display: none !important; \}/.test(css), 'the sidebar carries the Dashboard link on desktop');
+  const phone = css.slice(css.indexOf('@media (max-width: 768px)'));
+  assert.ok(phone.includes('#sqd-topbar, body.sb-collapsed #sqd-topbar { left: 0 !important; padding-left: 64px !important; }'), 'full width on phones, room for the menu button');
+  assert.ok(phone.includes('#sqd-topbar > div:first-child > a[href="dashboard.html"] { display: flex !important; }'), 'on phones the top bar keeps its Dashboard link');
+  assert.ok(phone.includes('#main-content { padding-top: 0 !important; padding-bottom: 0 !important; }'), 'the page has its own top bar and no bottom nav');
+  assert.ok(phone.includes('#mob-btn { top: 5px; z-index: 220; }'), 'the menu button sits in the top bar, above it');
+  // the top-bar link this hides is the page's only plain "dashboard.html" link in the bar
+  const bar = src.slice(src.indexOf('<div id="sqd-topbar"'), src.indexOf('<!-- MANAGE OVERVIEW PANEL -->'));
+  assert.equal((bar.match(/href="dashboard\.html"/g) || []).length, 1);
+});
+
+test('smart-qr-detail.html: every QR and editor control is still there, once', () => {
+  const src = read('smart-qr-detail.html');
+  for (const id of ['ov-qr-canvas', 'ov-qr-canvas-wrap', 'ov-qr-fg', 'ov-qr-fg-hex', 'ov-qr-bg', 'ov-qr-bg-hex', 'ov-qr-size-btns', 'ov-qr-preset-btns', 'ov-qr-margin', 'ov-qr-margin-val', 'ov-qr-download', 'ov-qr-view-live',
+    'sqd-ov-delete-btn', 'sqd-ov-scans', 'sqd-ov-subs', 'sqd-ov-cvr', 'sqd-ov-url', 'sqd-ov-name', 'ov-tab-qr', 'ov-tab-lp', 'ov-tab-analytics', 'ov-panel-qr', 'ov-panel-lp', 'ov-panel-analytics',
+    'sqd-iframe', 'sqd-publish-btn-2', 'sqd-view-btn', 'sqd-download-btn', 'sqd-qr-img', 'sqd-tabs', 'sqd-tab-content', 'sqd-save-global-status']) {
+    assert.equal((src.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id);
+  }
+});
+
+// js/admin-shell.js bindSidebar(), run against a stand-in page.
+function shellEnv({ width = 1440, stored = null, clerk } = {}) {
+  const store = new Map(); if (stored !== null) store.set('sb-collapsed', stored);
+  const classes = () => { const s = new Set(); return { add: (c) => s.add(c), remove: (c) => s.delete(c), contains: (c) => s.has(c), toggle: (c, f) => { const on = f === undefined ? !s.has(c) : !!f; if (on) s.add(c); else s.delete(c); return on; } }; };
+  const el = (id) => ({ id, attrs: {}, classList: classes(), listeners: {}, textContent: '', style: {},
+    setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; },
+    addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); }, click() { (this.listeners.click || []).forEach((f) => f({ preventDefault() {} })); } });
+  const ids = {}; for (const id of ['sidebar', 'sb-toggle', 'sb-signout', 'sb-username', 'sb-avatar', 'mob-btn', 'sb-overlay']) ids[id] = el(id);
+  const env = { width, store, ids, queries: [], location: { href: 'https://www.qraivy.com/smart-qr-detail.html' } };
+  const mm = (q) => { const o = { media: q, listeners: [], get matches() { return env.width <= Number(/max-width: (\d+)px/.exec(q)[1]); }, addEventListener(t, f) { o.listeners.push(f); } }; env.queries.push(o); return o; };
+  const body = { classList: classes(), style: {} };
+  const window = { matchMedia: mm, location: env.location, Clerk: clerk, QRAIVY_LANGUAGE: 'en' };
+  const document = { readyState: 'complete', body, documentElement: {}, getElementById: (id) => ids[id] || null, querySelectorAll: () => [], addEventListener() {} };
+  vm.runInNewContext(read('js/admin-shell.js'), { window, document, localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) }, Promise, setTimeout: (f) => f() });
+  return Object.assign(env, { shell: window.QraivyShell, body, collapsed: () => [ids.sidebar.classList.contains('collapsed'), body.classList.contains('sb-collapsed')], resize(w) { env.width = w; env.queries.forEach((q) => q.listeners.forEach((f) => f())); } });
+}
+
+test('admin-shell.js bindSidebar: starts collapsed in narrower windows only when the owner has not chosen', () => {
+  const at = (width, stored) => { const e = shellEnv({ width, stored }); e.shell.bindSidebar(); return e.collapsed(); };
+  assert.deepEqual(at(1440, null), [false, false], 'wide: expanded');
+  assert.deepEqual(at(1100, null), [false, false], 'from 1100 px: expanded');
+  assert.deepEqual(at(1099, null), [true, true], 'below 1100 px: collapsed');
+  assert.deepEqual(at(820, null), [true, true]);
+  assert.deepEqual(at(1024, 'false'), [false, false], 'an owner who expanded it keeps it expanded');
+  assert.deepEqual(at(1440, 'true'), [true, true], 'an owner who collapsed it keeps it collapsed');
+  for (const stored of [null, 'true', 'false']) assert.deepEqual(at(390, stored), [false, false], 'the phone drawer always opens full width (' + stored + ')');
+});
+
+test('admin-shell.js bindSidebar: follows the window while nothing is chosen; the toggle choice is remembered', () => {
+  const e = shellEnv({ width: 1440 });
+  assert.equal(e.shell.bindSidebar(), true);
+  e.resize(1024); assert.deepEqual(e.collapsed(), [true, true]);
+  e.resize(1440); assert.deepEqual(e.collapsed(), [false, false]);
+  e.ids['sb-toggle'].click(); assert.deepEqual([e.collapsed(), e.store.get('sb-collapsed')], [[true, true], 'true']);
+  e.resize(1600); assert.deepEqual(e.collapsed(), [true, true], 'the choice wins over the window');
+  e.resize(390); assert.deepEqual(e.collapsed(), [false, false], 'phone: drawer full width');
+  e.resize(1600); assert.deepEqual(e.collapsed(), [true, true], 'back to the choice');
+  e.ids['sb-toggle'].click(); assert.deepEqual([e.collapsed(), e.store.get('sb-collapsed')], [[false, false], 'false']);
+  assert.equal(e.shell.bindSidebar(), false, 'a second call does nothing');
+  assert.equal(e.ids['sb-toggle'].listeners.click.length, 1, 'one toggle handler');
+  assert.equal(e.ids['sb-signout'].listeners.click.length, 1, 'one sign-out handler');
+});
+
+test('admin-shell.js bindSidebar: account name and sign-out', () => { (async () => {
+  let signedOut = 0;
+  const e = shellEnv({ clerk: { load: () => Promise.resolve(), user: { firstName: 'Ada', primaryEmailAddress: { emailAddress: 'ada@example.com' } }, signOut: () => { signedOut += 1; return Promise.resolve(); } } });
+  e.shell.bindSidebar();
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual([e.ids['sb-username'].textContent, e.ids['sb-avatar'].textContent], ['Ada', 'A']);
+  e.ids['sb-signout'].click();
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual([signedOut, e.location.href], [1, 'login.html']);
+  // no first name: the email address, as on the dashboard
+  const f = shellEnv({ clerk: { load: () => Promise.resolve(), user: { emailAddresses: [{ emailAddress: 'bo@example.com' }] } } });
+  f.shell.bindSidebar(); await new Promise((r) => setImmediate(r));
+  assert.deepEqual([f.ids['sb-username'].textContent, f.ids['sb-avatar'].textContent], ['bo@example.com', 'B']);
+  // without Clerk, sign-out still leaves the page
+  const g = shellEnv({}); g.shell.bindSidebar(); g.ids['sb-signout'].click();
+  assert.equal(g.location.href, 'login.html');
+  })().catch((err) => { console.error('  FAIL admin-shell.js bindSidebar: account name and sign-out\n       ' + err.message); process.exitCode = 1; });
 });
 
 test('analytics: chart cards can shrink with the grid column (Chart.js fixed canvas width)', () => {

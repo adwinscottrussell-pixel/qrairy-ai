@@ -116,12 +116,66 @@
     if (window.MutationObserver) new MutationObserver(sync).observe(sb, { attributes: true, attributeFilter: ['class'] });
   }
 
+  // Collapse toggle, account name and Sign Out, for a page that does not
+  // carry its own copy of this code. Call once, right after the sidebar
+  // markup (so the remembered state is applied before the first paint).
+  // The choice is remembered as 'sb-collapsed', the key every Admin page
+  // uses. With nothing remembered, the sidebar starts collapsed in narrower
+  // windows and follows the window as it is resized; once the owner uses
+  // the toggle, that choice wins. On phones the sidebar is the drawer
+  // (bindMobile), which always opens full width, so nothing is collapsed there.
+  var NARROW_SIDEBAR = '(max-width: 1099px)', PHONE_SIDEBAR = '(max-width: 768px)';
+  function rememberedCollapse() { try { return localStorage.getItem('sb-collapsed'); } catch (e) { return null; } }
+  function bindSidebar() {
+    var sb = document.getElementById('sidebar');
+    if (!sb || sb.getAttribute('data-shell-bound') === '1') return false;
+    sb.setAttribute('data-shell-bound', '1');
+    function show(collapsed) { sb.classList.toggle('collapsed', collapsed); document.body.classList.toggle('sb-collapsed', collapsed); }
+    var narrow = window.matchMedia ? window.matchMedia(NARROW_SIDEBAR) : null;
+    var phone = window.matchMedia ? window.matchMedia(PHONE_SIDEBAR) : null;
+    function wanted() {
+      if (phone && phone.matches) return false;
+      var kept = rememberedCollapse();
+      return kept === 'true' ? true : (kept === 'false' ? false : !!(narrow && narrow.matches));
+    }
+    show(wanted());
+    [narrow, phone].forEach(function (q) {
+      if (!q) return;
+      var follow = function () { show(wanted()); };
+      if (q.addEventListener) q.addEventListener('change', follow); else if (q.addListener) q.addListener(follow);
+    });
+    var toggle = document.getElementById('sb-toggle');
+    if (toggle) toggle.addEventListener('click', function () {
+      var c = !sb.classList.contains('collapsed');
+      show(c);
+      try { localStorage.setItem('sb-collapsed', String(c)); } catch (e) {}
+    });
+    var out = document.getElementById('sb-signout');
+    if (out) out.addEventListener('click', function (e) {
+      e.preventDefault();
+      var go = function () { window.location.href = 'login.html'; };
+      try { if (window.Clerk && window.Clerk.signOut) { Promise.resolve(window.Clerk.signOut()).then(go, go); return; } } catch (err) {}
+      go();
+    });
+    if (window.Clerk && window.Clerk.load) {
+      Promise.resolve(window.Clerk.load()).then(function () {
+        var u = window.Clerk.user; if (!u) return;
+        var email = (u.primaryEmailAddress && u.primaryEmailAddress.emailAddress) || (u.emailAddresses && u.emailAddresses[0] && u.emailAddresses[0].emailAddress) || '';
+        var name = u.firstName || email; if (!name) return;
+        var n = document.getElementById('sb-username'), a = document.getElementById('sb-avatar');
+        if (n) n.textContent = name;
+        if (a) a.textContent = name.charAt(0).toUpperCase();
+      }, function () {});
+    }
+    return true;
+  }
+
   function init() {
     bindMobile();
     apply(lang());
   }
 
-  window.QraivyShell = { apply: apply, t: t, lang: lang, toast: toast };
+  window.QraivyShell = { apply: apply, t: t, lang: lang, toast: toast, bindSidebar: bindSidebar };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

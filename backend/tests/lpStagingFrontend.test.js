@@ -244,8 +244,12 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // same" rather than "only these changed", so it keeps holding as the
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
-  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js').map((f) => 'frontend/public/js/' + f);
-  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/smart-qr-detail.html', 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/prisma', 'backend/railway.toml').trim(), '');
+  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js').map((f) => 'frontend/public/js/' + f);
+  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/prisma', 'backend/railway.toml').trim(), '');
+  // smart-qr-detail.html and js/admin-shell.js: unchanged by this step's own commit. They were
+  // changed later, on purpose, to give the page the Admin sidebar (see adminNavShell.test.js;
+  // the page's own markup is still compared with production in lpVoiceGreetings.test.js).
+  assert.equal(git('diff', 'a642477', '9572bed', '--stat', '--', 'frontend/public/smart-qr-detail.html', 'frontend/public/js/admin-shell.js').trim(), '');
   // smart-editor.js: unchanged by this step's own commit. It was changed later, on purpose,
   // by the publish-safety fix (one save per click, no publishing before the page has loaded;
   // see lpEditorPublishSafety.test.js).
