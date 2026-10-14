@@ -252,8 +252,8 @@ test('C. the deal\'s own 4:3 image boxes and the live phone preview are unchange
   assert.equal((css.match(/aspect-ratio: 4 \/ 3;/g) || []).length, 5);
 });
 
-test('C. no backend, database or upload change in Phase 2', () => {
-  const changed = execFileSync('git', ['diff', '6ce73c4', '--name-only', '--', 'backend/src', 'backend/prisma', 'frontend/public/images', 'frontend/public/js/deal-starter-images.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
+test('C. no backend, database or upload change in Phase 2 (its commits 583ad05 + 63edaba)', () => {
+  const changed = execFileSync('git', ['diff', '6ce73c4', '63edaba', '--name-only', '--', 'backend/src', 'backend/prisma', 'frontend/public/images', 'frontend/public/js/deal-starter-images.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(changed, '');
 });
 

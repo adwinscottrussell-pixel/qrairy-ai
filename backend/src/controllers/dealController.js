@@ -54,7 +54,9 @@ async function saveDealDraft(req, res) {
 
 async function publishDeal(req, res) {
   try {
-    const deal = await dealService.publishDeal(req.userId, req.params.id);
+    // optional { includePlacements: true }: also publish the deal's draft placements, in the same transaction
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const deal = await dealService.publishDeal(req.userId, req.params.id, body.includePlacements === undefined ? {} : { includePlacements: body.includePlacements });
     return res.json({ deal });
   } catch (e) { return fail(res, e, 'publish the deal'); }
 }
@@ -103,7 +105,35 @@ async function uploadDealImageHandler(req, res) {
   } catch (e) { return fail(res, e, 'upload the image'); }
 }
 
+// ── Placements: where a deal appears (landing pages) ──────────
+async function listPlacements(req, res) {
+  try { return res.json({ placements: await dealService.listDealPlacements(req.userId, req.params.id) }); }
+  catch (e) { return fail(res, e, 'load the placements'); }
+}
+async function addPlacement(req, res) {
+  try { return res.status(201).json({ placement: await dealService.addDealPlacement(req.userId, req.params.id, req.body) }); }
+  catch (e) { return fail(res, e, 'add the placement'); }
+}
+async function publishPlacement(req, res) {
+  try { return res.json({ placement: await dealService.publishDealPlacement(req.userId, req.params.id, req.params.placementId) }); }
+  catch (e) { return fail(res, e, 'publish the placement'); }
+}
+async function archivePlacement(req, res) {
+  try { return res.json({ placement: await dealService.archiveDealPlacement(req.userId, req.params.id, req.params.placementId) }); }
+  catch (e) { return fail(res, e, 'archive the placement'); }
+}
+// The signed-in owner's landing pages, for choosing where a deal appears.
+async function listPages(req, res) {
+  try { return res.json({ pages: await dealService.listOwnerLandingPages(req.userId) }); }
+  catch (e) { return fail(res, e, 'load your pages'); }
+}
+
 module.exports = {
+  listPlacements,
+  addPlacement,
+  publishPlacement,
+  archivePlacement,
+  listPages,
   listDeals,
   createDeal,
   getDeal,

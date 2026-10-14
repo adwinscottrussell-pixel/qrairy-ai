@@ -135,9 +135,9 @@ async function through(gate, method, url, user) {
 }
 
 test('B. exactly six kinds of request are allowed, and only two of them without sign-in beyond page playback', () => {
-  // ...plus the eight owner Deals routes, all "user" (dealsPreviewSafety.test.js)
-  assert.deepEqual(ALLOWED_ROUTES.map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user',
-    'GET user', 'POST user', 'GET user', 'PUT user', 'POST user', 'POST user', 'DELETE user', 'POST user']);
+  // ...plus the owner Deals routes, all "user" (dealsPreviewSafety.test.js)
+  assert.deepEqual(ALLOWED_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
+  assert.ok(ALLOWED_ROUTES.slice(6).every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the six is a signed-in Deals route');
   const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
   for (const [m, p] of allowed) assert.ok(matchRoute(m, p), m + ' ' + p);
 });

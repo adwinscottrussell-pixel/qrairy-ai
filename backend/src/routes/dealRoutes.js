@@ -16,6 +16,11 @@ const {
   archiveDeal,
   deleteDeal,
   uploadDealImage,
+  listPlacements,
+  addPlacement,
+  publishPlacement,
+  archivePlacement,
+  listPages,
 } = require('../controllers/dealController');
 
 // Deal image upload — image only, 5MB cap, memory storage (no temp files
@@ -32,12 +37,19 @@ const dealImageUpload = multer({
 });
 
 router.get('/', requireAuth, listDeals);
+// before '/:id', so "pages" is never read as a deal id
+router.get('/pages', requireAuth, listPages);
 router.post('/', requireAuth, createDeal);
 router.get('/:id', requireAuth, getDeal);
 router.put('/:id/draft', requireAuth, saveDealDraft);
 router.post('/:id/publish', requireAuth, publishDeal);
 router.post('/:id/archive', requireAuth, archiveDeal);
 router.delete('/:id', requireAuth, deleteDeal);
+// Placements: where a deal appears. Every target page must belong to the owner.
+router.get('/:id/placements', requireAuth, listPlacements);
+router.post('/:id/placements', requireAuth, addPlacement);
+router.post('/:id/placements/:placementId/publish', requireAuth, publishPlacement);
+router.post('/:id/placements/:placementId/archive', requireAuth, archivePlacement);
 // requireAuth runs BEFORE multer parses the upload, so an unauthenticated
 // request is rejected without its body ever being read into memory.
 router.post('/:id/image', requireAuth, (req, res, next) => {

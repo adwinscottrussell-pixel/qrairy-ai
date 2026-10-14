@@ -506,8 +506,16 @@ async function saveDealDraft(ownerUserId, dealId, body) {
 // in the same write, so the published row and the editable state can
 // never disagree after a successful publish. Ownership is re-proven
 // inside the transaction, against the row the transaction itself read.
-async function publishDeal(ownerUserId, dealId) {
+// options.includePlacements (opt-in): in the same transaction, also publish
+// every DRAFT placement of this deal, re-checking that each page still
+// belongs to the owner. If one does not, nothing is published (the deal
+// included). Without the option publishing is exactly as before.
+async function publishDeal(ownerUserId, dealId, options = {}) {
   requireOwner(ownerUserId);
+  const includePlacements = options && options.includePlacements;
+  if (includePlacements !== undefined && typeof includePlacements !== 'boolean') {
+    throw new DealError('includePlacements must be true or false.');
+  }
   return prisma.$transaction(async (tx) => {
     const deal = await findDealOrThrow(ownerUserId, dealId, tx);
     if (deal.status === 'archived') {
@@ -544,6 +552,17 @@ async function publishDeal(ownerUserId, dealId) {
         draftData: null,
       },
     });
+    if (includePlacements === true) {
+      const drafts = (await tx.dealPlacement.findMany({ where: { dealId: deal.id } })).filter((p) => p.status === 'draft');
+      for (const p of drafts) {
+        try {
+          await assertOwnedPlacementTarget(ownerUserId, p.channel, p.targetRef, tx);
+        } catch (e) {
+          throw new DealError('A selected page no longer belongs to this account: ' + p.targetRef + '. Nothing was published.', 409);
+        }
+        await tx.dealPlacement.update({ where: { id: p.id }, data: { status: 'published', publishedAt: new Date() } });
+      }
+    }
     return mergeDealState(updated);
   });
 }
@@ -678,6 +697,77 @@ async function publishDealPlacement(ownerUserId, dealId, placementId) {
   });
 }
 
+// ── Owner's landing pages (for choosing where a deal appears) ─────
+// Only the signed-in owner's own pages; only what a page picker needs.
+async function listOwnerLandingPages(ownerUserId, client = prisma) {
+  requireOwner(ownerUserId);
+  const pages = await client.landingPage.findMany({
+    where: { userId: ownerUserId },
+    select: { slug: true, businessName: true, status: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+  return pages.map((p) => ({ slug: p.slug, name: p.businessName, live: p.status !== 'draft' }));
+}
+
+// ── Public: the deals a customer may see on a landing page ───────
+// A deal is shown on a page only if ALL of these hold right now:
+//   - the page exists, is live and has an owner
+//   - a PUBLISHED landing_page placement points at that page
+//   - the deal itself is published and inside its date range
+//   - the deal's owner is (still) the page's owner
+// Only customer-safe fields are returned -- never draftData, ids of
+// owners or businesses, storage public ids or the image master.
+const MAX_PUBLIC_DEALS_PER_PAGE = 3;
+const PUBLIC_SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/;
+function toPublicImage(image) {
+  if (!image || typeof image !== 'object') return null;
+  if (image.source === 'starter') {
+    const starter = findDealStarterImage(image.starterId);
+    return starter ? { source: 'starter', starterId: starter.id, aiGenerated: starter.origin === 'ai_generated' } : null;
+  }
+  if (image.source === 'background') return DEAL_BACKGROUNDS.includes(image.backgroundId) ? { source: 'background', backgroundId: image.backgroundId } : null;
+  if (typeof image.url === 'string' && image.url && isTrustedDealImage(image.url, image.publicId)) {
+    return { source: 'uploaded', url: image.url, width: image.width || null, height: image.height || null };
+  }
+  return null;
+}
+function toPublicDeal(deal) {
+  return {
+    title: deal.title,
+    offerText: deal.offerText,
+    description: deal.description || null,
+    offerType: deal.offerType || null,
+    offerDetails: deal.offerDetails || null,
+    image: toPublicImage(deal.image),
+    startsAt: deal.startsAt || null,
+    endsAt: deal.endsAt || null,
+  };
+}
+async function activeDealsForPage(slug, now = new Date(), client = prisma) {
+  if (typeof slug !== 'string' || !PUBLIC_SLUG.test(slug)) return [];
+  const at = now instanceof Date ? now.getTime() : Number(now);
+  if (!Number.isFinite(at)) return [];
+  const page = await client.landingPage.findUnique({ where: { slug } });
+  if (!page || !page.userId || page.status === 'draft') return [];
+  const placements = await client.dealPlacement.findMany({
+    where: { channel: 'landing_page', targetRef: slug, status: 'published' },
+    orderBy: { publishedAt: 'desc' },
+    take: 50,
+  });
+  const shown = [];
+  const seen = new Set();
+  for (const p of placements) {
+    if (p.channel !== 'landing_page' || p.targetRef !== slug || p.status !== 'published' || seen.has(p.dealId)) continue;
+    const deal = await client.deal.findUnique({ where: { id: p.dealId } });
+    if (!deal || deal.ownerUserId !== page.userId) continue;
+    if (liveStatus(deal, at) !== 'published') continue;     // draft, archived, scheduled, expired
+    seen.add(p.dealId);
+    shown.push(toPublicDeal(deal));
+    if (shown.length >= MAX_PUBLIC_DEALS_PER_PAGE) break;
+  }
+  return shown;
+}
+
 async function archiveDealPlacement(ownerUserId, dealId, placementId) {
   const { placement } = await findPlacementOrThrow(ownerUserId, dealId, placementId);
   if (placement.status === 'archived') {
@@ -703,6 +793,9 @@ module.exports = {
   addDealPlacement,
   publishDealPlacement,
   archiveDealPlacement,
+  listOwnerLandingPages,
+  activeDealsForPage,
+  MAX_PUBLIC_DEALS_PER_PAGE,
   // exported for direct unit testing only
   validateDealDraftPayload,
   mergeDealState,

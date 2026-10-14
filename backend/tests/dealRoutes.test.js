@@ -36,7 +36,15 @@ let uploads = [];
 let storageConfigured = true;
 let storageFails = false;
 
-function reset() { dealRows = []; idSeq = 100; uploads = []; storageConfigured = true; storageFails = false; }
+let placementRows = [];
+let pageRows = [];
+function reset() {
+  dealRows = []; idSeq = 100; uploads = []; storageConfigured = true; storageFails = false;
+  placementRows = [];
+  pageRows = [{ slug: 'anna-cafe', userId: ANNA, businessName: 'Anna Café', status: 'live', updatedAt: new Date(2) },
+    { slug: 'anna-draft', userId: ANNA, businessName: 'Anna Draft', status: 'draft', updatedAt: new Date(1) },
+    { slug: 'ben-bikes', userId: BEN, businessName: 'Ben Bikes', status: 'live', updatedAt: new Date(3) }];
+}
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
 
 const mockPrisma = {
@@ -65,11 +73,25 @@ const mockPrisma = {
       return dealRows.splice(i, 1)[0];
     },
   },
+  dealPlacement: {
+    findUnique: async ({ where }) => {
+      const k = where.dealId_channel_targetRef;
+      const r = where.id ? placementRows.find((p) => p.id === where.id) : placementRows.find((p) => p.dealId === k.dealId && p.channel === k.channel && p.targetRef === k.targetRef);
+      return r ? { ...r } : null;
+    },
+    findMany: async ({ where = {} } = {}) => cloneRows(placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]))),
+    create: async ({ data }) => { idSeq += 1; const r = { id: 'pl_' + idSeq, publishedAt: null, createdAt: new Date(), ...data }; placementRows.push(r); return { ...r }; },
+    update: async ({ where, data }) => { const r = placementRows.find((p) => p.id === where.id); Object.assign(r, data); return { ...r }; },
+  },
+  landingPage: {
+    findUnique: async ({ where }) => { const r = pageRows.find((p) => p.slug === where.slug); return r ? { ...r } : null; },
+    findMany: async ({ where, select }) => pageRows.filter((p) => p.userId === where.userId).map((p) => Object.fromEntries(Object.keys(select).map((k) => [k, p[k]]))),
+  },
   business: { findUnique: async () => null },
   businessMember: { findUnique: async () => null },
   $transaction: async (arg) => {
-    const snapshot = cloneRows(dealRows);
-    try { return await arg(mockPrisma); } catch (e) { dealRows = snapshot; throw e; }
+    const snapshot = cloneRows(dealRows), placements = cloneRows(placementRows);
+    try { return await arg(mockPrisma); } catch (e) { dealRows = snapshot; placementRows = placements; throw e; }
   },
 };
 
@@ -139,10 +161,12 @@ const tests = [];
 function test(name, fn) { tests.push({ name, fn }); }
 
 // ── A. Surface and authentication ──────────────────────────────
-test('A. exposes exactly the eight owner endpoints, each behind requireAuth first', () => {
+test('A. exposes exactly the owner endpoints (deals, image, placements, own pages), each behind requireAuth first', () => {
   const { requireAuth } = require('../src/middleware/auth');
   const routes = router.stack.filter((l) => l.route).map((l) => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path);
-  assert.deepEqual(routes, ['GET /', 'POST /', 'GET /:id', 'PUT /:id/draft', 'POST /:id/publish', 'POST /:id/archive', 'DELETE /:id', 'POST /:id/image']);
+  assert.deepEqual(routes, ['GET /', 'GET /pages', 'POST /', 'GET /:id', 'PUT /:id/draft', 'POST /:id/publish', 'POST /:id/archive', 'DELETE /:id',
+    'GET /:id/placements', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/placements/:placementId/archive', 'POST /:id/image']);
+  assert.ok(routes.indexOf('GET /pages') < routes.indexOf('GET /:id'), '"pages" is never read as a deal id');
   for (const l of router.stack.filter((x) => x.route)) assert.equal(l.route.stack[0].handle, requireAuth, l.route.path);
 });
 
@@ -348,6 +372,71 @@ test('D. archive is terminal: no further edits or publishing; delete removes the
   assert.equal(dealRows.length, 0);
 });
 
+// ── P. Placements (Phase 3.1) ───────────────────────────────────
+test('P. placement endpoints and the page list need a sign-in and change nothing without one', async () => {
+  reset();
+  const deal = await create();
+  for (const [m, p, o] of [['get', '/pages', {}], ['get', '/:id/placements', { params: { id: deal.dealId } }],
+    ['post', '/:id/placements', { params: { id: deal.dealId }, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }],
+    ['post', '/:id/placements/:placementId/publish', { params: { id: deal.dealId, placementId: 'x' } }],
+    ['post', '/:id/placements/:placementId/archive', { params: { id: deal.dealId, placementId: 'x' } }]]) {
+    assert.equal((await call(m, p, o)).statusCode, 401, m + ' ' + p);
+    assert.equal((await call(m, p, { ...o, token: 'tok_nobody' })).statusCode, 401, m + ' ' + p + ' (invalid token)');
+  }
+  assert.equal(placementRows.length, 0);
+});
+
+test('P. GET /deals/pages lists only the signed-in owner\'s pages', async () => {
+  reset();
+  const res = await call('get', '/pages', asAnna());
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.pages, [{ slug: 'anna-cafe', name: 'Anna Café', live: true }, { slug: 'anna-draft', name: 'Anna Draft', live: false }]);
+  assert.deepEqual((await call('get', '/pages', asBen())).body.pages.map((p) => p.slug), ['ben-bikes']);
+});
+
+test('P. add, list, publish (with the deal) and archive a placement over HTTP', async () => {
+  reset();
+  const deal = await create();
+  const id = { id: deal.dealId };
+  const add = await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }));
+  assert.equal(add.statusCode, 201, JSON.stringify(add.body));
+  assert.equal(add.body.placement.status, 'draft');
+  assert.equal((await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }))).statusCode, 409, 'duplicate');
+  const pub = await call('post', '/:id/publish', asAnna({ params: id, body: { includePlacements: true } }));
+  assert.equal(pub.statusCode, 200, JSON.stringify(pub.body));
+  assert.equal(placementRows[0].status, 'published');
+  const list = await call('get', '/:id/placements', asAnna({ params: id }));
+  assert.deepEqual(list.body.placements.map((p) => [p.targetRef, p.status]), [['anna-cafe', 'published']]);
+  const arch = await call('post', '/:id/placements/:placementId/archive', asAnna({ params: { id: deal.dealId, placementId: add.body.placement.placementId } }));
+  assert.equal(arch.body.placement.status, 'archived');
+});
+
+test('P. publishing without the option leaves placements as drafts (unchanged behaviour)', async () => {
+  reset();
+  const deal = await create();
+  await call('post', '/:id/placements', asAnna({ params: { id: deal.dealId }, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }));
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: deal.dealId } }))).statusCode, 200);
+  assert.equal(placementRows[0].status, 'draft');
+  const pid = placementRows[0].id;
+  const one = await call('post', '/:id/placements/:placementId/publish', asAnna({ params: { id: deal.dealId, placementId: pid } }));
+  assert.equal(one.body.placement.status, 'published', 'and can be published on its own afterwards');
+});
+
+test('P. nobody can place a deal on someone else\'s page, or touch someone else\'s deal', async () => {
+  reset();
+  const deal = await create();
+  const id = { id: deal.dealId };
+  assert.equal((await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'ben-bikes' } }))).statusCode, 404);
+  assert.equal((await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'nope' } }))).statusCode, 404);
+  assert.equal((await call('post', '/:id/placements', asBen({ params: id, body: { channel: 'landing_page', targetRef: 'ben-bikes' } }))).statusCode, 404, 'Ben cannot use Anna\'s deal');
+  assert.equal((await call('get', '/:id/placements', asBen({ params: id }))).statusCode, 404);
+  for (const body of [{ channel: 'email', targetRef: 'anna-cafe' }, { channel: 'landing_page' }, { channel: 'landing_page', targetRef: 'anna-cafe', status: 'published' }]) {
+    assert.equal((await call('post', '/:id/placements', asAnna({ params: id, body }))).statusCode, 400, JSON.stringify(body));
+  }
+  assert.equal(placementRows.length, 0);
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: id, body: { includePlacements: 'yes' } }))).statusCode, 400);
+});
+
 // ── E. Images ──────────────────────────────────────────────────
 test('E. upload stores the picture and attaches it to the draft, not to the published deal', async () => {
   reset();
@@ -412,8 +501,8 @@ test('F. the app mounts the router at /deals, and nothing public is exposed', ()
   assert.match(index, /const dealRoutes = require\('\.\/routes\/dealRoutes'\);/);
   assert.match(index, /app\.use\('\/deals', dealRoutes\);/);
   const routes = fs.readFileSync(resolve('src', 'routes', 'dealRoutes.js'), 'utf8');
-  assert.equal((routes.match(/^router\.(get|post|put|delete)\(/gm) || []).length, 8);
-  assert.equal((routes.match(/^router\.(get|post|put|delete)\('[^']*', requireAuth,/gm) || []).length, 8, 'every route line names requireAuth first');
+  assert.equal((routes.match(/^router\.(get|post|put|delete)\(/gm) || []).length, 13);
+  assert.equal((routes.match(/^router\.(get|post|put|delete)\('[^']*', requireAuth,/gm) || []).length, 13, 'every route line names requireAuth first');
 });
 
 test('F. the server\'s image lists mirror the frontend catalog and backgrounds', () => {

@@ -22,8 +22,9 @@
  * up by its owner, so another account's deal answers 404).
  *
  * QRAIVY Deals: the owner Deals API (routes/dealRoutes.js) is allowed as
- * "user" -- signed in AND on the allowlist. Exactly its eight routes;
- * anything else under /deals is refused like every other path.
+ * "user" -- signed in AND on the allowlist. Exactly its routes (deals,
+ * image, placements, own pages); anything else under /deals is refused
+ * like every other path.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -40,12 +41,16 @@ const ALLOWED_ROUTES = [
   { method: 'POST', path: new RegExp('^/lp/voice/preview/' + SLUG + '$'), access: 'user',   what: 'editor: voice audio preview' },
   { method: 'GET',    path: /^\/deals$/,                                      access: 'user', what: 'Deals: list own deals' },
   { method: 'POST',   path: /^\/deals$/,                                      access: 'user', what: 'Deals: create a deal' },
+  { method: 'GET',    path: /^\/deals\/pages$/,                                access: 'user', what: 'Deals: list own landing pages' },
   { method: 'GET',    path: new RegExp('^/deals/' + DEAL_ID + '$'),            access: 'user', what: 'Deals: load a deal' },
   { method: 'PUT',    path: new RegExp('^/deals/' + DEAL_ID + '/draft$'),      access: 'user', what: 'Deals: save a draft' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/publish$'),    access: 'user', what: 'Deals: publish' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/archive$'),    access: 'user', what: 'Deals: archive' },
   { method: 'DELETE', path: new RegExp('^/deals/' + DEAL_ID + '$'),            access: 'user', what: 'Deals: delete' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/image$'),      access: 'user', what: 'Deals: upload an image (staging folder only)' },
+  { method: 'GET',    path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: list placements' },
+  { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: add a placement (own pages only)' },
+  { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements/' + DEAL_ID + '/(?:publish|archive)$'), access: 'user', what: 'Deals: publish or archive a placement' },
 ];
 
 function matchRoute(method, path) {

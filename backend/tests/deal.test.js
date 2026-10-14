@@ -111,7 +111,13 @@ const mockPrisma = {
       }
       return row ? { ...row } : null;
     },
-    findMany: async ({ where }) => cloneRows(placementRows.filter((p) => p.dealId === where.dealId)),
+    // equality filters on any field; orderBy publishedAt desc; take (as Prisma does)
+    findMany: async ({ where = {}, orderBy, take } = {}) => {
+      let rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));
+      if (orderBy && orderBy.publishedAt === 'desc') rows = rows.slice().sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+      if (take) rows = rows.slice(0, take);
+      return cloneRows(rows);
+    },
     create: async ({ data }) => {
       const row = { id: nextId('placement'), publishedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data };
       placementRows.push(row);
@@ -126,6 +132,10 @@ const mockPrisma = {
   },
   landingPage: {
     findUnique: async ({ where }) => landingPageRows.find((p) => p.slug === where.slug) || null,
+    findMany: async ({ where, select }) => landingPageRows.filter((p) => p.userId === where.userId).map((p) => {
+      const full = { businessName: p.slug + ' name', status: 'live', updatedAt: new Date(0), ...p };
+      return select ? Object.fromEntries(Object.keys(select).map((k) => [k, full[k]])) : full;
+    }),
   },
   business: {
     findUnique: async ({ where }) => businessRows.find((b) => b.id === where.id) || null,
@@ -601,6 +611,162 @@ test('E2. nothing is trusted without a configured cloud, master included', () =>
   delete process.env.CLOUDINARY_CLOUD_NAME;
   try { assert.ok(throwsSync(() => service.checkDealImage(MASTER_IMAGE)) instanceof service.DealError); }
   finally { process.env.CLOUDINARY_CLOUD_NAME = saved; }
+});
+
+// ── P. Placements on landing pages (Phase 3.1) ───────────────────
+async function publishedDealOn(slugs, extra = {}, owner = ANNA) {
+  // image and offerDetails can only be set by saving a draft after creation
+  const { image, offerDetails, ...atCreation } = extra;
+  const deal = await newDeal(owner, atCreation);
+  if (image !== undefined || offerDetails !== undefined) await service.saveDealDraft(owner, deal.dealId, { ...(image !== undefined ? { image } : {}), ...(offerDetails !== undefined ? { offerDetails } : {}) });
+  for (const s of slugs) await service.addDealPlacement(owner, deal.dealId, { channel: 'landing_page', targetRef: s });
+  await service.publishDeal(owner, deal.dealId, { includePlacements: true });
+  return deal;
+}
+const DAY = 864e5;
+
+test('P. publish with includePlacements publishes the deal and all its draft placements together', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe-north' });
+  const state = await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal(state.status, 'published');
+  assert.deepEqual(placementRows.map((p) => p.status), ['published', 'published']);
+  assert.ok(placementRows.every((p) => p.publishedAt instanceof Date));
+  assert.equal(dealRows.length, 1, 'one deal, two placements: nothing duplicated');
+});
+
+test('P. without the option (or with false) publishing is exactly as before: placements stay draft', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDeal(ANNA, deal.dealId);
+  assert.equal(placementRows[0].status, 'draft');
+  await service.publishDeal(ANNA, deal.dealId, { includePlacements: false });
+  assert.equal(placementRows[0].status, 'draft');
+  const plain = await newDeal(ANNA, { title: 'No pages' });
+  assert.equal((await service.publishDeal(ANNA, plain.dealId, { includePlacements: true })).status, 'published', 'no placements selected: publishes as before');
+  assert.equal((await throwsAsync(() => service.publishDeal(ANNA, plain.dealId, { includePlacements: 'yes' }))).status, 400);
+});
+
+test('P. if a selected page is no longer the owner\'s, NOTHING is published (deal included)', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe-north' });
+  landingPageRows.find((p) => p.slug === 'anna-cafe-north').userId = BEN;
+  const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId, { includePlacements: true }));
+  assert.equal(err.status, 409);
+  assert.match(err.message, /anna-cafe-north/);
+  assert.equal(dealRows[0].status, 'draft', 'the deal was rolled back');
+  assert.deepEqual(placementRows.map((p) => p.status), ['draft', 'draft'], 'no placement was published');
+});
+
+test('P. archived placements are not re-published; duplicates are refused', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const p = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 409);
+  await service.archiveDealPlacement(ANNA, deal.dealId, p.placementId);
+  await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal(placementRows[0].status, 'archived');
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'ben-bikes' }))).status, 404, 'never another owner\'s page');
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'orphan-page' }))).status, 404, 'never an ownerless page');
+});
+
+test('P. activeDealsForPage: a published deal with a published placement, inside its dates', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Coffee', offerText: '2 for 1', description: 'Today' });
+  const shown = await service.activeDealsForPage('anna-cafe');
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].title, 'Coffee');
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe-north'), [], 'only on the pages it was placed on');
+});
+
+test('P. activeDealsForPage: scheduled and expired deals are not shown; they appear and disappear on time', async () => {
+  resetFixtures();
+  const now = Date.now();
+  await publishedDealOn(['anna-cafe'], { title: 'Later', startsAt: new Date(now + 2 * DAY).toISOString(), endsAt: new Date(now + 9 * DAY).toISOString() });
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe', new Date(now)), [], 'scheduled');
+  assert.equal((await service.activeDealsForPage('anna-cafe', new Date(now + 3 * DAY))).length, 1, 'running');
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe', new Date(now + 10 * DAY)), [], 'expired');
+});
+
+test('P. activeDealsForPage: draft or archived deals and draft or archived placements are not shown', async () => {
+  resetFixtures();
+  const a = await newDeal(ANNA, { title: 'Draft deal' });
+  await service.addDealPlacement(ANNA, a.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'draft deal, draft placement');
+  await service.publishDeal(ANNA, a.dealId);
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'published deal, placement still draft');
+  const b = await publishedDealOn(['anna-cafe'], { title: 'Live' });
+  assert.equal((await service.activeDealsForPage('anna-cafe')).length, 1);
+  await service.archiveDeal(ANNA, b.dealId);
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'archived deal');
+  const c = await publishedDealOn(['anna-cafe'], { title: 'Live 2' });
+  const pc = placementRows.find((p) => p.dealId === c.dealId);
+  await service.archiveDealPlacement(ANNA, c.dealId, pc.placementId || pc.id);
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'archived placement');
+});
+
+test('P. activeDealsForPage: never shown when the page is no longer the deal owner\'s, is a draft, or has no owner', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Mine' });
+  landingPageRows.find((p) => p.slug === 'anna-cafe').userId = BEN;
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'page now belongs to someone else');
+  landingPageRows.find((p) => p.slug === 'anna-cafe').userId = ANNA;
+  landingPageRows.find((p) => p.slug === 'anna-cafe').status = 'draft';
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'draft page');
+  // a placement row pointing at a page that is not the deal owner's (e.g. forged in the DB)
+  placementRows.push({ id: 'p_x', dealId: dealRows[0].id, channel: 'landing_page', targetRef: 'ben-bikes', status: 'published', publishedAt: new Date() });
+  assert.deepEqual(await service.activeDealsForPage('ben-bikes'), []);
+  placementRows.push({ id: 'p_y', dealId: dealRows[0].id, channel: 'landing_page', targetRef: 'orphan-page', status: 'published', publishedAt: new Date() });
+  assert.deepEqual(await service.activeDealsForPage('orphan-page'), []);
+  for (const bad of ['', '../x', 'a b', null, 42, 'x'.repeat(200)]) assert.deepEqual(await service.activeDealsForPage(bad), [], String(bad));
+  assert.deepEqual(await service.activeDealsForPage('no-such-page'), []);
+});
+
+test('P. activeDealsForPage returns customer-safe fields only', async () => {
+  resetFixtures();
+  const MASTER_PID2 = 'qraivy-deals/deal-pub-1';
+  const img = { source: 'uploaded', url: 'https://res.cloudinary.com/test-cloud/image/upload/c_fill,g_auto,h_900,w_1200/v1/' + MASTER_PID2 + '.jpg', publicId: MASTER_PID2, width: 1200, height: 900,
+    master: { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/' + MASTER_PID2 + '.jpg', width: 4000, height: 3000 } };
+  const deal = await publishedDealOn(['anna-cafe'], { title: 'Safe', offerType: 'percentage_discount', offerDetails: { percentOff: 20 }, image: img });
+  // an unpublished draft change must never leak
+  await service.saveDealDraft(ANNA, deal.dealId, { title: 'SECRET DRAFT TITLE' });
+  const [d] = await service.activeDealsForPage('anna-cafe');
+  assert.deepEqual(Object.keys(d).sort(), ['description', 'endsAt', 'image', 'offerDetails', 'offerText', 'offerType', 'startsAt', 'title']);
+  assert.equal(d.title, 'Safe');
+  assert.deepEqual(d.image, { source: 'uploaded', url: img.url, width: 1200, height: 900 });
+  const json = JSON.stringify(d);
+  for (const secret of ['SECRET DRAFT TITLE', ANNA, 'ownerUserId', 'draftData', 'businessId', 'createdBy', 'publicId', 'master', img.master.url, deal.dealId]) {
+    assert.ok(!json.includes(secret), 'leaks ' + secret);
+  }
+});
+
+test('P. activeDealsForPage: starter images keep their AI flag; at most three deals, newest first, each once', async () => {
+  resetFixtures();
+  const st = await publishedDealOn(['anna-cafe'], { title: 'Starter', image: { source: 'starter', starterId: 'bakery-croissants-01' } });
+  const [d] = await service.activeDealsForPage('anna-cafe');
+  assert.deepEqual(d.image, { source: 'starter', starterId: 'bakery-croissants-01', aiGenerated: true });
+  for (let i = 1; i <= 4; i++) await publishedDealOn(['anna-cafe'], { title: 'D' + i });
+  placementRows.forEach((p, i) => { p.publishedAt = new Date(1000 * (i + 1)); });
+  const shown = await service.activeDealsForPage('anna-cafe');
+  assert.equal(shown.length, service.MAX_PUBLIC_DEALS_PER_PAGE);
+  assert.deepEqual(shown.map((x) => x.title), ['D4', 'D3', 'D2']);
+  placementRows.push({ ...placementRows[placementRows.length - 1], id: 'dup' });
+  assert.equal(new Set((await service.activeDealsForPage('anna-cafe')).map((x) => x.title)).size, 3, 'a deal is never listed twice');
+  assert.ok(st);
+});
+
+test('P. listOwnerLandingPages: only the owner\'s own pages, with name and live state', async () => {
+  resetFixtures();
+  const pages = await service.listOwnerLandingPages(ANNA);
+  assert.deepEqual(pages.map((p) => p.slug).sort(), ['anna-cafe', 'anna-cafe-north']);
+  assert.deepEqual(Object.keys(pages[0]).sort(), ['live', 'name', 'slug']);
+  assert.deepEqual((await service.listOwnerLandingPages(BEN)).map((p) => p.slug), ['ben-bikes']);
+  assert.equal((await throwsAsync(() => service.listOwnerLandingPages(''))).status, 401);
 });
 
 // ── F. Publish ─────────────────────────────────────────────────

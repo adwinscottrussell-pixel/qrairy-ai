@@ -3,7 +3,7 @@
 // run on an isolated staging backend (deals-preview) without touching
 // production:
 //
-//   A. staging gate: exactly the eight owner Deals routes are allowed, as
+//   A. staging gate: exactly the owner Deals routes are allowed, as
 //      "user" (signed in AND on the allowlist); everything else under
 //      /deals is still refused; the original routes are unchanged.
 //   B. image folder: production keeps qraivy-deals; staging uses only its
@@ -46,21 +46,23 @@ test('A. the original six staging routes are exactly as before', () => {
   ]);
 });
 
-test('A. exactly the eight owner Deals routes are added, all "user" (sign-in + allowlist)', () => {
+test('A. exactly the owner Deals routes are added, all "user" (sign-in + allowlist)', () => {
   const deals = ALLOWED_ROUTES.slice(6);
-  assert.equal(ALLOWED_ROUTES.length, 14);
-  assert.deepEqual(deals.map((r) => r.method + ' ' + r.access), ['GET user', 'POST user', 'GET user', 'PUT user', 'POST user', 'POST user', 'DELETE user', 'POST user']);
-  const allowed = [['GET', '/deals'], ['POST', '/deals'], ['GET', '/deals/cmabc123'], ['PUT', '/deals/cmabc123/draft'],
-    ['POST', '/deals/cmabc123/publish'], ['POST', '/deals/cmabc123/archive'], ['DELETE', '/deals/cmabc123'], ['POST', '/deals/cmabc123/image']];
+  assert.equal(ALLOWED_ROUTES.length, 18);
+  assert.deepEqual(deals.map((r) => r.method + ' ' + r.access), ['GET user', 'POST user', 'GET user', 'GET user', 'PUT user', 'POST user', 'POST user', 'DELETE user', 'POST user', 'GET user', 'POST user', 'POST user']);
+  const allowed = [['GET', '/deals'], ['POST', '/deals'], ['GET', '/deals/pages'], ['GET', '/deals/cmabc123'], ['PUT', '/deals/cmabc123/draft'],
+    ['POST', '/deals/cmabc123/publish'], ['POST', '/deals/cmabc123/archive'], ['DELETE', '/deals/cmabc123'], ['POST', '/deals/cmabc123/image'],
+    ['GET', '/deals/cmabc123/placements'], ['POST', '/deals/cmabc123/placements'], ['POST', '/deals/cmabc123/placements/pl1/publish'], ['POST', '/deals/cmabc123/placements/pl1/archive']];
   for (const [m, p] of allowed) { const r = matchRoute(m, p); assert.ok(r && r.access === 'user', m + ' ' + p); }
   // the gate matches every route of routes/dealRoutes.js, and only those
   const routes = read('backend/src/routes/dealRoutes.js');
   const declared = [...routes.matchAll(/router\.(get|post|put|patch|delete)\('([^']+)'/g)].map((x) => x[1].toUpperCase() + ' ' + x[2]);
-  assert.deepEqual(declared.sort(), ['DELETE /:id', 'GET /', 'GET /:id', 'POST /', 'POST /:id/archive', 'POST /:id/image', 'POST /:id/publish', 'PUT /:id/draft'].sort());
+  assert.deepEqual(declared.sort(), ['DELETE /:id', 'GET /', 'GET /pages', 'GET /:id', 'POST /', 'POST /:id/archive', 'POST /:id/image', 'POST /:id/publish', 'PUT /:id/draft',
+    'GET /:id/placements', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/placements/:placementId/archive'].sort());
 });
 
 test('A. anything else under /deals is still refused', () => {
-  const denied = [['PATCH', '/deals/x'], ['GET', '/deals/x/placements'], ['POST', '/deals/x/placements'], ['GET', '/deals/x/draft'],
+  const denied = [['PATCH', '/deals/x'], ['DELETE', '/deals/x/placements'], ['GET', '/deals/x/placements/p1'], ['POST', '/deals/x/placements/p1/delete'], ['GET', '/deals/x/draft'], ['PUT', '/deals/pages'],
     ['DELETE', '/deals'], ['PUT', '/deals'], ['GET', '/deals/x/y'], ['GET', '/deals/' + 'a'.repeat(65)], ['GET', '/deals/a.b'],
     ['GET', '/dealsx'], ['GET', '/api/deals'], ['GET', '/deals/'], ['POST', '/deals/x/image/extra']];
   for (const [m, p] of denied) assert.equal(matchRoute(m, p), null, m + ' ' + p);
@@ -82,7 +84,12 @@ test('A. a Deals request needs a sign-in, then an allowlisted account', async ()
     assert.deepEqual(await through(m, p, MALLORY), { passed: false, status: 403, code: 'staging_account' }, 'not allowlisted: ' + m + ' ' + p);
     assert.equal((await through(m, p, ALICE)).passed, true, 'allowlisted: ' + m + ' ' + p);
   }
-  assert.deepEqual(await through('GET', '/deals/cm1/placements', ALICE), { passed: false, status: 404, code: 'staging_scope' });
+  for (const [m, p] of [['GET', '/deals/pages'], ['POST', '/deals/cm1/placements'], ['POST', '/deals/cm1/placements/pl1/publish']]) {
+    assert.equal((await through(m, p, null)).status, 401, 'signed out: ' + m + ' ' + p);
+    assert.equal((await through(m, p, MALLORY)).code, 'staging_account', 'not allowlisted: ' + m + ' ' + p);
+    assert.equal((await through(m, p, ALICE)).passed, true, 'allowlisted: ' + m + ' ' + p);
+  }
+  assert.deepEqual(await through('GET', '/deals/cm1/placements/pl1', ALICE), { passed: false, status: 404, code: 'staging_scope' });
 });
 
 test('A. the route itself still checks ownership: every deal is looked up by its owner', () => {
