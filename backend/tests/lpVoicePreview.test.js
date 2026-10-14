@@ -814,7 +814,11 @@ test('K. the QRAIVY Design System, the greetings and the database schema are unc
   // (the editor page itself is compared with production in lpVoiceGreetings.test.js)
   const { execFileSync } = require('child_process');
   const git = (...a) => execFileSync('git', a, { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  assert.equal(git('diff', 'd7f28e5', '--stat', '--', 'frontend/public/qds', 'frontend/public/js/voice-greetings.js', 'backend/src/data/voiceGreetings.js', 'backend/prisma').trim(), '');
+  assert.equal(git('diff', 'd7f28e5', '--stat', '--', 'frontend/public/qds', 'frontend/public/js/voice-greetings.js', 'backend/src/data/voiceGreetings.js').trim(), '');
+  // QRAIVY Deals (recovered from preview/qraivy-deals-foundation): the Deal and DealPlacement
+  // schema with its migration, and the Deals-only files below, are allowed to differ -- they
+  // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma').trim(), '');
 });
 
 // ── runner ──────────────────────────────────────────────────────
