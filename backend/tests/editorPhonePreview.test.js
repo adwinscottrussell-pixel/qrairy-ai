@@ -41,6 +41,22 @@ test('on desktop the preview column scrolls on its own and keeps the phone centr
   assert.ok(col.includes('height:calc(100vh - 52px);') && col.includes('position:sticky;') && col.includes('overflow:hidden;'));
 });
 
+test('the column scrollbar is visible: 12 px, dark track, muted orange thumb, bright orange on hover', () => {
+  const col = 'div:has(> div > div > .sqd-phone-frame)';
+  assert.ok(css.includes(col + '::-webkit-scrollbar { width: 12px; }'));
+  assert.ok(css.includes(col + '::-webkit-scrollbar-track { background: #14171d; }'));
+  assert.ok(css.includes(col + '::-webkit-scrollbar-thumb { background: rgba(255,90,31,0.5);'));
+  assert.ok(css.includes(col + '::-webkit-scrollbar-thumb:hover,\n  ' + col + '::-webkit-scrollbar-thumb:active { background: #ff5a1f; }'));
+  // Firefox only: in Chromium, scrollbar-color/-width would switch the ::-webkit-scrollbar rules off
+  const ff = css.slice(css.indexOf('@supports not selector(::-webkit-scrollbar) {'));
+  assert.ok(ff.includes(col + ' { scrollbar-width: auto; scrollbar-color: rgba(255,90,31,0.5) #14171d; }'));
+  assert.ok(ff.includes(col + ':hover { scrollbar-color: #ff5a1f #14171d; }'));
+  const outsideFf = css.slice(0, css.indexOf('@supports not selector(::-webkit-scrollbar) {'));
+  assert.ok(!/scrollbar-(color|width)\s*:/.test(outsideFf), 'no scrollbar-color/-width outside the Firefox block');
+  // only the column is styled, never the phone screen
+  assert.ok(!/\.sqd-phone-frame::-webkit-scrollbar/.test(css));
+});
+
 test('the page inside the phone keeps its own scrolling', () => {
   assert.ok(css.includes('.sqd-phone-frame { overscroll-behavior: contain; }'));
   assert.ok(page.includes("var phoneFrame = document.querySelector('.sqd-phone-frame');"));
