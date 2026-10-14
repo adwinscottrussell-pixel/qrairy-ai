@@ -36,6 +36,26 @@ body.sb-collapsed #sqd-topbar { left: var(--sidebar-collapsed-width) !important;
   #mob-btn { top: 5px; z-index: 220; }
 }
 </style>
+<style id="sqd-phone-size">
+/* Smart Landing Page editor: the phone preview is drawn smaller, so the whole device --
+   bottom edge and "Open Full Page" included -- fits the window without scrolling the page.
+   Only the drawing is scaled (transform): the page inside still lays out at its real 355 px
+   phone width, and scrolling, clicks and hotspots inside the phone work as before. The
+   device is 774 px tall at full size (10 + 28 + 2 + 700 screen + 24 + 10); the negative
+   margin hands back the space the scale frees, so the button below follows the phone.
+   Shorter windows get a smaller phone. Desktop only (phones keep the page's own layout). */
+@media (min-width: 769px) {
+  div:has(> .sqd-phone-frame) {
+    --sqd-phone-scale: .78;
+    transform: scale(var(--sqd-phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc(-774px * (1 - var(--sqd-phone-scale)));
+  }
+}
+@media (min-width: 769px) and (max-height: 799px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .68; } }
+@media (min-width: 769px) and (max-height: 699px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .58; } }
+@media (min-width: 769px) and (max-height: 599px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .5; } }
+</style>
 <script src="js/landing-section-registry.js"></script>
 <script src="js/landing-page-renderer.js"></script>
 <script src="js/smart-block-editor.js"></script>

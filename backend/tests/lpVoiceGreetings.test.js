@@ -782,7 +782,9 @@ test('F. the editor page loads the greeting data and field script before the edi
   const withoutSidebar = (withoutRouting.slice(0, headStart) + withoutRouting.slice(headEnd, bodyStart)
     + withoutRouting.slice(bodyStart, bodyTagEnd).replace('<body style=', '<body data-shell="customer" data-active-nav="nav-pages" style=')
     + withoutRouting.slice(bodyEnd))
-    .replace('    // Sidebar labels and the language selector come from the Admin shell.\n    if (window.QraivyShell) window.QraivyShell.apply(lang);\n', '');
+    .replace('    // Sidebar labels and the language selector come from the Admin shell.\n    if (window.QraivyShell) window.QraivyShell.apply(lang);\n', '')
+    // the smaller phone preview (tests/editorPhonePreview.test.js): one style block in <head>
+    .replace(/<style id="sqd-phone-size">\n[\s\S]*?<\/style>\n/, '');
   assert.equal(withoutSidebar, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
 });
 
