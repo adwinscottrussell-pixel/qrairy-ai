@@ -62,7 +62,7 @@ test('A. at least 60 % kept: subject-aware crop of the master (exact Cloudinary 
 test('A. less than 60 % kept: whole picture on a blurred border (exact Cloudinary URL)', () => {
   const t = byId(F.formatsFor(uploaded(4000, 3000), OPTS));
   assert.equal(t.story.mode, 'pad');                                            // 4:3 -> 9:16 keeps 42 %
-  assert.equal(t.story.src, CLOUD + 'c_pad,b_blurred:400:15,w_180,h_320,f_auto,q_auto/v1792004806/' + PID + '.jpg');
+  assert.equal(t.story.src, CLOUD + 'c_fill,w_180,h_320/e_blur:1000/l_qraivy-deals-staging:deal-abc-1792004805912,c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto/v1792004806/' + PID + '.jpg');
   assert.equal(t.story.status, 'padded');
 });
 
@@ -134,6 +134,69 @@ test('A. a background colour fills all four formats; no image means no tiles', (
   assert.deepEqual(plainJson(F.formatsFor(null, OPTS)), []);
 });
 
+// ── A2. Blurred-background padding: layered, never b_blurred ──
+test('A2. the pagoda: all three padded formats use the tested layered transformation', () => {
+  const t = byId(F.formatsFor(uploaded(1450, 708), OPTS));
+  const L = 'qraivy-deals-staging:deal-abc-1792004805912';
+  const want = {
+    feed: 'c_fill,w_272,h_340/e_blur:1000/l_' + L + ',c_fit,w_272,h_340/fl_layer_apply/f_auto,q_auto',     // the exact request tested: HTTP 200, 272x340
+    story: 'c_fill,w_180,h_320/e_blur:1000/l_' + L + ',c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto',
+    square: 'c_fill,w_336,h_336/e_blur:1000/l_' + L + ',c_fit,w_336,h_336/fl_layer_apply/f_auto,q_auto',
+  };
+  for (const id of Object.keys(want)) {
+    assert.equal(t[id].mode, 'pad', id);
+    assert.equal(t[id].src, CLOUD + want[id] + '/v1792004806/' + PID + '.jpg', id);
+  }
+});
+
+test('A2. the layer is the same asset: folders written with ":", nothing else accepted', () => {
+  assert.equal(F.layerIdOf(CLOUD + 'v1/qraivy-deals-staging/deal-x-1.jpg'), 'qraivy-deals-staging:deal-x-1');
+  assert.equal(F.layerIdOf(CLOUD + 'qraivy-deals/sub/deal-y.png'), 'qraivy-deals:sub:deal-y');
+  for (const bad of ['https://evil.example.com/image/upload/v1/a.jpg', CLOUD + 'c_fill,w_1/v1/a.jpg', null, '']) assert.equal(F.layerIdOf(bad), null, String(bad));
+  assert.equal(F.padTransformation({ width: 10, height: 20 }, 'f:a'), 'c_fill,w_10,h_20/e_blur:1000/l_f:a,c_fit,w_10,h_20/fl_layer_apply/f_auto,q_auto');
+});
+
+test('A2. b_blurred (video-only, rejected for images with HTTP 400) is never generated', () => {
+  const src = read('frontend/public/js/deal-image-formats.js');
+  assert.ok(!/['"]c_pad|b_blurred:/.test(src.replace(/\/\/.*|\/\*[\s\S]*?\*\/|^\s*\*.*$/gm, '')), 'no b_blurred in code');
+  for (const [w, h] of [[1450, 708], [4000, 3000], [3000, 4000], [800, 600], [5000, 500], [500, 5000]]) {
+    for (const tl of F.formatsFor(uploaded(w, h), OPTS)) assert.ok(!tl.src.includes('b_blurred') && !tl.src.includes('c_pad'), w + 'x' + h + ' ' + tl.id);
+  }
+});
+
+test('A2. every Cloudinary tile has the plain master as its browser-padded fallback', () => {
+  for (const [w, h] of [[1450, 708], [4000, 3000]]) {
+    const t = byId(F.formatsFor(uploaded(w, h), OPTS));
+    for (const id of ['feed', 'story', 'square']) assert.equal(t[id].fallback, CLOUD + 'v1792004806/' + PID + '.jpg', w + 'x' + h + ' ' + id);
+    assert.equal(t.deal.fallback, undefined, 'the 4:3 deal image keeps its existing behaviour');
+  }
+  const starter = F.formatsFor({ source: 'starter', id: 'bakery-croissants-01' }, OPTS);
+  assert.ok(starter.every((tl) => tl.fallback === undefined), 'browser-padded tiles need no fallback');
+});
+
+test('A2. a failed Cloudinary preview is replaced by the padded master in the page (simulated)', () => {
+  // the page's error handling, run against a minimal stand-in for the tile element
+  const fn = page.slice(page.indexOf('    function watch(frame) {'), page.indexOf("    Array.prototype.forEach.call(grid.querySelectorAll('.deal-format__frame'), watch);"));
+  const tiles = [{ fallback: 'https://res.cloudinary.com/c/image/upload/v1/f/m.jpg', ai: false }, { ai: true }];
+  function frameFor(i) {
+    const listeners = [];
+    const frame = { attrs: { 'data-tile': String(i) }, classes: new Set(), innerHTML: '<img src="x">',
+      getAttribute(k) { return this.attrs[k]; }, hasAttribute(k) { return k in this.attrs; }, setAttribute(k, v) { this.attrs[k] = v; },
+      classList: { add(c) { frame.classes.add(c); } },
+      querySelectorAll() { return [{ addEventListener(ev, cb) { listeners.push(cb); } }]; } };
+    return { frame, fail: () => listeners.shift()() };
+  }
+  const run = vm.runInNewContext('(function(tiles, paddedInner, aiLabel){' + fn + ' return watch; })', {});
+  const watch = run(tiles, (src) => '<padded ' + src + '>', '<ai>');
+  const a = frameFor(0); watch(a.frame); a.fail();
+  assert.equal(a.frame.innerHTML, '<padded https://res.cloudinary.com/c/image/upload/v1/f/m.jpg>', 'shows the picture instead of a blank tile');
+  assert.ok(!a.frame.classes.has('is-broken'));
+  a.fail();                                                                     // the fallback fails too
+  assert.ok(a.frame.classes.has('is-broken'), 'only then is the tile left empty');
+  const b = frameFor(1); watch(b.frame); b.fail();
+  assert.ok(b.frame.classes.has('is-broken'), 'tiles without a fallback (starter files) are not retried');
+});
+
 // ── B. Step 2 ──────────────────────────────────────────────────
 const page = read('frontend/public/deals.html');
 const panel2 = page.slice(page.indexOf('data-panel="2"'), page.indexOf('data-panel="3"'));
@@ -164,7 +227,8 @@ test('B. tiles carry the AI label for AI images, and a broken preview shows an e
   const fn = page.slice(page.indexOf('  function renderFormats(img) {'), page.indexOf('  function renderImageStep() {'));
   assert.ok(fn.includes("(tl.ai ? aiLabel : '')"));
   assert.ok(fn.includes('AI \\u00b7 KI-generiert'));
-  assert.ok(fn.includes("im.addEventListener('error', function () { im.parentNode.classList.add('is-broken'); });"));
+  assert.ok(fn.includes("frame.innerHTML = paddedInner(tl.fallback) + (tl.ai ? aiLabel : '');"), 'a failed preview is replaced by the browser-padded master');
+  assert.ok(fn.includes("frame.classList.add('is-broken');"), 'only if that fails too is the tile left empty');
   assert.ok(fn.includes('loading="lazy"'));
   assert.ok(!/innerHTML[^;]*\+ tl\.src/.test(fn) && fn.includes("esc(tl.src)"), 'every URL is escaped');
 });

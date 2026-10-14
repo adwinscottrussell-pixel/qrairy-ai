@@ -1060,24 +1060,41 @@
     box.hidden = !tiles.length;
     if (!tiles.length) { grid.innerHTML = ''; note.hidden = true; return; }
     var aiLabel = '<span class="deal-ai-label"><span aria-hidden="true">AI \u00b7 KI-generiert</span><span class="deal-sr-only">' + esc(t('ai_label_sr')) + '</span></span>';
-    grid.innerHTML = tiles.map(function (tl) {
+    // The whole picture over a blurred copy of itself, drawn by the browser.
+    function paddedInner(src) {
+      return '<span class="deal-format__blur" style="background-image:url(&quot;' + esc(src) + '&quot;)"></span>' +
+        '<img class="deal-format__img deal-format__img--contain" src="' + esc(src) + '" alt="" loading="lazy" decoding="async">';
+    }
+    grid.innerHTML = tiles.map(function (tl, i) {
       var shape = 'aspect-ratio:' + tl.width + ' / ' + tl.height + ';';
       var inner = '';
       if (tl.mode === 'color') shape += 'background:' + esc(tl.src) + ';';
-      else if (tl.mode === 'css-pad') inner = '<span class="deal-format__blur" style="background-image:url(&quot;' + esc(tl.src) + '&quot;)"></span>' +
-        '<img class="deal-format__img deal-format__img--contain" src="' + esc(tl.src) + '" alt="" loading="lazy" decoding="async">';
+      else if (tl.mode === 'css-pad') inner = paddedInner(tl.src);
       else inner = '<img class="deal-format__img" src="' + esc(tl.src) + '" alt="" loading="lazy" decoding="async">';
       var label = tl.status === 'padded' ? t('fm_padded') : tl.status === 'enlarged' ? t('fm_enlarged', { n: factorText(tl.enlargement) }) : t('fm_optimal');
       return '<figure class="deal-format deal-format--' + tl.id + '">' +
-        '<div class="deal-format__frame" style="' + shape + '">' + inner + (tl.ai ? aiLabel : '') + '</div>' +
+        '<div class="deal-format__frame" data-tile="' + i + '" style="' + shape + '">' + inner + (tl.ai ? aiLabel : '') + '</div>' +
         '<figcaption class="deal-format__caption"><span class="deal-format__name">' + esc(t(FORMAT_NAME[tl.id])) + '</span>' +
         '<span class="deal-format__size">' + tl.width + ' \u00d7 ' + tl.height + '</span>' +
         '<span class="deal-format__status deal-format__status--' + tl.status + (tl.warn ? ' deal-format__status--warn' : '') + '">' + esc(label) + '</span></figcaption></figure>';
     }).join('');
-    // A preview that cannot load shows an empty tile instead of a broken image.
-    Array.prototype.forEach.call(grid.querySelectorAll('img'), function (im) {
-      im.addEventListener('error', function () { im.parentNode.classList.add('is-broken'); });
-    });
+    // A Cloudinary preview that cannot load is replaced by the master, padded in the
+    // browser (once). Only if that fails too is the tile left empty, never a broken image.
+    function watch(frame) {
+      Array.prototype.forEach.call(frame.querySelectorAll('img'), function (im) {
+        im.addEventListener('error', function () {
+          var tl = tiles[Number(frame.getAttribute('data-tile'))];
+          if (tl && tl.fallback && !frame.hasAttribute('data-fallback')) {
+            frame.setAttribute('data-fallback', '');
+            frame.innerHTML = paddedInner(tl.fallback) + (tl.ai ? aiLabel : '');
+            watch(frame);
+          } else {
+            frame.classList.add('is-broken');
+          }
+        });
+      });
+    }
+    Array.prototype.forEach.call(grid.querySelectorAll('.deal-format__frame'), watch);
     var legacy = tiles.some(function (tl) { return tl.legacy; });
     var padded = tiles.some(function (tl) { return tl.status === 'padded'; });
     note.hidden = !(legacy || padded);

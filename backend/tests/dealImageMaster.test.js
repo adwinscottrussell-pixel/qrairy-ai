@@ -151,10 +151,13 @@ test('B. older images (no master) and starter/background images go back exactly 
   assert.deepEqual(JSON.parse(JSON.stringify(imageToServer(imageFromServer({ source: 'background', backgroundId: 'ocean' })))), { source: 'background', backgroundId: 'ocean' });
 });
 
-test('B. every screen still shows the 4:3 url; the master is never displayed', () => {
+test('B. every deal screen still shows the 4:3 url; only the Step 2 format tiles use the master', () => {
   const page = read('frontend/public/deals.html');
-  const lines = page.split('\n').filter((l) => /\bmaster\b/.test(l));
-  assert.deepEqual(lines.map((l) => l.trim().split('//')[0].trim()), ['if (img.master) up.master = img.master;', 'if (img.master) up.master = img.master;'], 'only the two pass-through lines mention the master');
+  const code = page.split('\n').filter((l) => /\bmaster\b/.test(l) && !/^\s*\/\//.test(l)).map((l) => l.trim().split('//')[0].trim());
+  assert.deepEqual(code, ['if (img.master) up.master = img.master;', 'if (img.master) up.master = img.master;'], 'the page only passes the master through');
+  // the master is shown only by the format tiles (js/deal-image-formats.js, and its browser-padded fallback)
+  const fnOf = (name) => page.slice(page.indexOf('  function ' + name + '('), page.indexOf('\n  }\n', page.indexOf('  function ' + name + '(')));
+  for (const name of ['imageCss', 'renderPreview']) assert.ok(!/master|fallback/.test(fnOf(name)), name + ' (thumbnail, phone preview) uses the 4:3 url only');
   const css = read('frontend/public/deals-page.css');
   assert.equal((css.match(/aspect-ratio: 4 \/ 3;/g) || []).length, 5, 'the 4:3 image boxes are unchanged');
 });

@@ -11,7 +11,11 @@
  *   uploaded, with master  Cloudinary transformation of the master. Subject-aware
  *                          crop (c_fill,g_auto) when the crop keeps at least
  *                          RETAIN_MIN of the picture; otherwise the whole
- *                          picture on a blurred copy of itself (c_pad,b_blurred).
+ *                          picture fitted over a blurred, full-frame copy of
+ *                          itself (two layers of the SAME asset; Cloudinary's
+ *                          b_blurred padding works for videos only).
+ *                          If a preview cannot load, the tile falls back to
+ *                          the master padded in the browser (tile.fallback).
  *   uploaded, no master    (uploads from before masters were kept) and
  *   starter                the picture shown whole, padded in the browser (CSS).
  *   background             the colour fills every format.
@@ -30,7 +34,7 @@
   var ENLARGE_NOTE = 1.05;     // above this the picture is shown as "Enlarged"
   var ENLARGE_WARN = 1.5;      // above this the label is a warning
   // Only the plain, untransformed delivery URL of an image on Cloudinary is used.
-  var MASTER_URL = /^https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/image\/upload\/(?:v\d+\/)?[A-Za-z0-9_\/-]+\.(?:jpe?g|png|webp)$/;
+  var MASTER_URL = /^https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/image\/upload\/(?:v\d+\/)?([A-Za-z0-9_\/-]+)\.(?:jpe?g|png|webp)$/;
 
   // Share of the picture a fill-crop to width:height keeps (1 = nothing cut away).
   function retention(mw, mh, width, height) {
@@ -50,7 +54,17 @@
     return masterUrl.replace('/image/upload/', '/image/upload/' + transformation + '/');
   }
   function cropTransformation(p) { return 'c_fill,g_auto,w_' + p.width + ',h_' + p.height + ',f_auto,q_auto'; }
-  function padTransformation(p) { return 'c_pad,b_blurred:400:15,w_' + p.width + ',h_' + p.height + ',f_auto,q_auto'; }
+  // The master's own asset as a Cloudinary layer id: folder separators become ':'.
+  function layerIdOf(masterUrl) {
+    var m = typeof masterUrl === 'string' ? masterUrl.match(MASTER_URL) : null;
+    return m ? m[1].replace(/\//g, ':') : null;
+  }
+  // Blurred full-frame background of the picture, with the whole picture fitted on top
+  // (tested against the real account: HTTP 200, exact size, nothing cropped away).
+  function padTransformation(p, layerId) {
+    var size = 'w_' + p.width + ',h_' + p.height;
+    return 'c_fill,' + size + '/e_blur:1000/l_' + layerId + ',c_fit,' + size + '/fl_layer_apply/f_auto,q_auto';
+  }
 
   function status(kind, enlargement) {
     if (kind === 'padded') return { status: 'padded', enlargement: enlargement > ENLARGE_NOTE ? round1(enlargement) : null, warn: enlargement > ENLARGE_WARN };
@@ -85,9 +99,10 @@
       }
       if (!hasMaster) return tile(f, 'css-pad', plain, status('padded', 1), { ai: ai, legacy: image.source === 'uploaded' });
       var keep = retention(mw, mh, f.width, f.height);
+      // fallback: the plain master, padded in the browser, if the Cloudinary preview fails
       var t = keep >= RETAIN_MIN
-        ? tile(f, 'crop', masterTransform(m.url, cropTransformation(f.preview)), status('crop', cropEnlargement(mw, mh, f.width, f.height)), { ai: false })
-        : tile(f, 'pad', masterTransform(m.url, padTransformation(f.preview)), status('padded', padEnlargement(mw, mh, f.width, f.height)), { ai: false });
+        ? tile(f, 'crop', masterTransform(m.url, cropTransformation(f.preview)), status('crop', cropEnlargement(mw, mh, f.width, f.height)), { ai: false, fallback: m.url })
+        : tile(f, 'pad', masterTransform(m.url, padTransformation(f.preview, layerIdOf(m.url))), status('padded', padEnlargement(mw, mh, f.width, f.height)), { ai: false, fallback: m.url });
       t.retention = Math.round(keep * 100) / 100;
       return t;
     });
@@ -96,6 +111,6 @@
   root.QraivyDealImageFormats = {
     FORMATS: FORMATS, RETAIN_MIN: RETAIN_MIN, ENLARGE_NOTE: ENLARGE_NOTE, ENLARGE_WARN: ENLARGE_WARN,
     retention: retention, cropEnlargement: cropEnlargement, padEnlargement: padEnlargement,
-    masterTransform: masterTransform, formatsFor: formatsFor
+    masterTransform: masterTransform, layerIdOf: layerIdOf, padTransformation: padTransformation, formatsFor: formatsFor
   };
 })(typeof window !== 'undefined' ? window : this);
