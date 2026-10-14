@@ -17,7 +17,9 @@
 <style id="sqd-admin-shell">
 /* The Admin sidebar (dashboard-shell.css + js/admin-shell.js) on the Smart QR page.
    The page keeps its own top bar, which starts where the sidebar ends. */
-#sidebar { z-index: 210; }
+/* Above the top bar on desktop only; on phones dashboard-shell.css stacks the
+   drawer (230) above its dimming overlay (225), and that must stay in force. */
+@media (min-width: 769px) { #sidebar { z-index: 210; } }
 #sqd-topbar { left: var(--sidebar-width) !important; transition: left .22s; }
 body.sb-collapsed #sqd-topbar { left: var(--sidebar-collapsed-width) !important; }
 /* The sidebar carries the Dashboard link; the top bar's own one is only for phones,

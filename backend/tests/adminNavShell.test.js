@@ -147,6 +147,18 @@ test('smart-qr-detail.html: the top bar follows the sidebar; one Dashboard link 
   assert.ok(phone.includes('#sqd-topbar > div:first-child > a[href="dashboard.html"] { display: flex !important; }'), 'on phones the top bar keeps its Dashboard link');
   assert.ok(phone.includes('#main-content { padding-top: 0 !important; padding-bottom: 0 !important; }'), 'the page has its own top bar and no bottom nav');
   assert.ok(phone.includes('#mob-btn { top: 5px; z-index: 220; }'), 'the menu button sits in the top bar, above it');
+  // The page lifts the sidebar above its top bar on desktop only. On phones the shared
+  // stylesheet's stacking must win -- drawer above its dimming overlay -- or every tap on a
+  // drawer link lands on the overlay and only closes the drawer.
+  assert.ok(css.includes('@media (min-width: 769px) { #sidebar { z-index: 210; } }'), 'desktop-only sidebar lift');
+  const sidebarZ = css.match(/#sidebar \{ z-index: \d+; \}/g) || [];
+  assert.equal(sidebarZ.length, 1, 'the sidebar stacking rule exists once, inside the desktop media query');
+  assert.ok(!phone.includes('#sidebar'), 'the phone rules leave the drawer to dashboard-shell.css');
+  const shellCss = read('dashboard-shell.css');
+  const num = (re) => Number((re.exec(shellCss) || [])[1]);
+  const drawerZ = num(/#sidebar \{ z-index: (\d+); \}/), overlayZ = num(/\.sb-overlay \{ z-index: (\d+); \}/);
+  assert.ok(drawerZ > overlayZ, 'shared phone rules: drawer (' + drawerZ + ') above its overlay (' + overlayZ + ')');
+  assert.ok(overlayZ > 220 && 220 > 200, 'overlay above the menu button (220), which is above the top bar (200)');
   // the top-bar link this hides is the page's only plain "dashboard.html" link in the bar
   const bar = src.slice(src.indexOf('<div id="sqd-topbar"'), src.indexOf('<!-- MANAGE OVERVIEW PANEL -->'));
   assert.equal((bar.match(/href="dashboard\.html"/g) || []).length, 1);
