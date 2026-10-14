@@ -18,13 +18,19 @@
  *           GET /api/lp/:slug, which production serves without sign-in.
  * The route behind the gate then applies its normal checks as well
  * (POST /lp: ownership of an existing page; the preview endpoint:
- * requireAuth + ownership).
+ * requireAuth + ownership; /deals: requireAuth, and every deal is looked
+ * up by its owner, so another account's deal answers 404).
+ *
+ * QRAIVY Deals: the owner Deals API (routes/dealRoutes.js) is allowed as
+ * "user" -- signed in AND on the allowlist. Exactly its eight routes;
+ * anything else under /deals is refused like every other path.
  * ─────────────────────────────────────────────────────────────
  */
 
 const { requireAuth } = require('./auth');
 
 const SLUG = '[A-Za-z0-9][A-Za-z0-9_-]{0,119}';
+const DEAL_ID = '[A-Za-z0-9_-]{1,64}';
 const ALLOWED_ROUTES = [
   { method: 'GET',  path: /^\/health$/,                                   access: 'public', what: 'health check' },
   { method: 'GET',  path: /^\/sw\.js$/,                                   access: 'public', what: 'the customer page\'s own worker script' },
@@ -32,6 +38,14 @@ const ALLOWED_ROUTES = [
   { method: 'GET',  path: new RegExp('^/api/lp/' + SLUG + '$'),           access: 'owner',  what: 'editor: load the page' },
   { method: 'POST', path: /^\/lp$/,                                       access: 'user',   what: 'editor: publish / save the page' },
   { method: 'POST', path: new RegExp('^/lp/voice/preview/' + SLUG + '$'), access: 'user',   what: 'editor: voice audio preview' },
+  { method: 'GET',    path: /^\/deals$/,                                      access: 'user', what: 'Deals: list own deals' },
+  { method: 'POST',   path: /^\/deals$/,                                      access: 'user', what: 'Deals: create a deal' },
+  { method: 'GET',    path: new RegExp('^/deals/' + DEAL_ID + '$'),            access: 'user', what: 'Deals: load a deal' },
+  { method: 'PUT',    path: new RegExp('^/deals/' + DEAL_ID + '/draft$'),      access: 'user', what: 'Deals: save a draft' },
+  { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/publish$'),    access: 'user', what: 'Deals: publish' },
+  { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/archive$'),    access: 'user', what: 'Deals: archive' },
+  { method: 'DELETE', path: new RegExp('^/deals/' + DEAL_ID + '$'),            access: 'user', what: 'Deals: delete' },
+  { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/image$'),      access: 'user', what: 'Deals: upload an image (staging folder only)' },
 ];
 
 function matchRoute(method, path) {

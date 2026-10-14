@@ -422,7 +422,7 @@ test('F. the server\'s image lists mirror the frontend catalog and backgrounds',
   assert.deepEqual(DEAL_BACKGROUNDS, [...page.matchAll(/\{ id: '([a-z]+)', css: 'linear-gradient/g)].map((m) => m[1]));
   assert.equal(DEAL_IMAGE_FOLDER, 'qraivy-deals');
   const upload = fs.readFileSync(resolve('src', 'services', 'dealImageUploadService.js'), 'utf8');
-  assert.match(upload, /folder: DEAL_IMAGE_FOLDER/);
+  assert.match(upload, /folder: ACTIVE_DEAL_IMAGE_FOLDER/); // production: DEAL_IMAGE_FOLDER (dealsPreviewSafety.test.js)
   assert.match(upload, /overwrite: false/);
 });
 

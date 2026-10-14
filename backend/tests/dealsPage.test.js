@@ -83,8 +83,9 @@ test('no other Admin page was changed to link here yet', () => {
 
 // ── Preview-only guarantees ────────────────────────────────────
 test('talks only to the Deals API, as the signed-in owner', () => {
-  assert.ok(page.includes('<script src="js/api-base.js"></script>'), 'uses the shared API base resolver');
-  assert.match(page, /var API_BASE = String\(window\.QRAIVY_API_BASE == null \? 'https:\/\/api\.qraivy\.com' : window\.QRAIVY_API_BASE\)/);
+  // its own default-deny routing (js/deals-routing.js; see dealsPreviewSafety.test.js)
+  assert.ok(page.includes('<script src="js/deals-routing.js"></script>'), 'uses the Deals routing');
+  assert.match(page, /var API_BASE = String\(ROUTING\.api \|\| ''\)\.replace\(/);
   // One request helper; every call goes through it with the Clerk token.
   assert.equal((page.match(/\bfetch\(/g) || []).length, 1, 'exactly one fetch call site');
   assert.match(page, /res = await fetch\(API_BASE \+ path, opts\);/);

@@ -1,5 +1,5 @@
 const { v2: cloudinary } = require('cloudinary');
-const { DEAL_IMAGE_FOLDER } = require('../data/dealImages');
+const { ACTIVE_DEAL_IMAGE_FOLDER } = require('../data/dealImages');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,8 +8,10 @@ cloudinary.config({
 });
 
 // Deal image upload — same Cloudinary pattern as logoUploadService.js,
-// into its own folder (DEAL_IMAGE_FOLDER), which is also what
+// into its own folder (ACTIVE_DEAL_IMAGE_FOLDER: production's qraivy-deals,
+// or a staging server's DEAL_IMAGE_FOLDER), which is also what
 // dealService.isTrustedDealImage() requires of any uploaded deal image.
+// A staging server without its own folder has no storage: uploads answer 503.
 //
 // Stored as 1200x900 (4:3), the format every deal image is shown in:
 // larger pictures are cropped to fill, smaller ones are never upscaled.
@@ -17,7 +19,7 @@ cloudinary.config({
 // deal keeps pointing at the picture it was published with while a newer
 // one sits in the draft.
 function isDealImageStorageConfigured() {
-  return !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+  return !!(ACTIVE_DEAL_IMAGE_FOLDER && process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 }
 
 async function uploadDealImage(buffer, dealId) {
@@ -25,7 +27,7 @@ async function uploadDealImage(buffer, dealId) {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'image',
-        folder: DEAL_IMAGE_FOLDER,
+        folder: ACTIVE_DEAL_IMAGE_FOLDER,
         public_id: `deal-${dealId}-${Date.now()}`,
         overwrite: false,
         transformation: [{ width: 1200, height: 900, crop: 'fill', gravity: 'auto' }],

@@ -23,7 +23,7 @@
  */
 
 const prisma = require('../utils/prismaClient');
-const { DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
+const { ACTIVE_DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
 
 class DealError extends Error {
   constructor(message, status = 400) {
@@ -63,7 +63,7 @@ function isTrustedDealImage(url, publicId) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   if (!cloudName) return false;
   if (!url.startsWith(`https://res.cloudinary.com/${cloudName}/image/upload/`)) return false;
-  if (!publicId.startsWith(`${DEAL_IMAGE_FOLDER}/`)) return false;
+  if (!ACTIVE_DEAL_IMAGE_FOLDER || !publicId.startsWith(`${ACTIVE_DEAL_IMAGE_FOLDER}/`)) return false;
   return url.includes(publicId);
 }
 

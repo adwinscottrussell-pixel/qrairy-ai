@@ -25,7 +25,17 @@
  * ─────────────────────────────────────────────────────────────
  */
 
+// Production's folder. A staging server never uses it: there the folder is
+// DEAL_IMAGE_FOLDER from config/stagingPolicy.js, or none (uploads refused).
 const DEAL_IMAGE_FOLDER = 'qraivy-deals';
+
+// The folder this server stores and trusts deal uploads in: production's
+// without a staging policy, the staging policy's folder (or null) with one.
+function dealImageFolderFor(policy) {
+  if (!policy) return DEAL_IMAGE_FOLDER;
+  return policy.dealImageFolder || null;
+}
+const ACTIVE_DEAL_IMAGE_FOLDER = dealImageFolderFor(require('../config/stagingPolicy').policy);
 
 const DEAL_STARTER_IMAGES = [
   { id: 'bakery-croissants-01', origin: 'ai_generated' },
@@ -59,4 +69,4 @@ function findDealStarterImage(id) {
   return DEAL_STARTER_IMAGES.find((i) => i.id === id) || null;
 }
 
-module.exports = { DEAL_IMAGE_FOLDER, DEAL_STARTER_IMAGES, DEAL_BACKGROUNDS, findDealStarterImage };
+module.exports = { DEAL_IMAGE_FOLDER, ACTIVE_DEAL_IMAGE_FOLDER, dealImageFolderFor, DEAL_STARTER_IMAGES, DEAL_BACKGROUNDS, findDealStarterImage };

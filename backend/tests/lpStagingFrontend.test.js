@@ -244,7 +244,7 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // same" rather than "only these changed", so it keeps holding as the
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
-  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js').map((f) => 'frontend/public/js/' + f);
+  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js').map((f) => 'frontend/public/js/' + f);
   assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/railway.toml').trim(), '');
   // QRAIVY Deals (recovered from preview/qraivy-deals-foundation): the Deal and DealPlacement
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they

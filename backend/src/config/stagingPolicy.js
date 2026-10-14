@@ -21,6 +21,13 @@
  *   CLOUDINARY_CLOUD_NAME            must be set. A separate account is
  *                                    best; the folder rule protects
  *                                    production audio either way.
+ *   DEAL_IMAGE_FOLDER                optional. Storage folder for QRAIVY
+ *                                    Deals image uploads; same rules as
+ *                                    VOICE_AUDIO_FOLDER, and different
+ *                                    from it. Without it a staging server
+ *                                    refuses Deals uploads (it never falls
+ *                                    back to the production folder); set
+ *                                    but unsafe, the server does not start.
  *
  *
  * Sign-in is verified with Clerk's PUBLIC key only, so staging holds no
@@ -123,6 +130,15 @@ function loadStagingPolicy(env = process.env) {
 
   if (!String(env.CLOUDINARY_CLOUD_NAME || '').trim()) problems.push('CLOUDINARY_CLOUD_NAME is required on staging.');
 
+  // QRAIVY Deals uploads: an explicit staging folder, or none at all.
+  const dealFolder = String(env.DEAL_IMAGE_FOLDER || '').trim();
+  if (dealFolder) {
+    if (!/^[a-z0-9][a-z0-9-]{2,60}$/.test(dealFolder)) problems.push('DEAL_IMAGE_FOLDER may only contain lowercase letters, digits and hyphens.');
+    else if (PRODUCTION_STORAGE_FOLDERS.includes(dealFolder)) problems.push('DEAL_IMAGE_FOLDER is a production folder. Staging deal images must go somewhere else.');
+    else if (!/(^|-)staging(-|$)/.test(dealFolder)) problems.push('DEAL_IMAGE_FOLDER must contain the word "staging" (for example qraivy-deals-staging).');
+    else if (dealFolder === folder) problems.push('DEAL_IMAGE_FOLDER must differ from VOICE_AUDIO_FOLDER.');
+  }
+
   const clerk = readClerkVerification(env, problems);
 
   const present = FORBIDDEN_SETTINGS.filter((name) => String(env[name] || '').trim());
@@ -134,6 +150,7 @@ function loadStagingPolicy(env = process.env) {
     allowedUserIds: Object.freeze(ids.slice()),
     recordingCeiling: ceiling,
     voiceAudioFolder: folder,
+    dealImageFolder: dealFolder || null,
     clerk,
   });
 }

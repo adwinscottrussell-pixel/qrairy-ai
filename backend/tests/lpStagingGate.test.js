@@ -68,7 +68,7 @@ test('A. production: no policy, nothing validated, whatever else is set', () => 
 
 test('A. staging with every setting right is accepted', () => {
   const p = loadStagingPolicy(STAGING_ENV);
-  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging',
+  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging', dealImageFolder: null,
     clerk: { jwtKey: STAGING_ENV.CLERK_JWT_KEY.trim(), issuer: 'https://clerk.voice-staging.example', authorizedParties: ['https://voice-preview.voice-staging.example'] } });
   assert.ok(Object.isFrozen(p) && Object.isFrozen(p.allowedUserIds));
 });
@@ -135,7 +135,9 @@ async function through(gate, method, url, user) {
 }
 
 test('B. exactly six kinds of request are allowed, and only two of them without sign-in beyond page playback', () => {
-  assert.deepEqual(ALLOWED_ROUTES.map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
+  // ...plus the eight owner Deals routes, all "user" (dealsPreviewSafety.test.js)
+  assert.deepEqual(ALLOWED_ROUTES.map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user',
+    'GET user', 'POST user', 'GET user', 'PUT user', 'POST user', 'POST user', 'DELETE user', 'POST user']);
   const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
   for (const [m, p] of allowed) assert.ok(matchRoute(m, p), m + ' ' + p);
 });
@@ -152,7 +154,7 @@ test('B. everything else is refused before any route code or sign-in check runs'
     // customer communication and customer data
     ['POST', '/lp/push/s'], ['GET', '/lp/push/s/count'], ['GET', '/lp/push/s/history'], ['POST', '/lp/webpush/subscribe/s'], ['GET', '/lp/webpush/vapid-key/s'], ['POST', '/lp/subscribe/s'], ['GET', '/lp/subscribers/s'], ['GET', '/customers/x'],
     // uploads, assistant, QR codes, dashboards, everything about other pages
-    ['POST', '/lp/upload-logo/s'], ['POST', '/lp/upload-strip/s'], ['POST', '/lp/chat'], ['GET', '/qr/x'], ['POST', '/qr'], ['DELETE', '/qr/x'], ['GET', '/dashboard'], ['GET', '/api/lp'], ['GET', '/manifest/s'], ['GET', '/analytics/x'], ['POST', '/ai/x'], ['GET', '/user/me'], ['POST', '/businesses/x'], ['GET', '/public/plans'], ['GET', '/public/stadtpocket/x'], ['POST', '/deals'],
+    ['POST', '/lp/upload-logo/s'], ['POST', '/lp/upload-strip/s'], ['POST', '/lp/chat'], ['GET', '/qr/x'], ['POST', '/qr'], ['DELETE', '/qr/x'], ['GET', '/dashboard'], ['GET', '/api/lp'], ['GET', '/manifest/s'], ['GET', '/analytics/x'], ['POST', '/ai/x'], ['GET', '/user/me'], ['POST', '/businesses/x'], ['GET', '/public/plans'], ['GET', '/public/stadtpocket/x'], ['PATCH', '/deals'],
     // allowed paths with the wrong method
     ['DELETE', '/lp/casa-lumi-ab1'], ['PUT', '/lp'], ['PATCH', '/lp'], ['POST', '/lp/casa-lumi-ab1'], ['POST', '/api/lp/casa-lumi-ab1'], ['GET', '/lp/voice/preview/casa-lumi-ab1'], ['POST', '/health'], ['DELETE', '/api/lp/casa-lumi-ab1'],
     // look-alikes

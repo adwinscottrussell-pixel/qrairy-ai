@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="deals-page.css"/>
   <script src="js/qraivy-lang.js"></script>
   <script src="js/admin-shell.js"></script>
-  <script src="js/api-base.js"></script>
+  <script src="js/deals-routing.js"></script>
   <script src="js/deal-starter-images.js"></script>
 </head>
 <body>
@@ -512,6 +512,7 @@
       db_published_note: 'This deal is published. Changes you save stay a draft until you publish again.',
       s2_uploading: 'Uploading your picture…',
       e_network: 'Could not reach the server. Check your connection and try again.',
+      e_routing: 'This address is not connected to a Deals server, so nothing can be loaded or saved here. Use qraivy.com or the Deals preview.',
       e_server: 'Something went wrong on our side. Please try again.',
       e_save_detail: 'Could not save: {detail}',
       e_gone: 'This deal no longer exists.',
@@ -596,6 +597,7 @@
       db_published_note: 'Dieser Deal ist veröffentlicht. Gespeicherte Änderungen bleiben ein Entwurf, bis du erneut veröffentlichst.',
       s2_uploading: 'Dein Bild wird hochgeladen …',
       e_network: 'Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.',
+      e_routing: 'Diese Adresse ist mit keinem Deals-Server verbunden, daher kann hier nichts geladen oder gespeichert werden. Nutze qraivy.com oder die Deals-Vorschau.',
       e_server: 'Bei uns ist etwas schiefgelaufen. Bitte versuche es erneut.',
       e_save_detail: 'Speichern nicht möglich: {detail}',
       e_gone: 'Diesen Deal gibt es nicht mehr.',
@@ -676,12 +678,16 @@
   function toast(msg) { if (window.QraivyShell && window.QraivyShell.toast) window.QraivyShell.toast(msg); }
 
   // ── API ──────────────────────────────────────────────────────
-  // Same base resolver as the dashboard (js/api-base.js) and the same
-  // Clerk bearer token every other Admin page sends.
-  var API_BASE = String(window.QRAIVY_API_BASE == null ? 'https://api.qraivy.com' : window.QRAIVY_API_BASE).replace(/\/$/, '');
+  // The API comes from js/deals-routing.js (default deny): production on
+  // qraivy.com, the isolated Deals API on deals-preview.qraivy.com, and NO
+  // request at all on any other host. Same Clerk bearer token every other
+  // Admin page sends.
+  var ROUTING = window.QRAIVY_DEALS_ROUTING || { blocked: true, api: '' };
+  var API_BASE = String(ROUTING.api || '').replace(/\/$/, '');
   function ApiError(status, message) { this.status = status; this.message = message || ''; }
   async function api(method, path, body) {
     var res, data;
+    if (ROUTING.blocked || !API_BASE) throw new ApiError(-1);   // never sent
     try {
       if (!window.Clerk || !window.Clerk.session) throw new ApiError(401);
       var token = await window.Clerk.session.getToken();
@@ -702,6 +708,7 @@
   // it is written for the owner. Everything else gets a general message.
   function errorText(err) {
     if (!(err instanceof ApiError)) return t('e_server');
+    if (err.status === -1) return t('e_routing');
     if (err.status === 0) return t('e_network');
     if (err.status === 404) return t('e_gone');
     if ((err.status === 400 || err.status === 409) && err.message) return t('e_save_detail', { detail: err.message });
@@ -1135,7 +1142,7 @@
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return;
       loadState = 'error';
-      $('deal-load-error-sub').textContent = err instanceof ApiError && err.status === 0 ? t('dl_load_error_sub') : t('e_server');
+      $('deal-load-error-sub').textContent = err instanceof ApiError && err.status === 0 ? t('dl_load_error_sub') : errorText(err);
     }
     renderList();
   }
@@ -1438,10 +1445,22 @@
   }
   window.toggleLang = function () { applyLang(_lang === 'en' ? 'de' : 'en'); };
 
+  // On a host without a Deals API, say so once at the top of the page.
+  function routingNotice() {
+    if (!ROUTING.blocked || document.getElementById('deals-routing-notice')) return;
+    var el = document.createElement('div');
+    el.id = 'deals-routing-notice';
+    el.setAttribute('role', 'alert');
+    el.style.cssText = 'position:sticky;top:0;z-index:1000;background:#7f1d1d;color:#fff;padding:10px 16px;font:500 13px/1.4 Inter,system-ui,sans-serif;text-align:center';
+    el.textContent = t('e_routing');
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     bind();
     applyLang(_lang);
     renderPreview();
+    routingNotice();
   });
 
   // Called by initDeals() once Clerk has confirmed the signed-in owner:
