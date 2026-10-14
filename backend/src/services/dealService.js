@@ -24,6 +24,7 @@
 
 const prisma = require('../utils/prismaClient');
 const { ACTIVE_DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
+const { forgetPageDeals } = require('./dealCards');
 
 class DealError extends Error {
   constructor(message, status = 400) {
@@ -510,13 +511,23 @@ async function saveDealDraft(ownerUserId, dealId, body) {
 // every DRAFT placement of this deal, re-checking that each page still
 // belongs to the owner. If one does not, nothing is published (the deal
 // included). Without the option publishing is exactly as before.
+// What customers see on landing pages is cached briefly (services/dealCards.js);
+// every change that could alter it drops the cache of the affected pages.
+// A failure here never fails the owner's action.
+async function forgetDealPages(dealId) {
+  try {
+    const rows = await prisma.dealPlacement.findMany({ where: { dealId } });
+    forgetPageDeals(rows.map((p) => p.targetRef));
+  } catch (e) { console.error('[deals] could not clear landing page cache:', e && e.message); }
+}
+
 async function publishDeal(ownerUserId, dealId, options = {}) {
   requireOwner(ownerUserId);
   const includePlacements = options && options.includePlacements;
   if (includePlacements !== undefined && typeof includePlacements !== 'boolean') {
     throw new DealError('includePlacements must be true or false.');
   }
-  return prisma.$transaction(async (tx) => {
+  const published = await prisma.$transaction(async (tx) => {
     const deal = await findDealOrThrow(ownerUserId, dealId, tx);
     if (deal.status === 'archived') {
       throw new DealError('Cannot publish an archived deal.', 400);
@@ -565,6 +576,8 @@ async function publishDeal(ownerUserId, dealId, options = {}) {
     }
     return mergeDealState(updated);
   });
+  await forgetDealPages(published.dealId);
+  return published;
 }
 
 // ── Archive (draft or published -> archived; terminal state) ──────
@@ -580,6 +593,7 @@ async function archiveDeal(ownerUserId, dealId) {
     where: { id: deal.id },
     data: { status: 'archived' },
   });
+  await forgetDealPages(deal.id);
   return mergeDealState(updated);
 }
 
@@ -587,6 +601,7 @@ async function archiveDeal(ownerUserId, dealId) {
 // Placements go with it (DealPlacement.dealId is ON DELETE CASCADE).
 async function deleteDeal(ownerUserId, dealId) {
   const deal = await findDealOrThrow(ownerUserId, dealId);
+  await forgetDealPages(deal.id);   // before the cascade removes its placements
   await prisma.deal.delete({ where: { id: deal.id } });
   return { deleted: true, dealId: deal.id };
 }
@@ -694,7 +709,7 @@ async function publishDealPlacement(ownerUserId, dealId, placementId) {
       data: { status: 'published', publishedAt: new Date() },
     });
     return toPlacementState(updated);
-  });
+  }).then((state) => { forgetPageDeals([state.targetRef]); return state; });
 }
 
 // ── Owner's landing pages (for choosing where a deal appears) ─────
@@ -777,6 +792,7 @@ async function archiveDealPlacement(ownerUserId, dealId, placementId) {
     where: { id: placement.id },
     data: { status: 'archived' },
   });
+  forgetPageDeals([updated.targetRef]);
   return toPlacementState(updated);
 }
 

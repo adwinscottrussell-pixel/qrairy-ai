@@ -1,5 +1,6 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
+const { injectActiveDeals } = require('../services/dealCards'); // QRAIVY Deals cards; off unless DEALS_ON_LANDING_PAGES=1
 const { mergeVoiceOnSave, ensureVoiceAudio, effectiveGreeting, audioIsCurrent, audioIsPlayable, flagVoiceOnSave, publishVoiceStatus } = require('../services/lpVoiceService');
 const prisma = require('../utils/prismaClient');
 const plans = require('../config/plans');
@@ -1803,7 +1804,7 @@ async function handleServeLP(req, res) {
     // instead of through renderLP's legacy template switch, which has its
     // own undefined-variable bugs (t.tagline, t.aiPowered, ...) left over
     // from being a separate, no-longer-maintained code path.
-    const _lpHtml = renderPremiumLP(page);
+    const _lpHtml = await injectActiveDeals(renderPremiumLP(page), page);
     if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
         const _stampKey = 'stamp:' + slug;

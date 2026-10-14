@@ -1058,7 +1058,7 @@ test('I. the migration is additive only: two new tables, nothing altered or drop
 
 test('I. dealService has no StadtPocket dependency', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
-  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../data/dealImages']);
+  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../data/dealImages', './dealCards']); // dealCards: the Deals' own landing page cards
   assert.doesNotMatch(src, /prisma\.stadtPocket|tx\.stadtPocket|listingLocationId/);
 });
 
