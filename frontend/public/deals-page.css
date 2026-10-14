@@ -311,6 +311,8 @@
 .deal-page__name { font-weight: var(--qds-font-weight-semibold); overflow-wrap: anywhere; }
 .deal-page__slug { font-family: var(--qds-font-family-mono); font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); overflow-wrap: anywhere; }
 .deal-page--off .deal-page__row { cursor: default; opacity: 0.6; }
+.deal-page__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qds-space-2); padding: var(--qds-space-2) var(--qds-space-3) 0; }
+.deal-page__hint { font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); overflow-wrap: anywhere; flex: 1 1 200px; }
 
 /* ── Step 2: formats preview (js/deal-image-formats.js). Tile shapes come from
    the format itself (inline aspect-ratio); the deal's own image boxes above

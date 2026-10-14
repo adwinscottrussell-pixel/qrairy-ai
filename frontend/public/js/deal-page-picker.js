@@ -14,11 +14,17 @@
  *              Save / Publish the server restores that same placement as a
  *              draft (never a second record, never published by itself)
  * Unticking a saved page (draft or published) archives it, after asking.
+ * "Publish on landing page": a saved (draft) page of a deal that is already
+ * published can be published on its own -- POST
+ * /deals/:id/placements/:placementId/publish. The deal itself is not
+ * republished: its live version stays as it is, and unpublished changes
+ * stay unpublished.
  * A saved placement on a page that is no longer the owner's (gone: true) is
  * still listed, so it can be removed -- otherwise it would block publishing.
  *
  * window.QraivyDealPagePicker: rows, toggleAction, selectAllSlugs,
- * clearAllPlan, needsIncludePlacements, savePending
+ * clearAllPlan, needsIncludePlacements, savePending, canPublishOnPage,
+ * publishOnPage
  */
 (function (root) {
   function rows(pages, bySlug, pending) {
@@ -90,5 +96,25 @@
     return { ok: true };
   }
 
-  root.QraivyDealPagePicker = { rows: rows, toggleAction: toggleAction, selectAllSlugs: selectAllSlugs, clearAllPlan: clearAllPlan, needsIncludePlacements: needsIncludePlacements, savePending: savePending };
+  // Only a saved page of the owner, on a deal that is already published
+  // (dealStatus = the deal's status on the server, not the form).
+  function canPublishOnPage(row, dealStatus) {
+    return !!row && row.state === 'draft' && !row.gone && !!row.placementId && dealStatus === 'published';
+  }
+
+  // Publishes that one placement -- never the deal. On success the page is
+  // marked "published here"; on failure nothing is changed here.
+  async function publishOnPage(api, dealId, row, bySlug) {
+    try {
+      var res = await api('POST', '/deals/' + encodeURIComponent(dealId) + '/placements/' + encodeURIComponent(row.placementId) + '/publish');
+      if (!res || !res.placement || res.placement.placementId !== row.placementId || res.placement.status !== 'published') return { ok: false, error: null };
+      bySlug[row.slug] = res.placement;
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  }
+
+  root.QraivyDealPagePicker = { rows: rows, toggleAction: toggleAction, selectAllSlugs: selectAllSlugs, clearAllPlan: clearAllPlan, needsIncludePlacements: needsIncludePlacements, savePending: savePending,
+    canPublishOnPage: canPublishOnPage, publishOnPage: publishOnPage };
 })(typeof window !== 'undefined' ? window : this);

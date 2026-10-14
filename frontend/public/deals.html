@@ -527,6 +527,10 @@
       e_pages_conflict: 'The page “{name}” was already set for this deal. The list has been refreshed; please check it and try again.',
       e_pages_remove: 'The deal could not be removed from “{name}”.',
       e_pages_publish: 'The deal was not published. One of the selected pages is no longer yours; the list has been refreshed.',
+      pg_publish_one: 'Publish on landing page',
+      pg_publish_hint: 'Shows the published version of this deal on that page now. Unpublished changes stay unpublished.',
+      pg_publish_ok: 'The deal is now published on “{name}”.',
+      e_pages_publish_one: 'The deal could not be published on “{name}”. The list has been refreshed.',
       s4_save: 'Save draft', s4_publish: 'Publish',
       rv_type: 'Deal type', rv_details: 'Details', rv_title: 'Title', rv_offer: 'Offer line', rv_desc: 'Description', rv_image: 'Image', rv_period: 'Period',
       rv_edit: 'Edit', rv_none: 'Not set', rv_no_image: 'No image', rv_image_upload: 'Your uploaded picture', rv_image_bg: 'Background “{name}”', rv_image_starter: 'Starter image “{name}” (AI-generated)',
@@ -630,6 +634,10 @@
       e_pages_conflict: 'Die Seite „{name}“ war für diesen Deal bereits eingetragen. Die Liste wurde aktualisiert; bitte prüfe sie und versuche es erneut.',
       e_pages_remove: 'Der Deal konnte nicht von „{name}“ entfernt werden.',
       e_pages_publish: 'Der Deal wurde nicht veröffentlicht. Eine der ausgewählten Seiten gehört nicht mehr dir; die Liste wurde aktualisiert.',
+      pg_publish_one: 'Auf Landingpage veröffentlichen',
+      pg_publish_hint: 'Zeigt die veröffentlichte Version dieses Deals jetzt auf dieser Seite. Unveröffentlichte Änderungen bleiben unveröffentlicht.',
+      pg_publish_ok: 'Der Deal ist jetzt auf „{name}“ veröffentlicht.',
+      e_pages_publish_one: 'Der Deal konnte nicht auf „{name}“ veröffentlicht werden. Die Liste wurde aktualisiert.',
       s4_save: 'Entwurf speichern', s4_publish: 'Veröffentlichen',
       rv_type: 'Deal-Art', rv_details: 'Details', rv_title: 'Titel', rv_offer: 'Angebotszeile', rv_desc: 'Beschreibung', rv_image: 'Bild', rv_period: 'Zeitraum',
       rv_edit: 'Bearbeiten', rv_none: 'Nicht angegeben', rv_no_image: 'Kein Bild', rv_image_upload: 'Dein hochgeladenes Bild', rv_image_bg: 'Hintergrund „{name}“', rv_image_starter: 'Vorlage „{name}“ (KI-generiert)',
@@ -1181,7 +1189,7 @@
   // listed (GET /deals/pages); the server checks ownership again for every
   // request. Unsaved ticks live only here until Save draft / Publish.
   var PAGE_BADGE = { pending: 'info', draft: 'neutral', published: 'success', archived: 'neutral' };
-  function freshPicker() { return { dealId: null, loading: false, error: '', pages: null, bySlug: {}, pending: new Set() }; }
+  function freshPicker() { return { dealId: null, loading: false, error: '', notice: '', pages: null, bySlug: {}, pending: new Set() }; }
   var picker = freshPicker();
   function pageName(slug) {
     var p = (picker.pages || []).filter(function (x) { return x.slug === slug; })[0];
@@ -1191,7 +1199,7 @@
     if (!draft || !draft.id) { renderPicker(); return; }
     if (!force && picker.dealId === draft.id && (picker.pages || picker.loading)) { renderPicker(); return; }
     var forDeal = draft.id;
-    picker.dealId = forDeal; picker.loading = true; picker.error = ''; renderPicker();
+    picker.dealId = forDeal; picker.loading = true; picker.error = ''; picker.notice = ''; renderPicker();
     try {
       var both = await Promise.all([api('GET', '/deals/pages'), api('GET', '/deals/' + encodeURIComponent(forDeal) + '/placements')]);
       if (!draft || draft.id !== forDeal) return;
@@ -1223,13 +1231,17 @@
     tools.hidden = false;
     $('deal-pages-all').disabled = busy || !lib.selectAllSlugs(rs).length;
     $('deal-pages-none').disabled = busy || !rs.some(function (r) { return r.checked; });
-    status.textContent = '';
+    status.textContent = picker.notice || '';
     list.innerHTML = rs.map(function (r) {
       var badge = r.state === 'none' ? '' : '<span class="qds-badge qds-badge--' + PAGE_BADGE[r.state] + '">' + esc(t('pg_st_' + r.state)) + '</span>';
+      // A saved page of an already-published deal can be published on its own.
+      var one = lib.canPublishOnPage(r, draft.status) ? '<div class="deal-page__actions">' +
+        '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-publish-page="' + esc(r.slug) + '"' + (busy ? ' disabled' : '') + '>' + esc(t('pg_publish_one')) + '</button>' +
+        '<span class="deal-page__hint">' + esc(t('pg_publish_hint')) + '</span></div>' : '';
       return '<li class="deal-page' + (r.disabled ? ' deal-page--off' : '') + '"><label class="deal-page__row">' +
         '<input type="checkbox" class="deal-page__check" data-page="' + esc(r.slug) + '"' + (r.checked ? ' checked' : '') + (r.disabled || busy ? ' disabled' : '') + '>' +
         '<span class="deal-page__text"><span class="deal-page__name">' + esc(r.name) + '</span>' +
-        '<span class="deal-page__slug">/lp/' + esc(r.slug) + (r.gone ? ' · ' + esc(t('pg_page_gone')) : r.live ? '' : ' · ' + esc(t('pg_page_draft'))) + '</span></span>' + badge + '</label></li>';
+        '<span class="deal-page__slug">/lp/' + esc(r.slug) + (r.gone ? ' · ' + esc(t('pg_page_gone')) : r.live ? '' : ' · ' + esc(t('pg_page_draft'))) + '</span></span>' + badge + '</label>' + one + '</li>';
     }).join('');
   }
   // Archives saved placements one by one; stops and explains at the first failure.
@@ -1250,6 +1262,7 @@
   }
   function onPageToggle(input) {
     var lib = window.QraivyDealPagePicker, slug = input.getAttribute('data-page');
+    picker.notice = '';
     var row = lib.rows(picker.pages, picker.bySlug, picker.pending).filter(function (r) { return r.slug === slug; })[0];
     var act = lib.toggleAction(row);
     if (act.type === 'add-pending') picker.pending.add(slug);
@@ -1268,6 +1281,26 @@
     var lib = window.QraivyDealPagePicker, plan = lib.clearAllPlan(lib.rows(picker.pages, picker.bySlug, picker.pending));
     plan.dropPending.forEach(function (s) { picker.pending.delete(s); });
     if (plan.archive.length && window.confirm(t('pg_confirm_clear', { n: plan.archive.length }))) { removePages(plan.archive); return; }
+    renderPicker();
+  }
+  // Publishes one saved page of an already-published deal -- only that
+  // placement (POST …/placements/:pid/publish). The deal is NOT republished:
+  // its live version stays, unpublished changes stay unpublished, and
+  // unsaved ticks are left alone.
+  async function onPublishOnPage(btn, slug) {
+    var lib = window.QraivyDealPagePicker;
+    var row = lib.rows(picker.pages, picker.bySlug, picker.pending).filter(function (r) { return r.slug === slug; })[0];
+    if (!lib.canPublishOnPage(row, draft.status)) return;
+    picker.notice = ''; showAlert('');
+    await runBusy(btn, async function () {
+      var res = await lib.publishOnPage(api, draft.id, row, picker.bySlug);
+      if (res.ok) { picker.notice = t('pg_publish_ok', { name: row.name }); toast(picker.notice); return; }
+      if (res.error instanceof ApiError && res.error.status === 401) return;
+      // a refusal (400/409) is explained by our own message; network or server trouble adds the general reason
+      var why = res.error && !(res.error instanceof ApiError && (res.error.status === 400 || res.error.status === 409)) ? ' ' + errorText(res.error) : '';
+      showAlert(t('e_pages_publish_one', { name: row.name }) + why);
+      await loadPicker(true);
+    });
     renderPicker();
   }
   // Saves the unsaved ticks. Returns true only when every one is on the server.
@@ -1592,6 +1625,7 @@
       if (e.target.closest('#deal-pages-all')) onPagesAll();
       else if (e.target.closest('#deal-pages-none')) onPagesNone();
       else if (e.target.closest('#deal-pages-retry')) loadPicker(true);
+      else if (e.target.closest('[data-publish-page]')) { var b = e.target.closest('[data-publish-page]'); onPublishOnPage(b, b.getAttribute('data-publish-page')); }
     });
     $('deal-builder-view').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;

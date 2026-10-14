@@ -117,6 +117,43 @@ test("A. a saved page that is no longer the owner's is still listed, so it can b
   assert.equal(r.find((x) => x.slug === 'cafe').gone, false);
 });
 
+test('A. "publish on landing page" is offered only for a saved page of an already-published deal', () => {
+  const r = Object.fromEntries(P.rows(PAGES, BY, new Set(['cafe'])).map((x) => [x.slug, x]));
+  assert.equal(P.canPublishOnPage(r.bar, 'published'), true, 'saved page, published deal');
+  assert.equal(P.canPublishOnPage(r.bar, 'draft'), false, 'the deal is not published yet: Publish publishes both');
+  assert.equal(P.canPublishOnPage(r.bar, 'archived'), false);
+  for (const s of ['cafe', 'pub', 'old', 'shop']) assert.equal(P.canPublishOnPage(r[s], 'published'), false, s + ' (' + r[s].state + ')');
+  const gone = P.rows(PAGES, { ...BY, sold: { placementId: 'pg', status: 'draft' } }, new Set()).find((x) => x.slug === 'sold');
+  assert.equal(P.canPublishOnPage(gone, 'published'), false, 'not one of the owner\'s pages any more');
+  assert.equal(P.canPublishOnPage(undefined, 'published'), false);
+});
+
+test('A. publishing on a page sends ONLY the placement-publish request; the page is then "published here"', async () => {
+  const calls = [];
+  const by = { bar: { placementId: 'p 1', dealId: 'd/1', status: 'draft', targetRef: 'bar' } };
+  const row = P.rows(PAGES, by, new Set()).find((x) => x.slug === 'bar');
+  const api = async (m, p, b) => { calls.push([m, p, b]); return { placement: { placementId: 'p 1', dealId: 'd/1', targetRef: 'bar', channel: 'landing_page', status: 'published', publishedAt: 'now' } }; };
+  assert.deepEqual(plain(await P.publishOnPage(api, 'd/1', row, by)), { ok: true });
+  assert.deepEqual(calls.map((c) => c.slice(0, 2)), [['POST', '/deals/d%2F1/placements/p%201/publish']], 'one request, ids encoded');
+  assert.equal(calls[0][2], undefined, 'no body');
+  assert.ok(!calls.some((c) => /^\/deals\/[^/]+\/publish$/.test(c[1])), 'never the deal publish');
+  assert.equal(by.bar.status, 'published');
+  assert.equal(P.rows(PAGES, by, new Set()).find((x) => x.slug === 'bar').state, 'published');
+});
+
+test('A. a refused or odd response publishes nothing locally: the page stays "saved"', async () => {
+  const by = { bar: { placementId: 'p1', status: 'draft', targetRef: 'bar' } };
+  const row = P.rows(PAGES, by, new Set()).find((x) => x.slug === 'bar');
+  const err = { status: 400 };
+  const r1 = await P.publishOnPage(async () => { throw err; }, 'd1', row, by);
+  assert.equal(r1.ok, false); assert.equal(r1.error, err);
+  const r2 = await P.publishOnPage(async () => ({ placement: { placementId: 'other', status: 'published' } }), 'd1', row, by);
+  assert.deepEqual(plain(r2), { ok: false, error: null });
+  const r3 = await P.publishOnPage(async () => ({ placement: { placementId: 'p1', status: 'draft' } }), 'd1', row, by);
+  assert.equal(r3.ok, false);
+  assert.equal(by.bar.status, 'draft');
+});
+
 // ── B. Deal Builder wiring ─────────────────────────────────────
 const page = read('frontend/public/deals.html');
 const panel4 = page.slice(page.indexOf('data-panel="4"'), page.indexOf('<!-- LIVE PREVIEW -->'));
@@ -185,6 +222,25 @@ test('B. English and German texts for every label, state and message', () => {
   assert.ok(page.includes("You can add it to those pages again later.") && page.includes('Du kannst ihn diesen Seiten später wieder hinzufügen.'));
   assert.ok(page.includes("pg_st_archived: 'Removed earlier'") && page.includes("pg_st_archived: 'Früher entfernt'"));
   for (const gone of ['cannot add it to this page again', 'cannot be added to it again', 'nicht erneut hinzufügen', 'nicht erneut hinzugefügt']) assert.ok(!page.includes(gone), gone);
+});
+
+test('B. "Auf Landingpage veröffentlichen": shown per saved page of a published deal, publishes only that placement', () => {
+  const render = fn('renderPicker');
+  assert.ok(render.includes('lib.canPublishOnPage(r, draft.status)') && render.includes('data-publish-page="') && render.includes("t('pg_publish_one')") && render.includes("t('pg_publish_hint')"));
+  assert.ok(render.indexOf('</label>') < render.indexOf("+ one + '</li>'"), 'the button sits outside the checkbox label');
+  const h = fn('onPublishOnPage');
+  assert.ok(h.includes('lib.canPublishOnPage(row, draft.status)') && h.includes('lib.publishOnPage(api, draft.id, row, picker.bySlug)'));
+  assert.ok(!/api\(|persist\(|savePickedPages\(|\/publish'/.test(h.replace('lib.publishOnPage(api,', '')), 'no deal save, no deal publish, no tick saving');
+  assert.ok(h.includes("t('pg_publish_ok'") && h.includes("t('e_pages_publish_one'") && h.includes('await loadPicker(true)'), 'success message; failure explained and the list reloaded');
+  assert.ok(page.includes("else if (e.target.closest('[data-publish-page]'))"), 'wired through the list\'s click handler');
+  // the deal's own Publish is unchanged
+  const c = fn('commit');
+  assert.ok(c.includes("'/publish', withPages ? { includePlacements: true } : undefined") && !c.includes('publishOnPage'));
+  for (const k of ['pg_publish_one', 'pg_publish_hint', 'pg_publish_ok', 'e_pages_publish_one']) assert.equal((page.match(new RegExp('\\b' + k + ": '", 'g')) || []).length, 2, k);
+  assert.ok(page.includes("pg_publish_one: 'Publish on landing page'") && page.includes("pg_publish_one: 'Auf Landingpage veröffentlichen'"));
+  assert.ok(page.includes('Unpublished changes stay unpublished.') && page.includes('Unveröffentlichte Änderungen bleiben unveröffentlicht.'));
+  const css = read('frontend/public/deals-page.css');
+  assert.ok(css.includes('.deal-page__actions { display: flex; flex-wrap: wrap;') && css.includes('.deal-page__hint {'));
 });
 
 test('B. responsive styles for the list', () => {
