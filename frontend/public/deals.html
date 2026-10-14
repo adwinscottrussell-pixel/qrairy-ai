@@ -14,6 +14,7 @@
   <script src="js/admin-shell.js"></script>
   <script src="js/deals-routing.js"></script>
   <script src="js/deal-starter-images.js"></script>
+  <script src="js/deal-image-formats.js"></script>
 </head>
 <body>
 
@@ -231,7 +232,7 @@
             <div class="qds-surface qds-surface--default qds-surface--padding-md qds-surface--elevation-raised deal-panel" data-panel="2" hidden>
               <div>
                 <h2 class="deal-panel__title" data-i18n="s2_title">Add an image</h2>
-                <p class="deal-panel__lead" data-i18n="s2_lead">Optional. Choose a starter image, upload your own picture or pick a plain background. Images are shown in 4:3.</p>
+                <p class="deal-panel__lead" data-i18n="s2_lead">Optional. Choose a starter image, upload your own picture or pick a plain background. Your deal shows the image in 4:3.</p>
               </div>
 
               <div class="deal-image-current" id="deal-image-current" hidden>
@@ -240,6 +241,16 @@
                   <span id="deal-image-info"></span>
                   <div><button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" id="deal-image-remove" data-i18n="s2_remove">Remove image</button></div>
                 </div>
+              </div>
+
+              <!-- Formats: how the chosen image fits four formats (js/deal-image-formats.js). Preview only. -->
+              <div class="deal-formats" id="deal-formats" hidden>
+                <div class="deal-formats__head">
+                  <span class="deal-formats__title" data-i18n="fm_title">Formats</span>
+                  <span class="deal-formats__lead" data-i18n="fm_lead">How your image appears in each format. Nothing is posted anywhere.</span>
+                </div>
+                <div class="deal-formats__grid" id="deal-formats-grid"></div>
+                <p class="deal-formats__note" id="deal-formats-note" hidden></p>
               </div>
 
               <div class="deal-tabs" role="tablist" aria-label="Image source">
@@ -270,7 +281,7 @@
                 <div class="deal-swatches" id="deal-swatches"></div>
               </div>
 
-              <p class="deal-note" data-i18n="s2_note">A picture you upload is stored with your deal and cropped to 4:3.</p>
+              <p class="deal-note" data-i18n="s2_note">A picture you upload is kept in full size. Your deal shows it in 4:3; the formats above show how it fits elsewhere.</p>
 
               <div class="deal-nav">
                 <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
@@ -466,12 +477,17 @@
       s1_f_desc: 'Description', s1_f_desc_ph: 'Conditions, what is included, how to redeem…',
       opt: '(optional)',
       nav_cancel: 'Cancel', nav_back: 'Back', nav_next_image: 'Next: Image', nav_next_schedule: 'Next: Schedule', nav_next_review: 'Next: Review',
-      s2_title: 'Add an image', s2_lead: 'Optional. Choose a starter image, upload your own picture or pick a plain background. Images are shown in 4:3.',
+      s2_title: 'Add an image', s2_lead: 'Optional. Choose a starter image, upload your own picture or pick a plain background. Your deal shows the image in 4:3.',
       s2_tab_starter: 'Starter images', s2_tab_upload: 'Upload your own', s2_tab_bg: 'Plain background',
       s2_ai_note: 'All starter images are AI-generated. They carry the label “AI · KI-generiert” wherever they are shown, including to your customers.',
       ai_label_sr: 'AI-generated image',
       s2_drop: 'Drop an image here or click to choose', s2_drop_hint: 'PNG, JPG or WebP, up to 5 MB',
-      s2_remove: 'Remove image', s2_note: 'A picture you upload is stored with your deal and cropped to 4:3.',
+      s2_remove: 'Remove image', s2_note: 'A picture you upload is kept in full size. Your deal shows it in 4:3; the formats above show how it fits elsewhere.',
+      fm_title: 'Formats', fm_lead: 'How your image appears in each format. Nothing is posted anywhere.',
+      fm_deal: 'QRAIVY Deal', fm_feed: 'Instagram Feed', fm_story: 'Story / Reel', fm_square: 'Square thumbnail',
+      fm_optimal: 'Optimal', fm_padded: 'Padded', fm_enlarged: 'Enlarged {n}',
+      fm_note_padded: 'Padded formats show your whole picture on a blurred border, so nothing important is cut off. A photo in that format’s proportions fills it completely.',
+      fm_note_legacy: 'This picture was uploaded before full-size originals were kept, so the other formats show it padded. Upload it again to get full-frame formats.',
       s2_info_upload: 'Your uploaded picture', s2_info_bg: 'Background: {name}', s2_info_starter: 'Starter image: {name} (AI-generated)',
       bg_ember: 'Ember', bg_sunrise: 'Sunrise', bg_night: 'Night', bg_slate: 'Slate', bg_forest: 'Forest', bg_ocean: 'Ocean', bg_plum: 'Plum', bg_sand: 'Sand',
       s3_title: 'When is the deal valid?', s3_lead: 'Dates are optional. Add a time only if the deal starts or ends at a specific hour; otherwise it runs for the whole day.',
@@ -551,12 +567,17 @@
       s1_f_desc: 'Beschreibung', s1_f_desc_ph: 'Bedingungen, was enthalten ist, wie eingelöst wird …',
       opt: '(optional)',
       nav_cancel: 'Abbrechen', nav_back: 'Zurück', nav_next_image: 'Weiter: Bild', nav_next_schedule: 'Weiter: Zeitraum', nav_next_review: 'Weiter: Überprüfen',
-      s2_title: 'Bild hinzufügen', s2_lead: 'Optional. Wähle eine Vorlage, lade ein eigenes Bild hoch oder nimm einen einfarbigen Hintergrund. Bilder werden im Format 4:3 gezeigt.',
+      s2_title: 'Bild hinzufügen', s2_lead: 'Optional. Wähle eine Vorlage, lade ein eigenes Bild hoch oder nimm einen einfarbigen Hintergrund. Dein Deal zeigt das Bild im Format 4:3.',
       s2_tab_starter: 'Vorlagen', s2_tab_upload: 'Eigenes Bild hochladen', s2_tab_bg: 'Einfarbiger Hintergrund',
       s2_ai_note: 'Alle Vorlagen sind KI-generiert. Sie tragen überall, wo sie gezeigt werden, den Hinweis „AI · KI-generiert“ – auch gegenüber deinen Kunden.',
       ai_label_sr: 'KI-generiertes Bild',
       s2_drop: 'Bild hierher ziehen oder klicken', s2_drop_hint: 'PNG, JPG oder WebP, bis 5 MB',
-      s2_remove: 'Bild entfernen', s2_note: 'Ein hochgeladenes Bild wird mit deinem Deal gespeichert und auf 4:3 zugeschnitten.',
+      s2_remove: 'Bild entfernen', s2_note: 'Ein hochgeladenes Bild wird in voller Größe gespeichert. Dein Deal zeigt es im Format 4:3; die Formate oben zeigen, wie es an anderer Stelle passt.',
+      fm_title: 'Formate', fm_lead: 'So erscheint dein Bild in jedem Format. Es wird nichts veröffentlicht.',
+      fm_deal: 'QRAIVY-Deal', fm_feed: 'Instagram-Feed', fm_story: 'Story / Reel', fm_square: 'Quadratisches Vorschaubild',
+      fm_optimal: 'Optimal', fm_padded: 'Mit Rand', fm_enlarged: 'Vergrößert {n}',
+      fm_note_padded: 'Formate mit Rand zeigen dein ganzes Bild auf einem unscharfen Hintergrund, damit nichts Wichtiges abgeschnitten wird. Ein Foto im passenden Seitenverhältnis füllt das Format vollständig.',
+      fm_note_legacy: 'Dieses Bild wurde hochgeladen, bevor Originale in voller Größe gespeichert wurden. Die anderen Formate zeigen es deshalb mit Rand. Lade es erneut hoch, um sie randlos zu erhalten.',
       s2_info_upload: 'Dein hochgeladenes Bild', s2_info_bg: 'Hintergrund: {name}', s2_info_starter: 'Vorlage: {name} (KI-generiert)',
       bg_ember: 'Glut', bg_sunrise: 'Sonnenaufgang', bg_night: 'Nacht', bg_slate: 'Schiefer', bg_forest: 'Wald', bg_ocean: 'Ozean', bg_plum: 'Pflaume', bg_sand: 'Sand',
       s3_title: 'Wann gilt der Deal?', s3_lead: 'Die Angaben sind optional. Gib eine Uhrzeit nur an, wenn der Deal zu einer bestimmten Stunde beginnt oder endet; sonst gilt er den ganzen Tag.',
@@ -1026,6 +1047,43 @@
     });
   }
 
+  // ── Formats preview (Step 2) — decisions in js/deal-image-formats.js ──
+  var FORMAT_NAME = { deal: 'fm_deal', feed: 'fm_feed', story: 'fm_story', square: 'fm_square' };
+  function factorText(n) { return '\u00d7' + String(n).replace('.', _lang === 'de' ? ',' : '.'); }
+  function renderFormats(img) {
+    var box = $('deal-formats'), grid = $('deal-formats-grid'), note = $('deal-formats-note');
+    var lib = window.QraivyDealImageFormats;
+    var tiles = lib && img ? lib.formatsFor(img, {
+      starterSrc: function (id) { var st = starterById(id); return st ? STARTERS.basePath + st.file : ''; },
+      backgroundCss: function (id) { var b = BACKGROUNDS.filter(function (x) { return x.id === id; })[0]; return b ? b.css : ''; }
+    }) : [];
+    box.hidden = !tiles.length;
+    if (!tiles.length) { grid.innerHTML = ''; note.hidden = true; return; }
+    var aiLabel = '<span class="deal-ai-label"><span aria-hidden="true">AI \u00b7 KI-generiert</span><span class="deal-sr-only">' + esc(t('ai_label_sr')) + '</span></span>';
+    grid.innerHTML = tiles.map(function (tl) {
+      var shape = 'aspect-ratio:' + tl.width + ' / ' + tl.height + ';';
+      var inner = '';
+      if (tl.mode === 'color') shape += 'background:' + esc(tl.src) + ';';
+      else if (tl.mode === 'css-pad') inner = '<span class="deal-format__blur" style="background-image:url(&quot;' + esc(tl.src) + '&quot;)"></span>' +
+        '<img class="deal-format__img deal-format__img--contain" src="' + esc(tl.src) + '" alt="" loading="lazy" decoding="async">';
+      else inner = '<img class="deal-format__img" src="' + esc(tl.src) + '" alt="" loading="lazy" decoding="async">';
+      var label = tl.status === 'padded' ? t('fm_padded') : tl.status === 'enlarged' ? t('fm_enlarged', { n: factorText(tl.enlargement) }) : t('fm_optimal');
+      return '<figure class="deal-format deal-format--' + tl.id + '">' +
+        '<div class="deal-format__frame" style="' + shape + '">' + inner + (tl.ai ? aiLabel : '') + '</div>' +
+        '<figcaption class="deal-format__caption"><span class="deal-format__name">' + esc(t(FORMAT_NAME[tl.id])) + '</span>' +
+        '<span class="deal-format__size">' + tl.width + ' \u00d7 ' + tl.height + '</span>' +
+        '<span class="deal-format__status deal-format__status--' + tl.status + (tl.warn ? ' deal-format__status--warn' : '') + '">' + esc(label) + '</span></figcaption></figure>';
+    }).join('');
+    // A preview that cannot load shows an empty tile instead of a broken image.
+    Array.prototype.forEach.call(grid.querySelectorAll('img'), function (im) {
+      im.addEventListener('error', function () { im.parentNode.classList.add('is-broken'); });
+    });
+    var legacy = tiles.some(function (tl) { return tl.legacy; });
+    var padded = tiles.some(function (tl) { return tl.status === 'padded'; });
+    note.hidden = !(legacy || padded);
+    note.textContent = legacy ? t('fm_note_legacy') : padded ? t('fm_note_padded') : '';
+  }
+
   function renderImageStep() {
     var cur = $('deal-image-current'), img = draft.image;
     cur.hidden = !img;
@@ -1036,6 +1094,7 @@
         ? t('s2_info_upload')
         : t(img.source === 'starter' ? 's2_info_starter' : 's2_info_bg', { name: imageName(img) });
     }
+    renderFormats(img);
     ['starter', 'upload', 'background'].forEach(function (name) {
       var on = imageTab === name, tab = $('tab-' + name);
       $('pane-' + name).hidden = !on;

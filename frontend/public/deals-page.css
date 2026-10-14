@@ -293,6 +293,41 @@
 .deal-pv--placeholder .deal-pv__title, .deal-pv--placeholder .deal-pv__offer { color: var(--qds-color-text-muted); }
 .deal-preview__note { font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); line-height: var(--qds-text-body-sm-line-height); }
 
+/* ── Step 2: formats preview (js/deal-image-formats.js). Tile shapes come from
+   the format itself (inline aspect-ratio); the deal's own image boxes above
+   are not changed. ─────────────────────────────────────────────── */
+.deal-formats { display: flex; flex-direction: column; gap: var(--qds-space-2); }
+.deal-formats__head { display: flex; flex-direction: column; gap: var(--qds-space-1); }
+.deal-formats__title { font-weight: var(--qds-font-weight-semibold); }
+.deal-formats__lead, .deal-formats__note { margin: 0; font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); }
+.deal-formats__grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--qds-space-3); }
+/* As wide as its picture: captions wrap underneath instead of stretching the tile. */
+.deal-format { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--qds-space-1); width: min-content; }
+.deal-format__frame {
+  position: relative;
+  height: 124px; /* 124px: no token — four tiles fit one row beside the phone preview */
+  overflow: hidden;
+  border-radius: var(--qds-radius-md);
+  border: 1px solid var(--qds-color-border-subtle);
+  background: var(--qds-color-surface-2);
+}
+.deal-format__img { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; }
+.deal-format__img--contain { object-fit: contain; }
+.deal-format__blur { position: absolute; inset: -12px; background-size: cover; background-position: center; filter: blur(12px) brightness(0.65); }
+.deal-format__frame.is-broken .deal-format__img, .deal-format__frame.is-broken .deal-format__blur { visibility: hidden; }
+/* The AI label stays complete on narrow tiles: it may wrap, it is never cut off. */
+.deal-format__frame .deal-ai-label { left: var(--qds-space-1); bottom: var(--qds-space-1); max-width: calc(100% - var(--qds-space-2)); padding: 1px var(--qds-space-1); border-radius: var(--qds-radius-md); font-size: 0.5625rem; white-space: normal; } /* 9px: no token — fits the 59 px Story tile on a phone */
+.deal-format__caption { display: flex; flex-direction: column; gap: 2px; font-size: var(--qds-text-caption-size); line-height: 1.3; }
+.deal-format__name { font-weight: var(--qds-font-weight-semibold); color: var(--qds-color-text-secondary); }
+.deal-format__size { font-family: var(--qds-font-family-mono); color: var(--qds-color-text-muted); white-space: nowrap; }
+.deal-format__status { color: var(--qds-color-text-secondary); }
+.deal-format__status--optimal::before { content: '\2713\00a0'; }
+.deal-format__status--warn { color: var(--qds-color-warning); font-weight: var(--qds-font-weight-semibold); }
+@media (max-width: 768px) { /* --qds-breakpoint-tablet */
+  .deal-formats__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-items: start; }
+  .deal-format__frame { height: 104px; } /* 104px: no token — two tiles side by side on a phone */
+}
+
 /* ── Responsive (see qds/foundation/breakpoints.css; values hard-coded
    because custom properties are not valid inside @media) ─────── */
 @media (max-width: 1024px) { /* --qds-breakpoint-desktop */
