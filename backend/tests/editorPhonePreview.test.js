@@ -1,12 +1,11 @@
 // ============================================================
 // editorPhonePreview.test.js — the phone preview in the Smart Landing
-// Page editor (smart-qr-detail.html) is drawn smaller so the whole device
-// fits the window.
+// Page editor (smart-qr-detail.html) is shown at full size, and its
+// column scrolls on its own when the window is too short for it.
 //
-// Static checks: the size is a CSS transform on the device shell (the
-// page inside keeps its real 355 px phone width), it shrinks further in
-// shorter windows, it applies on desktop only, and the 774 px the margin
-// compensation is based on still matches the device markup.
+// Static checks: no scaling of the device, the column (and only the
+// column) becomes a scroll container on desktop, the phone keeps its
+// own scrolling, and the phone markup is the original.
 //
 // Run: node tests/editorPhonePreview.test.js
 // ============================================================
@@ -18,46 +17,42 @@ const page = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'publi
 let passed = 0, failed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('PASS  ' + name); } catch (e) { failed++; console.log('FAIL  ' + name + '\n      ' + e.message); } }
 
-const at = page.indexOf('<style id="sqd-phone-size">');
+const at = page.indexOf('<style id="sqd-preview-column">');
 const css = at === -1 ? '' : page.slice(at, page.indexOf('</style>', at));
 
 test('one style block, in <head>, after the shared and Admin shell styles', () => {
-  assert.equal((page.match(/<style id="sqd-phone-size">/g) || []).length, 1);
-  assert.ok(at < page.indexOf('</head>'));
+  assert.equal((page.match(/<style id="sqd-preview-column">/g) || []).length, 1);
+  assert.ok(at > -1 && at < page.indexOf('</head>'));
   assert.ok(at > page.indexOf('href="dashboard-shell.css"') && at > page.indexOf('<style id="sqd-admin-shell">'));
 });
 
-test('the device shell is scaled, from its top centre, to 90 % on desktop (338 x 697 px)', () => {
+test('the phone is not scaled any more', () => {
+  assert.ok(!page.includes('sqd-phone-size') && !page.includes('--sqd-phone-scale'));
+  assert.ok(!/transform\s*:\s*scale/.test(css) && !/zoom\s*:/.test(css));
+});
+
+test('on desktop the preview column scrolls on its own and keeps the phone centred', () => {
   const desktop = css.slice(css.indexOf('@media (min-width: 769px) {'));
-  assert.ok(desktop.startsWith('@media (min-width: 769px) {\n  div:has(> .sqd-phone-frame) {'), 'the device shell, i.e. the direct parent of the phone screen');
-  assert.ok(desktop.includes('--sqd-phone-scale: .9;'));
-  assert.ok(desktop.includes('transform: scale(var(--sqd-phone-scale));'));
-  assert.ok(desktop.includes('transform-origin: top center;'), 'stays centred in the preview column');
-  assert.ok(desktop.includes('margin-bottom: calc(-774px * (1 - var(--sqd-phone-scale)));'), 'the freed space is handed back');
-});
-
-test('shorter windows get a smaller phone; phones keep the page layout', () => {
-  const steps = [...css.matchAll(/@media \(min-width: 769px\) and \(max-height: (\d+)px\) \{ div:has\(> \.sqd-phone-frame\) \{ --sqd-phone-scale: ([.\d]+); \} \}/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  assert.deepEqual(steps, [[849, 0.8], [799, 0.68], [699, 0.58], [599, 0.5]]);
-  // With the 52 px top bar, 20 px column padding, ~30 px label and ~46 px button around it,
-  // the device and its button fit the SHORTEST window each size is used for.
-  const around = 52 + 20 + 30 + 46;
-  assert.ok(around + 774 * 0.9 <= 850, 'default (windows 850 px and taller)');
-  for (const [[maxH, s], shortest] of steps.map((st, i) => [st, [800, 700, 600, 540][i]])) {
-    assert.ok(around + 774 * s <= shortest, maxH + ' px step fits down to ' + shortest + ' px: ' + Math.round(around + 774 * s));
-  }
+  assert.ok(desktop.startsWith('@media (min-width: 769px) {\n  div:has(> div > div > .sqd-phone-frame) {'), 'the column: phone screen > device shell > phone wrapper > column');
+  for (const rule of ['overflow-x: hidden !important;', 'overflow-y: auto !important;', 'scrollbar-gutter: stable both-edges;']) assert.ok(desktop.includes(rule), rule);
   assert.ok(!/@media \(max-width/.test(css), 'nothing changes at phone widths');
+  // the column is the one with the inline overflow:hidden the rule overrides
+  const col = page.slice(page.lastIndexOf('<div style="', page.indexOf('<!-- Phone preview label -->')), page.indexOf('<!-- Phone preview label -->'));
+  assert.ok(col.includes('height:calc(100vh - 52px);') && col.includes('position:sticky;') && col.includes('overflow:hidden;'));
 });
 
-test('the phone itself is unchanged: 355 x 700 screen, 355 px page width, same device chrome', () => {
+test('the page inside the phone keeps its own scrolling', () => {
+  assert.ok(css.includes('.sqd-phone-frame { overscroll-behavior: contain; }'));
+  assert.ok(page.includes("var phoneFrame = document.querySelector('.sqd-phone-frame');"));
+});
+
+test('the phone itself is the original: 375 x 774 device, 355 x 700 screen, 355 px page width', () => {
   assert.ok(page.includes('<div class="sqd-phone-frame" style="width:355px;height:700px;overflow-y:auto;overflow-x:hidden;border-radius:32px;-webkit-overflow-scrolling:touch;background:#000;">'));
   assert.ok(page.includes('<iframe id="sqd-iframe" src="" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" style="width:355px;height:2600px;border:none;display:block;" scrolling="no"></iframe>'));
-  // 774 = 10 padding + 28 notch + 2 gap + 700 screen + 24 home indicator + 10 padding
   const shell = page.slice(page.indexOf('<!-- Device shell -->'), page.indexOf('<!-- Single action button below preview -->'));
   assert.ok(shell.includes('border-radius:44px;padding:10px;'));
   assert.ok(shell.includes('height:28px;margin-bottom:2px;'));
   assert.ok(shell.includes('<div style="display:flex;justify-content:center;height:24px;align-items:center;">'));
-  assert.equal(10 + 28 + 2 + 700 + 24 + 10, 774);
 });
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed (' + (passed + failed) + ' total)');
