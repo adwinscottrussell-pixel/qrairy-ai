@@ -27,10 +27,10 @@ test('one style block, in <head>, after the shared and Admin shell styles', () =
   assert.ok(at > page.indexOf('href="dashboard-shell.css"') && at > page.indexOf('<style id="sqd-admin-shell">'));
 });
 
-test('the device shell is scaled, from its top centre, to 80 % on desktop (300 x 619 px)', () => {
+test('the device shell is scaled, from its top centre, to 90 % on desktop (338 x 697 px)', () => {
   const desktop = css.slice(css.indexOf('@media (min-width: 769px) {'));
   assert.ok(desktop.startsWith('@media (min-width: 769px) {\n  div:has(> .sqd-phone-frame) {'), 'the device shell, i.e. the direct parent of the phone screen');
-  assert.ok(desktop.includes('--sqd-phone-scale: .8;'));
+  assert.ok(desktop.includes('--sqd-phone-scale: .9;'));
   assert.ok(desktop.includes('transform: scale(var(--sqd-phone-scale));'));
   assert.ok(desktop.includes('transform-origin: top center;'), 'stays centred in the preview column');
   assert.ok(desktop.includes('margin-bottom: calc(-774px * (1 - var(--sqd-phone-scale)));'), 'the freed space is handed back');
@@ -38,12 +38,12 @@ test('the device shell is scaled, from its top centre, to 80 % on desktop (300 x
 
 test('shorter windows get a smaller phone; phones keep the page layout', () => {
   const steps = [...css.matchAll(/@media \(min-width: 769px\) and \(max-height: (\d+)px\) \{ div:has\(> \.sqd-phone-frame\) \{ --sqd-phone-scale: ([.\d]+); \} \}/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  assert.deepEqual(steps, [[799, 0.68], [699, 0.58], [599, 0.5]]);
+  assert.deepEqual(steps, [[849, 0.8], [799, 0.68], [699, 0.58], [599, 0.5]]);
   // With the 52 px top bar, 20 px column padding, ~30 px label and ~46 px button around it,
   // the device and its button fit the SHORTEST window each size is used for.
   const around = 52 + 20 + 30 + 46;
-  assert.ok(around + 774 * 0.8 <= 800, 'default (windows 800 px and taller)');
-  for (const [[maxH, s], shortest] of steps.map((st, i) => [st, [700, 600, 540][i]])) {
+  assert.ok(around + 774 * 0.9 <= 850, 'default (windows 850 px and taller)');
+  for (const [[maxH, s], shortest] of steps.map((st, i) => [st, [800, 700, 600, 540][i]])) {
     assert.ok(around + 774 * s <= shortest, maxH + ' px step fits down to ' + shortest + ' px: ' + Math.round(around + 774 * s));
   }
   assert.ok(!/@media \(max-width/.test(css), 'nothing changes at phone widths');

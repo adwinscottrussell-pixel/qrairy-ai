@@ -46,12 +46,13 @@ body.sb-collapsed #sqd-topbar { left: var(--sidebar-collapsed-width) !important;
    Shorter windows get a smaller phone. Desktop only (phones keep the page's own layout). */
 @media (min-width: 769px) {
   div:has(> .sqd-phone-frame) {
-    --sqd-phone-scale: .8;
+    --sqd-phone-scale: .9;
     transform: scale(var(--sqd-phone-scale));
     transform-origin: top center;
     margin-bottom: calc(-774px * (1 - var(--sqd-phone-scale)));
   }
 }
+@media (min-width: 769px) and (max-height: 849px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .8; } }
 @media (min-width: 769px) and (max-height: 799px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .68; } }
 @media (min-width: 769px) and (max-height: 699px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .58; } }
 @media (min-width: 769px) and (max-height: 599px) { div:has(> .sqd-phone-frame) { --sqd-phone-scale: .5; } }
