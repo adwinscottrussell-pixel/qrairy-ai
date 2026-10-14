@@ -94,7 +94,10 @@ async function uploadDealImageHandler(req, res) {
       return res.status(502).json({ error: 'The image could not be stored. Please try again.' });
     }
     const deal = await dealService.saveDealDraft(req.userId, req.params.id, {
-      image: { source: 'uploaded', url: stored.secure_url, publicId: stored.public_id, width: stored.width, height: stored.height },
+      image: {
+        source: 'uploaded', url: stored.displayUrl, publicId: stored.publicId, width: stored.displayWidth, height: stored.displayHeight,
+        master: { url: stored.masterUrl, width: stored.masterWidth, height: stored.masterHeight },
+      },
     });
     return res.json({ deal });
   } catch (e) { return fail(res, e, 'upload the image'); }

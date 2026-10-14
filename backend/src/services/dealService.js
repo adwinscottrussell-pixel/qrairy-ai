@@ -67,6 +67,28 @@ function isTrustedDealImage(url, publicId) {
   return url.includes(publicId);
 }
 
+// The master of an uploaded image (uploads from Phase 1 on): the plain,
+// untransformed delivery URL of the SAME Cloudinary asset as the image
+// itself, with its pixel size. Optional -- older uploads have none.
+const MAX_MASTER_EDGE = 20000;
+function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'); }
+function checkDealImageMaster(master, publicId) {
+  if (master == null) return null;
+  if (typeof master !== 'object' || Array.isArray(master)) throw new DealError('image.master must be an object.');
+  const url = typeof master.url === 'string' ? master.url.trim() : '';
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const plain = cloudName ? new RegExp('^https://res\\.cloudinary\\.com/' + escapeRegExp(cloudName) + '/image/upload/(?:v\\d+/)?' + escapeRegExp(publicId) + '\\.(?:jpe?g|png|webp)$') : null;
+  if (!plain || !isTrustedDealImage(url, publicId) || !plain.test(url)) {
+    throw new DealError('image.master is not the original of this QRAIVY-hosted image.');
+  }
+  const width = Number(master.width);
+  const height = Number(master.height);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0 || width > MAX_MASTER_EDGE || height > MAX_MASTER_EDGE) {
+    throw new DealError('image.master width and height must be whole positive numbers.');
+  }
+  return { url, width, height };
+}
+
 // A deal image is exactly one of three kinds (see data/dealImages.js).
 // Whatever the caller sends is rebuilt here from scratch: only the fields
 // of that kind survive, and facts the server owns -- above all whether a
@@ -111,7 +133,10 @@ function checkDealImage(image) {
     height = Number(image.height);
     if (!Number.isFinite(height) || height <= 0) throw new DealError('image.height must be a positive number.');
   }
-  return { source: 'uploaded', url: image.url.trim(), publicId: image.publicId.trim(), width, height };
+  const master = checkDealImageMaster(image.master, image.publicId.trim());
+  const stored = { source: 'uploaded', url: image.url.trim(), publicId: image.publicId.trim(), width, height };
+  if (master) stored.master = master;   // absent, not null, on older uploads: their stored shape is unchanged
+  return stored;
 }
 
 function checkOfferType(offerType) {

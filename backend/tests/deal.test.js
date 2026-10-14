@@ -527,6 +527,82 @@ test('E. starter and background images survive publish and stay as stored', asyn
   assert.deepEqual((await service.publishDeal(ANNA, b.dealId)).image, { source: 'background', backgroundId: 'plum' });
 });
 
+// ── E2. Image masters (uploads from image Phase 1 on) ─────────────
+const MASTER_PID = 'qraivy-deals/deal-m1-1700000000000';
+const MASTER_IMAGE = {
+  source: 'uploaded',
+  url: 'https://res.cloudinary.com/test-cloud/image/upload/c_fill,g_auto,h_900,w_1200/v1700000000/' + MASTER_PID + '.jpg',
+  publicId: MASTER_PID, width: 1200, height: 900,
+  master: { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1700000000/' + MASTER_PID + '.jpg', width: 4032, height: 3024 },
+};
+
+test('E2. an upload with its master is stored with the 4:3 picture and the master reference + size', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...MASTER_IMAGE, master: { ...MASTER_IMAGE.master, width: '4032' } } });
+  assert.deepEqual(state.image, MASTER_IMAGE);
+  assert.deepEqual(service.checkDealImage(MASTER_IMAGE), MASTER_IMAGE);
+});
+
+test('E2. older uploads without a master keep exactly their old stored shape', () => {
+  const old = service.checkDealImage({ ...TRUSTED_IMAGE, width: 1200, height: 900 });
+  assert.deepEqual(old, { source: 'uploaded', ...TRUSTED_IMAGE, width: 1200, height: 900 });
+  assert.ok(!('master' in old), 'no master key at all, not even null');
+  assert.ok(!('master' in service.checkDealImage({ ...TRUSTED_IMAGE, master: null })));
+});
+
+test('E2. the master survives saving again and publishing', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.saveDealDraft(ANNA, deal.dealId, { image: MASTER_IMAGE });
+  dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
+  const again = await service.saveDealDraft(ANNA, deal.dealId, { title: 'Renamed' });
+  assert.deepEqual(again.image, MASTER_IMAGE, 'saving other fields keeps the image and its master');
+  dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
+  const published = await service.publishDeal(ANNA, deal.dealId);
+  assert.deepEqual(published.image, MASTER_IMAGE);
+  assert.deepEqual(dealRows[0].image, MASTER_IMAGE);
+});
+
+test('E2. a master must be the plain original of the SAME trusted image', () => {
+  const pid = MASTER_PID;
+  const bad = [
+    { url: 'https://evil.example.com/' + pid + '.jpg' },                                                       // other host
+    { url: 'https://res.cloudinary.com/other-cloud/image/upload/v1/' + pid + '.jpg' },                          // other cloud
+    { url: 'http://res.cloudinary.com/test-cloud/image/upload/v1/' + pid + '.jpg' },                             // not https
+    { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/qraivy-deals/deal-other-1.jpg' },              // another asset
+    { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/qraivy-logos/deal-m1-1700000000000.jpg' },     // another folder
+    { url: 'https://res.cloudinary.com/test-cloud/image/upload/c_fill,w_10/v1/' + pid + '.jpg' },               // a transformation, not the original
+    { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/' + pid + '.jpg?x=1' },                       // extra parts
+    { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/' + pid + '.svg' },                           // not an accepted image type
+    { url: 'data:image/png;base64,AAAA' },
+    { url: '' },
+  ];
+  for (const m of bad) {
+    assert.ok(throwsSync(() => service.checkDealImage({ ...MASTER_IMAGE, master: { width: 4032, height: 3024, ...m } })) instanceof service.DealError, m.url);
+  }
+  for (const size of [{ width: 0 }, { height: -1 }, { width: 40.5 }, { width: 'abc' }, { width: 20001 }, { width: undefined }, { height: null }]) {
+    assert.ok(throwsSync(() => service.checkDealImage({ ...MASTER_IMAGE, master: { ...MASTER_IMAGE.master, ...size } })) instanceof service.DealError, JSON.stringify(size));
+  }
+  for (const shape of ['https://x', 5, ['a'], true]) {
+    assert.ok(throwsSync(() => service.checkDealImage({ ...MASTER_IMAGE, master: shape })) instanceof service.DealError, JSON.stringify(shape));
+  }
+  // the 4:3 picture itself is still checked exactly as before
+  assert.ok(throwsSync(() => service.checkDealImage({ ...MASTER_IMAGE, url: 'https://evil.example.com/' + pid + '.jpg' })) instanceof service.DealError);
+});
+
+test('E2. only uploads carry a master: starter and background images ignore one', () => {
+  assert.deepEqual(service.checkDealImage({ source: 'starter', starterId: 'bakery-croissants-01', master: MASTER_IMAGE.master }), { source: 'starter', starterId: 'bakery-croissants-01', aiGenerated: true });
+  assert.deepEqual(service.checkDealImage({ source: 'background', backgroundId: 'ocean', master: MASTER_IMAGE.master }), { source: 'background', backgroundId: 'ocean' });
+});
+
+test('E2. nothing is trusted without a configured cloud, master included', () => {
+  const saved = process.env.CLOUDINARY_CLOUD_NAME;
+  delete process.env.CLOUDINARY_CLOUD_NAME;
+  try { assert.ok(throwsSync(() => service.checkDealImage(MASTER_IMAGE)) instanceof service.DealError); }
+  finally { process.env.CLOUDINARY_CLOUD_NAME = saved; }
+});
+
 // ── F. Publish ─────────────────────────────────────────────────
 test('F. publish promotes the draft into the live columns, sets publishedAt and clears draftData', async () => {
   resetFixtures();

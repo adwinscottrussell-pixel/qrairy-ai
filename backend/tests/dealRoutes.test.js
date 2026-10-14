@@ -86,7 +86,8 @@ require.cache[uploadServicePath] = {
       if (storageFails) throw new Error('storage down');
       uploads.push({ dealId, bytes: buffer.length });
       const publicId = `qraivy-deals/deal-${dealId}-${uploads.length}`;
-      return { secure_url: `https://res.cloudinary.com/test-cloud/image/upload/v1/${publicId}.jpg`, public_id: publicId, width: 1200, height: 900 };
+      return { publicId, displayUrl: `https://res.cloudinary.com/test-cloud/image/upload/c_fill,g_auto,h_900,w_1200/v1/${publicId}.jpg`, displayWidth: 1200, displayHeight: 900,
+        masterUrl: `https://res.cloudinary.com/test-cloud/image/upload/v1/${publicId}.jpg`, masterWidth: 4032, masterHeight: 3024 };
     },
   },
 };
@@ -357,7 +358,11 @@ test('E. upload stores the picture and attaches it to the draft, not to the publ
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
   assert.deepEqual(uploads, [{ dealId: deal.dealId, bytes: 2048 }]);
   assert.equal(res.body.deal.image.source, 'uploaded');
-  assert.match(res.body.deal.image.url, /^https:\/\/res\.cloudinary\.com\/test-cloud\/image\/upload\/v1\/qraivy-deals\//);
+  // the 4:3 picture every screen shows, now a delivery URL of the stored master
+  assert.match(res.body.deal.image.url, /^https:\/\/res\.cloudinary\.com\/test-cloud\/image\/upload\/c_fill,g_auto,h_900,w_1200\/v1\/qraivy-deals\/deal-/);
+  assert.equal(res.body.deal.image.width, 1200);
+  assert.equal(res.body.deal.image.height, 900);
+  assert.deepEqual(res.body.deal.image.master, { url: `https://res.cloudinary.com/test-cloud/image/upload/v1/${res.body.deal.image.publicId}.jpg`, width: 4032, height: 3024 });
   assert.equal(res.body.deal.hasUnpublishedChanges, true);
   assert.equal(dealRows[0].image, null, 'the published deal still has no image');
 });

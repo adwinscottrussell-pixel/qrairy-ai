@@ -732,13 +732,18 @@
     if (!img || typeof img !== 'object') return null;
     if (img.source === 'starter') return { source: 'starter', id: img.starterId, aiGenerated: img.aiGenerated === true };
     if (img.source === 'background') return { source: 'background', id: img.backgroundId };
-    return img.url ? { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height } : null;
+    if (!img.url) return null;
+    var up = { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height };
+    if (img.master) up.master = img.master;   // kept as the server sent it, so saving never drops it
+    return up;
   }
   function imageToServer(img) {
     if (!img) return null;
     if (img.source === 'starter') return { source: 'starter', starterId: img.id };
     if (img.source === 'background') return { source: 'background', backgroundId: img.id };
-    return { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height };
+    var up = { source: 'uploaded', url: img.url, publicId: img.publicId, width: img.width, height: img.height };
+    if (img.master) up.master = img.master;
+    return up;
   }
   function fromServer(sd) {
     var d = emptyDeal();
