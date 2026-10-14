@@ -111,7 +111,8 @@ async function listPlacements(req, res) {
   catch (e) { return fail(res, e, 'load the placements'); }
 }
 async function addPlacement(req, res) {
-  try { return res.status(201).json({ placement: await dealService.addDealPlacement(req.userId, req.params.id, req.body) }); }
+  // 201 for a new placement; 200 when a page removed earlier was restored (same placement, as a draft)
+  try { const placement = await dealService.addDealPlacement(req.userId, req.params.id, req.body); return res.status(placement.restored ? 200 : 201).json({ placement }); }
   catch (e) { return fail(res, e, 'add the placement'); }
 }
 async function publishPlacement(req, res) {

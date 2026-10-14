@@ -682,11 +682,35 @@ async function addDealPlacement(ownerUserId, dealId, body) {
     where: { dealId_channel_targetRef: { dealId: deal.id, channel, targetRef } },
   });
   if (existing) {
-    throw new DealError('This deal already has a placement for that target.', 409);
+    if (existing.status !== 'archived') {
+      throw new DealError('This deal already has a placement for that target.', 409);
+    }
+    // A page removed earlier is added again by restoring the SAME row -- one
+    // record per deal and page -- as a draft: publishing stays an explicit
+    // step. The update only applies while the row is still archived, so two
+    // concurrent requests restore it once; the other one gets a 409.
+    // Ownership of the page was re-checked above.
+    const res = await prisma.dealPlacement.updateMany({
+      where: { id: existing.id, status: 'archived' },
+      data: { status: 'draft', publishedAt: null },
+    });
+    if (res.count !== 1) {
+      throw new DealError('This deal already has a placement for that target.', 409);
+    }
+    const restored = await prisma.dealPlacement.findUnique({ where: { id: existing.id } });
+    forgetPageDeals([targetRef]);
+    return { ...toPlacementState(restored), restored: true };
   }
-  const placement = await prisma.dealPlacement.create({
-    data: { dealId: deal.id, channel, targetRef, status: 'draft' },
-  });
+  let placement;
+  try {
+    placement = await prisma.dealPlacement.create({
+      data: { dealId: deal.id, channel, targetRef, status: 'draft' },
+    });
+  } catch (e) {
+    // Two concurrent first-time adds: the unique (deal, channel, page) key lets one win.
+    if (e && e.code === 'P2002') throw new DealError('This deal already has a placement for that target.', 409);
+    throw e;
+  }
   return toPlacementState(placement);
 }
 

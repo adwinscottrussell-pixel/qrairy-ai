@@ -91,7 +91,8 @@ test('talks only to the Deals API, as the signed-in owner', () => {
   assert.match(page, /res = await fetch\(API_BASE \+ path, opts\);/);
   assert.match(page, /headers: \{ Authorization: 'Bearer ' \+ token \}/);
   const calls = [...page.matchAll(/api\('(GET|POST|PUT|DELETE)', ('[^']*')/g)].map((m) => m[1] + ' ' + m[2]);
-  assert.deepEqual([...new Set(calls)].sort(), ["DELETE '/deals/'", "GET '/deals'", "POST '/deals'", "POST '/deals/'", "PUT '/deals/'"]);
+  // GET '/deals/pages' and GET '/deals/' (placements): the page picker (dealPagePicker.test.js)
+  assert.deepEqual([...new Set(calls)].sort(), ["DELETE '/deals/'", "GET '/deals'", "GET '/deals/'", "GET '/deals/pages'", "POST '/deals'", "POST '/deals/'", "PUT '/deals/'"]);
   for (const suffix of ["'/draft'", "'/publish'", "'/archive'", "'/image'"]) assert.ok(page.includes('encodeURIComponent(' ) && page.includes(suffix), suffix);
   for (const banned of ['XMLHttpRequest', 'sendBeacon', 'WebSocket', 'cloudinary']) assert.ok(!page.includes(banned), 'found ' + banned);
 });

@@ -293,6 +293,25 @@
 .deal-pv--placeholder .deal-pv__title, .deal-pv--placeholder .deal-pv__offer { color: var(--qds-color-text-muted); }
 .deal-preview__note { font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); line-height: var(--qds-text-body-sm-line-height); }
 
+/* ── Review: where the deal appears (js/deal-page-picker.js) ────── */
+.deal-pages { display: flex; flex-direction: column; gap: var(--qds-space-3); padding-top: var(--qds-space-4); border-top: 1px solid var(--qds-color-border-subtle); }
+.deal-pages__head { display: flex; flex-direction: column; gap: var(--qds-space-1); }
+.deal-pages__title { margin: 0; font-size: var(--qds-text-body-size); font-weight: var(--qds-font-weight-semibold); }
+.deal-pages__lead, .deal-pages__status { margin: 0; font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); }
+.deal-pages__status:empty { display: none; }
+.deal-pages__tools { display: flex; flex-wrap: wrap; gap: var(--qds-space-2); }
+.deal-pages__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--qds-space-2); }
+.deal-page__row {
+  display: flex; align-items: center; gap: var(--qds-space-3);
+  padding: var(--qds-space-3); border: 1px solid var(--qds-color-border-subtle); border-radius: var(--qds-radius-md);
+  background: var(--qds-color-surface-1); cursor: pointer;
+}
+.deal-page__check { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--qds-color-brand-primary); } /* 18px: no token — checkbox size */
+.deal-page__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.deal-page__name { font-weight: var(--qds-font-weight-semibold); overflow-wrap: anywhere; }
+.deal-page__slug { font-family: var(--qds-font-family-mono); font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); overflow-wrap: anywhere; }
+.deal-page--off .deal-page__row { cursor: default; opacity: 0.6; }
+
 /* ── Step 2: formats preview (js/deal-image-formats.js). Tile shapes come from
    the format itself (inline aspect-ratio); the deal's own image boxes above
    are not changed. ─────────────────────────────────────────────── */

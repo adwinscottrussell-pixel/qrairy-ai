@@ -118,10 +118,19 @@ const mockPrisma = {
       if (take) rows = rows.slice(0, take);
       return cloneRows(rows);
     },
+    // like the real unique (dealId, channel, targetRef) key: a second row is refused with P2002
     create: async ({ data }) => {
+      if (placementRows.some((p) => p.dealId === data.dealId && p.channel === data.channel && p.targetRef === data.targetRef)) {
+        throw Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+      }
       const row = { id: nextId('placement'), publishedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data };
       placementRows.push(row);
       return { ...row };
+    },
+    updateMany: async ({ where, data }) => {
+      const rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));
+      rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() }));
+      return { count: rows.length };
     },
     update: async ({ where, data }) => {
       const row = placementRows.find((p) => p.id === where.id);
@@ -769,6 +778,79 @@ test('P. listOwnerLandingPages: only the owner\'s own pages, with name and live 
   assert.equal((await throwsAsync(() => service.listOwnerLandingPages(''))).status, 401);
 });
 
+// ── R. Removing and re-adding a page (reversible placements) ─────
+test('R. re-adding a removed page restores the SAME placement as a draft -- no second record', async () => {
+  resetFixtures();
+  const deal = await publishedDealOn(['anna-cafe']);
+  const id = placementRows[0].id;
+  await service.archiveDealPlacement(ANNA, deal.dealId, id);
+  const back = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.equal(placementRows.length, 1, 'still exactly one record for this deal and page');
+  assert.equal(back.placementId, id);
+  assert.equal(back.status, 'draft', 'never published by itself');
+  assert.equal(back.publishedAt, null);
+  assert.equal(back.restored, true);
+});
+
+test('R. removed, re-added and published again: hidden until published, then shown', async () => {
+  resetFixtures();
+  const deal = await publishedDealOn(['anna-cafe'], { title: 'Again' });
+  const id = placementRows[0].id;
+  assert.equal((await service.activeDealsForPage('anna-cafe')).length, 1);
+  await service.archiveDealPlacement(ANNA, deal.dealId, id);
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'removed');
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'restored as a draft: not shown yet');
+  await service.publishDealPlacement(ANNA, deal.dealId, id);
+  assert.equal((await service.activeDealsForPage('anna-cafe'))[0].title, 'Again', 'shown again once published');
+  // ...and through publishing the deal with its pages
+  await service.archiveDealPlacement(ANNA, deal.dealId, id);
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal(placementRows[0].status, 'published');
+});
+
+test('R. only an archived placement is restored; a saved or published one is still a 409; archived rules stay', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const p = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 409, 'draft');
+  await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 409, 'published');
+  await service.archiveDealPlacement(ANNA, deal.dealId, p.placementId);
+  assert.match((await throwsAsync(() => service.archiveDealPlacement(ANNA, deal.dealId, p.placementId))).message, /already archived/);
+  assert.match((await throwsAsync(() => service.publishDealPlacement(ANNA, deal.dealId, p.placementId))).message, /archived placement/, 'must be re-added before publishing');
+});
+
+test('R. restoring re-checks the owner: someone else\'s page, someone else\'s deal, an archived deal', async () => {
+  resetFixtures();
+  const deal = await publishedDealOn(['anna-cafe']);
+  const id = placementRows[0].id;
+  await service.archiveDealPlacement(ANNA, deal.dealId, id);
+  landingPageRows.find((p) => p.slug === 'anna-cafe').userId = BEN;
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 404);
+  assert.equal(placementRows[0].status, 'archived', 'stays removed');
+  landingPageRows.find((p) => p.slug === 'anna-cafe').userId = ANNA;
+  assert.equal((await throwsAsync(() => service.addDealPlacement(BEN, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 404, 'not Ben\'s deal');
+  await service.archiveDeal(ANNA, deal.dealId);
+  assert.equal((await throwsAsync(() => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }))).status, 400, 'archived deal');
+  assert.equal(placementRows[0].status, 'archived');
+});
+
+test('R. concurrent requests never create a second record: restores and first adds both resolve to one row', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const add = () => service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' }).then(() => 'ok', (e) => e.status);
+  const first = await Promise.all([add(), add()]);
+  assert.deepEqual(first.slice().sort(), [409, 'ok'].sort());
+  assert.equal(placementRows.length, 1);
+  await service.archiveDealPlacement(ANNA, deal.dealId, placementRows[0].id);
+  const again = await Promise.all([add(), add()]);
+  assert.deepEqual(again.slice().sort(), [409, 'ok'].sort(), 'the archived row is restored exactly once');
+  assert.equal(placementRows.length, 1);
+  assert.equal(placementRows[0].status, 'draft');
+});
+
 // ── F. Publish ─────────────────────────────────────────────────
 test('F. publish promotes the draft into the live columns, sets publishedAt and clears draftData', async () => {
   resetFixtures();
@@ -1008,7 +1090,7 @@ test('H. a placement id from another deal, or another account, is never honored'
   assert.equal(placementRows[0].status, 'draft');
 });
 
-test('H. placement archive is terminal; an archived deal accepts no new placements', async () => {
+test('H. an archived placement stays archived until re-added; an archived deal accepts no new placements', async () => {
   resetFixtures();
   const deal = await newDeal();
   const placement = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });

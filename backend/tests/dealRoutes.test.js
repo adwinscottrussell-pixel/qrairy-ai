@@ -82,6 +82,7 @@ const mockPrisma = {
     findMany: async ({ where = {} } = {}) => cloneRows(placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]))),
     create: async ({ data }) => { idSeq += 1; const r = { id: 'pl_' + idSeq, publishedAt: null, createdAt: new Date(), ...data }; placementRows.push(r); return { ...r }; },
     update: async ({ where, data }) => { const r = placementRows.find((p) => p.id === where.id); Object.assign(r, data); return { ...r }; },
+    updateMany: async ({ where, data }) => { const rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k])); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
   },
   landingPage: {
     findUnique: async ({ where }) => { const r = pageRows.find((p) => p.slug === where.slug); return r ? { ...r } : null; },
@@ -420,6 +421,23 @@ test('P. publishing without the option leaves placements as drafts (unchanged be
   const pid = placementRows[0].id;
   const one = await call('post', '/:id/placements/:placementId/publish', asAnna({ params: { id: deal.dealId, placementId: pid } }));
   assert.equal(one.body.placement.status, 'published', 'and can be published on its own afterwards');
+});
+
+test('P. re-adding a removed page over HTTP: 200, the same placement, as a draft; repeats are 409', async () => {
+  reset();
+  const deal = await create();
+  const id = { id: deal.dealId };
+  const add = await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }));
+  await call('post', '/:id/placements/:placementId/archive', asAnna({ params: { id: deal.dealId, placementId: add.body.placement.placementId } }));
+  const back = await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }));
+  assert.equal(back.statusCode, 200, 'restored, not created');
+  assert.equal(back.body.placement.placementId, add.body.placement.placementId);
+  assert.equal(back.body.placement.status, 'draft');
+  assert.equal(placementRows.length, 1);
+  assert.equal((await call('post', '/:id/placements', asAnna({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }))).statusCode, 409);
+  assert.equal((await call('post', '/:id/placements', asBen({ params: id, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }))).statusCode, 404, 'not Ben\'s deal');
+  const list = await call('get', '/:id/placements', asAnna({ params: id }));
+  assert.deepEqual(list.body.placements.map((p) => [p.targetRef, p.status]), [['anna-cafe', 'draft']], 'reopening shows the restored state');
 });
 
 test('P. nobody can place a deal on someone else\'s page, or touch someone else\'s deal', async () => {

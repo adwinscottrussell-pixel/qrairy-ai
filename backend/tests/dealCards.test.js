@@ -29,7 +29,12 @@ const mockPrisma = {
     delete: async ({ where }) => { const i = deals.findIndex((d) => d.id === where.id); const [r] = deals.splice(i, 1); placements = placements.filter((p) => p.dealId !== r.id); return r; },
   },
   dealPlacement: {
-    findUnique: async ({ where }) => clone(placements.find((p) => p.id === where.id)),
+    findUnique: async ({ where }) => {
+      const k = where.dealId_channel_targetRef;
+      return clone(where.id ? placements.find((p) => p.id === where.id) : placements.find((p) => p.dealId === k.dealId && p.channel === k.channel && p.targetRef === k.targetRef));
+    },
+    create: async ({ data }) => { const r = { id: 'pl_new_' + placements.length, publishedAt: null, ...data }; placements.push(r); return { ...r }; },
+    updateMany: async ({ where, data }) => { const rows = placements.filter((p) => Object.keys(where).every((k) => p[k] === where[k])); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
     findMany: async ({ where = {}, orderBy, take } = {}) => {
       queries.placements += 1;
       let rows = placements.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));
@@ -246,6 +251,21 @@ test('C. publishing a deal or a placement shows it at once', async () => {
   assert.ok(section((await serve('cafe')).body), 'placement published: shown immediately');
 });
 
+test('C. removed, re-added and published again: the page follows each step at once', async () => {
+  reset();
+  const d = addDeal({ title: 'Wieder da' });
+  const pid = placements[0].id;
+  assert.ok(section((await serve('cafe')).body), 'shown');
+  await service.archiveDealPlacement(OWNER, d.id, pid);
+  assert.equal(section((await serve('cafe')).body), null, 'removed: gone at once');
+  await service.addDealPlacement(OWNER, d.id, { channel: 'landing_page', targetRef: 'cafe' });
+  assert.equal(placements.length, 1, 'the same record');
+  assert.equal(section((await serve('cafe')).body), null, 're-added as a draft: still hidden');
+  await service.publishDealPlacement(OWNER, d.id, pid);
+  const s = section((await serve('cafe')).body);
+  assert.ok(s && s.includes('Wieder da'), 'published again: shown at once');
+});
+
 test('C. a deal that ends disappears on time even while the list is cached', async () => {
   reset();
   const now = Date.now();
@@ -265,15 +285,15 @@ test('C. a failure while loading deals never breaks the page', async () => {
 });
 
 // ── K. Compatibility ───────────────────────────────────────────
-test('K. the page code changed by exactly the one hook; the editor and other features are untouched', () => {
-  const diff = execFileSync('git', ['diff', '48260df', '-U0', '--', 'backend/src/controllers/lpController.js'], { cwd: ROOT, encoding: 'utf8' })
+test('K. Phase 3.2 (commit 8d414f4) changed the page code by exactly the one hook; editor and other features untouched', () => {
+  const diff = execFileSync('git', ['diff', '48260df', '8d414f4', '-U0', '--', 'backend/src/controllers/lpController.js'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n').filter((l) => /^[+-][^+-]/.test(l)).map((l) => l.replace(/\r$/, ''));
   assert.deepEqual(diff, [
     "+const { injectActiveDeals } = require('../services/dealCards'); // QRAIVY Deals cards; off unless DEALS_ON_LANDING_PAGES=1",
     '-    const _lpHtml = renderPremiumLP(page);',
     '+    const _lpHtml = await injectActiveDeals(renderPremiumLP(page), page);',
   ]);
-  const untouched = execFileSync('git', ['diff', '48260df', '--name-only', '--', 'frontend', 'backend/prisma', 'backend/src/routes', 'backend/src/services/voiceService.js',
+  const untouched = execFileSync('git', ['diff', '48260df', '8d414f4', '--name-only', '--', 'frontend', 'backend/prisma', 'backend/src/routes', 'backend/src/services/voiceService.js',
     'backend/src/services/lpVoiceService.js', 'backend/src/controllers/qrController.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(untouched, '', 'no editor, frontend, schema, route, voice or QR change');
 });

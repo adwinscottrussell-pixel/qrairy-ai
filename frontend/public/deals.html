@@ -15,6 +15,7 @@
   <script src="js/deals-routing.js"></script>
   <script src="js/deal-starter-images.js"></script>
   <script src="js/deal-image-formats.js"></script>
+  <script src="js/deal-page-picker.js"></script>
 </head>
 <body>
 
@@ -355,6 +356,20 @@
 
               <ul class="deal-issues" id="deal-issues" hidden></ul>
 
+              <!-- Where should this Deal appear? (js/deal-page-picker.js) -->
+              <section class="deal-pages" id="deal-pages" aria-labelledby="deal-pages-title">
+                <div class="deal-pages__head">
+                  <h3 class="deal-pages__title" id="deal-pages-title" data-i18n="pg_title">Where should this Deal appear?</h3>
+                  <p class="deal-pages__lead" data-i18n="pg_lead">Choose your Smart Landing Pages. Selected pages are saved with the deal and published together with it.</p>
+                </div>
+                <div class="deal-pages__tools" id="deal-pages-tools" hidden>
+                  <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" id="deal-pages-all" data-i18n="pg_all">Select all</button>
+                  <button class="qds-btn qds-btn--ghost qds-btn--sm" type="button" id="deal-pages-none" data-i18n="pg_none">Clear all</button>
+                </div>
+                <p class="deal-pages__status" id="deal-pages-status" role="status" aria-live="polite"></p>
+                <ul class="deal-pages__list" id="deal-pages-list"></ul>
+              </section>
+
               <p class="deal-note" data-i18n="s4_note">Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.</p>
 
               <div class="deal-nav">
@@ -499,6 +514,19 @@
       pv_valid_none: 'No end date', pv_valid_from: 'From {start}', pv_valid_until: 'Until {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Review your deal', s4_lead: 'Check every detail. Use Edit to jump back to a step.',
       s4_note: 'Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.',
+      pg_title: 'Where should this Deal appear?',
+      pg_lead: 'Choose your Smart Landing Pages. Selected pages are saved with the deal and published together with it.',
+      pg_all: 'Select all', pg_none: 'Clear all', pg_loading: 'Loading your pages…', pg_retry: 'Try again',
+      pg_empty: 'You have no Smart Landing Pages yet. You can still save and publish the deal without one.',
+      pg_page_draft: 'page not published', pg_page_gone: 'no longer one of your pages, untick to remove',
+      pg_st_pending: 'Selected', pg_st_draft: 'Saved', pg_st_published: 'Published here', pg_st_archived: 'Removed earlier',
+      pg_confirm_remove: 'Remove this deal from “{name}”? You can add it to this page again later.',
+      pg_confirm_clear: 'Remove this deal from {n} saved page(s)? You can add it to those pages again later.',
+      e_pages_load: 'Your pages could not be loaded.',
+      e_pages_save: 'The page “{name}” could not be saved for this deal, so nothing was published.',
+      e_pages_conflict: 'The page “{name}” was already set for this deal. The list has been refreshed; please check it and try again.',
+      e_pages_remove: 'The deal could not be removed from “{name}”.',
+      e_pages_publish: 'The deal was not published. One of the selected pages is no longer yours; the list has been refreshed.',
       s4_save: 'Save draft', s4_publish: 'Publish',
       rv_type: 'Deal type', rv_details: 'Details', rv_title: 'Title', rv_offer: 'Offer line', rv_desc: 'Description', rv_image: 'Image', rv_period: 'Period',
       rv_edit: 'Edit', rv_none: 'Not set', rv_no_image: 'No image', rv_image_upload: 'Your uploaded picture', rv_image_bg: 'Background “{name}”', rv_image_starter: 'Starter image “{name}” (AI-generated)',
@@ -589,6 +617,19 @@
       pv_valid_none: 'Kein Enddatum', pv_valid_from: 'Ab {start}', pv_valid_until: 'Bis {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Deal überprüfen', s4_lead: 'Prüfe alle Angaben. Mit „Bearbeiten“ springst du zum jeweiligen Schritt zurück.',
       s4_note: 'Mit dem Veröffentlichen ist dieser Deal fertig. Er wird deinen Kunden noch nicht angezeigt: Die Anzeige auf der Landingpage ist noch in Arbeit.',
+      pg_title: 'Wo soll dieser Deal erscheinen?',
+      pg_lead: 'Wähle deine Smart Landingpages. Ausgewählte Seiten werden mit dem Deal gespeichert und zusammen mit ihm veröffentlicht.',
+      pg_all: 'Alle auswählen', pg_none: 'Auswahl aufheben', pg_loading: 'Deine Seiten werden geladen…', pg_retry: 'Erneut versuchen',
+      pg_empty: 'Du hast noch keine Smart Landingpages. Du kannst den Deal trotzdem speichern und veröffentlichen.',
+      pg_page_draft: 'Seite nicht veröffentlicht', pg_page_gone: 'gehört nicht mehr dir, zum Entfernen abwählen',
+      pg_st_pending: 'Ausgewählt', pg_st_draft: 'Gespeichert', pg_st_published: 'Hier veröffentlicht', pg_st_archived: 'Früher entfernt',
+      pg_confirm_remove: 'Diesen Deal von „{name}“ entfernen? Du kannst ihn dieser Seite später wieder hinzufügen.',
+      pg_confirm_clear: 'Diesen Deal von {n} gespeicherten Seite(n) entfernen? Du kannst ihn diesen Seiten später wieder hinzufügen.',
+      e_pages_load: 'Deine Seiten konnten nicht geladen werden.',
+      e_pages_save: 'Die Seite „{name}“ konnte für diesen Deal nicht gespeichert werden, daher wurde nichts veröffentlicht.',
+      e_pages_conflict: 'Die Seite „{name}“ war für diesen Deal bereits eingetragen. Die Liste wurde aktualisiert; bitte prüfe sie und versuche es erneut.',
+      e_pages_remove: 'Der Deal konnte nicht von „{name}“ entfernt werden.',
+      e_pages_publish: 'Der Deal wurde nicht veröffentlicht. Eine der ausgewählten Seiten gehört nicht mehr dir; die Liste wurde aktualisiert.',
       s4_save: 'Entwurf speichern', s4_publish: 'Veröffentlichen',
       rv_type: 'Deal-Art', rv_details: 'Details', rv_title: 'Titel', rv_offer: 'Angebotszeile', rv_desc: 'Beschreibung', rv_image: 'Bild', rv_period: 'Zeitraum',
       rv_edit: 'Bearbeiten', rv_none: 'Nicht angegeben', rv_no_image: 'Kein Bild', rv_image_upload: 'Dein hochgeladenes Bild', rv_image_bg: 'Hintergrund „{name}“', rv_image_starter: 'Vorlage „{name}“ (KI-generiert)',
@@ -1135,6 +1176,111 @@
     $('deal-schedule-summary').textContent = validity(draft, 'sum');
   }
 
+  // ── Where should this Deal appear? (Review step) ───────────────
+  // Decisions in js/deal-page-picker.js. Only the owner's own pages are
+  // listed (GET /deals/pages); the server checks ownership again for every
+  // request. Unsaved ticks live only here until Save draft / Publish.
+  var PAGE_BADGE = { pending: 'info', draft: 'neutral', published: 'success', archived: 'neutral' };
+  function freshPicker() { return { dealId: null, loading: false, error: '', pages: null, bySlug: {}, pending: new Set() }; }
+  var picker = freshPicker();
+  function pageName(slug) {
+    var p = (picker.pages || []).filter(function (x) { return x.slug === slug; })[0];
+    return p ? (p.name || p.slug) : slug;
+  }
+  async function loadPicker(force) {
+    if (!draft || !draft.id) { renderPicker(); return; }
+    if (!force && picker.dealId === draft.id && (picker.pages || picker.loading)) { renderPicker(); return; }
+    var forDeal = draft.id;
+    picker.dealId = forDeal; picker.loading = true; picker.error = ''; renderPicker();
+    try {
+      var both = await Promise.all([api('GET', '/deals/pages'), api('GET', '/deals/' + encodeURIComponent(forDeal) + '/placements')]);
+      if (!draft || draft.id !== forDeal) return;
+      picker.pages = both[0].pages || [];
+      picker.bySlug = {};
+      (both[1].placements || []).forEach(function (p) { if (p.channel === 'landing_page') picker.bySlug[p.targetRef] = p; });
+      // A tick only stays for a page the owner has and that has no placement yet.
+      Array.from(picker.pending).forEach(function (s) {
+        if (picker.bySlug[s] || !picker.pages.some(function (p) { return p.slug === s; })) picker.pending.delete(s);
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return;
+      picker.error = t('e_pages_load') + ' ' + errorText(err);
+    } finally {
+      if (picker.dealId === forDeal) { picker.loading = false; renderPicker(); }
+    }
+  }
+  function renderPicker() {
+    var lib = window.QraivyDealPagePicker, status = $('deal-pages-status'), list = $('deal-pages-list'), tools = $('deal-pages-tools');
+    if (!lib || !status) return;
+    var nothing = function (text) { status.textContent = text; list.innerHTML = ''; tools.hidden = true; };
+    if (!draft || !draft.id || (picker.loading && !picker.pages)) return nothing(t('pg_loading'));
+    if (picker.error) {
+      status.innerHTML = esc(picker.error) + ' <button class="qds-btn qds-btn--link qds-btn--sm" type="button" id="deal-pages-retry">' + esc(t('pg_retry')) + '</button>';
+      list.innerHTML = ''; tools.hidden = true; return;
+    }
+    var rs = lib.rows(picker.pages, picker.bySlug, picker.pending);
+    if (!rs.length) return nothing(t('pg_empty'));
+    tools.hidden = false;
+    $('deal-pages-all').disabled = busy || !lib.selectAllSlugs(rs).length;
+    $('deal-pages-none').disabled = busy || !rs.some(function (r) { return r.checked; });
+    status.textContent = '';
+    list.innerHTML = rs.map(function (r) {
+      var badge = r.state === 'none' ? '' : '<span class="qds-badge qds-badge--' + PAGE_BADGE[r.state] + '">' + esc(t('pg_st_' + r.state)) + '</span>';
+      return '<li class="deal-page' + (r.disabled ? ' deal-page--off' : '') + '"><label class="deal-page__row">' +
+        '<input type="checkbox" class="deal-page__check" data-page="' + esc(r.slug) + '"' + (r.checked ? ' checked' : '') + (r.disabled || busy ? ' disabled' : '') + '>' +
+        '<span class="deal-page__text"><span class="deal-page__name">' + esc(r.name) + '</span>' +
+        '<span class="deal-page__slug">/lp/' + esc(r.slug) + (r.gone ? ' · ' + esc(t('pg_page_gone')) : r.live ? '' : ' · ' + esc(t('pg_page_draft'))) + '</span></span>' + badge + '</label></li>';
+    }).join('');
+  }
+  // Archives saved placements one by one; stops and explains at the first failure.
+  async function removePages(items) {
+    await runBusy(null, async function () {
+      for (var i = 0; i < items.length; i++) {
+        try {
+          var res = await api('POST', '/deals/' + encodeURIComponent(draft.id) + '/placements/' + encodeURIComponent(items[i].placementId) + '/archive');
+          picker.bySlug[items[i].slug] = res.placement;
+        } catch (err) {
+          if (!(err instanceof ApiError && err.status === 401)) showAlert(t('e_pages_remove', { name: pageName(items[i].slug) }) + ' ' + errorText(err));
+          await loadPicker(true);
+          return;
+        }
+      }
+    });
+    renderPicker();
+  }
+  function onPageToggle(input) {
+    var lib = window.QraivyDealPagePicker, slug = input.getAttribute('data-page');
+    var row = lib.rows(picker.pages, picker.bySlug, picker.pending).filter(function (r) { return r.slug === slug; })[0];
+    var act = lib.toggleAction(row);
+    if (act.type === 'add-pending') picker.pending.add(slug);
+    else if (act.type === 'remove-pending') picker.pending.delete(slug);
+    else if (act.type === 'archive') {
+      if (window.confirm(t('pg_confirm_remove', { name: row.name }))) { removePages([{ slug: slug, placementId: act.placementId }]); return; }
+    }
+    renderPicker();
+  }
+  function onPagesAll() {
+    var lib = window.QraivyDealPagePicker;
+    lib.selectAllSlugs(lib.rows(picker.pages, picker.bySlug, picker.pending)).forEach(function (s) { picker.pending.add(s); });
+    renderPicker();
+  }
+  function onPagesNone() {
+    var lib = window.QraivyDealPagePicker, plan = lib.clearAllPlan(lib.rows(picker.pages, picker.bySlug, picker.pending));
+    plan.dropPending.forEach(function (s) { picker.pending.delete(s); });
+    if (plan.archive.length && window.confirm(t('pg_confirm_clear', { n: plan.archive.length }))) { removePages(plan.archive); return; }
+    renderPicker();
+  }
+  // Saves the unsaved ticks. Returns true only when every one is on the server.
+  async function savePickedPages() {
+    if (!picker.pending.size) return true;
+    var res = await window.QraivyDealPagePicker.savePending(api, draft.id, picker.pending, picker.bySlug);
+    if (res.ok) return true;
+    if (res.error instanceof ApiError && res.error.status === 401) return false;
+    showAlert(res.conflict ? t('e_pages_conflict', { name: pageName(res.slug) }) : t('e_pages_save', { name: pageName(res.slug) }) + ' ' + errorText(res.error));
+    await loadPicker(true);
+    return false;
+  }
+
   function renderReview() {
     var d = draft, none = '<span class="deal-review__value--empty">' + esc(t('rv_none')) + '</span>';
     var imgText = !d.image ? '<span class="deal-review__value--empty">' + esc(t('rv_no_image')) + '</span>'
@@ -1161,6 +1307,7 @@
     list.hidden = issues.length === 0;
     $('deal-publish').disabled = issues.length > 0;
     $('deal-save-draft').disabled = Object.keys(validateContent(d)).length > 0;
+    loadPicker(false);
   }
 
   function renderSteps() {
@@ -1291,6 +1438,7 @@
     renderTypeFields();
   }
   function openBuilder(deal) {
+    picker = freshPicker();
     editingId = deal ? deal.id : null;
     draft = deal ? cloneDeal(deal) : emptyDeal();
     step = 1;
@@ -1335,7 +1483,7 @@
     var el = document.querySelector('.deal-panel:not([hidden]) .qds-field--error input, .deal-panel:not([hidden]) .qds-field--error textarea');
     if (el) el.focus();
   }
-  function closeBuilder() { if (busy) return; draft = null; editingId = null; showAlert(''); showView('list'); loadDeals(); }
+  function closeBuilder() { if (busy) return; draft = null; editingId = null; picker = freshPicker(); showAlert(''); showView('list'); loadDeals(); }
 
   // Save draft / Publish from the review step. The list is reloaded from
   // the server afterwards, so it shows what was really stored.
@@ -1347,9 +1495,17 @@
     if (sch.blocking || (status === 'published' && sch.endPastOnly)) { step = 3; reached = Math.max(reached, 3); renderBuilder(); focusFirstError(); return; }
     var done = await runBusy(btn, async function () {
       if (!(await persist())) return false;
+      if (!(await savePickedPages())) return false;              // never report success while a page failed
       if (status !== 'published') return true;
-      try { await api('POST', '/deals/' + encodeURIComponent(draft.id) + '/publish'); return true; }
-      catch (err) { if (!(err instanceof ApiError && err.status === 401)) showAlert(errorText(err)); return false; }
+      // With saved pages, deal and pages are published in one transaction on the server.
+      var withPages = window.QraivyDealPagePicker.needsIncludePlacements(picker.bySlug);
+      try { await api('POST', '/deals/' + encodeURIComponent(draft.id) + '/publish', withPages ? { includePlacements: true } : undefined); return true; }
+      catch (err) {
+        if (err instanceof ApiError && err.status === 401) return false;
+        if (withPages && err instanceof ApiError && err.status === 409) { showAlert(t('e_pages_publish')); await loadPicker(true); }
+        else showAlert(errorText(err));
+        return false;
+      }
     });
     if (!done) return;
     closeBuilder();
@@ -1427,6 +1583,16 @@
       goTo(Number(btn.getAttribute('data-step')), null);
     });
 
+    $('deal-pages').addEventListener('change', function (e) {
+      var input = e.target.closest ? e.target.closest('input[data-page]') : null;
+      if (input && !busy) onPageToggle(input);
+    });
+    $('deal-pages').addEventListener('click', function (e) {
+      if (busy || !e.target.closest) return;
+      if (e.target.closest('#deal-pages-all')) onPagesAll();
+      else if (e.target.closest('#deal-pages-none')) onPagesNone();
+      else if (e.target.closest('#deal-pages-retry')) loadPicker(true);
+    });
     $('deal-builder-view').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
       var action = btn.getAttribute('data-action');
