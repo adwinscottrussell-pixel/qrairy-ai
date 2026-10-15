@@ -9,6 +9,7 @@
 //   C. caching: reuse, clearing on publish / archive / delete, end dates
 //   K. compatibility: one hook in the page code, editor untouched
 //   V. Welcome Voice and the cards on the same page (no recordings made)
+//   T. text contrast on the card in the page's light and dark theme
 //
 // Run: node tests/dealCards.test.js
 // ============================================================
@@ -390,6 +391,122 @@ test('V. switching Deal cards off leaves Welcome Voice as it is (and hides only 
   assert.equal(placements[0].status, 'published', 'the placement itself is untouched');
   assert.equal(net, 0);
   assert.equal(recordings, 0);
+});
+// ── T. Text contrast in the light and dark theme ───────────────
+// A small CSS cascade over the page's real stylesheets (the rendered
+// landing page + the cards): rules with descendant selectors made of
+// .class / tag / *, ranked by !important, specificity and order, with
+// colour inheritance. Enough to see what the page's dark theme does to the
+// card -- its rules are exactly of that form (.dark-mode h3, .dark-mode p).
+function cssRules(html) {
+  let css = (html.match(/<style[^>]*>[\s\S]*?<\/style>/g) || []).map((b) => b.replace(/<\/?style[^>]*>/g, '')).join('\n');
+  css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  let flat = '', depth = 0, skip = -1;                       // drop @media / @keyframes blocks
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (c === '@' && depth === 0) skip = 0;
+    if (c === '{') { depth++; if (skip === 0) skip = depth; }
+    if (skip > 0) { if (c === '}' && depth === skip) { skip = -1; } if (c === '}') depth--; continue; }
+    if (c === '}') depth--;
+    if (skip === -1) flat += c;
+  }
+  const rules = [];
+  let order = 0;
+  for (const chunk of flat.split('}')) {
+    const at = chunk.indexOf('{'); if (at === -1) continue;
+    const decls = chunk.slice(at + 1).split(';').map((d) => d.trim()).filter(Boolean);
+    for (const sel of chunk.slice(0, at).split(',').map((x) => x.trim())) {
+      if (!/^(\.[\w-]+|[a-z][\w-]*|\*)(\s+(\.[\w-]+|[a-z][\w-]*|\*))*$/i.test(sel)) continue;
+      const parts = sel.split(/\s+/);
+      const spec = [parts.filter((p) => p[0] === '.').length, parts.filter((p) => /^[a-z]/i.test(p)).length];
+      for (const d of decls) {
+        const m = d.match(/^(color|background|background-color)\s*:\s*(.+?)\s*(!important)?$/i); if (!m) continue;
+        rules.push({ parts, prop: m[1].toLowerCase() === 'color' ? 'color' : 'background', value: m[2].trim(), important: !!m[3], spec, order: order++ });
+      }
+    }
+  }
+  return rules;
+}
+const matchesOne = (el, part) => part === '*' || (part[0] === '.' ? el.classes.includes(part.slice(1)) : el.tag === part.toLowerCase());
+function matches(chain, i, parts) {                         // chain[i] is the element, chain[0..i-1] its ancestors
+  if (!matchesOne(chain[i], parts[parts.length - 1])) return false;
+  let j = i - 1;
+  for (let k = parts.length - 2; k >= 0; k--) { while (j >= 0 && !matchesOne(chain[j], parts[k])) j--; if (j < 0) return false; j--; }
+  return true;
+}
+function winner(rules, chain, i, prop) {
+  const hit = rules.filter((r) => r.prop === prop && matches(chain, i, r.parts));
+  hit.sort((a, b) => (a.important - b.important) || (a.spec[0] - b.spec[0]) || (a.spec[1] - b.spec[1]) || (a.order - b.order));
+  return hit.length ? hit[hit.length - 1].value : null;
+}
+function colorOf(rules, chain, i) {                         // inherited, like the browser
+  for (let k = i; k >= 0; k--) { const v = winner(rules, chain, k, 'color'); if (v && v !== 'inherit') return v; }
+  return '#000';
+}
+function rgbOf(v) {
+  const hex = String(v).match(/#([0-9a-f]{3}|[0-9a-f]{6})\b/i);
+  if (hex) { const h = hex[1].length === 3 ? hex[1].replace(/./g, '$&$&') : hex[1]; return [0, 2, 4].map((o) => parseInt(h.slice(o, o + 2), 16)); }
+  const rgb = String(v).match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (rgb) return rgb.slice(1, 4).map(Number);
+  if (/^white$/i.test(v)) return [255, 255, 255];
+  throw new Error('unknown colour ' + v);
+}
+function contrast(a, b) {
+  const L = (c) => { const [r, g, bl] = c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
+  const [x, y] = [L(rgbOf(a)), L(rgbOf(b))].sort((m, n) => n - m);
+  return (x + 0.05) / (y + 0.05);
+}
+// The card as rendered: body > section.qd-deals > div.qd-list > article.qd-card > div.qd-body > text
+const el = (tag, ...classes) => ({ tag, classes });
+function cardChain(dark) { return [el('html'), el('body', ...(dark ? ['dark-mode'] : [])), el('section', 'qd-deals'), el('div', 'qd-list'), el('article', 'qd-card'), el('div', 'qd-body')]; }
+const CARD_TEXT = [['offer', el('p', 'qd-offer')], ['deal title', el('h3', 'qd-name')], ['description', el('p', 'qd-desc')], ['expiry date', el('p', 'qd-valid')]];
+async function pageWithCard() {
+  reset();
+  addDeal({ title: 'Kontrast', description: 'Gut lesbar', endsAt: new Date(Date.now() + 3 * DAY) });
+  return (await serve('cafe')).body;
+}
+
+test('T. the rendered card uses the expected elements and the page really has its dark-theme text rules', async () => {
+  const html = await pageWithCard();
+  const s = section(html);
+  for (const [, e] of CARD_TEXT) assert.ok(new RegExp('<' + e.tag + ' class="' + e.classes[0] + '"').test(s), e.tag + '.' + e.classes[0]);
+  assert.ok(/<article class="qd-card"/.test(s) && /<div class="qd-body"/.test(s));
+  // the precondition for this test to mean anything: the page recolours text in dark mode
+  const r = cssRules(html);
+  assert.ok(r.some((x) => x.parts.join(' ') === '.dark-mode h3' && x.important), '.dark-mode h3 { … !important }');
+  assert.ok(r.some((x) => x.parts.join(' ') === '.dark-mode p'), '.dark-mode p');
+});
+
+for (const dark of [false, true]) {
+  test('T. ' + (dark ? 'dark' : 'light') + ' theme: the card stays white and its offer, title, description and expiry date reach at least 7:1', async () => {
+    const html = await pageWithCard();
+    const rules = cssRules(html);
+    const chain = cardChain(dark);
+    const bg = winner(rules, chain, 4, 'background');
+    assert.ok(bg && contrast(bg, '#fff') === 1, 'card background is white, got ' + bg);
+    for (const [name, e] of CARD_TEXT) {
+      const c = chain.concat([e]);
+      const col = colorOf(rules, c, c.length - 1);
+      const ratio = contrast(col, '#fff');
+      assert.ok(ratio >= 7, name + ': ' + col + ' on white = ' + ratio.toFixed(2) + ':1');
+    }
+  });
+}
+
+test('T. the heading on the page background is readable in both themes (at least 4.5:1)', async () => {
+  const html = await pageWithCard();
+  const rules = cssRules(html);
+  const light = [el('html'), el('body'), el('section', 'qd-deals'), el('h2', 'qd-heading')];
+  const dark = [el('html'), el('body', 'dark-mode'), el('section', 'qd-deals'), el('h2', 'qd-heading')];
+  assert.ok(contrast(colorOf(rules, light, 3), '#f8f8f8') >= 4.5, 'light: ' + colorOf(rules, light, 3) + ' on the default page background');
+  assert.ok(contrast(colorOf(rules, dark, 3), '#111') >= 4.5, 'dark: ' + colorOf(rules, dark, 3) + ' on the dark page background');
+});
+
+test('T. image, layout, spacing and rounded corners are unchanged', () => {
+  const html = cards.renderDealCards([{ title: 'A', offerText: 'B', description: 'C', endsAt: null, image: null }], { lang: 'de' });
+  for (const rule of ['.qd-deals{max-width:560px;margin:0 auto 32px;padding:0 20px', '.qd-list{display:grid;gap:14px}', 'border-radius:16px;overflow:hidden',
+    '.qd-media{position:relative;aspect-ratio:4/3', '.qd-media img{display:block;width:100%;height:100%;object-fit:cover}', '.qd-body{padding:14px 16px 16px}',
+    '.qd-offer{margin:0 0 4px;font-size:18px;font-weight:800', '.qd-valid{margin:0;font-size:12px']) assert.ok(html.includes(rule), rule);
 });
 
 (async () => {

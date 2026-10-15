@@ -97,9 +97,17 @@ function media(image, pageOrigin, t) {
     (ai ? '<span class="qd-ai"><span aria-hidden="true">AI · KI-generiert</span><span class="qd-sr">' + esc(t.ai) + '</span></span>' : '') + '</div>';
 }
 
+// The cards are always white, in the page's light and dark theme. The
+// landing page's dark theme recolours text page-wide (.dark-mode h1,h2,h3
+// {color:#fff !important}; .dark-mode p,span,div {color:#ccc}), which made
+// the card text white or pale grey on white. The card's own text colours
+// are therefore scoped (.qd-deals .qd-x, specificity 0,2,0) and !important,
+// so they win over those rules. All text on the card reaches at least 7:1.
+// The heading sits on the page background, so it follows the page theme:
+// dark orange on light (4.5:1+), the theme's white in dark mode.
 const STYLE = '<style>' +
   '.qd-deals{max-width:560px;margin:0 auto 32px;padding:0 20px;font-family:inherit}' +
-  '.qd-heading{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ff5a1f;margin:0 0 12px}' +
+  '.qd-heading{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#c2410c;margin:0 0 12px}' +
   '.qd-list{display:grid;gap:14px}' +
   '.qd-card{background:#fff;border:1px solid #ececec;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.06)}' +
   '.qd-media{position:relative;aspect-ratio:4/3;background:#f2f2f2;background-size:cover}' +
@@ -108,9 +116,12 @@ const STYLE = '<style>' +
   '.qd-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
   '.qd-body{padding:14px 16px 16px}' +
   '.qd-offer{margin:0 0 4px;font-size:18px;font-weight:800;line-height:1.25;color:#0a0a0a;overflow-wrap:anywhere}' +
-  '.qd-name{margin:0 0 6px;font-size:14px;font-weight:600;color:#555;overflow-wrap:anywhere}' +
-  '.qd-desc{margin:0 0 8px;font-size:14px;line-height:1.45;color:#444;overflow-wrap:anywhere}' +
-  '.qd-valid{margin:0;font-size:12px;color:#888}' +
+  '.qd-name{margin:0 0 6px;font-size:14px;font-weight:600;color:#2b2b2b;overflow-wrap:anywhere}' +
+  '.qd-desc{margin:0 0 8px;font-size:14px;line-height:1.45;color:#333;overflow-wrap:anywhere}' +
+  '.qd-valid{margin:0;font-size:12px;color:#555}' +
+  '.qd-deals .qd-card{background:#fff !important}' +
+  '.qd-deals .qd-offer{color:#0a0a0a !important}.qd-deals .qd-name{color:#2b2b2b !important}' +
+  '.qd-deals .qd-desc{color:#333 !important}.qd-deals .qd-valid{color:#555 !important}.qd-deals .qd-ai{color:#fff !important}' +
   '@media(min-width:600px){.qd-list{grid-template-columns:1fr}}' +
   '</style>';
 
