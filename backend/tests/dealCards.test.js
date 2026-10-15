@@ -8,6 +8,7 @@
 //      scheduling and statuses
 //   C. caching: reuse, clearing on publish / archive / delete, end dates
 //   K. compatibility: one hook in the page code, editor untouched
+//   V. Welcome Voice and the cards on the same page (no recordings made)
 //
 // Run: node tests/dealCards.test.js
 // ============================================================
@@ -61,6 +62,9 @@ process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 delete process.env.APP_ENV;
 const realError = console.error;
 console.error = (...a) => { if (!/^\[(deals|auth)\]/.test(String(a[0]))) realError(...a); };
+
+let recordings = 0;
+require('../src/services/voiceService').synthesizeAndUploadVoice = async () => { recordings += 1; throw new Error('no recordings in tests'); };
 
 const { pageCache } = require('../src/utils/pageCache');
 const cards = require('../src/services/dealCards');
@@ -303,6 +307,89 @@ test('K. the card colours mirror the Deal Builder backgrounds', () => {
   for (const [id, css] of Object.entries(cards.BACKGROUND_CSS)) assert.ok(page.includes("{ id: '" + id + "', css: '" + css + "' }"), id);
   const { DEAL_BACKGROUNDS } = require('../src/data/dealImages');
   assert.deepEqual(Object.keys(cards.BACKGROUND_CSS).sort(), DEAL_BACKGROUNDS.slice().sort());
+});
+
+// ── V. Welcome Voice and Deal cards together ───────────────────
+const lpVoice = require('../src/services/lpVoiceService');
+const VOICE_URL = 'https://res.cloudinary.com/test-cloud/video/upload/v1/qraivy-voice/voice-cafe-1.mp3';
+// A page with Welcome Voice on and a recording of its current greeting (audioFor = its fingerprint).
+function addVoicePage() {
+  const p = { id: 'lpv', slug: 'voice-cafe', businessName: 'Café Stimme', userId: OWNER, status: 'live', websiteUrl: 'https://example.com', useCase: 'cafe' };
+  const s = { language: 'de', voice: { enabled: true, audioUrl: VOICE_URL } };
+  p.sections = JSON.stringify(s);
+  s.voice.audioFor = lpVoice.effectiveGreeting(p).fingerprint;
+  p.sections = JSON.stringify(s);
+  pages['voice-cafe'] = p;
+  return p;
+}
+// The live (premium) page's click-to-play card: from its section to the AI chat that follows it.
+const voiceSection = (html) => { const b = html.indexOf('id="audio-play-btn"'); if (b === -1) return null; return html.slice(html.lastIndexOf('<div class="section">', b), html.indexOf('<!-- AI CHAT -->', b)); };
+const PLAY = 'id="audio-play-btn"';
+const voiceScript = (html) => (html.match(/var audioUrl = [^;]*;/) || [null])[0];
+async function serveWith(flag) {
+  if (flag) process.env.DEALS_ON_LANDING_PAGES = '1'; else delete process.env.DEALS_ON_LANDING_PAGES;
+  pageCache.delByPrefix('deals:'); pageCache.delByPrefix('lp:');
+  return serve('voice-cafe');
+}
+// No network at all while these pages are served.
+async function offline(fn) {
+  const https = require('https'), http = require('http');
+  const real = [https.request, https.get, http.request, http.get];
+  let calls = 0;
+  https.request = https.get = http.request = http.get = () => { calls += 1; throw new Error('no network in tests'); };
+  try { await fn(); } finally { [https.request, https.get, http.request, http.get] = real; }
+  return calls;
+}
+
+test('V. the fixture is a playable Welcome Voice page (switched on, current recording)', () => {
+  reset();
+  const p = addVoicePage();
+  assert.equal(lpVoice.audioIsPlayable(p), true);
+  assert.equal(lpVoice.effectiveGreeting(p).enabled, true);
+});
+
+test('V. Welcome Voice play button and the Deal card appear together on the same page', async () => {
+  reset();
+  addVoicePage();
+  addDeal({ title: 'Kaffee & Stimme' }, ['voice-cafe']);
+  let html;
+  const net = await offline(async () => { html = (await serveWith(true)).body; });
+  assert.ok(html.includes(PLAY) && html.includes('onclick="playAudio(this)"'), 'click-to-play button');
+  assert.equal(voiceScript(html), 'var audioUrl = ' + JSON.stringify(VOICE_URL) + ';', 'the player gets the recording');
+  const s = section(html);
+  assert.ok(s && s.includes('Kaffee &amp; Stimme'), 'deal card');
+  assert.equal((html.match(/id="audio-play-btn"/g) || []).length, 1);
+  assert.equal((html.match(/<section class="qd-deals"/g) || []).length, 1);
+  assert.ok(html.indexOf(PLAY) < html.indexOf('qd-deals'), 'voice where it always was, the cards before the footer');
+  assert.equal(net, 0, 'no network');
+  assert.equal(recordings, 0, 'no recording made');
+});
+
+test('V. the voice player markup is byte-identical with Deal cards on; the cards are the only difference', async () => {
+  reset();
+  addVoicePage();
+  addDeal({}, ['voice-cafe']);
+  let off, on;
+  await offline(async () => { off = (await serveWith(false)).body; on = (await serveWith(true)).body; });
+  assert.ok(voiceSection(off) && voiceSection(off).includes(PLAY) && voiceSection(off).includes('Welcome from'));
+  assert.equal(voiceSection(on), voiceSection(off), 'voice section unchanged');
+  assert.equal(voiceScript(on), voiceScript(off), 'player script unchanged');
+  assert.equal(on.replace(section(on), ''), off, 'everything except the inserted cards is identical');
+});
+
+test('V. switching Deal cards off leaves Welcome Voice as it is (and hides only the cards)', async () => {
+  reset();
+  addVoicePage();
+  addDeal({ title: 'Nur mit Schalter' }, ['voice-cafe']);
+  let html;
+  const net = await offline(async () => { html = (await serveWith(false)).body; });
+  assert.ok(html.includes(PLAY), 'play button still there');
+  assert.equal(voiceScript(html), 'var audioUrl = ' + JSON.stringify(VOICE_URL) + ';');
+  assert.equal(section(html), null, 'no cards');
+  assert.ok(!html.includes('Nur mit Schalter'));
+  assert.equal(placements[0].status, 'published', 'the placement itself is untouched');
+  assert.equal(net, 0);
+  assert.equal(recordings, 0);
 });
 
 (async () => {
