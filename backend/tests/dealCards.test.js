@@ -126,11 +126,17 @@ test('R. only our own Cloudinary 4:3 images and catalog starters become <img>; a
     'https://res.cloudinary.com/test-cloud/image/upload/v1/a.jpg" onerror="x', 'https://res.cloudinary.com/test-cloud/video/upload/v1/a.mp4']) {
     assert.ok(!r({ source: 'uploaded', url: bad }).includes('<img'), bad);
   }
-  const st = r({ source: 'starter', starterId: 'bakery-croissants-01', aiGenerated: true });
-  assert.ok(st.includes('<img src="https://www.qraivy.com/images/deals/starter/bakery-croissants-01.jpg"'));
-  assert.ok(st.includes('AI · KI-generiert'), 'AI disclosure on starter images');
-  assert.ok(!r({ source: 'starter', starterId: '../../x' }).includes('<img'));
-  assert.ok(!r({ source: 'starter', starterId: 'bakery-croissants-01' }, 'javascript:x').includes('<img'), 'never with an unsafe origin');
+  const cloudBefore = process.env.CLOUDINARY_CLOUD_NAME;
+  process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+  try {
+    const st = r({ source: 'starter', starterId: 'bakery-croissants-01', aiGenerated: true });
+    assert.ok(st.includes('<img src="https://res.cloudinary.com/test-cloud/image/upload/c_fill,g_auto,h_900,w_1200,f_auto,q_auto/qraivy-deal-starters/bakery-croissants-01.jpg"'), 'starter images come from our Cloudinary account');
+    assert.ok(st.includes('AI · KI-generiert'), 'AI disclosure on starter images');
+    assert.ok(!r({ source: 'starter', starterId: '../../x' }).includes('<img'));
+    assert.ok(r({ source: 'starter', starterId: 'bakery-croissants-01' }, 'javascript:x').includes('res.cloudinary.com/test-cloud/'), 'the page origin plays no part');
+  } finally {
+    if (cloudBefore === undefined) delete process.env.CLOUDINARY_CLOUD_NAME; else process.env.CLOUDINARY_CLOUD_NAME = cloudBefore;
+  }
   assert.ok(!r({ source: 'uploaded', url: IMG }).includes('AI · KI-generiert'), 'uploads are not labelled AI');
   assert.ok(r({ source: 'background', backgroundId: 'ocean' }).includes(cards.BACKGROUND_CSS.ocean));
 });

@@ -44,6 +44,28 @@ const TEXT = {
 
 const UPLOADED_IMAGE = /^https:\/\/res\.cloudinary\.com\/[A-Za-z0-9_-]+\/image\/upload\/[A-Za-z0-9_,:.\/-]+\.(?:jpe?g|png|webp)$/;
 
+// Starter images come from our own Cloudinary account (CLOUDINARY_CLOUD_NAME),
+// where the catalog is uploaded once per account as qraivy-deal-starters/<catalog id>:
+// 1200x900 like uploads, format and quality chosen by Cloudinary. Never from the
+// page's own site -- on deals-preview that site is behind Vercel's login.
+// Saved deals keep only the catalog id, so they follow this without any change.
+const STARTER_FOLDER = 'qraivy-deal-starters';
+const STARTER_TRANSFORM = 'c_fill,g_auto,h_900,w_1200,f_auto,q_auto';
+const CLOUD_NAME = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+let warnedNoCloud = false;
+function starterImageUrl(starterId, env = process.env) {
+  const cloud = String(env.CLOUDINARY_CLOUD_NAME || '').trim();
+  if (!CLOUD_NAME.test(cloud)) {
+    if (!warnedNoCloud) { warnedNoCloud = true; console.warn('[deals] CLOUDINARY_CLOUD_NAME missing or invalid: starter images are shown as a colour'); }
+    return '';
+  }
+  if (typeof starterId !== 'string' || !/^[a-z0-9-]+$/.test(starterId)) return '';
+  return 'https://res.cloudinary.com/' + cloud + '/image/upload/' + STARTER_TRANSFORM + '/' + STARTER_FOLDER + '/' + starterId + '.jpg';
+}
+// Behind every picture: one that fails to load leaves a soft colour instead of a
+// white hole. The <img> stays in the page, so the failed request is still visible.
+const MEDIA_UNDERLAY = BACKGROUND_CSS.sand;
+
 function isEnabled(env = process.env) { return String(env.DEALS_ON_LANDING_PAGES || '').trim() === '1'; }
 function cacheKey(slug) { return CACHE_PREFIX + slug; }
 // Called by dealService whenever something a customer could see changes.
@@ -60,9 +82,6 @@ function pageLang(page) {
     return s && s.language === 'de' ? 'de' : 'en';
   } catch (_) { return 'en'; }
 }
-function isHttpsOrigin(v) {
-  try { const u = new URL(String(v)); return u.protocol === 'https:' && u.origin === String(v); } catch (_) { return false; }
-}
 function formatDate(value, lang) {
   const d = value instanceof Date ? value : new Date(value);
   if (isNaN(d.getTime())) return '';
@@ -76,6 +95,7 @@ function stillRunning(deal, now) {
 }
 
 // The picture of one card: an <img> for an uploaded or starter image, else a colour.
+// (pageOrigin is no longer used here: starter images come from Cloudinary.)
 function media(image, pageOrigin, t) {
   const fallback = '<div class="qd-media" style="background:' + BACKGROUND_CSS.ember + '"></div>';
   if (!image || typeof image !== 'object') return fallback;
@@ -87,13 +107,13 @@ function media(image, pageOrigin, t) {
   if (image.source === 'uploaded' && typeof image.url === 'string' && UPLOADED_IMAGE.test(image.url)) src = image.url;
   if (image.source === 'starter') {
     const starter = findDealStarterImage(image.starterId);
-    if (starter && /^[a-z0-9-]+$/.test(starter.id) && isHttpsOrigin(pageOrigin)) {
-      src = pageOrigin + '/images/deals/starter/' + starter.id + '.jpg';
-      ai = starter.origin === 'ai_generated';
+    if (starter) {
+      src = starterImageUrl(starter.id);
+      ai = !!src && starter.origin === 'ai_generated';
     }
   }
   if (!src) return fallback;
-  return '<div class="qd-media"><img src="' + esc(src) + '" alt="" width="1200" height="900" loading="lazy" decoding="async">' +
+  return '<div class="qd-media" style="background:' + MEDIA_UNDERLAY + '"><img src="' + esc(src) + '" alt="" width="1200" height="900" loading="lazy" decoding="async">' +
     (ai ? '<span class="qd-ai"><span aria-hidden="true">AI · KI-generiert</span><span class="qd-sr">' + esc(t.ai) + '</span></span>' : '') + '</div>';
 }
 
