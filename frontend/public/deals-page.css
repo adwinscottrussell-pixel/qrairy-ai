@@ -485,3 +485,12 @@
 /* ── Deals access notice and usage (GET /deals/access) ───────── */
 .deal-access-usage { margin: 0 0 var(--qds-space-4); }
 .deal-access__billing { color: var(--qds-color-brand-primary); font-weight: 600; white-space: nowrap; }
+
+/* ── Archive confirmation (#deal-archive-dialog) ────────────── */
+.deal-confirm { margin: auto; width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: var(--qds-space-6); border: 1px solid var(--qds-color-border-subtle); border-radius: var(--qds-radius-lg); background: var(--qds-color-surface-1); color: var(--qds-color-text-primary); font-family: var(--qds-font-family-primary); }
+.deal-confirm::backdrop { background: rgba(0, 0, 0, .5); }
+.deal-confirm__title { margin: 0 0 var(--qds-space-3); font-size: 18px; font-weight: var(--qds-font-weight-semibold); }
+.deal-confirm__deal { margin: 0 0 var(--qds-space-3); font-weight: var(--qds-font-weight-semibold); overflow-wrap: anywhere; }
+.deal-confirm__msg { margin: 0 0 var(--qds-space-5); color: var(--qds-color-text-secondary); font-size: var(--qds-text-body-sm-size); line-height: var(--qds-text-body-sm-line-height); }
+.deal-confirm__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--qds-space-2); }
+@media (max-width: 480px) { .deal-confirm__actions { flex-direction: column; } .deal-confirm__actions .qds-btn { width: 100%; } }

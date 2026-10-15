@@ -417,6 +417,17 @@
   <footer class="dash-footer"><span data-i18n="dl_footer">QRAIVY — Deals</span></footer>
 </div>
 
+<!-- Archive confirmation (askArchive): archiving is final, so it needs an explicit second click -->
+<dialog class="deal-confirm" id="deal-archive-dialog" aria-labelledby="deal-archive-title" aria-describedby="deal-archive-name deal-archive-msg">
+  <h2 class="deal-confirm__title" id="deal-archive-title" data-i18n="ac_title">Really archive this deal?</h2>
+  <p class="deal-confirm__deal" id="deal-archive-name"></p>
+  <p class="deal-confirm__msg" id="deal-archive-msg" data-i18n="ac_message"></p>
+  <div class="deal-confirm__actions">
+    <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" id="deal-archive-cancel" data-i18n="ac_cancel" autofocus>Cancel</button>
+    <button class="qds-btn qds-btn--danger qds-btn--md" type="button" id="deal-archive-confirm" data-i18n="ac_confirm">Archive for good</button>
+  </div>
+</dialog>
+
 <script>
 // ============================================================
 // Deals — Phase C1: the Deal Builder on the real Deals API.
@@ -561,6 +572,9 @@
       is_step1: 'Content is incomplete.', is_step3: 'The schedule needs attention.',
       toast_draft: 'Draft saved', toast_published: 'Deal published',
       toast_archived: 'Deal archived', toast_deleted: 'Deal deleted',
+      ac_title: 'Really archive this deal?', ac_untitled: '(untitled deal)',
+      ac_message: 'This deal will be archived and can then no longer be edited or published. Archiving cannot be undone. A used deal slot becomes free again.',
+      ac_cancel: 'Cancel', ac_confirm: 'Archive for good',
       dl_unpublished: 'Unpublished changes',
       dl_loading: 'Loading your deals…',
       dl_load_error_title: 'Your deals could not be loaded',
@@ -686,6 +700,9 @@
       is_step1: 'Der Inhalt ist unvollständig.', is_step3: 'Der Zeitraum muss korrigiert werden.',
       toast_draft: 'Entwurf gespeichert', toast_published: 'Deal veröffentlicht',
       toast_archived: 'Deal archiviert', toast_deleted: 'Deal gelöscht',
+      ac_title: 'Deal wirklich archivieren?', ac_untitled: '(Deal ohne Titel)',
+      ac_message: 'Dieser Deal wird archiviert und ist danach nicht mehr bearbeitbar oder veröffentlichbar. Die Archivierung kann nicht rückgängig gemacht werden. Ein belegter Deal-Platz wird wieder frei.',
+      ac_cancel: 'Abbrechen', ac_confirm: 'Endgültig archivieren',
       dl_unpublished: 'Unveröffentlichte Änderungen',
       dl_loading: 'Deine Deals werden geladen …',
       dl_load_error_title: 'Deine Deals konnten nicht geladen werden',
@@ -1559,6 +1576,50 @@
       if (draft && step === 4 && !$('deal-builder-view').hidden) renderReview();
     }
   }
+  // ── Archive confirmation ─────────────────────────────────────
+  // Archiving is final (no restore), so POST …/archive is only sent after
+  // "Endgültig archivieren" in #deal-archive-dialog, which names the deal.
+  // Cancel, Esc or a second click while the dialog is open send nothing;
+  // each question resolves once, and runBusy() keeps one archive in flight.
+  var archiveQuestion = null;
+  function askArchive(deal) {
+    if (archiveQuestion) return Promise.resolve(false);
+    var dlg = $('deal-archive-dialog');
+    var name = String(deal && deal.title || '').trim() || t('ac_untitled');
+    if (!dlg || typeof dlg.showModal !== 'function') {
+      return Promise.resolve(window.confirm(t('ac_title') + '\n\n„' + name + '“\n\n' + t('ac_message')));
+    }
+    archiveQuestion = new Promise(function (resolve) {
+      var ok = $('deal-archive-confirm'), no = $('deal-archive-cancel');
+      function done(answer) {
+        ok.removeEventListener('click', onOk); no.removeEventListener('click', onNo); dlg.removeEventListener('cancel', onEsc);
+        if (dlg.open) dlg.close();
+        archiveQuestion = null;
+        resolve(answer);
+      }
+      function onOk() { done(true); }
+      function onNo() { done(false); }
+      function onEsc(e) { e.preventDefault(); done(false); }
+      ok.addEventListener('click', onOk); no.addEventListener('click', onNo); dlg.addEventListener('cancel', onEsc);
+      $('deal-archive-name').textContent = name;
+      dlg.showModal();
+    });
+    return archiveQuestion;
+  }
+  async function confirmArchive(deal, btn) {
+    if (!(await askArchive(deal)) || busy) return;
+    await runBusy(btn, async function () {
+      try {
+        await api('POST', '/deals/' + encodeURIComponent(deal.id) + '/archive');
+        toast(t('toast_archived'));
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) return;
+        toast(errorText(err));
+      }
+    });
+    return refreshList();
+  }
+  // ── end archive confirmation ─────────────────────────────────
   function showAlert(message, err) {
     var box = $('deal-alert'); box.textContent = message || ''; box.hidden = !message;
     if (message && needsUpgrade(err)) {
@@ -1731,13 +1792,12 @@
       var deal = deals.filter(function (d) { return d.id === id; })[0]; if (!deal) return;
       if (busy) return;
       if (btn.hasAttribute('data-edit')) { openBuilder(deal); return; }
-      var archive = btn.hasAttribute('data-archive');
-      if (!archive && !window.confirm(t('dl_confirm_delete'))) return;
+      if (btn.hasAttribute('data-archive')) { confirmArchive(deal, btn); return; }
+      if (!window.confirm(t('dl_confirm_delete'))) return;
       runBusy(btn, async function () {
         try {
-          if (archive) await api('POST', '/deals/' + encodeURIComponent(id) + '/archive');
-          else await api('DELETE', '/deals/' + encodeURIComponent(id));
-          toast(t(archive ? 'toast_archived' : 'toast_deleted'));
+          await api('DELETE', '/deals/' + encodeURIComponent(id));
+          toast(t('toast_deleted'));
         } catch (err) {
           if (err instanceof ApiError && err.status === 401) return;
           toast(errorText(err));
