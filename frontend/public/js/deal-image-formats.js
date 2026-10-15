@@ -61,9 +61,12 @@
   }
   // Blurred full-frame background of the picture, with the whole picture fitted on top
   // (tested against the real account: HTTP 200, exact size, nothing cropped away).
+  // The background is darkened like the browser fallback (deals-page.css,
+  // .deal-format__blur: brightness(0.65)), so the whole picture stands out from
+  // its border instead of seeming to run on into it.
   function padTransformation(p, layerId) {
     var size = 'w_' + p.width + ',h_' + p.height;
-    return 'c_fill,' + size + '/e_blur:1000/l_' + layerId + ',c_fit,' + size + '/fl_layer_apply/f_auto,q_auto';
+    return 'c_fill,' + size + '/e_blur:1000/e_brightness:-35/l_' + layerId + ',c_fit,' + size + '/fl_layer_apply/f_auto,q_auto';
   }
 
   function status(kind, enlargement) {

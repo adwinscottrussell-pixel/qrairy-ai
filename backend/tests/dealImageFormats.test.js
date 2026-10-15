@@ -62,7 +62,7 @@ test('A. at least 60 % kept: subject-aware crop of the master (exact Cloudinary 
 test('A. less than 60 % kept: whole picture on a blurred border (exact Cloudinary URL)', () => {
   const t = byId(F.formatsFor(uploaded(4000, 3000), OPTS));
   assert.equal(t.story.mode, 'pad');                                            // 4:3 -> 9:16 keeps 42 %
-  assert.equal(t.story.src, CLOUD + 'c_fill,w_180,h_320/e_blur:1000/l_qraivy-deals-staging:deal-abc-1792004805912,c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto/v1792004806/' + PID + '.jpg');
+  assert.equal(t.story.src, CLOUD + 'c_fill,w_180,h_320/e_blur:1000/e_brightness:-35/l_qraivy-deals-staging:deal-abc-1792004805912,c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto/v1792004806/' + PID + '.jpg');
   assert.equal(t.story.status, 'padded');
 });
 
@@ -139,9 +139,9 @@ test('A2. the pagoda: all three padded formats use the tested layered transforma
   const t = byId(F.formatsFor(uploaded(1450, 708), OPTS));
   const L = 'qraivy-deals-staging:deal-abc-1792004805912';
   const want = {
-    feed: 'c_fill,w_272,h_340/e_blur:1000/l_' + L + ',c_fit,w_272,h_340/fl_layer_apply/f_auto,q_auto',     // the exact request tested: HTTP 200, 272x340
-    story: 'c_fill,w_180,h_320/e_blur:1000/l_' + L + ',c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto',
-    square: 'c_fill,w_336,h_336/e_blur:1000/l_' + L + ',c_fit,w_336,h_336/fl_layer_apply/f_auto,q_auto',
+    feed: 'c_fill,w_272,h_340/e_blur:1000/e_brightness:-35/l_' + L + ',c_fit,w_272,h_340/fl_layer_apply/f_auto,q_auto',     // the exact request tested: HTTP 200, 272x340
+    story: 'c_fill,w_180,h_320/e_blur:1000/e_brightness:-35/l_' + L + ',c_fit,w_180,h_320/fl_layer_apply/f_auto,q_auto',
+    square: 'c_fill,w_336,h_336/e_blur:1000/e_brightness:-35/l_' + L + ',c_fit,w_336,h_336/fl_layer_apply/f_auto,q_auto',
   };
   for (const id of Object.keys(want)) {
     assert.equal(t[id].mode, 'pad', id);
@@ -149,11 +149,21 @@ test('A2. the pagoda: all three padded formats use the tested layered transforma
   }
 });
 
+test('A2. the blurred border is darkened like the browser fallback (brightness 0.65 = e_brightness:-35); the picture layer is not', () => {
+  const css = read('frontend/public/deals-page.css');
+  assert.ok(css.includes('.deal-format__blur {') && /\.deal-format__blur \{[^}]*filter: blur\(12px\) brightness\(0\.65\);/.test(css), 'browser fallback darkens to 0.65');
+  const tr = F.padTransformation({ width: 272, height: 340 }, 'f:a');
+  const [base, layer] = tr.split('/l_');
+  assert.equal(base, 'c_fill,w_272,h_340/e_blur:1000/e_brightness:-35', 'blur, then darken, the background only');
+  assert.equal(layer, 'f:a,c_fit,w_272,h_340/fl_layer_apply/f_auto,q_auto', 'the picture itself: fitted whole, never darkened or cropped');
+  assert.equal((tr.match(/e_brightness/g) || []).length, 1);
+});
+
 test('A2. the layer is the same asset: folders written with ":", nothing else accepted', () => {
   assert.equal(F.layerIdOf(CLOUD + 'v1/qraivy-deals-staging/deal-x-1.jpg'), 'qraivy-deals-staging:deal-x-1');
   assert.equal(F.layerIdOf(CLOUD + 'qraivy-deals/sub/deal-y.png'), 'qraivy-deals:sub:deal-y');
   for (const bad of ['https://evil.example.com/image/upload/v1/a.jpg', CLOUD + 'c_fill,w_1/v1/a.jpg', null, '']) assert.equal(F.layerIdOf(bad), null, String(bad));
-  assert.equal(F.padTransformation({ width: 10, height: 20 }, 'f:a'), 'c_fill,w_10,h_20/e_blur:1000/l_f:a,c_fit,w_10,h_20/fl_layer_apply/f_auto,q_auto');
+  assert.equal(F.padTransformation({ width: 10, height: 20 }, 'f:a'), 'c_fill,w_10,h_20/e_blur:1000/e_brightness:-35/l_f:a,c_fit,w_10,h_20/fl_layer_apply/f_auto,q_auto');
 });
 
 test('A2. b_blurred (video-only, rejected for images with HTTP 400) is never generated', () => {
