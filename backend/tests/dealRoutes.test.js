@@ -46,6 +46,8 @@ function reset() {
     { slug: 'ben-bikes', userId: BEN, businessName: 'Ben Bikes', status: 'live', updatedAt: new Date(3) }];
 }
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
+// Prisma-style where: plain equality, or { not: v } per field.
+const matches = (row, where) => Object.keys(where).every((k) => (where[k] && typeof where[k] === 'object' && 'not' in where[k] ? row[k] !== where[k].not : row[k] === where[k]));
 
 const mockPrisma = {
   deal: {
@@ -67,6 +69,7 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return { ...row };
     },
+    updateMany: async ({ where, data }) => { const rows = dealRows.filter((d) => matches(d, where)); rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() })); return { count: rows.length }; },
     delete: async ({ where }) => {
       const i = dealRows.findIndex((d) => d.id === where.id);
       if (i === -1) throw new Error('deal not found in mock');
@@ -82,7 +85,7 @@ const mockPrisma = {
     findMany: async ({ where = {} } = {}) => cloneRows(placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]))),
     create: async ({ data }) => { idSeq += 1; const r = { id: 'pl_' + idSeq, publishedAt: null, createdAt: new Date(), ...data }; placementRows.push(r); return { ...r }; },
     update: async ({ where, data }) => { const r = placementRows.find((p) => p.id === where.id); Object.assign(r, data); return { ...r }; },
-    updateMany: async ({ where, data }) => { const rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k])); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
+    updateMany: async ({ where, data }) => { const rows = placementRows.filter((p) => matches(p, where)); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
   },
   landingPage: {
     findUnique: async ({ where }) => { const r = pageRows.find((p) => p.slug === where.slug); return r ? { ...r } : null; },

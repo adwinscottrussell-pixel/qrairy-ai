@@ -547,8 +547,13 @@ async function publishDeal(ownerUserId, dealId, options = {}) {
     if (merged.offerType != null) checkOfferType(merged.offerType);
     if (merged.offerDetails != null) checkOfferDetails(merged.offerType, merged.offerDetails);
 
-    const updated = await tx.deal.update({
-      where: { id: deal.id },
+    // Conditional write: the status read above may be stale. If an archive
+    // (or delete) commits meanwhile, PostgreSQL re-checks this WHERE against
+    // the committed row, nothing matches, and the whole publish is refused
+    // instead of silently turning the archived deal back into a published one.
+    // Republishing a published deal still matches.
+    const written = await tx.deal.updateMany({
+      where: { id: deal.id, ownerUserId, status: { not: 'archived' } },
       data: {
         title: merged.title,
         description: merged.description,
@@ -563,6 +568,10 @@ async function publishDeal(ownerUserId, dealId, options = {}) {
         draftData: null,
       },
     });
+    if (written.count !== 1) {
+      throw new DealError('This deal was archived or deleted while it was being published. Nothing was published.', 409);
+    }
+    const updated = await tx.deal.findUnique({ where: { id: deal.id } });
     if (includePlacements === true) {
       const drafts = (await tx.dealPlacement.findMany({ where: { dealId: deal.id } })).filter((p) => p.status === 'draft');
       for (const p of drafts) {
@@ -571,7 +580,16 @@ async function publishDeal(ownerUserId, dealId, options = {}) {
         } catch (e) {
           throw new DealError('A selected page no longer belongs to this account: ' + p.targetRef + '. Nothing was published.', 409);
         }
-        await tx.dealPlacement.update({ where: { id: p.id }, data: { status: 'published', publishedAt: new Date() } });
+        // Only a placement that is still a draft. Another publish of the same
+        // deal may have published it meanwhile (fine); a removal (archive)
+        // that committed meanwhile stops the whole publish.
+        const placed = await tx.dealPlacement.updateMany({ where: { id: p.id, status: 'draft' }, data: { status: 'published', publishedAt: new Date() } });
+        if (placed.count !== 1) {
+          const current = await tx.dealPlacement.findUnique({ where: { id: p.id } });
+          if (!current || current.status !== 'published') {
+            throw new DealError('A selected page was removed from this deal while it was being published: ' + p.targetRef + '. Nothing was published.', 409);
+          }
+        }
       }
     }
     return mergeDealState(updated);
@@ -728,10 +746,16 @@ async function publishDealPlacement(ownerUserId, dealId, placementId) {
       throw new DealError('Publish the deal before publishing a placement.', 400);
     }
     await assertOwnedPlacementTarget(ownerUserId, placement.channel, placement.targetRef, tx);
-    const updated = await tx.dealPlacement.update({
-      where: { id: placement.id },
+    // Conditional write, like publishDeal: a removal (archive) that commits
+    // after the read above is never overwritten; republishing still matches.
+    const written = await tx.dealPlacement.updateMany({
+      where: { id: placement.id, dealId: deal.id, status: { not: 'archived' } },
       data: { status: 'published', publishedAt: new Date() },
     });
+    if (written.count !== 1) {
+      throw new DealError('This page was removed from the deal while it was being published. Nothing was published.', 409);
+    }
+    const updated = await tx.dealPlacement.findUnique({ where: { id: placement.id } });
     return toPlacementState(updated);
   }).then((state) => { forgetPageDeals([state.targetRef]); return state; });
 }

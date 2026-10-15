@@ -24,10 +24,13 @@ const ROOT = path.join(__dirname, '..', '..');
 // ── stand-in database ──────────────────────────────────────────
 let deals = [], placements = [], pages = {}, queries = { placements: 0, scans: 0 }, seq = 0;
 const clone = (r) => (r ? { ...r } : null);
+// Prisma-style where: plain equality, or { not: v } per field (dealService's conditional publish writes).
+const whereMatches = (row, where) => Object.keys(where).every((k) => (where[k] && typeof where[k] === 'object' && 'not' in where[k] ? row[k] !== where[k].not : row[k] === where[k]));
 const mockPrisma = {
   deal: {
     findUnique: async ({ where }) => clone(deals.find((d) => d.id === where.id)),
     update: async ({ where, data }) => { const r = deals.find((d) => d.id === where.id); Object.assign(r, data); return { ...r }; },
+    updateMany: async ({ where, data }) => { const rows = deals.filter((d) => whereMatches(d, where)); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
     delete: async ({ where }) => { const i = deals.findIndex((d) => d.id === where.id); const [r] = deals.splice(i, 1); placements = placements.filter((p) => p.dealId !== r.id); return r; },
   },
   dealPlacement: {
@@ -36,7 +39,7 @@ const mockPrisma = {
       return clone(where.id ? placements.find((p) => p.id === where.id) : placements.find((p) => p.dealId === k.dealId && p.channel === k.channel && p.targetRef === k.targetRef));
     },
     create: async ({ data }) => { const r = { id: 'pl_new_' + placements.length, publishedAt: null, ...data }; placements.push(r); return { ...r }; },
-    updateMany: async ({ where, data }) => { const rows = placements.filter((p) => Object.keys(where).every((k) => p[k] === where[k])); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
+    updateMany: async ({ where, data }) => { const rows = placements.filter((p) => whereMatches(p, where)); rows.forEach((r) => Object.assign(r, data)); return { count: rows.length }; },
     findMany: async ({ where = {}, orderBy, take } = {}) => {
       queries.placements += 1;
       let rows = placements.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));

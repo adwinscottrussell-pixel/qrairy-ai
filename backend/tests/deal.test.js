@@ -41,6 +41,8 @@ let idSeq = 0;
 function nextId(prefix) { idSeq += 1; return `${prefix}_${idSeq}`; }
 
 function resetFixtures() {
+  afterNextRead = null;
+  committedByOthers = [];
   dealRows = [];
   placementRows = [];
   landingPageRows = [
@@ -62,13 +64,38 @@ function resetFixtures() {
 }
 
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
+// Prisma-style where: plain equality, or { not: v } / { in: [...] } per field.
+function matches(row, where) {
+  return Object.keys(where).every((k) => {
+    const c = where[k];
+    if (c && typeof c === 'object' && !(c instanceof Date)) {
+      if ('not' in c) return row[k] !== c.not;
+      if ('in' in c) return c.in.includes(row[k]);
+    }
+    return row[k] === c;
+  });
+}
+// Simulates another request that commits between this request's read and its write.
+// afterNextRead = { table: 'deal' | 'dealPlacement', fn(row) }: runs once, right after that read.
+// fn is "another request" that commits: it is applied at once and survives this
+// request's own rollback (re-applied after the mock transaction restores its snapshot).
+let afterNextRead = null;
+let committedByOthers = [];
+function readThen(table, row) {
+  if (row && afterNextRead && afterNextRead.table === table) {
+    const { fn } = afterNextRead; afterNextRead = null;
+    const commit = () => fn(row);
+    commit(); committedByOthers.push(commit);
+  }
+  return row;
+}
 
 // ── Mock Prisma ──────────────────────────────────────────────────
 const mockPrisma = {
   deal: {
     findUnique: async ({ where }) => {
       const row = dealRows.find((d) => d.id === where.id);
-      return row ? { ...row } : null;
+      return readThen('deal', row ? { ...row } : null);
     },
     findMany: async ({ where }) => {
       let rows = dealRows;
@@ -92,6 +119,11 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return { ...row };
     },
+    updateMany: async ({ where, data }) => {
+      const rows = dealRows.filter((d) => matches(d, where));
+      rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() }));
+      return { count: rows.length };
+    },
     // Mirrors DealPlacement.dealId's ON DELETE CASCADE.
     delete: async ({ where }) => {
       const idx = dealRows.findIndex((d) => d.id === where.id);
@@ -109,7 +141,7 @@ const mockPrisma = {
         const k = where.dealId_channel_targetRef;
         row = placementRows.find((p) => p.dealId === k.dealId && p.channel === k.channel && p.targetRef === k.targetRef);
       }
-      return row ? { ...row } : null;
+      return readThen('dealPlacement', row ? { ...row } : null);
     },
     // equality filters on any field; orderBy publishedAt desc; take (as Prisma does)
     findMany: async ({ where = {}, orderBy, take } = {}) => {
@@ -128,7 +160,7 @@ const mockPrisma = {
       return { ...row };
     },
     updateMany: async ({ where, data }) => {
-      const rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));
+      const rows = placementRows.filter((p) => matches(p, where));
       rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() }));
       return { count: rows.length };
     },
@@ -140,7 +172,7 @@ const mockPrisma = {
     },
   },
   landingPage: {
-    findUnique: async ({ where }) => landingPageRows.find((p) => p.slug === where.slug) || null,
+    findUnique: async ({ where }) => readThen('landingPage', landingPageRows.find((p) => p.slug === where.slug) || null),
     findMany: async ({ where, select }) => landingPageRows.filter((p) => p.userId === where.userId).map((p) => {
       const full = { businessName: p.slug + ' name', status: 'live', updatedAt: new Date(0), ...p };
       return select ? Object.fromEntries(Object.keys(select).map((k) => [k, full[k]])) : full;
@@ -159,11 +191,13 @@ const mockPrisma = {
     if (Array.isArray(arg)) return Promise.all(arg);
     const dealSnapshot = cloneRows(dealRows);
     const placementSnapshot = cloneRows(placementRows);
+    committedByOthers = [];
     try {
       return await arg(mockPrisma);
     } catch (err) {
       dealRows = dealSnapshot;
       placementRows = placementSnapshot;
+      committedByOthers.forEach((commit) => commit());
       throw err;
     }
   },
@@ -1105,6 +1139,88 @@ test('H. an archived placement stays archived until re-added; an archived deal a
 });
 
 // ── I. Schema / migration / isolation guards ───────────────────
+// ── S. Races: an archive committed by another request is never overwritten ──
+// The other request runs right after this request's read (afterNextRead) and
+// commits; PostgreSQL behaves the same way under READ COMMITTED (verified on a
+// real database: conditional UPDATE re-checks the committed row).
+const archiveDealRow = (id) => () => { dealRows.find((d) => d.id === id).status = 'archived'; };
+const setPlacementStatus = (slug, status) => () => { placementRows.find((p) => p.targetRef === slug).status = status; };
+
+test('S. deal archived while publish is running: 409, the deal stays archived, no placement goes live', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  afterNextRead = { table: 'deal', fn: archiveDealRow(deal.dealId) };
+  const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId, { includePlacements: true }));
+  assert.equal(err && err.status, 409);
+  assert.match(err.message, /archived or deleted while it was being published/);
+  assert.equal(dealRows[0].status, 'archived');
+  assert.equal(dealRows[0].publishedAt, null);
+  assert.equal(placementRows[0].status, 'draft');
+});
+
+test('S. deal deleted while publish is running: a clear 409, not a server error', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  afterNextRead = { table: 'deal', fn: () => { dealRows = dealRows.filter((d) => d.id !== deal.dealId); } };
+  const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId));
+  assert.equal(err && err.status, 409);
+  assert.equal(dealRows.length, 0);
+});
+
+test('S. page removed from the deal while publish(includePlacements) is running: 409 and nothing is published', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe-north' });
+  afterNextRead = { table: 'landingPage', fn: setPlacementStatus('anna-cafe', 'archived') };
+  const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId, { includePlacements: true }));
+  assert.equal(err && err.status, 409);
+  assert.match(err.message, /removed from this deal while it was being published: anna-cafe/);
+  assert.equal(dealRows[0].status, 'draft');
+  assert.deepEqual(placementRows.map((p) => [p.targetRef, p.status]), [['anna-cafe', 'archived'], ['anna-cafe-north', 'draft']]);
+});
+
+test('S. placement already published by a parallel publish of the same deal: publish still succeeds', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  afterNextRead = { table: 'landingPage', fn: setPlacementStatus('anna-cafe', 'published') };
+  const out = await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal(out.status, 'published');
+  assert.equal(placementRows[0].status, 'published');
+});
+
+test('S. placement archived while its publish is running: 409, the placement stays archived', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const placement = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDeal(ANNA, deal.dealId);
+  afterNextRead = { table: 'dealPlacement', fn: setPlacementStatus('anna-cafe', 'archived') };
+  const err = await throwsAsync(() => service.publishDealPlacement(ANNA, deal.dealId, placement.placementId));
+  assert.equal(err && err.status, 409);
+  assert.match(err.message, /removed from the deal while it was being published/);
+  assert.equal(placementRows[0].status, 'archived');
+  assert.equal(placementRows[0].publishedAt, null);
+});
+
+test('S. republishing stays possible: a published deal and a published placement can be published again', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const placement = await service.addDealPlacement(ANNA, deal.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  await service.saveDealDraft(ANNA, deal.dealId, { title: 'Free Coffee Saturday' });
+  const again = await service.publishDeal(ANNA, deal.dealId, { includePlacements: true });
+  assert.equal(again.status, 'published');
+  assert.equal(again.title, 'Free Coffee Saturday');
+  const p = await service.publishDealPlacement(ANNA, deal.dealId, placement.placementId);
+  assert.equal(p.status, 'published');
+  // an archived deal is still refused up front, as before
+  await service.archiveDeal(ANNA, deal.dealId);
+  const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId));
+  assert.equal(err && err.status, 400);
+});
+
 test('I. schema defines Deal and DealPlacement with the fields the service writes', () => {
   const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
   const block = (name) => {
