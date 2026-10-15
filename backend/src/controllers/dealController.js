@@ -99,6 +99,10 @@ async function uploadDealImageHandler(req, res) {
     if (!isDealImageStorageConfigured()) {
       return res.status(503).json({ error: 'Image storage is not available right now.' });
     }
+    // From here on the attempt reaches Cloudinary, so it counts against the
+    // account's upload limit (services/dealUploadLimiter.js) whether the
+    // store succeeds or fails. Every earlier exit gives the slot back.
+    if (req.dealUploadSlot) req.dealUploadSlot.commit();
     let stored;
     try {
       stored = await uploadDealImage(req.file.buffer, req.params.id);

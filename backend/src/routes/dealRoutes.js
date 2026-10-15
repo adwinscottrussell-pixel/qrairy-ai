@@ -8,6 +8,7 @@ const multer = require('multer');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireDealAccess } = require('../services/dealAccess');
+const { throttleDealUploads } = require('../services/dealUploadLimiter');
 const {
   listDeals,
   createDeal,
@@ -42,6 +43,7 @@ const dealImageUpload = multer({
 // and removing a placement only need sign-in + ownership, so an owner who
 // lost access can still look after existing deals.
 const dealAccess = requireDealAccess();
+const uploadThrottle = throttleDealUploads();
 
 router.get('/', requireAuth, listDeals);
 // before '/:id', so "pages" is never read as a deal id
@@ -57,9 +59,11 @@ router.get('/:id/placements', requireAuth, listPlacements);
 router.post('/:id/placements', requireAuth, dealAccess, addPlacement);
 router.post('/:id/placements/:placementId/publish', requireAuth, dealAccess, publishPlacement);
 router.post('/:id/placements/:placementId/archive', requireAuth, archivePlacement);
-// requireAuth and the access check run BEFORE multer parses the upload, so a
-// refused request is rejected without its body ever being read into memory.
-router.post('/:id/image', requireAuth, dealAccess, (req, res, next) => {
+// requireAuth, the access check and the upload limit (20/hour, 60/day per
+// account; services/dealUploadLimiter.js) all run BEFORE multer parses the
+// upload, so a refused request is rejected without its body ever being read
+// into memory or sent to storage.
+router.post('/:id/image', requireAuth, dealAccess, uploadThrottle, (req, res, next) => {
   dealImageUpload.single('image')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'The image is larger than 5 MB.' : (err.message || 'Upload failed') });
     next();

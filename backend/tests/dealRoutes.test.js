@@ -50,7 +50,7 @@ function setRollout(vars) {
   Object.assign(process.env, vars);
 }
 function reset() {
-  setRollout(PILOTS); userRows = {}; userLookups = 0; userLookupFails = false;
+  setRollout(PILOTS); userRows = {}; userLookups = 0; userLookupFails = false; uploadLimiter._resetDealUploadLimiter();
   dealRows = []; idSeq = 100; uploads = []; storageConfigured = true; storageFails = false;
   placementRows = [];
   pageRows = [{ slug: 'anna-cafe', userId: ANNA, businessName: 'Anna Café', status: 'live', updatedAt: new Date(2) },
@@ -145,19 +145,25 @@ console.error = (...a) => { if (!String(a[0]).startsWith('[auth]') && !String(a[
 
 setRollout(PILOTS);
 const router = require('../src/routes/dealRoutes');
+const uploadLimiter = require('../src/services/dealUploadLimiter');
 
 // ── Route runner ─────────────────────────────────────────────────
 function fakeRes() {
+  const listeners = {};
   return {
-    statusCode: 200, body: undefined,
+    statusCode: 200, body: undefined, headers: {},
     status(c) { this.statusCode = c; return this; },
     json(b) { this.body = b; return this; },
+    set(k, v) { this.headers[k.toLowerCase()] = v; return this; },
+    on(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); return this; },
+    emit(ev) { for (const fn of listeners[ev] || []) fn(); },
   };
 }
 // Runs the route's real handler chain. `skipUploadParser` steps over the
 // multer wrapper (it needs a real multipart stream) and uses req.file as
 // given -- every other handler in the chain still runs.
-async function call(method, routePath, { token, params = {}, query = {}, body, file, skipUploadParser = false } = {}) {
+async function call(method, routePath, opts = {}) {
+  const { token, params = {}, query = {}, body, file, skipUploadParser = false } = opts;
   const layer = router.stack.find((l) => l.route && l.route.path === routePath && l.route.methods[method]);
   assert.ok(layer, `route ${method.toUpperCase()} ${routePath} not found`);
   const req = { headers: token ? { authorization: 'Bearer ' + token } : {}, params, query, body, file };
@@ -169,6 +175,7 @@ async function call(method, routePath, { token, params = {}, query = {}, body, f
     await handlers[i](req, res, () => { nextCalled = true; });
     if (!nextCalled) break;
   }
+  if (!opts.noFinish) res.emit('finish');   // as Express does once the response is sent
   return res;
 }
 const asAnna = (o = {}) => ({ token: 'tok_anna', ...o });
@@ -566,14 +573,14 @@ test('G. exactly the five creating/publishing/placing/upload routes carry the ac
     const names = l.route.stack.map((s) => s.handle);
     assert.equal(names[0], requireAuth, routeKey(l) + ': requireAuth first');
     // owner-only: requireAuth + handler; gated: + the access check (the upload also has its multer wrapper)
-    const hasGate = l.route.stack.length === (routeKey(l) === 'POST /:id/image' ? 4 : 3);
+    const hasGate = l.route.stack.length === (routeKey(l) === 'POST /:id/image' ? 5 : 3);   // image: + upload limit + multer wrapper
     (hasGate ? gated : ownerOnly).push(routeKey(l));
   }
   assert.deepEqual(gated.sort(), GATED.slice().sort());
   assert.deepEqual(ownerOnly.sort(), OWNER_ONLY.slice().sort());
   const src = fs.readFileSync(resolve('src', 'routes', 'dealRoutes.js'), 'utf8');
   assert.equal((src.match(/requireAuth, dealAccess,/g) || []).length, 5);
-  assert.match(src, /'\/:id\/image', requireAuth, dealAccess, \(req, res, next\) => \{\s*dealImageUpload/, 'the access check runs before multer reads the upload');
+  assert.match(src, /'\/:id\/image', requireAuth, dealAccess, uploadThrottle, \(req, res, next\) => \{\s*dealImageUpload/, 'the access check and the upload limit run before multer reads the upload');
 });
 
 test('G. rollout off (no variables): every gated action is 403 deals_not_available and changes nothing -- even on Pro', async () => {
@@ -848,6 +855,210 @@ test('L. limited creates take the per-account lock; unlimited ones do not', asyn
   assert.equal(advisoryLocks, 1);
   await call('post', '/', asBen(newBody(0)));
   assert.equal(advisoryLocks, 1, 'Pro: no lock needed');
+});
+
+// ── T. Upload limit over HTTP (Phase 3B.4) ─────────────────────
+const upload = (who, id, extra = {}) => call('post', '/:id/image', who({ params: { id }, file: { buffer: Buffer.from('img') }, skipUploadParser: true, ...extra }));
+const usageOf = (id) => uploadLimiter.usage(id).lastHour;
+
+test('T. order on the upload route: requireAuth, access check, upload limit, multer, controller', () => {
+  const layer = router.stack.find((l) => l.route && l.route.path === '/:id/image');
+  const { requireAuth } = require('../src/middleware/auth');
+  assert.equal(layer.route.stack.length, 5);
+  assert.equal(layer.route.stack[0].handle, requireAuth);
+  const src = fs.readFileSync(resolve('src', 'routes', 'dealRoutes.js'), 'utf8');
+  assert.match(src, /const uploadThrottle = throttleDealUploads\(\);/);
+  assert.match(src, /router\.post\('\/:id\/image', requireAuth, dealAccess, uploadThrottle, \(req, res, next\) => \{\s*dealImageUpload\.single/);
+  assert.equal((src.match(/uploadThrottle/g) || []).length, 2, 'only on the upload route');
+});
+
+test('T. 20 uploads in an hour, the 21st is 429 upload_limit with Retry-After -- not parsed, not stored', async () => {
+  reset();
+  const deal = await create();
+  for (let i = 0; i < 20; i++) assert.equal((await upload(asAnna, deal.dealId)).statusCode, 200, 'upload ' + (i + 1));
+  // not skipping the multer wrapper: the limit must answer before multer touches the (fake) request
+  const res = await call('post', '/:id/image', asAnna({ params: { id: deal.dealId } }));
+  assert.equal(res.statusCode, 429);
+  assert.equal(res.body.error, 'upload_limit'); assert.equal(res.body.window, 'hour'); assert.equal(res.body.limit, 20);
+  assert.equal(res.headers['retry-after'], String(res.body.retryAfter));
+  assert.equal(uploads.length, 20, 'storage was never called for the refused request');
+  assert.equal(usageOf(ANNA), 20, 'the refusal took nothing');
+});
+
+test('T. the daily limit (60 per 24 hours) is enforced over HTTP', async () => {
+  reset();
+  const deal = await create();
+  const now = Date.now();
+  for (let i = 0; i < 60; i++) uploadLimiter.reserveUploadSlot(ANNA, now - (23 * 3600e3) + i * 6 * 60e3).slot.commit();   // 60 spread over the last day, never 20 in an hour
+  const res = await upload(asAnna, deal.dealId);
+  assert.equal(res.statusCode, 429); assert.equal(res.body.window, 'day'); assert.equal(res.body.limit, 60);
+  assert.equal(uploads.length, 0);
+});
+
+test('T. every plan and pilots alike: Pro under general rollout and a pilot are both limited to 20', async () => {
+  for (const env of [{ DEALS_ENABLED: 'true' }, PILOTS]) {
+    reset(); setRollout(env); userRows[ANNA] = { plan: 'pro' };
+    const deal = await create();
+    for (let i = 0; i < 20; i++) await upload(asAnna, deal.dealId);
+    assert.equal((await upload(asAnna, deal.dealId)).statusCode, 429, JSON.stringify(env));
+  }
+});
+
+test('T. accounts are separate: Anna at the limit does not affect Ben', async () => {
+  reset();
+  const a = await create();
+  const b = await create(asBen);
+  for (let i = 0; i < 20; i++) await upload(asAnna, a.dealId);
+  assert.equal((await upload(asAnna, a.dealId)).statusCode, 429);
+  assert.equal((await upload(asBen, b.dealId)).statusCode, 200);
+  assert.equal(usageOf(BEN), 1);
+});
+
+test('T. requests refused before Cloudinary give the slot back: storage not configured, no file, not the owner', async () => {
+  reset();
+  const a = await create();
+  storageConfigured = false;
+  assert.equal((await upload(asAnna, a.dealId)).statusCode, 503);
+  storageConfigured = true;
+  assert.equal((await call('post', '/:id/image', asAnna({ params: { id: a.dealId }, skipUploadParser: true }))).statusCode, 400);
+  assert.equal((await upload(asBen, a.dealId)).statusCode, 404, 'Ben is not the owner');
+  assert.equal((await upload(asAnna, 'deal_unknown')).statusCode, 404, 'unknown deal');
+  assert.equal(usageOf(ANNA), 0); assert.equal(usageOf(BEN), 0);
+  assert.equal(uploads.length, 0, 'none of them reached storage');
+  // and many such refusals never block a real upload
+  for (let i = 0; i < 25; i++) await upload(asBen, a.dealId);
+  assert.equal((await upload(asAnna, a.dealId)).statusCode, 200);
+  assert.equal(usageOf(ANNA), 1); assert.equal(usageOf(BEN), 0);
+});
+
+test('T. an attempt that reaches Cloudinary counts even when Cloudinary fails (D-T1)', async () => {
+  reset();
+  const a = await create();
+  storageFails = true;
+  const res = await upload(asAnna, a.dealId);
+  assert.equal(res.statusCode, 502);
+  assert.equal(usageOf(ANNA), 1, 'the failed attempt counts');
+  for (let i = 1; i < 20; i++) assert.equal((await upload(asAnna, a.dealId)).statusCode, 502);
+  storageFails = false;
+  const blocked = await upload(asAnna, a.dealId);
+  assert.equal(blocked.statusCode, 429, '20 failed attempts use up the hour');
+  assert.equal(blocked.body.error, 'upload_limit'); assert.equal(blocked.headers['retry-after'], String(blocked.body.retryAfter));
+  assert.equal(usageOf(ANNA), 20);
+});
+
+test('T. successful uploads behave as before: 200, picture attached to the draft, one slot used', async () => {
+  reset();
+  const a = await create();
+  const res = await upload(asAnna, a.dealId);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.deal.image.source, 'uploaded');
+  assert.ok(res.body.deal.image.publicId.startsWith('qraivy-deals/deal-'));
+  assert.equal(res.body.deal.hasUnpublishedChanges, true, 'attached to the draft, not the published deal');
+  assert.equal(uploads.length, 1); assert.equal(usageOf(ANNA), 1);
+});
+
+// Real HTTP on a local Express app (real multer, real response events); only Clerk,
+// Prisma and the Cloudinary call are the stand-ins from the top of this file.
+async function withServer(fn) {
+  const express = require('express');
+  const app = express();
+  app.use('/deals', router);
+  const server = await new Promise((ok) => { const s = app.listen(0, '127.0.0.1', () => ok(s)); });
+  const base = 'http://127.0.0.1:' + server.address().port;
+  try { return await fn(base); } finally { await new Promise((ok) => server.close(ok)); }
+}
+function multipartUpload(base, id, token, { bytes = Buffer.from('fake-png-bytes'), type = 'image/png', name = 'a.png', field = 'image' } = {}) {
+  const fd = new FormData();
+  fd.append(field, new Blob([bytes], { type }), name);
+  return fetch(`${base}/deals/${id}/image`, { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd })
+    .then(async (r) => ({ status: r.status, retryAfter: r.headers.get('retry-after'), body: await r.json().catch(() => null) }));
+}
+const settled = () => new Promise((ok) => setTimeout(ok, 50));   // let the response 'finish' / 'close' events run
+
+test('T. real HTTP: invalid files rejected by multer (wrong type, over 5 MB) take no slot and never reach storage', async () => {
+  reset();
+  const a = await create();
+  await withServer(async (base) => {
+    const wrongType = await multipartUpload(base, a.dealId, 'tok_anna', { type: 'text/plain', name: 'a.txt' });
+    assert.equal(wrongType.status, 400); assert.match(wrongType.body.error, /Only PNG, JPG, JPEG, and WebP/);
+    const tooBig = await multipartUpload(base, a.dealId, 'tok_anna', { bytes: Buffer.alloc(5 * 1024 * 1024 + 10) });
+    assert.equal(tooBig.status, 400); assert.match(tooBig.body.error, /larger than 5 MB/);
+    await settled();
+    assert.equal(usageOf(ANNA), 0); assert.equal(uploads.length, 0);
+    const ok = await multipartUpload(base, a.dealId, 'tok_anna');
+    assert.equal(ok.status, 200);
+    await settled();
+    assert.equal(usageOf(ANNA), 1); assert.equal(uploads.length, 1);
+  });
+});
+
+test('T. real HTTP: no token (401), no access (403) and the limit itself (429) take no slot', async () => {
+  reset();
+  const a = await create();
+  await withServer(async (base) => {
+    assert.equal((await multipartUpload(base, a.dealId, null)).status, 401);
+    setRollout({});
+    assert.equal((await multipartUpload(base, a.dealId, 'tok_anna')).status, 403);
+    setRollout(PILOTS);
+    await settled();
+    assert.equal(usageOf(ANNA), 0);
+    for (let i = 0; i < 20; i++) uploadLimiter.reserveUploadSlot(ANNA).slot.commit();
+    const limited = await multipartUpload(base, a.dealId, 'tok_anna');
+    assert.equal(limited.status, 429); assert.equal(limited.retryAfter, String(limited.body.retryAfter));
+    await settled();
+    assert.equal(usageOf(ANNA), 20, 'the refused request took nothing');
+    assert.equal(uploads.length, 0);
+  });
+});
+
+test('T. real HTTP: 30 parallel uploads -> exactly 20 stored, 10 x 429; 30 parallel failing ones -> 20 attempts, 10 x 429', async () => {
+  reset();
+  const a = await create();
+  await withServer(async (base) => {
+    const rs = await Promise.all(Array.from({ length: 30 }, () => multipartUpload(base, a.dealId, 'tok_anna')));
+    const by = {}; for (const r of rs) by[r.status] = (by[r.status] || 0) + 1;
+    assert.deepEqual(by, { 200: 20, 429: 10 });
+    assert.equal(uploads.length, 20);
+    await settled();
+    assert.equal(usageOf(ANNA), 20);
+  });
+  reset();
+  const b = await create(asBen);
+  storageFails = true;
+  await withServer(async (base) => {
+    const rs = await Promise.all(Array.from({ length: 30 }, () => multipartUpload(base, b.dealId, 'tok_ben')));
+    const by = {}; for (const r of rs) by[r.status] = (by[r.status] || 0) + 1;
+    assert.deepEqual(by, { 502: 20, 429: 10 }, 'failed Cloudinary attempts are capped too');
+    await settled();
+    assert.equal(usageOf(BEN), 20);
+  });
+  storageFails = false;
+});
+
+test('T. once the image is stored the slot is used, even if attaching it fails afterwards', async () => {
+  reset();
+  const a = await create();
+  await call('post', '/:id/archive', asAnna({ params: { id: a.dealId } }));   // saving the draft will now fail
+  const res = await upload(asAnna, a.dealId);
+  assert.equal(res.statusCode, 400);
+  assert.equal(uploads.length, 1, 'stored');
+  assert.equal(usageOf(ANNA), 1, 'a stored image counts');
+});
+
+test('T. refused before the limit (no token, no access) takes no slot', async () => {
+  reset();
+  const a = await create();
+  assert.equal((await call('post', '/:id/image', { params: { id: a.dealId }, file: { buffer: Buffer.from('x') }, skipUploadParser: true })).statusCode, 401);
+  setRollout({});
+  assert.equal((await upload(asAnna, a.dealId)).statusCode, 403);
+  assert.equal(usageOf(ANNA), 0);
+});
+
+test('T. the counted account is the signed-in one, never one named in the request', async () => {
+  reset();
+  const a = await create();
+  assert.equal((await upload(asAnna, a.dealId, { body: { userId: BEN }, query: { userId: BEN } })).statusCode, 200);
+  assert.equal(usageOf(ANNA), 1); assert.equal(usageOf(BEN), 0);
 });
 
 // ── F. Errors and wiring ───────────────────────────────────────
