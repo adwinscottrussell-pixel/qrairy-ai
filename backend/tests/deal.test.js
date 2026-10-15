@@ -39,9 +39,21 @@ let businessRows = [];
 let businessMemberRows = [];
 let idSeq = 0;
 let advisoryLocks = 0;
+// Public visibility needs the page owner's Deals access: Anna and Ben are pilots
+// unless a test sets the rollout itself (section V).
+let userRows = {};
+let userLookups = 0;
+let userLookupFails = false;
+const PILOTS = { DEALS_PILOT_USER_IDS: 'user_anna,user_ben' };
+function setRollout(vars) {
+  delete process.env.DEALS_ENABLED; delete process.env.DEALS_PILOT_USER_IDS;
+  Object.assign(process.env, vars);
+}
+setRollout(PILOTS);
 function nextId(prefix) { idSeq += 1; return `${prefix}_${idSeq}`; }
 
 function resetFixtures() {
+  setRollout(PILOTS); userRows = {}; userLookups = 0; userLookupFails = false;
   afterNextRead = null;
   committedByOthers = [];
   dealRows = [];
@@ -179,6 +191,10 @@ const mockPrisma = {
       const full = { businessName: p.slug + ' name', status: 'live', updatedAt: new Date(0), ...p };
       return select ? Object.fromEntries(Object.keys(select).map((k) => [k, full[k]])) : full;
     }),
+  },
+  // Deals access of the page owner (services/dealAccess.js) for public visibility.
+  user: {
+    findUnique: async ({ where }) => { userLookups += 1; if (userLookupFails) throw new Error('db down'); return userRows[where.id] ? { ...userRows[where.id] } : null; },
   },
   business: {
     findUnique: async ({ where }) => businessRows.find((b) => b.id === where.id) || null,
@@ -1285,6 +1301,115 @@ test('L. a limited create takes the per-account lock inside its transaction; inv
   assert.deepEqual(service.LIMITED_DEAL_STATUSES, ['draft', 'published']);
 });
 
+// ── V. Public visibility follows the owner's Deals access (Phase 3B.6) ──
+const stored = () => JSON.stringify({ d: dealRows, p: placementRows });
+const shownOn = async (slug = 'anna-cafe', now = new Date()) => (await service.activeDealsForPage(slug, now)).map((d) => d.title);
+const HOURS = 3600 * 1000;
+
+test('V. rollout off: a published deal is hidden publicly, and nothing stored changes', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Visible?' });
+  assert.deepEqual(await shownOn(), ['Visible?'], 'pilot: shown');
+  setRollout({}); userRows[ANNA] = { plan: 'business' };
+  const before = stored();
+  assert.deepEqual(await shownOn(), [], 'no rollout: hidden, even on Business');
+  assert.equal(stored(), before, 'deal, placement and statuses untouched');
+  assert.equal(dealRows[0].status, 'published'); assert.equal(placementRows[0].status, 'published');
+});
+
+test('V. DEALS_ENABLED: Free, no User row and unknown plans are hidden; trial, Starter, Pro, Business, annual and past_due are shown', async () => {
+  const cases = [[undefined, false], [{ plan: 'free' }, false], [{ plan: 'gold' }, false],
+    [{ plan: 'trial', trialExpiresAt: new Date(Date.now() + 24 * HOURS) }, true], [{ plan: 'starter' }, true], [{ plan: 'pro' }, true],
+    [{ plan: 'business' }, true], [{ plan: 'pro_annual' }, true], [{ plan: 'starter_annual' }, true], [{ plan: 'business', subscriptionStatus: 'past_due' }, true], [{ plan: 'enterprise' }, true]];
+  for (const [row, visible] of cases) {
+    resetFixtures();
+    await publishedDealOn(['anna-cafe'], { title: 'Kaffee' });
+    setRollout({ DEALS_ENABLED: 'true' });
+    if (row) userRows[ANNA] = row;
+    assert.deepEqual(await shownOn(), visible ? ['Kaffee'] : [], JSON.stringify(row));
+  }
+});
+
+test('V. an expired trial or a canceled / unpaid / incomplete_expired subscription hides published deals', async () => {
+  for (const row of [{ plan: 'trial', trialExpiresAt: new Date(Date.now() - HOURS) }, { plan: 'pro', subscriptionStatus: 'canceled' },
+    { plan: 'starter', subscriptionStatus: 'unpaid' }, { plan: 'business_annual', subscriptionStatus: 'incomplete_expired' }]) {
+    resetFixtures();
+    await publishedDealOn(['anna-cafe'], { title: 'Kaffee' });
+    setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
+    const before = stored();
+    assert.deepEqual(await shownOn(), [], JSON.stringify(row));
+    assert.equal(stored(), before);
+  }
+});
+
+test('V. the trial end is exact: shown one moment before it, hidden from that moment on (render time decides)', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Kaffee', endsAt: new Date(Date.now() + 30 * 24 * HOURS).toISOString() });
+  const end = new Date(Date.now() + 2 * HOURS);
+  setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'trial', trialExpiresAt: end };
+  assert.deepEqual(await shownOn('anna-cafe', new Date(end.getTime() - 1)), ['Kaffee']);
+  assert.deepEqual(await shownOn('anna-cafe', end), []);
+});
+
+test('V. renewal: the same published deal comes back by itself, with the same ids and nothing recreated', async () => {
+  resetFixtures();
+  const deal = await publishedDealOn(['anna-cafe'], { title: 'Kaffee' });
+  setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter', subscriptionStatus: 'canceled' };
+  const before = stored();
+  assert.deepEqual(await shownOn(), []);
+  userRows[ANNA] = { plan: 'starter', subscriptionStatus: 'active' };   // renewed
+  assert.deepEqual(await shownOn(), ['Kaffee']);
+  assert.equal(stored(), before, 'same rows, same ids, same statuses');
+  assert.equal(dealRows.length, 1); assert.equal(dealRows[0].id, deal.dealId); assert.equal(placementRows.length, 1);
+  userRows[ANNA] = { plan: 'trial', trialExpiresAt: new Date(Date.now() - HOURS) };   // a later trial that has run out
+  assert.deepEqual(await shownOn(), []);
+  userRows[ANNA] = { plan: 'pro' };                                              // upgraded
+  assert.deepEqual(await shownOn(), ['Kaffee']);
+});
+
+test('V. pilots follow the approved rules: a listed pilot on Free is shown; an unlisted account without rollout is hidden', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Anna' });
+  await publishedDealOn(['ben-bikes'], { title: 'Ben' }, BEN);
+  setRollout({ DEALS_PILOT_USER_IDS: ANNA }); userRows[ANNA] = { plan: 'free' }; userRows[BEN] = { plan: 'pro' };
+  assert.deepEqual(await shownOn('anna-cafe'), ['Anna']);
+  assert.deepEqual(await shownOn('ben-bikes'), [], 'Ben is not a pilot and Deals is not on for everyone');
+  setRollout({ DEALS_PILOT_USER_IDS: ANNA, DEALS_ENABLED: 'true' });
+  assert.deepEqual(await shownOn('ben-bikes'), ['Ben'], 'with general rollout his Pro plan counts');
+});
+
+test('V. access cannot be determined: the lookup error is passed on (the page then renders without cards), nothing changes', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { title: 'Kaffee' });
+  userLookupFails = true;
+  const before = stored();
+  await assert.rejects(service.activeDealsForPage('anna-cafe'), /db down/);
+  assert.equal(stored(), before);
+});
+
+test('V. one access lookup per page, whatever the number of deals; none for a page that is a draft or has no owner', async () => {
+  resetFixtures();
+  for (let i = 0; i < 4; i++) await publishedDealOn(['anna-cafe'], { title: 'D' + i });
+  userLookups = 0;
+  assert.equal((await service.activeDealsForPage('anna-cafe')).length, 3);
+  assert.equal(userLookups, 1);
+  userLookups = 0;
+  assert.deepEqual(await service.activeDealsForPage('orphan-page'), []);
+  assert.deepEqual(await service.activeDealsForPage('no-such-page'), []);
+  assert.equal(userLookups, 0);
+});
+
+test('V. hidden publicly, the owner can still manage: list, edit the draft, archive, delete', async () => {
+  resetFixtures();
+  const d = await publishedDealOn(['anna-cafe'], { title: 'Kaffee' });
+  setRollout({});
+  assert.deepEqual(await shownOn(), []);
+  assert.equal((await service.listDeals(ANNA)).length, 1);
+  assert.equal((await service.saveDealDraft(ANNA, d.dealId, { title: 'Still editable' })).title, 'Still editable');
+  assert.equal((await service.archiveDeal(ANNA, d.dealId)).status, 'archived');
+  assert.deepEqual(await service.deleteDeal(ANNA, d.dealId), { deleted: true, dealId: d.dealId });
+});
+
 // ── U. Uploaded pictures only come in through the upload (Phase 3B.2) ──
 test('U. a draft save cannot attach a new uploaded picture; the upload step (allowNewUpload) can', async () => {
   resetFixtures();
@@ -1356,7 +1481,7 @@ test('I. the migration is additive only: two new tables, nothing altered or drop
 
 test('I. dealService has no StadtPocket dependency', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
-  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../config/plans', '../data/dealImages', './dealCards']); // plans: the canonical hasCapacity(); dealCards: the Deals' own landing page cards
+  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../config/plans', '../data/dealImages', './dealCards', './dealAccess']); // dealAccess: public visibility follows the owner's Deals access; plans: the canonical hasCapacity(); dealCards: the Deals' own landing page cards
   assert.doesNotMatch(src, /prisma\.stadtPocket|tx\.stadtPocket|listingLocationId/);
 });
 

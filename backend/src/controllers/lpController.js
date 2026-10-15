@@ -1,6 +1,8 @@
 const { getUserFromToken } = require('./qrController');
 const { pageCache } = require('../utils/pageCache');
 const { injectActiveDeals } = require('../services/dealCards'); // QRAIVY Deals cards; off unless DEALS_ON_LANDING_PAGES=1
+const { isEnabled: dealCardsEnabled } = require('../services/dealCards');
+const { getDealAccess } = require('../services/dealAccess');
 const { mergeVoiceOnSave, ensureVoiceAudio, effectiveGreeting, audioIsCurrent, audioIsPlayable, flagVoiceOnSave, publishVoiceStatus } = require('../services/lpVoiceService');
 const prisma = require('../utils/prismaClient');
 const plans = require('../config/plans');
@@ -1804,7 +1806,24 @@ async function handleServeLP(req, res) {
     // instead of through renderLP's legacy template switch, which has its
     // own undefined-variable bugs (t.tagline, t.aiPowered, ...) left over
     // from being a separate, no-longer-maintained code path.
-    const _lpHtml = await injectActiveDeals(renderPremiumLP(page), page);
+    //
+    // QRAIVY Deals: whether this page may show deal cards depends on the
+    // owner's Deals access RIGHT NOW (rollout + plan; services/dealAccess.js).
+    // It is checked on every request, outside the 30 s card cache, so cached
+    // cards are never shown for an owner who has lost access. Every page that
+    // can show deals (cards switched on, page has an owner) is never stored by
+    // browsers or CDNs -- whether it has cards, no cards, or the check failed.
+    // Pages that cannot show deals keep their caching. A failing check shows
+    // no cards (fail closed); the page itself is served as usual.
+    const _baseHtml = renderPremiumLP(page);
+    let _lpHtml = _baseHtml;
+    if (dealCardsEnabled() && page.userId) {
+      res.setHeader('Cache-Control', 'private, no-store');
+      let _dealAccess = null;
+      try { _dealAccess = await getDealAccess(page.userId); }
+      catch (e) { console.error('[deals] access check failed:', e && e.message); }
+      if (_dealAccess && _dealAccess.allowed) _lpHtml = await injectActiveDeals(_baseHtml, page);
+    }
     if (!req.query.preview && !req.query.t && _lpHtml.includes('<head>')) {
       try {
         const _stampKey = 'stamp:' + slug;

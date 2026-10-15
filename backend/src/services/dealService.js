@@ -26,6 +26,7 @@ const prisma = require('../utils/prismaClient');
 const { hasCapacity } = require('../config/plans');
 const { ACTIVE_DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
 const { forgetPageDeals } = require('./dealCards');
+const { getDealAccess } = require('./dealAccess');
 
 class DealError extends Error {
   constructor(message, status = 400) {
@@ -825,6 +826,13 @@ async function listOwnerLandingPages(ownerUserId, client = prisma) {
 //   - a PUBLISHED landing_page placement points at that page
 //   - the deal itself is published and inside its date range
 //   - the deal's owner is (still) the page's owner
+//   - that owner has Deals access RIGHT NOW (services/dealAccess.js: the
+//     same rollout + plan decision that gates creating and publishing; an
+//     expired trial or a cancelled subscription counts as Free). Without it
+//     nothing is shown, but nothing is changed either: deals, placements
+//     and their statuses stay as they are, so the same cards come back as
+//     soon as access returns. If access cannot be determined, the lookup
+//     throws and the page is rendered without cards (dealCards.js).
 // Only customer-safe fields are returned -- never draftData, ids of
 // owners or businesses, storage public ids or the image master.
 const MAX_PUBLIC_DEALS_PER_PAGE = 3;
@@ -859,6 +867,9 @@ async function activeDealsForPage(slug, now = new Date(), client = prisma) {
   if (!Number.isFinite(at)) return [];
   const page = await client.landingPage.findUnique({ where: { slug } });
   if (!page || !page.userId || page.status === 'draft') return [];
+  // Every card belongs to the page owner (checked below), so one access decision covers the page.
+  const access = await getDealAccess(page.userId, { client, now: new Date(at) });
+  if (!access.allowed) return [];
   const placements = await client.dealPlacement.findMany({
     where: { channel: 'landing_page', targetRef: slug, status: 'published' },
     orderBy: { publishedAt: 'desc' },

@@ -55,8 +55,12 @@ const mockPrisma = {
   stampSettings: { findUnique: async () => null },
   business: { findUnique: async () => null },
   businessMember: { findUnique: async () => null },
+  // Deals access of the page owner (Phase 3B.6): no User row; the owner is a pilot (below).
+  user: { findUnique: async () => null },
   $transaction: async (fn) => fn(mockPrisma),
 };
+process.env.DEALS_PILOT_USER_IDS = 'user_owner';   // the page owner (OWNER) may show deals
+delete process.env.DEALS_ENABLED;
 require.cache[resolve('src', 'utils', 'prismaClient.js')] = { id: 'p', filename: 'p', loaded: true, exports: mockPrisma };
 for (const svc of ['apnsService', 'emailService', 'webPushService']) {
   const p = resolve('src', 'services', svc + '.js');
