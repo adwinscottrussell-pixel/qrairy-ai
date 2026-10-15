@@ -41,6 +41,7 @@ let pageRows = [];
 let userRows = {};
 let userLookups = 0;
 let userLookupFails = false;
+let advisoryLocks = 0;
 // Deals access: Anna and Ben are pilot accounts for every test except the
 // G section, which sets the rollout variables itself (withRollout).
 const PILOTS = { DEALS_PILOT_USER_IDS: `${ANNA},${BEN}` };
@@ -58,7 +59,12 @@ function reset() {
 }
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
 // Prisma-style where: plain equality, or { not: v } per field.
-const matches = (row, where) => Object.keys(where).every((k) => (where[k] && typeof where[k] === 'object' && 'not' in where[k] ? row[k] !== where[k].not : row[k] === where[k]));
+const matches = (row, where) => Object.keys(where).every((k) => {
+  const c = where[k];
+  if (c && typeof c === 'object' && 'not' in c) return row[k] !== c.not;
+  if (c && typeof c === 'object' && 'in' in c) return c.in.includes(row[k]);
+  return row[k] === c;
+});
 
 const mockPrisma = {
   deal: {
@@ -80,6 +86,7 @@ const mockPrisma = {
       Object.assign(row, data, { updatedAt: new Date() });
       return { ...row };
     },
+    count: async ({ where }) => dealRows.filter((d) => matches(d, where)).length,
     updateMany: async ({ where, data }) => { const rows = dealRows.filter((d) => matches(d, where)); rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() })); return { count: rows.length }; },
     delete: async ({ where }) => {
       const i = dealRows.findIndex((d) => d.id === where.id);
@@ -106,6 +113,7 @@ const mockPrisma = {
   user: { findUnique: async ({ where }) => { userLookups += 1; if (userLookupFails) throw new Error('db down'); return userRows[where.id] ? { ...userRows[where.id] } : null; } },
   business: { findUnique: async () => null },
   businessMember: { findUnique: async () => null },
+  $executeRaw: async () => { advisoryLocks += 1; return 1; },   // pg_advisory_xact_lock in the create transaction
   $transaction: async (arg) => {
     const snapshot = cloneRows(dealRows), placements = cloneRows(placementRows);
     try { return await arg(mockPrisma); } catch (e) { dealRows = snapshot; placementRows = placements; throw e; }
@@ -619,7 +627,8 @@ test('G. DEALS_ENABLED=true: Starter, active Trial, annual and enterprise plans 
     const s = await annaSetup();
     setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
     const codes = await tryGated(asAnna, s);
-    assert.equal(codes.create, 201, JSON.stringify(row));
+    // annaSetup already made 2 active deals: Trial (limit 1) is full, every other plan here has room
+    assert.equal(codes.create, row.plan === 'trial' ? 402 : 201, JSON.stringify(row));
     assert.equal(codes.addPlacement, 201, JSON.stringify(row));   // a new placement is "created"
     for (const k of ['publish', 'republish', 'publishPlacement', 'upload']) assert.equal(codes[k], 200, row.plan + ' ' + k + ' ' + JSON.stringify(codes));
   }
@@ -755,6 +764,90 @@ test('G. refused uploads never reach the parser or storage (403 before multer)',
   const res = await call('post', '/:id/image', asAnna({ params: { id: a.dealId } }));
   assert.equal(res.statusCode, 403);
   assert.equal(uploads.length, 0);
+});
+
+// ── L. Deal limits over HTTP (Phase 3B.3) ──────────────────────
+const newBody = (i) => ({ body: { title: 'Deal ' + i, offerText: 'Offer ' + i } });
+// Creates until refused (at most `max` tries); returns how many were created and the refusal.
+async function fill(who, max = 12) {
+  let made = 0, refusal = null;
+  for (let i = 0; i < max; i++) {
+    const r = await call('post', '/', who(newBody(i)));
+    if (r.statusCode === 201) { made++; continue; }
+    refusal = r; break;
+  }
+  return { made, refusal };
+}
+const activeTrial = { plan: 'trial', trialExpiresAt: new Date(T + DAY) };
+
+test('L. general rollout: Free 0, active Trial 1, Starter 3, Pro / Business unlimited; annual plans and enterprise inherit', async () => {
+  const cases = [[{ plan: 'free' }, 0], [activeTrial, 1], [{ plan: 'starter' }, 3], [{ plan: 'starter_annual' }, 3],
+    [{ plan: 'pro' }, null], [{ plan: 'pro_annual' }, null], [{ plan: 'business' }, null], [{ plan: 'business_annual' }, null], [{ plan: 'enterprise' }, null]];
+  for (const [row, limit] of cases) {
+    reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
+    const { made, refusal } = await fill(asAnna);
+    if (limit === null) { assert.equal(made, 12, row.plan + ' unlimited'); assert.equal(refusal, null); continue; }
+    assert.equal(made, limit, row.plan);
+    assert.equal(refusal.statusCode, 402, row.plan);
+    if (limit === 0) { assert.equal(refusal.body.error, 'plan_required', 'Free has no Deals at all'); continue; }
+    assert.deepEqual(Object.keys(refusal.body).sort(), ['current', 'error', 'limit', 'message', 'upgrade']);
+    assert.equal(refusal.body.error, 'plan_limit'); assert.equal(refusal.body.limit, limit); assert.equal(refusal.body.current, limit); assert.equal(refusal.body.upgrade, true);
+    assert.equal(dealRows.length, limit, 'nothing created beyond the limit');
+  }
+});
+
+test('L. pilots: Free / Trial / expired trial / Starter get 10; Pro / Business pilots stay unlimited', async () => {
+  for (const row of [undefined, { plan: 'free' }, activeTrial, { plan: 'trial', trialExpiresAt: new Date(T - DAY) }, { plan: 'starter' }]) {
+    reset(); setRollout({ DEALS_PILOT_USER_IDS: ANNA }); if (row) userRows[ANNA] = row;
+    const { made, refusal } = await fill(asAnna, 14);
+    assert.equal(made, 10, JSON.stringify(row)); assert.equal(refusal.body.error, 'plan_limit'); assert.equal(refusal.body.limit, 10);
+  }
+  for (const row of [{ plan: 'pro' }, { plan: 'business_annual' }, { plan: 'enterprise' }]) {
+    reset(); setRollout({ DEALS_PILOT_USER_IDS: ANNA }); userRows[ANNA] = row;
+    assert.equal((await fill(asAnna, 14)).made, 14, row.plan);
+  }
+});
+
+test('L. archiving frees a slot, publishing does not; another account\'s deals never count', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' }; userRows[BEN] = { plan: 'pro' };
+  for (let i = 0; i < 5; i++) assert.equal((await call('post', '/', asBen(newBody(i)))).statusCode, 201);
+  const ids = [];
+  for (let i = 0; i < 3; i++) ids.push((await call('post', '/', asAnna(newBody(i)))).body.deal.dealId);
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: ids[0] }, body: {} }))).statusCode, 200);
+  assert.equal((await call('post', '/', asAnna(newBody(9)))).body.current, 3, 'published still counts');
+  assert.equal((await call('post', '/:id/archive', asAnna({ params: { id: ids[0] } }))).statusCode, 200);
+  assert.equal((await call('post', '/', asAnna(newBody(10)))).statusCode, 201, 'archived freed a slot');
+  assert.equal((await call('post', '/', asAnna(newBody(11)))).statusCode, 402);
+  assert.equal(dealRows.filter((d) => d.ownerUserId === ANNA && d.status === 'archived').length, 1, 'archived deal kept');
+});
+
+test('L. over the limit nothing changes and existing deals stay fully usable (publish, archive, delete)', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = activeTrial;
+  const only = (await call('post', '/', asAnna(newBody(0)))).body.deal;
+  const before = snapshot();
+  assert.equal((await call('post', '/', asAnna(newBody(1)))).statusCode, 402);
+  assert.equal(snapshot(), before);
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: only.dealId }, body: {} }))).statusCode, 200);
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: only.dealId }, body: { title: 'edited' } }))).statusCode, 200);
+  assert.equal((await call('delete', '/:id', asAnna({ params: { id: only.dealId } }))).statusCode, 200);
+  assert.equal((await call('post', '/', asAnna(newBody(2)))).statusCode, 201, 'deleting freed the slot');
+});
+
+test('L. the limit comes from the access decision only, never from the request', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = activeTrial;
+  assert.equal((await call('post', '/', asAnna(newBody(0)))).statusCode, 201);
+  const sneaky = await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y', limit: null }, query: { limit: '100' } }));
+  assert.ok([400, 402].includes(sneaky.statusCode), String(sneaky.statusCode));
+  assert.equal(dealRows.length, 1);
+});
+
+test('L. limited creates take the per-account lock; unlimited ones do not', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' }; userRows[BEN] = { plan: 'pro' };
+  advisoryLocks = 0;
+  await call('post', '/', asAnna(newBody(0)));
+  assert.equal(advisoryLocks, 1);
+  await call('post', '/', asBen(newBody(0)));
+  assert.equal(advisoryLocks, 1, 'Pro: no lock needed');
 });
 
 // ── F. Errors and wiring ───────────────────────────────────────

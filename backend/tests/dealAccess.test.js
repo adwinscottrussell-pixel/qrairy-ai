@@ -255,7 +255,7 @@ test('L. a database error is thrown, never treated as allowed', async () => {
 });
 
 // ── K. Foundation only ──────────────────────────────────────────
-test('K. wired in exactly once: only routes/dealRoutes.js requires dealAccess', () => {
+test('K. wired in where expected: the Deals routes (guard) and the Deals controller (limit answer)', () => {
   const src = path.join(__dirname, '..', 'src');
   const hits = [];
   (function walk(dir) {
@@ -265,7 +265,7 @@ test('K. wired in exactly once: only routes/dealRoutes.js requires dealAccess', 
       else if (f.name.endsWith('.js') && f.name !== 'dealAccess.js' && /require\([^)]*dealAccess/.test(fs.readFileSync(p, 'utf8'))) hits.push(p);
     }
   })(src);
-  assert.deepEqual(hits.map((p) => path.relative(src, p).split(path.sep).join('/')), ['routes/dealRoutes.js']);
+  assert.deepEqual(hits.map((p) => path.relative(src, p).split(path.sep).join('/')).sort(), ['controllers/dealController.js', 'routes/dealRoutes.js']);
 });
 
 // ── M. The route guard (requireDealAccess) ──────────────────────

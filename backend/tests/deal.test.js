@@ -38,6 +38,7 @@ let landingPageRows = [];
 let businessRows = [];
 let businessMemberRows = [];
 let idSeq = 0;
+let advisoryLocks = 0;
 function nextId(prefix) { idSeq += 1; return `${prefix}_${idSeq}`; }
 
 function resetFixtures() {
@@ -124,6 +125,7 @@ const mockPrisma = {
       rows.forEach((r) => Object.assign(r, data, { updatedAt: new Date() }));
       return { count: rows.length };
     },
+    count: async ({ where }) => dealRows.filter((d) => matches(d, where)).length,
     // Mirrors DealPlacement.dealId's ON DELETE CASCADE.
     delete: async ({ where }) => {
       const idx = dealRows.findIndex((d) => d.id === where.id);
@@ -187,6 +189,7 @@ const mockPrisma = {
       return businessMemberRows.find((m) => m.businessId === k.businessId && m.userId === k.userId) || null;
     },
   },
+  $executeRaw: async () => { advisoryLocks += 1; return 1; },   // pg_advisory_xact_lock in the create transaction
   $transaction: async (arg) => {
     if (Array.isArray(arg)) return Promise.all(arg);
     const dealSnapshot = cloneRows(dealRows);
@@ -1223,6 +1226,65 @@ test('S. republishing stays possible: a published deal and a published placement
   assert.equal(err && err.status, 400);
 });
 
+// ── L. Deal limit at creation (Phase 3B.3) ──────────────────────
+// (parallel creation is proven on real PostgreSQL; this stand-in has no locks)
+const mk = (owner = ANNA, limit) => service.createDealDraft(owner, { title: 'Limited', offerText: 'Deal' }, { limit });
+
+test('L. limit 3: three active deals, the fourth is refused with limit/current and nothing is created', async () => {
+  resetFixtures();
+  for (let i = 0; i < 3; i++) await mk(ANNA, 3);
+  const err = await throwsAsync(() => mk(ANNA, 3));
+  assert.ok(err instanceof service.DealLimitError);
+  assert.equal(err.status, 402); assert.equal(err.limit, 3); assert.equal(err.current, 3);
+  assert.equal(dealRows.length, 3);
+});
+
+test('L. draft and published deals count; archived and deleted ones free a slot', async () => {
+  resetFixtures();
+  const a = await mk(ANNA, 2);
+  await service.publishDeal(ANNA, a.dealId);
+  const b = await mk(ANNA, 2);
+  assert.equal((await throwsAsync(() => mk(ANNA, 2))).current, 2, 'published + draft = 2');
+  await service.archiveDeal(ANNA, a.dealId);
+  const c = await mk(ANNA, 2);
+  assert.ok(c.dealId, 'archiving freed a slot');
+  assert.ok(await throwsAsync(() => mk(ANNA, 2)));
+  await service.deleteDeal(ANNA, b.dealId);
+  assert.ok((await mk(ANNA, 2)).dealId, 'deleting freed a slot');
+  assert.equal(dealRows.filter((d) => d.status === 'archived').length, 1, 'the archived deal is kept');
+});
+
+test('L. only the account\'s own deals count', async () => {
+  resetFixtures();
+  for (let i = 0; i < 3; i++) await mk(BEN, null);
+  assert.ok((await mk(ANNA, 1)).dealId);
+  assert.ok(await throwsAsync(() => mk(ANNA, 1)));
+});
+
+test('L. limit 0 refuses the first deal; null is unlimited and takes no lock; no option = unlimited (internal callers)', async () => {
+  resetFixtures();
+  const zero = await throwsAsync(() => mk(ANNA, 0));
+  assert.equal(zero.limit, 0); assert.equal(zero.current, 0); assert.equal(dealRows.length, 0);
+  const locksBefore = advisoryLocks;
+  for (let i = 0; i < 12; i++) await mk(ANNA, null);
+  assert.equal(advisoryLocks, locksBefore, 'unlimited: no lock, no count');
+  for (let i = 0; i < 3; i++) await newDeal();
+  assert.equal(dealRows.length, 15);
+});
+
+test('L. a limited create takes the per-account lock inside its transaction; invalid input is refused before it', async () => {
+  resetFixtures();
+  const before = advisoryLocks;
+  await mk(ANNA, 5);
+  assert.equal(advisoryLocks, before + 1);
+  const bad = await throwsAsync(() => service.createDealDraft(ANNA, { title: 'x' }, { limit: 5 }));
+  assert.equal(bad.status, 400);
+  assert.equal(advisoryLocks, before + 1, 'validation runs before the lock');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
+  assert.match(src, /pg_advisory_xact_lock\(hashtextextended\(\$\{DEAL_CREATE_LOCK_PREFIX \+ ownerUserId\}, 0\)\)/, 'parameterised, per-account, transaction-scoped');
+  assert.deepEqual(service.LIMITED_DEAL_STATUSES, ['draft', 'published']);
+});
+
 // ── U. Uploaded pictures only come in through the upload (Phase 3B.2) ──
 test('U. a draft save cannot attach a new uploaded picture; the upload step (allowNewUpload) can', async () => {
   resetFixtures();
@@ -1294,7 +1356,7 @@ test('I. the migration is additive only: two new tables, nothing altered or drop
 
 test('I. dealService has no StadtPocket dependency', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
-  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../data/dealImages', './dealCards']); // dealCards: the Deals' own landing page cards
+  assert.deepEqual([...src.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]), ['../utils/prismaClient', '../config/plans', '../data/dealImages', './dealCards']); // plans: the canonical hasCapacity(); dealCards: the Deals' own landing page cards
   assert.doesNotMatch(src, /prisma\.stadtPocket|tx\.stadtPocket|listingLocationId/);
 });
 

@@ -11,6 +11,7 @@
 // like one that does not exist.
 
 const dealService = require('../services/dealService');
+const { limitResponse } = require('../services/dealAccess');
 const { uploadDealImage, isDealImageStorageConfigured } = require('../services/dealImageUploadService');
 
 // A DealError carries a message written for the caller and its own
@@ -31,11 +32,21 @@ async function listDeals(req, res) {
   } catch (e) { return fail(res, e, 'load deals'); }
 }
 
+// The route's access check (services/dealAccess.js) has set req.dealAccess;
+// its dealLimit (null = unlimited) is enforced inside the create transaction.
+// Without a decision nothing may be created (limit 0) -- fail closed.
 async function createDeal(req, res) {
+  const access = req.dealAccess && req.dealAccess.allowed ? req.dealAccess : null;
   try {
-    const deal = await dealService.createDealDraft(req.userId, req.body);
+    const deal = await dealService.createDealDraft(req.userId, req.body, { limit: access ? access.dealLimit : 0 });
     return res.status(201).json({ deal });
-  } catch (e) { return fail(res, e, 'create the deal'); }
+  } catch (e) {
+    if (e instanceof dealService.DealLimitError) {
+      const answer = limitResponse({ dealLimit: e.limit }, e.current);
+      return res.status(answer.status).json(answer.body);
+    }
+    return fail(res, e, 'create the deal');
+  }
 }
 
 async function getDeal(req, res) {

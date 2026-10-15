@@ -23,6 +23,7 @@
  */
 
 const prisma = require('../utils/prismaClient');
+const { hasCapacity } = require('../config/plans');
 const { ACTIVE_DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
 const { forgetPageDeals } = require('./dealCards');
 
@@ -32,6 +33,19 @@ class DealError extends Error {
     this.status = status;
   }
 }
+
+// The account already has as many draft/published deals as its limit allows.
+// The controller answers it as the established 402 plan_limit.
+class DealLimitError extends DealError {
+  constructor(limit, current) {
+    super('Deal limit reached.', 402);
+    this.code = 'plan_limit';
+    this.limit = limit;
+    this.current = current;
+  }
+}
+const LIMITED_DEAL_STATUSES = ['draft', 'published'];
+const DEAL_CREATE_LOCK_PREFIX = 'qraivy:deals:create:';
 
 // ── Field allow-lists ─────────────────────────────────────────
 const DEAL_FIELDS = ['title', 'description', 'offerText', 'offerType', 'offerDetails', 'image', 'startsAt', 'endsAt'];
@@ -423,7 +437,7 @@ async function listDeals(ownerUserId, { status } = {}) {
 // required immediately. status always starts 'draft', whatever is
 // supplied. offerDetails and image stay save-draft-only: offerDetails
 // needs an already-resolved offerType to validate against.
-async function createDealDraft(ownerUserId, body) {
+async function createDealDraft(ownerUserId, body, options = {}) {
   requireOwner(ownerUserId);
 
   const src = body || {};
@@ -455,20 +469,37 @@ async function createDealDraft(ownerUserId, body) {
   checkDateOrder(startsAt, endsAt);
   const businessId = 'businessId' in src ? await resolveOwnedBusinessId(ownerUserId, src.businessId) : null;
 
-  const deal = await prisma.deal.create({
-    data: {
-      ownerUserId,
-      businessId,
-      title: src.title.trim(),
-      description,
-      offerText: src.offerText.trim(),
-      offerType,
-      startsAt,
-      endsAt,
-      status: 'draft',
-      createdBy: ownerUserId,
-    },
-  });
+  const data = {
+    ownerUserId,
+    businessId,
+    title: src.title.trim(),
+    description,
+    offerText: src.offerText.trim(),
+    offerType,
+    startsAt,
+    endsAt,
+    status: 'draft',
+    createdBy: ownerUserId,
+  };
+
+  // Deal limit (options.limit from services/dealAccess.js; null = unlimited).
+  // Draft and published deals count, archived ones do not. Count and create
+  // run in ONE transaction behind a per-account advisory lock, so parallel
+  // creates by the same account queue up and can never exceed the limit;
+  // other accounts are not affected. Without options.limit (internal
+  // callers) creation is unlimited, as before.
+  if (options.limit !== undefined && options.limit !== null) {
+    const limit = options.limit;
+    const deal = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${DEAL_CREATE_LOCK_PREFIX + ownerUserId}, 0))`;
+      const current = await tx.deal.count({ where: { ownerUserId, status: { in: LIMITED_DEAL_STATUSES } } });
+      if (!hasCapacity(limit, current)) throw new DealLimitError(limit, current);
+      return tx.deal.create({ data });
+    });
+    return mergeDealState(deal);
+  }
+
+  const deal = await prisma.deal.create({ data });
   return mergeDealState(deal);
 }
 
@@ -862,6 +893,8 @@ async function archiveDealPlacement(ownerUserId, dealId, placementId) {
 
 module.exports = {
   DealError,
+  DealLimitError,
+  LIMITED_DEAL_STATUSES,
   createDealDraft,
   getDealState,
   listDeals,
