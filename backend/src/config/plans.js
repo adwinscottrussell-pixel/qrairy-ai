@@ -61,31 +61,41 @@ const PUBLIC_CHECKOUT_PLAN_IDS = Object.freeze([
 //   analytics        mirrors the current tierSystem flag; no server-side
 //                    analytics enforcement exists or is introduced here
 //   smartDashboard   Smart QR dashboard access (current tierSystem flag)
+//   deals            QRAIVY Deals -- plan eligibility only. Whether Deals is
+//                    rolled out to an account at all is decided separately
+//                    (services/dealAccess.js, fail-closed).
+//   dealLimit        Deals that may exist as draft or published at the same
+//                    time (archived ones do not count); null = unlimited
 const ENTITLEMENTS = Object.freeze({
   free: Object.freeze({
     basicQrLimit: null, smartPageLimit: 0, dynamicQr: false, push: false,
     walletPasses: false, walletPassLimit: 0, campaigns: false, aiVoice: false,
     aiChat: false, analytics: false, smartDashboard: false,
+    deals: false, dealLimit: 0,
   }),
   trial: Object.freeze({
     basicQrLimit: null, smartPageLimit: 1, dynamicQr: false, push: false,
     walletPasses: false, walletPassLimit: 0, campaigns: false, aiVoice: false,
     aiChat: false, analytics: true, smartDashboard: true,
+    deals: true, dealLimit: 1,
   }),
   starter: Object.freeze({
     basicQrLimit: null, smartPageLimit: 10, dynamicQr: false, push: true,
     walletPasses: false, walletPassLimit: 0, campaigns: false, aiVoice: false,
     aiChat: true, analytics: true, smartDashboard: true,
+    deals: true, dealLimit: 3,
   }),
   pro: Object.freeze({
     basicQrLimit: null, smartPageLimit: null, dynamicQr: true, push: true,
     walletPasses: false, walletPassLimit: 0, campaigns: true, aiVoice: true,
     aiChat: true, analytics: true, smartDashboard: true,
+    deals: true, dealLimit: null,
   }),
   business: Object.freeze({
     basicQrLimit: null, smartPageLimit: null, dynamicQr: true, push: true,
     walletPasses: true, walletPassLimit: null, campaigns: true, aiVoice: true,
     aiChat: true, analytics: true, smartDashboard: true,
+    deals: true, dealLimit: null,
   }),
 });
 
