@@ -197,9 +197,10 @@ function test(name, fn) { tests.push({ name, fn }); }
 test('A. exposes exactly the owner endpoints (deals, image, placements, own pages), each behind requireAuth first', () => {
   const { requireAuth } = require('../src/middleware/auth');
   const routes = router.stack.filter((l) => l.route).map((l) => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path);
-  assert.deepEqual(routes, ['GET /', 'GET /pages', 'POST /', 'GET /:id', 'PUT /:id/draft', 'POST /:id/publish', 'POST /:id/archive', 'DELETE /:id',
+  assert.deepEqual(routes, ['GET /', 'GET /pages', 'GET /access', 'POST /', 'GET /:id', 'PUT /:id/draft', 'POST /:id/publish', 'POST /:id/archive', 'DELETE /:id',
     'GET /:id/placements', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/placements/:placementId/archive', 'POST /:id/image']);
   assert.ok(routes.indexOf('GET /pages') < routes.indexOf('GET /:id'), '"pages" is never read as a deal id');
+  assert.ok(routes.indexOf('GET /access') < routes.indexOf('GET /:id'), '"access" is never read as a deal id');
   for (const l of router.stack.filter((x) => x.route)) assert.equal(l.route.stack[0].handle, requireAuth, l.route.path);
 });
 
@@ -539,7 +540,7 @@ test('E. only the server\'s own image kinds are accepted through save-draft', as
 // Owner-only (no access needed): list, pages, load, save draft, archive,
 // delete, list placements, remove placement.
 const GATED = ['POST /', 'POST /:id/publish', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/image'];
-const OWNER_ONLY = ['GET /', 'GET /pages', 'GET /:id', 'PUT /:id/draft', 'POST /:id/archive', 'DELETE /:id', 'GET /:id/placements', 'POST /:id/placements/:placementId/archive'];
+const OWNER_ONLY = ['GET /', 'GET /pages', 'GET /access', 'GET /:id', 'PUT /:id/draft', 'POST /:id/archive', 'DELETE /:id', 'GET /:id/placements', 'POST /:id/placements/:placementId/archive'];
 const routeKey = (l) => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path;
 const snapshot = () => JSON.stringify({ d: dealRows, p: placementRows, u: uploads.length });
 const T = Date.now();
@@ -1061,6 +1062,154 @@ test('T. the counted account is the signed-in one, never one named in the reques
   assert.equal(usageOf(ANNA), 1); assert.equal(usageOf(BEN), 0);
 });
 
+// ── X. Access status for the Deal Builder (GET /deals/access, Phase 3B.7) ──
+// Informational only: the same decision as the gated routes
+// (services/dealAccess.js) and the same count as the limit (draft +
+// published). It grants nothing and changes nothing.
+const ACCESS_KEYS = ['activeDeals', 'allowed', 'dealLimit', 'reason'];
+async function accessOf(who) {
+  const res = await call('get', '/access', who());
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.deepEqual(Object.keys(res.body).sort(), ACCESS_KEYS, 'only the four fields');
+  return res.body;
+}
+
+test('X. GET /access is owner-only: requireAuth first, no access gate; 401 without a valid token, before any lookup', async () => {
+  const { requireAuth } = require('../src/middleware/auth');
+  const layer = router.stack.find((l) => l.route && l.route.path === '/access' && l.route.methods.get);
+  assert.ok(layer);
+  assert.equal(layer.route.stack.length, 2, 'requireAuth + the handler only');
+  assert.equal(layer.route.stack[0].handle, requireAuth);
+  reset();
+  for (const token of [undefined, 'tok_forged']) {
+    const res = await call('get', '/access', token ? { token } : {});
+    assert.equal(res.statusCode, 401);
+    assert.equal(res.body.allowed, undefined);
+  }
+  assert.equal(userLookups, 0, 'no User lookup without a session');
+});
+
+test('X. the answer is the caller\'s own: Anna and Ben each get their own decision and count', async () => {
+  reset();
+  setRollout({ DEALS_ENABLED: 'true' });
+  userRows[ANNA] = { plan: 'pro' }; userRows[BEN] = { plan: 'starter' };
+  await create(); await create(); await create(asBen);
+  assert.deepEqual(await accessOf(asAnna), { allowed: true, reason: 'plan', dealLimit: null, activeDeals: 2 });
+  assert.deepEqual(await accessOf(asBen), { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 1 });
+});
+
+test('X. canonical plan rules (DEALS_ENABLED=true): Free, Trial, Starter, Pro, Business, annual, enterprise, expired and cancelled', async () => {
+  const D = 864e5, now = Date.now();
+  const cases = [
+    [undefined, { allowed: false, reason: 'plan_required', dealLimit: 0 }],
+    [{ plan: 'free' }, { allowed: false, reason: 'plan_required', dealLimit: 0 }],
+    [{ plan: 'trial', trialExpiresAt: new Date(now + D) }, { allowed: true, reason: 'plan', dealLimit: 1 }],
+    [{ plan: 'trial', trialExpiresAt: new Date(now - D) }, { allowed: false, reason: 'plan_required', dealLimit: 0 }],
+    [{ plan: 'starter' }, { allowed: true, reason: 'plan', dealLimit: 3 }],
+    [{ plan: 'starter_annual' }, { allowed: true, reason: 'plan', dealLimit: 3 }],
+    [{ plan: 'pro' }, { allowed: true, reason: 'plan', dealLimit: null }],
+    [{ plan: 'pro', subscriptionStatus: 'canceled' }, { allowed: false, reason: 'plan_required', dealLimit: 0 }],
+    [{ plan: 'starter_annual', subscriptionStatus: 'unpaid' }, { allowed: false, reason: 'plan_required', dealLimit: 0 }],
+    [{ plan: 'business' }, { allowed: true, reason: 'plan', dealLimit: null }],
+    [{ plan: 'enterprise' }, { allowed: true, reason: 'plan', dealLimit: null }],
+  ];
+  const { getDealAccess } = require('../src/services/dealAccess');
+  for (const [row, expected] of cases) {
+    reset();
+    setRollout({ DEALS_ENABLED: 'true' });
+    if (row) userRows[ANNA] = row;
+    const got = await accessOf(asAnna);
+    assert.deepEqual(got, { ...expected, activeDeals: 0 }, JSON.stringify(row));
+    // the very decision the gated routes use
+    const canonical = await getDealAccess(ANNA, { client: mockPrisma });
+    assert.deepEqual([got.allowed, got.reason, got.dealLimit], [canonical.allowed, canonical.reason, canonical.dealLimit], JSON.stringify(row));
+  }
+});
+
+test('X. pilot and rollout: pilots get access on any plan (10, or unlimited on Pro); rollout off is not_rolled_out even on Pro', async () => {
+  reset();   // Anna and Ben are pilots
+  assert.deepEqual(await accessOf(asAnna), { allowed: true, reason: 'pilot', dealLimit: 10, activeDeals: 0 });
+  userRows[ANNA] = { plan: 'pro' };
+  assert.deepEqual(await accessOf(asAnna), { allowed: true, reason: 'pilot', dealLimit: null, activeDeals: 0 });
+  setRollout({}); userRows[ANNA] = { plan: 'pro' };
+  assert.deepEqual(await accessOf(asAnna), { allowed: false, reason: 'not_rolled_out', dealLimit: 0, activeDeals: 0 });
+  setRollout({ DEALS_PILOT_USER_IDS: BEN });
+  assert.equal((await accessOf(asAnna)).reason, 'not_rolled_out', 'a pilot entry never enables another account');
+});
+
+test('X. activeDeals counts draft + published deals only -- exactly the number the create limit is checked against', async () => {
+  reset();
+  setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' };   // limit 3
+  const a = await create();
+  const b = await create();
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: a.dealId }, body: {} }))).statusCode, 200);
+  assert.equal((await accessOf(asAnna)).activeDeals, 2, 'one published + one draft');
+  assert.equal((await call('post', '/:id/archive', asAnna({ params: { id: b.dealId } }))).statusCode, 200);
+  assert.equal((await accessOf(asAnna)).activeDeals, 1, 'archived deals do not count');
+  await create(); await create();
+  const full = await accessOf(asAnna);
+  assert.deepEqual(full, { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 3 });
+  const refused = await call('post', '/', asAnna({ body: { title: 'one more', offerText: 'x' } }));
+  assert.equal(refused.statusCode, 402);
+  assert.equal(refused.body.error, 'plan_limit');
+  assert.equal(refused.body.current, full.activeDeals, 'the limit check counted the same deals');
+  assert.equal(refused.body.limit, full.dealLimit);
+  const src = fs.readFileSync(resolve('src', 'services', 'dealService.js'), 'utf8');
+  assert.match(src, /const current = await countLimitedDeals\(ownerUserId, tx\);/, 'the create transaction uses the same count');
+});
+
+test('X. informational only: it changes nothing, and every gated action is still refused on its own route', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'free' };
+  const before = snapshot();
+  const status = await accessOf(asAnna);
+  assert.deepEqual(status, { allowed: false, reason: 'plan_required', dealLimit: 0, activeDeals: 2 });
+  assert.equal(snapshot(), before, 'reading the status changes no deal, placement or upload');
+  const codes = await tryGated(asAnna, s);
+  assert.ok(all(codes, 402), JSON.stringify(codes));
+  assert.equal(snapshot(), before);
+});
+
+test('X. the status is never stored by browsers or proxies, and holds no plan, user or rollout detail', async () => {
+  reset();
+  userRows[ANNA] = { plan: 'pro', subscriptionStatus: 'active', email: 'anna@example.com', stripeCustomerId: 'cus_123' };
+  const res = await call('get', '/access', asAnna());
+  assert.equal(res.headers['cache-control'], 'private, no-store');
+  const text = JSON.stringify(res.body);
+  for (const leak of ['pro', 'anna@example.com', 'cus_123', ANNA, BEN, 'rollout', 'planReason', 'effectiveBase']) assert.ok(!text.includes(leak), 'leaks ' + leak);
+});
+
+test('X. a failing lookup is a 500 without detail, never "allowed"', async () => {
+  reset();
+  userLookupFails = true;
+  const res = await call('get', '/access', asAnna());
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: 'Failed to check Deals access.' });
+});
+
+test('X. after expiry the owner can still read the status and look after every deal: edit drafts, archive, delete, remove pages', async () => {
+  for (const row of [{ plan: 'trial', trialExpiresAt: new Date(Date.now() - 864e5) }, { plan: 'pro', subscriptionStatus: 'canceled' }]) {
+    reset();
+    const s = await annaSetup();
+    setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
+    assert.equal((await accessOf(asAnna)).allowed, false);
+    const edit = await call('put', '/:id/draft', asAnna({ params: { id: s.draft.dealId }, body: { title: 'Edited after expiry' } }));
+    assert.equal(edit.statusCode, 200); assert.equal(edit.body.deal.title, 'Edited after expiry');
+    assert.equal((await call('post', '/:id/placements/:placementId/archive', asAnna({ params: { id: s.pub.dealId, placementId: s.pid } }))).statusCode, 200, 'remove from a page');
+    assert.equal((await call('post', '/:id/archive', asAnna({ params: { id: s.pub.dealId } }))).statusCode, 200);
+    assert.equal((await call('delete', '/:id', asAnna({ params: { id: s.draft.dealId } }))).statusCode, 200);
+    assert.equal((await accessOf(asAnna)).activeDeals, 0, 'archived and deleted deals no longer count');
+  }
+});
+
+test('X. the preview staging gate lets GET /deals/access through as a signed-in, allowlisted owner route', () => {
+  const { matchRoute } = require('../src/middleware/stagingGate');
+  const r = matchRoute('GET', '/deals/access');
+  assert.ok(r && r.access === 'user');
+  assert.equal(matchRoute('POST', '/deals/access'), null, 'no write on that path');
+});
+
 // ── F. Errors and wiring ───────────────────────────────────────
 test('F. an unexpected failure is a 500 without internal detail', async () => {
   reset();
@@ -1078,8 +1227,8 @@ test('F. the app mounts the router at /deals, and nothing public is exposed', ()
   assert.match(index, /const dealRoutes = require\('\.\/routes\/dealRoutes'\);/);
   assert.match(index, /app\.use\('\/deals', dealRoutes\);/);
   const routes = fs.readFileSync(resolve('src', 'routes', 'dealRoutes.js'), 'utf8');
-  assert.equal((routes.match(/^router\.(get|post|put|delete)\(/gm) || []).length, 13);
-  assert.equal((routes.match(/^router\.(get|post|put|delete)\('[^']*', requireAuth,/gm) || []).length, 13, 'every route line names requireAuth first');
+  assert.equal((routes.match(/^router\.(get|post|put|delete)\(/gm) || []).length, 14);
+  assert.equal((routes.match(/^router\.(get|post|put|delete)\('[^']*', requireAuth,/gm) || []).length, 14, 'every route line names requireAuth first');
 });
 
 test('F. the server\'s image lists mirror the frontend catalog and backgrounds', () => {

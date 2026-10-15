@@ -481,3 +481,7 @@
 .deal-upload__status[hidden] { display: none; }
 .deal-upload--busy { opacity: 0.6; cursor: progress; }
 .deal-busy .deal-step, .deal-busy .deal-starter, .deal-busy .deal-swatch { cursor: progress; }
+
+/* ── Deals access notice and usage (GET /deals/access) ───────── */
+.deal-access-usage { margin: 0 0 var(--qds-space-4); }
+.deal-access__billing { color: var(--qds-color-brand-primary); font-weight: 600; white-space: nowrap; }

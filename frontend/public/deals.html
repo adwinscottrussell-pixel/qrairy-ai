@@ -77,6 +77,14 @@
         <span data-i18n="dl_banner_text">Deals are saved to your account. Publishing marks a deal as ready, but deals are not shown to your customers yet: the landing page display is still being built.</span>
       </div>
 
+      <!-- Deals access of this account (GET /deals/access): why creating is not
+           available, with the existing billing page where a plan change helps.
+           Informational only -- the server checks every action itself. -->
+      <div class="deal-preview-banner" id="deal-access" role="status" hidden>
+        <span class="deal-preview-banner__tag" data-i18n="acc_tag">Plan</span>
+        <span><span id="deal-access-text"></span> <a class="deal-access__billing" id="deal-access-billing" href="dashboard.html?section=billing" data-i18n="acc_billing" hidden>View plans &amp; billing →</a></span>
+      </div>
+
       <!-- ═══ LIST VIEW ═══ -->
       <section id="deal-list-view" aria-labelledby="deal-list-title">
         <div class="qds-page-header">
@@ -86,6 +94,7 @@
           </div>
           <button class="qds-btn qds-btn--primary qds-btn--md" type="button" id="deal-create-btn" data-i18n="dl_create">Create deal</button>
         </div>
+        <p class="deal-note deal-access-usage" id="deal-access-usage" hidden></p>
 
         <div class="deal-list" id="deal-loading" aria-busy="true">
           <div class="qds-skeleton qds-skeleton--card deal-card-skeleton"></div>
@@ -566,6 +575,24 @@
       e_gone: 'This deal no longer exists.',
       e_img_storage: 'Image upload is not available right now. Please try again later.',
       e_img_upload: 'The picture could not be uploaded. Please try again.',
+      acc_tag: 'Plan', acc_billing: 'View plans & billing →',
+      acc_not_available: 'Deals isn’t available for your account yet, so you can’t create or publish deals. Your existing deals stay saved: you can still open, edit, archive and delete them. Published deals are not shown on your landing pages for now.',
+      acc_plan_required: 'Your current plan doesn’t include Deals, so you can’t create or publish deals or add pictures. This also applies when a trial has ended or a subscription is no longer active. Your existing deals stay saved: you can still open, edit, archive and delete them. Published deals are not shown on your landing pages until your plan includes Deals again.',
+      acc_limit_reached: 'You’ve reached the limit of {limit} active deals for your account (drafts and published deals count, archived ones don’t). Archive a deal you no longer need to create a new one, or upgrade your plan.',
+      acc_limit_reached_one: 'You’ve reached the limit of 1 active deal for your account (drafts and published deals count, archived ones don’t). Archive it to create a new one, or upgrade your plan.',
+      acc_usage: '{active} of {limit} active deals used. Drafts and published deals count, archived ones don’t.',
+      acc_usage_unlimited: '{active} active deals. Your plan has no deal limit.',
+      acc_pilot: 'You have pilot access to Deals.',
+      acc_unknown: 'Your Deals access could not be checked right now. You can still manage your existing deals. If creating or publishing isn’t possible, you’ll see why when you try.',
+      e_access_unavailable: 'Deals isn’t available for your account yet. Your existing deals stay saved, and you can still edit, archive or delete them.',
+      e_plan_required: 'Your current plan doesn’t include Deals, so this isn’t possible. Creating and publishing deals, adding pages and uploading pictures need Starter or higher. Your existing deals stay saved and editable.',
+      e_plan_limit: 'You’ve reached the limit of {limit} active deals (drafts and published). Archive a deal you no longer need, or upgrade your plan to create more.',
+      e_plan_limit_one: 'You’ve reached the limit of 1 active deal (draft or published). Archive it, or upgrade your plan to create more.',
+      e_upload_limit_hour: 'You’ve uploaded the maximum of {limit} pictures per hour.',
+      e_upload_limit_day: 'You’ve uploaded the maximum of {limit} pictures per day.',
+      e_upload_limit: 'You’ve reached the upload limit for pictures.',
+      e_upload_retry: 'You can upload again in about {wait}.', e_upload_retry_later: 'Please try again later.',
+      wait_minutes: '{n} min', wait_hours: '{n} h',
       lang_toggle: 'Deutsch'
     },
     de: {
@@ -673,6 +700,24 @@
       e_gone: 'Diesen Deal gibt es nicht mehr.',
       e_img_storage: 'Der Bild-Upload ist gerade nicht verfügbar. Bitte versuche es später erneut.',
       e_img_upload: 'Das Bild konnte nicht hochgeladen werden. Bitte versuche es erneut.',
+      acc_tag: 'Tarif', acc_billing: 'Tarif & Abrechnung ansehen →',
+      acc_not_available: 'Deals ist für dein Konto noch nicht verfügbar, daher kannst du keine Deals erstellen oder veröffentlichen. Deine bestehenden Deals bleiben gespeichert: Du kannst sie weiterhin öffnen, bearbeiten, archivieren und löschen. Veröffentlichte Deals werden vorerst nicht auf deinen Landingpages angezeigt.',
+      acc_plan_required: 'Dein aktueller Tarif enthält keine Deals, daher kannst du keine Deals erstellen oder veröffentlichen und keine Bilder hinzufügen. Das gilt auch, wenn ein Testzeitraum abgelaufen oder ein Abo nicht mehr aktiv ist. Deine bestehenden Deals bleiben gespeichert: Du kannst sie weiterhin öffnen, bearbeiten, archivieren und löschen. Veröffentlichte Deals werden nicht auf deinen Landingpages angezeigt, bis dein Tarif wieder Deals enthält.',
+      acc_limit_reached: 'Du hast das Limit von {limit} aktiven Deals für dein Konto erreicht (Entwürfe und veröffentlichte Deals zählen, archivierte nicht). Archiviere einen Deal, den du nicht mehr brauchst, um einen neuen zu erstellen, oder wechsle in einen höheren Tarif.',
+      acc_limit_reached_one: 'Du hast das Limit von 1 aktiven Deal für dein Konto erreicht (Entwürfe und veröffentlichte Deals zählen, archivierte nicht). Archiviere ihn, um einen neuen zu erstellen, oder wechsle in einen höheren Tarif.',
+      acc_usage: '{active} von {limit} aktiven Deals genutzt. Entwürfe und veröffentlichte Deals zählen, archivierte nicht.',
+      acc_usage_unlimited: '{active} aktive Deals. Dein Tarif hat kein Deal-Limit.',
+      acc_pilot: 'Du hast Pilot-Zugang zu Deals.',
+      acc_unknown: 'Dein Deals-Zugang konnte gerade nicht geprüft werden. Deine bestehenden Deals kannst du weiterhin verwalten. Ist Erstellen oder Veröffentlichen nicht möglich, siehst du beim Versuch den Grund.',
+      e_access_unavailable: 'Deals ist für dein Konto noch nicht verfügbar. Deine bestehenden Deals bleiben gespeichert, und du kannst sie weiterhin bearbeiten, archivieren oder löschen.',
+      e_plan_required: 'Dein aktueller Tarif enthält keine Deals, daher ist das nicht möglich. Zum Erstellen und Veröffentlichen von Deals, Hinzufügen von Seiten und Hochladen von Bildern brauchst du Starter oder höher. Deine bestehenden Deals bleiben gespeichert und bearbeitbar.',
+      e_plan_limit: 'Du hast das Limit von {limit} aktiven Deals (Entwürfe und veröffentlichte) erreicht. Archiviere einen Deal, den du nicht mehr brauchst, oder wechsle in einen höheren Tarif, um weitere zu erstellen.',
+      e_plan_limit_one: 'Du hast das Limit von 1 aktiven Deal (Entwurf oder veröffentlicht) erreicht. Archiviere ihn oder wechsle in einen höheren Tarif, um weitere zu erstellen.',
+      e_upload_limit_hour: 'Du hast das Maximum von {limit} Bildern pro Stunde hochgeladen.',
+      e_upload_limit_day: 'Du hast das Maximum von {limit} Bildern pro Tag hochgeladen.',
+      e_upload_limit: 'Du hast das Upload-Limit für Bilder erreicht.',
+      e_upload_retry: 'In etwa {wait} kannst du wieder hochladen.', e_upload_retry_later: 'Bitte versuche es später erneut.',
+      wait_minutes: '{n} Min.', wait_hours: '{n} Std.',
       lang_toggle: 'English'
     }
   };
@@ -771,7 +816,7 @@
     }
     try { data = await res.json(); } catch (e) { data = {}; }
     if (res.status === 401) { window.location.href = 'login.html'; throw new ApiError(401); }
-    if (!res.ok) throw new ApiError(res.status, data && data.error);
+    if (!res.ok) { var failed = new ApiError(res.status, data && data.error); failed.data = data && typeof data === 'object' ? data : {}; throw failed; }
     return data;
   }
   // The server's own message is shown only for a rejected input (400/409);
@@ -782,8 +827,89 @@
     if (err.status === 0) return t('e_network');
     if (err.status === 404) return t('e_gone');
     if ((err.status === 400 || err.status === 409) && err.message) return t('e_save_detail', { detail: err.message });
+    if (err.status === 402 || err.status === 403 || err.status === 429) return accessErrorText(err);
     return t('e_server');
   }
+
+  // ── Deals access: refusals and the account's status ──────────
+  // Refusals come from services/dealAccess.js (403 deals_not_available,
+  // 402 plan_required / plan_limit) and services/dealUploadLimiter.js
+  // (429 upload_limit). Anything else keeps the general message.
+  var BILLING_URL = 'dashboard.html?section=billing';
+  function accessErrorText(err) {
+    var d = err.data || {};
+    if (err.status === 403 && d.error === 'deals_not_available') return t('e_access_unavailable');
+    if (err.status === 402 && d.error === 'plan_limit' && isCount(d.limit)) return tn('e_plan_limit', d.limit, { limit: d.limit });
+    if (err.status === 402 && d.error === 'plan_required') return t('e_plan_required');
+    if (err.status === 429 && d.error === 'upload_limit') return uploadLimitText(d);
+    return t('e_server');
+  }
+  function isCount(n) { return typeof n === 'number' && isFinite(n) && n >= 0 && Math.floor(n) === n; }
+  function tn(key, n, vars) { return t(n === 1 && _t.en[key + '_one'] !== undefined ? key + '_one' : key, vars); }
+  // Rounded up, so the owner is never told to retry too early.
+  function waitText(seconds) {
+    if (typeof seconds !== 'number' || !isFinite(seconds) || seconds <= 0) return '';
+    var min = Math.ceil(seconds / 60);
+    return min < 60 ? t('wait_minutes', { n: min }) : t('wait_hours', { n: Math.ceil(min / 60) });
+  }
+  function uploadLimitText(d) {
+    var head = isCount(d.limit) ? t(d.window === 'hour' ? 'e_upload_limit_hour' : 'e_upload_limit_day', { limit: d.limit }) : t('e_upload_limit');
+    var wait = waitText(d.retryAfter);
+    return head + ' ' + (wait ? t('e_upload_retry', { wait: wait }) : t('e_upload_retry_later'));
+  }
+  // A plan refusal (402) also offers the existing billing page.
+  function needsUpgrade(err) { return err instanceof ApiError && err.status === 402; }
+
+  // GET /deals/access: informational only, the server checks every action
+  // itself. Until it is known, or when it cannot be loaded, nothing is
+  // claimed and nothing is blocked. Only creating a deal is ever held back
+  // here; opening, editing, archiving, deleting and removing pages never are.
+  var access = null, accessState = 'idle', accessRun = 0;   // idle | ready | error
+  async function loadAccess() {
+    var run = ++accessRun;
+    try {
+      var a = await api('GET', '/deals/access');
+      if (run !== accessRun) return;
+      var valid = !!a && typeof a.allowed === 'boolean';
+      access = valid ? a : null; accessState = valid ? 'ready' : 'error';
+    } catch (err) {
+      if (run !== accessRun) return;
+      access = null; accessState = err instanceof ApiError && (err.status === 401 || err.status === -1) ? 'idle' : 'error';
+    }
+    renderAccess();
+  }
+  // Pure: what the list shows for an access status.
+  function accessNotice(state, a) {
+    var out = { notice: '', billing: false, usage: '', blockCreate: false };
+    if (state === 'error') { out.usage = t('acc_unknown'); return out; }
+    if (state !== 'ready' || !a) return out;
+    if (!a.allowed) {
+      out.blockCreate = true;
+      if (a.reason === 'plan_required') { out.notice = t('acc_plan_required'); out.billing = true; }
+      else out.notice = t('acc_not_available');
+      return out;
+    }
+    var active = isCount(a.activeDeals) ? a.activeDeals : null;
+    if (isCount(a.dealLimit) && active !== null) {
+      if (active >= a.dealLimit) { out.notice = tn('acc_limit_reached', a.dealLimit, { limit: a.dealLimit }); out.billing = true; out.blockCreate = true; }
+      else out.usage = t('acc_usage', { active: active, limit: a.dealLimit });
+    } else if (a.dealLimit === null && active !== null) out.usage = t('acc_usage_unlimited', { active: active });
+    if (a.reason === 'pilot') out.usage = (out.usage ? out.usage + ' ' : '') + t('acc_pilot');
+    return out;
+  }
+  function renderAccess() {
+    var v = accessNotice(accessState, access);
+    $('deal-access-text').textContent = v.notice;
+    $('deal-access-billing').hidden = !v.billing;
+    $('deal-access').hidden = !v.notice;
+    $('deal-access-usage').textContent = v.usage;
+    $('deal-access-usage').hidden = !v.usage;
+    ['deal-create-btn', 'deal-empty-create-btn'].forEach(function (id) {
+      var b = $(id); b.disabled = v.blockCreate;
+      if (v.blockCreate) b.setAttribute('aria-describedby', 'deal-access-text'); else b.removeAttribute('aria-describedby');
+    });
+  }
+  function refreshList() { loadAccess(); return loadDeals(); }
 
   // ── Server <-> form mapping ──────────────────────────────────
   // The form keeps a date and an optional time as two strings; the server
@@ -1298,7 +1424,7 @@
       if (res.error instanceof ApiError && res.error.status === 401) return;
       // a refusal (400/409) is explained by our own message; network or server trouble adds the general reason
       var why = res.error && !(res.error instanceof ApiError && (res.error.status === 400 || res.error.status === 409)) ? ' ' + errorText(res.error) : '';
-      showAlert(t('e_pages_publish_one', { name: row.name }) + why);
+      showAlert(t('e_pages_publish_one', { name: row.name }) + why, res.error);
       await loadPicker(true);
     });
     renderPicker();
@@ -1309,7 +1435,7 @@
     var res = await window.QraivyDealPagePicker.savePending(api, draft.id, picker.pending, picker.bySlug);
     if (res.ok) return true;
     if (res.error instanceof ApiError && res.error.status === 401) return false;
-    showAlert(res.conflict ? t('e_pages_conflict', { name: pageName(res.slug) }) : t('e_pages_save', { name: pageName(res.slug) }) + ' ' + errorText(res.error));
+    showAlert(res.conflict ? t('e_pages_conflict', { name: pageName(res.slug) }) : t('e_pages_save', { name: pageName(res.slug) }) + ' ' + errorText(res.error), res.error);
     await loadPicker(true);
     return false;
   }
@@ -1433,7 +1559,14 @@
       if (draft && step === 4 && !$('deal-builder-view').hidden) renderReview();
     }
   }
-  function showAlert(message) { var box = $('deal-alert'); box.textContent = message || ''; box.hidden = !message; if (message) box.scrollIntoView({ block: 'nearest' }); }
+  function showAlert(message, err) {
+    var box = $('deal-alert'); box.textContent = message || ''; box.hidden = !message;
+    if (message && needsUpgrade(err)) {
+      var link = document.createElement('a'); link.href = BILLING_URL; link.className = 'deal-access__billing'; link.textContent = t('acc_billing');
+      box.appendChild(document.createTextNode(' ')); box.appendChild(link);
+    }
+    if (message) box.scrollIntoView({ block: 'nearest' });
+  }
 
   // Writes the form to the server: creates the draft on first save, then
   // saves every field. Returns true when the server has it.
@@ -1449,7 +1582,7 @@
       draft.status = res.deal.status; draft.displayStatus = res.deal.displayStatus; draft.hasUnpublishedChanges = !!res.deal.hasUnpublishedChanges;
       return true;
     } catch (err) {
-      if (!(err instanceof ApiError && err.status === 401)) showAlert(errorText(err));
+      if (!(err instanceof ApiError && err.status === 401)) showAlert(errorText(err), err);
       return false;
     }
   }
@@ -1516,7 +1649,7 @@
     var el = document.querySelector('.deal-panel:not([hidden]) .qds-field--error input, .deal-panel:not([hidden]) .qds-field--error textarea');
     if (el) el.focus();
   }
-  function closeBuilder() { if (busy) return; draft = null; editingId = null; picker = freshPicker(); showAlert(''); showView('list'); loadDeals(); }
+  function closeBuilder() { if (busy) return; draft = null; editingId = null; picker = freshPicker(); showAlert(''); showView('list'); refreshList(); }
 
   // Save draft / Publish from the review step. The list is reloaded from
   // the server afterwards, so it shows what was really stored.
@@ -1536,7 +1669,7 @@
       catch (err) {
         if (err instanceof ApiError && err.status === 401) return false;
         if (withPages && err instanceof ApiError && err.status === 409) { showAlert(t('e_pages_publish')); await loadPicker(true); }
-        else showAlert(errorText(err));
+        else showAlert(errorText(err), err);
         return false;
       }
     });
@@ -1576,6 +1709,7 @@
         var msg = !(err instanceof ApiError) ? t('e_img_upload')
           : err.status === 0 ? t('e_network')
           : err.status === 503 ? t('e_img_storage')
+          : err.status === 402 || err.status === 403 || err.status === 429 ? errorText(err)
           : err.status === 400 && err.message ? err.message
           : t('e_img_upload');
         setError('field-image', 'err-image', msg);
@@ -1589,7 +1723,7 @@
     $('deal-create-btn').addEventListener('click', function () { openBuilder(null); });
     $('deal-empty-create-btn').addEventListener('click', function () { openBuilder(null); });
     $('deal-back-btn').addEventListener('click', closeBuilder);
-    $('deal-retry-btn').addEventListener('click', loadDeals);
+    $('deal-retry-btn').addEventListener('click', refreshList);
 
     $('deal-list').addEventListener('click', function (e) {
       var btn = e.target.closest('button'); if (!btn) return;
@@ -1608,7 +1742,7 @@
           if (err instanceof ApiError && err.status === 401) return;
           toast(errorText(err));
         }
-      }).then(loadDeals);
+      }).then(refreshList);
     });
 
     $('deal-steps').addEventListener('click', function (e) {
@@ -1723,6 +1857,7 @@
       renderBuilder();
     }
     renderList();
+    renderAccess();
   }
   window.toggleLang = function () { applyLang(_lang === 'en' ? 'de' : 'en'); };
 
@@ -1747,6 +1882,8 @@
   // Called by initDeals() once Clerk has confirmed the signed-in owner:
   // no request is made before there is a session to make it with.
   window.QraivyDeals = { start: loadDeals };
+  // The account's Deals access (GET /deals/access), loaded beside the list.
+  window.QraivyDeals.loadAccess = loadAccess;
 })();
 
 // ── Account shell (same sign-in gate and sidebar wiring as analytics.html) ──
@@ -1763,6 +1900,7 @@ async function initDeals() {
   });
 
   window.QraivyDeals.start();
+  window.QraivyDeals.loadAccess();
 }
 (function () {
   // Sidebar collapse (desktop). The mobile drawer is bound by js/admin-shell.js.

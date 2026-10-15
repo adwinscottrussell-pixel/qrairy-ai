@@ -92,7 +92,8 @@ test('talks only to the Deals API, as the signed-in owner', () => {
   assert.match(page, /headers: \{ Authorization: 'Bearer ' \+ token \}/);
   const calls = [...page.matchAll(/api\('(GET|POST|PUT|DELETE)', ('[^']*')/g)].map((m) => m[1] + ' ' + m[2]);
   // GET '/deals/pages' and GET '/deals/' (placements): the page picker (dealPagePicker.test.js)
-  assert.deepEqual([...new Set(calls)].sort(), ["DELETE '/deals/'", "GET '/deals'", "GET '/deals/'", "GET '/deals/pages'", "POST '/deals'", "POST '/deals/'", "PUT '/deals/'"]);
+  // GET '/deals/access': the account's Deals access for the notices (Phase 3B.7)
+  assert.deepEqual([...new Set(calls)].sort(), ["DELETE '/deals/'", "GET '/deals'", "GET '/deals/'", "GET '/deals/access'", "GET '/deals/pages'", "POST '/deals'", "POST '/deals/'", "PUT '/deals/'"]);
   for (const suffix of ["'/draft'", "'/publish'", "'/archive'", "'/image'"]) assert.ok(page.includes('encodeURIComponent(' ) && page.includes(suffix), suffix);
   for (const banned of ['XMLHttpRequest', 'sendBeacon', 'WebSocket', 'cloudinary']) assert.ok(!page.includes(banned), 'found ' + banned);
 });
@@ -110,6 +111,9 @@ test('waits for the signed-in session before the first request', () => {
   const init = page.slice(page.indexOf('async function initDeals()'));
   assert.ok(init.indexOf("if (!window.Clerk.user) { window.location.href = 'login.html'; return; }") < init.indexOf('window.QraivyDeals.start();'));
   assert.equal((page.match(/QraivyDeals\.start\(\)/g) || []).length, 1);
+  // the access status too: only after the sign-in check, once
+  assert.ok(init.indexOf("if (!window.Clerk.user) { window.location.href = 'login.html'; return; }") < init.indexOf('window.QraivyDeals.loadAccess();'));
+  assert.equal((page.match(/QraivyDeals\.loadAccess\(\)/g) || []).length, 1);
 });
 
 test('one action at a time: a running request blocks duplicates and shows a loading state', () => {

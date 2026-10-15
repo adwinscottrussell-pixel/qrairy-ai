@@ -493,7 +493,7 @@ async function createDealDraft(ownerUserId, body, options = {}) {
     const limit = options.limit;
     const deal = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${DEAL_CREATE_LOCK_PREFIX + ownerUserId}, 0))`;
-      const current = await tx.deal.count({ where: { ownerUserId, status: { in: LIMITED_DEAL_STATUSES } } });
+      const current = await countLimitedDeals(ownerUserId, tx);
       if (!hasCapacity(limit, current)) throw new DealLimitError(limit, current);
       return tx.deal.create({ data });
     });
@@ -502,6 +502,13 @@ async function createDealDraft(ownerUserId, body, options = {}) {
 
   const deal = await prisma.deal.create({ data });
   return mergeDealState(deal);
+}
+
+// The deals the Deal limit counts: draft and published, never archived.
+// The create transaction above and GET /deals/access both use this, so the
+// usage the owner is shown is exactly the number the limit is checked against.
+async function countLimitedDeals(ownerUserId, client = prisma) {
+  return client.deal.count({ where: { ownerUserId, status: { in: LIMITED_DEAL_STATUSES } } });
 }
 
 // ── Save draft ──────────────────────────────────────────────────
@@ -906,6 +913,7 @@ module.exports = {
   DealError,
   DealLimitError,
   LIMITED_DEAL_STATUSES,
+  countLimitedDeals,
   createDealDraft,
   getDealState,
   listDeals,

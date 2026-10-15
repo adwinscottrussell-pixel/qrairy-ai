@@ -23,6 +23,7 @@ const {
   publishPlacement,
   archivePlacement,
   listPages,
+  getAccessStatus,
 } = require('../controllers/dealController');
 
 // Deal image upload — image only, 5MB cap, memory storage (no temp files
@@ -46,8 +47,10 @@ const dealAccess = requireDealAccess();
 const uploadThrottle = throttleDealUploads();
 
 router.get('/', requireAuth, listDeals);
-// before '/:id', so "pages" is never read as a deal id
+// before '/:id', so "pages" and "access" are never read as a deal id
 router.get('/pages', requireAuth, listPages);
+// Informational: the owner's Deals access and usage for the UI. Grants nothing.
+router.get('/access', requireAuth, getAccessStatus);
 router.post('/', requireAuth, dealAccess, createDeal);
 router.get('/:id', requireAuth, getDeal);
 router.put('/:id/draft', requireAuth, saveDealDraft);

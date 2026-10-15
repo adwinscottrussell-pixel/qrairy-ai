@@ -57,7 +57,7 @@ test('A. exactly the owner Deals routes are added, all "user" (sign-in + allowli
   // the gate matches every route of routes/dealRoutes.js, and only those
   const routes = read('backend/src/routes/dealRoutes.js');
   const declared = [...routes.matchAll(/router\.(get|post|put|patch|delete)\('([^']+)'/g)].map((x) => x[1].toUpperCase() + ' ' + x[2]);
-  assert.deepEqual(declared.sort(), ['DELETE /:id', 'GET /', 'GET /pages', 'GET /:id', 'POST /', 'POST /:id/archive', 'POST /:id/image', 'POST /:id/publish', 'PUT /:id/draft',
+  assert.deepEqual(declared.sort(), ['DELETE /:id', 'GET /', 'GET /pages', 'GET /access', 'GET /:id', 'POST /', 'POST /:id/archive', 'POST /:id/image', 'POST /:id/publish', 'PUT /:id/draft',
     'GET /:id/placements', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/placements/:placementId/archive'].sort());
 });
 

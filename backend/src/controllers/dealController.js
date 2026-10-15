@@ -11,7 +11,7 @@
 // like one that does not exist.
 
 const dealService = require('../services/dealService');
-const { limitResponse } = require('../services/dealAccess');
+const { limitResponse, getDealAccess } = require('../services/dealAccess');
 const { uploadDealImage, isDealImageStorageConfigured } = require('../services/dealImageUploadService');
 
 // A DealError carries a message written for the caller and its own
@@ -46,6 +46,24 @@ async function createDeal(req, res) {
       return res.status(answer.status).json(answer.body);
     }
     return fail(res, e, 'create the deal');
+  }
+}
+
+// GET /deals/access -- informational only, for the Deal Builder's notices:
+// the signed-in owner's current Deals access (services/dealAccess.js, the
+// same decision the gated routes make) and how many deals count against the
+// limit. It grants nothing: every create, upload, publish and placement is
+// still checked on its own route. Only these four fields are returned --
+// no plan details, user ids or rollout settings.
+async function getAccessStatus(req, res) {
+  try {
+    const access = await getDealAccess(req.userId);
+    const activeDeals = await dealService.countLimitedDeals(req.userId);
+    if (typeof res.set === 'function') res.set('Cache-Control', 'private, no-store');
+    return res.json({ allowed: access.allowed, reason: access.reason, dealLimit: access.dealLimit, activeDeals });
+  } catch (e) {
+    console.error('[DealAPI] access status error:', e && e.message);
+    return res.status(500).json({ error: 'Failed to check Deals access.' });
   }
 }
 
@@ -150,6 +168,7 @@ module.exports = {
   publishPlacement,
   archivePlacement,
   listPages,
+  getAccessStatus,
   listDeals,
   createDeal,
   getDeal,
