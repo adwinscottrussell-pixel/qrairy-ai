@@ -255,7 +255,7 @@ test('L. a database error is thrown, never treated as allowed', async () => {
 });
 
 // ── K. Foundation only ──────────────────────────────────────────
-test('K. not wired in yet: no route, controller or service requires dealAccess', () => {
+test('K. wired in exactly once: only routes/dealRoutes.js requires dealAccess', () => {
   const src = path.join(__dirname, '..', 'src');
   const hits = [];
   (function walk(dir) {
@@ -265,7 +265,47 @@ test('K. not wired in yet: no route, controller or service requires dealAccess',
       else if (f.name.endsWith('.js') && f.name !== 'dealAccess.js' && /require\([^)]*dealAccess/.test(fs.readFileSync(p, 'utf8'))) hits.push(p);
     }
   })(src);
-  assert.deepEqual(hits, []);
+  assert.deepEqual(hits.map((p) => path.relative(src, p).split(path.sep).join('/')), ['routes/dealRoutes.js']);
+});
+
+// ── M. The route guard (requireDealAccess) ──────────────────────
+function fakeRes() { return { statusCode: 200, body: undefined, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } }; }
+async function runGuard({ userId, row, env, fails = false }) {
+  const client = { user: { findUnique: async () => { if (fails) throw new Error('db down'); return row || null; } } };
+  const req = { userId }, res = fakeRes();
+  let nextCalled = false;
+  const realError = console.error; console.error = () => {};
+  try { await access.requireDealAccess({ client, env })(req, res, () => { nextCalled = true; }); } finally { console.error = realError; }
+  return { req, res, nextCalled };
+}
+test('M. guard: allowed -> next(), decision attached to req.dealAccess', async () => {
+  const r = await runGuard({ userId: OTHER, row: u('starter'), env: ON });
+  assert.equal(r.nextCalled, true); assert.equal(r.req.dealAccess.dealLimit, 3); assert.equal(r.res.body, undefined);
+});
+test('M. guard: rollout off -> 403, next() never called', async () => {
+  const r = await runGuard({ userId: PILOT, row: u('business'), env: OFF });
+  assert.equal(r.nextCalled, false); assert.equal(r.res.statusCode, 403); assert.equal(r.res.body.error, 'deals_not_available');
+});
+test('M. guard: plan without Deals -> 402 plan_required', async () => {
+  const r = await runGuard({ userId: OTHER, row: u('free'), env: ON });
+  assert.equal(r.nextCalled, false); assert.equal(r.res.statusCode, 402); assert.equal(r.res.body.requiredPlan, 'starter');
+});
+test('M. guard: lookup error -> 500 without detail, never next()', async () => {
+  const r = await runGuard({ userId: PILOT, env: pilotEnv(ON), fails: true });
+  assert.equal(r.nextCalled, false); assert.equal(r.res.statusCode, 500);
+  assert.deepEqual(r.res.body, { error: 'Failed to check Deals access.' });
+});
+test('M. guard: reads the live environment when none is given', async () => {
+  const saved = { e: process.env.DEALS_ENABLED, p: process.env.DEALS_PILOT_USER_IDS };
+  try {
+    delete process.env.DEALS_ENABLED; process.env.DEALS_PILOT_USER_IDS = PILOT;
+    assert.equal((await runGuard({ userId: PILOT, row: u('free') })).nextCalled, true);
+    delete process.env.DEALS_PILOT_USER_IDS;
+    assert.equal((await runGuard({ userId: PILOT, row: u('free') })).res.statusCode, 403);
+  } finally {
+    if (saved.e === undefined) delete process.env.DEALS_ENABLED; else process.env.DEALS_ENABLED = saved.e;
+    if (saved.p === undefined) delete process.env.DEALS_PILOT_USER_IDS; else process.env.DEALS_PILOT_USER_IDS = saved.p;
+  }
 });
 test('K. the legacy planGate is not used by dealAccess', () => {
   const s = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealAccess.js'), 'utf8');

@@ -7,6 +7,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
+const { requireDealAccess } = require('../services/dealAccess');
 const {
   listDeals,
   createDeal,
@@ -36,23 +37,29 @@ const dealImageUpload = multer({
   }
 });
 
+// Access (services/dealAccess.js: rollout + plan) is required to create,
+// upload, publish and place. Viewing, saving drafts, archiving, deleting
+// and removing a placement only need sign-in + ownership, so an owner who
+// lost access can still look after existing deals.
+const dealAccess = requireDealAccess();
+
 router.get('/', requireAuth, listDeals);
 // before '/:id', so "pages" is never read as a deal id
 router.get('/pages', requireAuth, listPages);
-router.post('/', requireAuth, createDeal);
+router.post('/', requireAuth, dealAccess, createDeal);
 router.get('/:id', requireAuth, getDeal);
 router.put('/:id/draft', requireAuth, saveDealDraft);
-router.post('/:id/publish', requireAuth, publishDeal);
+router.post('/:id/publish', requireAuth, dealAccess, publishDeal);
 router.post('/:id/archive', requireAuth, archiveDeal);
 router.delete('/:id', requireAuth, deleteDeal);
 // Placements: where a deal appears. Every target page must belong to the owner.
 router.get('/:id/placements', requireAuth, listPlacements);
-router.post('/:id/placements', requireAuth, addPlacement);
-router.post('/:id/placements/:placementId/publish', requireAuth, publishPlacement);
+router.post('/:id/placements', requireAuth, dealAccess, addPlacement);
+router.post('/:id/placements/:placementId/publish', requireAuth, dealAccess, publishPlacement);
 router.post('/:id/placements/:placementId/archive', requireAuth, archivePlacement);
-// requireAuth runs BEFORE multer parses the upload, so an unauthenticated
-// request is rejected without its body ever being read into memory.
-router.post('/:id/image', requireAuth, (req, res, next) => {
+// requireAuth and the access check run BEFORE multer parses the upload, so a
+// refused request is rejected without its body ever being read into memory.
+router.post('/:id/image', requireAuth, dealAccess, (req, res, next) => {
   dealImageUpload.single('image')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'The image is larger than 5 MB.' : (err.message || 'Upload failed') });
     next();

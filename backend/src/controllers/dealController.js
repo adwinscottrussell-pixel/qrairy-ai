@@ -100,7 +100,7 @@ async function uploadDealImageHandler(req, res) {
         source: 'uploaded', url: stored.displayUrl, publicId: stored.publicId, width: stored.displayWidth, height: stored.displayHeight,
         master: { url: stored.masterUrl, width: stored.masterWidth, height: stored.masterHeight },
       },
-    });
+    }, { allowNewUpload: true });   // the only place a new upload may be attached
     return res.json({ deal });
   } catch (e) { return fail(res, e, 'upload the image'); }
 }

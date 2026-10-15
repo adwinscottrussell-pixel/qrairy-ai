@@ -473,13 +473,29 @@ async function createDealDraft(ownerUserId, body) {
 }
 
 // ── Save draft ──────────────────────────────────────────────────
-async function saveDealDraft(ownerUserId, dealId, body) {
+// An uploaded image can only come in through the image upload (which is
+// access-checked): saving a draft may keep this deal's own live or draft
+// upload, but never attach any other uploaded picture -- not a new one and
+// not one from another deal. options.allowNewUpload is set by the upload
+// handler only.
+function isUploadedImage(image) {
+  return !!image && typeof image === 'object' && (image.source == null || image.source === 'uploaded');
+}
+function isOwnExistingUpload(deal, image) {
+  const own = [deal.image, deal.draftData && deal.draftData.image].filter(isUploadedImage);
+  return own.some((o) => o.publicId === image.publicId && o.url === image.url);
+}
+
+async function saveDealDraft(ownerUserId, dealId, body, options = {}) {
   const deal = await findDealOrThrow(ownerUserId, dealId);
   if (deal.status === 'archived') {
     throw new DealError('Cannot edit an archived deal.', 400);
   }
   const currentMerged = mergeDealState(deal);
   const fields = validateDealDraftPayload(body, currentMerged.offerType);
+  if (fields.image && isUploadedImage(fields.image) && options.allowNewUpload !== true && !isOwnExistingUpload(deal, fields.image)) {
+    throw new DealError('A new picture can only be added with the image upload.', 400);
+  }
 
   // If offerType changes and the caller didn't also send offerDetails,
   // the old type's details would otherwise persist alongside the new

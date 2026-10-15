@@ -210,6 +210,8 @@ process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 
 const service = require('../src/services/dealService');
 
+// Attaching a NEW uploaded picture is the upload handler's job; these service tests stand in for it.
+const UPLOAD = { allowNewUpload: true };
 const TRUSTED_IMAGE = { url: 'https://res.cloudinary.com/test-cloud/image/upload/v1/qraivy-deals/deal1-abcd.jpg', publicId: 'qraivy-deals/deal1-abcd' };
 const FUTURE = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 const FAR_FUTURE = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -498,7 +500,7 @@ test('D. an archived deal can no longer be edited', async () => {
 test('E. a trusted image is normalized to metadata only', async () => {
   resetFixtures();
   const deal = await newDeal();
-  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...TRUSTED_IMAGE, width: '1200', height: 900, source: 'uploaded' } });
+  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...TRUSTED_IMAGE, width: '1200', height: 900, source: 'uploaded' } }, UPLOAD);
   assert.deepEqual(state.image, { source: 'uploaded', ...TRUSTED_IMAGE, width: 1200, height: 900 });
   const cleared = await service.saveDealDraft(ANNA, deal.dealId, { image: null });
   assert.equal(cleared.image, null);
@@ -592,7 +594,7 @@ const MASTER_IMAGE = {
 test('E2. an upload with its master is stored with the 4:3 picture and the master reference + size', async () => {
   resetFixtures();
   const deal = await newDeal();
-  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...MASTER_IMAGE, master: { ...MASTER_IMAGE.master, width: '4032' } } });
+  const state = await service.saveDealDraft(ANNA, deal.dealId, { image: { ...MASTER_IMAGE, master: { ...MASTER_IMAGE.master, width: '4032' } } }, UPLOAD);
   assert.deepEqual(state.image, MASTER_IMAGE);
   assert.deepEqual(service.checkDealImage(MASTER_IMAGE), MASTER_IMAGE);
 });
@@ -607,7 +609,7 @@ test('E2. older uploads without a master keep exactly their old stored shape', (
 test('E2. the master survives saving again and publishing', async () => {
   resetFixtures();
   const deal = await newDeal();
-  await service.saveDealDraft(ANNA, deal.dealId, { image: MASTER_IMAGE });
+  await service.saveDealDraft(ANNA, deal.dealId, { image: MASTER_IMAGE }, UPLOAD);
   dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
   const again = await service.saveDealDraft(ANNA, deal.dealId, { title: 'Renamed' });
   assert.deepEqual(again.image, MASTER_IMAGE, 'saving other fields keeps the image and its master');
@@ -661,7 +663,7 @@ async function publishedDealOn(slugs, extra = {}, owner = ANNA) {
   // image and offerDetails can only be set by saving a draft after creation
   const { image, offerDetails, ...atCreation } = extra;
   const deal = await newDeal(owner, atCreation);
-  if (image !== undefined || offerDetails !== undefined) await service.saveDealDraft(owner, deal.dealId, { ...(image !== undefined ? { image } : {}), ...(offerDetails !== undefined ? { offerDetails } : {}) });
+  if (image !== undefined || offerDetails !== undefined) await service.saveDealDraft(owner, deal.dealId, { ...(image !== undefined ? { image } : {}), ...(offerDetails !== undefined ? { offerDetails } : {}) }, UPLOAD);
   for (const s of slugs) await service.addDealPlacement(owner, deal.dealId, { channel: 'landing_page', targetRef: s });
   await service.publishDeal(owner, deal.dealId, { includePlacements: true });
   return deal;
@@ -889,7 +891,7 @@ test('R. concurrent requests never create a second record: restores and first ad
 test('F. publish promotes the draft into the live columns, sets publishedAt and clears draftData', async () => {
   resetFixtures();
   const deal = await newDeal(ANNA, { offerType: 'percentage_discount' });
-  await service.saveDealDraft(ANNA, deal.dealId, { title: 'Live title', offerDetails: { percentOff: 20 }, image: TRUSTED_IMAGE, endsAt: FUTURE });
+  await service.saveDealDraft(ANNA, deal.dealId, { title: 'Live title', offerDetails: { percentOff: 20 }, image: TRUSTED_IMAGE, endsAt: FUTURE }, UPLOAD);
   dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
 
   const state = await service.publishDeal(ANNA, deal.dealId);
@@ -1219,6 +1221,42 @@ test('S. republishing stays possible: a published deal and a published placement
   await service.archiveDeal(ANNA, deal.dealId);
   const err = await throwsAsync(() => service.publishDeal(ANNA, deal.dealId));
   assert.equal(err && err.status, 400);
+});
+
+// ── U. Uploaded pictures only come in through the upload (Phase 3B.2) ──
+test('U. a draft save cannot attach a new uploaded picture; the upload step (allowNewUpload) can', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  const err = await throwsAsync(() => service.saveDealDraft(ANNA, deal.dealId, { image: TRUSTED_IMAGE }));
+  assert.equal(err && err.status, 400);
+  assert.match(err.message, /only be added with the image upload/);
+  assert.equal(dealRows[0].draftData, null, 'nothing saved');
+  const ok = await service.saveDealDraft(ANNA, deal.dealId, { image: TRUSTED_IMAGE }, UPLOAD);
+  assert.equal(ok.image.publicId, TRUSTED_IMAGE.publicId);
+});
+
+test('U. the deal\'s own draft or live upload may be saved again; another deal\'s upload may not', async () => {
+  resetFixtures();
+  const a = await newDeal();
+  const b = await newDeal();
+  await service.saveDealDraft(ANNA, a.dealId, { image: MASTER_IMAGE }, UPLOAD);
+  dealRows[0].draftData = JSON.parse(JSON.stringify(dealRows[0].draftData));
+  assert.deepEqual((await service.saveDealDraft(ANNA, a.dealId, { image: MASTER_IMAGE, title: 'again' })).image, MASTER_IMAGE, 'own draft upload kept');
+  await service.publishDeal(ANNA, a.dealId);
+  await service.saveDealDraft(ANNA, a.dealId, { image: { source: 'background', backgroundId: 'night' } });
+  assert.deepEqual((await service.saveDealDraft(ANNA, a.dealId, { image: MASTER_IMAGE })).image, MASTER_IMAGE, 'own live upload restored');
+  const copy = await throwsAsync(() => service.saveDealDraft(ANNA, b.dealId, { image: MASTER_IMAGE }));
+  assert.equal(copy && copy.status, 400, 'another deal\'s picture is refused');
+  const sameAssetOtherUrl = await throwsAsync(() => service.saveDealDraft(ANNA, a.dealId, { image: { ...MASTER_IMAGE, url: MASTER_IMAGE.master.url } }));
+  assert.equal(sameAssetOtherUrl && sameAssetOtherUrl.status, 400, 'url must match the stored one too');
+});
+
+test('U. starter, background and removing the picture need no upload step', async () => {
+  resetFixtures();
+  const deal = await newDeal();
+  assert.equal((await service.saveDealDraft(ANNA, deal.dealId, { image: { source: 'starter', starterId: 'travel-greece-01' } })).image.source, 'starter');
+  assert.equal((await service.saveDealDraft(ANNA, deal.dealId, { image: { source: 'background', backgroundId: 'night' } })).image.source, 'background');
+  assert.equal((await service.saveDealDraft(ANNA, deal.dealId, { image: null })).image, null);
 });
 
 test('I. schema defines Deal and DealPlacement with the fields the service writes', () => {

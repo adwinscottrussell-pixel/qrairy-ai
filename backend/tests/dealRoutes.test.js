@@ -38,7 +38,18 @@ let storageFails = false;
 
 let placementRows = [];
 let pageRows = [];
+let userRows = {};
+let userLookups = 0;
+let userLookupFails = false;
+// Deals access: Anna and Ben are pilot accounts for every test except the
+// G section, which sets the rollout variables itself (withRollout).
+const PILOTS = { DEALS_PILOT_USER_IDS: `${ANNA},${BEN}` };
+function setRollout(vars) {
+  delete process.env.DEALS_ENABLED; delete process.env.DEALS_PILOT_USER_IDS;
+  Object.assign(process.env, vars);
+}
 function reset() {
+  setRollout(PILOTS); userRows = {}; userLookups = 0; userLookupFails = false;
   dealRows = []; idSeq = 100; uploads = []; storageConfigured = true; storageFails = false;
   placementRows = [];
   pageRows = [{ slug: 'anna-cafe', userId: ANNA, businessName: 'Anna Café', status: 'live', updatedAt: new Date(2) },
@@ -91,6 +102,8 @@ const mockPrisma = {
     findUnique: async ({ where }) => { const r = pageRows.find((p) => p.slug === where.slug); return r ? { ...r } : null; },
     findMany: async ({ where, select }) => pageRows.filter((p) => p.userId === where.userId).map((p) => Object.fromEntries(Object.keys(select).map((k) => [k, p[k]]))),
   },
+  // Deals access (services/dealAccess.js) reads the User row; none by default = Free.
+  user: { findUnique: async ({ where }) => { userLookups += 1; if (userLookupFails) throw new Error('db down'); return userRows[where.id] ? { ...userRows[where.id] } : null; } },
   business: { findUnique: async () => null },
   businessMember: { findUnique: async () => null },
   $transaction: async (arg) => {
@@ -122,6 +135,7 @@ process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 const realError = console.error;
 console.error = (...a) => { if (!String(a[0]).startsWith('[auth]') && !String(a[0]).startsWith('[DealAPI]')) realError(...a); };
 
+setRollout(PILOTS);
 const router = require('../src/routes/dealRoutes');
 
 // ── Route runner ─────────────────────────────────────────────────
@@ -142,7 +156,7 @@ async function call(method, routePath, { token, params = {}, query = {}, body, f
   const res = fakeRes();
   const handlers = layer.route.stack.map((s) => s.handle);
   for (let i = 0; i < handlers.length; i++) {
-    if (skipUploadParser && i === 1) continue;
+    if (skipUploadParser && i === handlers.length - 2) continue;   // the multer wrapper sits right before the controller
     let nextCalled = false;
     await handlers[i](req, res, () => { nextCalled = true; });
     if (!nextCalled) break;
@@ -503,6 +517,244 @@ test('E. only the server\'s own image kinds are accepted through save-draft', as
     assert.equal((await call('put', '/:id/draft', asAnna({ params: id, body: { image } }))).statusCode, 400, JSON.stringify(image));
   }
   assert.equal((await call('put', '/:id/draft', asAnna({ params: id, body: { image: null } }))).body.deal.image, null);
+});
+
+// ── G. Access control (services/dealAccess.js on the routes) ───
+// Gated: create, upload, publish, add/restore placement, publish placement.
+// Owner-only (no access needed): list, pages, load, save draft, archive,
+// delete, list placements, remove placement.
+const GATED = ['POST /', 'POST /:id/publish', 'POST /:id/placements', 'POST /:id/placements/:placementId/publish', 'POST /:id/image'];
+const OWNER_ONLY = ['GET /', 'GET /pages', 'GET /:id', 'PUT /:id/draft', 'POST /:id/archive', 'DELETE /:id', 'GET /:id/placements', 'POST /:id/placements/:placementId/archive'];
+const routeKey = (l) => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path;
+const snapshot = () => JSON.stringify({ d: dealRows, p: placementRows, u: uploads.length });
+const T = Date.now();
+const DAY = 864e5;
+
+// A published deal on anna-cafe (with its placement) plus a draft deal with a draft placement, made while Anna is a pilot.
+async function annaSetup() {
+  const pub = await create();
+  const pl = await call('post', '/:id/placements', asAnna({ params: { id: pub.dealId }, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }));
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: pub.dealId }, body: { includePlacements: true } }))).statusCode, 200);
+  const draft = await create();
+  return { pub, pid: pl.body.placement.placementId, draft };
+}
+// Every gated action, attempted by `who` on Anna's deals; returns the status codes.
+async function tryGated(who, { pub, pid, draft }) {
+  return {
+    create: (await call('post', '/', who({ body: { title: 'New', offerText: 'New offer' } }))).statusCode,
+    publish: (await call('post', '/:id/publish', who({ params: { id: draft.dealId }, body: {} }))).statusCode,
+    republish: (await call('post', '/:id/publish', who({ params: { id: pub.dealId }, body: { includePlacements: true } }))).statusCode,
+    addPlacement: (await call('post', '/:id/placements', who({ params: { id: draft.dealId }, body: { channel: 'landing_page', targetRef: 'anna-cafe' } }))).statusCode,
+    publishPlacement: (await call('post', '/:id/placements/:placementId/publish', who({ params: { id: pub.dealId, placementId: pid } }))).statusCode,
+    upload: (await call('post', '/:id/image', who({ params: { id: draft.dealId }, file: { buffer: Buffer.from('x') }, skipUploadParser: true }))).statusCode,
+  };
+}
+const all = (codes, status) => Object.values(codes).every((c) => c === status);
+
+test('G. exactly the five creating/publishing/placing/upload routes carry the access check, right after requireAuth', () => {
+  const { requireAuth } = require('../src/middleware/auth');
+  const gated = [], ownerOnly = [];
+  for (const l of router.stack.filter((x) => x.route)) {
+    const names = l.route.stack.map((s) => s.handle);
+    assert.equal(names[0], requireAuth, routeKey(l) + ': requireAuth first');
+    // owner-only: requireAuth + handler; gated: + the access check (the upload also has its multer wrapper)
+    const hasGate = l.route.stack.length === (routeKey(l) === 'POST /:id/image' ? 4 : 3);
+    (hasGate ? gated : ownerOnly).push(routeKey(l));
+  }
+  assert.deepEqual(gated.sort(), GATED.slice().sort());
+  assert.deepEqual(ownerOnly.sort(), OWNER_ONLY.slice().sort());
+  const src = fs.readFileSync(resolve('src', 'routes', 'dealRoutes.js'), 'utf8');
+  assert.equal((src.match(/requireAuth, dealAccess,/g) || []).length, 5);
+  assert.match(src, /'\/:id\/image', requireAuth, dealAccess, \(req, res, next\) => \{\s*dealImageUpload/, 'the access check runs before multer reads the upload');
+});
+
+test('G. rollout off (no variables): every gated action is 403 deals_not_available and changes nothing -- even on Pro', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({}); userRows[ANNA] = { plan: 'pro' };
+  const before = snapshot();
+  const codes = await tryGated(asAnna, s);
+  assert.ok(all(codes, 403), JSON.stringify(codes));
+  const body = (await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y' } }))).body;
+  assert.deepEqual(body, { error: 'deals_not_available', message: 'Deals are not available for this account yet.' });
+  assert.equal(snapshot(), before, 'no deal, placement or upload changed');
+});
+
+test('G. rollout off: the owner can still view, edit drafts, archive, delete and remove placements', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({});
+  assert.equal((await call('get', '/', asAnna())).statusCode, 200);
+  assert.equal((await call('get', '/pages', asAnna())).statusCode, 200);
+  assert.equal((await call('get', '/:id', asAnna({ params: { id: s.pub.dealId } }))).statusCode, 200);
+  assert.equal((await call('get', '/:id/placements', asAnna({ params: { id: s.pub.dealId } }))).statusCode, 200);
+  const edit = await call('put', '/:id/draft', asAnna({ params: { id: s.draft.dealId }, body: { title: 'Edited while closed' } }));
+  assert.equal(edit.statusCode, 200); assert.equal(edit.body.deal.title, 'Edited while closed');
+  const pendingEdit = await call('put', '/:id/draft', asAnna({ params: { id: s.pub.dealId }, body: { description: 'pending' } }));
+  assert.equal(pendingEdit.statusCode, 200); assert.equal(dealRows.find((d) => d.id === s.pub.dealId).status, 'published', 'edits stay pending; nothing is republished');
+  assert.equal((await call('post', '/:id/placements/:placementId/archive', asAnna({ params: { id: s.pub.dealId, placementId: s.pid } }))).statusCode, 200);
+  assert.equal((await call('post', '/:id/archive', asAnna({ params: { id: s.pub.dealId } }))).statusCode, 200);
+  assert.equal((await call('delete', '/:id', asAnna({ params: { id: s.draft.dealId } }))).statusCode, 200);
+  assert.equal(dealRows.length, 1);
+});
+
+test('G. DEALS_ENABLED=true: the plan decides -- Free (no User row) and Free plan get 402 plan_required, nothing changes', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({ DEALS_ENABLED: 'true' });
+  for (const row of [undefined, { plan: 'free' }, { plan: 'gold' }]) {
+    if (row) userRows[ANNA] = row; else delete userRows[ANNA];
+    const before = snapshot();
+    const codes = await tryGated(asAnna, s);
+    assert.ok(all(codes, 402), JSON.stringify(codes));
+    assert.equal(snapshot(), before);
+  }
+  const body = (await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y' } }))).body;
+  assert.equal(body.error, 'plan_required'); assert.equal(body.requiredPlan, 'starter'); assert.equal(body.upgrade, true);
+});
+
+test('G. DEALS_ENABLED=true: Starter, active Trial, annual and enterprise plans may create, publish, place and upload', async () => {
+  for (const row of [{ plan: 'starter' }, { plan: 'trial', trialExpiresAt: new Date(T + DAY) }, { plan: 'pro_annual' }, { plan: 'business', subscriptionStatus: 'past_due' }, { plan: 'enterprise' }]) {
+    reset();
+    const s = await annaSetup();
+    setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
+    const codes = await tryGated(asAnna, s);
+    assert.equal(codes.create, 201, JSON.stringify(row));
+    assert.equal(codes.addPlacement, 201, JSON.stringify(row));   // a new placement is "created"
+    for (const k of ['publish', 'republish', 'publishPlacement', 'upload']) assert.equal(codes[k], 200, row.plan + ' ' + k + ' ' + JSON.stringify(codes));
+  }
+});
+
+test('G. an expired trial or a cancelled / unpaid subscription loses publishing, keeps owner actions', async () => {
+  for (const row of [{ plan: 'trial', trialExpiresAt: new Date(T - DAY) }, { plan: 'pro', subscriptionStatus: 'canceled' }, { plan: 'starter_annual', subscriptionStatus: 'unpaid' }, { plan: 'business', subscriptionStatus: 'incomplete_expired' }]) {
+    reset();
+    const s = await annaSetup();
+    setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = row;
+    const before = snapshot();
+    const codes = await tryGated(asAnna, s);
+    assert.ok(all(codes, 402), JSON.stringify(row) + ' ' + JSON.stringify(codes));
+    assert.equal(snapshot(), before);
+    assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: s.draft.dealId }, body: { title: 'still editable' } }))).statusCode, 200);
+    assert.equal((await call('post', '/:id/archive', asAnna({ params: { id: s.pub.dealId } }))).statusCode, 200);
+  }
+});
+
+test('G. pilot list only: listed accounts get access on any plan; an unlisted account is 403', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({ DEALS_PILOT_USER_IDS: ANNA }); userRows[ANNA] = { plan: 'free' };
+  const codes = await tryGated(asAnna, s);
+  assert.equal(codes.create, 201); assert.equal(codes.upload, 200); assert.equal(codes.publishPlacement, 200);
+  const ben = await call('post', '/', asBen({ body: { title: 'x', offerText: 'y' } }));
+  assert.equal(ben.statusCode, 403); assert.equal(ben.body.error, 'deals_not_available');
+  for (const junk of ['*', 'all', ' , ', 'user_', 'USER_anna']) {
+    setRollout({ DEALS_PILOT_USER_IDS: junk });
+    assert.equal((await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y' } }))).statusCode, 403, junk);
+  }
+  for (const v of ['TRUE', '1', 'yes', ' true']) {
+    setRollout({ DEALS_ENABLED: v }); userRows[ANNA] = { plan: 'pro' };
+    assert.equal((await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y' } }))).statusCode, 403, 'DEALS_ENABLED=' + JSON.stringify(v));
+  }
+});
+
+test('G. ownership still applies with access: another account gets 404 on Anna\'s deals and changes nothing', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({ DEALS_ENABLED: 'true' }); userRows[BEN] = { plan: 'pro' };
+  const before = snapshot();
+  const codes = await tryGated(asBen, s);
+  delete codes.create;   // creating is Ben's own deal
+  assert.ok(all(codes, 404), JSON.stringify(codes));
+  assert.equal(dealRows.filter((d) => d.ownerUserId === ANNA).map((d) => d.status).join(), JSON.parse(before).d.map((d) => d.status).join());
+  assert.equal(uploads.length, JSON.parse(before).u);
+  for (const [m, p] of [['put', '/:id/draft'], ['post', '/:id/archive'], ['delete', '/:id'], ['get', '/:id']]) {
+    assert.equal((await call(m, p, asBen({ params: { id: s.pub.dealId }, body: { title: 'x' } }))).statusCode, 404, m + ' ' + p);
+  }
+});
+
+test('G. without access another account is refused before ownership is even looked at (403, no deal lookup)', async () => {
+  reset();
+  const s = await annaSetup();
+  setRollout({});
+  let dealReads = 0;
+  const orig = mockPrisma.deal.findUnique;
+  mockPrisma.deal.findUnique = async (q) => { dealReads += 1; return orig(q); };
+  try {
+    assert.equal((await call('post', '/:id/publish', asBen({ params: { id: s.pub.dealId }, body: {} }))).statusCode, 403);
+    assert.equal(dealReads, 0);
+  } finally { mockPrisma.deal.findUnique = orig; }
+});
+
+test('G. no token: 401 before the access check (no User lookup)', async () => {
+  reset();
+  setRollout({ DEALS_ENABLED: 'true' });
+  const before = userLookups;
+  for (const key of GATED) {
+    const [m, p] = key.split(' ');
+    assert.equal((await call(m.toLowerCase(), p, { params: { id: 'x', placementId: 'y' }, body: {} })).statusCode, 401, key);
+  }
+  assert.equal(userLookups, before);
+});
+
+test('G. a failing access lookup is a 500 without detail and never lets the request through', async () => {
+  reset();
+  const s = await annaSetup();
+  userLookupFails = true;
+  const before = snapshot();
+  const res = await call('post', '/', asAnna({ body: { title: 'x', offerText: 'y' } }));
+  assert.equal(res.statusCode, 500); assert.deepEqual(res.body, { error: 'Failed to check Deals access.' });
+  const codes = await tryGated(asAnna, s);
+  assert.ok(all(codes, 500), JSON.stringify(codes));
+  assert.equal(snapshot(), before);
+});
+
+test('G. draft saves cannot attach an uploaded picture: only the upload can; the deal\'s own picture may be kept', async () => {
+  reset();
+  const a = await create();
+  const b = await create();
+  const up = await call('post', '/:id/image', asAnna({ params: { id: a.dealId }, file: { buffer: Buffer.from('x') }, skipUploadParser: true }));
+  assert.equal(up.statusCode, 200);
+  const own = up.body.deal.image;
+  // keeping the deal's own upload (the Deal Builder sends it back on every save)
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: own, title: 'kept' } }))).statusCode, 200);
+  // a different, perfectly valid-looking upload of the same account: refused
+  const forged = { ...own, publicId: own.publicId.replace(/-\d+$/, '-999'), url: own.url.replace(/-\d+\.jpg$/, '-999.jpg') };
+  forged.master = { ...own.master, url: own.master.url.replace(/-\d+\.jpg$/, '-999.jpg') };
+  const r1 = await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: forged } }));
+  assert.equal(r1.statusCode, 400); assert.match(r1.body.error, /only be added with the image upload/);
+  // copying deal A's upload into deal B: refused
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: b.dealId }, body: { image: own } }))).statusCode, 400);
+  // after publishing A, its live upload can be kept or restored in the draft
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: a.dealId }, body: {} }))).statusCode, 200);
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: { source: 'background', backgroundId: 'night' } } }))).statusCode, 200);
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: own } }))).statusCode, 200);
+  // starter / background / none stay free choices
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: b.dealId }, body: { image: { source: 'starter', starterId: 'travel-greece-01' } } }))).statusCode, 200);
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: b.dealId }, body: { image: null } }))).statusCode, 200);
+  assert.equal(uploads.length, 1);
+});
+
+test('G. after losing access the draft rule still holds: own picture kept, nothing new attached', async () => {
+  reset();
+  const a = await create();
+  const own = (await call('post', '/:id/image', asAnna({ params: { id: a.dealId }, file: { buffer: Buffer.from('x') }, skipUploadParser: true }))).body.deal.image;
+  setRollout({});
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: own, title: 'edited' } }))).statusCode, 200);
+  const forged = { ...own, publicId: own.publicId + 'x', url: own.url.replace('.jpg', 'x.jpg') };
+  delete forged.master;
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: a.dealId }, body: { image: forged } }))).statusCode, 400);
+  assert.equal((await call('post', '/:id/image', asAnna({ params: { id: a.dealId }, file: { buffer: Buffer.from('x') }, skipUploadParser: true }))).statusCode, 403);
+  assert.equal(uploads.length, 1);
+});
+
+test('G. refused uploads never reach the parser or storage (403 before multer)', async () => {
+  reset();
+  const a = await create();
+  setRollout({});
+  // the real multer wrapper is NOT skipped here: the access check must answer first
+  const res = await call('post', '/:id/image', asAnna({ params: { id: a.dealId } }));
+  assert.equal(res.statusCode, 403);
+  assert.equal(uploads.length, 0);
 });
 
 // ── F. Errors and wiring ───────────────────────────────────────

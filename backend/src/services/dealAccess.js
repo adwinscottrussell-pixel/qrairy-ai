@@ -1,6 +1,6 @@
 // ============================================================
-// dealAccess.js — who may use QRAIVY Deals (Phase 3B.1: foundation only;
-// not attached to any route yet).
+// dealAccess.js — who may use QRAIVY Deals. requireDealAccess() guards the
+// Deals routes that create, upload, publish or place (routes/dealRoutes.js).
 //
 // Two separate questions, both required:
 //
@@ -144,8 +144,30 @@ function limitResponse(access, currentCount) {
   };
 }
 
+// Route guard for the Deals actions that need access (create, upload,
+// publish, add/restore and publish placements). Runs after requireAuth.
+// Viewing, saving drafts, archiving, deleting and removing placements do
+// NOT use it, so an owner who lost access can still look after their deals.
+// Refuses before any route code runs; an error while checking is a 500,
+// never a pass.
+function requireDealAccess({ client, env } = {}) {
+  return async (req, res, next) => {
+    try {
+      const access = await getDealAccess(req.userId, { client, env: env || process.env });
+      req.dealAccess = access;
+      const denial = denialFor(access);
+      if (denial) return res.status(denial.status).json(denial.body);
+      return next();
+    } catch (e) {
+      console.error('[deals] access check failed:', e && e.message);
+      return res.status(500).json({ error: 'Failed to check Deals access.' });
+    }
+  };
+}
+
 module.exports = {
   PILOT_DEAL_LIMIT,
+  requireDealAccess,
   UPGRADE_PLAN,
   isClerkUserId,
   readRollout,
