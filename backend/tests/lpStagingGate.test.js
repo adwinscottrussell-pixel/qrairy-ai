@@ -134,11 +134,11 @@ async function through(gate, method, url, user) {
   return { passed, status: res.statusCode, code: res.body && res.body.code };
 }
 
-test('B. exactly six kinds of request are allowed, and only two of them without sign-in beyond page playback', () => {
+test('B. exactly seven kinds of request are allowed, and only two of them without sign-in beyond page playback and its welcome screen', () => {
   // ...plus the owner Deals routes, all "user" (dealsPreviewSafety.test.js)
-  assert.deepEqual(ALLOWED_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
-  assert.ok(ALLOWED_ROUTES.slice(6).every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the six is a signed-in Deals route');
-  const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
+  assert.deepEqual(ALLOWED_ROUTES.slice(0, 7).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
+  assert.ok(ALLOWED_ROUTES.slice(7).every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the seven is a signed-in Deals route');
+  const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/lp/welcome/casa-lumi-ab1'], ['HEAD', '/lp/welcome/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
   for (const [m, p] of allowed) assert.ok(matchRoute(m, p), m + ' ' + p);
 });
 
@@ -150,7 +150,7 @@ test('B. everything else is refused before any route code or sign-in check runs'
     // wallet, passes
     ['GET', '/lp/wallet/apple/s'], ['GET', '/lp/wallet/google/s'], ['GET', '/lp/wallet-hero/s'], ['GET', '/wallet/x'], ['POST', '/pass/v1/devices/a/registrations/b/c'],
     // stamp, loyalty, rewards, staff
-    ['GET', '/stamp/s/tok'], ['POST', '/stamp/s/tok/confirm'], ['POST', '/stamp/s/customer'], ['GET', '/redeem/s/tok'], ['POST', '/redeem/s/tok/confirm'], ['GET', '/lp/card/s'], ['GET', '/lp/nfc-token/s'], ['GET', '/lp/stamp/token/s'], ['POST', '/lp/stamp/settings/s'], ['GET', '/lp/stamp/settings/s'], ['GET', '/lp/welcome/s'], ['GET', '/loyalty/x'], ['GET', '/tier/x'], ['POST', '/lp/staff-pin/s'], ['POST', '/lp/staff-pin/s/verify'], ['GET', '/lp/staff-pin/s/status'],
+    ['GET', '/stamp/s/tok'], ['POST', '/stamp/s/tok/confirm'], ['POST', '/stamp/s/customer'], ['GET', '/redeem/s/tok'], ['POST', '/redeem/s/tok/confirm'], ['GET', '/lp/card/s'], ['GET', '/lp/nfc-token/s'], ['GET', '/lp/stamp/token/s'], ['POST', '/lp/stamp/settings/s'], ['GET', '/lp/stamp/settings/s'], ['GET', '/loyalty/x'], ['GET', '/tier/x'], ['POST', '/lp/staff-pin/s'], ['POST', '/lp/staff-pin/s/verify'], ['GET', '/lp/staff-pin/s/status'],
     // customer communication and customer data
     ['POST', '/lp/push/s'], ['GET', '/lp/push/s/count'], ['GET', '/lp/push/s/history'], ['POST', '/lp/webpush/subscribe/s'], ['GET', '/lp/webpush/vapid-key/s'], ['POST', '/lp/subscribe/s'], ['GET', '/lp/subscribers/s'], ['GET', '/customers/x'],
     // uploads, assistant, QR codes, dashboards, everything about other pages
@@ -209,14 +209,29 @@ test('B. no router mounted ahead of the landing page router can answer an allowe
   assert.ok(!/method-override|X-HTTP-Method/i.test(index), 'the method cannot be overridden by a header');
 });
 
-test('B. every route the landing page router really has is refused, except the four staging needs', () => {
+test('B. every route the landing page router really has is refused, except the five staging needs', () => {
   const seed = (file, exports) => { const f = require.resolve(file); if (!require.cache[f]) require.cache[f] = { id: f, filename: f, loaded: true, exports }; };
   seed(path.join(SRC, 'utils', 'prismaClient.js'), {});
   const router = require(resolveSrc('routes', 'lpRoutes.js'));
   const real = router.stack.filter((l) => l.route).flatMap((l) => Object.keys(l.route.methods).map((m) => [m.toUpperCase(), l.route.path]));
   assert.ok(real.length >= 34);
   const allowedHere = real.filter(([m, p]) => matchRoute(m, p.replace(/:(\w+)/g, 'x')));
-  assert.deepEqual(allowedHere.map(([m, p]) => m + ' ' + p).sort(), ['GET /api/lp/:slug', 'GET /lp/:slug', 'POST /lp', 'POST /lp/voice/preview/:slug']);
+  assert.deepEqual(allowedHere.map(([m, p]) => m + ' ' + p).sort(), ['GET /api/lp/:slug', 'GET /lp/:slug', 'GET /lp/welcome/:slug', 'POST /lp', 'POST /lp/voice/preview/:slug']);
+});
+
+test('B. the welcome screen opens nothing else: its wallet, push and look-alike paths stay refused', () => {
+  for (const [m, p] of [['GET', '/lp/welcome/s'], ['HEAD', '/lp/welcome/s']]) assert.ok(matchRoute(m, p), m + ' ' + p);
+  for (const [m, p] of [['POST', '/lp/welcome/s'], ['PUT', '/lp/welcome/s'], ['DELETE', '/lp/welcome/s'],
+    ['GET', '/lp/welcome/'], ['GET', '/lp/welcome/s/x'], ['GET', '/lp/welcome/../wallet/apple/s'], ['GET', '/lp/welcome/s/../../wallet/apple/s'], ['GET', '/lp/welcome/%2e%2e'], ['GET', '/lp/welcome/-s'],
+    ['GET', '/lp/wallet/apple/s'], ['GET', '/lp/wallet/google/s'], ['GET', '/lp/wallet-hero/s'], ['POST', '/lp/webpush/subscribe/s'], ['GET', '/lp/webpush/vapid-key/s'], ['POST', '/lp/subscribe/s'], ['GET', '/manifest/s'], ['GET', '/lp/Welcome/s/../x']]) {
+    assert.equal(matchRoute(m, p), null, m + ' ' + p);
+  }
+  const route = matchRoute('GET', '/lp/welcome/s');
+  assert.equal(route.access, 'public');
+  assert.equal(route.what, 'customer welcome screen (read-only)');
+  // "/lp/welcome" alone is just a customer page whose slug is "welcome" (unchanged rule)
+  assert.equal(matchRoute('GET', '/lp/welcome').what, 'customer page (welcome audio playback, phone preview)');
+  assert.equal(ALLOWED_ROUTES.filter((r) => r.path.source.includes('welcome')).length, 1, 'one entry');
 });
 
 // ── C. The gate: who gets through ──────────────────────────────

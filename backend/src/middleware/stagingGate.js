@@ -10,8 +10,8 @@
  * route code runs.
  *
  * The gate never replaces a route's own checks, it adds to them:
- *   public  no sign-in. Only what a visitor needs to load a page and
- *           play its welcome audio.
+ *   public  no sign-in. Only what a visitor needs to load a page, play
+ *           its welcome audio and see its welcome screen (GET only).
  *   user    a valid Clerk sign-in (the same requireAuth production uses)
  *           AND the account is on the staging allowlist.
  *   owner   as user, and the page must belong to that account. Used for
@@ -36,6 +36,9 @@ const ALLOWED_ROUTES = [
   { method: 'GET',  path: /^\/health$/,                                   access: 'public', what: 'health check' },
   { method: 'GET',  path: /^\/sw\.js$/,                                   access: 'public', what: 'the customer page\'s own worker script' },
   { method: 'GET',  path: new RegExp('^/lp/' + SLUG + '$'),               access: 'public', what: 'customer page (welcome audio playback, phone preview)' },
+  // Phase 5.5B: the welcome screen a first visit is sent to. Read-only HTML;
+  // its wallet and push buttons lead to routes that stay refused here.
+  { method: 'GET',  path: new RegExp('^/lp/welcome/' + SLUG + '$'),       access: 'public', what: 'customer welcome screen (read-only)' },
   { method: 'GET',  path: new RegExp('^/api/lp/' + SLUG + '$'),           access: 'owner',  what: 'editor: load the page' },
   { method: 'POST', path: /^\/lp$/,                                       access: 'user',   what: 'editor: publish / save the page' },
   { method: 'POST', path: new RegExp('^/lp/voice/preview/' + SLUG + '$'), access: 'user',   what: 'editor: voice audio preview' },

@@ -35,8 +35,14 @@ function test(name, fn) { queue.push([name, fn]); }
 const { ALLOWED_ROUTES, matchRoute, createStagingGate } = require('../src/middleware/stagingGate');
 const ALICE = 'user_aliceAAAAAAAA', MALLORY = 'user_malloryMMMMMM';
 
+// Phase 5.5B adds one public, read-only route: the welcome screen. It is set
+// aside here so the guarantees about the original routes stay exactly as they were.
+const WELCOME_ROUTE = 'GET public ^\\/lp\\/welcome\\/[A-Za-z0-9][A-Za-z0-9_-]{0,119}$';
+const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE);
+
 test('A. the original six staging routes are exactly as before', () => {
-  assert.deepEqual(ALLOWED_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access} ${r.path.source}`), [
+  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1, 'exactly one welcome-screen route on top');
+  assert.deepEqual(BASE_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access} ${r.path.source}`), [
     'GET public ^\\/health$',
     'GET public ^\\/sw\\.js$',
     'GET public ^\\/lp\\/[A-Za-z0-9][A-Za-z0-9_-]{0,119}$',
@@ -47,8 +53,8 @@ test('A. the original six staging routes are exactly as before', () => {
 });
 
 test('A. exactly the owner Deals routes are added, all "user" (sign-in + allowlist)', () => {
-  const deals = ALLOWED_ROUTES.slice(6);
-  assert.equal(ALLOWED_ROUTES.length, 18);
+  const deals = BASE_ROUTES.slice(6);
+  assert.equal(BASE_ROUTES.length, 18);
   assert.deepEqual(deals.map((r) => r.method + ' ' + r.access), ['GET user', 'POST user', 'GET user', 'GET user', 'PUT user', 'POST user', 'POST user', 'DELETE user', 'POST user', 'GET user', 'POST user', 'POST user']);
   const allowed = [['GET', '/deals'], ['POST', '/deals'], ['GET', '/deals/pages'], ['GET', '/deals/cmabc123'], ['PUT', '/deals/cmabc123/draft'],
     ['POST', '/deals/cmabc123/publish'], ['POST', '/deals/cmabc123/archive'], ['DELETE', '/deals/cmabc123'], ['POST', '/deals/cmabc123/image'],
