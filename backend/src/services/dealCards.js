@@ -125,11 +125,28 @@ function media(image, pageOrigin, t) {
 // so they win over those rules. All text on the card reaches at least 7:1.
 // The heading sits on the page background, so it follows the page theme:
 // dark orange on light (4.5:1+), the theme's white in dark mode.
+const DEALS_ANCHOR = 'qraivy-deals';
+// One card's anchor: #qraivy-deal-<deal id>. Only well-formed ids get one.
+const DEAL_ANCHOR_PREFIX = 'qraivy-deal-';
+const DEAL_ID = /^[A-Za-z0-9_-]{1,64}$/;
+function cardAnchor(d) { return d && typeof d.id === 'string' && DEAL_ID.test(d.id) ? ' id="' + DEAL_ANCHOR_PREFIX + d.id + '"' : ''; }
+// Our own links (#qraivy-deals, #qraivy-deal-<id>) land on their target even
+// when content above it grows after the first jump (images, fonts -- seen on
+// phones): aligned again once the page has loaded, and shortly after. A link
+// to a deal that is not shown (ended, not started, beyond the three newest)
+// lands on the offers instead of the top of the page. Other anchors are left
+// alone. Fixed text, no data from the request.
+const ANCHOR_FALLBACK = '<script>(function(){function target(){var h=location.hash||"";' +
+  'if(h==="#' + DEALS_ANCHOR + '")return document.getElementById("' + DEALS_ANCHOR + '");if(h.indexOf("#' + DEAL_ANCHOR_PREFIX + '")!==0)return null;' +
+  'return document.getElementById(h.slice(1))||document.getElementById("' + DEALS_ANCHOR + '");}' +
+  'function go(){var t=target();if(t)t.scrollIntoView();}' +
+  'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",go);else go();' +
+  'window.addEventListener("load",function(){go();setTimeout(go,400);});window.addEventListener("hashchange",go);})();</script>';
 const STYLE = '<style>' +
-  '.qd-deals{max-width:560px;margin:0 auto 32px;padding:0 20px;font-family:inherit}' +
+  '.qd-deals{max-width:560px;margin:0 auto 32px;padding:0 20px;font-family:inherit;scroll-margin-top:80px}' +
   '.qd-heading{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#c2410c;margin:0 0 12px}' +
   '.qd-list{display:grid;gap:14px}' +
-  '.qd-card{background:#fff;border:1px solid #ececec;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.06)}' +
+  '.qd-card{background:#fff;border:1px solid #ececec;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.06);scroll-margin-top:80px}' +
   '.qd-media{position:relative;aspect-ratio:4/3;background:#f2f2f2;background-size:cover}' +
   '.qd-media img{display:block;width:100%;height:100%;object-fit:cover}' +
   '.qd-ai{position:absolute;left:8px;bottom:8px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600;line-height:1.4}' +
@@ -150,12 +167,14 @@ function renderDealCards(deals, { lang = 'en', pageOrigin = '', now = Date.now()
   const t = TEXT[lang] || TEXT.en;
   const list = (Array.isArray(deals) ? deals : []).filter((d) => d && d.title && d.offerText && stillRunning(d, now)).slice(0, MAX_CARDS);
   if (!list.length) return '';
-  const cards = list.map((d) => '<article class="qd-card">' + media(d.image, pageOrigin, t) +
+  const cards = list.map((d) => '<article class="qd-card"' + cardAnchor(d) + '>' + media(d.image, pageOrigin, t) +
     '<div class="qd-body"><p class="qd-offer">' + esc(d.offerText) + '</p><h3 class="qd-name">' + esc(d.title) + '</h3>' +
     (d.description ? '<p class="qd-desc">' + esc(d.description) + '</p>' : '') +
     (d.endsAt && formatDate(d.endsAt, lang) ? '<p class="qd-valid">' + esc(t.validUntil.replace('{date}', formatDate(d.endsAt, lang))) + '</p>' : '') +
     '</div></article>').join('');
-  return '<section class="qd-deals" aria-label="' + esc(t.heading) + '">' + STYLE + '<h2 class="qd-heading">' + esc(t.heading) + '</h2><div class="qd-list">' + cards + '</div></section>';
+  // ids: stable anchors, so the Deals admin can link straight to the offers
+  // (…/lp/<slug>#qraivy-deals) or to one deal (…#qraivy-deal-<id>)
+  return '<section class="qd-deals" id="' + DEALS_ANCHOR + '" aria-label="' + esc(t.heading) + '">' + STYLE + '<h2 class="qd-heading">' + esc(t.heading) + '</h2><div class="qd-list">' + cards + '</div>' + ANCHOR_FALLBACK + '</section>';
 }
 
 // Places the section before the page's footer (or before </body>); unchanged if neither exists.
@@ -188,4 +207,4 @@ async function injectActiveDeals(html, page, opts = {}) {
   }
 }
 
-module.exports = { injectActiveDeals, renderDealCards, insertSection, forgetPageDeals, isEnabled, BACKGROUND_CSS, DEAL_CARDS_CACHE_MS, MAX_CARDS, CACHE_PREFIX };
+module.exports = { injectActiveDeals, renderDealCards, insertSection, forgetPageDeals, isEnabled, BACKGROUND_CSS, DEAL_CARDS_CACHE_MS, MAX_CARDS, CACHE_PREFIX, DEALS_ANCHOR, DEAL_ANCHOR_PREFIX };

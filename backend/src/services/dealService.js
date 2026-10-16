@@ -25,7 +25,7 @@
 const prisma = require('../utils/prismaClient');
 const { hasCapacity } = require('../config/plans');
 const { ACTIVE_DEAL_IMAGE_FOLDER, DEAL_BACKGROUNDS, findDealStarterImage } = require('../data/dealImages');
-const { forgetPageDeals } = require('./dealCards');
+const { forgetPageDeals, isEnabled: dealCardsEnabled } = require('./dealCards');
 const { getDealAccess } = require('./dealAccess');
 
 class DealError extends Error {
@@ -886,14 +886,33 @@ async function publishDealPlacement(ownerUserId, dealId, placementId) {
 
 // ── Owner's landing pages (for choosing where a deal appears) ─────
 // Only the signed-in owner's own pages; only what a page picker needs.
-async function listOwnerLandingPages(ownerUserId, client = prisma) {
+// shownDealIds: the deals each page shows customers right now -- the same
+// decision that renders the cards (activeDealsForPage: running deals, newest
+// first, at most three, while the owner has Deals access); empty while
+// landing-page cards are switched off. The Deal Builder offers a link to a
+// deal on a page only when that page lists it here.
+async function listOwnerLandingPages(ownerUserId, client = prisma, now = new Date()) {
   requireOwner(ownerUserId);
   const pages = await client.landingPage.findMany({
     where: { userId: ownerUserId },
     select: { slug: true, businessName: true, status: true, updatedAt: true },
     orderBy: { updatedAt: 'desc' },
   });
-  return pages.map((p) => ({ slug: p.slug, name: p.businessName, live: p.status !== 'draft' }));
+  const withPlacements = new Set();
+  if (dealCardsEnabled() && pages.length) {
+    const placed = await client.dealPlacement.findMany({
+      where: { channel: 'landing_page', status: 'published', targetRef: { in: pages.map((p) => p.slug) } },
+      select: { targetRef: true },
+    });
+    placed.forEach((p) => withPlacements.add(p.targetRef));
+  }
+  const out = [];
+  for (const p of pages) {
+    const live = p.status !== 'draft';
+    const shown = live && withPlacements.has(p.slug) ? await activeDealsForPage(p.slug, now, client) : [];
+    out.push({ slug: p.slug, name: p.businessName, live, shownDealIds: shown.map((d) => d.id) });
+  }
+  return out;
 }
 
 // ── Public: the deals a customer may see on a landing page ───────
@@ -927,6 +946,9 @@ function toPublicImage(image) {
 }
 function toPublicDeal(deal) {
   return {
+    // the card's anchor on the page (#qraivy-deal-<id>), so a deal can be linked
+    // directly; only ever public for a deal that is shown right now
+    id: deal.id,
     title: deal.title,
     offerText: deal.offerText,
     description: deal.description || null,

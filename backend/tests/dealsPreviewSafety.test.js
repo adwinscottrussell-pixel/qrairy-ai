@@ -207,6 +207,17 @@ test('C. every other host is blocked: no API at all', () => {
   }
 });
 
+test('C. customer pages are linked where customers see them -- never the admin site, never production from a preview', () => {
+  const at = (h, o, l) => { const ctx = { window: { location: { hostname: h, origin: o || 'https://' + h } }, URL }; if (l !== undefined) ctx.window.QRAIVY_DEALS_LOCAL_API = l; vm.runInNewContext(read('frontend/public/js/deals-routing.js'), ctx); return ctx.window.QRAIVY_DEALS_PAGE_ORIGIN; };
+  for (const h of ['www.qraivy.com', 'qraivy.com']) assert.equal(at(h), 'https://www.qraivy.com', h);
+  const preview = at('deals-preview.qraivy.com');
+  assert.equal(preview, 'https://qraivy-deals-api-deals-preview.up.railway.app', 'the isolated API serves the preview pages');
+  assert.ok(!PRODUCTION_HOSTS.includes(new URL(preview).hostname) && new URL(preview).hostname !== 'deals-preview.qraivy.com', 'not production, not the admin site (its /lp goes to production)');
+  assert.equal(at('localhost', 'http://localhost:5178', 'http://localhost:5190'), 'http://localhost:5190');
+  for (const h of ['preview.qraivy.com', 'qraivy-xyz.vercel.app', 'evil.com', '']) assert.equal(at(h), '', h || '(empty)');
+  assert.equal(at('localhost', 'http://localhost:5178', 'https://api.qraivy.com'), '', 'blocked local: no links');
+});
+
 test('C. a local test server is used only when it is on this machine', () => {
   assert.deepEqual({ ...routingFor('127.0.0.1', 'http://127.0.0.1:5190').routing }, { mode: 'local', api: 'http://127.0.0.1:5190', blocked: false });
   assert.deepEqual({ ...routingFor('localhost', 'http://localhost:5178', 'http://localhost:5190/').routing }, { mode: 'local', api: 'http://localhost:5190', blocked: false });

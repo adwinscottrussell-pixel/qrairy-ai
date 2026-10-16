@@ -427,7 +427,7 @@ test('P. GET /deals/pages lists only the signed-in owner\'s pages', async () => 
   reset();
   const res = await call('get', '/pages', asAnna());
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body.pages, [{ slug: 'anna-cafe', name: 'Anna Café', live: true }, { slug: 'anna-draft', name: 'Anna Draft', live: false }]);
+  assert.deepEqual(res.body.pages, [{ slug: 'anna-cafe', name: 'Anna Café', live: true, shownDealIds: [] }, { slug: 'anna-draft', name: 'Anna Draft', live: false, shownDealIds: [] }]);
   assert.deepEqual((await call('get', '/pages', asBen())).body.pages.map((p) => p.slug), ['ben-bikes']);
 });
 

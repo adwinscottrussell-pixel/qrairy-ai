@@ -18,7 +18,7 @@ const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
-const ctx = { window: {} };
+const ctx = { window: {}, URL };
 vm.runInNewContext(read('frontend/public/js/deal-page-picker.js'), ctx);
 const P = ctx.window.QraivyDealPagePicker;
 const plain = (v) => JSON.parse(JSON.stringify(v));
@@ -154,6 +154,66 @@ test('A. a refused or odd response publishes nothing locally: the page stays "sa
   assert.equal(by.bar.status, 'draft');
 });
 
+test('A. links: offers (#qraivy-deals), one deal (#qraivy-deal-<id>), and the owner\'s view with ?preview=1', () => {
+  const O = 'https://www.qraivy.com';
+  assert.equal(P.pageUrl(O, 'cafe'), 'https://www.qraivy.com/lp/cafe#qraivy-deals');
+  assert.equal(P.pageUrl(O, 'cafe', { dealId: 'cmvb63y9m0001skg2zmexxzkf' }), 'https://www.qraivy.com/lp/cafe#qraivy-deal-cmvb63y9m0001skg2zmexxzkf');
+  assert.equal(P.pageUrl(O, 'cafe', { preview: true }), 'https://www.qraivy.com/lp/cafe?preview=1#qraivy-deals');
+  assert.equal(P.pageUrl(O, 'cafe', { dealId: 'd1', preview: true }), 'https://www.qraivy.com/lp/cafe?preview=1#qraivy-deal-d1');
+  assert.equal(P.pageUrl('https://qraivy-deals-api-deals-preview.up.railway.app', 'qraivy-deals-demo'), 'https://qraivy-deals-api-deals-preview.up.railway.app/lp/qraivy-deals-demo#qraivy-deals');
+  assert.equal(P.pageUrl('http://localhost:5190', 'cafe'), 'http://localhost:5190/lp/cafe#qraivy-deals', 'local test server');
+  assert.equal(P.DEALS_ANCHOR, 'qraivy-deals'); assert.equal(P.DEAL_ANCHOR_PREFIX, 'qraivy-deal-');
+  for (const bad of ['', null, 'http://www.qraivy.com', 'javascript:alert(1)', 'https://www.qraivy.com/admin', 'not a url']) assert.equal(P.pageUrl(bad, 'cafe'), '', String(bad));
+  for (const bad of ['', '../admin', 'a b', 'x/y', '-x', '<b>', undefined]) assert.equal(P.pageUrl(O, bad), '', String(bad));
+  for (const bad of ['', 'a b', 'x"y', '<b>', 'a'.repeat(65), 7, {}]) assert.equal(P.pageUrl(O, 'cafe', { dealId: bad }), '', 'deal id ' + JSON.stringify(bad));
+});
+
+test('A. shared links never carry preview; the View link always does (so viewing never counts as a visit)', () => {
+  const deal = { id: 'd1', status: 'published', displayStatus: 'published' };
+  const [e] = P.dealLinks(deal, [{ channel: 'landing_page', targetRef: 'cafe', status: 'published' }], [{ slug: 'cafe', name: 'Café', live: true, shownDealIds: ['d1'] }], 'https://www.qraivy.com');
+  assert.ok(!e.offersUrl.includes('preview') && !e.dealUrl.includes('preview'), 'what customers get is the normal public address');
+  assert.ok(/\?preview=1#/.test(e.viewUrl), 'the owner view is a preview');
+});
+
+const LINK_PAGES = [{ slug: 'nord', name: 'Café Nord', live: true, shownDealIds: ['d1'] }, { slug: 'sued', name: 'Café Süd', live: true, shownDealIds: ['x1', 'x2', 'x3'] },
+  { slug: 'leer', name: 'Leer', live: true, shownDealIds: [] }, { slug: 'entwurf', name: 'Entwurf', live: false, shownDealIds: [] }];
+const LINK_PLS = (...slugs) => slugs.map((s) => ({ channel: 'landing_page', targetRef: s, status: 'published' }));
+const RUNNING = { id: 'd1', status: 'published', displayStatus: 'published', startsAt: null };
+
+test('A. dealLinks: one entry per published page, by name; the deal link only where that page shows the deal', () => {
+  const out = plain(P.dealLinks(RUNNING, LINK_PLS('sued', 'nord', 'nord'), LINK_PAGES, 'https://www.qraivy.com'));
+  assert.deepEqual(out.map((e) => [e.slug, e.state]), [['nord', 'shown'], ['sued', 'not-shown']], 'sorted by name, a page once');
+  assert.equal(out[0].dealUrl, 'https://www.qraivy.com/lp/nord#qraivy-deal-d1');
+  assert.equal(out[0].offersUrl, 'https://www.qraivy.com/lp/nord#qraivy-deals');
+  assert.equal(out[0].viewUrl, 'https://www.qraivy.com/lp/nord?preview=1#qraivy-deal-d1');
+  assert.equal(out[1].dealUrl, '', 'Café Süd shows three newer offers: no deal link (three-card limit)');
+  assert.equal(out[1].offersUrl, 'https://www.qraivy.com/lp/sued#qraivy-deals', 'but its offers link');
+  assert.equal(out[1].viewUrl, 'https://www.qraivy.com/lp/sued?preview=1#qraivy-deals');
+});
+
+test('A. dealLinks: a page that shows no offers right now (cards off or no access) gets no link at all', () => {
+  const [e] = plain(P.dealLinks(RUNNING, LINK_PLS('leer'), LINK_PAGES, 'https://www.qraivy.com'));
+  assert.deepEqual([e.state, e.offersUrl, e.dealUrl, e.viewUrl], ['not-shown', '', '', '']);
+  const [m] = plain(P.dealLinks(RUNNING, LINK_PLS('nord'), [{ slug: 'nord', name: 'N', live: true }], 'https://www.qraivy.com'));
+  assert.equal(m.dealUrl + m.offersUrl, '', 'an older server without shownDealIds: no links, never a guess');
+});
+
+test('A. dealLinks: scheduled shows only its start; expired, archived, draft and unpublished placements give nothing', () => {
+  const sched = plain(P.dealLinks({ id: 'd1', status: 'published', displayStatus: 'scheduled', startsAt: '2026-11-01T09:00:00.000Z' }, LINK_PLS('nord'), LINK_PAGES, 'https://www.qraivy.com'));
+  assert.deepEqual(sched.map((e) => [e.state, e.offersUrl, e.dealUrl, e.viewUrl, e.startsAt]), [['scheduled', '', '', '', '2026-11-01T09:00:00.000Z']]);
+  for (const d of [{ id: 'd1', status: 'published', displayStatus: 'expired' }, { id: 'd1', status: 'archived', displayStatus: 'archived' }, { id: 'd1', status: 'draft', displayStatus: 'draft' }, null, { status: 'published' }]) {
+    assert.deepEqual(plain(P.dealLinks(d, LINK_PLS('nord'), LINK_PAGES, 'https://www.qraivy.com')), [], JSON.stringify(d));
+  }
+  const pl = [{ channel: 'landing_page', targetRef: 'nord', status: 'draft' }, { channel: 'landing_page', targetRef: 'nord', status: 'archived' }, { channel: 'other', targetRef: 'nord', status: 'published' }];
+  assert.deepEqual(plain(P.dealLinks(RUNNING, pl, LINK_PAGES, 'https://www.qraivy.com')), []);
+});
+
+test('A. dealLinks: only the owner\'s live pages, only a safe origin', () => {
+  assert.deepEqual(plain(P.dealLinks(RUNNING, LINK_PLS('entwurf', 'gone'), LINK_PAGES, 'https://www.qraivy.com')), [], 'draft page / page no longer the owner\'s');
+  assert.deepEqual(plain(P.dealLinks(RUNNING, LINK_PLS('nord'), LINK_PAGES, '')), [], 'no customer origin (unknown host): no links');
+  assert.deepEqual(plain(P.dealLinks(RUNNING, LINK_PLS('nord'), LINK_PAGES, 'javascript:alert(1)')), []);
+});
+
 // ── B. Deal Builder wiring ─────────────────────────────────────
 const page = read('frontend/public/deals.html');
 const panel4 = page.slice(page.indexOf('data-panel="4"'), page.indexOf('<!-- LIVE PREVIEW -->'));
@@ -241,6 +301,55 @@ test('B. "Auf Landingpage veröffentlichen": shown per saved page of a published
   assert.ok(page.includes('Unpublished changes stay unpublished.') && page.includes('Unveröffentlichte Änderungen bleiben unveröffentlicht.'));
   const css = read('frontend/public/deals-page.css');
   assert.ok(css.includes('.deal-page__actions { display: flex; flex-wrap: wrap;') && css.includes('.deal-page__hint {'));
+});
+
+test('B. deal links in the Builder: copy the public links, View as preview, scheduled hint, one renderer for list and Review', () => {
+  // never the admin site: the origin comes only from js/deals-routing.js
+  assert.ok(page.includes("var PAGE_ORIGIN = String(window.QRAIVY_DEALS_PAGE_ORIGIN || '');"));
+  assert.ok(!/location\.(origin|host)/.test(fn('pageLinkHtml') + fn('dealLinkHtml') + fn('copyLink') + fn('loadPageLinks') + fn('renderList') + fn('renderPicker')), 'no admin-domain address');
+  const block = fn('dealLinkHtml');
+  assert.ok(block.includes("copyBtnHtml(entry.offersUrl, t('lk_copy_offers'))") && block.includes("copyBtnHtml(entry.dealUrl, t('lk_copy_deal'))"), 'copy offers / copy deal');
+  assert.ok(block.includes("pageLinkHtml(entry.viewUrl, t('lk_view')"), 'View opens the preview link');
+  assert.ok(block.includes("entry.state === 'scheduled'") && block.includes("t('lk_scheduled', { date: when })"), 'scheduled: a hint with the start, no link');
+  assert.ok(block.includes("t(entry.offersUrl ? 'lk_not_shown_limit' : 'lk_not_shown')"), 'says why there is no deal link');
+  assert.ok(fn('copyBtnHtml').includes('data-copy-url="\' + esc(url) + \'"'), 'the copied address is escaped');
+  const link = fn('pageLinkHtml');
+  assert.ok(link.includes('target="_blank" rel="noopener noreferrer"') && link.includes("t('link_new_tab')"));
+  // list and Review step use the same rules (dealLinks) and the same renderer
+  assert.ok(fn('loadPageLinks').includes('lib.dealLinks(linkDeal(d), lists[i], pages, PAGE_ORIGIN)'));
+  assert.ok(!/api\('(POST|PUT|DELETE)'/.test(fn('loadPageLinks')), 'reads only');
+  assert.ok(fn('renderList').includes("(pageLinks[d.id] || []).map(function (l) { return dealLinkHtml(l, true); }).join('')"));
+  const review = fn('renderPicker');
+  assert.ok(review.includes("lib.dealLinks(linkDeal(draft), [{ channel: 'landing_page', targetRef: r.slug, status: 'published' }], picker.pages, PAGE_ORIGIN)[0]"));
+  assert.ok(review.indexOf('dealLinkHtml(') > review.indexOf('</label>') || review.indexOf("'</label>' + one") !== -1, 'outside the checkbox label');
+  assert.ok(fn('linkDeal').includes("moment(d, 'start')"), 'the start date the hint shows');
+  // old one-way "open" links are gone
+  assert.ok(!/dl_view_page|pg_open_page|publishedPageLinks/.test(page));
+  // existing behaviour untouched: publishing, picking and drafts
+  assert.ok(fn('commit').includes("'/publish', withPages ? { includePlacements: true } : undefined"));
+});
+
+test('B. copying: clipboard when available, a manual copy box otherwise; copy clicks never trigger list actions', () => {
+  const copy = fn('copyLink');
+  assert.ok(copy.includes('navigator.clipboard.writeText(url)') && copy.includes("toast(t('lk_copied'))"));
+  assert.ok(copy.includes("window.prompt(t('lk_copy_manual'), url)"), 'fallback: the link to copy by hand');
+  assert.ok(page.includes("var c = e.target.closest ? e.target.closest('[data-copy-url]') : null;") && page.includes("copyLink(c.getAttribute('data-copy-url'))"));
+  assert.ok(page.includes("if (!btn || btn.hasAttribute('data-copy-url')) return;"), 'the list handler ignores copy buttons (no edit/archive/delete by accident)');
+});
+
+test('B. deal link texts exist in English and German', () => {
+  for (const k of ['lk_copy_offers', 'lk_copy_deal', 'lk_view', 'lk_copied', 'lk_copy_manual', 'lk_scheduled', 'lk_not_shown_limit', 'lk_not_shown', 'link_new_tab']) {
+    assert.equal((page.match(new RegExp('\\b' + k + ": '", 'g')) || []).length, 2, k);
+  }
+  assert.ok(page.includes("lk_copy_offers: 'Angebots-Link kopieren', lk_copy_deal: 'Deal-Link kopieren', lk_view: 'Ansehen ↗'"));
+  assert.ok(page.includes("lk_copy_offers: 'Copy offers link', lk_copy_deal: 'Copy deal link', lk_view: 'View ↗'"));
+  assert.ok(page.includes("lk_scheduled: 'Teilbar ab {date}, wenn der Deal startet.'"));
+});
+
+test('B. mobile: link buttons wrap and fill the width on phones', () => {
+  const css = read('frontend/public/deals-page.css');
+  assert.ok(css.includes('.deal-link__actions { display: flex; flex-wrap: wrap;'));
+  assert.ok(css.includes('@media (max-width: 480px) { .deal-link__actions .qds-btn { flex: 1 1 100%;'));
 });
 
 test('B. responsive styles for the list', () => {

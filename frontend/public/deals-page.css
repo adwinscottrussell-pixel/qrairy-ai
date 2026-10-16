@@ -315,6 +315,13 @@
 .deal-page--off .deal-page__row { cursor: default; opacity: 0.6; }
 .deal-page__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qds-space-2); padding: var(--qds-space-2) var(--qds-space-3) 0; }
 .deal-page__hint { font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); overflow-wrap: anywhere; flex: 1 1 200px; }
+/* Deal links: copy the public offers / deal link, view the owner preview (deals.html dealLinkHtml) */
+.deal-link { display: flex; flex-direction: column; gap: var(--qds-space-1); padding: var(--qds-space-2) var(--qds-space-3) 0; }
+.deal-card__body .deal-link { padding: var(--qds-space-2) 0 0; }
+.deal-link__page { font-size: var(--qds-text-caption-size); font-weight: var(--qds-font-weight-semibold); color: var(--qds-color-text-secondary); overflow-wrap: anywhere; }
+.deal-link__actions { display: flex; flex-wrap: wrap; gap: var(--qds-space-2); }
+.deal-link__hint { font-size: var(--qds-text-caption-size); color: var(--qds-color-text-muted); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .deal-link__actions .qds-btn { flex: 1 1 100%; justify-content: center; } }
 
 /* ── Step 2: formats preview (js/deal-image-formats.js). Tile shapes come from
    the format itself (inline aspect-ratio); the deal's own image boxes above

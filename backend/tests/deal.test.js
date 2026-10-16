@@ -163,7 +163,7 @@ const mockPrisma = {
     },
     // equality filters on any field; orderBy publishedAt desc; take (as Prisma does)
     findMany: async ({ where = {}, orderBy, take } = {}) => {
-      let rows = placementRows.filter((p) => Object.keys(where).every((k) => p[k] === where[k]));
+      let rows = placementRows.filter((p) => matches(p, where));
       if (orderBy && orderBy.publishedAt === 'desc') rows = rows.slice().sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
       if (take) rows = rows.slice(0, take);
       return cloneRows(rows);
@@ -804,11 +804,13 @@ test('P. activeDealsForPage returns customer-safe fields only', async () => {
   // an unpublished draft change must never leak
   await service.saveDealDraft(ANNA, deal.dealId, { title: 'SECRET DRAFT TITLE' });
   const [d] = await service.activeDealsForPage('anna-cafe');
-  assert.deepEqual(Object.keys(d).sort(), ['description', 'endsAt', 'image', 'offerDetails', 'offerText', 'offerType', 'startsAt', 'title']);
+  // id: the card's public anchor (#qraivy-deal-<id>, Phase 5.4C); nothing else that identifies the owner or storage
+  assert.deepEqual(Object.keys(d).sort(), ['description', 'endsAt', 'id', 'image', 'offerDetails', 'offerText', 'offerType', 'startsAt', 'title']);
+  assert.equal(d.id, deal.dealId);
   assert.equal(d.title, 'Safe');
   assert.deepEqual(d.image, { source: 'uploaded', url: img.url, width: 1200, height: 900 });
   const json = JSON.stringify(d);
-  for (const secret of ['SECRET DRAFT TITLE', ANNA, 'ownerUserId', 'draftData', 'businessId', 'createdBy', 'publicId', 'master', img.master.url, deal.dealId]) {
+  for (const secret of ['SECRET DRAFT TITLE', ANNA, 'ownerUserId', 'draftData', 'businessId', 'createdBy', 'publicId', 'master', img.master.url]) {
     assert.ok(!json.includes(secret), 'leaks ' + secret);
   }
 });
@@ -832,7 +834,7 @@ test('P. listOwnerLandingPages: only the owner\'s own pages, with name and live 
   resetFixtures();
   const pages = await service.listOwnerLandingPages(ANNA);
   assert.deepEqual(pages.map((p) => p.slug).sort(), ['anna-cafe', 'anna-cafe-north']);
-  assert.deepEqual(Object.keys(pages[0]).sort(), ['live', 'name', 'slug']);
+  assert.deepEqual(Object.keys(pages[0]).sort(), ['live', 'name', 'shownDealIds', 'slug']);
   assert.deepEqual((await service.listOwnerLandingPages(BEN)).map((p) => p.slug), ['ben-bikes']);
   assert.equal((await throwsAsync(() => service.listOwnerLandingPages(''))).status, 401);
 });
@@ -1571,6 +1573,70 @@ test('Y. landing-page selections are never content changes', async () => {
   assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'page published');
   await service.archiveDealPlacement(ANNA, pub.dealId, pl.placementId);
   assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'page removed');
+});
+
+// ── Z. Deal links: which deals a page shows right now (Phase 5.4C) ─────
+// GET /deals/pages tells the Deal Builder, per page, which of the owner's
+// deals the page shows customers right now (shownDealIds) -- the same
+// decision that renders the cards. A deal link is offered only for those.
+async function withCards(on, fn) {
+  const before = process.env.DEALS_ON_LANDING_PAGES;
+  if (on) process.env.DEALS_ON_LANDING_PAGES = '1'; else delete process.env.DEALS_ON_LANDING_PAGES;
+  try { return await fn(); } finally { if (before === undefined) delete process.env.DEALS_ON_LANDING_PAGES; else process.env.DEALS_ON_LANDING_PAGES = before; }
+}
+const listedOn = async (owner, slug) => ((await service.listOwnerLandingPages(owner)).find((p) => p.slug === slug) || {}).shownDealIds;
+
+test('Z. a running published deal is listed for its page; nothing is listed while cards are switched off', async () => {
+  resetFixtures();
+  const d = await publishedDealOn(['anna-cafe'], { endsAt: FUTURE });
+  await withCards(true, async () => {
+    assert.deepEqual(await listedOn(ANNA, 'anna-cafe'), [d.dealId]);
+    assert.deepEqual(await listedOn(ANNA, 'anna-cafe-north'), [], 'not published there');
+  });
+  await withCards(false, async () => assert.deepEqual(await listedOn(ANNA, 'anna-cafe'), [], 'cards off: no page shows it, so no link'));
+});
+
+test('Z. scheduled, expired, archived, draft deals and draft or archived placements are never listed', async () => {
+  resetFixtures();
+  await publishedDealOn(['anna-cafe'], { startsAt: FUTURE, endsAt: FAR_FUTURE });           // scheduled
+  const ended = await publishedDealOn(['anna-cafe'], { endsAt: FUTURE });
+  expire(ended.dealId);                                                                      // expired
+  const gone = await publishedDealOn(['anna-cafe'], { endsAt: FUTURE });
+  await service.archiveDeal(ANNA, gone.dealId);                                              // archived
+  const draft = await newDeal(ANNA, { endsAt: FUTURE });
+  await service.addDealPlacement(ANNA, draft.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });   // draft deal, draft placement
+  const off = await publishedDealOn(['anna-cafe'], { endsAt: FUTURE });
+  const pl = placementRows.find((p) => p.dealId === off.dealId);
+  await service.archiveDealPlacement(ANNA, off.dealId, pl.placementId || pl.id);             // page removed
+  await withCards(true, async () => assert.deepEqual(await listedOn(ANNA, 'anna-cafe'), []));
+});
+
+test('Z. three-card limit: only the three newest running deals are listed, exactly as the page shows them', async () => {
+  resetFixtures();
+  const ids = [];
+  for (let i = 0; i < 4; i++) ids.push((await publishedDealOn(['anna-cafe'], { title: 'Deal ' + i, endsAt: FUTURE })).dealId);
+  ids.forEach((id, i) => { placementRows.find((p) => p.dealId === id).publishedAt = new Date(Date.now() - (4 - i) * 60000); });   // 0 oldest … 3 newest
+  await withCards(true, async () => {
+    const shown = await listedOn(ANNA, 'anna-cafe');
+    assert.deepEqual(shown, [ids[3], ids[2], ids[1]], 'newest first, at most three');
+    assert.ok(!shown.includes(ids[0]), 'the oldest gets no deal link');
+    assert.deepEqual((await service.activeDealsForPage('anna-cafe')).map((d) => d.id), shown, 'the same decision as the cards');
+  });
+});
+
+test('Z. ownership: only the owner\'s pages, only the page owner\'s deals; no access means nothing listed', async () => {
+  resetFixtures();
+  const d = await publishedDealOn(['anna-cafe'], { endsAt: FUTURE });
+  await withCards(true, async () => {
+    assert.ok(!(await service.listOwnerLandingPages(BEN)).some((p) => p.slug === 'anna-cafe'), 'Ben never sees Anna\'s pages');
+    // a stray placement of Ben's deal pointing at Anna's page is never listed
+    const b = await newDeal(BEN, { endsAt: FUTURE });
+    await service.publishDeal(BEN, b.dealId);
+    placementRows.push({ ...placementRows.find((p) => p.dealId === d.dealId), id: 'stray', dealId: b.dealId, publishedAt: new Date() });
+    assert.deepEqual(await listedOn(ANNA, 'anna-cafe'), [d.dealId]);
+    setRollout({});                                                                          // the owner lost Deals access
+    assert.deepEqual(await listedOn(ANNA, 'anna-cafe'), [], 'hidden from customers, so no link either');
+  });
 });
 
 // ── V. Public visibility follows the owner's Deals access (Phase 3B.6) ──

@@ -481,6 +481,11 @@
       dl_empty_sub: 'Build your first deal in four short steps. You can review everything before it goes anywhere.',
       dl_footer: 'QRAIVY — Deals',
       dl_edit: 'Edit', dl_archive: 'Archive', dl_delete: 'Delete',
+      lk_copy_offers: 'Copy offers link', lk_copy_deal: 'Copy deal link', lk_view: 'View ↗', link_new_tab: 'opens in a new tab',
+      lk_copied: 'Link copied', lk_copy_manual: 'Copy this link:',
+      lk_scheduled: 'Shareable from {date}, when the deal starts.',
+      lk_not_shown_limit: 'This page shows its three newest offers; this deal is not among them right now, so only the offers link is available.',
+      lk_not_shown: 'Not shown on this page right now.',
       dl_confirm_delete: 'Delete this deal permanently?',
       st_draft: 'Draft', st_published: 'Published', st_archived: 'Archived', st_expired: 'Expired', st_scheduled: 'Scheduled',
       db_back: '← All deals', db_title_new: 'Create deal', db_title_edit: 'Edit deal',
@@ -607,6 +612,11 @@
       dl_empty_sub: 'Erstelle deinen ersten Deal in vier kurzen Schritten. Du prüfst alles, bevor irgendetwas veröffentlicht wird.',
       dl_footer: 'QRAIVY — Deals',
       dl_edit: 'Bearbeiten', dl_archive: 'Archivieren', dl_delete: 'Löschen',
+      lk_copy_offers: 'Angebots-Link kopieren', lk_copy_deal: 'Deal-Link kopieren', lk_view: 'Ansehen ↗', link_new_tab: 'öffnet in einem neuen Tab',
+      lk_copied: 'Link kopiert', lk_copy_manual: 'Diesen Link kopieren:',
+      lk_scheduled: 'Teilbar ab {date}, wenn der Deal startet.',
+      lk_not_shown_limit: 'Diese Seite zeigt ihre drei neuesten Angebote; dieser Deal ist gerade nicht dabei, daher gibt es nur den Angebots-Link.',
+      lk_not_shown: 'Wird auf dieser Seite gerade nicht angezeigt.',
       dl_confirm_delete: 'Diesen Deal endgültig löschen?',
       st_draft: 'Entwurf', st_published: 'Veröffentlicht', st_archived: 'Archiviert', st_expired: 'Abgelaufen', st_scheduled: 'Geplant',
       db_back: '← Alle Deals', db_title_new: 'Deal erstellen', db_title_edit: 'Deal bearbeiten',
@@ -803,6 +813,43 @@
   // request at all on any other host. Same Clerk bearer token every other
   // Admin page sends.
   var ROUTING = window.QRAIVY_DEALS_ROUTING || { blocked: true, api: '' };
+  var PAGE_ORIGIN = String(window.QRAIVY_DEALS_PAGE_ORIGIN || '');      // where customers see a landing page
+  function pageLinkHtml(url, label, cls) {
+    return '<a class="qds-btn qds-btn--sm ' + cls + '" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" aria-label="' +
+      esc(label.replace(/\s*↗$/, '') + ' (' + t('link_new_tab') + ')') + '">' + esc(label) + '</a>';
+  }
+  // One deal's links on one landing page (js/deal-page-picker.js dealLinks):
+  // copy the public links to share them; View opens the owner's preview
+  // (?preview=1), which never counts as a visit.
+  function copyBtnHtml(url, label) {
+    return '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-copy-url="' + esc(url) + '">' + esc(label) + '</button>';
+  }
+  function dealLinkHtml(entry, withName) {
+    if (!entry) return '';
+    var head = withName ? '<span class="deal-link__page">' + esc(entry.name) + '</span>' : '';
+    if (entry.state === 'scheduled') {
+      var at = entry.startsAt ? new Date(entry.startsAt) : null;
+      var when = at && !isNaN(at.getTime()) ? new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(at) : '—';
+      return '<div class="deal-link">' + head + '<span class="deal-link__hint">' + esc(t('lk_scheduled', { date: when })) + '</span></div>';
+    }
+    var btns = (entry.offersUrl ? copyBtnHtml(entry.offersUrl, t('lk_copy_offers')) : '') +
+      (entry.dealUrl ? copyBtnHtml(entry.dealUrl, t('lk_copy_deal')) : '') +
+      (entry.viewUrl ? pageLinkHtml(entry.viewUrl, t('lk_view'), 'qds-btn--ghost deal-link__view') : '');
+    var hint = entry.state === 'not-shown' ? '<span class="deal-link__hint">' + esc(t(entry.offersUrl ? 'lk_not_shown_limit' : 'lk_not_shown')) + '</span>' : '';
+    return '<div class="deal-link">' + head + (btns ? '<div class="deal-link__actions">' + btns + '</div>' : '') + hint + '</div>';
+  }
+  async function copyLink(url) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(url); toast(t('lk_copied')); return true; }
+    } catch (e) { /* fall through to the manual copy */ }
+    window.prompt(t('lk_copy_manual'), url);
+    return false;
+  }
+  // The fields dealLinks needs from a deal of this page.
+  function linkDeal(d) {
+    var start = moment(d, 'start');
+    return { id: d.id, status: d.status, displayStatus: d.displayStatus, startsAt: start ? start.toISOString() : null };
+  }
   var API_BASE = String(ROUTING.api || '').replace(/\/$/, '');
   function ApiError(status, message) { this.status = status; this.message = message || ''; }
   async function api(method, path, body) {
@@ -1369,6 +1416,9 @@
       var one = lib.canPublishOnPage(r, draft.status) ? '<div class="deal-page__actions">' +
         '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-publish-page="' + esc(r.slug) + '"' + (busy ? ' disabled' : '') + '>' + esc(t('pg_publish_one')) + '</button>' +
         '<span class="deal-page__hint">' + esc(t('pg_publish_hint')) + '</span></div>' : '';
+      if (r.state === 'published' && !r.gone && r.live && PAGE_ORIGIN) {
+        one += dealLinkHtml(lib.dealLinks(linkDeal(draft), [{ channel: 'landing_page', targetRef: r.slug, status: 'published' }], picker.pages, PAGE_ORIGIN)[0], false);
+      }
       return '<li class="deal-page' + (r.disabled ? ' deal-page--off' : '') + '"><label class="deal-page__row">' +
         '<input type="checkbox" class="deal-page__check" data-page="' + esc(r.slug) + '"' + (r.checked ? ' checked' : '') + (r.disabled || busy ? ' disabled' : '') + '>' +
         '<span class="deal-page__text"><span class="deal-page__name">' + esc(r.name) + '</span>' +
@@ -1516,6 +1566,7 @@
           '<div class="deal-card__title">' + esc(d.title) + '</div>' +
           '<div class="deal-card__offer">' + esc(offerLine(d)) + '</div>' +
           '<div class="deal-card__meta">' + esc(validity(d, 'pv_valid')) + '</div>' +
+          (d.status !== 'published' ? '' : (pageLinks[d.id] || []).map(function (l) { return dealLinkHtml(l, true); }).join('')) +
         '</div>' +
         '<div class="deal-card__actions">' +
           (archived ? '' : '<button class="qds-btn qds-btn--secondary qds-btn--sm" type="button" data-edit="' + id + '">' + esc(t('dl_edit')) + '</button>') +
@@ -1525,12 +1576,33 @@
     }).join('');
   }
 
+  // Links on the overview cards (dealLinks): per published deal and landing
+  // page, GET /deals/pages once (which deals each page shows right now) and
+  // GET …/placements per published deal. Optional: if anything fails, the
+  // cards simply have no links.
+  var pageLinks = {}, pageLinksRun = 0;
+  async function loadPageLinks() {
+    var lib = window.QraivyDealPagePicker, run = ++pageLinksRun;
+    pageLinks = {};
+    var pub = deals.filter(function (d) { return d.status === 'published'; });
+    if (!lib || !PAGE_ORIGIN || !pub.length) return;
+    try {
+      var pages = (await api('GET', '/deals/pages')).pages || [];
+      var lists = await Promise.all(pub.map(function (d) {
+        return api('GET', '/deals/' + encodeURIComponent(d.id) + '/placements').then(function (r) { return r.placements || []; }, function () { return []; });
+      }));
+      if (run !== pageLinksRun) return;
+      pub.forEach(function (d, i) { pageLinks[d.id] = lib.dealLinks(linkDeal(d), lists[i], pages, PAGE_ORIGIN); });
+    } catch (err) { return; }
+    if (run === pageLinksRun && loadState === 'ready') renderList();
+  }
   async function loadDeals() {
     loadState = 'loading'; renderList();
     try {
       var data = await api('GET', '/deals');
       deals = (data.deals || []).map(fromServer);
       loadState = 'ready';
+      loadPageLinks();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return;
       loadState = 'error';
@@ -1774,8 +1846,12 @@
     $('deal-back-btn').addEventListener('click', closeBuilder);
     $('deal-retry-btn').addEventListener('click', refreshList);
 
+    document.addEventListener('click', function (e) {
+      var c = e.target.closest ? e.target.closest('[data-copy-url]') : null;
+      if (c) { e.preventDefault(); copyLink(c.getAttribute('data-copy-url')); }
+    });
     $('deal-list').addEventListener('click', function (e) {
-      var btn = e.target.closest('button'); if (!btn) return;
+      var btn = e.target.closest('button'); if (!btn || btn.hasAttribute('data-copy-url')) return;
       var id = btn.getAttribute('data-edit') || btn.getAttribute('data-archive') || btn.getAttribute('data-delete');
       var deal = deals.filter(function (d) { return d.id === id; })[0]; if (!deal) return;
       if (busy) return;

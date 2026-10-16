@@ -13,6 +13,13 @@
  *                                no request at all and says why.
  *
  * window.QRAIVY_DEALS_ROUTING = { mode, api, blocked }
+ * window.QRAIVY_DEALS_PAGE_ORIGIN: where this site's customers see a landing
+ * page (links from the Deals admin), never this admin site itself:
+ *   production      https://www.qraivy.com (the address the editor publishes)
+ *   deals-preview   the isolated Deals API, which serves /lp/<slug> itself --
+ *                   deals-preview.qraivy.com/lp/... would go to production
+ *   local           the local test server
+ *   blocked         '' (no links)
  * window.QraivyDealsRouting.resolve(hostname, localApi) is the same decision
  * as a pure function (tests/dealsPreviewSafety.test.js).
  */
@@ -37,6 +44,16 @@
     return { mode: 'unknown-host', api: '', blocked: true };
   }
 
-  window.QraivyDealsRouting = { resolve: resolve, PRODUCTION_API: PRODUCTION_API, DEALS_PREVIEW_HOST: DEALS_PREVIEW_HOST, DEALS_PREVIEW_API: DEALS_PREVIEW_API };
+  var PRODUCTION_PAGES = 'https://www.qraivy.com';
+  function pageOrigin(routing) {
+    if (!routing || routing.blocked) return '';
+    if (routing.mode === 'production') return PRODUCTION_PAGES;
+    if (routing.mode === 'deals-preview') return DEALS_PREVIEW_API;
+    if (routing.mode === 'local') return routing.api || '';
+    return '';
+  }
+
+  window.QraivyDealsRouting = { resolve: resolve, pageOrigin: pageOrigin, PRODUCTION_API: PRODUCTION_API, PRODUCTION_PAGES: PRODUCTION_PAGES, DEALS_PREVIEW_HOST: DEALS_PREVIEW_HOST, DEALS_PREVIEW_API: DEALS_PREVIEW_API };
   window.QRAIVY_DEALS_ROUTING = resolve(window.location.hostname, window.QRAIVY_DEALS_LOCAL_API || window.location.origin);
+  window.QRAIVY_DEALS_PAGE_ORIGIN = pageOrigin(window.QRAIVY_DEALS_ROUTING);
 })();

@@ -22,9 +22,18 @@
  * A saved placement on a page that is no longer the owner's (gone: true) is
  * still listed, so it can be removed -- otherwise it would block publishing.
  *
+ * Links to the customer page (dealLinks), at the site's customer-page origin
+ * (QRAIVY_DEALS_PAGE_ORIGIN): for a deal that is shown right now on a page
+ * the owner still has and that is live -- the offers link (#qraivy-deals),
+ * and the deal's own link (#qraivy-deal-<id>) only when that page lists the
+ * deal among the cards it shows (GET /deals/pages shownDealIds: at most three).
+ * Shared links are the public address; the owner's own View adds ?preview=1
+ * so it never counts as a visit. Scheduled: a start-date hint, no link.
+ * Expired, archived and draft deals: nothing.
+ *
  * window.QraivyDealPagePicker: rows, toggleAction, selectAllSlugs,
  * clearAllPlan, needsIncludePlacements, savePending, canPublishOnPage,
- * publishOnPage
+ * publishOnPage, pageUrl, dealLinks, DEALS_ANCHOR, DEAL_ANCHOR_PREFIX
  */
 (function (root) {
   function rows(pages, bySlug, pending) {
@@ -115,6 +124,61 @@
     }
   }
 
+  // The customer address of one page; '' when there is no safe one.
+  // opts.dealId: straight to that deal's card; opts.preview: the owner's own
+  // view (?preview=1 -- never counted as a visit, never cached).
+  var DEALS_ANCHOR = 'qraivy-deals';
+  var DEAL_ANCHOR_PREFIX = 'qraivy-deal-';
+  var SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/;
+  var DEAL_ID = /^[A-Za-z0-9_-]{1,64}$/;
+  function pageUrl(origin, slug, opts) {
+    opts = opts || {};
+    var u;
+    try { u = new URL(String(origin || '')); } catch (e) { return ''; }
+    var local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+    if (!(u.protocol === 'https:' || (u.protocol === 'http:' && local)) || u.origin !== String(origin).replace(/\/$/, '')) return '';
+    if (typeof slug !== 'string' || !SLUG.test(slug)) return '';
+    if (opts.dealId != null && (typeof opts.dealId !== 'string' || !DEAL_ID.test(opts.dealId))) return '';
+    return u.origin + '/lp/' + encodeURIComponent(slug) + (opts.preview ? '?preview=1' : '') +
+      '#' + (opts.dealId != null ? DEAL_ANCHOR_PREFIX + opts.dealId : DEALS_ANCHOR);
+  }
+
+  // The links of one deal, one entry per landing page it is published on
+  // (page still the owner's and live), sorted by page name:
+  //   shown      the page shows this deal: offersUrl, dealUrl, viewUrl
+  //   not-shown  running, but the page does not show it right now (three newer
+  //              offers, or cards switched off): offersUrl only if the page
+  //              shows any offers, viewUrl to them; no dealUrl
+  //   scheduled  starts later: startsAt only, no link yet
+  // Expired, archived and draft deals get no entries.
+  function dealLinks(deal, placements, pages, origin) {
+    if (!deal || typeof deal.id !== 'string' || deal.status !== 'published') return [];
+    var display = deal.displayStatus || 'published';
+    if (display !== 'published' && display !== 'scheduled') return [];
+    var bySlug = {};
+    (pages || []).forEach(function (p) { if (p && p.slug) bySlug[p.slug] = p; });
+    var seen = {}, out = [];
+    (placements || []).forEach(function (pl) {
+      if (!pl || pl.channel !== 'landing_page' || pl.status !== 'published' || seen[pl.targetRef]) return;
+      var page = bySlug[pl.targetRef];
+      if (!page || page.live === false || !pageUrl(origin, pl.targetRef)) return;
+      seen[pl.targetRef] = true;
+      var entry = { slug: pl.targetRef, name: page.name || pl.targetRef, state: 'scheduled', offersUrl: '', dealUrl: '', viewUrl: '', startsAt: deal.startsAt || null };
+      if (display === 'published') {
+        var shownIds = Array.isArray(page.shownDealIds) ? page.shownDealIds : [];
+        var shown = shownIds.indexOf(deal.id) !== -1;
+        entry.state = shown ? 'shown' : 'not-shown';
+        if (shownIds.length) {
+          entry.offersUrl = pageUrl(origin, pl.targetRef);
+          entry.viewUrl = pageUrl(origin, pl.targetRef, shown ? { dealId: deal.id, preview: true } : { preview: true });
+        }
+        if (shown) entry.dealUrl = pageUrl(origin, pl.targetRef, { dealId: deal.id });
+      }
+      out.push(entry);
+    });
+    return out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
   root.QraivyDealPagePicker = { rows: rows, toggleAction: toggleAction, selectAllSlugs: selectAllSlugs, clearAllPlan: clearAllPlan, needsIncludePlacements: needsIncludePlacements, savePending: savePending,
-    canPublishOnPage: canPublishOnPage, publishOnPage: publishOnPage };
+    canPublishOnPage: canPublishOnPage, publishOnPage: publishOnPage, pageUrl: pageUrl, dealLinks: dealLinks, DEALS_ANCHOR: DEALS_ANCHOR, DEAL_ANCHOR_PREFIX: DEAL_ANCHOR_PREFIX };
 })(typeof window !== 'undefined' ? window : this);

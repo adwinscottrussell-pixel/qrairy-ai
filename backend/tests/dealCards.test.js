@@ -115,7 +115,9 @@ function test(name, fn) { queue.push([name, fn]); }
 // ── R. The cards ───────────────────────────────────────────────
 test('R. all text is escaped', () => {
   const html = cards.renderDealCards([{ title: '<img src=x onerror=alert(1)>', offerText: '"><script>alert(2)</script>', description: "it's & <b>", endsAt: null, image: null }], { lang: 'en', pageOrigin: 'https://www.qraivy.com' });
-  assert.ok(!/<script>|<img src=x|<b>/.test(html));
+  // the only script is the fixed anchor fallback (Phase 5.4C); user text never becomes markup
+  assert.equal((html.match(/<script>/g) || []).length, 1);
+  assert.ok(!/<script>alert|<img src=x|<b>/.test(html));
   assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;') && html.includes('&quot;&gt;&lt;script&gt;') && html.includes('it&#39;s &amp; &lt;b&gt;'));
 });
 
@@ -197,7 +199,9 @@ test('S. an active deal appears once, before the footer, and the rest of the pag
   assert.ok(on.indexOf(s) < on.indexOf('<footer'), 'before the footer');
   assert.equal(on.replace(s, ''), off, 'nothing else on the page changed');
   for (const t of ['Aktuelle Angebote', '2 Kaffees zum Preis von 1', 'Kaffee-Deal', 'Nur heute', 'Gültig bis', '<img src="' + IMG + '"']) assert.ok(s.includes(t), t);
-  assert.ok(!/ownerUserId|user_owner|draftData|deal_1|publicId/.test(s), 'nothing private in the page');
+  assert.ok(!/ownerUserId|user_owner|draftData|publicId/.test(s), 'nothing private in the page');
+  assert.equal((s.match(/deal_1/g) || []).length, 1, 'the deal id appears only as its card anchor');
+  assert.ok(s.includes('<article class="qd-card" id="qraivy-deal-deal_1">'));
 });
 
 test('S. only deals that are published, running, published on THIS page and owned by its owner appear', async () => {
@@ -513,6 +517,85 @@ test('T. the heading on the page background is readable in both themes (at least
   const dark = [el('html'), el('body', 'dark-mode'), el('section', 'qd-deals'), el('h2', 'qd-heading')];
   assert.ok(contrast(colorOf(rules, light, 3), '#f8f8f8') >= 4.5, 'light: ' + colorOf(rules, light, 3) + ' on the default page background');
   assert.ok(contrast(colorOf(rules, dark, 3), '#111') >= 4.5, 'dark: ' + colorOf(rules, dark, 3) + ' on the dark page background');
+});
+
+test('T. the offers section has a stable anchor that the Deals admin links to', async () => {
+  const html = await pageWithCard();
+  assert.equal(cards.DEALS_ANCHOR, 'qraivy-deals');
+  assert.equal((html.match(/id="qraivy-deals"/g) || []).length, 1, 'exactly one, on the section');
+  assert.ok(/<section class="qd-deals" id="qraivy-deals"/.test(html));
+  const picker = fs.readFileSync(path.join(ROOT, 'frontend/public/js/deal-page-picker.js'), 'utf8');
+  assert.ok(picker.includes("var DEALS_ANCHOR = 'qraivy-deals';"), 'the admin links use the same anchor');
+  assert.ok(html.includes('scroll-margin-top:80px'), 'not hidden under the page header');
+});
+
+// ── L. Deal links on the page (Phase 5.4C) ─────────────────────
+const linkCards = (deals) => cards.renderDealCards(deals, { lang: 'en', now: Date.now() });
+test('L. each shown card has its own anchor #qraivy-deal-<id>, matching the admin links', () => {
+  const html = linkCards([{ id: 'cmvb63y9m0001skg2zmexxzkf', title: 'A', offerText: 'a' }, { id: 'cm2', title: 'B', offerText: 'b' }]);
+  assert.ok(html.includes('<article class="qd-card" id="qraivy-deal-cmvb63y9m0001skg2zmexxzkf">'));
+  assert.ok(html.includes('<article class="qd-card" id="qraivy-deal-cm2">'));
+  assert.equal(cards.DEAL_ANCHOR_PREFIX, 'qraivy-deal-');
+  const picker = fs.readFileSync(path.join(ROOT, 'frontend/public/js/deal-page-picker.js'), 'utf8');
+  assert.ok(picker.includes("var DEAL_ANCHOR_PREFIX = 'qraivy-deal-';"), 'the admin links use the same prefix');
+});
+
+test('L. a card without a well-formed id simply has no anchor (never broken markup)', () => {
+  for (const id of [undefined, null, '', 'a b', 'x"onmouseover="y', '<b>', 'a'.repeat(65), 7]) {
+    const html = linkCards([{ id, title: 'T', offerText: 'O' }]);
+    assert.ok(html.includes('<article class="qd-card">'), JSON.stringify(id));
+    assert.deepEqual(html.match(/<article[^>]*>/g), ['<article class="qd-card">'], 'the card tag is exactly as before: ' + JSON.stringify(id));
+  }
+});
+
+test('L. only shown cards get anchors: ended, not started and the 4th newest do not', () => {
+  const now = Date.now();
+  const html = cards.renderDealCards([
+    { id: 'd1', title: '1', offerText: 'o' }, { id: 'd2', title: '2', offerText: 'o' }, { id: 'd3', title: '3', offerText: 'o' }, { id: 'd4', title: '4', offerText: 'o' },
+    { id: 'old', title: 'x', offerText: 'o', endsAt: new Date(now - 1000).toISOString() }, { id: 'later', title: 'y', offerText: 'o', startsAt: new Date(now + 60000).toISOString() },
+  ], { lang: 'en', now });
+  assert.deepEqual((html.match(/id="qraivy-deal-[^"]+"/g) || []), ['id="qraivy-deal-d1"', 'id="qraivy-deal-d2"', 'id="qraivy-deal-d3"']);
+});
+
+test('L. the fallback for a deal link that is not shown is one fixed script inside the offers section', () => {
+  const html = linkCards([{ id: 'd1', title: '<script>x</script>', offerText: 'o' }]);
+  const scripts = html.match(/<script>[\s\S]*?<\/script>/g) || [];
+  assert.equal(scripts.length, 1, 'exactly one');
+  assert.ok(html.indexOf(scripts[0]) > html.indexOf('<div class="qd-list">') && html.indexOf(scripts[0]) < html.indexOf('</section>'), 'inside the section, after the cards');
+  assert.ok(!scripts[0].includes('d1') && !scripts[0].includes('x</'), 'no deal data in it');
+  assert.equal(linkCards([]), '', 'no offers: no section and no script');
+});
+
+test('L. our links land on their target (again after the page has loaded); a missing deal lands on the offers; other anchors untouched', () => {
+  const html = linkCards([{ id: 'd1', title: 'A', offerText: 'a' }]);
+  const vm = require('vm');
+  const code = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const run = (hash, present) => {
+    const scrolled = [], handlers = {}, timers = [];
+    const el = (id) => ({ id, scrollIntoView: () => scrolled.push(id) });
+    const ctx = { location: { hash }, setTimeout: (f) => timers.push(f),
+      document: { readyState: 'complete', getElementById: (id) => (present.includes(id) ? el(id) : null), addEventListener() {} },
+      window: { addEventListener: (ev, f) => { handlers[ev] = f; } } };
+    vm.runInNewContext(code, ctx);
+    const first = scrolled.slice();
+    if (handlers.load) handlers.load();
+    timers.forEach((f) => f());
+    return { first, all: scrolled, listens: Object.keys(handlers).sort() };
+  };
+  const gone = run('#qraivy-deal-gone', ['qraivy-deals']);
+  assert.deepEqual(gone.first, ['qraivy-deals'], 'missing deal: lands on the offers');
+  const card = run('#qraivy-deal-d1', ['qraivy-deals', 'qraivy-deal-d1']);
+  assert.deepEqual(card.all, ['qraivy-deal-d1', 'qraivy-deal-d1', 'qraivy-deal-d1'], 'present card: at once, after load and once more shortly after (content above grew)');
+  assert.deepEqual(run('#qraivy-deals', ['qraivy-deals']).first, ['qraivy-deals'], 'the offers link');
+  assert.deepEqual(run('#contact', ['qraivy-deals', 'contact']).all, [], 'other anchors untouched');
+  assert.deepEqual(run('', ['qraivy-deals']).all, [], 'no anchor: nothing happens');
+  assert.deepEqual(card.listens, ['hashchange', 'load'], 'also follows a later hash change');
+});
+
+test('L. mobile: section and every card keep clear of the page header when jumped to', () => {
+  const html = linkCards([{ id: 'd1', title: 'A', offerText: 'a' }]);
+  assert.ok(/\.qd-deals\{[^}]*scroll-margin-top:80px/.test(html), 'section');
+  assert.ok(/\.qd-card\{[^}]*scroll-margin-top:80px/.test(html), 'each card');
 });
 
 test('T. image, layout, spacing and rounded corners are unchanged', () => {
