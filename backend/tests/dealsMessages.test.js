@@ -105,11 +105,11 @@ test('M. 402 plan_required: the plan does not include Deals, Starter or higher, 
 test('M. 402 plan_limit: names the limit, explains archiving, singular for a limit of 1 (EN/DE)', () => {
   const en = load('en'), de = load('de');
   const three = { error: 'plan_limit', limit: 3, current: 3, upgrade: true };
-  assert.match(en.errorText(refusal(en, 402, three)), /limit of 3 active deals \(drafts and published\)\. Archive a deal/);
-  assert.match(de.errorText(refusal(de, 402, three)), /Limit von 3 aktiven Deals/);
+  assert.equal(en.errorText(refusal(en, 402, three)), 'All 3 deal slots are in use (drafts, scheduled and running deals). Archive a deal you no longer need or wait until one ends – or upgrade your plan.');
+  assert.equal(de.errorText(refusal(de, 402, three)), 'Alle 3 Deal-Plätze sind belegt (Entwürfe, geplante und laufende Deals). Archiviere einen Deal, den du nicht mehr brauchst, oder warte, bis einer endet – oder wechsle in einen höheren Tarif.');
   const one = { error: 'plan_limit', limit: 1, current: 1, upgrade: true };
-  assert.match(en.errorText(refusal(en, 402, one)), /limit of 1 active deal \(draft or published\)/);
-  assert.match(de.errorText(refusal(de, 402, one)), /Limit von 1 aktiven Deal \(Entwurf/);
+  assert.equal(en.errorText(refusal(en, 402, one)), 'Your deal slot is in use (a draft, scheduled or running deal). Archive it or wait until it ends – or upgrade your plan.');
+  assert.equal(de.errorText(refusal(de, 402, one)), 'Dein Deal-Platz ist belegt (Entwurf, geplanter oder laufender Deal). Archiviere ihn oder warte, bis er endet – oder wechsle in einen höheren Tarif.');
   // a malformed limit never prints "undefined"
   assert.doesNotMatch(en.errorText(refusal(en, 402, { error: 'plan_limit' })), /undefined/);
 });
@@ -216,13 +216,13 @@ test('A. not_rolled_out: reason without a billing link (a plan change would not 
 
 test('A. usage versus limit: Trial 0 of 1, Starter 2 of 3, limit reached holds Create back with the billing link, singular for 1', () => {
   const p = load('en'), de = load('de');
-  assert.equal(p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 1, activeDeals: 0 }).usage, '0 of 1 active deals used. Drafts and published deals count, archived ones don’t.');
+  assert.equal(p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 1, activeDeals: 0 }).usage, '0 of 1 deal slots in use. Drafts, scheduled and running deals count; expired and archived ones don’t – a deal frees its slot automatically when it ends.');
   const starter = p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 2 });
-  assert.match(starter.usage, /^2 of 3 active deals used/); assert.equal(starter.blockCreate, false); assert.equal(starter.notice, '');
-  assert.match(de.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 2 }).usage, /^2 von 3 aktiven Deals genutzt/);
+  assert.match(starter.usage, /^2 of 3 deal slots in use/); assert.equal(starter.blockCreate, false); assert.equal(starter.notice, '');
+  assert.equal(de.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 2 }).usage, '2 von 3 Deal-Plätzen belegt. Entwürfe, geplante und laufende Deals zählen; abgelaufene und archivierte nicht – ein Deal gibt seinen Platz automatisch frei, sobald er endet.');
   const full = p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 3, activeDeals: 3 });
-  assert.match(full.notice, /limit of 3 active deals/); assert.equal(full.billing, true); assert.equal(full.blockCreate, true);
-  assert.match(p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 1, activeDeals: 1 }).notice, /limit of 1 active deal for/);
+  assert.match(full.notice, /limit of 3 deals for your account/); assert.equal(full.billing, true); assert.equal(full.blockCreate, true);
+  assert.match(p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: 1, activeDeals: 1 }).notice, /limit of 1 deal for/);
 });
 
 test('A. Pro / Business (unlimited) and pilot access', () => {
@@ -230,7 +230,7 @@ test('A. Pro / Business (unlimited) and pilot access', () => {
   const pro = p.accessNotice('ready', { allowed: true, reason: 'plan', dealLimit: null, activeDeals: 7 });
   assert.equal(pro.usage, '7 active deals. Your plan has no deal limit.'); assert.equal(pro.blockCreate, false);
   const pilot = p.accessNotice('ready', { allowed: true, reason: 'pilot', dealLimit: 10, activeDeals: 4 });
-  assert.match(pilot.usage, /^4 of 10 active deals used\. .* You have pilot access to Deals\.$/);
+  assert.match(pilot.usage, /^4 of 10 deal slots in use\. .* You have pilot access to Deals\.$/);
   const pilotFull = p.accessNotice('ready', { allowed: true, reason: 'pilot', dealLimit: 10, activeDeals: 10 });
   assert.equal(pilotFull.blockCreate, true);
 });
@@ -291,6 +291,30 @@ test('A. markup: the notice reuses the existing banner, the usage line the exist
   assert.ok(page.includes('<div class="deal-preview-banner" id="deal-access" role="status" hidden>'));
   assert.ok(page.includes('<a class="deal-access__billing" id="deal-access-billing" href="dashboard.html?section=billing" data-i18n="acc_billing" hidden>'));
   assert.ok(page.includes('<p class="deal-note deal-access-usage" id="deal-access-usage" hidden></p>'));
+});
+
+test('A. every limit text says what counts (drafts, scheduled, running) and what does not (expired, archived), EN and DE', () => {
+  const { _t } = load();
+  for (const k of ['acc_usage', 'acc_limit_reached', 'acc_limit_reached_one']) {
+    assert.match(_t.en[k], /drafts, scheduled and running deals count; expired and archived ones don’t/i, 'en.' + k);
+    assert.match(_t.de[k], /Entwürfe, geplante und laufende Deals zählen; abgelaufene und archivierte nicht/, 'de.' + k);
+    assert.match(_t.en[k], /automatically when (a|the) deal ends|automatically when it ends/, 'en.' + k + ' frees automatically');
+    assert.match(_t.de[k], /automatisch frei, sobald (ein|der) Deal endet|automatisch frei, sobald er endet/, 'de.' + k + ' frees automatically');
+  }
+  for (const k of ['e_plan_limit', 'e_plan_limit_one']) {
+    assert.match(_t.en[k], /scheduled or running|scheduled and running/, 'en.' + k);
+    assert.match(_t.de[k], /geplante?r? (und|oder) laufende/, 'de.' + k);
+    assert.match(_t.en[k], /wait until (one|it) ends/); assert.match(_t.de[k], /warte, bis (einer|er) endet/);
+  }
+  for (const lang of ['en', 'de']) assert.doesNotMatch(Object.values(_t[lang]).join(' | '), /drafts and published deals count|Entwürfe und veröffentlichte Deals zählen|to create more|um weitere zu erstellen/, lang + ': no old rule left');
+});
+
+test('A. a hidden notice really disappears: the banner\'s display:flex never overrides the hidden attribute', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'deals-page.css'), 'utf8').replace(/\r\n/g, '\n');
+  const flex = css.indexOf('.deal-preview-banner {\n  display: flex;');
+  const hidden = css.indexOf('.deal-preview-banner[hidden] { display: none; }');
+  assert.ok(flex !== -1, 'the banner is a flex box');
+  assert.ok(hidden > flex, 'and a hidden banner is display:none (after the flex rule, same specificity wins later)');
 });
 
 // ── runner ──────────────────────────────────────────────────────

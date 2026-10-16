@@ -69,14 +69,6 @@
   <main>
     <div class="qds-page-wrap">
 
-      <!-- Deals are real and saved through /deals (dealRoutes.js). What does
-           NOT exist yet is any customer-facing display, and the page says so:
-           "published" here never means "publicly visible". -->
-      <div class="deal-preview-banner" role="note">
-        <span class="deal-preview-banner__tag" data-i18n="dl_banner_tag">Note</span>
-        <span data-i18n="dl_banner_text">Deals are saved to your account. Publishing marks a deal as ready, but deals are not shown to your customers yet: the landing page display is still being built.</span>
-      </div>
-
       <!-- Deals access of this account (GET /deals/access): why creating is not
            available, with the existing billing page where a plan change helps.
            Informational only -- the server checks every action itself. -->
@@ -379,7 +371,7 @@
                 <ul class="deal-pages__list" id="deal-pages-list"></ul>
               </section>
 
-              <p class="deal-note" data-i18n="s4_note">Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.</p>
+              <p class="deal-note" data-i18n="s4_note">Once published, this deal appears on the landing pages you select below – from its start until its end date. A landing page shows up to three current deals.</p>
 
               <div class="deal-nav">
                 <button class="qds-btn qds-btn--secondary qds-btn--md" type="button" data-action="back" data-i18n="nav_back">Back</button>
@@ -482,8 +474,6 @@
 
   var _t = {
     en: {
-      dl_banner_tag: 'Note',
-      dl_banner_text: 'Deals are saved to your account. Publishing marks a deal as ready, but deals are not shown to your customers yet: the landing page display is still being built.',
       dl_title: 'Deals', dl_title_em: '& Promotions',
       dl_sub: 'Create an offer once and show it on your Smart Landing Pages.',
       dl_create: 'Create deal', dl_create_first: 'Create your first deal',
@@ -533,7 +523,7 @@
       sum_range: 'Valid from {start} until {end}.',
       pv_valid_none: 'No end date', pv_valid_from: 'From {start}', pv_valid_until: 'Until {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Review your deal', s4_lead: 'Check every detail. Use Edit to jump back to a step.',
-      s4_note: 'Publishing marks this deal as ready. It is not shown to your customers yet: the landing page display is still being built.',
+      s4_note: 'Once published, this deal appears on the landing pages you select below – from its start until its end date. A landing page shows up to three current deals.',
       pg_title: 'Where should this Deal appear?',
       pg_lead: 'Choose your Smart Landing Pages. Selected pages are saved with the deal and published together with it.',
       pg_all: 'Select all', pg_none: 'Clear all', pg_loading: 'Loading your pages…', pg_retry: 'Try again',
@@ -592,16 +582,16 @@
       acc_tag: 'Plan', acc_billing: 'View plans & billing →',
       acc_not_available: 'Deals isn’t available for your account yet, so you can’t create or publish deals. Your existing deals stay saved: you can still open, edit, archive and delete them. Published deals are not shown on your landing pages for now.',
       acc_plan_required: 'Your current plan doesn’t include Deals, so you can’t create or publish deals or add pictures. This also applies when a trial has ended or a subscription is no longer active. Your existing deals stay saved: you can still open, edit, archive and delete them. Published deals are not shown on your landing pages until your plan includes Deals again.',
-      acc_limit_reached: 'You’ve reached the limit of {limit} active deals for your account (drafts and published deals count, archived ones don’t). Archive a deal you no longer need to create a new one, or upgrade your plan.',
-      acc_limit_reached_one: 'You’ve reached the limit of 1 active deal for your account (drafts and published deals count, archived ones don’t). Archive it to create a new one, or upgrade your plan.',
-      acc_usage: '{active} of {limit} active deals used. Drafts and published deals count, archived ones don’t.',
+      acc_limit_reached: 'You’ve reached the limit of {limit} deals for your account (drafts, scheduled and running deals count; expired and archived ones don’t). A slot frees up automatically when a deal ends. You can also archive a deal you no longer need, or upgrade your plan.',
+      acc_limit_reached_one: 'You’ve reached the limit of 1 deal for your account (drafts, scheduled and running deals count; expired and archived ones don’t). The slot frees up automatically when the deal ends. You can also archive it, or upgrade your plan.',
+      acc_usage: '{active} of {limit} deal slots in use. Drafts, scheduled and running deals count; expired and archived ones don’t – a deal frees its slot automatically when it ends.',
       acc_usage_unlimited: '{active} active deals. Your plan has no deal limit.',
       acc_pilot: 'You have pilot access to Deals.',
       acc_unknown: 'Your Deals access could not be checked right now. You can still manage your existing deals. If creating or publishing isn’t possible, you’ll see why when you try.',
       e_access_unavailable: 'Deals isn’t available for your account yet. Your existing deals stay saved, and you can still edit, archive or delete them.',
       e_plan_required: 'Your current plan doesn’t include Deals, so this isn’t possible. Creating and publishing deals, adding pages and uploading pictures need Starter or higher. Your existing deals stay saved and editable.',
-      e_plan_limit: 'You’ve reached the limit of {limit} active deals (drafts and published). Archive a deal you no longer need, or upgrade your plan to create more.',
-      e_plan_limit_one: 'You’ve reached the limit of 1 active deal (draft or published). Archive it, or upgrade your plan to create more.',
+      e_plan_limit: 'All {limit} deal slots are in use (drafts, scheduled and running deals). Archive a deal you no longer need or wait until one ends – or upgrade your plan.',
+      e_plan_limit_one: 'Your deal slot is in use (a draft, scheduled or running deal). Archive it or wait until it ends – or upgrade your plan.',
       e_upload_limit_hour: 'You’ve uploaded the maximum of {limit} pictures per hour.',
       e_upload_limit_day: 'You’ve uploaded the maximum of {limit} pictures per day.',
       e_upload_limit: 'You’ve reached the upload limit for pictures.',
@@ -610,8 +600,6 @@
       lang_toggle: 'Deutsch'
     },
     de: {
-      dl_banner_tag: 'Hinweis',
-      dl_banner_text: 'Deals werden in deinem Konto gespeichert. Mit dem Veröffentlichen ist ein Deal fertig, er wird deinen Kunden aber noch nicht angezeigt: Die Anzeige auf der Landingpage ist noch in Arbeit.',
       dl_title: 'Deals', dl_title_em: '& Aktionen',
       dl_sub: 'Erstelle ein Angebot einmal und zeige es auf deinen Smart Landingpages.',
       dl_create: 'Deal erstellen', dl_create_first: 'Ersten Deal erstellen',
@@ -661,7 +649,7 @@
       sum_range: 'Gültig von {start} bis {end}.',
       pv_valid_none: 'Kein Enddatum', pv_valid_from: 'Ab {start}', pv_valid_until: 'Bis {end}', pv_valid_range: '{start} – {end}',
       s4_title: 'Deal überprüfen', s4_lead: 'Prüfe alle Angaben. Mit „Bearbeiten“ springst du zum jeweiligen Schritt zurück.',
-      s4_note: 'Mit dem Veröffentlichen ist dieser Deal fertig. Er wird deinen Kunden noch nicht angezeigt: Die Anzeige auf der Landingpage ist noch in Arbeit.',
+      s4_note: 'Nach dem Veröffentlichen erscheint dieser Deal auf den unten ausgewählten Landingpages – von seinem Start bis zu seinem Enddatum. Eine Landingpage zeigt bis zu drei aktuelle Deals.',
       pg_title: 'Wo soll dieser Deal erscheinen?',
       pg_lead: 'Wähle deine Smart Landingpages. Ausgewählte Seiten werden mit dem Deal gespeichert und zusammen mit ihm veröffentlicht.',
       pg_all: 'Alle auswählen', pg_none: 'Auswahl aufheben', pg_loading: 'Deine Seiten werden geladen…', pg_retry: 'Erneut versuchen',
@@ -720,16 +708,16 @@
       acc_tag: 'Tarif', acc_billing: 'Tarif & Abrechnung ansehen →',
       acc_not_available: 'Deals ist für dein Konto noch nicht verfügbar, daher kannst du keine Deals erstellen oder veröffentlichen. Deine bestehenden Deals bleiben gespeichert: Du kannst sie weiterhin öffnen, bearbeiten, archivieren und löschen. Veröffentlichte Deals werden vorerst nicht auf deinen Landingpages angezeigt.',
       acc_plan_required: 'Dein aktueller Tarif enthält keine Deals, daher kannst du keine Deals erstellen oder veröffentlichen und keine Bilder hinzufügen. Das gilt auch, wenn ein Testzeitraum abgelaufen oder ein Abo nicht mehr aktiv ist. Deine bestehenden Deals bleiben gespeichert: Du kannst sie weiterhin öffnen, bearbeiten, archivieren und löschen. Veröffentlichte Deals werden nicht auf deinen Landingpages angezeigt, bis dein Tarif wieder Deals enthält.',
-      acc_limit_reached: 'Du hast das Limit von {limit} aktiven Deals für dein Konto erreicht (Entwürfe und veröffentlichte Deals zählen, archivierte nicht). Archiviere einen Deal, den du nicht mehr brauchst, um einen neuen zu erstellen, oder wechsle in einen höheren Tarif.',
-      acc_limit_reached_one: 'Du hast das Limit von 1 aktiven Deal für dein Konto erreicht (Entwürfe und veröffentlichte Deals zählen, archivierte nicht). Archiviere ihn, um einen neuen zu erstellen, oder wechsle in einen höheren Tarif.',
-      acc_usage: '{active} von {limit} aktiven Deals genutzt. Entwürfe und veröffentlichte Deals zählen, archivierte nicht.',
+      acc_limit_reached: 'Du hast das Limit von {limit} Deals für dein Konto erreicht (Entwürfe, geplante und laufende Deals zählen; abgelaufene und archivierte nicht). Ein Platz wird automatisch frei, sobald ein Deal endet. Du kannst auch einen Deal archivieren, den du nicht mehr brauchst, oder in einen höheren Tarif wechseln.',
+      acc_limit_reached_one: 'Du hast das Limit von 1 Deal für dein Konto erreicht (Entwürfe, geplante und laufende Deals zählen; abgelaufene und archivierte nicht). Der Platz wird automatisch frei, sobald der Deal endet. Du kannst ihn auch archivieren oder in einen höheren Tarif wechseln.',
+      acc_usage: '{active} von {limit} Deal-Plätzen belegt. Entwürfe, geplante und laufende Deals zählen; abgelaufene und archivierte nicht – ein Deal gibt seinen Platz automatisch frei, sobald er endet.',
       acc_usage_unlimited: '{active} aktive Deals. Dein Tarif hat kein Deal-Limit.',
       acc_pilot: 'Du hast Pilot-Zugang zu Deals.',
       acc_unknown: 'Dein Deals-Zugang konnte gerade nicht geprüft werden. Deine bestehenden Deals kannst du weiterhin verwalten. Ist Erstellen oder Veröffentlichen nicht möglich, siehst du beim Versuch den Grund.',
       e_access_unavailable: 'Deals ist für dein Konto noch nicht verfügbar. Deine bestehenden Deals bleiben gespeichert, und du kannst sie weiterhin bearbeiten, archivieren oder löschen.',
       e_plan_required: 'Dein aktueller Tarif enthält keine Deals, daher ist das nicht möglich. Zum Erstellen und Veröffentlichen von Deals, Hinzufügen von Seiten und Hochladen von Bildern brauchst du Starter oder höher. Deine bestehenden Deals bleiben gespeichert und bearbeitbar.',
-      e_plan_limit: 'Du hast das Limit von {limit} aktiven Deals (Entwürfe und veröffentlichte) erreicht. Archiviere einen Deal, den du nicht mehr brauchst, oder wechsle in einen höheren Tarif, um weitere zu erstellen.',
-      e_plan_limit_one: 'Du hast das Limit von 1 aktiven Deal (Entwurf oder veröffentlicht) erreicht. Archiviere ihn oder wechsle in einen höheren Tarif, um weitere zu erstellen.',
+      e_plan_limit: 'Alle {limit} Deal-Plätze sind belegt (Entwürfe, geplante und laufende Deals). Archiviere einen Deal, den du nicht mehr brauchst, oder warte, bis einer endet – oder wechsle in einen höheren Tarif.',
+      e_plan_limit_one: 'Dein Deal-Platz ist belegt (Entwurf, geplanter oder laufender Deal). Archiviere ihn oder warte, bis er endet – oder wechsle in einen höheren Tarif.',
       e_upload_limit_hour: 'Du hast das Maximum von {limit} Bildern pro Stunde hochgeladen.',
       e_upload_limit_day: 'Du hast das Maximum von {limit} Bildern pro Tag hochgeladen.',
       e_upload_limit: 'Du hast das Upload-Limit für Bilder erreicht.',

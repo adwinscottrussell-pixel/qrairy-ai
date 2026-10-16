@@ -137,13 +137,14 @@ test('shows loading, empty, error and saved states', () => {
   }
 });
 
-test('never claims a published deal is visible to customers', () => {
-  assert.match(page, /class="deal-preview-banner" role="note"/);
+test('says where and when a published deal appears, never more (no outdated "not shown yet" banner)', () => {
+  assert.doesNotMatch(page, /class="deal-preview-banner" role="note"/, 'the old "not shown to customers yet" banner is gone');
+  assert.doesNotMatch(page, /dl_banner_/);
   const t = dictionary();
-  assert.match(t.en.dl_banner_text, /not shown to your customers yet/);
-  assert.match(t.en.s4_note, /not shown to your customers yet/);
-  assert.match(t.de.dl_banner_text, /noch nicht angezeigt/);
-  assert.match(t.de.s4_note, /noch nicht angezeigt/);
+  for (const lang of ['en', 'de']) assert.doesNotMatch(Object.values(t[lang]).join(' | '), /not shown to your customers yet|noch nicht angezeigt|still being built|noch in Arbeit/i, lang);
+  assert.equal(t.en.s4_note, 'Once published, this deal appears on the landing pages you select below – from its start until its end date. A landing page shows up to three current deals.');
+  assert.equal(t.de.s4_note, 'Nach dem Veröffentlichen erscheint dieser Deal auf den unten ausgewählten Landingpages – von seinem Start bis zu seinem Enddatum. Eine Landingpage zeigt bis zu drei aktuelle Deals.');
+  assert.ok(page.includes('data-i18n="s4_note">' + t.en.s4_note + '</p>'), 'the markup fallback is the English text');
   for (const lang of ['en', 'de']) {
     const all = Object.values(t[lang]).join(' | ');
     assert.ok(!/is (now )?live|now visible|customers can (now )?see|ist (jetzt )?live|jetzt sichtbar|Kunden sehen (ihn|den Deal) jetzt/i.test(all), lang + ' claims visibility');

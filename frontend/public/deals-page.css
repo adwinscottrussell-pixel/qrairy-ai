@@ -31,6 +31,8 @@
   color: var(--qds-color-warning);
   padding-top: 2px; /* optical alignment with the body-sm line box */
 }
+/* display:flex above would otherwise override the hidden attribute (#deal-access with no notice) */
+.deal-preview-banner[hidden] { display: none; }
 
 /* ── List view ───────────────────────────────────────────────── */
 .deal-list {
