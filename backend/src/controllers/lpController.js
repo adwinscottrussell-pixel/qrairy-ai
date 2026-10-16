@@ -14,6 +14,7 @@ const { sendWelcomeEmail } = require('../services/emailService');
 // blocks or fails the legacy writes below it — see service header comment.
 const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
+const { renderWelcome, welcomeV2Enabled } = require('../services/welcomeView');
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -1833,7 +1834,9 @@ async function handleServeLP(req, res) {
           pageCache.set(_stampKey, _lset || false); // cache null as false
         }
         if (_lset === false) _lset = null;
-        let _shouldWelcome = !!(_lset && _lset.enabled);
+        // Phase 5.5B — pages switched to the unified welcome (WELCOME_V2_SLUGS)
+        // also get it on the first visit, with or without loyalty.
+        let _shouldWelcome = !!(_lset && _lset.enabled) || welcomeV2Enabled(slug);
         // Phase 3C.7A — a StadtPocket-linked business with loyalty off
         // (Business Wallet Card mode) also gets routed through the
         // first-visit welcome/Add-to-Home-Screen page; previously this
@@ -3416,6 +3419,19 @@ async function handleLoyaltyWelcome(req, res) {
       const smColor = page.brandColor || color;
       return res.send(renderStadtPocketSmartWelcome({
         slug, isDE, bizName, logoUrl, color: smColor, city: stadtPocket.city,
+      }));
+    }
+
+    // Phase 5.5B — the unified QRAIVY welcome, per page (WELCOME_V2_SLUGS).
+    // Loyalty only with real, enabled StampSettings; no logo in the content,
+    // the logo stays the installed app's icon. Every other page: unchanged.
+    if (welcomeV2Enabled(slug)) {
+      const loyaltyOn = !!(stampCfg && stampCfg.enabled);
+      return res.send(renderWelcome({
+        slug, isDE, bizName,
+        iconUrl: logoUrl || page.logoUrl || null,
+        loyalty: loyaltyOn ? { goal: stampCfg.goal, rewardName: stampCfg.rewardName || null } : null,
+        cidHelperJs: SLUG_CID_HELPER_JS,
       }));
     }
 
