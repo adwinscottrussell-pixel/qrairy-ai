@@ -244,7 +244,7 @@ test('C. the Deal Builder routing, run with the page: a blocked host never calls
 
 test('C. no other page\'s routing changed: api-base.js, lp-routing.js and staging-config.js are production\'s', () => {
   const changed = execFileSync('git', ['diff', '4ac9e84', '--name-only', '--', 'frontend/public/js/api-base.js', 'frontend/public/js/lp-routing.js', 'frontend/public/js/staging-config.js',
-    'frontend/public/smart-qr-detail.html', 'frontend/public/smart-editor.js', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/dashboard.html', 'frontend/public/index.html',
+    'frontend/public/smart-editor.js', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/dashboard.html', 'frontend/public/index.html',
     'backend/src/utils/corsOriginPolicy.js', 'backend/src/middleware/auth.js', 'backend/src/utils/clerkVerify.js', 'backend/src/config/publicOrigins.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(changed, '');
   for (const p of ['dashboard.html', 'index.html']) assert.ok(read('frontend/public/' + p).includes('<script src="js/api-base.js"></script>'), p + ' still uses api-base.js');

@@ -353,7 +353,9 @@ test('D. every API request the editor makes is one the switch recognises', () =>
       assert.ok(b.routing.url(probe).startsWith(STAGING_API + '/'), name + ': ' + lit);
     }
   }
-  assert.ok(found >= 19, 'found ' + found + ' production API addresses in the editor');
+  // 18 since the Smart QR detail screen stopped loading the public page for its stats
+  // (tests/smartQrDetailVisits.test.js): two requests fewer, one /api/lp read instead.
+  assert.ok(found >= 18, 'found ' + found + ' production API addresses in the editor');
 });
 
 test('D. the phone preview addresses (not fetch) pass through the switch in all three places', () => {

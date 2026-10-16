@@ -784,7 +784,16 @@ test('F. the editor page loads the greeting data and field script before the edi
     + withoutRouting.slice(bodyEnd))
     .replace('    // Sidebar labels and the language selector come from the Admin shell.\n    if (window.QraivyShell) window.QraivyShell.apply(lang);\n', '')
     // the scrollable phone preview column (tests/editorPhonePreview.test.js): one style block in <head>
-    .replace(/<style id="sqd-preview-column">\n[\s\S]*?<\/style>\n/, '');
+    .replace(/<style id="sqd-preview-column">\n[\s\S]*?<\/style>\n/, '')
+    // Smart QR visits (tests/smartQrDetailVisits.test.js): the page record keeps its visit count,
+    // the hidden stats request to the public page is gone, the overview tile reads cardMetric(),
+    // and its fallback reads /api/lp/:slug instead of the public page.
+    .replace('          sections:     data.sections,\n          scanCount:    data.scanCount\n', '          sections:     data.sections\n')
+    .replace(/  \/\/ ── Live stats ─+\n[\s\S]*?  if \(pending\.scanCount != null\) document\.getElementById\('sqd-scans'\)\.textContent = pending\.scanCount;\n/,
+      "  // ── Fetch live stats if slug available ────────────────────────────────\n  if (pending.slug) {\n    try {\n      const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;\n      const res = await fetch(`https://www.qraivy.com/lp/${pending.slug}`, {\n        headers: token ? { Authorization: `Bearer ${token}` } : {}\n      });\n      const data = await res.json();\n      if (data.scanCount !== undefined) document.getElementById('sqd-scans').textContent  = data.scanCount;\n    } catch(e) {}\n  }\n")
+    .replace('            var scans = cardMetric(card);\n', '            var scans = card.totalScans || 0;\n')
+    .replace(/  \/\/ The tile's number, by card type[\s\S]*?  function fallbackFromLP\(slug, lpUrl\) \{\n    fetch\(\(window\.QRAIVY_API_BASE \|\| 'https:\/\/api\.qraivy\.com'\) \+ '\/api\/lp\/' \+ encodeURIComponent\(slug\)\)\n/,
+      "  function fallbackFromLP(slug, lpUrl) {\n    fetch('https://www.qraivy.com/lp/' + slug)\n");
   assert.equal(withoutSidebar, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
 });
 

@@ -33,6 +33,7 @@ const clerkBackendPath   = require.resolve('@clerk/backend');
 const apnsServicePath    = resolve('src', 'services', 'apnsService.js');
 const emailServicePath   = resolve('src', 'services', 'emailService.js');
 const webPushServicePath = resolve('src', 'services', 'webPushService.js');
+const customerQueryServicePath = resolve('src', 'services', 'customerQueryService.js');
 
 // ── Seed data (mutable, reset per test) ──────────────────────
 let qrRows = [];
@@ -80,6 +81,9 @@ const mockPrisma = {
     groupBy: async () => [],
   }),
   user: {
+    // upsertUser reads the User row first (added after this test was
+    // written); an existing email means Clerk is never asked -- no network.
+    findUnique: async () => ({ email: 'owner@example.test' }),
     upsert: async ({ where }) => ({ id: where.id, plan: 'free', qrs: qrRows.filter(r => r.userId === where.id) }),
     findMany: async () => [],
     count: async () => 0,
@@ -113,6 +117,17 @@ require.cache[emailServicePath] = {
 require.cache[webPushServicePath] = {
   id: webPushServicePath, filename: webPushServicePath, loaded: true,
   exports: { sendWebPush: async () => ({ ok: true }) },
+};
+// handleDashboard's Customer Foundation numbers (added after this test was
+// written) come from their own service; stubbed empty here, so the
+// scan/visit read model under test is all that varies.
+require.cache[customerQueryServicePath] = {
+  id: customerQueryServicePath, filename: customerQueryServicePath, loaded: true,
+  exports: {
+    getCustomerCountsBySlug: async () => new Map(),
+    getCustomerGrowthSeries: async () => [],
+    getCustomerSummary: async () => ({ totalCustomers: 0, emailCustomers: 0, walletCustomers: 0, loyaltyCustomers: 0, pushCustomers: 0 }),
+  },
 };
 
 const { handleDashboard } = require('../src/controllers/qrController');
@@ -315,6 +330,19 @@ test('handleServeLP: a real visit still increments LandingPage.scanCount exactly
   assert.equal(scanCountUpdateCalls.length, 1);
   assert.deepEqual(scanCountUpdateCalls[0].where, { slug: 'visit-untouched' });
   assert.deepEqual(scanCountUpdateCalls[0].data, { scanCount: { increment: 1 } });
+});
+
+test('handleServeLP: admin loads (?preview=1, ?t=) never count as a visit; a real visit after them counts once', async () => {
+  resetMocks();
+  makeLpPage('admin-views');
+  for (const query of [{ preview: '1' }, { t: String(Date.now()) }, { preview: '1', t: '1' }]) {
+    await handleServeLP({ params: { slug: 'admin-views' }, query }, fakeRes());
+  }
+  await flush();
+  assert.equal(scanCountUpdateCalls.length, 0, 'editor previews and forced refreshes are not visits');
+  await handleServeLP({ params: { slug: 'admin-views' }, query: { src: 'qr' } }, fakeRes());
+  await flush();
+  assert.equal(scanCountUpdateCalls.length, 1, 'a public visit (also from a QR code, ?src=qr) still counts');
 });
 
 // ── runner ────────────────────────────────────────────────────

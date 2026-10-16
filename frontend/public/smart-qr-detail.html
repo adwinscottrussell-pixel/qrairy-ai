@@ -1537,7 +1537,8 @@ async function initPage() {
           hostedUrl:    `https://qraivy.com/lp/${data.slug}`,
           useCase:      data.useCase,
           brandColor:   data.brandColor,
-          sections:     data.sections
+          sections:     data.sections,
+          scanCount:    data.scanCount
         };
       }
     } catch(e) {}
@@ -1672,17 +1673,11 @@ async function initPage() {
     });
   });
 
-  // ── Fetch live stats if slug available ────────────────────────────────
-  if (pending.slug) {
-    try {
-      const token = (window.Clerk && window.Clerk.session) ? await window.Clerk.session.getToken() : null;
-      const res = await fetch(`https://www.qraivy.com/lp/${pending.slug}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (data.scanCount !== undefined) document.getElementById('sqd-scans').textContent  = data.scanCount;
-    } catch(e) {}
-  }
+  // ── Live stats ────────────────────────────────────────────────────────
+  // The visit count comes with the page record above (/api/lp/:slug). The
+  // public page itself is never requested from here: every GET /lp/:slug
+  // without ?preview counts as a visit, so opening this screen must not.
+  if (pending.scanCount != null) document.getElementById('sqd-scans').textContent = pending.scanCount;
 }
 
 function toast(msg) {
@@ -3694,7 +3689,7 @@ window.QRAIVY_EDITOR_STATE = {
             var subsEl  = document.getElementById('sqd-ov-subs');
             var cvrEl   = document.getElementById('sqd-ov-cvr');
 
-            var scans = card.totalScans || 0;
+            var scans = cardMetric(card);
             var subs  = card.totalSubscribers || 0;
             var cvr   = scans > 0 ? ((subs/scans)*100).toFixed(1) : '0.0';
 
@@ -3716,8 +3711,18 @@ window.QRAIVY_EDITOR_STATE = {
     }, 100);
   }
 
+  // The tile's number, by card type -- the same rule as the dashboard list:
+  // a Smart Landing Page (source 'lp') counts page visits (totalVisits), a
+  // legacy QR code counts redirect scans (totalScans). /dashboard never sends
+  // totalScans for a landing page.
+  function cardMetric(card) {
+    return Number(card && (card.source === 'lp' ? card.totalVisits : card.totalScans)) || 0;
+  }
+
+  // The page record as JSON (/api/lp/:slug) -- never the public page
+  // (/lp/:slug), which is HTML and counts every load as a visit.
   function fallbackFromLP(slug, lpUrl) {
-    fetch('https://www.qraivy.com/lp/' + slug)
+    fetch((window.QRAIVY_API_BASE || 'https://api.qraivy.com') + '/api/lp/' + encodeURIComponent(slug))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var nameEl  = document.getElementById('sqd-ov-name');
