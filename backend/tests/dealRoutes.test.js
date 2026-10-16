@@ -59,10 +59,13 @@ function reset() {
 }
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
 // Prisma-style where: plain equality, or { not: v } per field.
+const instant = (v) => (v instanceof Date ? v.getTime() : typeof v === 'string' ? Date.parse(v) : v);
 const matches = (row, where) => Object.keys(where).every((k) => {
   const c = where[k];
+  if (k === 'OR') return c.some((w) => matches(row, w));
   if (c && typeof c === 'object' && 'not' in c) return row[k] !== c.not;
   if (c && typeof c === 'object' && 'in' in c) return c.in.includes(row[k]);
+  if (c && typeof c === 'object' && !(c instanceof Date) && 'gte' in c) return row[k] != null && instant(row[k]) >= instant(c.gte);
   return row[k] === c;
 });
 
@@ -856,6 +859,68 @@ test('L. limited creates take the per-account lock; unlimited ones do not', asyn
   assert.equal(advisoryLocks, 1);
   await call('post', '/', asBen(newBody(0)));
   assert.equal(advisoryLocks, 1, 'Pro: no lock needed');
+});
+
+// ── L. Expired deals and the limit over HTTP (Phase 3) ──────────
+// An expired published deal (endsAt passed) no longer counts. Republishing
+// it is a reactivation: POST /:id/publish must find a free slot, with the
+// limit from the access decision. Expiry is simulated by moving a stored
+// endsAt into the past -- the state a deal reaches by itself.
+const FUTURE_END = new Date(T + 7 * DAY).toISOString();
+async function liveDeal(who, i) {
+  const id = (await call('post', '/', who({ body: { title: 'Deal ' + i, offerText: 'Offer ' + i, endsAt: FUTURE_END } }))).body.deal.dealId;
+  assert.equal((await call('post', '/:id/publish', who({ params: { id }, body: {} }))).statusCode, 200);
+  return id;
+}
+const expireRow = (id) => { dealRows.find((d) => d.id === id).endsAt = new Date(Date.now() - 60 * 1000); };
+
+test('L. an expired deal frees its slot: create works again and /access shows the lower count', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' };
+  const ids = [await liveDeal(asAnna, 0), await liveDeal(asAnna, 1), await liveDeal(asAnna, 2)];
+  assert.equal((await call('post', '/', asAnna(newBody(3)))).statusCode, 402, 'Starter full at 3');
+  expireRow(ids[0]);
+  assert.equal((await accessOf(asAnna)).activeDeals, 2, 'usage drops on its own');
+  assert.equal((await call('post', '/', asAnna(newBody(4)))).statusCode, 201, 'slot free without archiving');
+  const listed = (await call('get', '/', asAnna())).body.deals.find((d) => d.dealId === ids[0]);
+  assert.equal(listed.displayStatus, 'expired', 'still in the list, shown as expired');
+});
+
+test('L. republishing an expired deal at the limit is a 402 plan_limit and changes nothing', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' };
+  const old = await liveDeal(asAnna, 0);
+  expireRow(old);
+  for (let i = 1; i <= 3; i++) await liveDeal(asAnna, i);
+  assert.equal((await call('put', '/:id/draft', asAnna({ params: { id: old }, body: { endsAt: new Date(T + 14 * DAY).toISOString() } }))).statusCode, 200, 'rescheduling the draft is allowed');
+  const before = snapshot();
+  const res = await call('post', '/:id/publish', asAnna({ params: { id: old }, body: { includePlacements: true } }));
+  assert.equal(res.statusCode, 402);
+  assert.equal(res.body.error, 'plan_limit'); assert.equal(res.body.limit, 3); assert.equal(res.body.current, 3);
+  assert.equal(snapshot(), before, 'nothing changed');
+});
+
+test('L. republishing an expired deal with room works; the limit comes from the plan, never from the request', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = activeTrial;   // Trial: 1
+  const old = await liveDeal(asAnna, 0);
+  expireRow(old);
+  await call('put', '/:id/draft', asAnna({ params: { id: old }, body: { endsAt: new Date(T + 14 * DAY).toISOString() } }));
+  const ok = await call('post', '/:id/publish', asAnna({ params: { id: old }, body: { limit: 100 }, query: { limit: '100' } }));
+  assert.equal(ok.statusCode, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.deal.displayStatus, 'published');
+  assert.equal((await call('post', '/', asAnna(newBody(1)))).statusCode, 402, 'full again');
+});
+
+test('L. Pro / Business reactivate without a limit; other accounts never fill a slot', async () => {
+  reset(); setRollout({ DEALS_ENABLED: 'true' }); userRows[ANNA] = { plan: 'starter' }; userRows[BEN] = { plan: 'pro' };
+  for (let i = 0; i < 6; i++) await liveDeal(asBen, i);
+  const benOld = await liveDeal(asBen, 9); expireRow(benOld);
+  await call('put', '/:id/draft', asBen({ params: { id: benOld }, body: { endsAt: new Date(T + 14 * DAY).toISOString() } }));
+  advisoryLocks = 0;
+  assert.equal((await call('post', '/:id/publish', asBen({ params: { id: benOld }, body: {} }))).statusCode, 200);
+  assert.equal(advisoryLocks, 0, 'unlimited: no lock');
+  const annaOld = await liveDeal(asAnna, 0); expireRow(annaOld);
+  await call('put', '/:id/draft', asAnna({ params: { id: annaOld }, body: { endsAt: new Date(T + 14 * DAY).toISOString() } }));
+  assert.equal((await call('post', '/:id/publish', asAnna({ params: { id: annaOld }, body: {} }))).statusCode, 200, 'Ben\'s 7 deals do not count for Anna');
+  assert.equal((await call('post', '/:id/publish', asBen({ params: { id: annaOld }, body: {} }))).statusCode, 404, 'not Ben\'s deal');
 });
 
 // ── T. Upload limit over HTTP (Phase 3B.4) ─────────────────────

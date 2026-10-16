@@ -85,9 +85,21 @@ async function publishDeal(req, res) {
   try {
     // optional { includePlacements: true }: also publish the deal's draft placements, in the same transaction
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    const deal = await dealService.publishDeal(req.userId, req.params.id, body.includePlacements === undefined ? {} : { includePlacements: body.includePlacements });
+    // Republishing an expired deal needs a free slot: the limit comes from the
+    // route's access check (req.dealAccess), never from the request. Without a
+    // decision no expired deal can be reactivated (limit 0) -- fail closed.
+    const access = req.dealAccess && req.dealAccess.allowed ? req.dealAccess : null;
+    const options = { limit: access ? access.dealLimit : 0 };
+    if (body.includePlacements !== undefined) options.includePlacements = body.includePlacements;
+    const deal = await dealService.publishDeal(req.userId, req.params.id, options);
     return res.json({ deal });
-  } catch (e) { return fail(res, e, 'publish the deal'); }
+  } catch (e) {
+    if (e instanceof dealService.DealLimitError) {
+      const answer = limitResponse({ dealLimit: e.limit }, e.current);
+      return res.status(answer.status).json(answer.body);
+    }
+    return fail(res, e, 'publish the deal');
+  }
 }
 
 async function archiveDeal(req, res) {

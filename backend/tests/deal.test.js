@@ -77,13 +77,17 @@ function resetFixtures() {
 }
 
 function cloneRows(rows) { return rows.map((r) => ({ ...r })); }
-// Prisma-style where: plain equality, or { not: v } / { in: [...] } per field.
+// Prisma-style where: plain equality, or { not: v } / { in: [...] } / { gte: d } per field,
+// and OR: [where, ...]. Dates compare by instant.
+const instant = (v) => (v instanceof Date ? v.getTime() : typeof v === 'string' ? Date.parse(v) : v);
 function matches(row, where) {
   return Object.keys(where).every((k) => {
     const c = where[k];
+    if (k === 'OR') return c.some((w) => matches(row, w));
     if (c && typeof c === 'object' && !(c instanceof Date)) {
       if ('not' in c) return row[k] !== c.not;
       if ('in' in c) return c.in.includes(row[k]);
+      if ('gte' in c) return row[k] != null && instant(row[k]) >= instant(c.gte);
     }
     return row[k] === c;
   });
@@ -1299,6 +1303,168 @@ test('L. a limited create takes the per-account lock inside its transaction; inv
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
   assert.match(src, /pg_advisory_xact_lock\(hashtextextended\(\$\{DEAL_CREATE_LOCK_PREFIX \+ ownerUserId\}, 0\)\)/, 'parameterised, per-account, transaction-scoped');
   assert.deepEqual(service.LIMITED_DEAL_STATUSES, ['draft', 'published']);
+});
+
+// ── X. Expired deals free their slot (Phase 3) ─────────────────
+// A published deal whose endsAt has passed no longer counts toward the
+// Deal limit. Nothing is written when it expires: the count simply reads
+// the dates at that moment. Republishing it (reactivating) must find room.
+// Time passing is simulated by moving a stored endsAt into the past, the
+// same state a deal reaches on its own; the real clock is never changed.
+const HOUR = 3600 * 1000;
+const expire = (dealId, at = Date.now() - HOUR) => { const r = dealRows.find((d) => d.id === dealId); r.endsAt = new Date(at); return r; };
+async function publishedDeal(owner = ANNA, extra = {}) {
+  const d = await newDeal(owner, { endsAt: FUTURE, ...extra });
+  return service.publishDeal(owner, d.dealId);
+}
+
+test('X. drafts, running and scheduled published deals count; expired and archived ones do not', async () => {
+  resetFixtures();
+  await newDeal();                                                            // draft
+  await publishedDeal();                                                      // published, running
+  await publishedDeal(ANNA, { startsAt: FUTURE, endsAt: FAR_FUTURE });       // published, scheduled
+  expire((await publishedDeal()).dealId);                                     // published, expired
+  const gone = await publishedDeal(); await service.archiveDeal(ANNA, gone.dealId);
+  await newDeal();                                                            // another draft
+  assert.equal(await service.countLimitedDeals(ANNA), 4, 'two drafts + running + scheduled');
+});
+
+test('X. a draft counts even when its end date has passed (only published deals expire)', async () => {
+  resetFixtures();
+  const d = await newDeal(ANNA, { endsAt: FUTURE });
+  expire(d.dealId);
+  assert.equal(await service.countLimitedDeals(ANNA), 1);
+});
+
+test('X. expiring frees the slot by itself: no write, no job -- the count reads the dates at that moment', async () => {
+  resetFixtures();
+  const end = Date.parse('2026-10-23T21:59:59.000Z');
+  const d = await publishedDeal();
+  expire(d.dealId, end);
+  const before = JSON.stringify(dealRows);
+  assert.equal(await service.countLimitedDeals(ANNA, undefined, new Date(end - 1000)), 1, 'before the end');
+  assert.equal(await service.countLimitedDeals(ANNA, undefined, new Date(end + 1000)), 0, 'after the end');
+  assert.equal(JSON.stringify(dealRows), before, 'nothing was written');
+  assert.equal(dealRows.find((r) => r.id === d.dealId).status, 'published', 'status stays published');
+});
+
+test('X. endsAt equal to now still counts; one millisecond later it does not', async () => {
+  resetFixtures();
+  const end = Date.parse('2026-10-23T21:59:59.000Z');
+  expire((await publishedDeal()).dealId, end);
+  assert.equal(await service.countLimitedDeals(ANNA, undefined, new Date(end)), 1, 'at endsAt');
+  assert.equal(await service.countLimitedDeals(ANNA, undefined, new Date(end + 1)), 0, '1 ms after');
+});
+
+test('X. without an explicit time the count uses the current server time', async () => {
+  resetFixtures();
+  expire((await publishedDeal()).dealId, Date.now() + 10 * 60 * 1000);   // ends in 10 minutes
+  expire((await publishedDeal()).dealId, Date.now() - 1000);              // ended a second ago
+  assert.equal(await service.countLimitedDeals(ANNA), 1);
+});
+
+test('X. an expired deal frees room for a new one, and stays saved and listed as expired', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); await mk(ANNA, 2);
+  assert.ok(await throwsAsync(() => mk(ANNA, 2)), 'full');
+  expire(a.dealId);
+  assert.ok((await mk(ANNA, 2)).dealId, 'the expired deal no longer takes a slot');
+  assert.ok(dealRows.some((r) => r.id === a.dealId), 'still in the database');
+  const listed = (await service.listDeals(ANNA)).find((d) => d.dealId === a.dealId);
+  assert.equal(listed && listed.displayStatus, 'expired');
+  assert.equal(listed.status, 'published');
+});
+
+test('X. editing an expired deal does not reactivate it or take a slot, even at the limit', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); expire(a.dealId);
+  await mk(ANNA, 1);                                                        // now at the limit of 1
+  const edited = await service.saveDealDraft(ANNA, a.dealId, { title: 'Neuer Titel', endsAt: FAR_FUTURE });
+  assert.equal(edited.displayStatus, 'expired', 'the live dates are unchanged until it is published');
+  assert.equal(await service.countLimitedDeals(ANNA), 1, 'still only the other deal counts');
+});
+
+test('X. republishing an expired deal is refused at the limit; nothing changes', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); expire(a.dealId);
+  await mk(ANNA, 2); await mk(ANNA, 2);                                     // two active deals, limit 2
+  await service.saveDealDraft(ANNA, a.dealId, { endsAt: FAR_FUTURE });     // rescheduled in the draft
+  const before = JSON.stringify(dealRows);
+  const err = await throwsAsync(() => service.publishDeal(ANNA, a.dealId, { limit: 2 }));
+  assert.ok(err instanceof service.DealLimitError, String(err && err.message));
+  assert.equal(err.status, 402); assert.equal(err.limit, 2); assert.equal(err.current, 2);
+  assert.equal(JSON.stringify(dealRows), before, 'deal, dates and draft untouched');
+});
+
+test('X. republishing an expired deal with room is allowed and counts again', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); expire(a.dealId);
+  await mk(ANNA, 2);
+  await service.saveDealDraft(ANNA, a.dealId, { endsAt: FAR_FUTURE });
+  const locks = advisoryLocks;
+  const out = await service.publishDeal(ANNA, a.dealId, { limit: 2 });
+  assert.equal(out.displayStatus, 'published');
+  assert.equal(advisoryLocks, locks + 1, 'reactivation takes the per-account limit lock');
+  assert.equal(await service.countLimitedDeals(ANNA), 2);
+  assert.ok(await throwsAsync(() => mk(ANNA, 2)), 'and the account is full again');
+});
+
+test('X. publishing a deal that already counts never needs a free slot (drafts, running, scheduled; even over the limit)', async () => {
+  resetFixtures();
+  const draft = await newDeal(ANNA, { endsAt: FUTURE });
+  const running = await publishedDeal();
+  const scheduled = await publishedDeal(ANNA, { startsAt: FUTURE, endsAt: FAR_FUTURE });
+  await newDeal();                                                          // 4 counted, limit 1: over the limit (e.g. after a downgrade)
+  const locks = advisoryLocks;
+  for (const d of [draft, running, scheduled]) assert.equal((await service.publishDeal(ANNA, d.dealId, { limit: 1 })).status, 'published', d.dealId);
+  assert.equal(advisoryLocks, locks, 'no lock and no count when the deal already takes a slot');
+});
+
+test('X. reactivation cannot be smuggled in: no status field, no past end, placements do not revive a deal', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); expire(a.dealId);
+  await mk(ANNA, 1);
+  assert.equal((await throwsAsync(() => service.saveDealDraft(ANNA, a.dealId, { status: 'draft' }))).status, 400, 'status is not editable');
+  assert.equal((await throwsAsync(() => service.createDealDraft(ANNA, { title: 't', offerText: 'o', status: 'published' }, { limit: 5 }))).status, 400);
+  assert.ok(await throwsAsync(() => service.publishDeal(ANNA, a.dealId, { limit: 1 })), 'republishing with its old, past end is refused');
+  const pl = await service.addDealPlacement(ANNA, a.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDealPlacement(ANNA, a.dealId, pl.placementId);
+  assert.equal(dealRows.find((r) => r.id === a.dealId).status, 'published');
+  assert.equal(await service.countLimitedDeals(ANNA), 1, 'a placement does not make an expired deal count');
+  assert.deepEqual(await service.activeDealsForPage('anna-cafe'), [], 'and it is still not shown');
+});
+
+test('X. the limit is per account: other accounts\' deals never count, another account\'s deal cannot be published', async () => {
+  resetFixtures();
+  for (let i = 0; i < 3; i++) await mk(BEN, null);
+  const a = await publishedDeal(); expire(a.dealId);
+  await service.saveDealDraft(ANNA, a.dealId, { endsAt: FAR_FUTURE });
+  assert.equal((await service.publishDeal(ANNA, a.dealId, { limit: 1 })).displayStatus, 'published', 'Ben\'s deals do not fill Anna\'s slot');
+  const b = await publishedDeal(BEN); expire(b.dealId);
+  assert.equal((await throwsAsync(() => service.publishDeal(ANNA, b.dealId, { limit: 5 }))).status, 404);
+});
+
+test('X. unlimited (null) and internal callers (no limit) reactivate without a lock or count', async () => {
+  resetFixtures();
+  const a = await publishedDeal(); expire(a.dealId);
+  const b = await publishedDeal(); expire(b.dealId);
+  for (let i = 0; i < 5; i++) await newDeal();
+  await service.saveDealDraft(ANNA, a.dealId, { endsAt: FAR_FUTURE });
+  await service.saveDealDraft(ANNA, b.dealId, { endsAt: FAR_FUTURE });
+  const locks = advisoryLocks;
+  assert.equal((await service.publishDeal(ANNA, a.dealId, { limit: null })).displayStatus, 'published');
+  assert.equal((await service.publishDeal(ANNA, b.dealId)).displayStatus, 'published');
+  assert.equal(advisoryLocks, locks);
+});
+
+test('X. the reactivation check runs inside the publish transaction, behind the same per-account lock as create', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'services', 'dealService.js'), 'utf8');
+  const pub = src.slice(src.indexOf('async function publishDeal('), src.indexOf('// ── Archive'));
+  const lock = pub.indexOf('pg_advisory_xact_lock(hashtextextended(${DEAL_CREATE_LOCK_PREFIX + ownerUserId}, 0))');
+  const count = pub.indexOf('countLimitedDeals(');
+  const write = pub.indexOf('tx.deal.updateMany(');
+  assert.ok(pub.indexOf('prisma.$transaction(async (tx)') !== -1 && lock !== -1 && count !== -1, 'lock and count in publish');
+  assert.ok(lock < count && count < write, 'lock, then count, then the write');
 });
 
 // ── V. Public visibility follows the owner's Deals access (Phase 3B.6) ──

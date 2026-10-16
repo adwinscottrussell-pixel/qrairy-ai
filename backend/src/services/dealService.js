@@ -35,7 +35,7 @@ class DealError extends Error {
   }
 }
 
-// The account already has as many draft/published deals as its limit allows.
+// The account already has as many counted deals (drafts, running or scheduled) as its limit allows.
 // The controller answers it as the established 402 plan_limit.
 class DealLimitError extends DealError {
   constructor(limit, current) {
@@ -45,6 +45,7 @@ class DealLimitError extends DealError {
     this.current = current;
   }
 }
+// Statuses that can count toward the Deal limit; a published deal only until it ends (countLimitedDeals).
 const LIMITED_DEAL_STATUSES = ['draft', 'published'];
 const DEAL_CREATE_LOCK_PREFIX = 'qraivy:deals:create:';
 
@@ -504,11 +505,31 @@ async function createDealDraft(ownerUserId, body, options = {}) {
   return mergeDealState(deal);
 }
 
-// The deals the Deal limit counts: draft and published, never archived.
-// The create transaction above and GET /deals/access both use this, so the
-// usage the owner is shown is exactly the number the limit is checked against.
-async function countLimitedDeals(ownerUserId, client = prisma) {
-  return client.deal.count({ where: { ownerUserId, status: { in: LIMITED_DEAL_STATUSES } } });
+// The deals the Deal limit counts: drafts, and published deals that have not
+// ended (running or scheduled; endsAt equal to `now` still counts). Expired
+// and archived deals do not. Expiry writes nothing: the count reads the
+// dates at `now` (the server's current time unless given), so a deal frees
+// its slot the moment it ends and stays saved as it is. The create and
+// publish transactions and GET /deals/access all use this, so the usage the
+// owner is shown is exactly the number the limit is checked against.
+async function countLimitedDeals(ownerUserId, client = prisma, now = new Date()) {
+  return client.deal.count({
+    where: {
+      ownerUserId,
+      OR: [
+        { status: 'draft' },
+        { status: 'published', endsAt: null },
+        { status: 'published', endsAt: { gte: now } },
+      ],
+    },
+  });
+}
+// The same rule for one deal row.
+function countsTowardLimit(deal, now = new Date()) {
+  if (deal.status === 'draft') return true;
+  if (deal.status !== 'published') return false;
+  const endsAt = toDateOrNull(deal.endsAt);
+  return endsAt == null || endsAt.getTime() >= now.getTime();
 }
 
 // ── Save draft ──────────────────────────────────────────────────
@@ -601,6 +622,26 @@ async function publishDeal(ownerUserId, dealId, options = {}) {
     if (merged.image != null) checkDealImage(merged.image);
     if (merged.offerType != null) checkOfferType(merged.offerType);
     if (merged.offerDetails != null) checkOfferDetails(merged.offerType, merged.offerDetails);
+
+    // Reactivation: an expired deal does not count toward the Deal limit
+    // (countLimitedDeals); publishing it again makes it count, so it needs a
+    // free slot (options.limit from services/dealAccess.js; null = unlimited;
+    // no option = internal caller, unlimited). Same per-account lock and
+    // count as create, inside this transaction, so parallel creates and
+    // reactivations queue up and can never exceed the limit. The deal is read
+    // again behind the lock: if a parallel publish already reactivated it,
+    // it counts already and needs no second slot. Publishing a deal that
+    // already counts (draft, running, scheduled) never needs one.
+    const limit = options && options.limit;
+    if (limit !== undefined && limit !== null && !countsTowardLimit(deal)) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${DEAL_CREATE_LOCK_PREFIX + ownerUserId}, 0))`;
+      const now = new Date();
+      const current = await tx.deal.findUnique({ where: { id: deal.id } });
+      if (current && !countsTowardLimit(current, now)) {
+        const used = await countLimitedDeals(ownerUserId, tx, now);
+        if (!hasCapacity(limit, used)) throw new DealLimitError(limit, used);
+      }
+    }
 
     // Conditional write: the status read above may be stale. If an archive
     // (or delete) commits meanwhile, PostgreSQL re-checks this WHERE against
