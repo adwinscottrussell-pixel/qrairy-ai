@@ -61,15 +61,65 @@ for (const [page, active] of Object.entries(ACTIVE)) {
   });
 }
 
-test('canonical menu: groups, items and destinations', () => {
+test('canonical menu: six tabs, their items and destinations', () => {
   const items = [...canonical.matchAll(/data-i18n="(nav_[a-z]+)"/g)].map((m) => m[1]);
   assert.deepEqual(items, ['nav_main', 'nav_dashboard', 'nav_analytics', 'nav_smartpages', 'nav_sqrpages', 'nav_createnew',
+    'nav_dealspromo', 'nav_deals',
     'nav_engage', 'nav_campaigns', 'nav_customers', 'nav_loyalty', 'nav_configure', 'nav_wallet', 'nav_account', 'nav_billing', 'nav_settings', 'nav_signout']);
+  const tabs = [...canonical.matchAll(/<div class="sb-tab" data-tab="([a-z]+)">/g)].map((m) => m[1]);
+  assert.deepEqual(tabs, ['main', 'smartpages', 'deals', 'engage', 'configure', 'account']);
   const hrefs = [...canonical.matchAll(/<a href="([^"]*)" class="sb-item/g)].map((m) => m[1]);
   assert.deepEqual(hrefs, ['dashboard.html', 'analytics.html', 'dashboard.html?section=sqr', 'dashboard.html?launch=onboarding',
+    'deals.html',
     'dashboard.html?section=campaigns', 'dashboard.html?section=customers', 'dashboard.html?section=loyalty',
     'wallet-pass-studio.html', 'dashboard.html?section=billing', 'dashboard.html?section=settings']);
+  // every item sits inside its tab's submenu
+  for (const name of tabs) {
+    const t = canonical.slice(canonical.indexOf('data-tab="' + name + '"'));
+    const btn = t.match(/<button type="button" class="sb-tab-btn" aria-expanded="false" aria-controls="sb-sub-([a-z]+)">/);
+    assert.ok(btn && btn[1] === name, name + ': tab button controls its submenu');
+    assert.ok(t.includes('<div class="sb-sub" id="sb-sub-' + name + '">'), name + ': submenu');
+  }
+  // the ids the pages' own scripts use are all still there, once
+  for (const id of ['sb-smart-pages', 'sqr-count-badge', 'sb-create-sqr', 'sb-campaigns', 'sb-customers', 'sb-loyalty', 'sb-wallet', 'sb-billing', 'sb-settings', 'sb-toggle', 'sb-deals']) {
+    assert.equal((canonical.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id);
+  }
   assert.ok(canonical.includes('id="sb-username"') && canonical.includes('id="lang-toggle"') && canonical.includes('id="sb-signout"'));
+  assert.ok(canonical.includes('data-i18n="role_owner">Business Owner<'), 'Business Owner footer');
+});
+
+test('canonical menu: Deals & Promotions for every owner, with its orange icon; access stays with the Deals page', () => {
+  const deals = canonical.slice(canonical.indexOf('data-tab="deals"'), canonical.indexOf('data-tab="engage"'));
+  assert.ok(deals.includes('class="sb-tab-icon sb-tab-icon--deals"'));
+  assert.equal((canonical.match(/sb-tab-icon--deals/g) || []).length, 1, 'only the Deals icon is orange');
+  assert.ok(/#sidebar \.sb-tab-icon--deals \{ stroke: var\(--sbx-orange\); \}/.test(read('dashboard-shell.css')));
+  // no plan or pilot check in the menu: deals.html asks GET /deals/access itself
+  assert.ok(!/data-plan|\shidden[\s>=]|display:none|dealAccess|deals\/access/.test(deals));
+  assert.ok(!/deals\/access|dealAccess|DEALS_/.test(read('js/admin-shell.js')));
+});
+
+test('header: the QRAIVY app icon and an upright QR/AIVY wordmark; icons and PWA files untouched', () => {
+  assert.ok(canonical.includes('<div class="sb-logo-icon" aria-hidden="true">Q</div>'));
+  assert.ok(canonical.includes('<div class="sb-logo-text"><span class="sb-wm-qr">QR</span><span class="sb-wm-aivy">AIVY</span></div>'));
+  for (const f of ['dashboard-shell.css', 'sidebar.css']) {
+    const css = read(f);
+    assert.ok(css.includes("#sidebar .sb-logo-icon::after { content: ''; position: absolute; inset: 0; background: url('apple-touch-icon.png')"), f + ': app icon');
+    assert.ok(/#sidebar \.sb-wm-qr \{ color: var\(--sbx-orange\); \}/.test(css) && /--sbx-orange: #FF5B2A;/.test(css), f + ': QR orange');
+    assert.ok(/#sidebar \.sb-wm-aivy \{ color: #fff; \}/.test(css), f + ': AIVY white');
+    assert.ok(/#sidebar \.sb-logo-text \{[^}]*font-style: normal;/.test(css), f + ': upright');
+  }
+  assert.ok(!/\.sb-logo-text span \{[^}]*italic/.test(read('dashboard-shell.css')), 'no italic wordmark left');
+  assert.ok(/--dashboard-accent: #ff5a1f;/.test(read('dashboard-shell.css')), 'the site accent is unchanged');
+  const changed = require('child_process').execFileSync('git', ['diff', '4679924', '--name-only', '--', 'frontend/public/favicon.ico', 'frontend/public/favicon.png',
+    'frontend/public/favicon-16x16.png', 'frontend/public/favicon-32x32.png', 'frontend/public/apple-touch-icon.png', 'frontend/public/manifest.json', 'frontend/public/sw.js'],
+  { cwd: path.join(__dirname, '..'), encoding: 'utf8' }).trim();
+  assert.equal(changed, '');
+});
+
+test('the six-tab styles are one block, the same in dashboard-shell.css and sidebar.css (designer-saved)', () => {
+  const block = (f) => { const s = read(f); const a = s.indexOf('/* ── Admin sidebar: six tabs'); const b = s.indexOf('/* ── end of the six-tab block'); assert.ok(a !== -1 && b > a, f); return s.slice(a, b); };
+  assert.equal(block('sidebar.css'), block('dashboard-shell.css'));
+  assert.ok(read('designer-saved.html').includes('href="sidebar.css'));
 });
 
 test('admin-shell.js: EN and DE cover the same keys, incl. every sidebar key', () => {
@@ -233,6 +283,101 @@ test('admin-shell.js bindSidebar: account name and sign-out', () => { (async () 
   const g = shellEnv({}); g.shell.bindSidebar(); g.ids['sb-signout'].click();
   assert.equal(g.location.href, 'login.html');
   })().catch((err) => { console.error('  FAIL admin-shell.js bindSidebar: account name and sign-out\n       ' + err.message); process.exitCode = 1; });
+});
+
+// js/admin-shell.js bindTabs(), run against stand-in tabs.
+function tabsEnv({ width = 1440, collapsed = false, active = 'deals' } = {}) {
+  const classes = (init) => { const s = new Set(init || []); return { add: (c) => s.add(c), remove: (c) => s.delete(c), contains: (c) => s.has(c), toggle: (c, f) => { const on = f === undefined ? !s.has(c) : !!f; if (on) s.add(c); else s.delete(c); return on; } }; };
+  const attrs = () => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; } });
+  const tabs = {};
+  for (const name of ['main', 'smartpages', 'deals', 'engage', 'configure', 'account']) {
+    const item = { classList: classes(name === active ? ['sb-item', 'active'] : ['sb-item']) };
+    const btn = Object.assign(attrs(), { listeners: [], addEventListener(t, f) { this.listeners.push(f); }, click() { this.listeners.forEach((f) => f({})); } });
+    tabs[name] = { name, item, btn, classList: classes(['sb-tab']), querySelector: (sel) => (sel === '.sb-tab-btn' ? btn : sel === '.sb-item.active' ? (item.classList.contains('active') ? item : null) : null) };
+  }
+  let toggles = 0;
+  const sidebar = Object.assign(attrs(), { classList: classes(collapsed ? ['collapsed'] : []), querySelectorAll: (sel) => (sel === '.sb-tab' ? Object.values(tabs) : []) });
+  const toggle = { click() { toggles += 1; sidebar.classList.toggle('collapsed'); } };
+  const ids = { sidebar, 'sb-toggle': toggle };
+  const window = { matchMedia: (q) => ({ matches: width <= Number(/max-width: (\d+)px/.exec(q)[1]), addEventListener() {} }), QRAIVY_LANGUAGE: 'en' };
+  const document = { readyState: 'loading', body: { classList: classes(), style: {} }, documentElement: {}, getElementById: (id) => ids[id] || null, querySelectorAll: () => [], addEventListener() {} };
+  vm.runInNewContext(read('js/admin-shell.js'), { window, document, localStorage: { getItem: () => null, setItem() {} } });
+  const open = () => Object.values(tabs).filter((t) => t.btn.getAttribute('aria-expanded') === 'true').map((t) => t.name);
+  return { shell: window.QraivyShell, tabs, sidebar, open, toggles: () => toggles };
+}
+
+test('admin-shell.js bindTabs: all tabs closed except the one holding the current page; clicking opens and closes', () => {
+  const e = tabsEnv({ active: 'deals' });           // bound at load: the sidebar is already in the page
+  assert.equal(e.sidebar.getAttribute('data-tabs-bound'), '1');
+  assert.deepEqual(e.open(), ['deals']);
+  assert.ok(e.tabs.deals.classList.contains('current') && !e.tabs.main.classList.contains('current'));
+  e.tabs.engage.btn.click(); assert.deepEqual(e.open(), ['deals', 'engage'], 'a click opens a tab');
+  e.tabs.engage.btn.click(); assert.deepEqual(e.open(), ['deals'], 'a second click closes it');
+  e.tabs.deals.btn.click(); assert.deepEqual(e.open(), [], 'the current tab can be closed too');
+  e.tabs.deals.btn.click(); assert.deepEqual(e.open(), ['deals']);
+  assert.equal(e.shell.bindTabs(), false, 'a second call does nothing');
+  assert.equal(e.tabs.main.btn.listeners.length, 1, 'one handler per tab');
+  const none = tabsEnv({ active: null });             // designer-saved: no current page in the menu
+  assert.deepEqual(none.open(), []);
+});
+
+test('admin-shell.js bindTabs: when the page marks another item active, its tab opens (dashboard sections)', () => {
+  const e = tabsEnv({ active: 'main' });
+  e.tabs.main.item.classList.remove('active'); e.tabs.engage.item.classList.add('active');
+  e.tabs.configure.btn.click();                       // any sync; in browsers a MutationObserver does this at once
+  assert.deepEqual(e.open(), ['engage', 'configure']);
+  assert.ok(e.tabs.engage.classList.contains('current') && !e.tabs.main.classList.contains('current'));
+  assert.ok(/new MutationObserver\(function \(records\)[\s\S]*?attributeFilter: \['class'\], subtree: true/.test(read('js/admin-shell.js')));
+});
+
+test('admin-shell.js bindTabs: on the narrow rail a tab opens the sidebar through its own toggle; the phone drawer never collapses', () => {
+  const e = tabsEnv({ collapsed: true, active: 'main' });
+  e.tabs.engage.btn.click();
+  assert.equal(e.toggles(), 1, 'the page\'s own toggle (keeps its remembered state)');
+  assert.ok(!e.sidebar.classList.contains('collapsed'));
+  assert.deepEqual(e.open(), ['main', 'engage'], 'and the clicked tab is open');
+  const p = tabsEnv({ width: 390, collapsed: true, active: 'main' });
+  p.tabs.engage.btn.click(); assert.equal(p.toggles(), 0);
+  assert.deepEqual(p.open(), ['main', 'engage']);
+});
+
+test('the collapse toggle is bound exactly once on every Admin page (analytics bound it twice: a click did nothing)', () => {
+  for (const page of Object.keys(ACTIVE).concat('deals.html')) {
+    const src = read(page);
+    const own = (src.match(/getElementById\(['"]sb-toggle['"]\)/g) || []).length;
+    const shell = (src.match(/QraivyShell\.bindSidebar\(\)/g) || []).length;
+    assert.equal(own + shell, 1, page + ': ' + own + ' own binding(s), ' + shell + ' shell binding(s)');
+  }
+});
+
+test('sidebar palette: the approved QRAIVY black-and-orange values, in both stylesheets', () => {
+  for (const f of ['dashboard-shell.css', 'sidebar.css']) {
+    const css = read(f);
+    for (const v of ['--sbx-orange: #FF5B2A;', '--sbx-bg: #101012;', '--sbx-tab: #171719;', '--sbx-selected: #101012;', '--sbx-text: #FFFFFF;', '--sbx-text-2: #A1A1AA;', '--sbx-muted: #71717A;']) assert.ok(css.includes(v), f + ': ' + v);
+    assert.ok(css.includes('#sidebar .sb-sub { display: none; padding: 0 6px 6px; background: var(--sbx-bg);'), f + ': submenu background');
+    assert.ok(/#sidebar \.sb-sub \.sb-item \{[^}]*color: var\(--sbx-text-2\)/.test(css), f + ': secondary item text');
+    assert.ok(css.includes('#sidebar .sb-tab:has(.sb-item.active) { border-color: var(--sbx-orange); }'), f + ': current tab outline in QRAIVY orange');
+    const block = css.slice(css.indexOf('/* ── Admin sidebar: six tabs'), css.indexOf('/* ── end of the six-tab block'));
+    assert.ok(!/rgba\(255,\s*91,\s*42/.test(block), f + ': no translucent (brown-looking) orange left');
+  }
+});
+
+test('selected item: near-black background with an orange accent, no orange fill', () => {
+  for (const f of ['dashboard-shell.css', 'sidebar.css']) {
+    const css = read(f);
+    assert.ok(/--sbx-selected: #101012;/.test(css), f);
+    const rule = css.match(/#sidebar \.sb-sub \.sb-item\.active \{[^}]*\}/)[0];
+    assert.ok(rule.includes('background: var(--sbx-selected)') && rule.includes('color: #fff') && rule.includes('inset 3px 0 0 var(--sbx-orange)'), f + ': ' + rule);
+    assert.ok(!/rgba\(255,\s*91,\s*42,\s*0\.1\d\)/.test(css.slice(css.indexOf('/* ── Admin sidebar: six tabs'))), f + ': no orange-tinted fill left');
+  }
+});
+
+test('the tab holding the current page is open on first paint, before any script (:has), and closed tabs hide their items', () => {
+  const css = read('dashboard-shell.css');
+  assert.ok(css.includes('#sidebar .sb-sub { display: none; padding: 0 6px 6px; background: var(--sbx-bg); border-radius: 0 0 11px 11px; }'));
+  assert.ok(css.includes('#sidebar .sb-tab:has(.sb-item.active):not(.shut) > .sb-sub { display: block; }'));
+  assert.ok(css.includes('#sidebar.collapsed .sb-sub { display: none !important; }'));
+  assert.ok(/#sidebar \.sb-sub \.sb-item\.active \{[^}]*var\(--sbx-orange\)/.test(css), 'orange active highlight');
 });
 
 test('analytics: chart cards can shrink with the grid column (Chart.js fixed canvas width)', () => {

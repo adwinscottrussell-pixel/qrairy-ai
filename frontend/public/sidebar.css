@@ -287,3 +287,84 @@ body {
     margin-left: 0 !important;
   }
 }
+
+/* ── Admin sidebar: six tabs (js/admin-shell.js bindTabs) ─────────────────────
+   The same block is in dashboard-shell.css and sidebar.css (designer-saved).
+   A tab is closed until it is clicked; the tab holding the current page opens
+   itself (.current, set by the shell; :has() so it is open on first paint).
+   The sidebar's own orange is local to it; the site accent stays as it is. */
+#sidebar {
+  --sbx-orange: #FF5B2A;
+  --sbx-bg: #101012;
+  --sbx-tab: #171719;
+  --sbx-tab-hover: #1d1d20;
+  --sbx-line: rgba(255,255,255,0.07);
+  --sbx-text: #FFFFFF;
+  --sbx-text-2: #A1A1AA;
+  --sbx-muted: #71717A;
+  --sbx-selected: #101012;
+  background: var(--sbx-bg);
+}
+#sidebar .sb-logo-icon { position: relative; overflow: hidden; border-radius: 8px; background: var(--sbx-tab); }
+/* the QRAIVY app icon over the plain "Q" (which stays if the image is not served) */
+#sidebar .sb-logo-icon::after { content: ''; position: absolute; inset: 0; background: url('apple-touch-icon.png') center / cover no-repeat; border-radius: inherit; }
+#sidebar .sb-logo-text { font-family: 'Space Grotesk', 'Inter', sans-serif; font-size: 1.02rem; font-weight: 700; font-style: normal; letter-spacing: .06em; color: #fff; }
+#sidebar .sb-logo-text span { font-style: normal; }
+#sidebar .sb-wm-qr { color: var(--sbx-orange); }
+#sidebar .sb-wm-aivy { color: #fff; }
+
+#sidebar .sb-nav { padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+#sidebar .sb-tab { background: var(--sbx-tab); border: 1px solid var(--sbx-line); border-radius: 12px; flex-shrink: 0; }
+#sidebar .sb-tab-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px;
+  padding: 9px 10px 9px 11px; margin: 0; background: none; border: 0; border-radius: 11px;
+  color: var(--sbx-text); font-family: 'Inter', sans-serif; font-size: .65rem; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; text-align: left; white-space: nowrap; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+#sidebar .sb-tab-btn:hover { background: var(--sbx-tab-hover); color: #fff; }
+#sidebar .sb-tab-btn:focus-visible { outline: 2px solid var(--sbx-orange); outline-offset: -2px; }
+#sidebar .sb-tab-btn .sb-label { flex: 1; min-width: 0; font-size: inherit; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+#sidebar .sb-tab-icon { width: 17px; height: 17px; flex-shrink: 0; fill: none; stroke: var(--sbx-muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#sidebar .sb-tab-icon--deals { stroke: var(--sbx-orange); }
+#sidebar .sb-chev { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: var(--sbx-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s; }
+#sidebar .sb-tab-btn[aria-expanded="true"] .sb-chev { transform: rotate(90deg); }
+
+#sidebar .sb-sub { display: none; padding: 0 6px 6px; background: var(--sbx-bg); border-radius: 0 0 11px 11px; }
+#sidebar .sb-tab.open > .sb-sub,
+#sidebar .sb-tab.current:not(.shut) > .sb-sub,
+#sidebar .sb-tab:has(.sb-item.active):not(.shut) > .sb-sub { display: block; }
+
+#sidebar .sb-tab.current,
+#sidebar .sb-tab:has(.sb-item.active) { border-color: var(--sbx-orange); }
+#sidebar .sb-tab.current > .sb-tab-btn,
+#sidebar .sb-tab:has(.sb-item.active) > .sb-tab-btn { color: #fff; }
+#sidebar .sb-tab.current .sb-tab-icon,
+#sidebar .sb-tab:has(.sb-item.active) .sb-tab-icon { stroke: var(--sbx-orange); }
+
+#sidebar .sb-sub .sb-item {
+  display: flex; align-items: center; gap: 8px; margin: 1px 0; padding: 8px 10px 8px 38px;
+  border-radius: 8px; background: none; color: var(--sbx-text-2); font-size: .8rem; font-weight: 500;
+  text-decoration: none; white-space: nowrap; overflow: hidden;
+}
+#sidebar .sb-sub .sb-item .sb-label { font-size: .8rem; }
+#sidebar .sb-sub .sb-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+#sidebar .sb-sub .sb-item.active { background: var(--sbx-selected); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--sbx-orange), inset 0 0 0 1px var(--sbx-orange); }
+#sidebar .sb-sub .sb-item.active .sb-badge { background: var(--sbx-orange); }
+
+/* footer colours (layout unchanged): primary white, secondary #A1A1AA; the language
+   button carries inline colours, hence !important */
+#sidebar .sb-user-name { color: var(--sbx-text); }
+#sidebar .sb-user-role, #sidebar .sb-signout { color: var(--sbx-text-2); }
+#sidebar #lang-toggle { background: var(--sbx-tab) !important; border-color: var(--sbx-line) !important; color: var(--sbx-text-2) !important; }
+#sidebar #lang-toggle:hover { background: var(--sbx-tab-hover) !important; }
+
+/* the narrow rail: one icon per tab; a tab opens the sidebar (bindTabs) */
+#sidebar.collapsed .sb-tab { background: none; border-color: transparent; }
+#sidebar.collapsed .sb-tab-btn { justify-content: center; padding: 9px 0; }
+#sidebar.collapsed .sb-tab-btn .sb-label,
+#sidebar.collapsed .sb-chev,
+#sidebar.collapsed .sb-sub { display: none !important; }
+#sidebar.collapsed .sb-tab.current > .sb-tab-btn,
+#sidebar.collapsed .sb-tab:has(.sb-item.active) > .sb-tab-btn { background: var(--sbx-selected); box-shadow: inset 0 0 0 1px var(--sbx-orange); }
+/* ── end of the six-tab block ─────────────────────────────────────────────── */

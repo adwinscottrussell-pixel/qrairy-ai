@@ -245,7 +245,10 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
   const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js' && f !== 'deal-image-formats.js' && f !== 'deal-page-picker.js').map((f) => 'frontend/public/js/' + f);
-  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/dashboard-shell.css', 'frontend/public/qds', 'backend/railway.toml').trim(), '');
+  assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/qds', 'backend/railway.toml').trim(), '');
+  // dashboard-shell.css: unchanged by this step's own commit. It was changed later, on purpose,
+  // for the six-tab Admin sidebar (Phase 5.5A; see adminNavShell.test.js).
+  assert.equal(git('diff', 'a642477', '9572bed', '--stat', '--', 'frontend/public/dashboard-shell.css').trim(), '');
   // QRAIVY Deals (recovered from preview/qraivy-deals-foundation): the Deal and DealPlacement
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.

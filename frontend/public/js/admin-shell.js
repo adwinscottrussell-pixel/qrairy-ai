@@ -14,6 +14,7 @@
     en: {
       nav_main: 'Main', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
       nav_smartpages: 'Smart Pages', nav_sqrpages: 'Smart QR Pages', nav_createnew: 'Create New QR',
+      nav_dealspromo: 'Deals & Promotions', nav_deals: 'All Deals',
       nav_engage: 'Engage', nav_campaigns: 'AI Campaigns', nav_customers: 'Customers', nav_loyalty: 'Loyalty',
       nav_configure: 'Configure', nav_wallet: 'Wallet Passes',
       nav_account: 'Account', nav_billing: 'Billing & Plans', nav_settings: 'Settings',
@@ -28,6 +29,7 @@
     de: {
       nav_main: 'Hauptmenü', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
       nav_smartpages: 'Smart Pages', nav_sqrpages: 'Smart QR-Seiten', nav_createnew: 'Neuen QR erstellen',
+      nav_dealspromo: 'Deals & Aktionen', nav_deals: 'Alle Deals',
       nav_engage: 'Engagement', nav_campaigns: 'KI-Kampagnen', nav_customers: 'Kunden', nav_loyalty: 'Treue',
       nav_configure: 'Konfigurieren', nav_wallet: 'Wallet-Pässe',
       nav_account: 'Konto', nav_billing: 'Abrechnung & Pläne', nav_settings: 'Einstellungen',
@@ -170,12 +172,60 @@
     return true;
   }
 
+  // The six tabs (MAIN … ACCOUNT). Each is closed until it is clicked; the
+  // tab holding the current page (.sb-item.active, also set by pages such as
+  // dashboard.html as the owner moves between sections) is marked .current
+  // and opens itself -- the CSS does the same with :has() on first paint.
+  // Clicking an open tab closes it, even the current one (.shut). On the
+  // narrow rail a tab first opens the sidebar, through the page's own toggle.
+  function bindTabs() {
+    var sb = typeof document.getElementById === 'function' ? document.getElementById('sidebar') : null;
+    if (!sb || typeof sb.querySelectorAll !== 'function' || sb.getAttribute('data-tabs-bound') === '1') return false;
+    var tabs = [].slice.call(sb.querySelectorAll('.sb-tab'));
+    if (!tabs.length) return false;
+    sb.setAttribute('data-tabs-bound', '1');
+    function isOpen(tab) { return tab.classList.contains('open') || (tab.classList.contains('current') && !tab.classList.contains('shut')); }
+    function sync() {
+      tabs.forEach(function (tab) {
+        var current = !!tab.querySelector('.sb-item.active');
+        if (current && !tab.classList.contains('current')) tab.classList.remove('shut');   // the page moved here: show it
+        if (current !== tab.classList.contains('current')) tab.classList.toggle('current', current);
+        var btn = tab.querySelector('.sb-tab-btn');
+        if (btn) btn.setAttribute('aria-expanded', String(isOpen(tab)));
+      });
+    }
+    tabs.forEach(function (tab) {
+      var btn = tab.querySelector('.sb-tab-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var rail = sb.classList.contains('collapsed') && !(window.matchMedia && window.matchMedia(PHONE_SIDEBAR).matches);
+        if (rail || !isOpen(tab)) { tab.classList.add('open'); tab.classList.remove('shut'); }
+        else { tab.classList.remove('open'); tab.classList.add('shut'); }
+        if (rail) { var toggle = document.getElementById('sb-toggle'); if (toggle) toggle.click(); }
+        sync();
+      });
+    });
+    sync();
+    if (window.MutationObserver) {
+      new MutationObserver(function (records) {
+        for (var i = 0; i < records.length; i++) {
+          if (records[i].target.classList && records[i].target.classList.contains('sb-item')) { sync(); return; }
+        }
+      }).observe(sb, { attributes: true, attributeFilter: ['class'], subtree: true });
+    }
+    return true;
+  }
+
   function init() {
     bindMobile();
+    bindTabs();
     apply(lang());
   }
 
-  window.QraivyShell = { apply: apply, t: t, lang: lang, toast: toast, bindSidebar: bindSidebar };
+  // Tabs right away when the sidebar is already parsed (script after it).
+  bindTabs();
+
+  window.QraivyShell = { apply: apply, t: t, lang: lang, toast: toast, bindSidebar: bindSidebar, bindTabs: bindTabs };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

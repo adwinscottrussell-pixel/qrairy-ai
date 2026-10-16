@@ -57,9 +57,11 @@ function shellKeys() {
 }
 
 // ── Admin shell ────────────────────────────────────────────────
-test('carries the canonical Admin sidebar, with no item marked active', () => {
-  const canonical = sidebar(read('dashboard.html')).replace(/class="sb-item active"/g, 'class="sb-item"');
-  assert.equal(sidebar(page), canonical);
+test('carries the canonical Admin sidebar, with its own Deals item marked active', () => {
+  const plain = (b) => b.replace(/class="sb-item active"/g, 'class="sb-item"');
+  assert.equal(plain(sidebar(page)), plain(sidebar(read('dashboard.html'))));
+  const active = sidebar(page).match(/<a [^>]*class="sb-item active"[^>]*>/g) || [];
+  assert.deepEqual(active, ['<a href="deals.html" class="sb-item active" id="sb-deals">']);
 });
 
 test('loads the shared shell, QDS and its own stylesheet, in that order', () => {
@@ -75,10 +77,13 @@ test('mobile menu button and overlay follow the sidebar', () => {
   assert.match(after, /^\n<\/div>\s*<button id="mob-btn">[^<]*<\/button>\s*<div class="sb-overlay" id="sb-overlay"><\/div>/);
 });
 
-test('no other Admin page was changed to link here yet', () => {
-  for (const f of ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html', 'js/admin-shell.js']) {
-    assert.ok(!read(f).includes('deals.html'), f + ' links to deals.html');
+test('every Admin page links here only through the sidebar tab Deals & Promotions', () => {
+  for (const f of ['dashboard.html', 'analytics.html', 'wallet-pass-studio.html', 'loyalty-setup.html', 'designer-saved.html', 'smart-qr-detail.html']) {
+    const src = read(f);
+    assert.equal((src.match(/deals\.html/g) || []).length, 1, f + ': one link to deals.html');
+    assert.ok(sidebar(src).includes('<a href="deals.html" class="sb-item" id="sb-deals">'), f + ': in the sidebar');
   }
+  assert.ok(!read('js/admin-shell.js').includes('deals.html'), 'the shell itself does not link anywhere');
 });
 
 // ── Preview-only guarantees ────────────────────────────────────

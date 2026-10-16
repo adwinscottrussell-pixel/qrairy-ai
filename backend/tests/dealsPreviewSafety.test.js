@@ -255,9 +255,13 @@ test('C. the Deal Builder routing, run with the page: a blocked host never calls
 
 test('C. no other page\'s routing changed: api-base.js, lp-routing.js and staging-config.js are production\'s', () => {
   const changed = execFileSync('git', ['diff', '4ac9e84', '--name-only', '--', 'frontend/public/js/api-base.js', 'frontend/public/js/lp-routing.js', 'frontend/public/js/staging-config.js',
-    'frontend/public/smart-editor.js', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/dashboard.html', 'frontend/public/index.html',
+    'frontend/public/smart-editor.js', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/index.html',
     'backend/src/utils/corsOriginPolicy.js', 'backend/src/middleware/auth.js', 'backend/src/utils/clerkVerify.js', 'backend/src/config/publicOrigins.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(changed, '');
+  // dashboard.html: the Admin sidebar's logo and menu (Phase 5.5A, tests/adminNavShell.test.js)
+  // are the only change since then; everything else is byte for byte production's.
+  const withoutMenu = (s) => { s = s.replace(/\r\n/g, '\n'); const a = s.indexOf('<div id="sidebar">'), b = s.indexOf('  </nav>', a); assert.ok(a !== -1 && b > a); return s.slice(0, a) + s.slice(b); };
+  assert.equal(withoutMenu(read('frontend/public/dashboard.html')), withoutMenu(execFileSync('git', ['show', '4ac9e84:frontend/public/dashboard.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })));
   for (const p of ['dashboard.html', 'index.html']) assert.ok(read('frontend/public/' + p).includes('<script src="js/api-base.js"></script>'), p + ' still uses api-base.js');
 });
 
