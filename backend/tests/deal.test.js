@@ -1467,6 +1467,112 @@ test('X. the reactivation check runs inside the publish transaction, behind the 
   assert.ok(lock < count && count < write, 'lock, then count, then the write');
 });
 
+// ── Y. Unpublished changes = a real difference (Phase 4.1) ─────
+// The Deal Builder saves the whole form on every step, so a published
+// deal often has draftData that equals what is published. Only a draft
+// value that differs from its published value is an unpublished change.
+const STARTER = { source: 'starter', starterId: 'bakery-coffee-01' };
+async function publishedFull(extra = {}) {
+  const d = await newDeal(ANNA, { endsAt: FUTURE, offerType: 'fixed_price' });
+  await service.saveDealDraft(ANNA, d.dealId, { description: 'Nur freitags', offerDetails: { price: 2.5, currency: 'EUR' }, image: STARTER, ...extra });
+  return service.publishDeal(ANNA, d.dealId);
+}
+// Exactly what the Builder sends after "Weiter" with nothing changed (deals.html toServer).
+const builderPayload = (s) => ({ title: s.title, offerText: s.offerText, description: s.description, offerType: s.offerType, offerDetails: s.offerDetails,
+  image: s.image && s.image.source === 'starter' ? { source: 'starter', starterId: s.image.starterId } : s.image,
+  startsAt: s.startsAt ? new Date(s.startsAt).toISOString() : null, endsAt: s.endsAt ? new Date(s.endsAt).toISOString() : null });
+const rowOf = (id) => dealRows.find((r) => r.id === id);
+
+test('Y. clicking through the steps of a published deal without changing anything is not an unpublished change', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  const saved = await service.saveDealDraft(ANNA, pub.dealId, builderPayload(pub));
+  assert.ok(rowOf(pub.dealId).draftData && Object.keys(rowOf(pub.dealId).draftData).length >= 8, 'the draft is stored');
+  assert.equal(saved.hasUnpublishedChanges, false);
+  assert.equal((await service.listDeals(ANNA))[0].hasUnpublishedChanges, false, 'list (the dashboard badge) agrees');
+});
+
+test('Y. a real edit of any content field is an unpublished change', async () => {
+  const edits = { title: 'Neuer Titel', offerText: 'Neues Angebot', description: 'Auch samstags',
+    offerDetails: { price: 3, currency: 'EUR' }, image: { source: 'starter', starterId: 'restaurant-meal-01' }, endsAt: FAR_FUTURE,
+    startsAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString() };
+  for (const [key, value] of Object.entries(edits)) {
+    resetFixtures();
+    const pub = await publishedFull();
+    const s = await service.saveDealDraft(ANNA, pub.dealId, { ...builderPayload(pub), [key]: value });
+    assert.equal(s.hasUnpublishedChanges, true, key);
+  }
+  resetFixtures();
+  const pub = await publishedFull();
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { description: null })).hasUnpublishedChanges, true, 'clearing the description');
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { offerType: 'custom' })).hasUnpublishedChanges, true, 'another offer type');
+});
+
+test('Y. dates: the same instant in another notation is no change; one second is', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  const end = new Date(pub.endsAt);
+  const berlin = new Date(end.getTime()).toISOString().replace('Z', '+00:00');
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { endsAt: berlin })).hasUnpublishedChanges, false, 'same instant, other notation');
+  rowOf(pub.dealId).draftData.endsAt = end.toISOString();   // as the JSON column returns it (string, not Date)
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'string vs Date');
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { endsAt: new Date(end.getTime() + 1000).toISOString() })).hasUnpublishedChanges, true, '+1 s');
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { endsAt: end.toISOString() })).hasUnpublishedChanges, false, 'back to the published end');
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { startsAt: null })).hasUnpublishedChanges, false, 'no start, as published');
+});
+
+test('Y. images and offer details compare by content, whatever the key order (as PostgreSQL jsonb may return them)', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  const live = rowOf(pub.dealId);
+  const reversed = (o) => Object.fromEntries(Object.entries(o).reverse());
+  live.draftData = { image: reversed(live.image), offerDetails: reversed(live.offerDetails) };
+  assert.ok(Object.keys(live.draftData.image)[0] !== Object.keys(live.image)[0], 'really another order');
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false);
+  live.draftData = { image: { ...live.image, starterId: 'beauty-spa-01' } };
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, true, 'another picture');
+  live.draftData = { offerDetails: { currency: 'EUR', price: 2.6 } };
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, true, 'another price');
+  live.draftData = { offerDetails: { currency: 'EUR', price: 2.5 } };
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'same price, other order');
+});
+
+test('Y. an edit undone again is no longer a change; an unknown draft key always counts', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { title: 'Probe' })).hasUnpublishedChanges, true);
+  assert.equal((await service.saveDealDraft(ANNA, pub.dealId, { title: pub.title })).hasUnpublishedChanges, false);
+  rowOf(pub.dealId).draftData = { somethingNew: 1 };
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, true, 'never hide what we cannot compare');
+});
+
+test('Y. customers keep seeing the published version; publishing applies the edit and clears the warning', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  await service.addDealPlacement(ANNA, pub.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  await service.publishDeal(ANNA, pub.dealId, { includePlacements: true });
+  const edited = await service.saveDealDraft(ANNA, pub.dealId, { ...builderPayload(pub), title: 'Neuer Titel', image: { source: 'starter', starterId: 'restaurant-meal-01' } });
+  assert.equal(edited.hasUnpublishedChanges, true);
+  let shown = (await service.activeDealsForPage('anna-cafe'))[0];
+  assert.equal(shown.title, pub.title, 'customers: still the published title');
+  assert.equal(shown.image.starterId, 'bakery-coffee-01', 'and the published picture');
+  const after = await service.publishDeal(ANNA, pub.dealId);
+  assert.equal(after.hasUnpublishedChanges, false);
+  shown = (await service.activeDealsForPage('anna-cafe'))[0];
+  assert.equal(shown.title, 'Neuer Titel'); assert.equal(shown.image.starterId, 'restaurant-meal-01');
+});
+
+test('Y. landing-page selections are never content changes', async () => {
+  resetFixtures();
+  const pub = await publishedFull();
+  const pl = await service.addDealPlacement(ANNA, pub.dealId, { channel: 'landing_page', targetRef: 'anna-cafe' });
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'page added');
+  await service.publishDealPlacement(ANNA, pub.dealId, pl.placementId);
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'page published');
+  await service.archiveDealPlacement(ANNA, pub.dealId, pl.placementId);
+  assert.equal((await service.getDealState(ANNA, pub.dealId)).hasUnpublishedChanges, false, 'page removed');
+});
+
 // ── V. Public visibility follows the owner's Deals access (Phase 3B.6) ──
 const stored = () => JSON.stringify({ d: dealRows, p: placementRows });
 const shownOn = async (slug = 'anna-cafe', now = new Date()) => (await service.activeDealsForPage(slug, now)).map((d) => d.title);

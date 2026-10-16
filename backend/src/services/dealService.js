@@ -414,8 +414,36 @@ function mergeDealState(deal) {
     startsAt,
     endsAt,
     isExpired: endsAt != null ? endsAt.getTime() < Date.now() : false,
-    hasUnpublishedChanges: Object.keys(draft).length > 0,
+    hasUnpublishedChanges: hasDraftChanges(deal),
   };
+}
+
+// True only when the saved draft would actually change what is published.
+// The Deal Builder saves the whole form on every step, so draftData often
+// holds the published values unchanged -- that is not a change. Compared
+// per field: dates as instants, objects (image, offerDetails) by content
+// whatever their key order, a missing value the same as null. Placements
+// (landing pages) are separate rows and never part of this. An unknown
+// draft key counts as a change, so nothing is ever hidden.
+function hasDraftChanges(deal) {
+  const draft = deal.draftData || {};
+  return Object.keys(draft).some((key) => !DEAL_FIELDS.includes(key) || !sameDealValue(key, draft[key], deal[key]));
+}
+function sameDealValue(key, a, b) {
+  if (key === 'startsAt' || key === 'endsAt') {
+    const x = toDateOrNull(a), y = toDateOrNull(b);
+    return x == null || y == null ? x == null && y == null : x.getTime() === y.getTime();
+  }
+  return canonicalJson(a) === canonicalJson(b);
+}
+function canonicalJson(v) {
+  if (v == null) return 'null';
+  if (v instanceof Date) return JSON.stringify(v.toISOString());
+  if (Array.isArray(v)) return '[' + v.map(canonicalJson).join(',') + ']';
+  if (typeof v === 'object') {
+    return '{' + Object.keys(v).filter((k) => v[k] !== undefined).sort().map((k) => JSON.stringify(k) + ':' + canonicalJson(v[k])).join(',') + '}';
+  }
+  return JSON.stringify(v);
 }
 
 async function getDealState(ownerUserId, dealId) {
