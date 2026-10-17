@@ -434,8 +434,26 @@ test('E. production: the rendered customer page is byte-for-byte what it was bef
   fs.writeFileSync(headFile, execFileSync('git', ['show', '10ab8d5:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
   let before;
   try { before = await renderWith({}, headFile); } finally { fs.unlinkSync(headFile); }
-  const now = await renderWith({});
+  const rendered = await renderWith({});
   assert.ok(before.length > 20000 && before.includes('id="chat-input"'));
+  // Phase 5.5C.2 moved the push texts into the page's dictionary (tests/pushLocalization.test.js).
+  // For this English page the texts are the same; undo exactly those edits and the page must be
+  // byte for byte what it was.
+  const pushJson = rendered.match(/\nwindow\.QRAIVY_PUSH_TEXT = (\{.*?\});/);
+  assert.ok(pushJson && JSON.parse(pushJson[1]).btn === 'Enable Updates', 'English page: English push texts');
+  const now = rendered
+    .replace(pushJson[0], '')
+    .replace('(function(){var _pt=window.QRAIVY_PUSH_TEXT;', '(function(){')
+    .replace("'+_pt.hintTitle+'", '📲 Benachrichtigungen aktivieren')
+    .replace("'+_pt.hintBody+'", 'Tippe auf <b>Teilen</b> → <b>Zum Home-Bildschirm</b>, dann öffne die App vom Home-Bildschirm, um Benachrichtigungen zu aktivieren.')
+    .replace("'+_pt.hintOk+'", 'Verstanden')
+    .replace('title:_pt.title,desc:_pt.desc,btn:_pt.btn,trust:_pt.trust', "title:'Stay updated instantly',desc:'Get special offers and updates from this business.',btn:'Enable Updates',trust:'You can turn this off anytime.'")
+    .replace('title:_pt.asking', "title:'Setting things up…'")
+    .replace('title:_pt.okTitle,desc:_pt.okDesc', 'title:"You\'re subscribed!",desc:"We\'ll notify you about special offers."')
+    .replace("xBtn.setAttribute('aria-label',_pt.close);", '')
+    .replace('alert(window.QRAIVY_PUSH_TEXT.unsupported)', "alert('Notifications not supported in this browser.')")
+    .replace('btn.textContent = window.QRAIVY_PUSH_TEXT.enabled;', "btn.textContent = '✓ Notifications enabled!';")
+    .replace('btn.textContent = window.QRAIVY_PUSH_TEXT.blocked;', "btn.textContent = '⛔ Notifications blocked in browser settings';");
   assert.equal(now, before);
   for (const expected of ["var API  = 'https://api.qraivy.com';", "window.location.href = 'https://api.qraivy.com/lp/wallet/google/' + SLUG", "fetch('https://www.qraivy.com/lp/webpush/vapid-key/'+_s)", "fetch('https://www.qraivy.com/lp/webpush/subscribe/'+_s,"]) assert.ok(now.includes(expected), expected);
   assert.ok(!now.includes('${'), 'no unfilled placeholder');

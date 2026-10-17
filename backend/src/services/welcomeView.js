@@ -84,18 +84,18 @@ function texts(isDE, name, loyalty) {
     skip: 'Ohne Speichern fortfahren',
     powered: 'Unterstützt von',
     ready: name + ' ist bereit.',
-    readyPush: 'Tippe auf der nächsten Seite auf „Enable Updates“ und dann auf „Erlauben“, um Benachrichtigungen zu aktivieren.',
+    readyPush: 'Tippe auf der nächsten Seite auf „Benachrichtigungen aktivieren“ und dann auf „Erlauben“.',
     openSmart: 'Smart Page öffnen',
     close: 'Verstanden',
     guideTitle: 'Zum Home-Bildschirm hinzufügen',
-    // The landing page's notification button reads "Enable Updates" in every
-    // language, so the steps name it exactly as visitors see it.
+    // The steps name the landing page's notification button exactly as it
+    // reads on a page in this language (lpController renderPremiumLP T.push.btn).
     iosSteps: [
       ico('share') + '<span>Tippe in Safari auf „Teilen“. Je nach iOS-Version findest du es unter „•••“.</span>',
       ico('add') + '<span>Wähle „Zum Home-Bildschirm“.</span>',
       ico('blank') + '<span>Tippe oben rechts auf „Hinzufügen“.</span>',
       ico('home') + '<span>Öffne ' + name + ' über das neue Symbol auf deinem Home-Bildschirm.</span>',
-      ico('bell') + '<span>Tippe auf „Enable Updates“ und dann auf „Erlauben“.</span>',
+      ico('bell') + '<span>Tippe auf „Benachrichtigungen aktivieren“ und dann auf „Erlauben“.</span>',
     ],
     iosOther: 'Öffne diese Seite in Safari, um ' + name + ' zum Home-Bildschirm hinzuzufügen.',
     androidSteps: [
@@ -103,7 +103,7 @@ function texts(isDE, name, loyalty) {
       ico('add') + '<span>Wähle „Zum Startbildschirm hinzufügen“ oder „App installieren“.</span>',
       ico('blank') + '<span>Bestätige.</span>',
       ico('home') + '<span>Öffne ' + name + ' über das neue Symbol auf deinem Startbildschirm.</span>',
-      ico('bell') + '<span>Tippe auf „Enable Updates“ und dann auf „Zulassen“.</span>',
+      ico('bell') + '<span>Tippe auf „Benachrichtigungen aktivieren“ und dann auf „Zulassen“.</span>',
     ],
     desktop: 'Öffne diese Seite auf deinem Handy, um ' + name + ' zum Home-Bildschirm hinzuzufügen.',
   } : {

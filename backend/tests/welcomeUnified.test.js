@@ -162,7 +162,7 @@ test('install steps: line icons for Share, Add, Home and notifications; no emoji
   }
   assert.ok(s.includes('class=\\"ico\\" aria-hidden=\\"true\\"'), 'icons are decorative; the text says it all');
   assert.ok(!/\p{Extended_Pictographic}/u.test(html.replace(/•••/g, '').replace(/&#10003;/g, '')), 'no emoji');
-  assert.ok(s.includes('Tippe auf „Enable Updates“ und dann auf „Erlauben“.'), 'names the landing page button as visitors see it');
+  assert.ok(s.includes('Tippe auf „Benachrichtigungen aktivieren“ und dann auf „Erlauben“.'), 'names the German landing page button as visitors see it');
   assert.ok(/\.btn-green\{[^}]*min-height:56px/.test(html) && html.includes('id="showMeBtn">Zeig mir wie</button>'));
 });
 
