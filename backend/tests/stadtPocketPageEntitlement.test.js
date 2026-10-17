@@ -105,6 +105,8 @@ require.cache[emailServicePath] = {
   exports: { sendWelcomeEmail: async () => ({ ok: true }), sendCampaignEmail: async () => ({ success: 0, failed: 0, errors: [] }), sendBusinessInviteEmail: async () => ({ ok: true }) },
 };
 
+// The deleted-page address reservation (tests/slugReservation.test.js) is not under test here: no slug is reserved.
+require.cache[require.resolve('../src/services/slugReservation')] = { loaded: true, exports: { retainedDataFor: async () => [] } };
 const { handlePublishLP } = require('../src/controllers/lpController');
 
 // ── Test helpers ──────────────────────────────────────────────
