@@ -170,7 +170,8 @@ test('C. the 22 starter images and their catalog are unchanged', () => {
 });
 
 test('C. no database change: images stay in the existing Deal.image JSON column', () => {
-  const changed = execFileSync('git', ['diff', '5e1dcf3', '--name-only', '--', 'backend/prisma'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
+  const changed = execFileSync('git', ['diff', '5e1dcf3', '--name-only', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(changed, '');
 });
 

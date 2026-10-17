@@ -31,7 +31,9 @@ const mockPrisma = {
     async findMany({ where }) { calls.reads.push('campaigns:' + where.slug); return [{ slug: where.slug, title: 'Secret plan of ' + where.slug }]; },
   },
   subscriber: { async findMany({ where }) { calls.reads.push('subscribers:' + where.slug); return [{ id: 's1', email: 'customer@' + where.slug + '.example' }]; } },
-  webPushSubscription: { async findMany({ where }) { calls.reads.push('webpush:' + where.slug); return [{ endpoint: 'https://push.example/' + where.slug, p256dh: 'p', auth: 'a' }]; } },
+  // Phase 5.5C.3: recipients are the page's active opt-ins (WebPushPageSubscription)
+  webPushPageSubscription: { async findMany({ where }) { calls.reads.push('webpush:' + where.slug); return [{ subscription: { id: 'w-' + where.slug, endpoint: 'https://push.example/' + where.slug, p256dh: 'p', auth: 'a' } }]; } },
+  webPushSubscription: { async updateMany() { return { count: 0 }; } },
   stampSettings: { async findUnique() { return null; } },
 };
 require.cache[resolve('src', 'utils', 'prismaClient.js')] = { loaded: true, exports: mockPrisma };
@@ -124,13 +126,18 @@ test('managers: no other account (StadtPocket business members, city managers) g
   assert.ok(helper.includes('page.userId !== userId') && !/businessMember|BusinessMember|manager/i.test(helper));
   const changed = execFileSync('git', ['diff', '884aa8d', '--name-only', '--', 'backend/src/routes/managerRoutes.js', 'backend/src/controllers', 'backend/src/services', 'backend/src/middleware'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim().split('\n').filter(Boolean);
   // (loyaltyAdminController: the later subscriber data hotfix, tests/subscriberDataAuth.test.js)
-  assert.deepEqual(changed.filter((f) => f !== 'backend/src/controllers/loyaltyAdminController.js'), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
+  // Phase 5.5C.3 (tests/pushPageSubscriptions.test.js): per-page push opt-ins
+  const later = ['backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/customerQueryService.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js'];
+  assert.deepEqual(changed.filter((f) => !later.includes(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
 test('internal workflows are unchanged: stamp and reward pushes, the Wallet owner push, the subscribe and key routes', () => {
   const ctl = SRC('controllers/lpController.js'), before = HEAD('backend/src/controllers/lpController.js');
   const fn = (s, name) => s.slice(s.indexOf('async function ' + name + '('), s.indexOf('\n}\n', s.indexOf('async function ' + name + '(')));
-  for (const name of ['handleStampConfirm', 'handleRedeemTapConfirm', 'handleWebPushSubscribe', 'handleWebPushVapidKey', 'handleStamp']) assert.equal(fn(ctl, name), fn(before, name), name);
+  for (const name of ['handleRedeemTapConfirm', 'handleWebPushVapidKey', 'handleStamp']) assert.equal(fn(ctl, name), fn(before, name), name);
+  // Phase 5.5C.3 changed these two on purpose (tests/pushPageSubscriptions.test.js): stamp messages go to the
+  // stamped customer only; subscribing is per page. Apart from that, the stamp flow is as before.
+  assert.equal(require('./helpers/push55c3Revert').revertStamp55c3(fn(ctl, 'handleStampConfirm')), fn(before, 'handleStampConfirm'), 'handleStampConfirm');
   assert.equal(SRC('controllers/walletController.js'), HEAD('backend/src/controllers/walletController.js'), 'POST /wallet/push/:passId keeps its own owner check');
   assert.ok(SRC('controllers/walletController.js').includes("if (pass.userId !== userId) return res.status(403)"));
 });

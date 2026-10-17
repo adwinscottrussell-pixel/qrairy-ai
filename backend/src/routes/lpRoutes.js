@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 const { handleVoicePreview } = require('../controllers/lpVoiceController');
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
+  handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushUnsubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
   handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleCustomerStamp, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLoyaltyWelcome,
   handleLPManifest,
@@ -125,6 +125,7 @@ router.post('/lp/push/:slug', requireAuth, handleSendPush);
 router.get('/lp/push/:slug/count', requireAuth, handlePushCount);
 router.get('/lp/push/:slug/history', requireAuth, handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
+router.post('/lp/webpush/unsubscribe/:slug', handleWebPushUnsubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
 // The page's own account only (the handler checks ownership): subscriber emails.

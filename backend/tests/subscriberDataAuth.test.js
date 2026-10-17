@@ -41,10 +41,11 @@ const mockPrisma = {
     async findFirst({ where }) { return subs.filter((s) => s.slug === where.slug)[0] || null; },
     async groupBy({ where }) { reads.push('subGroups:' + JSON.stringify(where || null)); return group(subs, where); },
   },
-  webPushSubscription: {
-    async findMany({ where }) { reads.push('webpush:' + where.slug); return webSubs.filter((s) => s.slug === where.slug); },
+  // Phase 5.5C.3: the Admin counts the page's active opt-ins (WebPushPageSubscription)
+  webPushPageSubscription: {
+    async findMany({ where }) { reads.push('webpush:' + where.slug); return webSubs.filter((s) => s.slug === where.slug).map((s) => ({ createdAt: s.createdAt, subscription: { endpoint: s.endpoint } })); },
     async findFirst({ where }) { return webSubs.filter((s) => s.slug === where.slug)[0] || null; },
-    async groupBy({ where }) { reads.push('webGroups:' + JSON.stringify(where || null)); return group(webSubs, where); },
+    async groupBy({ where }) { reads.push('webGroups:' + JSON.stringify({ slug: where.slug })); return group(webSubs, where); },
   },
   pass: { async findMany() { return []; } },
   passDevice: { async findMany() { return []; }, async count() { return 0; } },

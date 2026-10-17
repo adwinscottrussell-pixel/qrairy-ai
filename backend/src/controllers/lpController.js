@@ -13,6 +13,7 @@ const { sendWelcomeEmail } = require('../services/emailService');
 // Customer Foundation Phase 2: canonical dual-write, additive only. Never
 // blocks or fails the legacy writes below it — see service header comment.
 const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
+const webPushPages = require('../services/webPushPages');
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 const { renderWelcome, welcomeV2Enabled } = require('../services/welcomeView');
 
@@ -1615,48 +1616,49 @@ async function handleGetSubscribers(req, res) {
 }
 
 // ── POST /lp/push/:slug — send push to all wallet pass holders ──
+// Phase 5.5C.3: the browser's address is stored once; the opt-in is per page
+// (services/webPushPages.js). `consent: 'explicit'` = the customer tapped
+// to enable on this page; without it (the page's background re-sync) no
+// opt-in is created or re-activated. The answer says whether this page's
+// opt-in is active, so the page only shows "subscribed" when it is.
 async function handleWebPushSubscribe(req, res) {
   try {
     const { slug } = req.params;
-    const { endpoint, keys } = req.body || {};
-    if (!endpoint || !keys) return res.status(400).json({ error: 'missing subscription data' });
+    const { endpoint, keys, consent } = req.body || {};
+    if (!webPushPages.validSubscription(endpoint, keys)) return res.status(400).json({ error: 'missing subscription data' });
+    const page = await prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } });
+    if (!page) return res.status(404).json({ error: 'Page not found.' });
     // Same cid format used to mint it client-side (CUSTOMER_ID_HELPER_JS /
-    // SLUG_CID_HELPER_JS above) — reject anything else rather than store
-    // garbage. Absent/invalid cid is not an error for this endpoint; push
-    // subscription itself must keep working either way (see below).
-    const rawCid = req.body ? req.body.cid : null;
-    const validCid = (typeof rawCid === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(rawCid)) ? rawCid : null;
+    // SLUG_CID_HELPER_JS above); absent/invalid cid never blocks subscribing.
+    const validCid = webPushPages.validCid(req.body.cid);
 
-    // Only include `cid` in the update payload when a valid new value was
-    // supplied — Prisma's update() only touches fields actually present in
-    // this object, so omitting the key here leaves an existing stored cid
-    // (valid or not) untouched instead of overwriting it with null.
-    const updateData = { slug, p256dh: keys.p256dh, auth: keys.auth };
-    if (validCid) updateData.cid = validCid;
-
-    await prisma.webPushSubscription.upsert({
-      where: { endpoint },
-      update: updateData,
-      create: { slug, endpoint, p256dh: keys.p256dh, auth: keys.auth, cid: validCid }
-    });
+    const { subscribed } = await webPushPages.subscribePage({ slug, endpoint, keys, cid: validCid, explicit: consent === 'explicit' });
 
     // Customer Foundation Phase 2: canonical dual-write, fire-and-forget —
     // never awaited into the response, never allowed to affect whether
     // this endpoint reports success. Only proceeds when a valid cid was
     // supplied; a subscription with no/invalid cid has no deterministic
     // identity signal to record and is simply skipped.
-    if (validCid) {
-      prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } })
-        .then((lp) => {
-          if (lp && lp.userId) {
-            return resolveOrCreateCustomerIdentity({ ownerUserId: lp.userId, slug, type: 'cid', value: validCid, source: 'webpush_subscribe' });
-          }
-        })
+    if (validCid && subscribed && page.userId) {
+      resolveOrCreateCustomerIdentity({ ownerUserId: page.userId, slug, type: 'cid', value: validCid, source: 'webpush_subscribe' })
         .catch(() => {});
     }
 
-    return res.json({ ok: true });
-  } catch(e) { return res.status(500).json({ error: e.message }); }
+    return res.json({ ok: true, subscribed });
+  } catch(e) { return res.status(500).json({ error: 'Could not save the subscription.' }); }
+}
+
+// ── POST /lp/webpush/unsubscribe/:slug — opt out of this page only ──
+// Knowing the browser's push address is the proof, as for subscribing.
+// Always answers the same, whether or not anything changed.
+async function handleWebPushUnsubscribe(req, res) {
+  try {
+    const { slug } = req.params;
+    const { endpoint } = req.body || {};
+    if (typeof endpoint !== 'string' || !endpoint || endpoint.length > 2048) return res.status(400).json({ error: 'missing subscription data' });
+    await webPushPages.unsubscribePage({ slug, endpoint });
+    return res.json({ ok: true, subscribed: false });
+  } catch(e) { return res.status(500).json({ error: 'Could not update the subscription.' }); }
 }
 
 async function handleWebPushVapidKey(req, res) {
@@ -1711,15 +1713,12 @@ async function handleSendPush(req, res) {
       const { sendCampaignEmail, sendWelcomeEmail } = require('../services/emailService');
       emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: ownedPage.businessName || slug, slug });
     }
-    // Also send web push to browser subscribers
-    const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
+    // Also send web push: this page's active opt-ins only, one per browser
+    const webSubs = await webPushPages.recipientsForPage(slug);
     let webPushSent = 0;
     if (webSubs.length > 0) {
-      const { sendWebPush } = require('../services/webPushService');
-      for (const sub of webSubs) {
-        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://www.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
-        if (r.ok) webPushSent++;
-      }
+      const r = await webPushPages.sendToRecipients(webSubs, { title, body: message, url: linkUrl || ('https://www.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });
+      webPushSent = r.sent;
     }
     console.log('[Push] Sent to', devices.length, 'Apple devices +', webPushSent, 'web push for', slug, results);
     console.log('[Email] Sent to', emailSubs?.length || 0, 'subscribers', emailResults);
@@ -2296,22 +2295,18 @@ async function handleStampConfirm(req, res) {
       const { updateGoogleWalletStamps } = require('../services/googleWalletService');
       await updateGoogleWalletStamps(slug, newCount, cid);
     } catch(e) { console.error('[Stamp] Google Wallet update error:', e.message); }
-    // Web Push: deep link customer to their loyalty card
+    // Web Push: deep link customer to their loyalty card -- this customer's
+    // own opt-in on this page only (before 5.5C.3 every subscriber of the
+    // page got every customer's stamp message).
     try {
-      const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
+      const webSubs = cid ? await webPushPages.recipientsForPage(slug, { cid }) : [];
       if (webSubs.length > 0) {
-        const { sendWebPush } = require('../services/webPushService');
         const title = rewardReady ? '🎉 Reward ready!' : '✅ Stamp collected!';
         const body = rewardReady
           ? 'Show your pass to claim your ' + rewardName
           : newCount + ' of ' + goal + ' stamps - tap to see your card';
         const url = 'https://api.qraivy.com/lp/card/' + slug;
-        for (const sub of webSubs) {
-          await sendWebPush(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            { title, body, url, icon: 'https://qraivy.com/icon-192.png' }
-          );
-        }
+        await webPushPages.sendToRecipients(webSubs, { title, body, url, icon: 'https://qraivy.com/icon-192.png' });
         console.log('[Stamp] Web push sent to', webSubs.length, 'subscribers for', slug);
       }
     } catch(e) { console.error('[Stamp] WebPush error:', e.message); }
@@ -2561,7 +2556,10 @@ function renderPremiumLP(page) {
         btn: 'Enable Updates', trust: 'You can turn this off anytime.',
         asking: 'Setting things up…', okTitle: "You're subscribed!", okDesc: "We'll notify you about special offers.",
         close: 'Close', unsupported: 'Notifications not supported in this browser.',
-        enabled: '✓ Notifications enabled!', blocked: '⛔ Notifications blocked in browser settings'
+        enabled: '✓ Notifications enabled!', blocked: '⛔ Notifications blocked in browser settings',
+        blockedTitle: 'Notifications are blocked', blockedDesc: 'Allow notifications for this site in your browser settings to get updates.',
+        failTitle: "Couldn't turn on notifications", failDesc: 'Something went wrong. Please try again.', retry: 'Try again',
+        onLine: 'Notifications from this business are on.', offLine: 'Notifications from this business are off.', turnOff: 'Turn off', turnOn: 'Turn on'
       }
     },
     de: {
@@ -2585,7 +2583,10 @@ function renderPremiumLP(page) {
         btn: 'Benachrichtigungen aktivieren', trust: 'Du kannst das jederzeit wieder abschalten.',
         asking: 'Wird eingerichtet…', okTitle: 'Du bist angemeldet!', okDesc: 'Wir informieren dich über neue Angebote.',
         close: 'Schließen', unsupported: 'Dieser Browser unterstützt keine Benachrichtigungen.',
-        enabled: '✓ Benachrichtigungen aktiviert!', blocked: '⛔ Benachrichtigungen sind in den Browser-Einstellungen blockiert'
+        enabled: '✓ Benachrichtigungen aktiviert!', blocked: '⛔ Benachrichtigungen sind in den Browser-Einstellungen blockiert',
+        blockedTitle: 'Benachrichtigungen sind blockiert', blockedDesc: 'Erlaube Benachrichtigungen für diese Seite in deinen Browser-Einstellungen, um Neuigkeiten zu erhalten.',
+        failTitle: 'Benachrichtigungen konnten nicht aktiviert werden', failDesc: 'Etwas ist schiefgelaufen. Bitte versuche es noch einmal.', retry: 'Erneut versuchen',
+        onLine: 'Benachrichtigungen von diesem Betrieb sind aktiv.', offLine: 'Benachrichtigungen von diesem Betrieb sind aus.', turnOff: 'Abbestellen', turnOn: 'Aktivieren'
       }
     }
   };
@@ -3247,7 +3248,7 @@ ${SLUG_CID_HELPER_JS}
             // mechanism CUSTOMER_ID_HELPER_JS/SLUG_CID_HELPER_JS already
             // establish elsewhere on this page. Never blocks subscribing.
             var _pc = null; try { _pc = localStorage.getItem('cTok'); } catch (e) {}
-            return fetch('/lp/webpush/subscribe/' + SLUG, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: _pc }) });
+            return fetch('/lp/webpush/subscribe/' + SLUG, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, cid: _pc, consent: 'explicit' }) });
           }).then(function() {
             if (btn) { btn.textContent = window.QRAIVY_PUSH_TEXT.enabled; btn.style.background = 'rgba(34,197,94,0.2)'; btn.style.borderColor = 'rgba(34,197,94,0.5)'; btn.disabled = true; }
             localStorage.setItem('wp_sub_' + SLUG, '1');
@@ -3264,7 +3265,7 @@ ${SLUG_CID_HELPER_JS}
     if (nb) nb.style.display = 'block';
   }
 })();
-(function(){var _pt=window.QRAIVY_PUSH_TEXT;var _s=window.location.pathname.split('/').pop();var _pc=null;try{_pc=localStorage.getItem('cTok');}catch(e){}console.log('[Push] Premium LP loaded, slug:',_s);var isStandalone=(window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches);if(!('serviceWorker' in navigator&&'PushManager' in window)){console.log('[Push] Blocked: not PWA or unsupported');var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);if(isIOS&&isSafari&&!isStandalone){setTimeout(function(){var hint=document.createElement('div');hint.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';hint.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:6px;">'+_pt.hintTitle+'<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">'+_pt.hintBody+'<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">'+_pt.hintOk+'<\/button>';document.body.appendChild(hint);},2000);}return;}navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});if(localStorage.getItem('wp_sub_'+_s)){if('Notification' in window&&Notification.permission==='granted'){(function tryAS(){if(window.__swReg){fetch('${pageOrigin}/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return window.__swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('${pageOrigin}/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');}).catch(function(){});}else{setTimeout(tryAS,500);}})();}return;}if(!('Notification' in window)||Notification.permission==='denied'){return;}var AC='#ff6b00';var ICONS={bell:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',check:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',spin:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>'};var STATES={idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:_pt.title,desc:_pt.desc,btn:_pt.btn,trust:_pt.trust},asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:_pt.asking,desc:'',btn:'',trust:''},ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:_pt.okTitle,desc:_pt.okDesc,btn:'',trust:''}};var wrap=document.createElement('div');wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';var card=document.createElement('div');card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';var xBtn=document.createElement('button');xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';xBtn.innerHTML='&times;';xBtn.setAttribute('aria-label',_pt.close);xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};var iWrap=document.createElement('div');iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';var iEl=document.createElement('div');iEl.style.cssText='width:26px;height:26px;';var ttl=document.createElement('div');ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';var dsc=document.createElement('div');dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';var btn=document.createElement('button');btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';var tst=document.createElement('div');tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';function setState(s){var c=STATES[s]||STATES.idle;iWrap.style.background=c.bg;iEl.style.color=c.ic;iEl.innerHTML=ICONS[c.icon]||'';ttl.textContent=c.title;dsc.textContent=c.desc;dsc.style.display=c.desc?'block':'none';btn.textContent=c.btn;btn.style.display=c.btn?'block':'none';tst.textContent=c.trust;tst.style.display=c.trust?'block':'none';if(s==='ok'){setTimeout(function(){wrap.style.display='none';},2800);}}iWrap.appendChild(iEl);card.appendChild(xBtn);card.appendChild(iWrap);card.appendChild(ttl);card.appendChild(dsc);card.appendChild(btn);card.appendChild(tst);wrap.appendChild(card);document.body.appendChild(wrap);setTimeout(function(){card.style.transform='translateY(0)';},600);setState('idle');function doSub(){setState('asking');function sub(reg){fetch('${pageOrigin}/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});}).then(function(s){var j=s.toJSON();return fetch('${pageOrigin}/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,cid:_pc})});}).then(function(){localStorage.setItem('wp_sub_'+_s,'1');setState('ok');}).catch(function(){wrap.style.display='none';});}if(window.__swReg){sub(window.__swReg);}else{navigator.serviceWorker.register('/sw.js').then(sub);}}btn.onclick=function(){Notification.requestPermission().then(function(p){if(p==='granted'){doSub();}else if(p==='denied'){setState('ok');localStorage.setItem('wp_sub_'+_s,'denied');}else{wrap.style.display='none';}});};})()
+(function(){var _pt=window.QRAIVY_PUSH_TEXT;var _s=window.location.pathname.split('/').pop();var _pc=null;try{_pc=localStorage.getItem('qraivy_cid_'+_s)||localStorage.getItem('cTok');}catch(e){}console.log('[Push] Premium LP loaded, slug:',_s);var isStandalone=(window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches);if(!('serviceWorker' in navigator&&'PushManager' in window)){console.log('[Push] Blocked: not PWA or unsupported');var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);if(isIOS&&isSafari&&!isStandalone){setTimeout(function(){var hint=document.createElement('div');hint.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#fff;padding:14px 20px 28px;font-size:13px;line-height:1.5;z-index:9999;text-align:center;';hint.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:6px;">'+_pt.hintTitle+'<\/div><div style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">'+_pt.hintBody+'<\/div><button onclick="this.parentNode.remove()" style="margin-top:14px;padding:10px 24px;background:#ff6b00;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">'+_pt.hintOk+'<\/button>';document.body.appendChild(hint);},2000);}return;}navigator.serviceWorker.register('/sw.js').then(function(reg){window.__swReg=reg;});var _st=null;try{_st=localStorage.getItem('wp_sub_'+_s);}catch(e){}function _set(v){try{if(v){localStorage.setItem('wp_sub_'+_s,v);}else{localStorage.removeItem('wp_sub_'+_s);}}catch(e){}}function _reg(){return window.__swReg?Promise.resolve(window.__swReg):navigator.serviceWorker.register('/sw.js');}function _key(reg){return fetch('${pageOrigin}/lp/webpush/vapid-key/'+_s).then(function(x){return x.json();}).then(function(d){var arr=new Uint8Array(atob(d.publicKey.replace(/-/g,'+').replace(/_/g,'/')).split('').map(function(c){return c.charCodeAt(0);}));return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:arr});});}function _post(explicit){return _reg().then(_key).then(function(s){var j=s.toJSON();var b={endpoint:j.endpoint,keys:j.keys,cid:_pc};if(explicit){b.consent='explicit';}return fetch('${pageOrigin}/lp/webpush/subscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});}).then(function(r){if(!r.ok){throw new Error('subscribe '+r.status);}return r.json();}).then(function(j){return !!(j&&j.subscribed===true);});}var _ft=null;function _footer(on){if(!_ft){_ft=document.createElement('div');_ft.id='qraivy-push-footer';_ft.style.cssText='text-align:center;font-size:12px;color:#888;padding:14px 16px 24px;';document.body.appendChild(_ft);}_ft.textContent=(on?_pt.onLine:_pt.offLine)+' ';var a=document.createElement('button');a.type='button';a.textContent=on?_pt.turnOff:_pt.turnOn;a.style.cssText='background:none;border:none;padding:0;color:inherit;text-decoration:underline;font:inherit;cursor:pointer;';a.onclick=on?_off:_on;_ft.appendChild(a);}function _off(){_reg().then(function(reg){return reg.pushManager.getSubscription();}).then(function(s){if(!s){return;}return fetch('${pageOrigin}/lp/webpush/unsubscribe/'+_s,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:s.endpoint})}).then(function(r){if(!r.ok){throw new Error('unsubscribe '+r.status);}});}).then(function(){_set('off');_footer(false);}).catch(function(){});}function _on(){Notification.requestPermission().then(function(p){if(p!=='granted'){_ft.textContent=_pt.blockedTitle;return;}return _post(true).then(function(on){if(on){_set('1');_footer(true);}else{_ft.textContent=_pt.failTitle;}});}).catch(function(){_ft.textContent=_pt.failTitle;});}if(_st){if(_st==='1'&&'Notification' in window&&Notification.permission==='granted'){_post(false).then(function(on){if(on){_footer(true);}else{_set(null);}}).catch(function(){});}else if(_st==='off'&&'Notification' in window&&Notification.permission!=='denied'){_footer(false);}return;}if(!('Notification' in window)||Notification.permission==='denied'){return;}var AC='#ff6b00';var ICONS={alert:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/><\/svg>',bell:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><\/svg>',check:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><\/svg>',spin:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><\/svg>'};var STATES={idle:{icon:'bell',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:_pt.title,desc:_pt.desc,btn:_pt.btn,trust:_pt.trust},asking:{icon:'spin',bg:'linear-gradient(135deg,#fff5f0,#ffe4d6)',ic:AC,title:_pt.asking,desc:'',btn:'',trust:''},ok:{icon:'check',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)',ic:'#16a34a',title:_pt.okTitle,desc:_pt.okDesc,btn:'',trust:''},blocked:{icon:'alert',bg:'linear-gradient(135deg,#fef2f2,#fee2e2)',ic:'#dc2626',title:_pt.blockedTitle,desc:_pt.blockedDesc,btn:'',trust:''},failed:{icon:'alert',bg:'linear-gradient(135deg,#fef2f2,#fee2e2)',ic:'#dc2626',title:_pt.failTitle,desc:_pt.failDesc,btn:_pt.retry,trust:''}};var wrap=document.createElement('div');wrap.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9990;display:flex;justify-content:center;pointer-events:none;';var card=document.createElement('div');card.style.cssText='pointer-events:all;position:relative;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -6px 40px rgba(0,0,0,.14);padding:22px 22px 30px;width:100%;max-width:480px;box-sizing:border-box;transform:translateY(110%);transition:transform .38s cubic-bezier(.32,0,.67,0);';var xBtn=document.createElement('button');xBtn.style.cssText='position:absolute;top:14px;right:14px;background:rgba(0,0,0,.06);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:#888;font-size:16px;';xBtn.innerHTML='&times;';xBtn.setAttribute('aria-label',_pt.close);xBtn.onclick=function(){localStorage.setItem('wp_sub_'+_s,'dismissed');wrap.style.display='none';};var iWrap=document.createElement('div');iWrap.style.cssText='width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;';var iEl=document.createElement('div');iEl.style.cssText='width:26px;height:26px;';var ttl=document.createElement('div');ttl.style.cssText='font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:6px;';var dsc=document.createElement('div');dsc.style.cssText='font-size:.86rem;color:#666;line-height:1.5;margin-bottom:14px;';var btn=document.createElement('button');btn.style.cssText='width:100%;padding:14px;background:'+AC+';color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;';var tst=document.createElement('div');tst.style.cssText='font-size:.73rem;color:#aaa;text-align:center;margin-top:10px;';function setState(s){var c=STATES[s]||STATES.idle;iWrap.style.background=c.bg;iEl.style.color=c.ic;iEl.innerHTML=ICONS[c.icon]||'';ttl.textContent=c.title;dsc.textContent=c.desc;dsc.style.display=c.desc?'block':'none';btn.textContent=c.btn;btn.style.display=c.btn?'block':'none';tst.textContent=c.trust;tst.style.display=c.trust?'block':'none';if(s==='ok'){setTimeout(function(){wrap.style.display='none';},2800);}}iWrap.appendChild(iEl);card.appendChild(xBtn);card.appendChild(iWrap);card.appendChild(ttl);card.appendChild(dsc);card.appendChild(btn);card.appendChild(tst);wrap.appendChild(card);document.body.appendChild(wrap);setTimeout(function(){card.style.transform='translateY(0)';},600);setState('idle');function doSub(){setState('asking');_post(true).then(function(on){if(!on){throw new Error('not subscribed');}_set('1');setState('ok');_footer(true);}).catch(function(){setState('failed');});}btn.onclick=function(){Notification.requestPermission().then(function(p){if(p==='granted'){doSub();}else if(p==='denied'){setState('blocked');_set('denied');}else{wrap.style.display='none';}});};})()
 <\/script>
 </body>
 </html>`;
@@ -3572,7 +3573,7 @@ async function handleVerifyStaffPin(req, res) {
 // ── END PREMIUM TEMPLATE RENDERER ────────────────────────────────────────
 
 module.exports = { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
-  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
+  handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handleWebPushSubscribe, handleWebPushUnsubscribe, handleWebPushVapidKey, handlePushCount, handlePushHistory, handleSubscribe, handleGetSubscribers,
   handleLoyaltyCardPage, handleLoyaltyWelcome, handleGetNFCToken, handleCustomerStamp, handleStamp, handleStampConfirm, handleRedeemTap, handleRedeemTapConfirm, handleGetStampToken, handleStampSettings, handleGetStampSettings,
   handleLPManifest,
   handleSetStaffPin, handleGetStaffPinStatus, handleVerifyStaffPin,

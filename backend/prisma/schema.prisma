@@ -173,8 +173,34 @@ model WebPushSubscription {
   // migration created here — see docs/architecture/CUSTOMER_FOUNDATION.md.
   cid       String?
   createdAt DateTime @default(now())
+  // Phase 5.5C.3: set when the push service answers 404/410 (the browser
+  // dropped this address). Kept, never deleted; excluded from sending.
+  expiredAt DateTime?
+  // Which businesses this browser agreed to hear from, one row per page.
+  // `slug` above is legacy: the last page this browser subscribed on.
+  pages     WebPushPageSubscription[]
 
   @@index([cid])
+}
+
+// Phase 5.5C.3: one browser push address, many independently consented
+// businesses. A row exists only for a page the customer opted in on
+// (migrated rows: the one page each existing subscription belonged to).
+// Opting out sets unsubscribedAt; other pages' rows are untouched.
+model WebPushPageSubscription {
+  id             String              @id @default(uuid())
+  subscriptionId String
+  subscription   WebPushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  slug           String
+  cid            String?
+  // 'migrated' (existing subscription carried over) or 'explicit' (tapped to enable)
+  source         String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  unsubscribedAt DateTime?
+
+  @@unique([subscriptionId, slug])
+  @@index([slug])
 }
 
 model StampSettings {

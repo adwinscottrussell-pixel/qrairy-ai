@@ -41,6 +41,10 @@ const pushLine = (html) => html.split('\n').find((l) => l.includes("console.log(
 const lf = (s) => s.split('\r\n').join('\n');
 const SRC = () => lf(require('fs').readFileSync(path.join(__dirname, '..', 'src', 'controllers', 'lpController.js'), 'utf8'));
 const HEAD = () => lf(execFileSync('git', ['show', 'e7060e5:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
+// Phase 5.5C.3 (tests/pushPageSubscriptions.test.js) changed the push logic on purpose; its edits are undone first.
+const { revertPush55c3, revertInline55c3, NEW_TEXT_KEYS, PRISMA_EXCLUDES } = require('./helpers/push55c3Revert');
+const BASE55C3 = () => lf(execFileSync('git', ['show', '0cd8e45:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
+const without55c3 = (t) => { const o = Object.assign({}, t); NEW_TEXT_KEYS.forEach((k) => { assert.ok(typeof o[k] === 'string' && o[k], k); delete o[k]; }); return o; };
 
 const EN = {
   hintTitle: '📲 Turn on notifications',
@@ -64,7 +68,7 @@ const test = (name, fn) => tests.push({ name, fn });
 
 test('English page: the existing English push texts, unchanged', async () => {
   const t = pushText(await render(page('push-en', 'en')));
-  assert.deepEqual(t, EN);
+  assert.deepEqual(without55c3(t), EN);
   // the sheet's texts are exactly the ones the page showed before this change
   const before = pushLine(HEAD());
   for (const k of ['title', 'desc', 'btn', 'trust', 'asking', 'okTitle', 'okDesc']) assert.ok(before.includes(EN[k]), k + ' was the English text before');
@@ -72,12 +76,12 @@ test('English page: the existing English push texts, unchanged', async () => {
 
 test('German page: German push texts, "Benachrichtigungen aktivieren" on the button', async () => {
   const html = await render(page('push-de', 'de'));
-  assert.deepEqual(pushText(html), DE);
+  assert.deepEqual(without55c3(pushText(html)), DE);
   assert.ok(!/Stay updated instantly|Enable Updates|You're subscribed|Setting things up|Turn on notifications/.test(html), 'no English push text on a German page');
 });
 
 test('a page without a saved language is English, as the rest of the page', async () => {
-  assert.deepEqual(pushText(await render(page('push-none', null))), EN);
+  assert.deepEqual(without55c3(pushText(await render(page('push-none', null)))), EN);
 });
 
 test('the push block reads every text from QRAIVY_PUSH_TEXT; none is left in the script', async () => {
@@ -89,7 +93,7 @@ test('the push block reads every text from QRAIVY_PUSH_TEXT; none is left in the
 });
 
 test('the push logic is unchanged: put the old texts back and the script is identical to before', () => {
-  const now = pushLine(SRC()), before = pushLine(HEAD());
+  const now = revertPush55c3(pushLine(SRC()), pushLine(BASE55C3())), before = pushLine(HEAD());
   const BS = String.fromCharCode(92), u = (h) => BS + 'u' + h, end = (n) => '<' + BS + '/' + n + '>';
   const restored = now
     .replace('(function(){var _pt=window.QRAIVY_PUSH_TEXT;', '(function(){')
@@ -103,7 +107,7 @@ test('the push logic is unchanged: put the old texts back and the script is iden
   assert.equal(restored, before);
   // the inline button's handler: only its three texts changed
   const fn = (s) => s.slice(s.indexOf('window.lpEnableNotifications = function() {'), s.indexOf('// Show notif button if not already subscribed'));
-  const restoredFn = fn(SRC())
+  const restoredFn = fn(revertInline55c3(SRC()))
     .replace('alert(window.QRAIVY_PUSH_TEXT.unsupported)', "alert('Notifications not supported in this browser.')")
     .replace('btn.textContent = window.QRAIVY_PUSH_TEXT.enabled;', "btn.textContent = '" + u('2713') + " Notifications enabled!';")
     .replace('btn.textContent = window.QRAIVY_PUSH_TEXT.blocked;', "btn.textContent = '" + u('26d4') + " Notifications blocked in browser settings';");
@@ -118,9 +122,9 @@ test('the texts cannot end the script element, and they load before the push cod
   assert.ok(html.indexOf('window.QRAIVY_PUSH_TEXT =') < html.indexOf('window.lpEnableNotifications = function()'));
 });
 
-test('service worker, VAPID key, subscribe call and subscription storage are untouched', () => {
+test('service worker and VAPID key are untouched (subscribe and storage: Phase 5.5C.3, pushPageSubscriptions.test.js)', () => {
   const root = path.join(__dirname, '..', '..');
-  const changed = execFileSync('git', ['diff', 'e7060e5', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/services/webPushService.js', 'backend/src/routes', 'backend/prisma',
+  const changed = execFileSync('git', ['diff', 'e7060e5', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/routes', 'backend/prisma', ...PRISMA_EXCLUDES,
     'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
   // the push campaign security hotfix (tests/pushCampaignAuth.test.js) adds sign-in to two push routes, nothing else
   assert.deepEqual(changed.filter((f) => f !== 'backend/src/routes/lpRoutes.js'), []);
@@ -128,16 +132,16 @@ test('service worker, VAPID key, subscribe call and subscription storage are unt
     .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
     .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory")
     // and the subscriber data hotfix (tests/subscriberDataAuth.test.js): sign-in on the email list route
-    .replace("// The page's own account only (the handler checks ownership): subscriber emails.\nrouter.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);", "router.get('/lp/subscribers/:slug', handleGetSubscribers);");
+    .replace("// The page's own account only (the handler checks ownership): subscriber emails.\nrouter.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);", "router.get('/lp/subscribers/:slug', handleGetSubscribers);")
+    // and Phase 5.5C.3 (tests/pushPageSubscriptions.test.js): the per-page unsubscribe route
+    .replace('handleWebPushSubscribe, handleWebPushUnsubscribe, handleWebPushVapidKey,', 'handleWebPushSubscribe, handleWebPushVapidKey,')
+    .replace("router.post('/lp/webpush/unsubscribe/:slug', handleWebPushUnsubscribe);\n", '');
   assert.equal(routes, lf(execFileSync('git', ['show', 'e7060e5:backend/src/routes/lpRoutes.js'], { cwd: root, encoding: 'utf8' })));
   const fn = (s, name) => s.slice(s.indexOf('async function ' + name + '('), s.indexOf('\n}\n', s.indexOf('async function ' + name + '(')));
-  // handleSendPush: only the hotfix's owner check and its reuse of the page it loaded
-  const sendNow = fn(SRC(), 'handleSendPush')
-    .replace("    const ownedPage = await findOwnedPushPage(slug, req.userId);\n    if (!ownedPage) return pushPageNotFound(res);\n", '')
-    .replace('      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: ownedPage.businessName || slug, slug });',
-      "      const page = await prisma.landingPage.findUnique({ where: { slug } });\n      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });");
-  assert.equal(sendNow, fn(HEAD(), 'handleSendPush'), 'handleSendPush');
-  for (const name of ['handleWebPushSubscribe', 'handleWebPushVapidKey']) assert.equal(fn(SRC(), name), fn(HEAD(), name), name);
+  // handleSendPush: as at the security hotfix (8cf3b89), apart from the 5.5C.3 recipient lines
+  const sendNow = fn(SRC(), 'handleSendPush').replace("    // Also send web push: this page's active opt-ins only, one per browser\n    const webSubs = await webPushPages.recipientsForPage(slug);\n    let webPushSent = 0;\n    if (webSubs.length > 0) {\n      const r = await webPushPages.sendToRecipients(webSubs, { title, body: message, url: linkUrl || ('https://www.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });\n      webPushSent = r.sent;\n    }", "    // Also send web push to browser subscribers\n    const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });\n    let webPushSent = 0;\n    if (webSubs.length > 0) {\n      const { sendWebPush } = require('../services/webPushService');\n      for (const sub of webSubs) {\n        const r = await sendWebPush({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, { title, body: message, url: linkUrl || ('https://www.qraivy.com/lp/' + slug), icon: 'https://qraivy.com/icon-192.png' });\n        if (r.ok) webPushSent++;\n      }\n    }");
+  assert.equal(sendNow, fn(BASE55C3(), 'handleSendPush'), 'handleSendPush');
+  assert.equal(fn(SRC(), 'handleWebPushVapidKey'), fn(HEAD(), 'handleWebPushVapidKey'), 'handleWebPushVapidKey');
 });
 
 (async () => {

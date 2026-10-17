@@ -100,8 +100,10 @@ async function fetchWebPushSubscribedByIdentityPairs(cidIdentities) {
   const pairs = cidIdentities.filter((i) => i.slug && i.value);
   if (!pairs.length) return set;
 
-  const rows = await prisma.webPushSubscription.findMany({
-    where: { cid: { not: null }, OR: pairs.map((p) => ({ slug: p.slug, cid: p.value })) },
+  // Phase 5.5C.3: active per-page opt-ins (WebPushPageSubscription), not the
+  // legacy "last page" column of the browser's address.
+  const rows = await prisma.webPushPageSubscription.findMany({
+    where: { cid: { not: null }, unsubscribedAt: null, subscription: { expiredAt: null }, OR: pairs.map((p) => ({ slug: p.slug, cid: p.value })) },
     select: { slug: true, cid: true },
   });
   for (const row of rows) set.add(webPushKey(row.slug, row.cid));
@@ -196,8 +198,8 @@ async function resolveWebPushCustomerIds(ownerUserId) {
   });
   if (!cidIdentities.length) return [];
   const keyToCustomer = new Map(cidIdentities.map((i) => [webPushKey(i.slug, i.value), i.customerId]));
-  const subscriptions = await prisma.webPushSubscription.findMany({
-    where: { cid: { not: null }, OR: cidIdentities.map((i) => ({ slug: i.slug, cid: i.value })) },
+  const subscriptions = await prisma.webPushPageSubscription.findMany({
+    where: { cid: { not: null }, unsubscribedAt: null, subscription: { expiredAt: null }, OR: cidIdentities.map((i) => ({ slug: i.slug, cid: i.value })) },
     select: { slug: true, cid: true },
   });
   return Array.from(new Set(

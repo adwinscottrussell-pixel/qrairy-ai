@@ -441,7 +441,15 @@ test('E. production: the rendered customer page is byte-for-byte what it was bef
   // byte for byte what it was.
   const pushJson = rendered.match(/\nwindow\.QRAIVY_PUSH_TEXT = (\{.*?\});/);
   assert.ok(pushJson && JSON.parse(pushJson[1]).btn === 'Enable Updates', 'English page: English push texts');
-  const now = rendered
+  // Phase 5.5C.3 (tests/pushPageSubscriptions.test.js) changed the push logic on purpose: undo exactly
+  // its edits first (tests/helpers/push55c3Revert.js), then the 5.5C.2 ones below.
+  const { revertPush55c3, revertInline55c3 } = require('./helpers/push55c3Revert');
+  const isPushLine = (l) => l.includes("console.log('[Push] Premium LP loaded");
+  const baseLine = execFileSync('git', ['show', '0cd8e45:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).split(/\r?\n/).find(isPushLine);
+  const renderedLines = rendered.split('\n');
+  const pushAt = renderedLines.findIndex(isPushLine);
+  renderedLines[pushAt] = revertPush55c3(renderedLines[pushAt], baseLine, 'https://www.qraivy.com');
+  const now = revertInline55c3(renderedLines.join('\n'))
     .replace(pushJson[0], '')
     .replace('(function(){var _pt=window.QRAIVY_PUSH_TEXT;', '(function(){')
     .replace("'+_pt.hintTitle+'", '📲 Benachrichtigungen aktivieren')
@@ -523,7 +531,8 @@ test('G. the change is limited to routing: sign-in, the database schema, the des
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
   // (backend/src/data/dealImages.js later gained the staging image folder: dealsPreviewSafety.test.js)
-  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma').trim(), '');
+  // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES).trim(), '');
   // auth.js: the routing step's own commit left it alone. Its one later change (which
   // function verifies a token) is pinned line by line in lpStagingClerkAuth.test.js.
   assert.equal(git('diff', '10ab8d5', 'fa2c67c', '--stat', '--', 'backend/src/middleware/auth.js').trim(), '');

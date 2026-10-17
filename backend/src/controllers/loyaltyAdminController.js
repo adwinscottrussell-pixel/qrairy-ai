@@ -10,6 +10,7 @@ const crypto = require('crypto');
 // canonical resolver the real Apple/Google pass generators use (passService.js,
 // googleWalletService.js) rather than re-deriving StadtPocket linkage here.
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
+const { countActiveBySlug: countActiveWebPushBySlug } = require('../services/webPushPages');
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -444,15 +445,14 @@ async function getSubscriberSummary(req, res) {
     const pages = await prisma.landingPage.findMany({ where: { userId }, select: { slug: true, businessName: true } });
     const ownSlugs = pages.map(function(p) { return p.slug; });
     const [webGroups, emailGroups] = await Promise.all([
-      prisma.webPushSubscription.groupBy({ by: ['slug'], where: { slug: { in: ownSlugs } }, _count: { id: true } }),
+      countActiveWebPushBySlug(ownSlugs),
       prisma.subscriber.groupBy({ by: ['slug'], where: { slug: { in: ownSlugs } }, _count: { id: true } }).catch(() => [])
     ]);
 
     const pageNameMap = {};
     pages.forEach(function(p) { pageNameMap[p.slug] = p.businessName || p.name || p.slug; });
 
-    const webMap = {};
-    webGroups.forEach(function(g) { webMap[g.slug] = g._count.id; });
+    const webMap = webGroups;
 
     const emailMap = {};
     emailGroups.forEach(function(g) { emailMap[g.slug] = g._count.id; });
@@ -469,7 +469,7 @@ async function getSubscriberSummary(req, res) {
         : 0;
 
       const [lastWeb, lastEmail] = await Promise.all([
-        prisma.webPushSubscription.findFirst({ where: { slug }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
+        prisma.webPushPageSubscription.findFirst({ where: { slug, unsubscribedAt: null, subscription: { expiredAt: null } }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
         prisma.subscriber.findFirst({ where: { slug }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null)
       ]);
       const dates = [lastWeb && lastWeb.createdAt, lastEmail && lastEmail.createdAt].filter(Boolean);
@@ -505,7 +505,8 @@ async function getSubscriberDetail(req, res) {
     if (!page || !page.userId || page.userId !== userId) return res.status(404).json({ error: 'Page not found.' });
 
     const [webSubs, emailSubs, passIds] = await Promise.all([
-      prisma.webPushSubscription.findMany({ where: { slug }, select: { endpoint: true, createdAt: true }, orderBy: { createdAt: 'desc' } }),
+      prisma.webPushPageSubscription.findMany({ where: { slug, unsubscribedAt: null, subscription: { expiredAt: null } }, select: { createdAt: true, subscription: { select: { endpoint: true } } }, orderBy: { createdAt: 'desc' } })
+        .then(function(rows) { return rows.map(function(r) { return { endpoint: r.subscription.endpoint, createdAt: r.createdAt }; }); }),
       prisma.subscriber.findMany({ where: { slug, gdprConsent: true }, select: { email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).catch(() => []),
       prisma.pass.findMany({ where: { serialNumber: { startsWith: 'sqr-' + slug } }, select: { id: true } })
     ]);

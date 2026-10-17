@@ -252,7 +252,8 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // QRAIVY Deals (recovered from preview/qraivy-deals-foundation): the Deal and DealPlacement
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
-  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', 'frontend/public/js/deal-starter-images.js').trim(), '');
+  // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, 'frontend/public/js/deal-starter-images.js').trim(), '');
   // smart-qr-detail.html and js/admin-shell.js: unchanged by this step's own commit. They were
   // changed later, on purpose, to give the page the Admin sidebar (see adminNavShell.test.js;
   // the page's own markup is still compared with production in lpVoiceGreetings.test.js).

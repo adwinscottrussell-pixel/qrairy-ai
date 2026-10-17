@@ -50,7 +50,9 @@ const mockPrisma = {
   pass: { async updateMany() { return { count: 0 }; } },
   pushCampaign: { async create() { return {}; } },
   subscriber: { async findMany() { return mockPrisma._emailSubs || []; } },
-  webPushSubscription: { async findMany() { return mockPrisma._webSubs || []; } },
+  // Phase 5.5C.3: the page's active opt-ins, each with its browser address
+  webPushPageSubscription: { async findMany() { return (mockPrisma._webSubs || []).map((s, i) => ({ subscription: Object.assign({ id: 'w' + i }, s) })); } },
+  webPushSubscription: { async updateMany() { return { count: 0 }; } },
   stampSettings: { async findUnique() { return null; } },
 };
 

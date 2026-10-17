@@ -11,8 +11,9 @@ async function sendWebPush(subscription, payload) {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
     return { ok: true };
   } catch(e) {
-    console.error('[WebPush] Failed:', e.message);
-    return { ok: false, error: e.message };
+    console.error('[WebPush] Failed:', e.statusCode || '', e.message);
+    // statusCode 404/410: the browser dropped this address (webPushPages marks it expired)
+    return { ok: false, error: e.message, statusCode: e.statusCode };
   }
 }
 
