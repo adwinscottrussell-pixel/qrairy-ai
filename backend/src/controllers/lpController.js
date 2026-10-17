@@ -3427,8 +3427,14 @@ async function handleLoyaltyWelcome(req, res) {
     // the logo stays the installed app's icon. Every other page: unchanged.
     if (welcomeV2Enabled(slug)) {
       const loyaltyOn = !!(stampCfg && stampCfg.enabled);
+      // Language: an explicit ?lang=de|en wins, then the page's own saved
+      // language (sections.language), then German. The first-visit redirect
+      // carries no ?lang, so it now follows the page.
+      const asked = req.query.lang === 'de' || req.query.lang === 'en' ? req.query.lang : null;
+      const saved = sections.language === 'de' || sections.language === 'en' ? sections.language : null;
+      const welcomeDE = (asked || saved || 'de') === 'de';
       return res.send(renderWelcome({
-        slug, isDE, bizName,
+        slug, isDE: welcomeDE, bizName,
         iconUrl: logoUrl || page.logoUrl || null,
         loyalty: loyaltyOn ? { goal: stampCfg.goal, rewardName: stampCfg.rewardName || null } : null,
         cidHelperJs: SLUG_CID_HELPER_JS,

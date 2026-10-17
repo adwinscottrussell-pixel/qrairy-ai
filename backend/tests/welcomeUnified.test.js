@@ -27,6 +27,13 @@ pages['sp'] = page('sp', { businessId: 'biz-1', businessName: 'Ulm Cafe' }); // 
 pages['nologo'] = page('nologo', { sections: JSON.stringify({}) });
 pages['httplogo'] = page('httplogo', { sections: JSON.stringify({ logo: { url: 'http://insecure.example/logo.png' } }) });
 pages['evil'] = page('evil', { businessName: '<img src=x onerror="alert(1)">\'</script>', sections: JSON.stringify({ logo: { url: 'https://x.example/a.png"><script>alert(2)</script>' } }) });
+// saved page languages (LandingPage.sections.language)
+pages['page-en'] = page('page-en', { businessName: 'Qraivy', sections: JSON.stringify({ language: 'en' }) });
+pages['page-de'] = page('page-de', { businessName: 'Qraivy', sections: JSON.stringify({ language: 'de' }) });
+pages['page-xx'] = page('page-xx', { businessName: 'Qraivy', sections: JSON.stringify({ language: 'fr' }) });
+pages['loyal-en'] = page('loyal-en', { businessName: 'Kaffee Ulm', sections: JSON.stringify({ language: 'en' }) });
+pages['sp-en'] = page('sp-en', { businessId: 'biz-1', businessName: 'Ulm Cafe', sections: JSON.stringify({ language: 'en' }) });
+stamps['loyal-en'] = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
 stamps['loyal'] = { enabled: true, goal: 8, rewardName: 'Free Coffee' };
 stamps['loyal-noreward'] = { enabled: true, goal: 6, rewardName: '' };
 stamps['loyal-off'] = { enabled: false, goal: 10, rewardName: 'Gratisprodukt' };
@@ -108,7 +115,9 @@ test('official Google and Apple Wallet badges, used byte for byte, never stretch
   const de = await welcome('loyal', {}, ALL), en = await welcome('loyal', { lang: 'en' }, ALL);
   assert.ok(de.includes(badge('de_add_to_google_wallet_add-wallet-badge.svg')));
   assert.ok(en.includes(badge('enUS_add_to_google_wallet_add-wallet-badge.svg')));
-  const sha = (f) => require('crypto').createHash('sha256').update(fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'wallet-badges', f))).digest('hex').slice(0, 16);
+  // SVGs are text: a Windows checkout (core.autocrlf) adds a CR per line, which is not a change to
+  // the artwork. Hash them with LF line ends, as git stores and the server deploys them.
+  const sha = (f) => { const b = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'wallet-badges', f)); return require('crypto').createHash('sha256').update(f.endsWith('.svg') ? Buffer.from(b.toString('utf8').split('\r\n').join('\n'), 'utf8') : b).digest('hex').slice(0, 16); };
   assert.equal(sha('de_add_to_google_wallet_add-wallet-badge.svg'), '8ad2913864b48714');
   assert.equal(sha('enUS_add_to_google_wallet_add-wallet-badge.svg'), 'fee1f26a7f5d5c59');
   // Apple: the owner-supplied outline badge (for dark backgrounds), embedded unchanged
@@ -207,6 +216,36 @@ test('English copy is complete, without German left over', async () => {
   const v = visible(html).replace(/<svg[\s\S]*?<\/svg>/g, '');
   for (const s of ['Add to Home Screen', 'Show me how', 'Continue without saving', 'Collect 8 stamps – get Free Coffee.', 'Enable Updates']) assert.ok(v.includes(s), s);
   assert.ok(!/Zeig mir|Ohne Speichern|Stempel|Home-Bildschirm|Treue/.test(v));
+});
+
+test('language: the page\'s saved language, unless ?lang=de|en says otherwise; German when nothing is saved', async () => {
+  const L = 'page-en,page-de,page-xx,loyal-en,plain';
+  const lang = (html) => (html.match(/<html lang="([a-z]+)">/) || [])[1] + '/' + ((html.match(/<h1>([^<]*)<\/h1>/) || [])[1]);
+  assert.equal(lang(await welcome('page-en', {}, L)), 'en/Never miss a new offer!', 'English page, no ?lang (as after the first-visit redirect)');
+  assert.equal(lang(await welcome('page-de', {}, L)), 'de/Verpasse keine Angebote mehr!');
+  assert.equal(lang(await welcome('plain', {}, L)), 'de/Verpasse keine Angebote mehr!', 'nothing saved: German, as before');
+  assert.equal(lang(await welcome('page-xx', {}, L)), 'de/Verpasse keine Angebote mehr!', 'unknown saved language: German');
+  assert.equal(lang(await welcome('page-en', { lang: 'de' }, L)), 'de/Verpasse keine Angebote mehr!', '?lang=de wins over an English page');
+  assert.equal(lang(await welcome('page-de', { lang: 'en' }, L)), 'en/Never miss a new offer!', '?lang=en wins over a German page');
+  assert.equal(lang(await welcome('page-en', { lang: 'fr' }, L)), 'en/Never miss a new offer!', 'an unknown ?lang falls back to the page');
+  // the loyalty variant follows the page too, with the matching Google badge
+  const loyal = await welcome('loyal-en', {}, L);
+  assert.ok(loyal.includes('Collect 8 stamps – get Free Coffee.') && loyal.includes('aria-label="Add to Google Wallet"'));
+});
+
+test('language: pages without the unified screen and StadtPocket pages keep their language rule (?lang, else German)', async () => {
+  const legacy = await welcome('page-en', {}, 'plain');          // not listed: today's screen
+  assert.ok(legacy.includes('<html lang="de">') && legacy.includes('Treueprämien'), 'not listed: unchanged, still German without ?lang');
+  const sp = await welcome('sp-en', {}, 'sp-en');                  // StadtPocket, even if listed
+  assert.ok(sp.includes('<html lang="de">') && sp.includes('auf deinem Handy speichern') && !sp.includes('data-welcome="unified"'), 'StadtPocket: unchanged');
+  assert.ok((await welcome('sp-en', { lang: 'en' }, 'sp-en')).includes('<html lang="en">'));
+});
+
+test('first visit: the redirect still sends no ?lang, so the welcome screen follows the page', () => {
+  const s = src();
+  assert.ok(s.includes('var u=new URL("/lp/welcome/"+s,window.location.origin);if(c)u.searchParams.set("cid",c);window.location.replace(u.toString());'));
+  assert.ok(s.includes("const asked = req.query.lang === 'de' || req.query.lang === 'en' ? req.query.lang : null;"));
+  assert.ok(s.includes("const saved = sections.language === 'de' || sections.language === 'en' ? sections.language : null;"));
 });
 
 test('scope: wallet passes, wallet routes, StadtPocket and the database are untouched', () => {
