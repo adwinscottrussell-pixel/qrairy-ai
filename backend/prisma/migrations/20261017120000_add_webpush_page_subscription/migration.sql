@@ -29,8 +29,12 @@ CREATE INDEX "WebPushPageSubscription_slug_idx" ON "WebPushPageSubscription"("sl
 ALTER TABLE "WebPushPageSubscription" ADD CONSTRAINT "WebPushPageSubscription_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "WebPushSubscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Backfill: each existing subscription keeps exactly the one page it
--- belongs to today. No consent is inferred for any other page.
+-- belongs to today, if that page still exists. No consent is inferred for
+-- any other page. Subscriptions of deleted pages are left as they are (kept,
+-- not linked): no business can send to them, and their slug stays reserved
+-- (services/slugReservation.js).
 INSERT INTO "WebPushPageSubscription" ("id", "subscriptionId", "slug", "cid", "source", "createdAt", "updatedAt")
 SELECT 'migrated-' || s."id", s."id", s."slug", s."cid", 'migrated', s."createdAt", CURRENT_TIMESTAMP
 FROM "WebPushSubscription" s
+WHERE EXISTS (SELECT 1 FROM "LandingPage" l WHERE l."slug" = s."slug")
 ON CONFLICT ("subscriptionId", "slug") DO NOTHING;

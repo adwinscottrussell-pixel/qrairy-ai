@@ -205,7 +205,7 @@ test('existing subscriptions: a migrated opt-in sends and re-syncs as before; it
   assert.deepEqual(activeLinks(EP(7)), ['biz-a'], 'the legacy column no longer decides anything');
 });
 
-test('the migration is additive and carries over exactly one page per existing subscription', () => {
+test('the migration is additive and carries over exactly one page per existing subscription, only for pages that still exist', () => {
   const dir = path.join(__dirname, '..', 'prisma', 'migrations', '20261017120000_add_webpush_page_subscription');
   assert.deepEqual(fs.readdirSync(dir), ['migration.sql']);
   const sql = lf(fs.readFileSync(path.join(dir, 'migration.sql'), 'utf8'));
@@ -215,7 +215,9 @@ test('the migration is additive and carries over exactly one page per existing s
   assert.ok(statements[0] === 'ALTER TABLE "WebPushSubscription" ADD COLUMN "expiredAt" TIMESTAMP(3)', 'one nullable column');
   assert.equal(statements[5], 'INSERT INTO "WebPushPageSubscription" ("id", "subscriptionId", "slug", "cid", "source", "createdAt", "updatedAt")\n'
     + 'SELECT \'migrated-\' || s."id", s."id", s."slug", s."cid", \'migrated\', s."createdAt", CURRENT_TIMESTAMP\n'
-    + 'FROM "WebPushSubscription" s\nON CONFLICT ("subscriptionId", "slug") DO NOTHING');
+    + 'FROM "WebPushSubscription" s\n'
+    + 'WHERE EXISTS (SELECT 1 FROM "LandingPage" l WHERE l."slug" = s."slug")\n'
+    + 'ON CONFLICT ("subscriptionId", "slug") DO NOTHING');
 });
 
 test('schema: only the 5.5C.3 additions (expiredAt, the pages relation, WebPushPageSubscription)', () => {
