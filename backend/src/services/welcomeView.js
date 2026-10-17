@@ -44,9 +44,20 @@ const appleImg = (file) => '<img class="wallet-img" src="data:image/png;base64,'
 const APPLE_BADGE_EN = appleImg('enUS_add_to_apple_wallet_outline.png');
 const APPLE_BADGE = { de: APPLE_BADGE_EN, en: APPLE_BADGE_EN };
 
-function welcomeV2Enabled(slug, env = process.env) {
+const list = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+// The unified welcome, per page or per account:
+//   WELCOME_V2_SLUGS      pages named one by one (as before);
+//   WELCOME_V2_OWNER_IDS  every page of these accounts (Phase 5.5C.4). Ownership is
+//                         the page's stored owner (LandingPage.userId, loaded on the
+//                         server by the caller), never anything the request says.
+//                         Pages linked to a Business (StadtPocket) are left out: they
+//                         keep their own welcome unless named in WELCOME_V2_SLUGS.
+function welcomeV2Enabled(slug, env = process.env, page = null) {
   if (typeof slug !== 'string' || !SLUG.test(slug)) return false;
-  return String(env.WELCOME_V2_SLUGS || '').split(',').map((s) => s.trim()).filter(Boolean).includes(slug);
+  if (list(env.WELCOME_V2_SLUGS).includes(slug)) return true;
+  if (!page || page.slug !== slug || typeof page.userId !== 'string' || !page.userId || page.businessId) return false;
+  return list(env.WELCOME_V2_OWNER_IDS).includes(page.userId);
 }
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

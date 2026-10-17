@@ -306,9 +306,10 @@ class El {
   get textContent() { return this._text + this.children.map((c) => c.textContent).join(''); }
   set textContent(v) { this._text = String(v); this.children = []; }
   appendChild(c) { this.children.push(c); c.parentNode = this; return c; }
-  setAttribute(k, v) { this.attrs[k] = v; }
+  setAttribute(k, v) { this.attrs[k] = v; (this.history = this.history || []).push([k, v]); }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter((c) => c !== this); }
 }
+const findById = (el, id) => { if (el.id === id) return el; for (const c of el.children) { const x = findById(c, id); if (x) return x; } return null; };
 const flush = async () => { for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r)); };
 // opts: permission, ask (what requestPermission answers), stored (wp_sub_ value), server (subscribe answer), pushFails, noPush
 function browser(script, opts) {
@@ -323,15 +324,15 @@ function browser(script, opts) {
   const Notification = { permission: o.permission, requestPermission: () => { Notification.permission = o.ask === 'default' ? Notification.permission : o.ask; return Promise.resolve(o.ask); } };
   const win = {
     QRAIVY_PUSH_TEXT: null,
-    navigator: Object.assign({ userAgent: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/130', standalone: false }, o.noPush ? {} : { serviceWorker: { register: () => Promise.resolve(reg) } }),
+    navigator: Object.assign({ userAgent: o.ua || 'Mozilla/5.0 (X11; Linux x86_64) Chrome/130', standalone: false }, o.noPush ? {} : { serviceWorker: { register: () => Promise.resolve(reg) } }),
     location: { pathname: '/lp/biz-a', search: '' },
     localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) },
     matchMedia: () => ({ matches: false }),
-    document: { createElement: (t) => new El(t), body },
+    document: { createElement: (t) => new El(t), body, getElementById: (id) => findById(body, id) },
     fetch: (url, init) => {
       requests.push({ url, body: init && init.body ? JSON.parse(init.body) : null });
       if (url.includes('/vapid-key/')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ publicKey: 'BPk' }) });
-      const a = url.includes('/unsubscribe/') ? { status: 200, body: { ok: true, subscribed: false } } : o.server;
+      const a = url.includes('/unsubscribe/') ? { status: o.unsub || 200, body: { ok: true, subscribed: false } } : o.server;
       return Promise.resolve({ ok: a.status < 400, status: a.status, json: () => Promise.resolve(a.body) });
     },
     setTimeout: () => 0, console: { log() {}, error() {} }, atob: (s) => Buffer.from(s, 'base64').toString('binary'),
@@ -349,18 +350,23 @@ async function run(script, texts, opts) {
   const wrap = b.body.children.find((c) => c.children[0] && c.children[0].children.length === 6);
   const card = wrap ? wrap.children[0] : null;
   b.sheet = card ? { title: () => card.children[2].textContent, btn: card.children[4], wrap } : null;
-  b.footer = () => b.body.children.find((c) => c.id === 'qraivy-push-footer');
+  // the settings section: what it shows now, and every state it went through
+  b.settings = () => { const box = findById(b.body, 'qraivy-push-settings'); if (!box || !box.children[0]) return null; const card = box.children[0], tx = card.children[1], btn = card.children[2] || null;
+    const out = { state: box.attrs['data-state'], title: tx.children[0].textContent, status: tx.children[1].children[1].textContent, button: btn ? btn.textContent : null };
+    Object.defineProperty(out, 'buttonEl', { value: btn, enumerable: false }); return out; };
+  b.states = () => { const box = findById(b.body, 'qraivy-push-settings'); return box ? (box.history || []).filter(([k]) => k === 'data-state').map(([, v]) => v) : []; };
   b.subscribes = () => b.requests.filter((r) => r.url.includes('/lp/webpush/subscribe/'));
   return b;
 }
 
-test('page: permission denied shows "blocked", never "subscribed", and registers nothing', async () => {
+test('page: permission denied at the prompt shows "blocked" in the sheet and the settings, never "subscribed", registers nothing', async () => {
   const { texts, script } = await renderPushScript('en');
   const b = await run(script, texts, { ask: 'denied' });
   assert.equal(b.sheet.title(), texts.title);
+  assert.deepEqual(b.settings(), { state: 'off', title: 'Notifications', status: 'Off', button: 'Turn on' });
   b.sheet.btn.onclick(); await flush();
   assert.equal(b.sheet.title(), 'Notifications are blocked');
-  assert.notEqual(b.sheet.title(), texts.okTitle);
+  assert.deepEqual(b.settings(), { state: 'blocked', title: 'Notifications', status: 'Blocked in your browser settings', button: null });
   assert.equal(b.store.get('wp_sub_biz-a'), 'denied');
   assert.deepEqual(b.subscribes(), []);
 });
@@ -373,36 +379,55 @@ test('page: failed registration shows "failed" with retry, never "subscribed" (s
     assert.equal(b.sheet.title(), "Couldn't turn on notifications", JSON.stringify(opts));
     assert.equal(b.sheet.btn.textContent, 'Try again');
     assert.ok(!b.store.has('wp_sub_biz-a'), 'not marked as subscribed');
-    assert.equal(b.footer(), undefined);
+    assert.notEqual(b.settings().state, 'on');
+    // and from the settings section: an error with retry, never "on"
+    b.settings().buttonEl.onclick(); await flush();
+    assert.deepEqual(b.settings(), { state: 'error', title: 'Notifications', status: "That didn't work. Please try again.", button: 'Try again' }, JSON.stringify(opts));
+    assert.ok(b.states().includes('turningOn') && !b.states().includes('on'));
   }
 });
 
-test('page: a confirmed registration says "subscribed", sends explicit consent with the page\'s customer id, shows the on/off line', async () => {
+test('page: a confirmed registration says "subscribed", sends explicit consent with the page\'s customer id, and the settings show "on"', async () => {
   const { texts, script } = await renderPushScript('en');
   const b = await run(script, texts, {});
   b.sheet.btn.onclick(); await flush();
   assert.equal(b.sheet.title(), "You're subscribed!");
   assert.equal(b.store.get('wp_sub_biz-a'), '1');
   assert.deepEqual(b.subscribes().map((r) => r.body), [{ endpoint: EP(42), keys: KEYS, cid: 'cid-slug-a-0001', consent: 'explicit' }]);
-  assert.equal(b.footer().textContent, 'Notifications from this business are on. Turn off');
+  assert.deepEqual(b.settings(), { state: 'on', title: 'Notifications', status: 'On for this business', button: 'Turn off' });
 });
 
-test('page: "Turn off" opts out of this business only and keeps the browser subscription for the others', async () => {
+test('page: the settings turn this business off and on again; the browser subscription stays for the others', async () => {
   const { texts, script } = await renderPushScript('en');
   const b = await run(script, texts, { permission: 'granted', stored: '1' });
   assert.equal(b.subscribes()[0].body.consent, undefined, 're-sync without consent');
-  const off = b.footer().children[0];
-  assert.equal(off.textContent, 'Turn off');
-  off.onclick(); await flush();
+  assert.deepEqual(b.states(), ['checking', 'on'], 'checking first, "on" only after the server confirmed');
+  assert.equal(b.settings().button, 'Turn off');
+  b.settings().buttonEl.onclick(); await flush();
   const un = b.requests.filter((r) => r.url.includes('/lp/webpush/unsubscribe/biz-a'));
   assert.deepEqual(un.map((r) => r.body), [{ endpoint: EP(42) }]);
   assert.equal(b.pushSub.unsubscribeCalls, 0, 'the browser push subscription itself stays (other businesses)');
   assert.equal(b.store.get('wp_sub_biz-a'), 'off');
-  assert.equal(b.footer().textContent, 'Notifications from this business are off. Turn on');
+  assert.deepEqual(b.settings(), { state: 'off', title: 'Notifications', status: 'Off', button: 'Turn on' });
+  assert.deepEqual(b.states().slice(-2), ['turningOff', 'off']);
   // and back on: an explicit opt-in again
-  b.footer().children[0].onclick(); await flush();
+  b.settings().buttonEl.onclick(); await flush();
   assert.equal(b.subscribes().pop().body.consent, 'explicit');
   assert.equal(b.store.get('wp_sub_biz-a'), '1');
+  assert.deepEqual(b.states().slice(-2), ['turningOn', 'on']);
+});
+
+test('page: turning off or checking can fail: an error with retry, the previous choice is kept', async () => {
+  const { texts, script } = await renderPushScript('en');
+  const b = await run(script, texts, { permission: 'granted', stored: '1', unsub: 500 });
+  b.settings().buttonEl.onclick(); await flush();
+  assert.deepEqual(b.settings(), { state: 'error', title: 'Notifications', status: "That didn't work. Please try again.", button: 'Try again' });
+  assert.equal(b.store.get('wp_sub_biz-a'), '1', 'still on as far as we know');
+  b.settings().buttonEl.onclick(); await flush();
+  assert.equal(b.requests.filter((r) => r.url.includes('/unsubscribe/')).length, 2, 'retry repeats the turn-off');
+  const c = await run(script, texts, { permission: 'granted', stored: '1', server: { status: 503, body: {} } });
+  assert.deepEqual(c.states(), ['checking', 'error']);
+  assert.equal(c.store.get('wp_sub_biz-a'), '1', 'a failed check forgets nothing');
 });
 
 test('page: revisits — dismissed and denied never re-subscribe; a lost opt-in is not assumed; off stays off', async () => {
@@ -411,35 +436,61 @@ test('page: revisits — dismissed and denied never re-subscribe; a lost opt-in 
     const b = await run(script, texts, { permission: 'granted', stored });
     assert.deepEqual(b.subscribes(), [], stored);
     assert.equal(b.sheet, null, 'no sheet');
+    assert.deepEqual(b.settings(), { state: 'off', title: 'Notifications', status: 'Off', button: 'Turn on' }, stored + ': can still turn on, by tapping');
   }
   const lost = await run(script, texts, { permission: 'granted', stored: '1', server: { status: 200, body: { ok: true, subscribed: false } } });
   assert.equal(lost.subscribes().length, 1);
   assert.ok(!lost.store.has('wp_sub_biz-a'), 'forgotten, so the page can ask again next time');
-  assert.equal(lost.footer(), undefined);
+  assert.deepEqual(lost.states(), ['checking', 'off']);
   const off = await run(script, texts, { permission: 'granted', stored: 'off' });
   assert.deepEqual(off.subscribes(), []);
-  assert.equal(off.footer().textContent, 'Notifications from this business are off. Turn on');
+  assert.equal(off.settings().state, 'off');
 });
 
-test('page: prompt closed without a choice, and browsers without push, register nothing', async () => {
+test('page: blocked, unsupported and iPhone-in-Safari states are shown as they are, without a button', async () => {
+  const { texts, script } = await renderPushScript('en');
+  const blocked = await run(script, texts, { permission: 'denied' });
+  assert.deepEqual(blocked.settings(), { state: 'blocked', title: 'Notifications', status: 'Blocked in your browser settings', button: null });
+  assert.deepEqual(blocked.requests, []);
+  const none = await run(script, texts, { noPush: true });
+  assert.deepEqual(none.settings(), { state: 'unsupported', title: 'Notifications', status: 'Not available in this browser', button: null });
+  assert.deepEqual(none.requests, []);
+  const iphone = await run(script, texts, { noPush: true, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+  assert.deepEqual(iphone.settings(), { state: 'ios', title: 'Notifications', status: 'Add this page to your Home Screen to get notifications', button: null });
+});
+
+test('page: prompt closed without a choice registers nothing', async () => {
   const { texts, script } = await renderPushScript('en');
   const closed = await run(script, texts, { ask: 'default' });
   closed.sheet.btn.onclick(); await flush();
   assert.equal(closed.sheet.wrap.style.display, 'none');
   assert.deepEqual(closed.subscribes(), []);
   assert.ok(!closed.store.has('wp_sub_biz-a'));
-  const none = await run(script, texts, { noPush: true });
-  assert.deepEqual(none.requests, []);
-  assert.equal(none.sheet, null);
+  assert.equal(closed.settings().state, 'off');
 });
 
-test('page: German texts for the new states (informal "du")', async () => {
+test('page: German texts for the settings and the new states (informal "du")', async () => {
   const { texts, script } = await renderPushScript('de');
-  assert.deepEqual([texts.blockedTitle, texts.failTitle, texts.retry, texts.onLine, texts.turnOff, texts.turnOn],
-    ['Benachrichtigungen sind blockiert', 'Benachrichtigungen konnten nicht aktiviert werden', 'Erneut versuchen', 'Benachrichtigungen von diesem Betrieb sind aktiv.', 'Abbestellen', 'Aktivieren']);
+  assert.deepEqual([texts.setTitle, texts.stOn, texts.stOff, texts.turnOn, texts.turnOff, texts.stChecking, texts.stTurningOn, texts.stTurningOff, texts.stBlocked, texts.stUnsupported, texts.stIos, texts.stError, texts.blockedTitle, texts.failTitle, texts.retry],
+    ['Benachrichtigungen', 'Für diesen Betrieb aktiv', 'Aus', 'Einschalten', 'Ausschalten', 'Wird geprüft…', 'Wird eingeschaltet…', 'Wird ausgeschaltet…', 'In deinen Browser-Einstellungen blockiert', 'In diesem Browser nicht verfügbar',
+      'Füge diese Seite zu deinem Home-Bildschirm hinzu, um Benachrichtigungen zu erhalten', 'Das hat nicht geklappt. Bitte versuch es noch einmal.', 'Benachrichtigungen sind blockiert', 'Benachrichtigungen konnten nicht aktiviert werden', 'Erneut versuchen']);
+  assert.ok(!/\bSie\b|Ihr(e|en)?\b/.test([texts.setTitle, texts.stOn, texts.stIos, texts.stError, texts.stBlocked].join(' ')), 'du, not Sie');
   const b = await run(script, texts, { ask: 'denied' });
+  assert.deepEqual(b.settings(), { state: 'off', title: 'Benachrichtigungen', status: 'Aus', button: 'Einschalten' });
   b.sheet.btn.onclick(); await flush();
   assert.equal(b.sheet.title(), 'Benachrichtigungen sind blockiert');
+  assert.equal(b.settings().status, 'In deinen Browser-Einstellungen blockiert');
+});
+
+test('page: the settings section is part of the page (before the footer), hidden until the script fills it; the old footer line is gone', async () => {
+  twoBusinesses();
+  require('../src/utils/pageCache').pageCache.delByPrefix('lp:biz-a');
+  const res = fakeRes();
+  await lp.handleServeLP({ params: { slug: 'biz-a' }, query: { preview: '1' }, headers: {} }, res);
+  const html = res.body;
+  const at = html.indexOf('<div class="section" id="qraivy-push-settings" hidden></div>');
+  assert.ok(at > 0 && at < html.indexOf('<!-- FOOTER -->'));
+  assert.ok(!html.includes('qraivy-push-footer') && !html.includes('_footer('));
 });
 
 test('nothing else changed: service workers, VAPID key route, StadtPocket and Wallet files', () => {

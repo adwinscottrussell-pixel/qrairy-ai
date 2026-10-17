@@ -443,13 +443,13 @@ test('E. production: the rendered customer page is byte-for-byte what it was bef
   assert.ok(pushJson && JSON.parse(pushJson[1]).btn === 'Enable Updates', 'English page: English push texts');
   // Phase 5.5C.3 (tests/pushPageSubscriptions.test.js) changed the push logic on purpose: undo exactly
   // its edits first (tests/helpers/push55c3Revert.js), then the 5.5C.2 ones below.
-  const { revertPush55c3, revertInline55c3 } = require('./helpers/push55c3Revert');
+  const { revertPush55c3, revertInline55c3, revertPage55c4 } = require('./helpers/push55c3Revert');
   const isPushLine = (l) => l.includes("console.log('[Push] Premium LP loaded");
   const baseLine = execFileSync('git', ['show', '0cd8e45:backend/src/controllers/lpController.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).split(/\r?\n/).find(isPushLine);
   const renderedLines = rendered.split('\n');
   const pushAt = renderedLines.findIndex(isPushLine);
   renderedLines[pushAt] = revertPush55c3(renderedLines[pushAt], baseLine, 'https://www.qraivy.com');
-  const now = revertInline55c3(renderedLines.join('\n'))
+  const now = revertPage55c4(revertInline55c3(renderedLines.join('\n')))
     .replace(pushJson[0], '')
     .replace('(function(){var _pt=window.QRAIVY_PUSH_TEXT;', '(function(){')
     .replace("'+_pt.hintTitle+'", '📲 Benachrichtigungen aktivieren')

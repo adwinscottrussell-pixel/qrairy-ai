@@ -182,7 +182,43 @@ test('unchanged journeys: continue, wallet endpoints with cid, 4 s return, wEnr_
 });
 
 test('first visit: listed pages are sent to the welcome screen, as loyalty and StadtPocket pages already are', () => {
-  assert.ok(src().includes('let _shouldWelcome = !!(_lset && _lset.enabled) || welcomeV2Enabled(slug);'));
+  assert.ok(src().includes('let _shouldWelcome = !!(_lset && _lset.enabled) || welcomeV2Enabled(slug, process.env, page);'));
+  assert.ok(src().includes('    if (welcomeV2Enabled(slug, process.env, page)) {'), 'the welcome screen asks with the same loaded page');
+});
+
+// ── Phase 5.5C.4: every page of an account (WELCOME_V2_OWNER_IDS), by the page's stored owner ──
+pages['acct-a'] = page('acct-a', { userId: 'user_admin_account', businessName: 'Admin Page A', sections: JSON.stringify({ language: 'en' }) });
+pages['acct-b'] = page('acct-b', { userId: 'user_other_business', businessName: 'Other Business' });
+pages['acct-sp'] = page('acct-sp', { userId: 'user_admin_account', businessId: 'biz-1', businessName: 'Ulm Cafe' });
+async function welcomeForAccounts(slug, ownerIds, slugs) {
+  const before = process.env.WELCOME_V2_OWNER_IDS;
+  process.env.WELCOME_V2_OWNER_IDS = ownerIds;
+  try { return await welcome(slug, {}, slugs); } finally { if (before === undefined) delete process.env.WELCOME_V2_OWNER_IDS; else process.env.WELCOME_V2_OWNER_IDS = before; }
+}
+
+test('gate by account: only pages whose stored owner is listed; StadtPocket-linked pages and other accounts are left out', () => {
+  const env = { WELCOME_V2_OWNER_IDS: 'user_admin_account' };
+  assert.equal(welcomeV2Enabled('acct-a', env, pages['acct-a']), true);
+  assert.equal(welcomeV2Enabled('acct-b', env, pages['acct-b']), false, 'another business account');
+  assert.equal(welcomeV2Enabled('acct-sp', env, pages['acct-sp']), false, 'linked to a Business (StadtPocket): own welcome');
+  assert.equal(welcomeV2Enabled('acct-a', env), false, 'no loaded page, no account decision');
+  assert.equal(welcomeV2Enabled('acct-a', env, Object.assign({}, pages['acct-a'], { slug: 'other-slug' })), false, 'the page must be the one asked about');
+  assert.equal(welcomeV2Enabled('acct-a', env, Object.assign({}, pages['acct-a'], { userId: null })), false, 'ownerless');
+  for (const v of ['', '*', 'all', ',', 'USER_ADMIN_ACCOUNT', 'user_admin']) assert.equal(welcomeV2Enabled('acct-a', { WELCOME_V2_OWNER_IDS: v }, pages['acct-a']), false, v);
+  assert.equal(welcomeV2Enabled('acct-a', { WELCOME_V2_OWNER_IDS: ' x , user_admin_account ' }, pages['acct-a']), true);
+  assert.equal(welcomeV2Enabled('acct-sp', { WELCOME_V2_OWNER_IDS: 'user_admin_account', WELCOME_V2_SLUGS: 'acct-sp' }, pages['acct-sp']), true, 'a page named one by one still works');
+  assert.equal(welcomeV2Enabled('acct-a', {}, pages['acct-a']), false, 'unset: nothing changes');
+});
+
+test('account rollout through the real welcome handler: the account\'s page gets the unified screen in its own language, nothing else changes', async () => {
+  const a = await welcomeForAccounts('acct-a', 'user_admin_account');
+  assert.ok(a.includes('data-welcome="unified"') && a.includes('<html lang="en">'), 'unified, page language');
+  const b = await welcomeForAccounts('acct-b', 'user_admin_account');
+  assert.ok(!b.includes('data-welcome="unified"'), 'another account: unchanged');
+  assert.equal(b, await welcome('acct-b'), 'byte for byte as without the setting');
+  const sp = await welcomeForAccounts('acct-sp', 'user_admin_account');
+  assert.equal(sp, await welcome('acct-sp'), 'StadtPocket-linked page: unchanged');
+  assert.equal(await welcomeForAccounts('acct-a', ''), await welcome('acct-a'), 'unset: as today');
 });
 
 test('no business logo in the content; the installed app keeps the logo icon (fallback: the QRAIVY icon)', async () => {

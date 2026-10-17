@@ -22,7 +22,8 @@ function swap(s, a, b, label) {
 
 function revertPush55c3(line, baseLine, origin) {
   const fill = (x) => (origin ? x.split('${pageOrigin}').join(origin) : x);
-  let s = line;
+  // Phase 5.5C.4 (notification settings section): browsers without push report their state there
+  let s = swap(line, "_settings(isIOS&&isSafari&&!isStandalone?'ios':'unsupported');return;}", 'return;}', 'settings: unsupported');
   s = swap(s, region(s, 'var _st=null;', MARK, 're-sync'), fill(region(baseLine, "if(localStorage.getItem('wp_sub_'+_s)){", MARK, 'base re-sync')), 're-sync');
   s = swap(s, s.slice(s.indexOf('function doSub(){'), s.lastIndexOf('})()')),
     fill(baseLine.slice(baseLine.indexOf('function doSub(){'), baseLine.lastIndexOf('})()'))), 'doSub');
@@ -42,10 +43,14 @@ function revertInline55c3(text) {
   return swap(text, "cid: _pc, consent: 'explicit' })", 'cid: _pc })', 'inline button');
 }
 
-// The push texts 5.5C.3 added to T.en.push / T.de.push.
-const NEW_TEXT_KEYS = ['blockedTitle', 'blockedDesc', 'failTitle', 'failDesc', 'retry', 'onLine', 'offLine', 'turnOff', 'turnOn'];
+// The push texts added to T.en.push / T.de.push since 5.5C.2 (5.5C.3 states, 5.5C.4 settings section).
+const NEW_TEXT_KEYS = ['blockedTitle', 'blockedDesc', 'failTitle', 'failDesc', 'retry', 'setTitle', 'stOn', 'stOff', 'stChecking', 'stTurningOn', 'stTurningOff', 'stBlocked', 'stUnsupported', 'stIos', 'stError', 'turnOff', 'turnOn'];
+
+// Phase 5.5C.4: the settings section's place in the page.
+const SETTINGS_SLOT = '<!-- NOTIFICATIONS (filled by the push script) -->\n<div class="section" id="qraivy-push-settings" hidden></div>\n\n';
+function revertPage55c4(html) { return swap(html, SETTINGS_SLOT, '', 'settings slot'); }
 
 // Paths 5.5C.3 owns in backend/prisma (pinned exactly in pushPageSubscriptions.test.js).
 const PRISMA_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261017120000_add_webpush_page_subscription'];
 
-module.exports = { revertPush55c3, revertInline55c3, revertStamp55c3, NEW_TEXT_KEYS, PRISMA_EXCLUDES };
+module.exports = { revertPush55c3, revertInline55c3, revertStamp55c3, revertPage55c4, NEW_TEXT_KEYS, PRISMA_EXCLUDES };
