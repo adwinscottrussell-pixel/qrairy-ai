@@ -441,7 +441,7 @@ async function getSubscriberSummary(req, res) {
   try {
     const userId = signedInUser(req);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const pages = await prisma.landingPage.findMany({ where: { userId }, select: { slug: true, businessName: true, name: true } });
+    const pages = await prisma.landingPage.findMany({ where: { userId }, select: { slug: true, businessName: true } });
     const ownSlugs = pages.map(function(p) { return p.slug; });
     const [webGroups, emailGroups] = await Promise.all([
       prisma.webPushSubscription.groupBy({ by: ['slug'], where: { slug: { in: ownSlugs } }, _count: { id: true } }),

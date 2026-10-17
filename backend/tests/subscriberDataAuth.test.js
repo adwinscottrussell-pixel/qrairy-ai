@@ -135,6 +135,17 @@ test('detail — A cannot read B (404, nothing read); A reads its own masked row
   assert.ok(own.body.rows.some((x) => x.masked === 'an***@a.example.test'), 'owner still sees the masked email');
 });
 
+test('the summary selects only fields LandingPage really has (the old select failed and was silently swallowed)', () => {
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8').split('\r\n').join('\n');
+  const model = schema.slice(schema.indexOf('model LandingPage {'), schema.indexOf('\n}', schema.indexOf('model LandingPage {')));
+  const fields = new Set(model.split('\n').slice(1).map((l) => l.trim().split(/\s+/)[0]).filter((w) => /^[a-zA-Z]+$/.test(w)));
+  const ctl = SRC('controllers/loyaltyAdminController.js');
+  const fn = ctl.slice(ctl.indexOf('async function getSubscriberSummary('), ctl.indexOf('\n}\n', ctl.indexOf('async function getSubscriberSummary(')));
+  const sel = fn.match(/landingPage\.findMany\(\{ where: \{ userId \}, select: \{ ([^}]*) \} \}\)/);
+  assert.ok(sel, 'owner-filtered page query');
+  for (const k of sel[1].split(',').map((x) => x.trim().split(':')[0])) assert.ok(fields.has(k), 'LandingPage.' + k);
+});
+
 test('all routes require sign-in; errors no longer echo internal messages', () => {
   const loyaltyRoutes = SRC('routes/loyaltyAdminRoutes.js');
   assert.ok(loyaltyRoutes.includes("router.get('/subscribers/summary', requireAuth, getSubscriberSummary);"));
