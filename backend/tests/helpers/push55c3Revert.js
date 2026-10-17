@@ -48,7 +48,7 @@ const NEW_TEXT_KEYS = ['blockedTitle', 'blockedDesc', 'failTitle', 'failDesc', '
 
 // Phase 5.5C.4: the settings section's place in the page.
 const SETTINGS_SLOT = '<!-- NOTIFICATIONS (filled by the push script) -->\n<div class="section" id="qraivy-push-settings" hidden></div>\n\n';
-const SETTINGS_CSS = '\n.dark-mode #qraivy-push-settings .qps-accent{color:#ff6b00 !important;}';
+const SETTINGS_CSS = '\n.dark-mode #qraivy-push-settings .qps-accent,.dark-mode #qraivy-push-settings .qps-accent *{color:#ff6b00 !important;}';
 function revertPage55c4(html) { return swap(swap(html, SETTINGS_SLOT, '', 'settings slot'), SETTINGS_CSS, '', 'settings dark-mode colour'); }
 
 // Paths 5.5C.3 owns in backend/prisma (pinned exactly in pushPageSubscriptions.test.js).
