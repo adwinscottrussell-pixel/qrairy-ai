@@ -3854,12 +3854,23 @@ window.QRAIVY_EDITOR_STATE = {
 })();
 
 
+// The push endpoints answer only the page's own account: send its sign-in.
+function qraivyPushFetch(url, opts) {
+  var tok = (window.Clerk && window.Clerk.session) ? window.Clerk.session.getToken() : null;
+  return Promise.resolve(tok).catch(function () { return null; }).then(function (t) {
+    opts = opts || {};
+    var h = Object.assign({}, opts.headers || {});
+    if (t) h.Authorization = 'Bearer ' + t;
+    return fetch(url, Object.assign({}, opts, { headers: h }));
+  });
+}
+
 function loadPushDeviceCount() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) return;
   var el = document.getElementById('push-device-count');
   if (el) el.textContent = 'Loading devices...';
-  fetch('https://www.qraivy.com/lp/push/' + slug + '/count')
+  qraivyPushFetch('https://www.qraivy.com/lp/push/' + slug + '/count')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (el) el.textContent = d.count > 0
@@ -3873,7 +3884,7 @@ function loadPushHistory() {
   var slug = window.QRAIVY_EDITOR_STATE && window.QRAIVY_EDITOR_STATE.slug;
   if (!slug) return;
   var el = document.getElementById('push-history');
-  fetch('https://www.qraivy.com/lp/push/' + slug + '/history')
+  qraivyPushFetch('https://www.qraivy.com/lp/push/' + slug + '/history')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!el) return;
@@ -3909,7 +3920,7 @@ function sendWalletPush() {
   btn.disabled = true;
   btn.textContent = 'Sending...';
   result.style.display = 'none';
-  fetch('https://www.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
+  qraivyPushFetch('https://www.qraivy.com/lp/push/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, message: message, linkUrl: linkUrl }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       btn.disabled = false;

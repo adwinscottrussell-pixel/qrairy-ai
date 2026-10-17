@@ -249,9 +249,14 @@ test('first visit: the redirect still sends no ?lang, so the welcome screen foll
 });
 
 test('scope: wallet passes, wallet routes, StadtPocket and the database are untouched', () => {
-  const changed = git('diff', '3b0804f', '--name-only', '--', 'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js', 'backend/src/routes/lpRoutes.js',
+  const changed = git('diff', '3b0804f', '--name-only', '--', 'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js',
     'backend/src/services/stadtPocketContext.js', 'backend/prisma', 'frontend/public/manifest.json', 'frontend/public/sw.js', 'backend/public/sw.js').trim();
   assert.equal(changed, '');
+  // lpRoutes.js: unchanged apart from the push campaign security hotfix (sign-in on two push routes)
+  const routes = lf(fs.readFileSync(path.join(ROOT, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
+    .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
+    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory");
+  assert.equal(routes, git('show', '3b0804f:backend/src/routes/lpRoutes.js'));
 });
 
 (async () => {

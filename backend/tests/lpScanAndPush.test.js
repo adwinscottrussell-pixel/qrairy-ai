@@ -232,7 +232,7 @@ test('handleSendPush: response includes wallet/email/webPush per-channel reporti
   mockPrisma._webPushResults = [{ ok: true }, { ok: true }, { ok: false }];
   makePage('push-test-1');
 
-  const req = { params: { slug: 'push-test-1' }, body: { title: 'Hi', message: 'There' } };
+  const req = { params: { slug: 'push-test-1' }, userId: 'user_test', body: { title: 'Hi', message: 'There' } }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
   await handleSendPush(req, res);
 
@@ -248,7 +248,7 @@ test('handleSendPush: total === wallet.attempted (legacy wallet-only meaning pre
   mockPrisma._walletResult = { success: 1, failed: 1 };
   makePage('push-test-total-numeric');
 
-  const req = { params: { slug: 'push-test-total-numeric' }, body: { title: 'Hi', message: 'There' } };
+  const req = { params: { slug: 'push-test-total-numeric' }, userId: 'user_test', body: { title: 'Hi', message: 'There' } }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
   await handleSendPush(req, res);
 
@@ -267,7 +267,7 @@ test('handleSendPush: deliveryTotal is the combined object across all three chan
   mockPrisma._webPushResults = [{ ok: true }, { ok: true }, { ok: false }];
   makePage('push-test-deliverytotal');
 
-  const req = { params: { slug: 'push-test-deliverytotal' }, body: { title: 'Hi', message: 'There' } };
+  const req = { params: { slug: 'push-test-deliverytotal' }, userId: 'user_test', body: { title: 'Hi', message: 'There' } }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
   await handleSendPush(req, res);
 
@@ -286,7 +286,7 @@ test('handleSendPush: deliveryTotal is the combined object across all three chan
 test('handleSendPush: a channel with zero recipients reports {attempted:0, sent:0, failed:0}; total: 0; deliveryTotal all zero', async () => {
   resetMocks();
   makePage('push-test-empty');
-  const req = { params: { slug: 'push-test-empty' }, body: { title: 'Hi', message: 'There' } };
+  const req = { params: { slug: 'push-test-empty' }, userId: 'user_test', body: { title: 'Hi', message: 'There' } }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
 
   await handleSendPush(req, res);
@@ -311,7 +311,7 @@ test('handleSendPush: legacy sent/failed/emailSent/emailFailed fields are numeri
   mockPrisma._webPushResults = [{ ok: true }];
   makePage('push-test-legacy');
 
-  const req = { params: { slug: 'push-test-legacy' }, body: { title: 'Hi', message: 'There' } };
+  const req = { params: { slug: 'push-test-legacy' }, userId: 'user_test', body: { title: 'Hi', message: 'There' } }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
   await handleSendPush(req, res);
 
@@ -332,7 +332,7 @@ test('handleSendPush: legacy sent/failed/emailSent/emailFailed fields are numeri
 test('handleSendPush: missing title/message still returns 400, unaffected by the response reshaping', async () => {
   resetMocks();
   makePage('push-test-400');
-  const req = { params: { slug: 'push-test-400' }, body: {} };
+  const req = { params: { slug: 'push-test-400' }, userId: 'user_test', body: {} }; // the page's owner, as requireAuth sets it
   const res = fakeRes();
 
   await handleSendPush(req, res);

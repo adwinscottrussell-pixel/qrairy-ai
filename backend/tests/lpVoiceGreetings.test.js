@@ -794,7 +794,12 @@ test('F. the editor page loads the greeting data and field script before the edi
     .replace('            var scans = cardMetric(card);\n', '            var scans = card.totalScans || 0;\n')
     .replace(/  \/\/ The tile's number, by card type[\s\S]*?  function fallbackFromLP\(slug, lpUrl\) \{\n    fetch\(\(window\.QRAIVY_API_BASE \|\| 'https:\/\/api\.qraivy\.com'\) \+ '\/api\/lp\/' \+ encodeURIComponent\(slug\)\)\n/,
       "  function fallbackFromLP(slug, lpUrl) {\n    fetch('https://www.qraivy.com/lp/' + slug)\n");
-  assert.equal(withoutSidebar, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
+  // Push campaign security hotfix (tests/pushCampaignAuth.test.js): one helper, and the three
+  // push requests (send, device count, history) go through it to send the sign-in.
+  const withoutPushAuth = withoutSidebar
+    .replace(/\/\/ The push endpoints answer only the page's own account: send its sign-in\.\nfunction qraivyPushFetch\(url, opts\) \{\n[\s\S]*?\n\}\n\n/, '')
+    .split('qraivyPushFetch(').join('fetch(');
+  assert.equal(withoutPushAuth, before, 'phone mockup, Hero layout and every other part of the editor page are byte-for-byte as before');
 });
 
 test('F. the editor script hooks the field into load, draft restore, render, language change and publish', () => {

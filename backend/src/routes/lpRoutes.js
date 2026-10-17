@@ -120,8 +120,10 @@ router.post('/lp/chat', handleChatLP);
 // Voice tab of the editor: listen to the greeting before publishing.
 router.post('/lp/voice/preview/:slug', requireAuth, handleVoicePreview);
 router.post('/lp/push/:slug', requireAuth, handleSendPush);
-router.get('/lp/push/:slug/count', handlePushCount);
-router.get('/lp/push/:slug/history', handlePushHistory);
+// The page's own account only (handlers check ownership): device counts and
+// campaign texts are that business's data.
+router.get('/lp/push/:slug/count', requireAuth, handlePushCount);
+router.get('/lp/push/:slug/history', requireAuth, handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);

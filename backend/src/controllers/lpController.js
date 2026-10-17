@@ -1661,11 +1661,27 @@ async function handleWebPushVapidKey(req, res) {
   return res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 }
 
+// ── Push campaigns: who may act for a page ──────────────────────
+// Only the page's own account (LandingPage.userId, looked up here on the
+// server; nothing the client sends counts as proof). A page without an
+// owner belongs to no one. Anything else answers 404 -- the same answer as
+// a page that does not exist -- before any recipient is read or anything
+// is sent.
+async function findOwnedPushPage(slug, userId) {
+  if (typeof userId !== 'string' || !userId || typeof slug !== 'string' || !slug) return null;
+  const page = await prisma.landingPage.findUnique({ where: { slug } });
+  if (!page || !page.userId || page.userId !== userId) return null;
+  return page;
+}
+const pushPageNotFound = (res) => res.status(404).json({ error: 'Page not found.' });
+
 async function handleSendPush(req, res) {
   try {
     const { slug } = req.params;
     const { title, message, linkUrl } = req.body || {};
     if (!slug) return res.status(400).json({ error: 'missing slug' });
+    const ownedPage = await findOwnedPushPage(slug, req.userId);
+    if (!ownedPage) return pushPageNotFound(res);
     if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
     const serial = 'sqr-' + slug;
     const devices = await prisma.passDevice.findMany({
@@ -1691,8 +1707,7 @@ async function handleSendPush(req, res) {
 
     if (emailSubs.length > 0) {
       const { sendCampaignEmail, sendWelcomeEmail } = require('../services/emailService');
-      const page = await prisma.landingPage.findUnique({ where: { slug } });
-      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });
+      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: ownedPage.businessName || slug, slug });
     }
     // Also send web push to browser subscribers
     const webSubs = await prisma.webPushSubscription.findMany({ where: { slug } });
@@ -1746,6 +1761,7 @@ async function handleSendPush(req, res) {
 async function handlePushHistory(req, res) {
   try {
     const { slug } = req.params;
+    if (!(await findOwnedPushPage(slug, req.userId))) return pushPageNotFound(res);
     const campaigns = await prisma.pushCampaign.findMany({
       where: { slug },
       orderBy: { createdAt: 'desc' },
@@ -1762,6 +1778,7 @@ async function handlePushHistory(req, res) {
 async function handlePushCount(req, res) {
   try {
     const { slug } = req.params;
+    if (!(await findOwnedPushPage(slug, req.userId))) return pushPageNotFound(res);
     const serial = 'sqr-' + slug;
     const count = await prisma.passDevice.count({
       where: { pass: { serialNumber: serial } }

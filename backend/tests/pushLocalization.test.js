@@ -119,11 +119,23 @@ test('the texts cannot end the script element, and they load before the push cod
 });
 
 test('service worker, VAPID key, subscribe call and subscription storage are untouched', () => {
+  const root = path.join(__dirname, '..', '..');
   const changed = execFileSync('git', ['diff', 'e7060e5', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/services/webPushService.js', 'backend/src/routes', 'backend/prisma',
-    'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' }).trim();
-  assert.equal(changed, '');
+    'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  // the push campaign security hotfix (tests/pushCampaignAuth.test.js) adds sign-in to two push routes, nothing else
+  assert.deepEqual(changed.filter((f) => f !== 'backend/src/routes/lpRoutes.js'), []);
+  const routes = lf(require('fs').readFileSync(path.join(root, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
+    .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
+    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory");
+  assert.equal(routes, lf(execFileSync('git', ['show', 'e7060e5:backend/src/routes/lpRoutes.js'], { cwd: root, encoding: 'utf8' })));
   const fn = (s, name) => s.slice(s.indexOf('async function ' + name + '('), s.indexOf('\n}\n', s.indexOf('async function ' + name + '(')));
-  for (const name of ['handleWebPushSubscribe', 'handleWebPushVapidKey', 'handleSendPush']) assert.equal(fn(SRC(), name), fn(HEAD(), name), name);
+  // handleSendPush: only the hotfix's owner check and its reuse of the page it loaded
+  const sendNow = fn(SRC(), 'handleSendPush')
+    .replace("    const ownedPage = await findOwnedPushPage(slug, req.userId);\n    if (!ownedPage) return pushPageNotFound(res);\n", '')
+    .replace('      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: ownedPage.businessName || slug, slug });',
+      "      const page = await prisma.landingPage.findUnique({ where: { slug } });\n      emailResults = await sendCampaignEmail(emailSubs, { title, message, linkUrl, bizName: page?.businessName || slug, slug });");
+  assert.equal(sendNow, fn(HEAD(), 'handleSendPush'), 'handleSendPush');
+  for (const name of ['handleWebPushSubscribe', 'handleWebPushVapidKey']) assert.equal(fn(SRC(), name), fn(HEAD(), name), name);
 });
 
 (async () => {
