@@ -124,7 +124,9 @@ test('managers: no other account (StadtPocket business members, city managers) g
   assert.ok(helper.includes('page.userId !== userId') && !/businessMember|BusinessMember|manager/i.test(helper));
   const changed = execFileSync('git', ['diff', '884aa8d', '--name-only', '--', 'backend/src/routes/managerRoutes.js', 'backend/src/controllers', 'backend/src/services', 'backend/src/middleware'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim().split('\n').filter(Boolean);
   // (loyaltyAdminController: the later subscriber data hotfix, tests/subscriberDataAuth.test.js)
-  assert.deepEqual(changed.filter((f) => f !== 'backend/src/controllers/loyaltyAdminController.js'), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
+  // (and the deleted-page address reservation, tests/slugReservation.test.js)
+  const later = ['backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/slugReservation.js'];
+  assert.deepEqual(changed.filter((f) => !later.includes(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
 test('internal workflows are unchanged: stamp and reward pushes, the Wallet owner push, the subscribe and key routes', () => {
