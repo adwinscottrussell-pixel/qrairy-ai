@@ -255,7 +255,9 @@ test('scope: wallet passes, wallet routes, StadtPocket and the database are unto
   // lpRoutes.js: unchanged apart from the push campaign security hotfix (sign-in on two push routes)
   const routes = lf(fs.readFileSync(path.join(ROOT, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
     .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
-    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory");
+    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory")
+    // and the subscriber data hotfix (tests/subscriberDataAuth.test.js): sign-in on the email list route
+    .replace("// The page's own account only (the handler checks ownership): subscriber emails.\nrouter.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);", "router.get('/lp/subscribers/:slug', handleGetSubscribers);");
   assert.equal(routes, git('show', '3b0804f:backend/src/routes/lpRoutes.js'));
 });
 

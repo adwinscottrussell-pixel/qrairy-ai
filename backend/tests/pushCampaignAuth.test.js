@@ -123,7 +123,8 @@ test('managers: no other account (StadtPocket business members, city managers) g
   const helper = ctl.slice(ctl.indexOf('async function findOwnedPushPage('), ctl.indexOf('const pushPageNotFound'));
   assert.ok(helper.includes('page.userId !== userId') && !/businessMember|BusinessMember|manager/i.test(helper));
   const changed = execFileSync('git', ['diff', '884aa8d', '--name-only', '--', 'backend/src/routes/managerRoutes.js', 'backend/src/controllers', 'backend/src/services', 'backend/src/middleware'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim().split('\n').filter(Boolean);
-  assert.deepEqual(changed, ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
+  // (loyaltyAdminController: the later subscriber data hotfix, tests/subscriberDataAuth.test.js)
+  assert.deepEqual(changed.filter((f) => f !== 'backend/src/controllers/loyaltyAdminController.js'), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
 test('internal workflows are unchanged: stamp and reward pushes, the Wallet owner push, the subscribe and key routes', () => {

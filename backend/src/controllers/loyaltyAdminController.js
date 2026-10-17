@@ -430,13 +430,22 @@ async function generateCampaignMessage(req, res) {
   }
 }
 
+// The signed-in account's own pages only (LandingPage.userId). Subscriber
+// counts and details of any other page answer as if the page did not exist.
+function signedInUser(req) {
+  return (typeof req.userId === 'string' && req.userId) ? req.userId : null;
+}
+
 // GET /loyalty/subscribers/summary
 async function getSubscriberSummary(req, res) {
   try {
-    const [pages, webGroups, emailGroups] = await Promise.all([
-      prisma.landingPage.findMany({ select: { slug: true, businessName: true, name: true } }).catch(() => []),
-      prisma.webPushSubscription.groupBy({ by: ['slug'], _count: { id: true } }),
-      prisma.subscriber.groupBy({ by: ['slug'], _count: { id: true } }).catch(() => [])
+    const userId = signedInUser(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const pages = await prisma.landingPage.findMany({ where: { userId }, select: { slug: true, businessName: true, name: true } });
+    const ownSlugs = pages.map(function(p) { return p.slug; });
+    const [webGroups, emailGroups] = await Promise.all([
+      prisma.webPushSubscription.groupBy({ by: ['slug'], where: { slug: { in: ownSlugs } }, _count: { id: true } }),
+      prisma.subscriber.groupBy({ by: ['slug'], where: { slug: { in: ownSlugs } }, _count: { id: true } }).catch(() => [])
     ]);
 
     const pageNameMap = {};
@@ -448,11 +457,7 @@ async function getSubscriberSummary(req, res) {
     const emailMap = {};
     emailGroups.forEach(function(g) { emailMap[g.slug] = g._count.id; });
 
-    const allSlugs = Array.from(new Set([
-      ...Object.keys(webMap),
-      ...Object.keys(emailMap),
-      ...pages.map(function(p) { return p.slug; })
-    ]));
+    const allSlugs = ownSlugs;
 
     const rows = await Promise.all(allSlugs.map(async function(slug) {
       const passIds = await prisma.pass.findMany({
@@ -486,7 +491,7 @@ async function getSubscriberSummary(req, res) {
     return res.json({ ok: true, pages: sorted, totals });
   } catch(e) {
     console.error('[Subscribers] summary error:', e.message);
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Could not load subscribers.' });
   }
 }
 
@@ -494,6 +499,10 @@ async function getSubscriberSummary(req, res) {
 async function getSubscriberDetail(req, res) {
   try {
     const { slug } = req.params;
+    const userId = signedInUser(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const page = (typeof slug === 'string' && slug) ? await prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } }) : null;
+    if (!page || !page.userId || page.userId !== userId) return res.status(404).json({ error: 'Page not found.' });
 
     const [webSubs, emailSubs, passIds] = await Promise.all([
       prisma.webPushSubscription.findMany({ where: { slug }, select: { endpoint: true, createdAt: true }, orderBy: { createdAt: 'desc' } }),
@@ -524,7 +533,7 @@ async function getSubscriberDetail(req, res) {
     return res.json({ ok: true, slug, rows });
   } catch(e) {
     console.error('[Subscribers] detail error:', e.message);
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Could not load subscribers.' });
   }
 }
 

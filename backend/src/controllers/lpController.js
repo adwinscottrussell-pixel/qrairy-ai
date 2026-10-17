@@ -1599,16 +1599,18 @@ async function syncResendContact(email, audienceId) {
   }
 }
 // ── GET /lp/subscribers/:slug ──
+// The page's own account only: these are its customers' email addresses.
 async function handleGetSubscribers(req, res) {
   try {
     const { slug } = req.params;
+    if (!(await findOwnedPushPage(slug, req.userId))) return pushPageNotFound(res);
     const subscribers = await prisma.subscriber.findMany({
       where: { slug },
       orderBy: { createdAt: 'desc' }
     });
     return res.json({ ok: true, count: subscribers.length, subscribers });
   } catch(e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Could not load subscribers.' });
   }
 }
 
@@ -1661,7 +1663,7 @@ async function handleWebPushVapidKey(req, res) {
   return res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 }
 
-// ── Push campaigns: who may act for a page ──────────────────────
+// ── Push campaigns and subscriber lists: who may act for a page ─
 // Only the page's own account (LandingPage.userId, looked up here on the
 // server; nothing the client sends counts as proof). A page without an
 // owner belongs to no one. Anything else answers 404 -- the same answer as

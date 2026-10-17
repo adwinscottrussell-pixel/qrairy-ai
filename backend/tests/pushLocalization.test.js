@@ -126,7 +126,9 @@ test('service worker, VAPID key, subscribe call and subscription storage are unt
   assert.deepEqual(changed.filter((f) => f !== 'backend/src/routes/lpRoutes.js'), []);
   const routes = lf(require('fs').readFileSync(path.join(root, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
     .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
-    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory");
+    .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory")
+    // and the subscriber data hotfix (tests/subscriberDataAuth.test.js): sign-in on the email list route
+    .replace("// The page's own account only (the handler checks ownership): subscriber emails.\nrouter.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);", "router.get('/lp/subscribers/:slug', handleGetSubscribers);");
   assert.equal(routes, lf(execFileSync('git', ['show', 'e7060e5:backend/src/routes/lpRoutes.js'], { cwd: root, encoding: 'utf8' })));
   const fn = (s, name) => s.slice(s.indexOf('async function ' + name + '('), s.indexOf('\n}\n', s.indexOf('async function ' + name + '(')));
   // handleSendPush: only the hotfix's owner check and its reuse of the page it loaded

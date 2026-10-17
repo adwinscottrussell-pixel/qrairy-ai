@@ -127,7 +127,8 @@ router.get('/lp/push/:slug/history', requireAuth, handlePushHistory);
 router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
 router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
 router.post('/lp/subscribe/:slug', handleSubscribe);
-router.get('/lp/subscribers/:slug', handleGetSubscribers);
+// The page's own account only (the handler checks ownership): subscriber emails.
+router.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);
 // Staff PIN — set (owner auth), status (no auth, existence check only),
 // verify (no auth, validates an entered PIN)
 router.post('/lp/staff-pin/:slug', requireAuth, handleSetStaffPin);
