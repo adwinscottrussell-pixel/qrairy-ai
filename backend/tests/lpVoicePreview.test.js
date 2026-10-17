@@ -99,6 +99,8 @@ const { STANDARD_VOICES, standardVoice } = require('../src/services/voiceService
 const voice = require('../src/services/lpVoiceService');
 const limiter = require('../src/services/voicePreviewLimiter');
 const { handleVoicePreview } = require('../src/controllers/lpVoiceController');
+// The deleted-page address reservation (tests/slugReservation.test.js) is not under test here: no slug is reserved.
+require.cache[require.resolve('../src/services/slugReservation')] = { loaded: true, exports: { retainedDataFor: async () => [] } };
 const { handlePublishLP, handleGetLP, handleServeLP } = require('../src/controllers/lpController');
 const { requireAuth } = require('../src/middleware/auth');
 

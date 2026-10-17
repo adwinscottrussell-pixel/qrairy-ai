@@ -14,6 +14,7 @@ const { sendWelcomeEmail } = require('../services/emailService');
 // blocks or fails the legacy writes below it — see service header comment.
 const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
 const webPushPages = require('../services/webPushPages');
+const { retainedDataFor } = require('../services/slugReservation');
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 const { renderWelcome, welcomeV2Enabled } = require('../services/welcomeView');
 
@@ -1245,6 +1246,13 @@ async function handlePublishLP(req, res) {
       if (existing.userId !== userId) {
         return res.status(403).json({ error: 'Forbidden' });
       }
+    }
+    // ── A deleted page's address stays reserved while its data remains ─
+    // (services/slugReservation.js): a new page on that slug would inherit
+    // another business's subscribers, push subscriptions, Wallet passes,
+    // loyalty records and deals. Applies to every new page, signed in or not.
+    if (!existing && (await retainedDataFor(slug)).length) {
+      return res.status(409).json({ error: 'slug_unavailable', message: 'This page address is not available. Please choose another one.' });
     }
     // ─────────────────────────────────────────────────────────────
 

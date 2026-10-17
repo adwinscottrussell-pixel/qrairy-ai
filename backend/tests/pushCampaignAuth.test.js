@@ -127,7 +127,8 @@ test('managers: no other account (StadtPocket business members, city managers) g
   const changed = execFileSync('git', ['diff', '884aa8d', '--name-only', '--', 'backend/src/routes/managerRoutes.js', 'backend/src/controllers', 'backend/src/services', 'backend/src/middleware'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim().split('\n').filter(Boolean);
   // (loyaltyAdminController: the later subscriber data hotfix, tests/subscriberDataAuth.test.js)
   // Phase 5.5C.3 (tests/pushPageSubscriptions.test.js): per-page push opt-ins
-  const later = ['backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/customerQueryService.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js'];
+  // and the deleted-page address reservation (tests/slugReservation.test.js)
+  const later = ['backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/customerQueryService.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js', 'backend/src/services/slugReservation.js'];
   assert.deepEqual(changed.filter((f) => !later.includes(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 

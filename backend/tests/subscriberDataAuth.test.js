@@ -168,7 +168,8 @@ test('no other route hands out subscriber rows: every subscriber read is owner-s
   // lpController: subscribe (dedupe lookup), the owner-only list, the owner-only campaign send.
   // loyaltyAdminController: the owner-only summary/detail. qrController: dashboard counts for the token's own pages.
   // routes/adminRoutes + services/searchService: requireAdmin (internal QRAIVY admins). analyticsService: { userId }.
-  assert.deepEqual(Array.from(new Set(hits)).sort(), ['controllers/loyaltyAdminController.js', 'controllers/lpController.js', 'controllers/qrController.js', 'routes/adminRoutes.js', 'services/analyticsService.js', 'services/searchService.js']);
+  // slugReservation: existence check only (select id), never returned (tests/slugReservation.test.js).
+  assert.deepEqual(Array.from(new Set(hits)).sort(), ['controllers/loyaltyAdminController.js', 'controllers/lpController.js', 'controllers/qrController.js', 'routes/adminRoutes.js', 'services/analyticsService.js', 'services/searchService.js', 'services/slugReservation.js']);
   assert.ok(SRC('routes/opsRoutes.js').includes("router.get('/search', requireAdmin, handleSearch);"));
   assert.ok(/router\.use\(requireAdmin\)|requireAdmin, async/.test(SRC('routes/adminRoutes.js')));
   assert.ok(SRC('controllers/qrController.js').includes("const where = userId ? { userId } : null;\n    if (!where) return res.json({ dashboard: [] });"));
