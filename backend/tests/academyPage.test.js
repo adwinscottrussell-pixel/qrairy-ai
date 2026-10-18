@@ -134,7 +134,14 @@ test('page: header, welcome, featured 16:9 area, filters, cards and help section
   assert.ok(order.every((n, i) => n !== -1 && (i === 0 || n > order[i - 1])), JSON.stringify(order));
   const css = read('academy.css');
   assert.ok(css.includes('aspect-ratio: 16 / 9;'));
-  assert.ok(/--ac-bg: #0B1428;/.test(css) && /--ac-orange: #FF5B2A;/.test(css) && /--ac-green: #34D399;/.test(css), 'navy, QRAIVY orange, green');
+  // the dashboard's black/gray theme (sidebar palette of dashboard-shell.css), not a separate blue one
+  for (const v of ['--ac-bg: #101012;', '--ac-surface: #171719;', '--ac-surface-2: #1d1d20;', '--ac-text: #FFFFFF;', '--ac-text-2: #A1A1AA;', '--ac-muted: #71717A;', '--ac-orange: #FF5B2A;', '--ac-green: #22C55E;']) assert.ok(css.includes(v), v);
+  const shell = read('dashboard-shell.css');
+  for (const v of ['--sbx-bg: #101012;', '--sbx-tab: #171719;', '--sbx-tab-hover: #1d1d20;', '--sbx-text-2: #A1A1AA;', '--sbx-orange: #FF5B2A;']) assert.ok(shell.includes(v), 'same value as the sidebar: ' + v);
+  assert.ok(!/#0B1428|#111D36|#16243F|#22314F|#142241|#0A1222|#33476E|navy/i.test(css), 'no navy-blue values left');
+  for (const [r, g, b] of [...css.matchAll(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})\b/gi)].map((m) => m.slice(1).map((h) => parseInt(h, 16)))) {
+    assert.ok(!(b > r + 12 && b > g + 6), 'blue-tinted colour #' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join(''));
+  }
   assert.ok(/@media \(max-width: 768px\)/.test(css), 'phone layout');
   const scripts = [...page.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/academy-catalog.js', 'js/academy.js']);
