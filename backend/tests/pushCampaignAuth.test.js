@@ -130,7 +130,8 @@ test('managers: no other account (StadtPocket business members, city managers) g
   // and the deleted-page address reservation (tests/slugReservation.test.js)
   const later = ['backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/customerQueryService.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js', 'backend/src/services/slugReservation.js',
     'backend/src/services/welcomeView.js',   // 5.5C.4: account-wide welcome flag (tests/welcomeUnified.test.js)
-    'backend/src/services/platformAdmin.js'];   // 5.5C.4A: page-deletion admin check (tests/lpDeleteAuth.test.js)
+    'backend/src/services/platformAdmin.js',   // 5.5C.4A: page-deletion admin check (tests/lpDeleteAuth.test.js)
+    'backend/src/services/staffPin.js'];   // Phase 0 S2/S5: staff PIN hashing and limits (tests/staffPinAuth.test.js)
   assert.deepEqual(changed.filter((f) => !later.includes(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
