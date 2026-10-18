@@ -165,17 +165,17 @@ test('S3: reward counting on the loyalty record is unchanged', async () => {
 // ── the scanner page ──
 const scanner = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'stamp-scanner.html'), 'utf8').replace(/\r\n/g, '\n');
 function scannerFetchToken({ clerkToken, storedPin, status = 200, body = { token: 'daycode1' } }) {
-  const src = scanner.slice(scanner.indexOf('  async function fetchToken(slug){'), scanner.indexOf('  // ── Extract cid from scanned URL ──'));
+  const src = scanner.slice(scanner.indexOf('  async function requestCode(slug){'), scanner.indexOf('  // ── Access check ──'));
   const store = {}; if (storedPin) store['staff_pin_shop'] = storedPin;
   const sent = [];
   const ctx = {
-    API: 'https://api.qraivy.com', pinSlug: 'shop', gateShown: 0,
+    API: 'https://api.qraivy.com', pinSlug: 'shop', relocked: [],
     sessionStorage: { getItem: (k) => (k in store ? store[k] : null), removeItem: (k) => { delete store[k]; } },
     getToken: async () => clerkToken || null,
     fetch: async (u, o) => { sent.push({ u, o }); return { ok: status === 200, status, json: async () => body }; },
     Promise, Error,
   };
-  vm.runInNewContext(src + ';function showPinGate(){ gateShown++; } this.f = fetchToken;', ctx);
+  vm.runInNewContext(src + ';function authorize(slug, why, r){ relocked.push([slug, why, r.sentPin]); } this.f = fetchToken;', ctx);
   return { ctx, sent, store };
 }
 
@@ -188,13 +188,13 @@ test('scanner: sends the owner sign-in and/or the session PIN with the code requ
   assert.deepEqual(JSON.parse(JSON.stringify(s.sent[0].o.headers)), { 'X-Staff-Pin': '4321' });
   s = scannerFetchToken({ storedPin: '0000', status: 401, body: { error: 'Incorrect PIN.' } });
   await assert.rejects(() => s.ctx.f('shop'), /Incorrect PIN/);
-  assert.equal(s.store.staff_pin_shop, undefined, 'a rejected PIN is forgotten');
-  assert.equal(s.ctx.gateShown, 1, 'and the PIN screen is shown again');
+  assert.deepEqual(JSON.parse(JSON.stringify(s.ctx.relocked)), [['shop', 'expired', true]], 'the scanner locks again (the access check forgets the PIN: scannerAccess.test.js)');
 });
 
 test('scanner: the PIN is kept only for the session and only after the server accepted it', () => {
   assert.ok(scanner.includes("sessionStorage.setItem('staff_pin_'+slug, pinBuffer);"));
-  assert.ok(scanner.includes("if(sessionStorage.getItem('staff_pin_'+slug)){ showScanner(); return; }"), 'the old "ok" flag alone no longer opens the scanner');
+  assert.ok(!scanner.includes('showScanner'), 'a stored PIN alone no longer opens the scanner: only the code from the server does');
+  assert.ok(scanner.includes('    if(r.token){\n      authorizedSlug = slug;'), 'the scanner opens only on a code from the server');
   assert.ok(!scanner.includes("fetch(API+'/lp/stamp/token/'+encodeURIComponent(slug));"), 'no code request without credentials');
   assert.ok(!/localStorage\.setItem\([^)]*pin/i.test(scanner), 'never stored beyond the session');
 });

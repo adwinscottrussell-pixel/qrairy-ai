@@ -15,6 +15,8 @@ const PHASE0_FILES = PHASE0_FRONTEND.concat([
   'backend/tests/stampCodeAuth.test.js',
   'backend/tests/lpGetAuth.test.js',
   'backend/tests/staffPinAuth.test.js',
+  // scanner access follow-up: the scanner opens only after the server's yes
+  'backend/tests/scannerAccess.test.js',
   // older tests adjusted to the intended Phase 0 behaviour
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

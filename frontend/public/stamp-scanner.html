@@ -64,9 +64,27 @@
     .pin-key.wide{grid-column:span 1}
     .pin-key.del{color:rgba(240,244,248,0.5);font-size:.9rem}
     .pin-err{color:#f87171;font-size:.75rem;min-height:18px}
+    /* Access check / sign-in required */
+    .access-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;width:100%;max-width:340px;text-align:center}
+    a.btn{display:block;text-align:center;text-decoration:none}
+    .access-link{color:#ff5a1f;font-size:.75rem;text-decoration:none}
   </style>
 </head>
 <body>
+<!-- Access check — nothing to scan with until the server has confirmed the
+     owner's sign-in or the staff PIN for this business. -->
+<div id="access-check" class="access-panel">
+  <div class="pin-logo">Q</div>
+  <p class="pin-sub"><span class="status-dot"></span><span data-i18n="ss_checking">Checking access…</span></p>
+</div>
+<div id="access-denied" class="access-panel" style="display:none">
+  <div class="pin-logo">Q</div>
+  <div class="pin-title" id="access-title">Sign in required</div>
+  <p class="pin-sub" id="access-msg"></p>
+  <a id="access-signin" class="btn btn-primary" href="login.html" data-i18n="ss_signin">Sign in as owner</a>
+  <button id="access-retry" class="btn btn-secondary" style="display:none" onclick="retryAccess()" data-i18n="ss_retry">Try again</button>
+</div>
+
 <!-- PIN gate — shown before scanner if no PIN verified yet -->
 <div id="pin-gate" style="display:none">
   <div class="pin-logo">Q</div>
@@ -92,6 +110,7 @@
     <button class="pin-key" onclick="pinKey('0')" style="grid-column:2">0</button>
     <button class="pin-key del" onclick="pinDel()">⌫</button>
   </div>
+  <a id="pin-signin" class="access-link" href="login.html" data-i18n="ss_pin_owner">Owner? Sign in instead</a>
 </div>
 
 <div class="wrap" id="scanner-wrap" style="display:none">
@@ -142,11 +161,49 @@
   var pinSlug = new URLSearchParams(window.location.search).get('slug') || '';
   var scanning = false;
   var animFrame = null;
+  // The one business the scanner is unlocked for. Set only after the server
+  // handed out that business's stamp code (owner sign-in or staff PIN);
+  // scanning, manual entry and stamping refuse every other business.
+  var authorizedSlug = null;
+  var gateSlug = '';   // the business the PIN / sign-in screen is for
+  var authSeq = 0;     // only the latest access check may change the screen
+
+  function tr(k, fallback){ return (window.SS_T && window.SS_T[k]) || fallback; }
+
+  // ── Screens: exactly one is visible, the scanner only once authorized ──
+  var VIEWS = ['access-check', 'access-denied', 'pin-gate', 'scanner-wrap'];
+  function showView(id){
+    VIEWS.forEach(function(v){
+      var el = document.getElementById(v);
+      if(el) el.style.display = v === id ? 'flex' : 'none';
+    });
+  }
+  function signInHref(){
+    return 'login.html?redirect=' + encodeURIComponent('stamp-scanner.html' + (gateSlug ? '?slug=' + encodeURIComponent(gateSlug) : ''));
+  }
+  function showPinGate(msg){
+    pinBuffer = ''; updatePinDots();
+    document.getElementById('pin-err').textContent = msg || '';
+    document.getElementById('pin-signin').href = signInHref();
+    showView('pin-gate');
+  }
+  function showDenied(title, msg, opts){
+    opts = opts || {};
+    document.getElementById('access-title').textContent = title;
+    document.getElementById('access-msg').textContent = msg || '';
+    var signin = document.getElementById('access-signin');
+    signin.href = signInHref();
+    signin.style.display = opts.noSignIn ? 'none' : 'block';
+    document.getElementById('access-retry').style.display = opts.retry ? 'block' : 'none';
+    showView('access-denied');
+  }
+  function lockScanner(){
+    authorizedSlug = null;
+    currentToken = null;
+    if(scanning) stopScanner();
+  }
 
   // ── PIN gate ──
-  function showPinGate(){ document.getElementById('pin-gate').style.display='flex'; document.getElementById('scanner-wrap').style.display='none'; }
-  function showScanner(){ document.getElementById('pin-gate').style.display='none'; document.getElementById('scanner-wrap').style.display='flex'; }
-
   function updatePinDots(){
     var dots = document.querySelectorAll('.pin-dot');
     dots.forEach(function(d,i){ d.classList.toggle('filled', i < pinBuffer.length); });
@@ -166,48 +223,43 @@
   };
 
   async function submitPin(){
-    var slug = pinSlug;
+    var slug = gateSlug;
     if(!slug){ document.getElementById('pin-err').textContent = 'No program slug in URL.'; pinBuffer=''; updatePinDots(); return; }
     try{
       var res = await fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/verify', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({pin: pinBuffer})
       });
-      var d = await res.json();
+      var d = {};
+      try{ d = await res.json(); }catch(_){}
       if(res.ok && d.ok){
         // The server checks the PIN again on every stamp code request
-        // (fetchToken), so it is kept for this browser session.
+        // (fetchToken), so it is kept for this browser session; the scanner
+        // opens only once that code request has succeeded too.
         sessionStorage.setItem('staff_pin_'+slug, pinBuffer);
-        sessionStorage.setItem('staff_pin_ok_'+slug, '1');
-        showScanner();
+        pinBuffer=''; updatePinDots();
+        authorize(slug);
       } else {
-        document.getElementById('pin-err').textContent = d.error === 'No PIN set for this page.' ? (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet' : (window.SS_T&&window.SS_T.ss_pin_wrong)||'Incorrect PIN. Try again.';
+        document.getElementById('pin-err').textContent = res.status === 429 ? tr('ss_pin_locked','Too many incorrect PINs. Please wait 15 minutes and try again.') : d.error === 'No PIN set for this page.' ? tr('ss_pin_none','No PIN set yet') : tr('ss_pin_wrong','Incorrect PIN. Try again.');
         pinBuffer=''; updatePinDots();
       }
     }catch(e){
-      document.getElementById('pin-err').textContent = (window.SS_T&&window.SS_T.ss_net_err)||'Network error. Check connection.';
+      document.getElementById('pin-err').textContent = tr('ss_net_err','Network error. Check connection.');
       pinBuffer=''; updatePinDots();
     }
   }
 
-  function checkPinGate(){
-    var slug = pinSlug;
-    // If no slug in URL, go straight to scanner (owner-accessed without slug)
-    if(!slug){ showScanner(); return; }
-    // If already verified this session, skip PIN
-    if(sessionStorage.getItem('staff_pin_'+slug)){ showScanner(); return; }
-    // Status endpoint checks existence only — no PIN guess involved. Replaces
-    // the old empty-string probe against /verify, which could never report
-    // "no PIN configured" because the server rejects an empty pin before it
-    // ever checks whether staffPin exists.
-    fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/status', {
-      method:'GET'
-    }).then(function(r){ return r.json(); }).then(function(d){
-      // Only an explicit configured:false bypasses the gate — anything else
-      // (true, or an unexpected/error response body) shows it.
-      if(d.configured === false){ showScanner(); }
-      else { showPinGate(); }
-    }).catch(function(){ showPinGate(); }); // request failure -> fail closed
+  // Whether the business has a staff PIN (existence only, no PIN guess):
+  // true / false, or null when the answer is unknown.
+  function pinConfigured(slug){
+    return fetch(API+'/lp/staff-pin/'+encodeURIComponent(slug)+'/status', {method:'GET'})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ return (d && d.configured === true) ? true : (d && d.configured === false) ? false : null; })
+      .catch(function(){ return null; });
+  }
+
+  function forgetPin(slug){
+    try{ sessionStorage.removeItem('staff_pin_'+slug); sessionStorage.removeItem('staff_pin_ok_'+slug); }catch(_){}
   }
 
   var stream = null;
@@ -229,7 +281,11 @@
     // If slug is in the URL, use it directly — staff don't have a logged-in
     // session so the programs API won't work for them anyway.
     if(pinSlug){
-      sel.innerHTML = '<option value="' + pinSlug + '">' + pinSlug + '</option>';
+      var fixed = document.createElement('option');
+      fixed.value = pinSlug;
+      fixed.textContent = pinSlug;
+      sel.innerHTML = '';
+      sel.appendChild(fixed);
       sel.value = pinSlug;
       if(slugWrap) slugWrap.style.display = 'none'; // hide dropdown, slug is fixed
       return;
@@ -252,6 +308,8 @@
         o.textContent = p.businessName || p.slug;
         sel.appendChild(o);
       });
+      // Switching business locks the scanner until that one is authorized.
+      sel.onchange = function(){ authorize(sel.value); };
     }catch(e){
       sel.innerHTML = '<option value="">Add ?slug=YOUR-SLUG to the URL</option>';
     }
@@ -260,7 +318,7 @@
   // ── Fetch stamp token ──
   // The server hands out the stamp code only to the owner's sign-in or with
   // the staff PIN (X-Staff-Pin); both are sent when present.
-  async function fetchToken(slug){
+  async function requestCode(slug){
     var h = {};
     var tok = await getToken();
     if(tok) h['Authorization'] = 'Bearer '+tok;
@@ -270,15 +328,65 @@
     var res = await fetch(API+'/lp/stamp/token/'+encodeURIComponent(slug), {headers:h});
     var d = {};
     try{ d = await res.json(); }catch(_){}
-    if(!res.ok || !d.token){
-      if(res.status === 401 && pin){
-        try{ sessionStorage.removeItem('staff_pin_'+slug); sessionStorage.removeItem('staff_pin_ok_'+slug); }catch(_){}
-        if(pinSlug === slug) showPinGate();
-      }
-      throw new Error(d.error || 'Could not get a stamp code.');
-    }
-    return d.token;
+    return { status: res.status, token: (res.ok && d.token) ? d.token : null, error: d.error, signedIn: !!tok, sentPin: !!pin };
   }
+
+  async function fetchToken(slug){
+    var r = await requestCode(slug);
+    if(!r.token){
+      // Signed out, PIN changed or locked since the scanner opened: lock it
+      // and show the way back in (without asking the server a second time).
+      if(r.status === 401 || r.status === 403 || r.status === 429) authorize(slug, 'expired', r);
+      throw new Error(r.error || 'Could not get a stamp code.');
+    }
+    return r.token;
+  }
+
+  // ── Access check ──
+  // Opens the scanner only when the server hands out this business's stamp
+  // code; otherwise shows the PIN screen (business has a staff PIN) or the
+  // sign-in screen (it has none). `known` reuses an answer already received.
+  async function authorize(slug, why, known){
+    var seq = ++authSeq;
+    lockScanner();
+    gateSlug = slug || '';
+    showView('access-check');
+    var r = known;
+    if(!r){
+      try{ r = await requestCode(slug); }
+      catch(e){ r = null; }
+      if(seq !== authSeq) return;
+    }
+    if(!r || r.status >= 500){
+      showDenied(tr('ss_net_title','Connection problem'), tr('ss_net_err','Network error. Check connection.'), {retry:true, noSignIn:true});
+      return;
+    }
+    if(r.token){
+      authorizedSlug = slug;
+      document.getElementById('result-box').innerHTML = '';
+      showView('scanner-wrap');
+      return;
+    }
+    if(r.status === 404){
+      showDenied(tr('ss_unknown_title','Program not found'), tr('ss_unknown_msg','This scanner link does not belong to an active business. Ask the owner for the current link.'), {noSignIn:true});
+      return;
+    }
+    if(r.sentPin) forgetPin(slug);
+    var msg = why === 'expired' ? tr('ss_expired','Your session has expired or access was withdrawn.') + ' '
+      : '';
+    if(r.status === 429) msg += tr('ss_pin_locked','Too many incorrect PINs. Please wait 15 minutes and try again.');
+    else if(r.sentPin) msg += tr('ss_pin_invalid','The saved staff PIN was not accepted. Please enter it again.');
+    else if(r.signedIn) msg += tr('ss_not_owner','This account is not the owner of this business.');
+    var configured = await pinConfigured(slug);
+    if(seq !== authSeq) return;
+    if(configured === false){
+      showDenied(tr('ss_signin_title','Sign in required'), (msg ? msg.trim() + ' ' : '') + tr('ss_signin_msg','Only the business owner, or staff with a staff PIN, can use the stamp scanner. This business has no staff PIN yet: sign in as the owner, or ask the owner to set a staff PIN in the dashboard.'));
+    } else {
+      showPinGate(msg.trim());
+    }
+  }
+
+  window.retryAccess = function(){ if(gateSlug) authorize(gateSlug); else boot(); };
 
   // ── Extract cid from scanned URL ──
   function extractCid(url){
@@ -292,14 +400,19 @@
     try{
       var u = new URL(url);
       var parts = u.pathname.split('/').filter(Boolean);
-      // path is /lp/{slug}
+      // path is /lp/{slug} (also /lp/card/{slug} and /lp/welcome/{slug})
       var idx = parts.indexOf('lp');
+      if(idx >= 0 && (parts[idx+1] === 'card' || parts[idx+1] === 'welcome')) idx++;
       return idx >= 0 && parts[idx+1] ? parts[idx+1] : null;
     }catch(_){ return null; }
   }
 
+  function setLocked(){ setResult('err','🔒',tr('ss_locked','Scanner locked'),''); }
+  function setOtherBusiness(){ setResult('err','❌',tr('ss_other_business','This pass belongs to another business'),tr('ss_other_business_sub','This scanner is open only for the business it was unlocked for.')); }
+
   // ── Stamp action ──
   async function doStamp(slug, cid){
+    if(!authorizedSlug || slug !== authorizedSlug){ setLocked(); return; }
     setResult('info', '⏳', 'Stamping…', '');
     try{
       if(!currentToken) currentToken = await fetchToken(slug);
@@ -331,13 +444,13 @@
 
   // ── Stamp from URL string (manual entry or scan result) ──
   window.stampFromUrl = async function(url){
+    if(!authorizedSlug){ setLocked(); return; }
     if(!url || !url.trim()){ setResult('err','❌','No URL','Please scan or paste a barcode URL.'); return; }
     url = url.trim();
     var cid = extractCid(url);
     var slugFromUrl = extractSlug(url);
-    var sel = document.getElementById('slug-select');
-    var slug = sel.value || slugFromUrl;
-    if(!slug){ setResult('err','❌',(window.SS_T&&window.SS_T.ss_no_slug)||'No program selected',''); return; }
+    var slug = authorizedSlug;
+    if(slugFromUrl && slugFromUrl !== slug){ setOtherBusiness(); return; }
     if(!cid){ setResult('err','❌','No customer ID','This barcode doesn\'t contain a customer ID. Make sure customers add the wallet pass fresh so the new barcode is generated.'); return; }
     await doStamp(slug, cid);
   };
@@ -353,6 +466,7 @@
     var box = document.getElementById('camera-box');
     var btn = document.getElementById('start-btn');
     if(scanning){ stopScanner(); return; }
+    if(!authorizedSlug){ setLocked(); return; }
     try{
       stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
       var video = document.getElementById('video');
@@ -396,10 +510,11 @@
         var cid = extractCid(url);
         // dedupe: ignore same cid for 3 seconds
         if(cid && !(cid === lastStampedCid && Date.now() - lastStampTime < DEDUPE_MS)){
-          var sel = document.getElementById('slug-select');
-          var slug = sel.value || extractSlug(url);
+          var slug = authorizedSlug;
           if(slug){
             stopScanner();
+            var barcodeSlug = extractSlug(url);
+            if(barcodeSlug && barcodeSlug !== slug){ setOtherBusiness(); return; }
             doStamp(slug, cid);
             return;
           }
@@ -415,18 +530,35 @@
   };
 
   // ── Boot ──
+  // Clerk decides who is signed in: wait for it (at most 10 s, then the
+  // visitor counts as signed out) before asking the server for access.
+  function clerkReady(){
+    if(!window.Clerk) return Promise.resolve();
+    var load;
+    try{ load = Promise.resolve(window.Clerk.load()); }catch(_){ load = Promise.resolve(); }
+    return Promise.race([load.catch(function(){}), new Promise(function(r){ setTimeout(r, 10000); })]);
+  }
+
   function boot(){
-    checkPinGate();
-    loadPrograms();
-    if(window.Clerk){
-      window.Clerk.load().then(function(){
-        var u = window.Clerk.user;
-        // Staff open the scanner with ?slug= and the staff PIN, without an
-        // account; the server checks the PIN. Without ?slug= it is the
-        // owner's view and needs the sign-in.
-        if(!u && !pinSlug){ window.location.href = 'index.html'; }
-      });
-    }
+    showView('access-check');
+    return clerkReady().then(async function(){
+      // Staff open the scanner with ?slug= and the staff PIN, without an
+      // account; the owner can use the same link signed in.
+      if(pinSlug){ await loadPrograms(); return authorize(pinSlug); }
+      // Without ?slug= it is the owner's view: their programs, their sign-in.
+      gateSlug = '';
+      if(!(window.Clerk && window.Clerk.user)){
+        showDenied(tr('ss_signin_title','Sign in required'), tr('ss_signin_owner','Sign in with your QRAIVY account to use the stamp scanner.'));
+        return;
+      }
+      await loadPrograms();
+      var sel = document.getElementById('slug-select');
+      if(!sel.value){
+        showDenied(tr('ss_noprog_title','No loyalty program'), tr('ss_noprog_msg','Your account has no loyalty program yet. Set one up in the dashboard first.'), {noSignIn:true});
+        return;
+      }
+      return authorize(sel.value);
+    });
   }
 
   if(document.readyState === 'loading'){
@@ -463,6 +595,25 @@
       ss_pin_none: (window.SS_T&&window.SS_T.ss_pin_none)||'No PIN set yet',
       ss_net_err: (window.SS_T&&window.SS_T.ss_net_err)||'Network error. Check connection.',
       ss_cam_err: 'Camera error',
+      ss_checking: "Checking access…",
+      ss_signin: "Sign in as owner",
+      ss_retry: "Try again",
+      ss_pin_owner: "Owner? Sign in instead",
+      ss_signin_title: "Sign in required",
+      ss_signin_msg: "Only the business owner, or staff with a staff PIN, can use the stamp scanner. This business has no staff PIN yet: sign in as the owner, or ask the owner to set a staff PIN in the dashboard.",
+      ss_signin_owner: "Sign in with your QRAIVY account to use the stamp scanner.",
+      ss_expired: "Your session has expired or access was withdrawn.",
+      ss_pin_locked: "Too many incorrect PINs. Please wait 15 minutes and try again.",
+      ss_pin_invalid: "The saved staff PIN was not accepted. Please enter it again.",
+      ss_not_owner: "This account is not the owner of this business.",
+      ss_net_title: "Connection problem",
+      ss_unknown_title: "Program not found",
+      ss_unknown_msg: "This scanner link does not belong to an active business. Ask the owner for the current link.",
+      ss_noprog_title: "No loyalty program",
+      ss_noprog_msg: "Your account has no loyalty program yet. Set one up in the dashboard first.",
+      ss_locked: "Scanner locked",
+      ss_other_business: "This pass belongs to another business",
+      ss_other_business_sub: "This scanner is open only for the business it was unlocked for.",
     },
     de: {
       ss_back: '← Zurück',
@@ -486,6 +637,25 @@
       ss_pin_none: 'Noch keine PIN gesetzt — bitte den Geschäftsinhaber, eine PIN im Dashboard einzurichten.',
       ss_net_err: 'Netzwerkfehler. Verbindung prüfen.',
       ss_cam_err: 'Kamerafehler',
+      ss_checking: "Zugang wird geprüft…",
+      ss_signin: "Als Inhaber anmelden",
+      ss_retry: "Erneut versuchen",
+      ss_pin_owner: "Inhaber? Stattdessen anmelden",
+      ss_signin_title: "Anmeldung erforderlich",
+      ss_signin_msg: "Nur der Geschäftsinhaber oder Mitarbeitende mit Mitarbeiter-PIN können den Stempelscanner nutzen. Für dieses Geschäft ist noch keine Mitarbeiter-PIN eingerichtet: Melde dich als Inhaber an oder bitte den Inhaber, im Dashboard eine PIN festzulegen.",
+      ss_signin_owner: "Melde dich mit deinem QRAIVY-Konto an, um den Stempelscanner zu nutzen.",
+      ss_expired: "Deine Sitzung ist abgelaufen oder der Zugang wurde entzogen.",
+      ss_pin_locked: "Zu viele falsche PINs. Bitte 15 Minuten warten und erneut versuchen.",
+      ss_pin_invalid: "Die gespeicherte Mitarbeiter-PIN wurde nicht akzeptiert. Bitte erneut eingeben.",
+      ss_not_owner: "Dieses Konto ist nicht Inhaber dieses Geschäfts.",
+      ss_net_title: "Verbindungsproblem",
+      ss_unknown_title: "Programm nicht gefunden",
+      ss_unknown_msg: "Dieser Scanner-Link gehört zu keinem aktiven Geschäft. Bitte den Inhaber um den aktuellen Link.",
+      ss_noprog_title: "Kein Treueprogramm",
+      ss_noprog_msg: "Dein Konto hat noch kein Treueprogramm. Richte zuerst eines im Dashboard ein.",
+      ss_locked: "Scanner gesperrt",
+      ss_other_business: "Dieser Pass gehört zu einem anderen Geschäft",
+      ss_other_business_sub: "Dieser Scanner ist nur für das Geschäft freigeschaltet, für das er geöffnet wurde.",
     }
   };
   var t = T[lang] || T.en;
