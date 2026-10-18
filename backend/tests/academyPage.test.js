@@ -168,9 +168,9 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
   const changed = execFileSync('git', ['diff', '12df76d', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)
     .concat(execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)).sort();
   const PAGES = ['analytics.html', 'dashboard.html', 'deals.html', 'designer-saved.html', 'loyalty-setup.html', 'smart-qr-detail.html', 'wallet-pass-studio.html'];
-  // tests: this file, the nav test, and three older "frontend unchanged" guards narrowed via helpers/academyFiles.js
+  // tests: this file, the nav test, and four older "frontend unchanged" guards narrowed via helpers/academyFiles.js
   const allowed = ['backend/tests/academyPage.test.js', 'backend/tests/adminNavShell.test.js', 'backend/tests/helpers/academyFiles.js',
-    'backend/tests/lpDeleteAuth.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'frontend/public/academy.css', 'frontend/public/academy.html',
+    'backend/tests/lpDeleteAuth.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'backend/tests/lpStagingFrontend.test.js', 'frontend/public/academy.css', 'frontend/public/academy.html',
     'frontend/public/js/academy-catalog.js', 'frontend/public/js/academy.js', 'frontend/public/js/admin-shell.js'].concat(PAGES.map((p) => 'frontend/public/' + p));
   for (const f of changed) assert.ok(allowed.includes(f), 'unexpected change: ' + f);
   // each Admin page gained exactly the one sidebar line

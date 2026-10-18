@@ -244,7 +244,9 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // same" rather than "only these changed", so it keeps holding as the
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
-  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js' && f !== 'deal-image-formats.js' && f !== 'deal-page-picker.js').map((f) => 'frontend/public/js/' + f);
+  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js' && f !== 'deal-image-formats.js' && f !== 'deal-page-picker.js')
+    .map((f) => 'frontend/public/js/' + f)
+    .filter((f) => !require('./helpers/academyFiles').ACADEMY_FRONTEND.includes(f));   // Academy: tests/academyPage.test.js
   assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/qds', 'backend/railway.toml').trim(), '');
   // dashboard-shell.css: unchanged by this step's own commit. It was changed later, on purpose,
   // for the six-tab Admin sidebar (Phase 5.5A; see adminNavShell.test.js).
