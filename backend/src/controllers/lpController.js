@@ -14,7 +14,8 @@ const { sendWelcomeEmail } = require('../services/emailService');
 // blocks or fails the legacy writes below it — see service header comment.
 const { resolveOrCreateCustomerIdentity, attachDeterministicIdentity } = require('../services/customerIdentityService');
 const webPushPages = require('../services/webPushPages');
-const { retainedDataFor } = require('../services/slugReservation');
+const { retainedDataFor, DELETED_PAGE_MARKER } = require('../services/slugReservation');
+const { isPlatformAdmin, logSecurityEvent } = require('../services/platformAdmin');
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 const { renderWelcome, welcomeV2Enabled } = require('../services/welcomeView');
 
@@ -1922,7 +1923,15 @@ async function handleDeleteLP(req, res) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Not found' });
-    if (page.userId && page.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    // Phase 5.5C.4A: only the page's owner may delete it. A page without an
+    // owner may only be deleted by a platform admin (Clerk publicMetadata.role
+    // 'admin', the requireAdmin rule). Everything else is refused; before this,
+    // any signed-in account could delete an ownerless page.
+    const allowed = page.userId ? page.userId === userId : await isPlatformAdmin(userId);
+    if (!allowed) {
+      logSecurityEvent('LP_DELETE_DENIED', req, { clerkId: userId, slug, ownerless: !page.userId });
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     pageCache.delByPrefix('lp:' + slug);
     pageCache.delByPrefix('stamp:' + slug);
     // Fix 3: StampToken has no Prisma relation to LandingPage — it's joined
@@ -1934,9 +1943,14 @@ async function handleDeleteLP(req, res) {
     // no longer pass the token-validity check at all. Pass, PassDevice,
     // PassRegistration, StampEntry, RewardEvent, and LoyaltyCustomer are
     // deliberately left untouched — historical records, never deleted here.
+    // Phase 5.5C.4A: the deletion is recorded in the same transaction. That
+    // record keeps the address reserved for good (services/slugReservation.js),
+    // so nobody can take over a deleted page's printed QR codes, NFC tags or
+    // Wallet links by creating a new page on its slug.
     await prisma.$transaction([
       prisma.stampToken.deleteMany({ where: { slug } }),
       prisma.landingPage.delete({ where: { slug } }),
+      prisma.supportAction.create({ data: Object.assign({}, DELETED_PAGE_MARKER, { targetId: slug, actorId: userId, actorType: 'human', metadata: { pageId: page.id, ownerless: !page.userId } }) }),
     ]);
     return res.json({ ok: true, success: true });
   } catch (err) {

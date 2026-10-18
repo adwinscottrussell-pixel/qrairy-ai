@@ -9,8 +9,16 @@
 // So a NEW page may not be created on a slug that still has any such record.
 // Nothing is deleted or reassigned; the address simply stays unavailable.
 // Existing pages are unaffected (this is only consulted when no page exists).
+//
+// Phase 5.5C.4A: a deleted page's address also stays reserved once its data
+// is gone. Printed QR codes, NFC tags and Wallet links keep pointing at it, so
+// a new page there would receive the old page's visitors. handleDeleteLP
+// records every deletion (SupportAction, DELETED_PAGE_MARKER); that record
+// reserves the slug for good.
 
 const prisma = require('../utils/prismaClient');
+
+const DELETED_PAGE_MARKER = { actionType: 'landing_page_deleted', targetType: 'LandingPageSlug' };
 
 // Each check answers "is there at least one record for this slug?".
 // Wallet passes: newer passes carry `slug`; older ones only the serial
@@ -34,6 +42,7 @@ function checks(slug) {
     ['customers', () => prisma.customer.findFirst(Object.assign({ where: { slug } }, one))],
     ['customer identities', () => prisma.customerIdentity.findFirst(Object.assign({ where: { slug } }, one))],
     ['deal placements', () => prisma.dealPlacement.findFirst(Object.assign({ where: { channel: 'landing_page', targetRef: slug } }, one))],
+    ['deleted page', () => prisma.supportAction.findFirst(Object.assign({ where: Object.assign({ targetId: slug }, DELETED_PAGE_MARKER) }, one))],
   ];
 }
 
@@ -44,4 +53,4 @@ async function retainedDataFor(slug) {
   return found.filter(Boolean);
 }
 
-module.exports = { retainedDataFor, CHECKED_KINDS: checks('x').map(([kind]) => kind) };
+module.exports = { retainedDataFor, DELETED_PAGE_MARKER, CHECKED_KINDS: checks('x').map(([kind]) => kind) };

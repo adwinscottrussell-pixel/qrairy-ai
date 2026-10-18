@@ -20,7 +20,7 @@ const lf = (s) => s.split('\r\n').join('\n');
 
 // ── data: one table per model, rows with the fields the check reads ──
 let pages, rows, upserts, reads;
-const MODELS = ['subscriber', 'webPushSubscription', 'webPushPageSubscription', 'pass', 'loyaltyCustomer', 'stampEntry', 'rewardEvent', 'stampSettings', 'stampToken', 'pushCampaign', 'customer', 'customerIdentity', 'dealPlacement'];
+const MODELS = ['subscriber', 'webPushSubscription', 'webPushPageSubscription', 'pass', 'loyaltyCustomer', 'stampEntry', 'rewardEvent', 'stampSettings', 'stampToken', 'pushCampaign', 'customer', 'customerIdentity', 'dealPlacement', 'supportAction'];
 function reset() {
   pages = {
     'live-page': { id: 'lp1', slug: 'live-page', userId: 'owner_live', businessName: 'Live', sections: '{}', businessId: null },
@@ -81,6 +81,8 @@ const LEFTOVER = {
   customer: { slug: 'old-page' },
   customerIdentity: { slug: 'old-page' },
   dealPlacement: { channel: 'landing_page', targetRef: 'old-page' },
+  // Phase 5.5C.4A: the record handleDeleteLP writes for every deletion
+  supportAction: { actionType: 'landing_page_deleted', targetType: 'LandingPageSlug', targetId: 'old-page' },
 };
 
 const tests = [];
@@ -104,6 +106,17 @@ test('anonymous creation is refused the same way; and so is a signed-in account 
   assert.equal((await publish('old-page', null)).statusCode, 409);
   assert.equal((await publish('old-page', 'user_newcomer', { userId: 'owner_old', ownerUserId: 'owner_old' })).statusCode, 409);
   assert.deepEqual(upserts, []);
+});
+
+test('Phase 5.5C.4A: a deleted page\'s address stays reserved after its data is gone, for everyone including its old owner', async () => {
+  reset(); rows.supportAction.push(Object.assign({ id: 'sa1' }, LEFTOVER.supportAction));
+  assert.deepEqual(await retainedDataFor('old-page'), ['deleted page']);
+  for (const user of ['user_newcomer', 'owner_old', null]) assert.equal((await publish('old-page', user)).statusCode, 409, String(user));
+  assert.deepEqual(upserts, []);
+  // only that slug, and only the deletion record counts
+  assert.deepEqual(await retainedDataFor('old-page-2'), []);
+  reset(); rows.supportAction.push({ id: 'sa2', actionType: 'landing_page_owner_assigned', targetType: 'LandingPage', targetId: 'old-page' });
+  assert.deepEqual(await retainedDataFor('old-page'), []);
 });
 
 test('Wallet passes without a slug field are found by serial number (sqr-<slug> and sqr-<slug>-<customer>)', async () => {
