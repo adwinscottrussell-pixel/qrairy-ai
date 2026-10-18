@@ -7,6 +7,7 @@ const assert = require('assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { revertSource0 } = require('./helpers/phase0Revert');
 
 const ROOT = path.join(__dirname, '..', '..');
 const resolve = (...p) => require.resolve(path.join(__dirname, '..', ...p));
@@ -79,7 +80,8 @@ test('gate off: every page keeps today\'s screen, byte for byte the same templat
   const html = await welcome('plain');
   assert.ok(html.includes('Treueprämien') && !html.includes('data-welcome="unified"'));
   const line = (src) => src.split('\n').find((l) => l.trim().startsWith("const html = '<!DOCTYPE html><html lang=\"' + lang + '\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"));
-  const now = line(src());
+  // Phase 0 (S1) escaped the business name and the slug: undone exactly (tests/helpers/phase0Revert.js).
+  const now = line(revertSource0(src()));
   assert.ok(now && now === line(git('show', '3b0804f:backend/src/controllers/lpController.js')), 'the legacy loyalty template is unchanged');
 });
 
@@ -87,7 +89,7 @@ test('StadtPocket pages keep their Smart Welcome even when listed (StadtPocket u
   const html = await welcome('sp', {}, ALL);
   assert.ok(html.includes('StadtPocket &middot; Ulm') && html.includes('card-primary') && !html.includes('data-welcome="unified"'));
   const fn = (src) => src.slice(src.indexOf('function renderStadtPocketSmartWelcome('), src.indexOf('// ── GET /lp/welcome/:slug'));
-  assert.equal(fn(src()), fn(git('show', '3b0804f:backend/src/controllers/lpController.js')));
+  assert.equal(fn(revertSource0(src())), fn(git('show', '3b0804f:backend/src/controllers/lpController.js')));
 });
 
 test('no loyalty: the business variant, without stamps, rewards or a wallet pass', async () => {

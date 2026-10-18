@@ -124,7 +124,7 @@ async function save(slug, body, { owner = OWNER } = {}) {
 }
 async function reload(slug) {
   const res = { statusCode: 200, body: undefined, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } };
-  await handleGetLP({ params: { slug } }, res);
+  await handleGetLP({ params: { slug }, headers: { authorization: 'Bearer ' + OWNER } }, res);   // Phase 0 (S4): owner only
   return JSON.parse(res.body.sections);
 }
 
@@ -767,7 +767,8 @@ test('F. the editor page loads the greeting data and field script before the edi
   // Apart from the voice scripts, the only other difference from it
   // is the API routing switch (tests/lpStagingRouting.test.js): three lines
   // in <head>, and the phone preview's address passing through it.
-  const withoutVoice = editorPage.replace('<script src="js/voice-greetings.js"></script>\n<script src="js/voice-greeting-editor.js"></script>\n', '');
+  // Phase 0 (S4): the fallback sends the sign-in -- undone exactly (tests/helpers/phase0Revert.js).
+  const withoutVoice = require('./helpers/phase0Revert').revertSqd0(editorPage).replace('<script src="js/voice-greetings.js"></script>\n<script src="js/voice-greeting-editor.js"></script>\n', '');
   const routingHead = withoutVoice.slice(withoutVoice.indexOf('<script src="js/staging-config.js"></script>'), withoutVoice.indexOf('<meta charset="UTF-8"/>'));
   assert.equal(routingHead.split('\n').length - 1, 3);
   const withoutRouting = withoutVoice.replace(routingHead, '').replace('iframeEl.src = window.QRAIVY_ROUTING.url(_iframeSlug ? ', 'iframeEl.src = _iframeSlug ? ').replace('"&preview=1")));', '"&preview=1"));');
@@ -939,6 +940,7 @@ test('G. when new audio is on its way the preview reloads again once it is reall
   h.els['sqd-iframe'].src = 'set-by-publish';
   h.api.afterSave({ ok: true, voice: { enabled: true, pending: true, audioFor: 'new-print' } }, { skipReload: true });
   assert.equal(h.els['se-voice-audio-status'].textContent, 'Welcome audio is being updated…');
+  await settle();   // Phase 0 (S4): the page is read with the sign-in, which is fetched first
   assert.equal(h.fetches.length, 1);
   assert.match(h.fetches[0].url, /^https:\/\/api\.qraivy\.com\/api\/lp\/casa-lumi-ab1\?t=\d+$/, 'asks the page-data route, not the page itself');
   // still the old audio
@@ -958,6 +960,7 @@ test('G. when new audio is on its way the preview reloads again once it is reall
 test('G. it gives up politely if the audio never arrives, and a newer publish replaces an older wait', async () => {
   const h = editorHarness();
   h.api.afterSave({ voice: { enabled: true, pending: true, audioFor: 'never' } }, { skipReload: true });
+  await settle();   // Phase 0 (S4): see above
   for (let i = 0; i < 20; i++) {
     h.fetches[h.fetches.length - 1].respond({ sections: JSON.stringify({ voice: {} }) });
     await settle();
@@ -968,6 +971,7 @@ test('G. it gives up politely if the audio never arrives, and a newer publish re
   const h2 = editorHarness();
   h2.api.afterSave({ voice: { enabled: true, pending: true, audioFor: 'first' } }, { skipReload: true });
   h2.api.afterSave({ voice: { enabled: true, pending: true, audioFor: 'second' } }, { skipReload: true });
+  await settle();   // Phase 0 (S4): see above
   h2.els['sqd-iframe'].src = 'marker';
   h2.fetches[0].respond({ sections: JSON.stringify({ voice: { audioUrl: 'https://x', audioFor: 'first' } }) });
   await settle();

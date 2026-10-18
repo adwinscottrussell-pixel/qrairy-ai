@@ -175,6 +175,9 @@
       });
       var d = await res.json();
       if(res.ok && d.ok){
+        // The server checks the PIN again on every stamp code request
+        // (fetchToken), so it is kept for this browser session.
+        sessionStorage.setItem('staff_pin_'+slug, pinBuffer);
         sessionStorage.setItem('staff_pin_ok_'+slug, '1');
         showScanner();
       } else {
@@ -192,7 +195,7 @@
     // If no slug in URL, go straight to scanner (owner-accessed without slug)
     if(!slug){ showScanner(); return; }
     // If already verified this session, skip PIN
-    if(sessionStorage.getItem('staff_pin_ok_'+slug) === '1'){ showScanner(); return; }
+    if(sessionStorage.getItem('staff_pin_'+slug)){ showScanner(); return; }
     // Status endpoint checks existence only — no PIN guess involved. Replaces
     // the old empty-string probe against /verify, which could never report
     // "no PIN configured" because the server rejects an empty pin before it
@@ -255,9 +258,25 @@
   }
 
   // ── Fetch stamp token ──
+  // The server hands out the stamp code only to the owner's sign-in or with
+  // the staff PIN (X-Staff-Pin); both are sent when present.
   async function fetchToken(slug){
-    var res = await fetch(API+'/lp/stamp/token/'+encodeURIComponent(slug));
-    var d = await res.json();
+    var h = {};
+    var tok = await getToken();
+    if(tok) h['Authorization'] = 'Bearer '+tok;
+    var pin = null;
+    try{ pin = sessionStorage.getItem('staff_pin_'+slug); }catch(_){}
+    if(pin) h['X-Staff-Pin'] = pin;
+    var res = await fetch(API+'/lp/stamp/token/'+encodeURIComponent(slug), {headers:h});
+    var d = {};
+    try{ d = await res.json(); }catch(_){}
+    if(!res.ok || !d.token){
+      if(res.status === 401 && pin){
+        try{ sessionStorage.removeItem('staff_pin_'+slug); sessionStorage.removeItem('staff_pin_ok_'+slug); }catch(_){}
+        if(pinSlug === slug) showPinGate();
+      }
+      throw new Error(d.error || 'Could not get a stamp code.');
+    }
     return d.token;
   }
 
@@ -402,7 +421,10 @@
     if(window.Clerk){
       window.Clerk.load().then(function(){
         var u = window.Clerk.user;
-        if(!u){ window.location.href = 'index.html'; }
+        // Staff open the scanner with ?slug= and the staff PIN, without an
+        // account; the server checks the PIN. Without ?slug= it is the
+        // owner's view and needs the sign-in.
+        if(!u && !pinSlug){ window.location.href = 'index.html'; }
       });
     }
   }

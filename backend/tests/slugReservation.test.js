@@ -192,7 +192,7 @@ test('Wallet, loyalty and StadtPocket code is untouched', () => {
   const changed = execFileSync('git', ['diff', '0cd8e45', '--name-only', '--', 'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js', 'backend/src/services/apnsService.js',
     'backend/src/controllers/walletController.js', 'backend/src/controllers/passController.js', 'backend/src/services/stadtPocketContext.js', 'backend/src/routes/stadtpocketPublicRoutes.js',
     'backend/src/routes/managerStadtpocketListingRoutes.js', 'backend/prisma/migrations/20261011120000_add_deal_and_deal_placement', 'frontend/public',
-    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();   // Academy: tests/academyPage.test.js
+    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES, ...require('./helpers/phase0Files').PHASE0_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();   // Academy: tests/academyPage.test.js
   assert.equal(changed, '');
 });
 

@@ -613,7 +613,7 @@ test('G. a recording that fails is noted on the page for the editor, and the nex
   const res = await publish(slug, 'This one fails.');
   quiet(false); tts.fail = false;
   assert.equal(res.body.voice.status, 'pending', 'nothing was known to be wrong when the save was answered');
-  const read = mkRes(); await handleGetLP({ params: { slug } }, read);
+  const read = mkRes(); await handleGetLP({ params: { slug }, headers: { authorization: 'Bearer ' + OWNER } }, read);   // Phase 0 (S4): owner only
   const seen = JSON.parse(read.body.sections).voice;
   assert.deepEqual([seen.audioError.code, seen.audioError.for, seen.audioStale], ['failed', res.body.voice.audioFor, true]);
   assert.equal(await hasPlayer(slug), false);
@@ -695,6 +695,7 @@ test('G. editor: while waiting, a failure noted on the page ends the wait with a
     const h = editorHarness();
     h.api.afterSave({ ok: true, voice: { enabled: true, pending: true, audioFor: 'new-print', status: 'pending' } }, { skipReload: true });
     assert.equal(h.status.textContent, 'Welcome audio is being updated…');
+    await settle();   // Phase 0 (S4): the page is read with the sign-in, which is fetched first
     // a note about some other greeting is not this one's
     h.fetches[0].respond(pageWith({ audioUrl: 'https://old', audioFor: 'old-print', audioStale: true, audioError: { code, for: 'another-print' } }));
     await settle();
@@ -711,6 +712,7 @@ test('G. editor: an answer without the new status still works as before', async 
   const h = editorHarness();
   h.api.afterSave({ ok: true, voice: { enabled: true, pending: true, audioFor: 'new-print' } }, { skipReload: true });
   assert.equal(h.status.textContent, 'Welcome audio is being updated…');
+  await settle();   // Phase 0 (S4): the page is read with the sign-in, which is fetched first
   h.fetches[0].respond(pageWith({ audioUrl: 'https://new', audioFor: 'new-print' }));
   await settle();
   assert.equal(h.status.textContent, 'Welcome audio updated ✓');

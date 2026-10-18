@@ -3748,8 +3748,12 @@ window.QRAIVY_EDITOR_STATE = {
 
   // The page record as JSON (/api/lp/:slug) -- never the public page
   // (/lp/:slug), which is HTML and counts every load as a visit.
+  // Answered only to the page's signed-in owner, so the token is sent along.
   function fallbackFromLP(slug, lpUrl) {
-    fetch((window.QRAIVY_API_BASE || 'https://api.qraivy.com') + '/api/lp/' + encodeURIComponent(slug))
+    var tok = null;
+    try { tok = (window.Clerk && window.Clerk.session) ? window.Clerk.session.getToken() : null; } catch (_) {}
+    Promise.resolve(tok).catch(function() { return null; })
+      .then(function(t) { return fetch((window.QRAIVY_API_BASE || 'https://api.qraivy.com') + '/api/lp/' + encodeURIComponent(slug), t ? { headers: { Authorization: 'Bearer ' + t } } : undefined); })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var nameEl  = document.getElementById('sqd-ov-name');

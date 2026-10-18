@@ -261,9 +261,13 @@ test('C. the Deal Builder routing, run with the page: a blocked host never calls
 
 test('C. no other page\'s routing changed: api-base.js, lp-routing.js and staging-config.js are production\'s', () => {
   const changed = execFileSync('git', ['diff', '4ac9e84', '--name-only', '--', 'frontend/public/js/api-base.js', 'frontend/public/js/lp-routing.js', 'frontend/public/js/staging-config.js',
-    'frontend/public/smart-editor.js', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/index.html',
+    'frontend/public/smart-editor.js', 'frontend/public/index.html',
     'backend/src/utils/corsOriginPolicy.js', 'backend/src/middleware/auth.js', 'backend/src/utils/clerkVerify.js', 'backend/src/config/publicOrigins.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
   assert.equal(changed, '');
+  // js/voice-greeting-editor.js: production's, apart from Phase 0 (S4) sending the sign-in with the
+  // page record request (tests/helpers/phase0Revert.js undoes exactly that).
+  assert.equal(require('./helpers/phase0Revert').revertVoiceEditor0(read('frontend/public/js/voice-greeting-editor.js')),
+    execFileSync('git', ['show', '4ac9e84:frontend/public/js/voice-greeting-editor.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).replace(/\r\n/g, '\n'));
   // dashboard.html: the Admin sidebar's logo and menu (Phase 5.5A, tests/adminNavShell.test.js)
   // are the only change since then; everything else is byte for byte production's.
   const withoutMenu = (s) => { s = s.replace(/\r\n/g, '\n'); const a = s.indexOf('<div id="sidebar">'), b = s.indexOf('  </nav>', a); assert.ok(a !== -1 && b > a); return s.slice(0, a) + s.slice(b); };

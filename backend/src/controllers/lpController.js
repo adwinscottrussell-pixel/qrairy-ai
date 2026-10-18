@@ -18,6 +18,54 @@ const { retainedDataFor, DELETED_PAGE_MARKER } = require('../services/slugReserv
 const { isPlatformAdmin, logSecurityEvent } = require('../services/platformAdmin');
 const { resolveStadtPocketContext } = require('../services/stadtPocketContext');
 const { renderWelcome, welcomeV2Enabled } = require('../services/welcomeView');
+const staffPin = require('../services/staffPin');
+
+// ── Phase 0 (S1): text and links that reach the HTML of a public page ──
+// Public pages are served from www.qraivy.com, the same site as the signed-in
+// dashboard, and a page can be created without signing in. Every value an
+// owner, a visitor or the website scan can influence is therefore escaped
+// before it is written into a page.
+const escHtml = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// A link target: http(s), mailto and tel links and addresses without a scheme
+// (relative, as before) are kept; any other scheme (javascript:, data:, ...)
+// becomes '#'. Browsers ignore tabs, line breaks and control characters inside
+// a scheme, so they are removed before it is checked.
+function safeHref(v) {
+  const s = String(v == null ? '' : v).trim();
+  const probe = s.replace(/[\u0000-\u0020\u007f]/g, '');
+  if (/^(https?:|mailto:|tel:)/i.test(probe)) return s;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(probe)) return '#';
+  return s;
+}
+// An image source: like safeHref, plus embedded raster images (two live pages
+// store their logo as data:image/... -- left exactly as it is).
+function safeImgSrc(v) {
+  const s = String(v == null ? '' : v).trim();
+  const probe = s.replace(/[\u0000-\u0020\u007f]/g, '');
+  if (/^data:image\/(png|jpe?g|gif|webp);/i.test(probe)) return s;
+  const h = safeHref(s);
+  return /^(mailto:|tel:)/i.test(h) ? '' : (h === '#' ? '' : h);
+}
+// A colour written into CSS: #rgb, #rgba, #rrggbb or #rrggbbaa only.
+const safeColor = (v, fallback) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v.trim())) ? v.trim() : fallback;
+// A value inside an inline <script>: a JSON string literal that cannot end
+// the script element.
+const jsStr = (v) => JSON.stringify(String(v == null ? '' : v)).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, (c) => c === '\u2028' ? '\\u2028' : '\\u2029');
+// Address format for NEW pages (the staging gate uses the same pattern).
+// Existing pages keep their address; only creation is checked.
+const SLUG_FORMAT = /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/;
+
+// The signed-in owner of a page, or a platform admin for a page without an
+// owner (the rule handleDeleteLP uses). Returns the Clerk user id or null.
+async function ownerOrAdmin(page, userId) {
+  if (!page || !userId) return null;
+  const allowed = page.userId ? page.userId === userId : await isPlatformAdmin(userId);
+  return allowed ? userId : null;
+}
+function parseSections(page) {
+  try { return page && page.sections ? (typeof page.sections === 'string' ? JSON.parse(page.sections) : page.sections) || {} : {}; }
+  catch (_) { return {}; }
+}
 
 // Client-side customer identity (Milestone A: Identity Refactor).
 // This is the single authored source of truth for reading/creating/storing
@@ -1252,6 +1300,12 @@ async function handlePublishLP(req, res) {
     // (services/slugReservation.js): a new page on that slug would inherit
     // another business's subscribers, push subscriptions, Wallet passes,
     // loyalty records and deals. Applies to every new page, signed in or not.
+    // Phase 0 (S1): a new page's address may only use letters, digits, "-"
+    // and "_" -- it is written into the page and its scripts. Existing pages
+    // are not re-checked.
+    if (!existing && (typeof slug !== 'string' || !SLUG_FORMAT.test(slug))) {
+      return res.status(400).json({ error: 'invalid_slug', message: 'The page address may only contain letters, numbers, "-" and "_".' });
+    }
     if (!existing && (await retainedDataFor(slug)).length) {
       return res.status(409).json({ error: 'slug_unavailable', message: 'This page address is not available. Please choose another one.' });
     }
@@ -1358,6 +1412,16 @@ async function handlePublishLP(req, res) {
     {
       const _voice = mergeVoiceOnSave(mergedSections.voice, _existingVoice);
       if (_voice !== undefined) mergedSections.voice = _voice;
+    }
+    // Phase 0 (S4/S5): the staff PIN is only ever set through
+    // POST /lp/staff-pin/:slug. Editors no longer receive it (GET /api/lp
+    // leaves it out), so whatever a save sends is ignored and the stored PIN
+    // is kept.
+    if (mergedSections && typeof mergedSections === 'object') {
+      mergedSections = Object.assign({}, mergedSections);
+      delete mergedSections.staffPin;
+      const _storedPin = existing ? parseSections(existing).staffPin : undefined;
+      if (_storedPin) mergedSections.staffPin = _storedPin;
     }
 
 
@@ -1881,7 +1945,7 @@ async function handleServeLP(req, res) {
           _shouldWelcome = !!(_spCtx && _spCtx.isStadtPocketLinked);
         }
         if (_shouldWelcome) {
-          const _es = '<scr' + 'ipt>' + SLUG_CID_HELPER_JS + '(function(){try{var s="' + slug + '";var c=resolveSlugCid(s);if(!localStorage.getItem("wEnr_"+s)){var u=new URL("/lp/welcome/"+s,window.location.origin);if(c)u.searchParams.set("cid",c);window.location.replace(u.toString());}}catch(_e){}})();<\/scr' + 'ipt>';
+          const _es = '<scr' + 'ipt>' + SLUG_CID_HELPER_JS + '(function(){try{var s=' + jsStr(slug) + ';var c=resolveSlugCid(s);if(!localStorage.getItem("wEnr_"+s)){var u=new URL("/lp/welcome/"+s,window.location.origin);if(c)u.searchParams.set("cid",c);window.location.replace(u.toString());}}catch(_e){}})();<\/scr' + 'ipt>';
           return res.send(_lpHtml.replace('<head>', '<head>' + _es));
         }
       } catch(_eg) {}
@@ -1893,10 +1957,25 @@ async function handleServeLP(req, res) {
   }
 }
 
+// GET /api/lp/:slug — the page record for its editors. Phase 0 (S4): only the
+// page's owner (or a platform admin, for a page without an owner) may read it;
+// it holds the owner's id, the visit count and the scanned website text, none
+// of which is shown on the public page. The staff PIN hash is never sent.
 async function handleGetLP(req, res) {
   try {
+    let userId = null;
+    if (req.headers.authorization) {
+      try { userId = await getUserFromToken(req.headers.authorization); } catch (_) {}
+    }
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const page = await prisma.landingPage.findUnique({ where: { slug: req.params.slug } });
     if (!page) return res.status(404).json({ error: 'not found' });
+    if (!(await ownerOrAdmin(page, userId))) return res.status(403).json({ error: 'Forbidden' });
+    const sec = parseSections(page);
+    if (sec.staffPin !== undefined) {
+      delete sec.staffPin;
+      return res.json(Object.assign({}, page, { sections: JSON.stringify(sec) }));
+    }
     return res.json(page);
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -1969,14 +2048,16 @@ async function handleLoyaltyCardPage(req, res) {
     const sections = page.sections ? JSON.parse(page.sections) : {};
     // Brand color comes from the Smart Landing Page only — single source of
     // truth shared with the actual Apple/Google Wallet pass.
-    const color = (sections.theme && sections.theme.accentColor) || '#ff5a1f';
-    const bizName = (page.businessName || slug).replace(/s+[a-z0-9]{3}$/, '').trim();
+    // Phase 0 (S1): values written into this page's HTML are escaped.
+    const color = safeColor(sections.theme && sections.theme.accentColor, '#ff5a1f');
+    const bizNameRaw = (page.businessName || slug).replace(/s+[a-z0-9]{3}$/, '').trim();
+    const bizName = escHtml(bizNameRaw);
     // Business logo — sections.logo.url (Brand Center) is the single source
     // of truth, with the legacy page.logoUrl column as a fallback.
-    const logoUrl = (sections.logo && sections.logo.url) || page.logoUrl || '';
+    const logoUrl = escHtml(safeImgSrc((sections.logo && sections.logo.url) || page.logoUrl || ''));
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = settings ? settings.goal : 10;
-    const rewardName = settings ? settings.rewardName : 'Free item';
+    const rewardName = escHtml(settings ? settings.rewardName : 'Free item');
     // Identity Continuity: read the SAME per-customer serial
     // handleStampConfirm writes to, never the legacy shared "sqr-{slug}"
     // bucket, when a cid is known. Read-only lookup -- never creates/
@@ -1987,13 +2068,13 @@ async function handleLoyaltyCardPage(req, res) {
     const serial = cid ? `sqr-${slug}-${cid}` : 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     const stampCount = pass ? (pass.stampCount || 0) : 0;
-    const logoHtml = logoUrl ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>' : '<div class="logo">' + bizName.charAt(0) + '</div>';
+    const logoHtml = logoUrl ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>' : '<div class="logo">' + escHtml(bizNameRaw.charAt(0)) + '</div>';
     const dots = Array.from({length: goal}, (_, i) => i < stampCount ? '<div class="dot filled">✓</div>' : '<div class="dot"></div>').join('');
     // No valid cid in the URL yet -- resolve one (URL > slug-scoped storage
     // > legacy cTok > mint) and redirect to this same page with it attached,
     // before any stamp-count markup is ever painted.
-    const cidBootstrapScript = cid ? '' : ('<script>' + SLUG_CID_HELPER_JS + '(function(){try{var s="' + slug + '";var c=resolveSlugCid(s);if(!c){console.error("[LoyaltyCard] customer id unavailable");return;}var u=new URL(window.location.href);u.searchParams.set("cid",c);window.location.replace(u.toString());}catch(e){console.error("[LoyaltyCard] cid redirect failed");}})();</script>');
-    const html = '<!DOCTYPE html><html lang="en"><head>' + cidBootstrapScript + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + bizName + ' Loyalty Card</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.card{background:' + color + ';border-radius:20px;padding:32px 24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}.logo{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz-name{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px}.reward-sub{font-size:.85rem;color:rgba(255,255,255,0.75);margin-bottom:24px}.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:24px}.dot{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4)}.dot.filled{background:rgba(255,255,255,0.92);border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:rgba(0,0,0,0.5)}.stamp-count{font-size:.78rem;color:rgba(255,255,255,0.7);margin-bottom:16px;margin-top:-10px}.wallet-btn{display:block;background:#000;color:#fff;border-radius:12px;padding:16px 28px;font-size:1rem;font-weight:700;text-decoration:none;width:100%;margin-bottom:12px}.powered{margin-top:20px;font-size:.7rem;color:rgba(255,255,255,0.3)}.powered a{color:rgba(255,255,255,0.4);text-decoration:none}</style></head><body><div class="card">' + logoHtml + '<div class="biz-name">' + bizName + '</div><div class="reward-sub">Sammle ' + goal + ' Stempel — erhalte ' + rewardName + '</div><div class="dots">' + dots + '</div><div class="stamp-count">' + stampCount + ' von ' + goal + ' Stempeln gesammelt</div><a class="wallet-btn" id="walletBtn" href="/lp/wallet/apple/' + slug + '" id="appleWalletBtn">+ Zu Apple Wallet hinzuf&#252;gen</a><a class="wallet-btn" id="googleWalletBtn" href="/lp/wallet/google/' + slug + '" style="background:#4285F4;color:#fff;margin-top:10px;">Zu Google Wallet hinzuf&#252;gen</a></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div><script>(function(){try{var CID=' + JSON.stringify(cid) + ';var ab2=document.getElementById("walletBtn"),gb2=document.getElementById("googleWalletBtn");if(CID){if(ab2)ab2.href=ab2.href+(ab2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);if(gb2)gb2.href=gb2.href+(gb2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);}}catch(e){}})();document.getElementById("walletBtn").addEventListener("click",function(){setTimeout(function(){window.location.href="/lp/' + slug + (cid ? '?cid=' + encodeURIComponent(cid) : '') + '";},3500);});(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.getElementById("walletBtn");var gb=document.getElementById("googleWalletBtn");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();</script></body></html>';
+    const cidBootstrapScript = cid ? '' : ('<script>' + SLUG_CID_HELPER_JS + '(function(){try{var s=' + jsStr(slug) + ';var c=resolveSlugCid(s);if(!c){console.error("[LoyaltyCard] customer id unavailable");return;}var u=new URL(window.location.href);u.searchParams.set("cid",c);window.location.replace(u.toString());}catch(e){console.error("[LoyaltyCard] cid redirect failed");}})();</script>');
+    const html = '<!DOCTYPE html><html lang="en"><head>' + cidBootstrapScript + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + bizName + ' Loyalty Card</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#f0ece0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.card{background:' + color + ';border-radius:20px;padding:32px 24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}.logo{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz-name{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px}.reward-sub{font-size:.85rem;color:rgba(255,255,255,0.75);margin-bottom:24px}.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:24px}.dot{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4)}.dot.filled{background:rgba(255,255,255,0.92);border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:rgba(0,0,0,0.5)}.stamp-count{font-size:.78rem;color:rgba(255,255,255,0.7);margin-bottom:16px;margin-top:-10px}.wallet-btn{display:block;background:#000;color:#fff;border-radius:12px;padding:16px 28px;font-size:1rem;font-weight:700;text-decoration:none;width:100%;margin-bottom:12px}.powered{margin-top:20px;font-size:.7rem;color:rgba(255,255,255,0.3)}.powered a{color:rgba(255,255,255,0.4);text-decoration:none}</style></head><body><div class="card">' + logoHtml + '<div class="biz-name">' + bizName + '</div><div class="reward-sub">Sammle ' + goal + ' Stempel — erhalte ' + rewardName + '</div><div class="dots">' + dots + '</div><div class="stamp-count">' + stampCount + ' von ' + goal + ' Stempeln gesammelt</div><a class="wallet-btn" id="walletBtn" href="/lp/wallet/apple/' + escHtml(slug) + '" id="appleWalletBtn">+ Zu Apple Wallet hinzuf&#252;gen</a><a class="wallet-btn" id="googleWalletBtn" href="/lp/wallet/google/' + escHtml(slug) + '" style="background:#4285F4;color:#fff;margin-top:10px;">Zu Google Wallet hinzuf&#252;gen</a></div><div class="powered">Powered by <a href="https://qraivy.com">Qraivy</a></div><script>(function(){try{var CID=' + (cid ? jsStr(cid) : 'null') + ';var ab2=document.getElementById("walletBtn"),gb2=document.getElementById("googleWalletBtn");if(CID){if(ab2)ab2.href=ab2.href+(ab2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);if(gb2)gb2.href=gb2.href+(gb2.href.indexOf("?")===-1?"?":"&")+"cid="+encodeURIComponent(CID);}}catch(e){}})();document.getElementById("walletBtn").addEventListener("click",function(){setTimeout(function(){window.location.href="/lp/' + slug + (cid ? '?cid=' + encodeURIComponent(cid) : '') + '";},3500);});(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.getElementById("walletBtn");var gb=document.getElementById("googleWalletBtn");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();</script></body></html>';
     return res.send(html);
   } catch(e) { console.error('[LoyaltyCard] Error:', e.message); return res.status(500).send('Error'); }
 }
@@ -2077,7 +2158,9 @@ async function handleUploadLogo(req, res) {
 
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
-    if (page.userId && req.userId && page.userId !== req.userId) {
+    // Phase 0 (S5): the page's owner only; a page without an owner, a
+    // platform admin only.
+    if (!(await ownerOrAdmin(page, req.userId))) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -2101,7 +2184,9 @@ async function handleUploadStrip(req, res) {
 
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
-    if (page.userId && req.userId && page.userId !== req.userId) {
+    // Phase 0 (S5): the page's owner only; a page without an owner, a
+    // platform admin only.
+    if (!(await ownerOrAdmin(page, req.userId))) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -2158,9 +2243,41 @@ async function getNFCStampToken(slug) {
   return token;
 }
 
+// Phase 0 (S2): who may receive a page's stamp code. The code stamps AND
+// redeems, so it is never handed out without one of:
+//   - the signed-in owner of the page (a platform admin for a page without
+//     an owner), or
+//   - with allowPin, the page's staff PIN in the X-Staff-Pin header, checked
+//     here on the server (services/staffPin.js, wrong PINs limited per page).
+// A page without a PIN therefore needs the owner's sign-in.
+// Returns { ok: true, page } or { ok: false, status, error }.
+async function authorizeStampCode(req, slug, { allowPin }) {
+  const page = await prisma.landingPage.findUnique({ where: { slug } });
+  if (!page) return { ok: false, status: 404, error: 'Page not found.' };
+  let userId = null;
+  if (req.headers.authorization) {
+    try { userId = await getUserFromToken(req.headers.authorization); } catch (_) {}
+  }
+  if (userId && await ownerOrAdmin(page, userId)) return { ok: true, page };
+  const pin = req.headers['x-staff-pin'];
+  const storedPin = parseSections(page).staffPin;
+  if (allowPin && pin && storedPin) {
+    const r = staffPin.checkPin(slug, pin, storedPin);
+    if (r.ok) return { ok: true, page };
+    logSecurityEvent('STAMP_CODE_PIN_DENIED', req, { slug, status: r.status });
+    return r;
+  }
+  logSecurityEvent('STAMP_CODE_DENIED', req, { slug, signedIn: !!userId });
+  return userId ? { ok: false, status: 403, error: 'Forbidden' } : { ok: false, status: 401, error: 'Sign in as the owner or enter the staff PIN.' };
+}
+
+// GET /lp/nfc-token/:slug — the long-lived code for programming NFC tags.
+// Owner only (the dashboard's NFC panel); staff use the daily code below.
 async function handleGetNFCToken(req, res) {
   try {
     const { slug } = req.params;
+    const auth = await authorizeStampCode(req, slug, { allowPin: false });
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
     const token = await getNFCStampToken(slug);
     const stampUrl = `https://www.qraivy.com/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl, nfcUrl: stampUrl });
@@ -2219,7 +2336,7 @@ async function handleStamp(req, res) {
       // over from the welcome/enrollment redirect) takes priority over a
       // fresh storage read, so a stamp can never silently create or target
       // a second Pass the installed wallet pass isn't registered to.
-      + 'try{window.__cid=resolveSlugCid(' + JSON.stringify(slug) + ');}catch(e){window.__cid=null;}\n'
+      + 'try{window.__cid=resolveSlugCid(' + jsStr(slug) + ');}catch(e){window.__cid=null;}\n'
       + 'fetch(window.location.pathname+"/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cid:window.__cid})}).then(function(r){return r.json();}).then(render).catch(function(){render({status:"error"});});\n'
       + '})();</script></body></html>';
     return res.status(200).send(html);
@@ -2297,6 +2414,14 @@ async function handleStampConfirm(req, res) {
     const previouslyReady = pass.rewardReady;
     await prisma.pass.update({ where: { id: pass.id }, data: { stampCount: newCount, rewardReady, totalStamps: { increment: 1 }, lastStampAt: now, updatedAt: now, slug } });
     await prisma.stampEntry.create({ data: { slug, passId: pass.id, source: 'qr' } });
+    // Phase 0 (S3): the customer's loyalty record (Admin customer and loyalty
+    // views) is counted here, after the stamp code and the one-per-hour rule
+    // have passed -- no longer by a separate request without a code. Never
+    // fails the stamp itself.
+    if (cid) {
+      try { await addLoyaltyCustomerStamp(slug, cid, settings); }
+      catch (e) { console.error('[Stamp] LoyaltyCustomer update error:', e.message); }
+    }
     if (rewardReady && !previouslyReady) {
       try {
         await prisma.rewardEvent.create({ data: { slug, passId: pass.id, rewardText: settings ? settings.rewardName : 'Free item', status: 'earned' } });
@@ -2417,9 +2542,13 @@ async function handleRedeemTapConfirm(req, res) {
   }
 }
 
+// GET /lp/stamp/token/:slug — the daily code the stamp scanner uses: the
+// owner's sign-in or the staff PIN (authorizeStampCode above).
 async function handleGetStampToken(req, res) {
   try {
     const { slug } = req.params;
+    const auth = await authorizeStampCode(req, slug, { allowPin: true });
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
     const token = await getOrCreateStampToken(slug);
     const stampUrl = `https://www.qraivy.com/stamp/${slug}/${token}`;
     return res.json({ token, stampUrl });
@@ -2464,6 +2593,39 @@ async function handleGetStampSettings(req, res) {
 }
 
 // POST /stamp/:slug/customer — per-customer stamp recording
+// One stamp on a customer's loyalty record (LoyaltyCustomer). Called only by
+// handleStampConfirm after a valid stamp; does nothing while the program is
+// off, exactly like the request it replaces.
+async function addLoyaltyCustomerStamp(slug, cid, settings) {
+  if (!cid || !settings || !settings.enabled) return null;
+  const goal = settings.goal || 10;
+  let lc = null;
+  try { lc = await prisma.loyaltyCustomer.findUnique({ where: { slug_customerId: { slug, customerId: cid } } }); } catch(_) {}
+  if (!lc) {
+    lc = await prisma.loyaltyCustomer.create({
+      data: { slug, customerId: cid, stampCount: 1, totalStamps: 1, rewardReady: goal <= 1, lastStampAt: new Date() }
+    });
+  } else if (lc.stampCount < goal) {
+    const nc = lc.stampCount + 1;
+    const rr = nc >= goal;
+    const re = (rr && !lc.rewardReady) ? lc.rewardsEarned + 1 : lc.rewardsEarned;
+    lc = await prisma.loyaltyCustomer.update({
+      where: { slug_customerId: { slug, customerId: cid } },
+      data: { stampCount: nc, totalStamps: { increment: 1 }, rewardReady: rr, rewardsEarned: re, lastStampAt: new Date() }
+    });
+  } else {
+    lc = await prisma.loyaltyCustomer.update({
+      where: { slug_customerId: { slug, customerId: cid } },
+      data: { totalStamps: { increment: 1 }, lastStampAt: new Date() }
+    });
+  }
+  return lc;
+}
+
+// POST /stamp/:slug/customer — Phase 0 (S3): read-only. It used to add a
+// stamp to any customer id without a stamp code; handleStampConfirm now does
+// that. Stamp pages still call it after a stamp (also pages opened before this
+// change), so it keeps answering with the customer's current count.
 async function handleCustomerStamp(req, res) {
   try {
     const { slug } = req.params;
@@ -2474,24 +2636,7 @@ async function handleCustomerStamp(req, res) {
     const goal = settings.goal || 10;
     let lc = null;
     try { lc = await prisma.loyaltyCustomer.findUnique({ where: { slug_customerId: { slug, customerId: cid } } }); } catch(_) {}
-    if (!lc) {
-      lc = await prisma.loyaltyCustomer.create({
-        data: { slug, customerId: cid, stampCount: 1, totalStamps: 1, rewardReady: goal <= 1, lastStampAt: new Date() }
-      });
-    } else if (lc.stampCount < goal) {
-      const nc = lc.stampCount + 1;
-      const rr = nc >= goal;
-      const re = (rr && !lc.rewardReady) ? lc.rewardsEarned + 1 : lc.rewardsEarned;
-      lc = await prisma.loyaltyCustomer.update({
-        where: { slug_customerId: { slug, customerId: cid } },
-        data: { stampCount: nc, totalStamps: { increment: 1 }, rewardReady: rr, rewardsEarned: re, lastStampAt: new Date() }
-      });
-    } else {
-      lc = await prisma.loyaltyCustomer.update({
-        where: { slug_customerId: { slug, customerId: cid } },
-        data: { totalStamps: { increment: 1 }, lastStampAt: new Date() }
-      });
-    }
+    if (!lc) return res.json({ ok: true, stampCount: 0, goal, rewardReady: false, hasWallet: false });
     return res.json({ ok: true, stampCount: lc.stampCount, goal, rewardReady: lc.rewardReady, hasWallet: lc.hasWallet });
   } catch(e) {
     console.error('[CustomerStamp]', e.message);
@@ -2552,7 +2697,11 @@ async function handleLPManifest(req, res) {
 //   default     → Services, Offers, Gallery, Directions, Reviews, Contact, Loyalty, Events
 //
 function renderPremiumLP(page) {
-  const bizName = (page.businessName || 'My Business').trim();
+  // Phase 0 (S1): everything below is written into HTML, so the values are
+  // escaped here, once (escHtml, safeHref, safeImgSrc, safeColor, jsStr).
+  const bizNameRaw = (page.businessName || 'My Business').trim();
+  const bizName = escHtml(bizNameRaw);
+  const bizInitial = escHtml(bizNameRaw.charAt(0).toUpperCase());
   // ── Translation dictionary ──
   const lang = (function(){ try { const s = typeof page.sections === 'string' ? JSON.parse(page.sections) : (page.sections||{}); return s.language || 'en'; } catch(_){ return 'en'; }})();
   const T = {
@@ -2643,8 +2792,8 @@ function renderPremiumLP(page) {
     }
   };
   const slug    = page.slug || '';
-  const website = page.websiteUrl || '#';
-  const accent  = page.brandColor || '#0a0a0a';
+  const website = escHtml(safeHref(page.websiteUrl || '#'));
+  const accent  = safeColor(page.brandColor, '#0a0a0a');
   const useCase = page.useCase || 'restaurant';
 
   let storedSections = {};
@@ -2657,10 +2806,11 @@ function renderPremiumLP(page) {
   }
   // Business logo — sections.logo.url (Brand Center) is the single source of
   // truth, with the legacy page.logoUrl column as a fallback for older pages.
-  const logoUrl = (storedSections.logo && storedSections.logo.url) || page.logoUrl || '';
+  const logoUrl = escHtml(safeImgSrc((storedSections.logo && storedSections.logo.url) || page.logoUrl || ''));
+  const _lightBgColor = safeColor(storedSections.theme && (storedSections.theme.lightBackgroundColor || storedSections.theme.bg), '#f8f8f8');
   const logoHTML = logoUrl
     ? `<img src="${logoUrl}" style="width:30px;height:30px;border-radius:6px;object-fit:contain;" alt="${bizName}">`
-    : `<div style="width:30px;height:30px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">${bizName.charAt(0).toUpperCase()}</div>`;
+    : `<div style="width:30px;height:30px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">${bizInitial}</div>`;
   const sh = storedSections.hero  || {};
   const sv = storedSections.voice || {};
   const sa = storedSections.ai    || {};
@@ -2693,14 +2843,14 @@ function renderPremiumLP(page) {
   const voiceTitle = _escText(sv.playerTitle || _ownVoiceTitle || t.personalWelcome);
   const voiceSubtitle = _escText(sv.playerSubtitle || _ownVoiceSub || t.tapToListen);
 
-  const headline = sh.aiTitle  || sh.title    || ('Welcome to ' + bizName);
-  const sub      = sh.aiSubtitle || sh.subtitle || 'Visit us, explore what we offer, and stay connected.';
+  const headline = escHtml(sh.aiTitle  || sh.title    || ('Welcome to ' + bizNameRaw));
+  const sub      = escHtml(sh.aiSubtitle || sh.subtitle || 'Visit us, explore what we offer, and stay connected.');
 
   // ── CTA buttons ──
   const ctaBtns = storedButtons.filter(b => b.active !== false).map(b => {
-    const url = (b.url || '#').startsWith('http') ? b.url : 'https://' + b.url;
+    const url = escHtml((b.url || '#').startsWith('http') ? b.url : 'https://' + b.url);
     const isPrimary = b.style !== 'secondary';
-    return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;font-family:inherit;text-decoration:none;cursor:pointer;${isPrimary ? `background:${accent};color:#fff;border:none;` : 'background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;'}transition:opacity .15s;">${b.title || b.label || 'Button'}</a>`;
+    return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-size:14px;font-weight:600;font-family:inherit;text-decoration:none;cursor:pointer;${isPrimary ? `background:${accent};color:#fff;border:none;` : 'background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;'}transition:opacity .15s;">${escHtml(b.title || b.label || 'Button')}</a>`;
   }).join('');
 
   // ── Business sections by useCase ──
@@ -2818,11 +2968,11 @@ function renderPremiumLP(page) {
     : bizSections.map(s => { const tr = (CARD_LABELS[lang] && CARD_LABELS[lang][s.id]) || {}; return { icon: s.icon, label: tr.label || s.label, sub: tr.sub || s.sub, url: '#' }; });
 
   const actionCardsHTML = _cardSource.map(s =>
-    `<div onclick="openCard('${s.url}','${s.label.replace(/'/g,"\\'")}'  )" style="display:flex;align-items:center;gap:14px;padding:16px 20px;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .2s,transform .2s,background .15s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" class="card" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 28px rgba(0,0,0,.12)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'">
-      <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${s.icon}</div>
+    `<div onclick="openCard(this.getAttribute('data-url'),this.getAttribute('data-label'))" data-url="${escHtml(safeHref(s.url))}" data-label="${escHtml(s.label)}" style="display:flex;align-items:center;gap:14px;padding:16px 20px;border:1.5px solid ${accent};border-radius:14px;cursor:pointer;transition:box-shadow .2s,transform .2s,background .15s;box-shadow:0 2px 12px rgba(0,0,0,0.06);" class="card" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 28px rgba(0,0,0,.12)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'">
+      <div style="width:40px;height:40px;border-radius:10px;border:1.5px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${escHtml(s.icon)}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${s.label}</div>
-        <div style="font-size:12px;color:#555;">${s.sub}</div>
+        <div style="font-size:14px;font-weight:600;color:#0a0a0a;margin-bottom:2px;">${escHtml(s.label)}</div>
+        <div style="font-size:12px;color:#555;">${escHtml(s.sub)}</div>
       </div>
       <div style="font-size:16px;color:#bbb;">›</div>
     </div>`
@@ -2862,7 +3012,7 @@ function renderPremiumLP(page) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="${bizName}">
 <link rel="apple-touch-icon" href="${logoUrl || 'https://qraivy.com/icon-192.png'}">
-<link rel="manifest" href="/manifest/${slug}">
+<link rel="manifest" href="/manifest/${escHtml(slug)}">
 <title>${bizName} — ${t.tagline}</title>
 <meta name="description" content="${sub}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2871,7 +3021,7 @@ function renderPremiumLP(page) {
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 @keyframes waveBar{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
-body{font-family:'Outfit',system-ui,sans-serif;background:${storedSections.theme && storedSections.theme.lightBackgroundColor ? storedSections.theme.lightBackgroundColor : (storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8')};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+body{font-family:'Outfit',system-ui,sans-serif;background:${_lightBgColor};color:#0a0a0a;max-width:600px;margin:0 auto;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
 a{color:inherit;text-decoration:none}
 input,textarea,button{font-family:inherit}
 .section{padding:0 20px;margin-bottom:16px}
@@ -2919,9 +3069,9 @@ input,textarea,button{font-family:inherit}
 
 <!-- HERO -->
 <div style="background:#fff;text-align:center;padding:56px 24px 48px;">
-  ${logoUrl ? `<div style="margin-bottom:20px;"><img src="${logoUrl}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;box-shadow:0 4px 16px rgba(0,0,0,0.08);" alt="${bizName}"></div>` : `<div style="margin-bottom:20px;"><div style="width:72px;height:72px;border-radius:16px;background:${accent};display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12);">${bizName.charAt(0).toUpperCase()}</div></div>`}
+  ${logoUrl ? `<div style="margin-bottom:20px;"><img src="${logoUrl}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;box-shadow:0 4px 16px rgba(0,0,0,0.08);" alt="${bizName}"></div>` : `<div style="margin-bottom:20px;"><div style="width:72px;height:72px;border-radius:16px;background:${accent};display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.12);">${bizInitial}</div></div>`}
   <div style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d0d0;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:600;color:#555;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px;">
-    ${sh.badge || t.tagline}
+    ${sh.badge ? escHtml(sh.badge) : t.tagline}
 
   </div>
   <h1 style="font-size:clamp(30px,7vw,48px);font-weight:800;color:#0a0a0a;letter-spacing:-1.2px;line-height:1.05;margin-bottom:16px;">${headline}</h1>
@@ -2936,7 +3086,7 @@ input,textarea,button{font-family:inherit}
       <a href="#subscribe" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;background:transparent;color:#0a0a0a;border:1.5px solid #d0d0d0;text-decoration:none;">${t.learnMore}</a>
     `}
   </div>
-  <p style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;" onclick="window.location.href='${website}'">${t.autoFill}</p>
+  <p style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;" data-href="${website}" onclick="window.location.href=this.getAttribute('data-href')">${t.autoFill}</p>
 </div>
 
 <!-- AUDIO -->
@@ -3065,7 +3215,7 @@ ${sa.active !== false ? `
 window.QRAIVY_PUSH_TEXT = ${pushTextJs};
 ${SLUG_CID_HELPER_JS}
 (function(){
-  var SLUG = '${slug}';
+  var SLUG = ${jsStr(slug)};
   var API  = '${apiBase}';
 
   function toast(msg) {
@@ -3076,7 +3226,7 @@ ${SLUG_CID_HELPER_JS}
   }
 
   var dark = false;
-  var _lightBg = '${storedSections.theme && storedSections.theme.lightBackgroundColor ? storedSections.theme.lightBackgroundColor : (storedSections.theme && storedSections.theme.bg ? storedSections.theme.bg : '#f8f8f8')}';
+  var _lightBg = '${_lightBgColor}';
   window.toggleTheme = function() {
     dark = !dark;
     document.getElementById('theme-knob').style.transform = dark ? 'translateX(20px)' : 'none';
@@ -3422,7 +3572,7 @@ function renderStadtPocketSmartWelcome(opts) {
     + '</div>'
     + '<div class="overlay" id="guidancePanel"><div class="sheet"><div class="sheet-title">' + t.guidanceTitle + '</div><div id="guidanceBody"></div><button class="btn-close" id="guidanceClose">' + t.close + '</button></div></div>'
     + '<script>' + SLUG_CID_HELPER_JS + '(function(){'
-    + 'var s="' + slug + '";'
+    + 'var s=' + jsStr(slug) + ';'
     + 'var RESOLVED_CID=null;try{RESOLVED_CID=resolveSlugCid(s);}catch(ex){}'
     + 'function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}'
     + 'function backToLP(){return "/lp/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");}'
@@ -3459,13 +3609,18 @@ function renderStadtPocketSmartWelcome(opts) {
 async function handleLoyaltyWelcome(req, res) {
   try {
     const { slug } = req.params;
-    const lang = req.query.lang || 'de';
+    // Phase 0 (S1): ?lang is written into the page, so only 'de' or 'en'
+    // (anything else showed the English texts before, and still does).
+    const lang = (!req.query.lang || req.query.lang === 'de') ? 'de' : 'en';
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).send('Not found');
     const sections = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
     const bizName = page.businessName || slug;
-    const color = (sections.theme && sections.theme.accentColor) || '#e8a020';
-    const logoUrl = sections.logo && sections.logo.url;
+    const color = safeColor(sections.theme && sections.theme.accentColor, '#e8a020');
+    // Phase 0 (S1): a link only (renderWelcome escapes it itself); the other
+    // two variants below write it into HTML, escaped (logoHtmlSrc).
+    const logoUrl = safeImgSrc(sections.logo && sections.logo.url) || null;
+    const logoHtmlSrc = logoUrl ? escHtml(logoUrl) : '';
     // sections.stamp is never actually populated — StampSettings (the same
     // table handleStampConfirm/generateSmartQRPass read from) is the real
     // source of truth for goal/rewardName. Reading the wrong place here
@@ -3473,10 +3628,10 @@ async function handleLoyaltyWelcome(req, res) {
     // business actually configured.
     const stampCfg = await prisma.stampSettings.findUnique({ where: { slug } });
     const goal = stampCfg ? stampCfg.goal : 10;
-    const rewardName = (stampCfg && stampCfg.rewardName) || (lang === 'de' ? 'Gratisprodukt' : 'Free Item');
+    const rewardName = escHtml((stampCfg && stampCfg.rewardName) || (lang === 'de' ? 'Gratisprodukt' : 'Free Item'));
     const logoHtml = logoUrl
-      ? '<div class="logo"><img src="' + logoUrl + '" alt="logo"></div>'
-      : '<div class="logo">' + bizName.charAt(0) + '</div>';
+      ? '<div class="logo"><img src="' + logoHtmlSrc + '" alt="logo"></div>'
+      : '<div class="logo">' + escHtml(bizName.charAt(0)) + '</div>';
     const isDE = lang === 'de';
 
     // Phase 3C.5 — Business Wallet Card copy: only for a genuinely
@@ -3491,9 +3646,9 @@ async function handleLoyaltyWelcome(req, res) {
     // the only branch that changes output; loyalty-enabled StadtPocket
     // pages and non-StadtPocket pages fall through unchanged below.
     if (isBusinessWalletCard) {
-      const smColor = page.brandColor || color;
+      const smColor = safeColor(page.brandColor, color);
       return res.send(renderStadtPocketSmartWelcome({
-        slug, isDE, bizName, logoUrl, color: smColor, city: stadtPocket.city,
+        slug, isDE, bizName, logoUrl: logoHtmlSrc, color: smColor, city: stadtPocket.city,
       }));
     }
 
@@ -3510,7 +3665,7 @@ async function handleLoyaltyWelcome(req, res) {
       const welcomeDE = (asked || saved || 'de') === 'de';
       return res.send(renderWelcome({
         slug, isDE: welcomeDE, bizName,
-        iconUrl: logoUrl || page.logoUrl || null,
+        iconUrl: logoUrl || safeImgSrc(page.logoUrl) || null,
         loyalty: loyaltyOn ? { goal: stampCfg.goal, rewardName: stampCfg.rewardName || null } : null,
         cidHelperJs: SLUG_CID_HELPER_JS,
       }));
@@ -3525,7 +3680,7 @@ async function handleLoyaltyWelcome(req, res) {
       skip: isDE ? 'Ohne Wallet fortfahren' : 'Continue without wallet',
       powered: isDE ? 'Unterstützt von' : 'Powered by',
     };
-    const html = '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - ' + bizName + '</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:' + color + ';border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.92);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:rgba(0,0,0,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:14px;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card">' + logoHtml + '<div class="biz">' + bizName + '</div><div class="badge">' + t.badge + '</div><div class="reward">' + t.reward + '</div><div class="explain">' + t.explain + '</div><button class="btn btn-apple" onclick="addAppleWallet()">' + t.apple + '</button><button class="btn btn-google" onclick="addGoogleWallet()">' + t.google + '</button><button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button></div><div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div><script>' + SLUG_CID_HELPER_JS + '(function(){var s="' + slug + '";var RESOLVED_CID=null;try{RESOLVED_CID=resolveSlugCid(s);}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function backToLP(){return "/lp/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");}function addAppleWallet(){mE();window.location.href="/lp/wallet/apple/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function addGoogleWallet(){mE();window.location.href="/lp/wallet/google/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function continueWithout(){mE();window.location.href=backToLP();}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.querySelector(".btn-apple");var gb=document.querySelector(".btn-google");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();})();<\/script></body></html>';
+    const html = '<!DOCTYPE html><html lang="' + lang + '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Welcome - ' + escHtml(bizName) + '</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}.wrap{max-width:340px;width:100%;text-align:center}.card{background:' + color + ';border-radius:24px;padding:32px 24px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.6)}.logo{width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;color:#fff}.logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}.biz{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:14px}.badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:4px 13px;border-radius:999px;margin-bottom:14px}.reward{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.4}.explain{font-size:.78rem;color:rgba(255,255,255,0.92);margin-bottom:22px;line-height:1.6;padding:0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;border:none;border-radius:14px;font-size:.92rem;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-tap-highlight-color:transparent}.btn-apple{background:#000;color:#fff}.btn-google{background:#fff;color:#222;border:1px solid #e5e5e5}.btn-skip{display:block;width:100%;padding:13px;background:rgba(0,0,0,0.15);color:#fff;border:1.5px solid rgba(255,255,255,0.6);border-radius:14px;font-size:.84rem;font-weight:600;cursor:pointer;margin-top:4px}.powered{margin-top:18px;font-size:.62rem;color:rgba(255,255,255,0.22)}.powered a{color:rgba(255,255,255,0.28);text-decoration:none}</style></head><body><div class="wrap"><div class="card">' + logoHtml + '<div class="biz">' + escHtml(bizName) + '</div><div class="badge">' + t.badge + '</div><div class="reward">' + t.reward + '</div><div class="explain">' + t.explain + '</div><button class="btn btn-apple" onclick="addAppleWallet()">' + t.apple + '</button><button class="btn btn-google" onclick="addGoogleWallet()">' + t.google + '</button><button class="btn-skip" onclick="continueWithout()">' + t.skip + '</button></div><div class="powered">' + t.powered + ' <a href="https://qraivy.com">Qraivy</a></div></div><script>' + SLUG_CID_HELPER_JS + '(function(){var s=' + jsStr(slug) + ';var RESOLVED_CID=null;try{RESOLVED_CID=resolveSlugCid(s);}catch(ex){}function mE(){try{localStorage.setItem("wEnr_"+s,"1");}catch(ex){}}function backToLP(){return "/lp/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");}function addAppleWallet(){mE();window.location.href="/lp/wallet/apple/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function addGoogleWallet(){mE();window.location.href="/lp/wallet/google/"+s+(RESOLVED_CID?"?cid="+encodeURIComponent(RESOLVED_CID):"");setTimeout(function(){window.location.href=backToLP();},4000);}function continueWithout(){mE();window.location.href=backToLP();}window.addAppleWallet=addAppleWallet;window.addGoogleWallet=addGoogleWallet;window.continueWithout=continueWithout;(function(){var ua=navigator.userAgent;var isIOS=/iPhone|iPad|iPod/i.test(ua);var isAndroid=/Android/i.test(ua);var ab=document.querySelector(".btn-apple");var gb=document.querySelector(".btn-google");if(isIOS){if(gb)gb.style.display="none";}else if(isAndroid){if(ab)ab.style.display="none";}else{if(ab)ab.style.display="none";if(gb)gb.style.display="none";}})();})();<\/script></body></html>';
     return res.send(html);
   } catch(e) {
     console.error('[LoyaltyWelcome] Error:', e.message);
@@ -3538,7 +3693,8 @@ async function handleLoyaltyWelcome(req, res) {
 // Not high-security — this is a lightweight barrier so staff don't need
 // the business owner's Clerk account, not an access-control boundary.
 
-const _pinHash = (pin) => require('crypto').createHash('sha256').update(String(pin).trim() + 'qraivy-pin-salt').digest('hex');
+// Phase 0 (S5): PINs are hashed and checked by services/staffPin.js (salted
+// scrypt; PINs set before keep working).
 
 async function handleSetStaffPin(req, res) {
   try {
@@ -3547,9 +3703,11 @@ async function handleSetStaffPin(req, res) {
     if (!pin || String(pin).trim().length < 4) return res.status(400).json({ error: 'PIN must be at least 4 digits.' });
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
-    if (page.userId && req.userId && page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    // Phase 0 (S5): the page's owner only; a page without an owner, a
+    // platform admin only (before, any signed-in account could set it).
+    if (!(await ownerOrAdmin(page, req.userId))) return res.status(403).json({ error: 'Forbidden' });
     let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
-    sec.staffPin = _pinHash(pin);
+    sec.staffPin = staffPin.hashPin(pin);
     await prisma.landingPage.update({ where: { slug }, data: { sections: JSON.stringify(sec) } });
     pageCache.delByPrefix('lp:' + slug);
     return res.json({ ok: true });
@@ -3594,8 +3752,12 @@ async function handleVerifyStaffPin(req, res) {
     const page = await prisma.landingPage.findUnique({ where: { slug } });
     if (!page) return res.status(404).json({ error: 'Page not found.' });
     let sec = page.sections ? JSON.parse(typeof page.sections === 'string' ? page.sections : JSON.stringify(page.sections)) : {};
-    if (!sec.staffPin) return res.status(404).json({ error: 'No PIN set for this page.' });
-    if (sec.staffPin !== _pinHash(pin)) return res.status(401).json({ error: 'Incorrect PIN.' });
+    // Phase 0 (S5): wrong PINs are limited per page (services/staffPin.js).
+    const r = staffPin.checkPin(slug, pin, sec.staffPin);
+    if (!r.ok) {
+      if (r.status !== 404) logSecurityEvent('STAFF_PIN_DENIED', req, { slug, status: r.status });
+      return res.status(r.status).json({ error: r.error });
+    }
     return res.json({ ok: true, slug });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 }

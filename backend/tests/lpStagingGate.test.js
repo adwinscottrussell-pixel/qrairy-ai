@@ -590,7 +590,9 @@ test('F. two requests for the same greeting at once still make one recording and
 });
 
 // ── G. The editor on staging ───────────────────────────────────
-test('G. on staging the editor reads the page with the owner\'s sign-in; in production that request is exactly as before', async () => {
+// Phase 0 (S4, tests/lpGetAuth.test.js): production answers the page record only to its owner
+// too, so the editor now sends the sign-in there as well.
+test('G. the editor reads the page with the owner\'s sign-in, on staging and in production', async () => {
   function run(hostname, config) {
     const els = {}, fetches = [];
     const mk = (id) => (els[id] = { id, value: '', textContent: '', style: {}, attrs: {}, listeners: {}, addEventListener(ev, fn) { this.listeners[ev] = fn; }, setAttribute(k, v) { this.attrs[k] = v; } });
@@ -608,9 +610,10 @@ test('G. on staging the editor reads the page with the owner\'s sign-in; in prod
   }
   const prod = run('www.qraivy.com', { hosts: [], api: '' });
   assert.equal(prod.mode, 'production');
-  assert.equal(prod.fetches.length, 1, 'sent at once, as before');
+  for (let i = 0; i < 6; i++) await new Promise((r) => setImmediate(r));
+  assert.equal(prod.fetches.length, 1);
   assert.match(prod.fetches[0].url, /^https:\/\/api\.qraivy\.com\/api\/lp\/casa-lumi-ab1\?t=\d+$/);
-  assert.equal(prod.fetches[0].init, undefined, 'no headers added in production');
+  assert.deepEqual(JSON.parse(JSON.stringify(prod.fetches[0].init)), { headers: { Authorization: 'Bearer tok-owner' } }, 'production: the owner\'s sign-in is sent');
 
   const stg = run('voice-preview.example', { hosts: ['voice-preview.example'], api: 'https://voice-api.example' });
   assert.equal(stg.mode, 'staging');

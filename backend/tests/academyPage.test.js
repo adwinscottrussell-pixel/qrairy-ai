@@ -172,9 +172,21 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
   const allowed = ['backend/tests/academyPage.test.js', 'backend/tests/adminNavShell.test.js', 'backend/tests/helpers/academyFiles.js',
     'backend/tests/lpDeleteAuth.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'backend/tests/lpStagingFrontend.test.js', 'frontend/public/academy.css', 'frontend/public/academy.html',
     'frontend/public/js/academy-catalog.js', 'frontend/public/js/academy.js', 'frontend/public/js/admin-shell.js'].concat(PAGES.map((p) => 'frontend/public/' + p));
-  for (const f of changed) assert.ok(allowed.includes(f), 'unexpected change: ' + f);
-  // each Admin page gained exactly the one sidebar line
+  // Phase 0 security release (tests/helpers/phase0Files.js) came after the Academy.
+  const { PHASE0_FILES } = require('./helpers/phase0Files');
+  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f), 'unexpected change: ' + f);
+  // each Admin page gained exactly the one sidebar line (smart-qr-detail.html: after undoing
+  // exactly the Phase 0 edit, tests/helpers/phase0Revert.js)
+  const { revertSqd0 } = require('./helpers/phase0Revert');
   for (const p of PAGES) {
+    if (p === 'smart-qr-detail.html') {
+      const before = execFileSync('git', ['show', '12df76d:frontend/public/' + p], { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).replace(/\r\n/g, '\n').split('\n');
+      const now = revertSqd0(read(p)).split('\n');
+      const added = now.filter((l) => l.includes('<a href="academy.html" class="sb-item'));
+      assert.equal(added.length, 1, p);
+      assert.deepEqual(now.filter((l) => !l.includes('<a href="academy.html" class="sb-item')), before, p + ': only the sidebar line besides Phase 0');
+      continue;
+    }
     const d = execFileSync('git', ['diff', '12df76d', '--numstat', '--', 'frontend/public/' + p], { cwd: ROOT, encoding: 'utf8' }).trim();
     assert.equal(d.split('\t').slice(0, 2).join(' '), '1 0', p + ': ' + d);
     assert.ok(read(p).includes('<a href="academy.html" class="sb-item'), p);

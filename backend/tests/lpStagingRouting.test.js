@@ -449,7 +449,9 @@ test('E. production: the rendered customer page is byte-for-byte what it was bef
   const renderedLines = rendered.split('\n');
   const pushAt = renderedLines.findIndex(isPushLine);
   renderedLines[pushAt] = revertPush55c3(renderedLines[pushAt], baseLine, 'https://www.qraivy.com');
-  const now = revertPage55c4(revertInline55c3(renderedLines.join('\n')))
+  // Phase 0 (S1) escaping: undone exactly by tests/helpers/phase0Revert.js.
+  const { revertPage0 } = require('./helpers/phase0Revert');
+  const now = revertPage0(revertPage55c4(revertInline55c3(renderedLines.join('\n'))))
     .replace(pushJson[0], '')
     .replace('(function(){var _pt=window.QRAIVY_PUSH_TEXT;', '(function(){')
     .replace("'+_pt.hintTitle+'", '📲 Benachrichtigungen aktivieren')

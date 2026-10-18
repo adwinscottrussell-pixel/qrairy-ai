@@ -137,10 +137,13 @@ test('managers: no other account (StadtPocket business members, city managers) g
 test('internal workflows are unchanged: stamp and reward pushes, the Wallet owner push, the subscribe and key routes', () => {
   const ctl = SRC('controllers/lpController.js'), before = HEAD('backend/src/controllers/lpController.js');
   const fn = (s, name) => s.slice(s.indexOf('async function ' + name + '('), s.indexOf('\n}\n', s.indexOf('async function ' + name + '(')));
-  for (const name of ['handleRedeemTapConfirm', 'handleWebPushVapidKey', 'handleStamp']) assert.equal(fn(ctl, name), fn(before, name), name);
+  // Phase 0 (tests/lpRenderEscaping.test.js, tests/stampCodeAuth.test.js) changed the stamp page's slug
+  // and moved the loyalty-record count into the confirm step: undone exactly by revertStamp0.
+  const { revertStamp0 } = require('./helpers/phase0Revert');
+  for (const name of ['handleRedeemTapConfirm', 'handleWebPushVapidKey', 'handleStamp']) assert.equal(revertStamp0(fn(ctl, name)), fn(before, name), name);
   // Phase 5.5C.3 changed these two on purpose (tests/pushPageSubscriptions.test.js): stamp messages go to the
   // stamped customer only; subscribing is per page. Apart from that, the stamp flow is as before.
-  assert.equal(require('./helpers/push55c3Revert').revertStamp55c3(fn(ctl, 'handleStampConfirm')), fn(before, 'handleStampConfirm'), 'handleStampConfirm');
+  assert.equal(require('./helpers/push55c3Revert').revertStamp55c3(revertStamp0(fn(ctl, 'handleStampConfirm'))), fn(before, 'handleStampConfirm'), 'handleStampConfirm');
   assert.equal(SRC('controllers/walletController.js'), HEAD('backend/src/controllers/walletController.js'), 'POST /wallet/push/:passId keeps its own owner check');
   assert.ok(SRC('controllers/walletController.js').includes("if (pass.userId !== userId) return res.status(403)"));
 });

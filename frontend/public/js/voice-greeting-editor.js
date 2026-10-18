@@ -447,12 +447,10 @@
     (function poll() {
       if (token !== pollToken) return;
       tries += 1;
-      // Production reads the page as before. A staging API answers this
-      // only to the signed-in owner, so there the token is sent along.
+      // The page record is answered only to the signed-in owner (staging
+      // and, since Phase 0, production), so the token is always sent along.
       var pageUrl = API + '/api/lp/' + encodeURIComponent(slug) + '?t=' + Date.now();
-      var read = window.QRAIVY_ROUTING.mode === 'staging'
-        ? Promise.resolve(authToken()).then(function (tok) { return fetch(pageUrl, tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : undefined); })
-        : fetch(pageUrl);
+      var read = Promise.resolve(authToken()).then(function (tok) { return fetch(pageUrl, tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : undefined); });
       read
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (page) {

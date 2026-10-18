@@ -239,7 +239,7 @@ test('no schema, migration, Wallet, push, loyalty, StadtPocket, billing or front
     'backend/src/services/apnsService.js', 'backend/src/controllers/walletController.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js',
     'backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/stadtPocketContext.js', 'backend/src/routes/stadtpocketPublicRoutes.js',
     'backend/src/routes/managerStadtpocketListingRoutes.js', 'backend/src/routes/stripeRoutes.js', 'backend/src/services/customerIdentityService.js',
-    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();
+    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES, ...require('./helpers/phase0Files').PHASE0_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();
   assert.equal(changed, '');
 });
 
