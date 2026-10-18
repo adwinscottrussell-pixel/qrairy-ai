@@ -12,7 +12,7 @@
 (function () {
   var T = {
     en: {
-      nav_main: 'Main', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
+      nav_main: 'Main', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics', nav_academy: 'Academy',
       nav_smartpages: 'Smart Pages', nav_sqrpages: 'Smart QR Pages', nav_createnew: 'Create New QR',
       nav_dealspromo: 'Deals & Promotions', nav_deals: 'All Deals',
       nav_engage: 'Engage', nav_campaigns: 'AI Campaigns', nav_customers: 'Customers', nav_loyalty: 'Loyalty',
@@ -27,7 +27,7 @@
       settings_signed_in: 'Signed in as', settings_role: 'Role'
     },
     de: {
-      nav_main: 'Hauptmenü', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics',
+      nav_main: 'Hauptmenü', nav_dashboard: 'Dashboard', nav_analytics: 'Analytics', nav_academy: 'Academy',
       nav_smartpages: 'Smart Pages', nav_sqrpages: 'Smart QR-Seiten', nav_createnew: 'Neuen QR erstellen',
       nav_dealspromo: 'Deals & Aktionen', nav_deals: 'Alle Deals',
       nav_engage: 'Engagement', nav_campaigns: 'KI-Kampagnen', nav_customers: 'Kunden', nav_loyalty: 'Treue',

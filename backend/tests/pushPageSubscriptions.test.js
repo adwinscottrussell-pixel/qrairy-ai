@@ -496,7 +496,8 @@ test('page: the settings section is part of the page (before the footer), hidden
 test('nothing else changed: service workers, VAPID key route, StadtPocket and Wallet files', () => {
   const changed = execFileSync('git', ['diff', '0cd8e45', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/services/passService.js',
     'backend/src/services/googleWalletService.js', 'backend/src/services/apnsService.js', 'backend/src/services/stadtPocketContext.js', 'backend/src/routes/managerRoutes.js',
-    'backend/src/routes/managerStadtpocketListingRoutes.js', 'backend/src/routes/stadtpocketPublicRoutes.js', 'backend/src/controllers/walletController.js', 'frontend/public'], { cwd: ROOT, encoding: 'utf8' }).trim();
+    'backend/src/routes/managerStadtpocketListingRoutes.js', 'backend/src/routes/stadtpocketPublicRoutes.js', 'backend/src/controllers/walletController.js', 'frontend/public',
+    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES], { cwd: ROOT, encoding: 'utf8' }).trim();   // Academy: tests/academyPage.test.js
   assert.equal(changed, '');
 });
 

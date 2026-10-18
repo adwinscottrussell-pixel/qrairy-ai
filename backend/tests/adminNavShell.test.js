@@ -36,6 +36,7 @@ const ACTIVE = {
   'loyalty-setup.html': 'id="sb-loyalty"',
   'designer-saved.html': null,
   'smart-qr-detail.html': 'id="sb-smart-pages"',
+  'academy.html': 'id="sb-academy"',
 };
 const canonical = sidebar(read('dashboard.html')).replace(/class="sb-item active"/g, 'class="sb-item"');
 
@@ -63,13 +64,13 @@ for (const [page, active] of Object.entries(ACTIVE)) {
 
 test('canonical menu: six tabs, their items and destinations', () => {
   const items = [...canonical.matchAll(/data-i18n="(nav_[a-z]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(items, ['nav_main', 'nav_dashboard', 'nav_analytics', 'nav_smartpages', 'nav_sqrpages', 'nav_createnew',
+  assert.deepEqual(items, ['nav_main', 'nav_dashboard', 'nav_analytics', 'nav_academy', 'nav_smartpages', 'nav_sqrpages', 'nav_createnew',
     'nav_dealspromo', 'nav_deals',
     'nav_engage', 'nav_campaigns', 'nav_customers', 'nav_loyalty', 'nav_configure', 'nav_wallet', 'nav_account', 'nav_billing', 'nav_settings', 'nav_signout']);
   const tabs = [...canonical.matchAll(/<div class="sb-tab" data-tab="([a-z]+)">/g)].map((m) => m[1]);
   assert.deepEqual(tabs, ['main', 'smartpages', 'deals', 'engage', 'configure', 'account']);
   const hrefs = [...canonical.matchAll(/<a href="([^"]*)" class="sb-item/g)].map((m) => m[1]);
-  assert.deepEqual(hrefs, ['dashboard.html', 'analytics.html', 'dashboard.html?section=sqr', 'dashboard.html?launch=onboarding',
+  assert.deepEqual(hrefs, ['dashboard.html', 'analytics.html', 'academy.html', 'dashboard.html?section=sqr', 'dashboard.html?launch=onboarding',
     'deals.html',
     'dashboard.html?section=campaigns', 'dashboard.html?section=customers', 'dashboard.html?section=loyalty',
     'wallet-pass-studio.html', 'dashboard.html?section=billing', 'dashboard.html?section=settings']);
@@ -81,7 +82,7 @@ test('canonical menu: six tabs, their items and destinations', () => {
     assert.ok(t.includes('<div class="sb-sub" id="sb-sub-' + name + '">'), name + ': submenu');
   }
   // the ids the pages' own scripts use are all still there, once
-  for (const id of ['sb-smart-pages', 'sqr-count-badge', 'sb-create-sqr', 'sb-campaigns', 'sb-customers', 'sb-loyalty', 'sb-wallet', 'sb-billing', 'sb-settings', 'sb-toggle', 'sb-deals']) {
+  for (const id of ['sb-smart-pages', 'sqr-count-badge', 'sb-create-sqr', 'sb-campaigns', 'sb-customers', 'sb-loyalty', 'sb-wallet', 'sb-billing', 'sb-settings', 'sb-toggle', 'sb-deals', 'sb-academy']) {
     assert.equal((canonical.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id);
   }
   assert.ok(canonical.includes('id="sb-username"') && canonical.includes('id="lang-toggle"') && canonical.includes('id="sb-signout"'));
