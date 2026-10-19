@@ -104,7 +104,7 @@ async function openScanner({ search = '', auth = null, pins = {} } = {}) {
       querySelectorAll: () => [],
       addEventListener() {},
     },
-    location: { search },
+    location: { search, hostname: 'www.qraivy.com', origin: 'https://www.qraivy.com' },
     URLSearchParams, URL, Promise, JSON, Date, Error,
     sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     fetch: server(calls),
@@ -290,12 +290,14 @@ test('?slug= is shown as text, never as markup', async () => {
   assert.equal(p.els['slug-select'].options[0].textContent, '"><img src=x onerror=alert(1)>');
 });
 
-test('server rules unchanged: this change touches only the scanner page (and its tests)', () => {
+// Staging isolation follow-up: the scanner's staging API choice and the
+// staging-only gate entries for it (scannerStagingIsolation.test.js).
+test('server rules unchanged: this change touches only the scanner page, the staging-only gate (and their tests)', () => {
   const { execFileSync } = require('child_process');
   const ROOT = path.join(__dirname, '..', '..');
   const changed = execFileSync('git', ['diff', 'ae2861e', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)
     .concat(execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)).sort();
-  assert.deepEqual(changed, ['backend/tests/helpers/phase0Files.js', 'backend/tests/scannerAccess.test.js', 'backend/tests/stampCodeAuth.test.js', 'frontend/public/stamp-scanner.html']);
+  assert.deepEqual(changed, ['backend/src/middleware/stagingGate.js', 'backend/tests/dealsPreviewSafety.test.js', 'backend/tests/helpers/phase0Files.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingGate.test.js', 'backend/tests/pushCampaignAuth.test.js', 'backend/tests/scannerAccess.test.js', 'backend/tests/scannerStagingIsolation.test.js', 'backend/tests/stampCodeAuth.test.js', 'frontend/public/stamp-scanner.html']);
 });
 
 // helpers used above
@@ -308,7 +310,7 @@ async function openScannerWith(search, fetchImpl) {
   const ctx = {
     window: { Clerk: { load: async () => {}, user: null, session: null } },
     document: { readyState: 'complete', getElementById: (id) => (els[id] = els[id] || element(id)), createElement: () => ({}), querySelectorAll: () => [], addEventListener() {} },
-    location: { search }, URLSearchParams, URL, Promise, JSON, Date, Error,
+    location: { search, hostname: 'www.qraivy.com', origin: 'https://www.qraivy.com' }, URLSearchParams, URL, Promise, JSON, Date, Error,
     sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     fetch: fetchImpl, setTimeout: () => 0, navigator: {}, cancelAnimationFrame() {}, requestAnimationFrame() {},
   };

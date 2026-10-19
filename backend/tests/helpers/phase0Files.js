@@ -17,6 +17,10 @@ const PHASE0_FILES = PHASE0_FRONTEND.concat([
   'backend/tests/staffPinAuth.test.js',
   // scanner access follow-up: the scanner opens only after the server's yes
   'backend/tests/scannerAccess.test.js',
+  // scanner staging isolation: the staging site's scanner uses the staging
+  // API only; the staging-only gate admits its requests for test pages
+  'backend/src/middleware/stagingGate.js',
+  'backend/tests/scannerStagingIsolation.test.js',
   // older tests adjusted to the intended Phase 0 behaviour
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

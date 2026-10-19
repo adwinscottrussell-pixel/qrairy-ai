@@ -25,6 +25,15 @@
  * "user" -- signed in AND on the allowlist. Exactly its routes (deals,
  * image, placements, own pages); anything else under /deals is refused
  * like every other path.
+ *
+ * Stamp scanner (group "scanner"): the four requests stamp-scanner.html
+ * makes, as "test-page" -- no sign-in at the gate (staff use the staff
+ * PIN), but the page in the path must belong to an allowlisted account,
+ * so only test pages can be scanned or stamped. The route then applies its
+ * own rules as in production (stamp code: owner sign-in or server-checked
+ * PIN; stamp: a valid stamp code). Plus the owner's program list ("user").
+ * Setting a PIN, NFC codes, stamp settings, redeeming and the old stamp
+ * paths stay refused.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -54,6 +63,11 @@ const ALLOWED_ROUTES = [
   { method: 'GET',    path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: list placements' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: add a placement (own pages only)' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements/' + DEAL_ID + '/(?:publish|archive)$'), access: 'user', what: 'Deals: publish or archive a placement' },
+  { method: 'GET',  path: new RegExp('^/lp/staff-pin/(' + SLUG + ')/status$'),                  access: 'test-page', group: 'scanner', what: 'scanner: does the page have a staff PIN (yes/no only)' },
+  { method: 'POST', path: new RegExp('^/lp/staff-pin/(' + SLUG + ')/verify$'),                  access: 'test-page', group: 'scanner', what: 'scanner: check an entered staff PIN (wrong PINs limited per page)' },
+  { method: 'GET',  path: new RegExp('^/lp/stamp/token/(' + SLUG + ')$'),                       access: 'test-page', group: 'scanner', what: 'scanner: daily stamp code (owner sign-in or staff PIN, checked by the route)' },
+  { method: 'POST', path: new RegExp('^/stamp/(' + SLUG + ')/[A-Za-z0-9]{1,64}/confirm$'),       access: 'test-page', group: 'scanner', what: 'scanner: one stamp (needs a valid stamp code)' },
+  { method: 'GET',  path: /^\/loyalty\/programs$/,                                               access: 'user',      group: 'scanner', what: 'scanner: the owner\'s own loyalty programs' },
 ];
 
 function matchRoute(method, path) {
@@ -70,6 +84,21 @@ function createStagingGate({ allowedUserIds, authenticate = requireAuth, findPag
     const route = matchRoute(req.method, req.path);
     if (!route) return res.status(404).json({ error: 'Not available on staging.', code: 'staging_scope' });
     if (route.access === 'public') return next();
+    if (route.access === 'test-page') {
+      // No sign-in here: the route decides who may scan. The gate only keeps
+      // it to pages of allowlisted (test) accounts. A missing page goes on to
+      // the route, which answers 404 itself.
+      const slug = route.path.exec(req.path)[1];
+      return Promise.resolve().then(() => findPageOwner(slug)).then((page) => {
+        if (page && (!page.userId || !allowed.has(page.userId))) {
+          return res.status(403).json({ error: 'This page is not a staging test page.', code: 'staging_page' });
+        }
+        return next();
+      }).catch((err) => {
+        console.error('[staging gate]', err && err.message);
+        return res.status(503).json({ error: 'Staging could not verify this request.', code: 'staging_unverified' });
+      });
+    }
 
     // Same token verification as production. It answers 401 itself.
     return authenticate(req, res, async () => {

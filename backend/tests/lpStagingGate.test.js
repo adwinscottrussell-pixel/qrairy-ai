@@ -137,7 +137,7 @@ async function through(gate, method, url, user) {
 test('B. exactly seven kinds of request are allowed, and only two of them without sign-in beyond page playback and its welcome screen', () => {
   // ...plus the owner Deals routes, all "user" (dealsPreviewSafety.test.js)
   assert.deepEqual(ALLOWED_ROUTES.slice(0, 7).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
-  assert.ok(ALLOWED_ROUTES.slice(7).every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the seven is a signed-in Deals route');
+  assert.ok(ALLOWED_ROUTES.slice(7).filter((r) => r.group !== 'scanner').every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the seven is a signed-in Deals route, or the stamp scanner group (section H)');
   const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/lp/welcome/casa-lumi-ab1'], ['HEAD', '/lp/welcome/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
   for (const [m, p] of allowed) assert.ok(matchRoute(m, p), m + ' ' + p);
 });
@@ -150,7 +150,8 @@ test('B. everything else is refused before any route code or sign-in check runs'
     // wallet, passes
     ['GET', '/lp/wallet/apple/s'], ['GET', '/lp/wallet/google/s'], ['GET', '/lp/wallet-hero/s'], ['GET', '/wallet/x'], ['POST', '/pass/v1/devices/a/registrations/b/c'],
     // stamp, loyalty, rewards, staff
-    ['GET', '/stamp/s/tok'], ['POST', '/stamp/s/tok/confirm'], ['POST', '/stamp/s/customer'], ['GET', '/redeem/s/tok'], ['POST', '/redeem/s/tok/confirm'], ['GET', '/lp/card/s'], ['GET', '/lp/nfc-token/s'], ['GET', '/lp/stamp/token/s'], ['POST', '/lp/stamp/settings/s'], ['GET', '/lp/stamp/settings/s'], ['GET', '/loyalty/x'], ['GET', '/tier/x'], ['POST', '/lp/staff-pin/s'], ['POST', '/lp/staff-pin/s/verify'], ['GET', '/lp/staff-pin/s/status'],
+    // (the stamp scanner's own four requests are section H)
+    ['GET', '/stamp/s/tok'], ['POST', '/stamp/s/customer'], ['GET', '/redeem/s/tok'], ['POST', '/redeem/s/tok/confirm'], ['GET', '/lp/card/s'], ['GET', '/lp/nfc-token/s'], ['POST', '/lp/stamp/settings/s'], ['GET', '/lp/stamp/settings/s'], ['GET', '/loyalty/x'], ['GET', '/tier/x'], ['POST', '/lp/staff-pin/s'],
     // customer communication and customer data
     ['POST', '/lp/push/s'], ['GET', '/lp/push/s/count'], ['GET', '/lp/push/s/history'], ['POST', '/lp/webpush/subscribe/s'], ['GET', '/lp/webpush/vapid-key/s'], ['POST', '/lp/subscribe/s'], ['GET', '/lp/subscribers/s'], ['GET', '/customers/x'],
     // uploads, assistant, QR codes, dashboards, everything about other pages
@@ -209,14 +210,14 @@ test('B. no router mounted ahead of the landing page router can answer an allowe
   assert.ok(!/method-override|X-HTTP-Method/i.test(index), 'the method cannot be overridden by a header');
 });
 
-test('B. every route the landing page router really has is refused, except the five staging needs', () => {
+test('B. every route the landing page router really has is refused, except the five staging needs and the stamp scanner\'s four', () => {
   const seed = (file, exports) => { const f = require.resolve(file); if (!require.cache[f]) require.cache[f] = { id: f, filename: f, loaded: true, exports }; };
   seed(path.join(SRC, 'utils', 'prismaClient.js'), {});
   const router = require(resolveSrc('routes', 'lpRoutes.js'));
   const real = router.stack.filter((l) => l.route).flatMap((l) => Object.keys(l.route.methods).map((m) => [m.toUpperCase(), l.route.path]));
   assert.ok(real.length >= 34);
   const allowedHere = real.filter(([m, p]) => matchRoute(m, p.replace(/:(\w+)/g, 'x')));
-  assert.deepEqual(allowedHere.map(([m, p]) => m + ' ' + p).sort(), ['GET /api/lp/:slug', 'GET /lp/:slug', 'GET /lp/welcome/:slug', 'POST /lp', 'POST /lp/voice/preview/:slug']);
+  assert.deepEqual(allowedHere.map(([m, p]) => m + ' ' + p).sort(), ['GET /api/lp/:slug', 'GET /lp/:slug', 'GET /lp/staff-pin/:slug/status', 'GET /lp/stamp/token/:slug', 'GET /lp/welcome/:slug', 'POST /lp', 'POST /lp/staff-pin/:slug/verify', 'POST /lp/voice/preview/:slug', 'POST /stamp/:slug/:token/confirm']);
 });
 
 test('B. the welcome screen opens nothing else: its wallet, push and look-alike paths stay refused', () => {
@@ -348,6 +349,10 @@ test('D. staging server: starts with the gate, answers health, refuses everythin
     // the running server: alternate spellings and other methods of allowed paths are refused too
     for (const [m, p] of [['GET', '/LP/some-page'], ['GET', '/lp/some-page/'], ['GET', '//lp/some-page'], ['GET', '/API/lp/some-page'], ['GET', '/api/lp/some-page/'], ['GET', '/health/'], ['GET', '/HEALTH'], ['POST', '/lp/'], ['POST', '/LP'], ['PUT', '/lp'], ['PATCH', '/lp'], ['DELETE', '/lp'], ['POST', '/health'], ['PUT', '/lp/voice/preview/some-page'], ['POST', '/lp/voice/preview/some-page/']]) {
       assert.deepEqual(await call(s.port, m, p), { status: 404, code: 'staging_scope' }, m + ' ' + p);
+    }
+    // stamp scanner (section H): admitted to the test-page check, which fails closed without a database
+    for (const [m, p] of [['GET', '/lp/staff-pin/some-page/status'], ['POST', '/lp/staff-pin/some-page/verify'], ['GET', '/lp/stamp/token/some-page'], ['POST', '/stamp/some-page/abcd1234/confirm']]) {
+      assert.deepEqual(await call(s.port, m, p), { status: 503, code: 'staging_unverified' }, m + ' ' + p);
     }
     // in scope, but only with a valid sign-in
     for (const [m, p] of [['POST', '/lp'], ['POST', '/lp/voice/preview/some-page'], ['GET', '/api/lp/some-page']]) {
@@ -621,6 +626,73 @@ test('G. the editor reads the page with the owner\'s sign-in, on staging and in 
   assert.equal(stg.fetches.length, 1);
   assert.match(stg.fetches[0].url, /^https:\/\/voice-api\.example\/api\/lp\/casa-lumi-ab1\?t=\d+$/);
   assert.deepEqual(JSON.parse(JSON.stringify(stg.fetches[0].init)), { headers: { Authorization: 'Bearer tok-owner' } });
+});
+
+// ── H. The stamp scanner on staging ────────────────────────────
+// stamp-scanner.html on the staging site talks to the staging API only
+// (scannerStagingIsolation.test.js); these are the requests it makes there.
+const SCANNER_REQUESTS = [['GET', '/lp/staff-pin/PAGE/status'], ['POST', '/lp/staff-pin/PAGE/verify'], ['GET', '/lp/stamp/token/PAGE'], ['POST', '/stamp/PAGE/abcd1234/confirm']];
+const scannerCall = (page) => SCANNER_REQUESTS.map(([m, p]) => [m, p.replace('PAGE', page)]);
+
+test('H. exactly five scanner routes: the four requests of the scanner as "test-page", the owner\'s program list as "user"', () => {
+  const group = ALLOWED_ROUTES.filter((r) => r.group === 'scanner');
+  assert.deepEqual(group.map((r) => `${r.method} ${r.access} ${r.path.source}`), [
+    'GET test-page ^\\/lp\\/staff-pin\\/([A-Za-z0-9][A-Za-z0-9_-]{0,119})\\/status$',
+    'POST test-page ^\\/lp\\/staff-pin\\/([A-Za-z0-9][A-Za-z0-9_-]{0,119})\\/verify$',
+    'GET test-page ^\\/lp\\/stamp\\/token\\/([A-Za-z0-9][A-Za-z0-9_-]{0,119})$',
+    'POST test-page ^\\/stamp\\/([A-Za-z0-9][A-Za-z0-9_-]{0,119})\\/[A-Za-z0-9]{1,64}\\/confirm$',
+    'GET user ^\\/loyalty\\/programs$',
+  ]);
+  assert.ok(ALLOWED_ROUTES.filter((r) => r.access === 'test-page').every((r) => r.group === 'scanner'), 'no other route uses the test-page rule');
+  // everything else about loyalty stays refused: setting a PIN, NFC codes, settings, redeeming, the old stamp paths
+  for (const [m, p] of [['POST', '/lp/staff-pin/s'], ['GET', '/lp/nfc-token/s'], ['GET', '/lp/stamp/settings/s'], ['POST', '/lp/stamp/settings/s'], ['GET', '/stamp/s/abcd1234'], ['POST', '/stamp/s/customer'],
+    ['GET', '/redeem/s/tok'], ['POST', '/redeem/s/tok/confirm'], ['GET', '/lp/card/s'], ['POST', '/loyalty/programs'], ['GET', '/loyalty/programs/x'], ['GET', '/loyalty/programs/x/customers'], ['POST', '/loyalty/programs/x/stamp'],
+    ['GET', '/lp/staff-pin/s/verify'], ['POST', '/lp/staff-pin/s/status'], ['POST', '/lp/stamp/token/s'], ['GET', '/stamp/s/abcd1234/confirm'], ['POST', '/stamp/s/abc-123/confirm'], ['POST', '/stamp/s/abcd1234/confirm/x'],
+    ['GET', '/lp/staff-pin/s/status/'], ['GET', '/LP/stamp/token/s'], ['GET', '/lp/stamp/token/s/x'], ['GET', '/loyalty/programs/']]) {
+    assert.equal(matchRoute(m, p), null, m + ' ' + p);
+  }
+});
+
+test('H. a scanner request needs no sign-in at the gate, but only for a page of an allowlisted (test) account', async () => {
+  const { gate, calls } = gateWith();
+  for (const [m, p] of scannerCall('alice-page').concat(scannerCall('bob-page'))) {
+    assert.deepEqual(await through(gate, m, p, null), { passed: true, status: 200, code: undefined }, 'staff without sign-in: ' + m + ' ' + p);
+  }
+  assert.equal(calls.auth, 0, 'the gate itself asks for no sign-in (the route checks owner or staff PIN)');
+  for (const [m, p] of scannerCall('ownerless')) {
+    assert.deepEqual(await through(gate, m, p, ALICE), { passed: false, status: 403, code: 'staging_page' }, 'a page without an owner: ' + m + ' ' + p);
+  }
+  assert.equal((await through(gate, 'GET', '/lp/stamp/token/does-not-exist', null)).passed, true, 'a missing page goes on to the route, which answers 404');
+});
+
+test('H. a page of an account not on the allowlist (a real customer) is refused, signed in or not', async () => {
+  const { gate } = gateWith({ ownerLookup: async (slug) => ({ 'mallory-page': { userId: MALLORY } })[slug] || null });
+  for (const [m, p] of scannerCall('mallory-page')) {
+    for (const user of [null, MALLORY, ALICE]) {
+      assert.deepEqual(await through(gate, m, p, user), { passed: false, status: 403, code: 'staging_page' }, (user || 'signed out') + ': ' + m + ' ' + p);
+    }
+  }
+});
+
+test('H. if the gate cannot look up the page it refuses; the owner\'s program list needs sign-in and the allowlist', async () => {
+  const realError = console.error; console.error = () => {};
+  try {
+    const { gate } = gateWith({ ownerLookup: async () => { throw new Error('database unreachable'); } });
+    for (const [m, p] of scannerCall('alice-page')) assert.deepEqual(await through(gate, m, p, ALICE), { passed: false, status: 503, code: 'staging_unverified' }, m + ' ' + p);
+  } finally { console.error = realError; }
+  const { gate } = gateWith();
+  assert.deepEqual(await through(gate, 'GET', '/loyalty/programs', null), { passed: false, status: 401, code: undefined });
+  assert.deepEqual(await through(gate, 'GET', '/loyalty/programs', MALLORY), { passed: false, status: 403, code: 'staging_account' });
+  assert.deepEqual(await through(gate, 'GET', '/loyalty/programs?_=1', ALICE), { passed: true, status: 200, code: undefined });
+});
+
+test('H. the scanner routes keep their own production rules behind the gate', () => {
+  const routes = read(SRC, 'routes', 'lpRoutes.js');
+  for (const line of ["router.post('/stamp/:slug/:token/confirm', handleStampConfirm);", "router.get('/lp/stamp/token/:slug', handleGetStampToken);", "router.get('/lp/staff-pin/:slug/status', handleGetStaffPinStatus);", "router.post('/lp/staff-pin/:slug/verify', handleVerifyStaffPin);", "router.post('/lp/staff-pin/:slug', requireAuth, handleSetStaffPin);"]) assert.ok(routes.includes(line), line);
+  assert.match(read(SRC, 'routes', 'loyaltyAdminRoutes.js'), /router\.get\('\/programs',\s+requireAuth, listPrograms\);/);
+  const lp = read(SRC, 'controllers', 'lpController.js');
+  assert.match(lp, /const auth = await authorizeStampCode\(req, slug, \{ allowPin: true \}\);\n    if \(!auth\.ok\) return res\.status\(auth\.status\)/, 'stamp code: owner sign-in or server-checked staff PIN');
+  assert.match(lp, /const validToken = await prisma\.stampToken\.findFirst\(\{\n      where: \{ slug, token, expiresAt: \{ gt: now \} \}\n    \}\);\n    if \(!validToken\) return res\.json\(\{ status: 'invalid' \}\);/, 'stamp: a valid stamp code');
 });
 
 // ── runner ──────────────────────────────────────────────────────

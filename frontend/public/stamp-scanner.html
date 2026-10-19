@@ -155,7 +155,32 @@
 <script>
 (function(){
   'use strict';
-  var API = 'https://api.qraivy.com';
+  // ── Which API this scanner may talk to (default deny) ──
+  //   www.qraivy.com, qraivy.com   production API (https://api.qraivy.com)
+  //   deals-preview.qraivy.com     the isolated staging API (its own database),
+  //                                never production
+  //   localhost, 127.0.0.1         a local test server, never production
+  //   anything else                blocked: Vercel deployment addresses, other
+  //                                preview domains. The scanner sends no
+  //                                request at all and says why.
+  // A blocked page gets an address no request can leave through (not even a
+  // relative one, which Vercel would forward to production).
+  var BLOCKED_API = 'about:blank#qraivy-api-blocked';
+  function resolveApi(hostname, localApi){
+    var host = String(hostname || '').toLowerCase();
+    if(host === 'www.qraivy.com' || host === 'qraivy.com') return { mode: 'production', api: 'https://api.qraivy.com', blocked: false };
+    if(host === 'deals-preview.qraivy.com') return { mode: 'staging', api: 'https://qraivy-deals-api-deals-preview.up.railway.app', blocked: false };
+    if(host === 'localhost' || host === '127.0.0.1'){
+      var u = null;
+      try{ u = new URL(String(localApi || '')); }catch(_){ u = null; }
+      var ok = u && (u.protocol === 'http:' || u.protocol === 'https:') && (u.hostname === 'localhost' || u.hostname === '127.0.0.1');
+      return { mode: 'local', api: ok ? u.origin : BLOCKED_API, blocked: !ok };
+    }
+    return { mode: 'unknown-host', api: BLOCKED_API, blocked: true };
+  }
+  var ROUTING = resolveApi(window.location.hostname, window.QRAIVY_SCANNER_LOCAL_API || window.location.origin);
+  window.QraivyScannerRouting = { resolve: resolveApi, current: ROUTING };
+  var API = ROUTING.api;
   var PIN_LEN = 4;
   var pinBuffer = '';
   var pinSlug = new URLSearchParams(window.location.search).get('slug') || '';
@@ -540,6 +565,10 @@
   }
 
   function boot(){
+    if(ROUTING.blocked){
+      showDenied(tr('ss_blocked_title','Scanner not available here'), tr('ss_blocked_msg','The stamp scanner only works on www.qraivy.com. Open the scanner link from your dashboard.'), {noSignIn:true});
+      return Promise.resolve();
+    }
     showView('access-check');
     return clerkReady().then(async function(){
       // Staff open the scanner with ?slug= and the staff PIN, without an
@@ -614,6 +643,8 @@
       ss_locked: "Scanner locked",
       ss_other_business: "This pass belongs to another business",
       ss_other_business_sub: "This scanner is open only for the business it was unlocked for.",
+      ss_blocked_title: "Scanner not available here",
+      ss_blocked_msg: "The stamp scanner only works on www.qraivy.com. Open the scanner link from your dashboard.",
     },
     de: {
       ss_back: '← Zurück',
@@ -656,6 +687,8 @@
       ss_locked: "Scanner gesperrt",
       ss_other_business: "Dieser Pass gehört zu einem anderen Geschäft",
       ss_other_business_sub: "Dieser Scanner ist nur für das Geschäft freigeschaltet, für das er geöffnet wurde.",
+      ss_blocked_title: "Scanner hier nicht verfügbar",
+      ss_blocked_msg: "Der Stempelscanner funktioniert nur auf www.qraivy.com. Öffne den Scanner-Link aus deinem Dashboard.",
     }
   };
   var t = T[lang] || T.en;

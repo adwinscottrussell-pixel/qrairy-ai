@@ -38,10 +38,13 @@ const ALICE = 'user_aliceAAAAAAAA', MALLORY = 'user_malloryMMMMMM';
 // Phase 5.5B adds one public, read-only route: the welcome screen. It is set
 // aside here so the guarantees about the original routes stay exactly as they were.
 const WELCOME_ROUTE = 'GET public ^\\/lp\\/welcome\\/[A-Za-z0-9][A-Za-z0-9_-]{0,119}$';
-const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE);
+// The stamp scanner group (lpStagingGate.test.js, section H) is set aside the same way.
+const SCANNER_ROUTES = ALLOWED_ROUTES.filter((r) => r.group === 'scanner');
+const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE && r.group !== 'scanner');
 
 test('A. the original six staging routes are exactly as before', () => {
-  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1, 'exactly one welcome-screen route on top');
+  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length - SCANNER_ROUTES.length, 1, 'exactly one welcome-screen route on top');
+  assert.equal(SCANNER_ROUTES.length, 5, 'and the five stamp scanner routes');
   assert.deepEqual(BASE_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access} ${r.path.source}`), [
     'GET public ^\\/health$',
     'GET public ^\\/sw\\.js$',
