@@ -2,7 +2,8 @@
 // guards exclude exactly these paths and keep checking everything else; the
 // Phase 0 tests (lpRenderEscaping, stampCodeAuth, lpGetAuth, staffPinAuth)
 // pin what changed inside them.
-const PHASE0_FRONTEND = ['frontend/public/stamp-scanner.html', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/smart-qr-detail.html'];
+// login.html: deals-preview returns to itself after sign-in (tests/loginRedirect.test.js)
+const PHASE0_FRONTEND = ['frontend/public/stamp-scanner.html', 'frontend/public/js/voice-greeting-editor.js', 'frontend/public/smart-qr-detail.html', 'frontend/public/login.html'];
 
 const PHASE0_FILES = PHASE0_FRONTEND.concat([
   'backend/src/controllers/lpController.js',
@@ -21,6 +22,8 @@ const PHASE0_FILES = PHASE0_FRONTEND.concat([
   // API only; the staging-only gate admits its requests for test pages
   'backend/src/middleware/stagingGate.js',
   'backend/tests/scannerStagingIsolation.test.js',
+  // staging sign-in: deals-preview returns to itself, never to www
+  'backend/tests/loginRedirect.test.js',
   // older tests adjusted to the intended Phase 0 behaviour
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

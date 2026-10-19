@@ -292,12 +292,14 @@ test('?slug= is shown as text, never as markup', async () => {
 
 // Staging isolation follow-up: the scanner's staging API choice and the
 // staging-only gate entries for it (scannerStagingIsolation.test.js).
-test('server rules unchanged: this change touches only the scanner page, the staging-only gate (and their tests)', () => {
+// Staging sign-in follow-up: login.html returns deals-preview to itself
+// (loginRedirect.test.js).
+test('server rules unchanged: this change touches only the scanner page, the sign-in page, the staging-only gate (and their tests)', () => {
   const { execFileSync } = require('child_process');
   const ROOT = path.join(__dirname, '..', '..');
   const changed = execFileSync('git', ['diff', 'ae2861e', '--name-only'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)
     .concat(execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean)).sort();
-  assert.deepEqual(changed, ['backend/src/middleware/stagingGate.js', 'backend/tests/dealsPreviewSafety.test.js', 'backend/tests/helpers/phase0Files.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingGate.test.js', 'backend/tests/pushCampaignAuth.test.js', 'backend/tests/scannerAccess.test.js', 'backend/tests/scannerStagingIsolation.test.js', 'backend/tests/stampCodeAuth.test.js', 'frontend/public/stamp-scanner.html']);
+  assert.deepEqual(changed, ['backend/src/middleware/stagingGate.js', 'backend/tests/dealsPreviewSafety.test.js', 'backend/tests/helpers/phase0Files.js', 'backend/tests/loginRedirect.test.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingGate.test.js', 'backend/tests/pushCampaignAuth.test.js', 'backend/tests/scannerAccess.test.js', 'backend/tests/scannerStagingIsolation.test.js', 'backend/tests/stampCodeAuth.test.js', 'frontend/public/login.html', 'frontend/public/stamp-scanner.html']);
 });
 
 // helpers used above

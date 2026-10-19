@@ -49,11 +49,15 @@
         window.location.href = _rp;
         return;
       }
-      // Production returns to www; plan-preview stays on its own host, and
-      // so does a staging host (js/staging-config.js) -- signing in there
-      // must not carry the session over to the production site.
+      // Production returns to www; plan-preview and the Deals staging site
+      // (deals-preview, whose scanner talks to the staging API) stay on their
+      // own host, and so does a staging host (js/staging-config.js) --
+      // signing in there must not carry the session over to the production
+      // site. deals-preview is listed here, not in staging-config.js, whose
+      // api setting is the Voice staging API.
       const _stagingHosts = (window.QRAIVY_STAGING_CONFIG && Array.isArray(window.QRAIVY_STAGING_CONFIG.hosts)) ? window.QRAIVY_STAGING_CONFIG.hosts : [];
-      const _ownHost = window.location.hostname === 'plan-preview.qraivy.com' || _stagingHosts.indexOf(window.location.hostname) !== -1;
+      const _ownHosts = ['plan-preview.qraivy.com', 'deals-preview.qraivy.com'];
+      const _ownHost = _ownHosts.indexOf(window.location.hostname) !== -1 || _stagingHosts.indexOf(window.location.hostname) !== -1;
       const _base = _ownHost ? window.location.origin + '/' : 'https://www.qraivy.com/';
       const _target = _base + _rp;
       window.Clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
