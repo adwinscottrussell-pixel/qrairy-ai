@@ -68,6 +68,7 @@
     .access-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;width:100%;max-width:340px;text-align:center}
     a.btn{display:block;text-align:center;text-decoration:none}
     .access-link{color:#ff5a1f;font-size:.75rem;text-decoration:none}
+    button.access-link{background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
   </style>
 </head>
 <body>
@@ -82,6 +83,7 @@
   <div class="pin-title" id="access-title">Sign in required</div>
   <p class="pin-sub" id="access-msg"></p>
   <a id="access-signin" class="btn btn-primary" href="login.html" data-i18n="ss_signin">Sign in as owner</a>
+  <button id="access-switch" class="btn btn-primary" style="display:none" onclick="switchAccount()" data-i18n="ss_switch">Sign out and use another account</button>
   <button id="access-retry" class="btn btn-secondary" style="display:none" onclick="retryAccess()" data-i18n="ss_retry">Try again</button>
 </div>
 
@@ -111,6 +113,7 @@
     <button class="pin-key del" onclick="pinDel()">⌫</button>
   </div>
   <a id="pin-signin" class="access-link" href="login.html" data-i18n="ss_pin_owner">Owner? Sign in instead</a>
+  <button id="pin-switch" class="access-link" style="display:none" onclick="switchAccount()" data-i18n="ss_switch">Sign out and use another account</button>
 </div>
 
 <div class="wrap" id="scanner-wrap" style="display:none">
@@ -203,22 +206,36 @@
       if(el) el.style.display = v === id ? 'flex' : 'none';
     });
   }
-  function signInHref(){
-    return 'login.html?redirect=' + encodeURIComponent('stamp-scanner.html' + (gateSlug ? '?slug=' + encodeURIComponent(gateSlug) : ''));
+  // This scanner again (same host, relative): only the business slug.
+  function scannerHref(){
+    return 'stamp-scanner.html' + (gateSlug ? '?slug=' + encodeURIComponent(gateSlug) : '');
   }
+  function signInHref(){
+    return 'login.html?redirect=' + encodeURIComponent(scannerHref());
+  }
+  // A signed-in visitor who is refused here cannot "sign in": login.html
+  // sends a signed-in visitor straight back. They get "Sign out and use
+  // another account" instead; the staff PIN stays available.
+  function isSignedIn(){ return !!(window.Clerk && window.Clerk.user); }
   function showPinGate(msg){
     pinBuffer = ''; updatePinDots();
     document.getElementById('pin-err').textContent = msg || '';
-    document.getElementById('pin-signin').href = signInHref();
+    var signedIn = isSignedIn();
+    var signin = document.getElementById('pin-signin');
+    signin.href = signInHref();
+    signin.style.display = signedIn ? 'none' : '';
+    document.getElementById('pin-switch').style.display = signedIn ? '' : 'none';
     showView('pin-gate');
   }
   function showDenied(title, msg, opts){
     opts = opts || {};
     document.getElementById('access-title').textContent = title;
     document.getElementById('access-msg').textContent = msg || '';
+    var signedIn = isSignedIn();
     var signin = document.getElementById('access-signin');
     signin.href = signInHref();
-    signin.style.display = opts.noSignIn ? 'none' : 'block';
+    signin.style.display = opts.noSignIn || signedIn ? 'none' : 'block';
+    document.getElementById('access-switch').style.display = signedIn && (!opts.noSignIn || opts.switchAccount) ? 'block' : 'none';
     document.getElementById('access-retry').style.display = opts.retry ? 'block' : 'none';
     showView('access-denied');
   }
@@ -413,6 +430,30 @@
 
   window.retryAccess = function(){ if(gateSlug) authorize(gateSlug); else boot(); };
 
+  // ── Switch account ──
+  // Clerk signs the visitor out; then this scanner address loads again,
+  // signed out: the PIN screen or the sign-in screen, never the scanner.
+  // This business's saved staff PIN is dropped as well.
+  var switching = false;
+  window.switchAccount = async function(){
+    if(switching) return;
+    switching = true;
+    var href = scannerHref();
+    lockScanner();
+    if(gateSlug) forgetPin(gateSlug);
+    try{
+      await window.Clerk.signOut();
+    }catch(_){
+      switching = false;
+      var err = tr('ss_switch_err','Could not sign out. Please try again.');
+      if(document.getElementById('pin-gate').style.display !== 'none') document.getElementById('pin-err').textContent = err;
+      else document.getElementById('access-msg').textContent = err;
+      return;
+    }
+    showView('access-check');
+    window.location.replace(href);
+  };
+
   // ── Extract cid from scanned URL ──
   function extractCid(url){
     try{
@@ -583,7 +624,7 @@
       await loadPrograms();
       var sel = document.getElementById('slug-select');
       if(!sel.value){
-        showDenied(tr('ss_noprog_title','No loyalty program'), tr('ss_noprog_msg','Your account has no loyalty program yet. Set one up in the dashboard first.'), {noSignIn:true});
+        showDenied(tr('ss_noprog_title','No loyalty program'), tr('ss_noprog_msg','Your account has no loyalty program yet. Set one up in the dashboard first.'), {noSignIn:true, switchAccount:true});
         return;
       }
       return authorize(sel.value);
@@ -635,6 +676,8 @@
       ss_pin_locked: "Too many incorrect PINs. Please wait 15 minutes and try again.",
       ss_pin_invalid: "The saved staff PIN was not accepted. Please enter it again.",
       ss_not_owner: "This account is not the owner of this business.",
+      ss_switch: "Sign out and use another account",
+      ss_switch_err: "Could not sign out. Please try again.",
       ss_net_title: "Connection problem",
       ss_unknown_title: "Program not found",
       ss_unknown_msg: "This scanner link does not belong to an active business. Ask the owner for the current link.",
@@ -679,6 +722,8 @@
       ss_pin_locked: "Zu viele falsche PINs. Bitte 15 Minuten warten und erneut versuchen.",
       ss_pin_invalid: "Die gespeicherte Mitarbeiter-PIN wurde nicht akzeptiert. Bitte erneut eingeben.",
       ss_not_owner: "Dieses Konto ist nicht Inhaber dieses Geschäfts.",
+      ss_switch: "Abmelden und anderes Konto verwenden",
+      ss_switch_err: "Abmelden fehlgeschlagen. Bitte erneut versuchen.",
       ss_net_title: "Verbindungsproblem",
       ss_unknown_title: "Programm nicht gefunden",
       ss_unknown_msg: "Dieser Scanner-Link gehört zu keinem aktiven Geschäft. Bitte den Inhaber um den aktuellen Link.",

@@ -82,17 +82,20 @@ function element(id) {
   el.appendChild = (o) => { el.options.push(o); if (el.options.length === 1) value = o.value; };
   return el;
 }
-async function openScanner({ search = '', auth = null, pins = {} } = {}) {
+async function openScanner({ search = '', auth = null, pins = {}, signOutFails = false } = {}) {
   const els = {};
   const calls = [];
   const store = {};
   for (const [slug, pin] of Object.entries(pins)) store['staff_pin_' + slug] = pin;
   const signedIn = { current: auth };
+  const signOuts = [];
+  const replaced = [];
   const window = {
     Clerk: {
       load: async () => {},
       get user() { return signedIn.current ? { id: signedIn.current } : null; },
       get session() { return signedIn.current ? { getToken: async () => signedIn.current } : null; },
+      signOut: async () => { signOuts.push(signedIn.current); if (signOutFails) throw new Error('clerk offline'); signedIn.current = null; },
     },
   };
   const ctx = {
@@ -104,7 +107,7 @@ async function openScanner({ search = '', auth = null, pins = {} } = {}) {
       querySelectorAll: () => [],
       addEventListener() {},
     },
-    location: { search, hostname: 'www.qraivy.com', origin: 'https://www.qraivy.com' },
+    location: { search, hostname: 'www.qraivy.com', origin: 'https://www.qraivy.com', replace: (u) => replaced.push(u) },
     URLSearchParams, URL, Promise, JSON, Date, Error,
     sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     fetch: server(calls),
@@ -116,9 +119,11 @@ async function openScanner({ search = '', auth = null, pins = {} } = {}) {
   vm.runInNewContext(MAIN, ctx);
   await settle();
   const page = {
-    els, calls, store, window, signedIn,
+    els, calls, store, window, signedIn, signOuts, replaced,
     visible: () => SCREENS.filter((s) => els[s] && els[s].style.display !== 'none'),
     text: (id) => (els[id] ? els[id].textContent : ''),
+    shown: (id) => !!els[id] && els[id].style.display !== 'none',
+    async switchAccount() { await window.switchAccount(); await settle(); },
     async pin(digits) { for (const d of digits) window.pinKey(d); await settle(); },
     async manual(url) { await window.stampFromUrl(url); await settle(); },
     stamps: () => calls.filter((c) => c.path && c.path.endsWith('/confirm')),
@@ -288,6 +293,99 @@ test('?slug= is shown as text, never as markup', async () => {
   const p = await openScanner({ search: '?slug=' + encodeURIComponent('"><img src=x onerror=alert(1)>') });
   assert.equal(p.els['slug-select'].innerHTML, '');
   assert.equal(p.els['slug-select'].options[0].textContent, '"><img src=x onerror=alert(1)>');
+});
+
+// ── switch account: a refused signed-in visitor can sign out and start over ──
+// Before: "Sign in" went to login.html, which sends a signed-in visitor
+// straight back -- a dead end. Now: "Sign out and use another account"
+// (Clerk signOut, then this scanner address again, signed out).
+test('switch account: signed in, not the owner, no PIN -> switch instead of sign-in; after it the visitor is signed out and must sign in again', async () => {
+  setup();
+  const p = await openScanner({ search: '?slug=cafe', auth: 'user_other' });
+  assert.deepEqual(p.visible(), ['access-denied']);
+  assert.match(p.text('access-msg'), /not the owner of this business/);
+  assert.equal(p.shown('access-switch'), true);
+  assert.equal(p.shown('access-signin'), false, 'login.html would only send them back');
+  await p.switchAccount();
+  assert.deepEqual(p.signOuts, ['user_other'], 'Clerk signOut, once, for that account');
+  assert.equal(p.signedIn.current, null);
+  assert.deepEqual(p.replaced, ['stamp-scanner.html?slug=cafe'], 'the same scanner, relative (same host)');
+  assert.deepEqual(p.visible(), ['access-check'], 'locked while leaving');
+  assert.equal(p.stamps().length, 0);
+  // the reloaded page, signed out: sign-in screen, no scanner, no switch
+  const again = await openScanner({ search: '?slug=cafe' });
+  assert.deepEqual(again.visible(), ['access-denied']);
+  assert.equal(again.shown('access-signin'), true);
+  assert.equal(again.shown('access-switch'), false);
+  assert.equal(again.els['access-signin'].href, 'login.html?redirect=' + encodeURIComponent('stamp-scanner.html?slug=cafe'));
+});
+
+test('switch account: business with a PIN keeps the staff PIN while signed in; the switch drops this business\'s saved PIN', async () => {
+  setup();
+  // another business's owner on bakery (PIN 8765): PIN pad + switch, no sign-in link
+  let p = await openScanner({ search: '?slug=bakery', auth: 'user_owner' });
+  assert.deepEqual(p.visible(), ['pin-gate']);
+  assert.match(p.text('pin-err'), /not the owner/);
+  assert.equal(p.shown('pin-switch'), true);
+  assert.equal(p.shown('pin-signin'), false);
+  await p.pin('8765');
+  assert.deepEqual(p.visible(), ['scanner-wrap'], 'staff PIN alternative still works');
+  // a stored PIN for the business is removed by the switch
+  p = await openScanner({ search: '?slug=bakery', auth: 'user_owner', pins: { bakery: '0000', shop: '4321' } });
+  assert.deepEqual(p.visible(), ['pin-gate']);
+  p.store.staff_pin_bakery = '8765';
+  await p.switchAccount();
+  assert.equal(p.store.staff_pin_bakery, undefined);
+  assert.equal(p.store.staff_pin_shop, '4321', 'other businesses untouched');
+  assert.deepEqual(p.replaced, ['stamp-scanner.html?slug=bakery']);
+  // the reloaded page, signed out, no saved PIN: PIN screen with the sign-in link again
+  const again = await openScanner({ search: '?slug=bakery' });
+  assert.deepEqual(again.visible(), ['pin-gate']);
+  assert.equal(again.shown('pin-signin'), true);
+  assert.equal(again.shown('pin-switch'), false);
+});
+
+test('switch account: never shown to signed-out visitors, owners with access, or where it cannot help', async () => {
+  setup();
+  for (const slug of ['cafe', 'shop']) {
+    const p = await openScanner({ search: '?slug=' + slug });
+    assert.equal(p.shown('access-switch') || p.shown('pin-switch'), false, slug);
+  }
+  const owner = await openScanner({ search: '?slug=shop', auth: 'user_owner' });
+  assert.deepEqual(owner.visible(), ['scanner-wrap']);
+  assert.equal(owner.shown('access-switch') || owner.shown('pin-switch'), false);
+  // unknown business: switching would not help
+  const unknown = await openScanner({ search: '?slug=nope', auth: 'user_other' });
+  assert.equal(unknown.text('access-title'), 'Program not found');
+  assert.equal(unknown.shown('access-switch'), false);
+  // signed in without ?slug= and without programs: the switch is the way out
+  const none = await openScanner({ auth: 'user_nobody' });
+  assert.equal(none.text('access-title'), 'No loyalty program');
+  assert.equal(none.shown('access-switch'), true);
+  assert.equal(none.shown('access-signin'), false);
+  await none.switchAccount();
+  assert.deepEqual(none.replaced, ['stamp-scanner.html']);
+});
+
+test('switch account: return address is only this scanner and the slug; extra query parameters are dropped', async () => {
+  setup();
+  const p = await openScanner({ search: '?slug=cafe&redirect=https%3A%2F%2Fevil.example&next=//evil.example', auth: 'user_other' });
+  await p.switchAccount();
+  assert.deepEqual(p.replaced, ['stamp-scanner.html?slug=cafe']);
+  for (const u of p.replaced) assert.ok(!/^[a-z]+:|^\/\//i.test(u), 'relative, same host');
+});
+
+test('switch account: if Clerk cannot sign out, nothing navigates, the scanner stays locked and says so', async () => {
+  setup();
+  const p = await openScanner({ search: '?slug=cafe', auth: 'user_other', signOutFails: true });
+  await p.switchAccount();
+  assert.deepEqual(p.signOuts, ['user_other']);
+  assert.deepEqual(p.replaced, []);
+  assert.equal(p.signedIn.current, 'user_other');
+  assert.match(p.text('access-msg'), /Could not sign out/);
+  assert.notDeepEqual(p.visible(), ['scanner-wrap']);
+  await p.manual(pass('cafe'));
+  assert.equal(p.stamps().length, 0);
 });
 
 // Staging isolation follow-up: the scanner's staging API choice and the
