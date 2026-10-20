@@ -40,6 +40,9 @@ app.use(cors({
   origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
   credentials: true
 }));
+// TEMPORARY (2026-10-20, remove): staging-only proxy hop diagnostic, see
+// middleware/proxyDiag.js. Never mounted unless APP_ENV=staging.
+if (process.env.APP_ENV === 'staging') app.use(require('./middleware/proxyDiag').proxyDiag);
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
 
 // Staging only (APP_ENV=staging). Production never mounts this and its

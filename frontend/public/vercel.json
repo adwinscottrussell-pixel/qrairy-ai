@@ -9,6 +9,7 @@
     { "source": "/(.*)", "has": [{"type": "host", "value": "voice-preview\\.qraivy\\.com"}], "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"},{"key": "Cache-Control", "value": "no-store"}] }
   ],
   "rewrites": [
+    { "source": "/__proxy-diag/health", "has": [{"type": "host", "value": "deals-preview\\.qraivy\\.com"}], "destination": "https://qraivy-deals-api-deals-preview.up.railway.app/health" },
     { "source": "/lp/:path*", "destination": "https://api.qraivy.com/lp/:path*" },
     { "source": "/stamp/:path*", "destination": "https://api.qraivy.com/stamp/:path*" },
     { "source": "/wallet/:path*", "destination": "https://api.qraivy.com/wallet/:path*" },
