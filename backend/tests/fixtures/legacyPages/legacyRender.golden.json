@@ -1,0 +1,330 @@
+{
+  "about": "SHA-256 of each legacy public page render (tests/fixtures/legacyPages/fixtures.json), generated from main ae2861e before any Studio V3 code. Must never change in V3 work.",
+  "generatedFrom": "ae2861e89a42f65914d215647b261a427a65d9ab",
+  "frozenNow": "2026-10-20T10:00:00.000Z",
+  "results": [
+    {
+      "id": "01-standard-en",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 41659,
+      "sha256": "fff9c1d5720050d8496bc17b1c622dd61f933805a048da51b9e1458e19fc2f92"
+    },
+    {
+      "id": "02-standard-de",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 41041,
+      "sha256": "20a64380f0f8cac7f05de635a7120a7bba74b13a404c29cbdd3c1918e3b404ab"
+    },
+    {
+      "id": "03-minimal",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 45960,
+      "sha256": "2c9bd30954ce472d746be747ef3e2284001579b074684dfe47ace0e714e997a2"
+    },
+    {
+      "id": "04-usecase-gym-events",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48038,
+      "sha256": "6201bf2fb549ad10616b6edff68b41556f68ca3d10f73f0c21de094dfb72ad32"
+    },
+    {
+      "id": "05-legacy-logo-column-data-uri",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48352,
+      "sha256": "5b4a00efe3755d8a7e379d304a9dc91468143f00e3e6e1ac4fc8e2a4c7f04d32"
+    },
+    {
+      "id": "06-voice-on",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 44886,
+      "sha256": "17fc63e50573d8c1a0ad09e7612dd4c0a1137a9665dff35cf3714b4d6815c71d"
+    },
+    {
+      "id": "07-voice-stale",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48202,
+      "sha256": "2dba0417935cb7e10ca7c68140e0d27abcb6e4895abe480443846abd9ae67095"
+    },
+    {
+      "id": "08-voice-disabled-in-settings",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48196,
+      "sha256": "0c25287af238367260ba83fac3e686a996fe1465b84d765d1a08caea39848010"
+    },
+    {
+      "id": "09-loyalty-on",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 42735,
+      "sha256": "e400eb076569b12cab584edb16a55c46320edd07f8ca1d2040036df21201cf84"
+    },
+    {
+      "id": "10-loyalty-on-preview",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 41657,
+      "sha256": "7c8e50c0130c6be5ef8dd80d4717c446daf00d5c523f50315dbcf2c6d153b360"
+    },
+    {
+      "id": "11-loyalty-disabled",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48147,
+      "sha256": "b877f07a8854f111a48b3ce175748ac7582ccbb4e40931ac188ad383191f1d74"
+    },
+    {
+      "id": "12-welcome-v2-slug",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 49719,
+      "sha256": "89f768ef068c5eab9cc1824f3499750e4932b37d65154172f253a2f0fff3ba64"
+    },
+    {
+      "id": "13-welcome-v2-owner",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 49241,
+      "sha256": "cf8ce61f5291906a4875c51ee8ff097fbafa6035e3f1d8a39ddba57666f6599c"
+    },
+    {
+      "id": "14-stadtpocket-linked",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 49722,
+      "sha256": "c2833f443b1b709999e063e40d0970815d3f17f965834c3f0eb36ee936c91a8c"
+    },
+    {
+      "id": "15-business-not-stadtpocket",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48143,
+      "sha256": "e74ea349c0e06a26432a727dae95f41abf21c644d2761cb71e847a8de37cb392"
+    },
+    {
+      "id": "16-deals-cards",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 44990,
+      "sha256": "0413ff3271648800aac3990fcfb9125327884ac1fb0d90bb7ffe87b4ac65621a"
+    },
+    {
+      "id": "17-deals-no-access",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48149,
+      "sha256": "19a2ab89ac420a82a7963f54ea80eb092060f88e17c95470764d8d9fca629867"
+    },
+    {
+      "id": "18-deals-switch-off",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48143,
+      "sha256": "921531965dddd0a9953b98cbaa8249605f6a7ffe920f403bb1f97391bbf51446"
+    },
+    {
+      "id": "19-ownerless",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48143,
+      "sha256": "12d0e8eb9563cd4ef727c107e6421f61e501f8c1d3ad064347d9072541fb889f"
+    },
+    {
+      "id": "20-escaping",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 44759,
+      "sha256": "4500906103f740381bc0322b2f5fa32fb5e558ba72eab373441367187a0ed494"
+    },
+    {
+      "id": "21-unparseable-sections",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=60",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 48139,
+      "sha256": "34febfa40e8dc704290b413f1254dd6356103d547ea4ab6a005695a0e1bd5666"
+    },
+    {
+      "id": "22-draft-404",
+      "status": 404,
+      "headers": {},
+      "bytes": 1923,
+      "sha256": "aefbd9950fc683c86f24fc1b5033c501be09e14bfa73a945d6a5b9cd0e3d1a0d"
+    },
+    {
+      "id": "23-missing-404",
+      "status": 404,
+      "headers": {},
+      "bytes": 1932,
+      "sha256": "696c19f1b93b7f3f42de95651bbc22e958438b92a2fb0367ef7ee2fc7a3e5364"
+    },
+    {
+      "id": "24-loyalty-card-page",
+      "status": 200,
+      "headers": {},
+      "bytes": 3593,
+      "sha256": "81579a76e42e249ba6ea7fd1a11efaa228cbe9fdd0b7da76a35b18214e667056"
+    },
+    {
+      "id": "25-loyalty-welcome-page",
+      "status": 200,
+      "headers": {},
+      "bytes": 4902,
+      "sha256": "6e44388f44b08d77a8a9297816f31e5a21c899983b8749e53b9c22b7a3a6e823"
+    },
+    {
+      "id": "26-welcome-v2-page",
+      "status": 200,
+      "headers": {},
+      "bytes": 13000,
+      "sha256": "26b93c3e0bb07206fd1a35482a2c9bb966c6a4b1fdceaa263c5cd98c2fdf022f"
+    },
+    {
+      "id": "27-deals-uploaded-image",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 50815,
+      "sha256": "f1d395dc50ec8e2eb41920d5c97b442b88391ecc339b32adba2f6a266241bc4c"
+    },
+    {
+      "id": "28-deals-starter-image",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 51046,
+      "sha256": "ab7c53ce7705365eb767479cabbb40045749c0d1aea9ed27fa8c4149db971414"
+    },
+    {
+      "id": "29-deals-starter-no-cloud",
+      "status": 200,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+        "Content-Security-Policy": "frame-ancestors *",
+        "X-Frame-Options": "ALLOWALL"
+      },
+      "bytes": 50675,
+      "sha256": "cd1048ba564e9cbe94e009881cea3b0cffe3a84d2616de2ab77cc5d78db0c7cc"
+    }
+  ]
+}

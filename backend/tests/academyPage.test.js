@@ -174,7 +174,9 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
     'frontend/public/js/academy-catalog.js', 'frontend/public/js/academy.js', 'frontend/public/js/admin-shell.js'].concat(PAGES.map((p) => 'frontend/public/' + p));
   // Phase 0 security release (tests/helpers/phase0Files.js) came after the Academy.
   const { PHASE0_FILES } = require('./helpers/phase0Files');
-  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f), 'unexpected change: ' + f);
+  // Landing Page Studio V3 Phase 1 (tests/helpers/lpV3Files.js) came after Phase 0.
+  const { LPV3_FILES } = require('./helpers/lpV3Files');
+  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f) || LPV3_FILES.includes(f), 'unexpected change: ' + f);
   // each Admin page gained exactly the one sidebar line (smart-qr-detail.html: after undoing
   // exactly the Phase 0 edit, tests/helpers/phase0Revert.js)
   const { revertSqd0 } = require('./helpers/phase0Revert');

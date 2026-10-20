@@ -239,8 +239,13 @@ test('no schema, migration, Wallet, push, loyalty, StadtPocket, billing or front
     'backend/src/services/apnsService.js', 'backend/src/controllers/walletController.js', 'backend/src/services/webPushPages.js', 'backend/src/services/webPushService.js',
     'backend/src/controllers/loyaltyAdminController.js', 'backend/src/services/stadtPocketContext.js', 'backend/src/routes/stadtpocketPublicRoutes.js',
     'backend/src/routes/managerStadtpocketListingRoutes.js', 'backend/src/routes/stripeRoutes.js', 'backend/src/services/customerIdentityService.js',
-    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES, ...require('./helpers/phase0Files').PHASE0_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();
+    ...require('./helpers/academyFiles').ACADEMY_EXCLUDES, ...require('./helpers/phase0Files').PHASE0_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim();
   assert.equal(changed, '');
+  // Studio V3 Phase 1 adds to schema.prisma; everything else in it is unchanged.
+  const lfs = (s) => s.replace(/\r\n/g, '\n');
+  const schemaNow = lfs(fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8'));
+  const schemaThen = lfs(execFileSync('git', ['show', '4ed4287:backend/prisma/schema.prisma'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
+  assert.equal(require('./helpers/lpV3Files').withoutV3(schemaNow), schemaThen);
 });
 
 (async () => {

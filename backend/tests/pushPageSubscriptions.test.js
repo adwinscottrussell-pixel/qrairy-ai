@@ -221,7 +221,8 @@ test('the migration is additive and carries over exactly one page per existing s
 });
 
 test('schema: only the 5.5C.3 additions (expiredAt, the pages relation, WebPushPageSubscription)', () => {
-  const now = lf(fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8'));
+  // (Studio V3 Phase 1 additions removed exactly: tests/helpers/lpV3Files.js)
+  const now = require('./helpers/lpV3Files').withoutV3(lf(fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8')));
   const before = lf(execFileSync('git', ['show', '0cd8e45:backend/prisma/schema.prisma'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
   const added = now.slice(now.indexOf('  // Phase 5.5C.3: set when the push service'), now.indexOf('\n  @@index([cid])\n}', now.indexOf('model WebPushSubscription {')));
   const model = now.slice(now.indexOf('\n\n// Phase 5.5C.3: one browser push address'), now.indexOf('\n}\n', now.indexOf('model WebPushPageSubscription {')) + 2);

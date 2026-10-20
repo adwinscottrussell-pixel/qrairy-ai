@@ -1,0 +1,804 @@
+{
+  "about": "Synthetic landing pages for the legacy-renderer guard (tests/legacyRenderGolden.test.js). No customer data.",
+  "frozenNow": "2026-10-20T10:00:00.000Z",
+  "pages": [
+    {
+      "id": "lp-fx-standard-en",
+      "slug": "fx-standard-en",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "bakery",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Our daily menu\",\"url\":\"https://example.com/menu\"},{\"label\":\"Directions\",\"icon\":\"📍\",\"description\":\"Find us\",\"url\":\"https://maps.example.com/?q=bakery\"}],\"ai\":{\"active\":true},\"settings\":{}}"
+    },
+    {
+      "id": "lp-fx-standard-de",
+      "slug": "fx-standard-de",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"de\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Speisekarte\",\"url\":\"https://example.com/menu\"}],\"ai\":{\"active\":true},\"settings\":{}}"
+    },
+    {
+      "id": "lp-fx-minimal",
+      "slug": "fx-minimal",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "other",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{}"
+    },
+    {
+      "id": "lp-fx-gym",
+      "slug": "fx-gym",
+      "businessName": "Studio Nord",
+      "websiteUrl": "https://example.com",
+      "useCase": "gym",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-data-logo",
+      "slug": "fx-data-logo",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-voice-on",
+      "slug": "fx-voice-on",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Our daily menu\",\"url\":\"https://example.com/menu\"},{\"label\":\"Directions\",\"icon\":\"📍\",\"description\":\"Find us\",\"url\":\"https://maps.example.com/?q=bakery\"}],\"ai\":{\"active\":true},\"settings\":{},\"voice\":{\"enabled\":true,\"audioUrl\":\"https://res.cloudinary.com/demo/video/upload/v1/qraivy-fixture/greeting.mp3\",\"title\":\"Hallo from the bakery\",\"description\":\"Tap to hear us\"}}"
+    },
+    {
+      "id": "lp-fx-voice-stale",
+      "slug": "fx-voice-stale",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"voice\":{\"enabled\":true,\"audioUrl\":\"https://res.cloudinary.com/demo/video/upload/v1/old.mp3\",\"title\":\"Old\"}}"
+    },
+    {
+      "id": "lp-fx-voice-off",
+      "slug": "fx-voice-off",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"settings\":{\"voiceEnabled\":false},\"voice\":{\"enabled\":true,\"audioUrl\":\"https://res.cloudinary.com/demo/video/upload/v1/x.mp3\"}}"
+    },
+    {
+      "id": "lp-fx-loyalty",
+      "slug": "fx-loyalty",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Our daily menu\",\"url\":\"https://example.com/menu\"},{\"label\":\"Directions\",\"icon\":\"📍\",\"description\":\"Find us\",\"url\":\"https://maps.example.com/?q=bakery\"}],\"ai\":{\"active\":true},\"settings\":{}}"
+    },
+    {
+      "id": "lp-fx-loyalty-pv",
+      "slug": "fx-loyalty-pv",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Our daily menu\",\"url\":\"https://example.com/menu\"},{\"label\":\"Directions\",\"icon\":\"📍\",\"description\":\"Find us\",\"url\":\"https://maps.example.com/?q=bakery\"}],\"ai\":{\"active\":true},\"settings\":{}}"
+    },
+    {
+      "id": "lp-fx-loyalty-off",
+      "slug": "fx-loyalty-off",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-welcome-v2",
+      "slug": "fx-welcome-v2",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"de\"}"
+    },
+    {
+      "id": "lp-fx-welcome-owner",
+      "slug": "fx-welcome-owner",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_welcome_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-stadtpocket",
+      "slug": "fx-stadtpocket",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": null,
+      "businessId": "biz-fixture-sp",
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"de\"}"
+    },
+    {
+      "id": "lp-fx-biz-plain",
+      "slug": "fx-biz-plain",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": "biz-fixture-plain",
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-deals",
+      "slug": "fx-deals",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_deals_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"de\",\"logo\":{\"url\":\"https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png\"},\"theme\":{\"lightBackgroundColor\":\"#fff7ed\"},\"hero\":{\"badge\":\"Fresh daily\",\"title\":\"Bread & coffee since 1952\",\"subtitle\":\"Your neighbourhood bakery\",\"aiTitle\":\"Ask us anything\",\"aiSubtitle\":\"Opening hours, menu, allergens\"},\"buttons\":[{\"label\":\"Order online\",\"url\":\"https://example.com/order\",\"style\":\"primary\"},{\"label\":\"Call us\",\"url\":\"example.com/call\",\"style\":\"secondary\"},{\"label\":\"Hidden\",\"url\":\"https://example.com/x\",\"active\":false}],\"actionLinks\":[{\"label\":\"Menu\",\"icon\":\"📋\",\"description\":\"Our daily menu\",\"url\":\"https://example.com/menu\"},{\"label\":\"Directions\",\"icon\":\"📍\",\"description\":\"Find us\",\"url\":\"https://maps.example.com/?q=bakery\"}],\"ai\":{\"active\":true},\"settings\":{}}"
+    },
+    {
+      "id": "lp-fx-deals-denied",
+      "slug": "fx-deals-denied",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_no_deals",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-deals-off",
+      "slug": "fx-deals-off",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_deals_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-ownerless",
+      "slug": "fx-ownerless",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": null,
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-escaping",
+      "slug": "fx-escaping",
+      "businessName": "\"><script>alert(1)</script><img src=x onerror=alert(2)>",
+      "websiteUrl": "javascript:alert(3)",
+      "useCase": "restaurant",
+      "brandColor": "red;background:url(x)",
+      "logoUrl": "javascript:alert(4)",
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\",\"logo\":{\"url\":\"javascript:alert(5)\"},\"theme\":{\"bg\":\"#fff;}</style><script>alert(6)</script>\"},\"hero\":{\"badge\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"title\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"subtitle\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"aiTitle\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"aiSubtitle\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\"},\"buttons\":[{\"label\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"url\":\"javascript:alert(7)\"}],\"actionLinks\":[{\"label\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"icon\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"description\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"url\":\"javascript:alert(8)\"}],\"voice\":{\"enabled\":true,\"audioUrl\":\"https://x.example/a.mp3\",\"title\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\",\"description\":\"\\\"><script>alert(1)</script><img src=x onerror=alert(2)>\"}}"
+    },
+    {
+      "id": "lp-fx-corrupt",
+      "slug": "fx-corrupt",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{not json"
+    },
+    {
+      "id": "lp-fx-draft",
+      "slug": "fx-draft",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_owner_fixture",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "draft",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-deals-upload",
+      "slug": "fx-deals-upload",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_deals_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-deals-starter",
+      "slug": "fx-deals-starter",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_deals_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    },
+    {
+      "id": "lp-fx-deals-starter-nc",
+      "slug": "fx-deals-starter-nc",
+      "businessName": "Musterbäckerei",
+      "websiteUrl": "https://example.com",
+      "useCase": "restaurant",
+      "brandColor": "#c2410c",
+      "logoUrl": null,
+      "userId": "user_deals_owner",
+      "businessId": null,
+      "qrType": "ai",
+      "template": "premium",
+      "status": "live",
+      "scanCount": 3,
+      "createdAt": "2026-10-20T10:00:00.000Z",
+      "updatedAt": "2026-10-20T10:00:00.000Z",
+      "sections": "{\"language\":\"en\"}"
+    }
+  ],
+  "cases": [
+    {
+      "id": "01-standard-en",
+      "why": "standard page, all editable fields (logo, theme, hero, buttons, action links, AI)",
+      "handler": "handleServeLP",
+      "slug": "fx-standard-en",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "02-standard-de",
+      "why": "German page (language de, translated cards)",
+      "handler": "handleServeLP",
+      "slug": "fx-standard-de",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "03-minimal",
+      "why": "empty sections, no logo (defaults, use-case cards)",
+      "handler": "handleServeLP",
+      "slug": "fx-minimal",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "04-usecase-gym-events",
+      "why": "other use-case card sets",
+      "handler": "handleServeLP",
+      "slug": "fx-gym",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "05-legacy-logo-column-data-uri",
+      "why": "logo only in legacy logoUrl column, as data: URI (kept as-is today)",
+      "handler": "handleServeLP",
+      "slug": "fx-data-logo",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "06-voice-on",
+      "why": "voice welcome with current https audio",
+      "handler": "handleServeLP",
+      "slug": "fx-voice-on",
+      "query": {},
+      "env": {},
+      "voicePlayable": true
+    },
+    {
+      "id": "07-voice-stale",
+      "why": "voice enabled but audio not current (player hidden)",
+      "handler": "handleServeLP",
+      "slug": "fx-voice-stale",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "08-voice-disabled-in-settings",
+      "why": "voice audio present, switched off in settings",
+      "handler": "handleServeLP",
+      "slug": "fx-voice-off",
+      "query": {},
+      "env": {},
+      "voicePlayable": true
+    },
+    {
+      "id": "09-loyalty-on",
+      "why": "loyalty program enabled -> first-visit welcome redirect script injected (Wallet / stamp entry)",
+      "handler": "handleServeLP",
+      "slug": "fx-loyalty",
+      "query": {},
+      "env": {},
+      "stampSettings": {
+        "enabled": true,
+        "goal": 8,
+        "rewardName": "Free coffee"
+      }
+    },
+    {
+      "id": "10-loyalty-on-preview",
+      "why": "same page with ?preview=1 (editor preview: no welcome injection, no-store)",
+      "handler": "handleServeLP",
+      "slug": "fx-loyalty-pv",
+      "query": {
+        "preview": "1"
+      },
+      "env": {},
+      "stampSettings": {
+        "enabled": true,
+        "goal": 8,
+        "rewardName": "Free coffee"
+      }
+    },
+    {
+      "id": "11-loyalty-disabled",
+      "why": "stamp settings present but disabled (no injection)",
+      "handler": "handleServeLP",
+      "slug": "fx-loyalty-off",
+      "query": {},
+      "env": {},
+      "stampSettings": {
+        "enabled": false,
+        "goal": 8,
+        "rewardName": "x"
+      }
+    },
+    {
+      "id": "12-welcome-v2-slug",
+      "why": "unified welcome via WELCOME_V2_SLUGS",
+      "handler": "handleServeLP",
+      "slug": "fx-welcome-v2",
+      "query": {},
+      "env": {
+        "WELCOME_V2_SLUGS": "fx-welcome-v2"
+      }
+    },
+    {
+      "id": "13-welcome-v2-owner",
+      "why": "unified welcome via WELCOME_V2_OWNER_IDS",
+      "handler": "handleServeLP",
+      "slug": "fx-welcome-owner",
+      "query": {},
+      "env": {
+        "WELCOME_V2_OWNER_IDS": "user_welcome_owner"
+      }
+    },
+    {
+      "id": "14-stadtpocket-linked",
+      "why": "StadtPocket-linked business (businessId) -> welcome injection",
+      "handler": "handleServeLP",
+      "slug": "fx-stadtpocket",
+      "query": {},
+      "env": {},
+      "stadtPocketLinked": true
+    },
+    {
+      "id": "15-business-not-stadtpocket",
+      "why": "businessId without StadtPocket link (no injection)",
+      "handler": "handleServeLP",
+      "slug": "fx-biz-plain",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "16-deals-cards",
+      "why": "deal cards on (DEALS_ON_LANDING_PAGES=1, owner has access, 2 running deals)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals",
+      "query": {},
+      "env": {
+        "DEALS_ON_LANDING_PAGES": "1"
+      },
+      "dealAccess": true,
+      "deals": [
+        {
+          "id": "deal_fx_1",
+          "title": "2 Croissants zum Preis von 1",
+          "description": "Jeden Montag",
+          "offerText": "2 für 1",
+          "image": {
+            "source": "background",
+            "backgroundId": "ember"
+          },
+          "endsAt": "2026-10-31T22:59:00.000Z"
+        },
+        {
+          "id": "deal_fx_2",
+          "title": "20% auf Kaffeespezialitäten",
+          "description": "Nur diese Woche",
+          "offerText": "-20%",
+          "image": null,
+          "endsAt": null
+        }
+      ]
+    },
+    {
+      "id": "17-deals-no-access",
+      "why": "deal cards on but owner has no Deals access (fail closed, private no-store)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals-denied",
+      "query": {},
+      "env": {
+        "DEALS_ON_LANDING_PAGES": "1"
+      }
+    },
+    {
+      "id": "18-deals-switch-off",
+      "why": "deal data present but DEALS_ON_LANDING_PAGES off (production default page)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals-off",
+      "query": {},
+      "env": {},
+      "dealAccess": true,
+      "deals": [
+        {
+          "id": "deal_fx_3",
+          "title": "x",
+          "offerText": "y"
+        }
+      ]
+    },
+    {
+      "id": "19-ownerless",
+      "why": "page without owner (userId null)",
+      "handler": "handleServeLP",
+      "slug": "fx-ownerless",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "20-escaping",
+      "why": "Phase 0 escaping: hostile values in every owner-editable field",
+      "handler": "handleServeLP",
+      "slug": "fx-escaping",
+      "query": {},
+      "env": {},
+      "voicePlayable": true
+    },
+    {
+      "id": "21-unparseable-sections",
+      "why": "corrupt sections JSON (renderer falls back)",
+      "handler": "handleServeLP",
+      "slug": "fx-corrupt",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "22-draft-404",
+      "why": "status draft -> 404 page",
+      "handler": "handleServeLP",
+      "slug": "fx-draft",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "23-missing-404",
+      "why": "unknown slug -> 404 page",
+      "handler": "handleServeLP",
+      "slug": "fx-does-not-exist",
+      "query": {},
+      "env": {}
+    },
+    {
+      "id": "24-loyalty-card-page",
+      "why": "GET /lp/card/:slug (loyalty card / Wallet buttons)",
+      "handler": "handleLoyaltyCardPage",
+      "slug": "fx-loyalty",
+      "query": {
+        "cid": "fixture-cid-0001"
+      },
+      "env": {}
+    },
+    {
+      "id": "25-loyalty-welcome-page",
+      "why": "GET /lp/welcome/:slug (first-visit welcome, Add to Home Screen / Wallet)",
+      "handler": "handleLoyaltyWelcome",
+      "slug": "fx-loyalty",
+      "query": {
+        "cid": "fixture-cid-0001"
+      },
+      "env": {}
+    },
+    {
+      "id": "26-welcome-v2-page",
+      "why": "GET /lp/welcome/:slug for a WELCOME_V2 page",
+      "handler": "handleLoyaltyWelcome",
+      "slug": "fx-welcome-v2",
+      "query": {},
+      "env": {
+        "WELCOME_V2_SLUGS": "fx-welcome-v2"
+      }
+    },
+    {
+      "id": "27-deals-uploaded-image",
+      "why": "deal card with an uploaded Cloudinary image (S1 gap)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals-upload",
+      "query": {},
+      "env": {
+        "DEALS_ON_LANDING_PAGES": "1"
+      },
+      "dealAccess": true,
+      "deals": [
+        {
+          "id": "deal_fx_4",
+          "title": "Fresh bread",
+          "description": "Every Friday",
+          "offerText": "€ 2,50",
+          "image": {
+            "source": "uploaded",
+            "url": "https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/bread.jpg"
+          },
+          "endsAt": null
+        }
+      ]
+    },
+    {
+      "id": "28-deals-starter-image",
+      "why": "deal card with a starter-library image, Cloudinary cloud configured (S1 gap)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals-starter",
+      "query": {},
+      "env": {
+        "DEALS_ON_LANDING_PAGES": "1",
+        "CLOUDINARY_CLOUD_NAME": "demo"
+      },
+      "dealAccess": true,
+      "deals": [
+        {
+          "id": "deal_fx_5",
+          "title": "Croissant morning",
+          "description": "Until 10 am",
+          "offerText": "-30%",
+          "image": {
+            "source": "starter",
+            "starterId": "bakery-croissants-01"
+          },
+          "endsAt": "2026-11-15T10:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "29-deals-starter-no-cloud",
+      "why": "starter image while CLOUDINARY_CLOUD_NAME is missing (colour fallback)",
+      "handler": "handleServeLP",
+      "slug": "fx-deals-starter-nc",
+      "query": {},
+      "env": {
+        "DEALS_ON_LANDING_PAGES": "1"
+      },
+      "dealAccess": true,
+      "deals": [
+        {
+          "id": "deal_fx_6",
+          "title": "Croissant morning",
+          "description": "Until 10 am",
+          "offerText": "-30%",
+          "image": {
+            "source": "starter",
+            "starterId": "bakery-croissants-01"
+          },
+          "endsAt": null
+        }
+      ]
+    }
+  ]
+}

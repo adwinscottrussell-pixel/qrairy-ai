@@ -99,8 +99,48 @@ model LandingPage {
   businessId String?
   business   Business? @relation(fields: [businessId], references: [id])
 
+  // Landing Page Studio V3 (2026-10, additive). Which renderer serves the
+  // public page: "legacy" (renderPremiumLP, every existing page) or "v3"
+  // (the published PageDesignVersion). Only an explicit publish in the
+  // Studio changes it; nothing reads it before the V3 serving step.
+  renderer   String      @default("legacy")
+  pageDesign PageDesign?
+
   @@index([businessName])
   @@index([businessId])
+}
+
+// Landing Page Studio V3 (2026-10, additive). One design per landing page:
+// the owner's server-side draft (validated with backend/src/lpV3/core.js)
+// and a pointer to the published version. Never read by the legacy renderer.
+model PageDesign {
+  id                 String              @id @default(cuid())
+  landingPageId      String              @unique
+  landingPage        LandingPage         @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  schemaVersion      Int                 @default(1)
+  draft              Json
+  // Incremented on every draft save; a save based on an older revision is
+  // refused (two tabs, two devices).
+  draftRevision      Int                 @default(0)
+  publishedVersionId String?
+  updatedByUserId    String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  versions           PageDesignVersion[]
+}
+
+// A published snapshot of a design; never changed after it is written.
+model PageDesignVersion {
+  id              String     @id @default(cuid())
+  designId        String
+  design          PageDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+  version         Int
+  content         Json
+  createdByUserId String?
+  note            String?
+  createdAt       DateTime   @default(now())
+
+  @@unique([designId, version])
 }
 
 model Pass {

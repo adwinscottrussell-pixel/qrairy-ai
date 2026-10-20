@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "theme": {
+    "palette": { "brand": "#ff5a1f", "onBrand": "#ffffff", "background": "#ffffff", "surface": "#f7f4f0", "text": "#1a1410", "muted": "#6b625a", "heroText": "#ffffff", "dark": "#14100c" },
+    "fontPair": "serif-display",
+    "radius": "md"
+  },
+  "settings": { "language": "de", "seo": { "title": "Musterbäckerei – Tradition trifft Genuss", "description": "Frische Backwaren aus der Region." } },
+  "header": {
+    "logo": "https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/logo.png",
+    "logoAlt": "Musterbäckerei",
+    "showBusinessName": false,
+    "nav": [
+      { "label": "Start", "target": "/" },
+      { "label": "Angebote", "target": "/angebote" },
+      { "label": "Öffnungszeiten", "target": "/zeiten" },
+      { "label": "Kontakt", "target": "/kontakt" }
+    ]
+  },
+  "footer": { "text": "Musterbäckerei GmbH", "links": [{ "label": "Impressum", "target": "https://example.com/impressum" }] },
+  "pages": [
+    {
+      "id": "start",
+      "title": "Start",
+      "sections": [
+        {
+          "id": "s_hero01", "type": "hero", "variant": "overlay",
+          "data": {
+            "eyebrow": "Frisch · Regional · Mit Herz",
+            "headline": "Tradition trifft Genuss",
+            "subheadline": "Unsere Backwaren – täglich frisch\nin der Stadt und Umgebung.",
+            "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/bread.jpg",
+            "imageAlt": "Frisches Brot",
+            "overlay": 55,
+            "primary": { "text": "Unsere Angebote", "target": "/angebote", "icon": "tag" },
+            "secondary": { "text": "Standorte", "target": "/kontakt", "icon": "pin" }
+          }
+        },
+        {
+          "id": "s_quick01", "type": "buttons", "variant": "cards",
+          "data": {
+            "items": [
+              { "label": "Stempelkarte", "subtitle": "Punkte sammeln", "kind": "link", "target": "https://example.com/stempelkarte", "icon": "gift" },
+              { "label": "Angebote", "subtitle": "Aktuelle Aktionen", "kind": "link", "target": "/angebote", "icon": "tag" },
+              { "label": "WhatsApp", "subtitle": "Schreib uns", "kind": "whatsapp", "target": "https://wa.me/4973112345678" },
+              { "label": "Kontakt", "subtitle": "So erreichen Sie uns", "kind": "call", "target": "+49 731 123 456 78" }
+            ]
+          }
+        },
+        { "id": "s_deals01", "type": "dealsOffers", "anchor": "angebote", "data": { "title": "Aktuelle Angebote", "subtitle": "Unsere Highlights", "maxItems": 3, "showAllText": "Alle Angebote anzeigen", "showAllTarget": "/angebote" } },
+        { "id": "s_loyal01", "type": "loyalty", "data": { "title": "Unsere Stempelkarte", "subtitle": "Jeder 10. Kaffee gratis" } },
+        {
+          "id": "s_hours01", "type": "openingHours", "anchor": "zeiten", "style": { "background": "alt" },
+          "data": {
+            "title": "Öffnungszeiten",
+            "days": [
+              { "day": "mon", "ranges": [{ "open": "06:30", "close": "18:00" }] },
+              { "day": "tue", "ranges": [{ "open": "06:30", "close": "18:00" }] },
+              { "day": "wed", "ranges": [{ "open": "06:30", "close": "18:00" }] },
+              { "day": "thu", "ranges": [{ "open": "06:30", "close": "18:00" }] },
+              { "day": "fri", "ranges": [{ "open": "06:30", "close": "18:00" }] },
+              { "day": "sat", "ranges": [{ "open": "07:00", "close": "13:00" }] },
+              { "day": "sun", "closed": true }
+            ],
+            "note": "An Feiertagen geschlossen."
+          }
+        },
+        {
+          "id": "s_text01", "type": "text", "variant": "image-left",
+          "data": { "heading": "Seit 1952", "body": "Handwerk, Zeit und gute Zutaten.\nDas schmeckt man.", "image": "https://res.cloudinary.com/demo/image/upload/v1/qraivy-fixture/bakery.jpg", "imageAlt": "Backstube" }
+        },
+        {
+          "id": "s_contact01", "type": "contact", "anchor": "kontakt",
+          "data": {
+            "title": "Kontakt",
+            "address": { "line1": "Musterstraße 1", "postalCode": "89073", "city": "Ulm", "country": "Deutschland" },
+            "phone": "+49 731 123 456 78",
+            "email": "info@example.com",
+            "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Ulm"
+          }
+        },
+        { "id": "s_social01", "type": "socialMedia", "data": { "title": "Folgen Sie uns", "links": [{ "platform": "instagram", "url": "https://www.instagram.com/example" }, { "platform": "facebook", "url": "https://www.facebook.com/example" }] } }
+      ]
+    }
+  ]
+}
