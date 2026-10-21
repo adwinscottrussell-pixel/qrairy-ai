@@ -18,14 +18,46 @@ const LPV3_FILES = [
   'backend/tests/lpV3ImportLegacy.test.js',
   'backend/tests/lpV3Migration.test.js',
   'backend/tests/lpV3Scope.test.js',
+  // Phase 2A-1 (core additions): preview mode, describe(), Gallery and
+  // Products, and the browser copy of core.js for the Studio preview
+  'frontend/public/js/lpV3/core.js',
+  'backend/tests/fixtures/lpV3/allRenderedVariants.json',
+  'backend/tests/fixtures/lpV3/publicRender.golden.json',
+  'backend/tests/lpV3Preview.test.js',
+  'backend/tests/lpV3CoreCopy.test.js',
+  // Phase 2A-2 (Studio shell): a new page and its own files only; no
+  // existing page links to it yet
+  'frontend/public/studio.html',
+  'frontend/public/css/studio.css',
+  'frontend/public/js/studio/studio-routing.js',
+  'frontend/public/js/studio/studio-demo.js',
+  'frontend/public/js/studio/studio-shell.js',
+  'backend/tests/studioShell.test.js',
+  'backend/tests/studioShell.browser.test.js',
+  'backend/tests/adminNavShell.test.js',
   // older scope guards that now allow the files above
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',
   'backend/tests/pushPageSubscriptions.test.js',
+  // ...and those comparing committed history (they saw the V3 migration only
+  // once it was committed; fixed in Phase 2A-1)
+  'backend/tests/dealImageMaster.test.js',
+  'backend/tests/lpStagingFrontend.test.js',
+  'backend/tests/lpStagingRouting.test.js',
+  'backend/tests/lpVoicePreview.test.js',
+  'backend/tests/pushLocalization.test.js',
+  'backend/tests/welcomeUnified.test.js',
+  'backend/tests/slugReservation.test.js',
   'docs/architecture/LP_STUDIO_V3.md',
 ];
 
-const LPV3_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261021090000_add_page_design_v3'];
+// The browser copy of core.js is pinned by tests/lpV3CoreCopy.test.js (byte for byte
+// the server file) and lpV3Scope.test.js (the only new frontend file).
+// The Studio files (new, loaded only by studio.html) are pinned by
+// tests/studioShell.test.js and lpV3Scope.test.js.
+const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio'];
+const LPV3_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261021090000_add_page_design_v3']
+  .concat(LPV3_NEW_FRONTEND.map((f) => ':(exclude)' + f));
 
 // schema.prisma (LF line endings) without the V3 column block and models.
 function withoutV3(schema) {
@@ -46,4 +78,4 @@ function withoutV3(schema) {
   return s;
 }
 
-module.exports = { LPV3_FILES, LPV3_EXCLUDES, withoutV3 };
+module.exports = { LPV3_FILES, LPV3_EXCLUDES, LPV3_NEW_FRONTEND, withoutV3 };

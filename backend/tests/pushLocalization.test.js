@@ -124,7 +124,7 @@ test('the texts cannot end the script element, and they load before the push cod
 
 test('service worker and VAPID key are untouched (subscribe and storage: Phase 5.5C.3, pushPageSubscriptions.test.js)', () => {
   const root = path.join(__dirname, '..', '..');
-  const changed = execFileSync('git', ['diff', 'e7060e5', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/routes', 'backend/prisma', ...PRISMA_EXCLUDES,
+  const changed = execFileSync('git', ['diff', 'e7060e5', '--name-only', '--', 'frontend/public/sw.js', 'backend/public/sw.js', 'backend/src/routes', 'backend/prisma', ...PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES,
     'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
   // the push campaign security hotfix (tests/pushCampaignAuth.test.js) adds sign-in to two push routes, nothing else
   assert.deepEqual(changed.filter((f) => f !== 'backend/src/routes/lpRoutes.js'), []);

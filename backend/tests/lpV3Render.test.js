@@ -139,6 +139,8 @@ test('XSS sweep: hostile values in every field of every section', () => {
       const r = render(d);
       assert.ok(r.ok);
       assertSafe(r.html, p.join('.') + ' = ' + payload);
+      // the Studio preview (samples, placeholders, data-v3-id) is just as safe
+      assertSafe(V3.renderDesign(d, CTX, { preview: true }).html, 'preview ' + p.join('.') + ' = ' + payload);
     }
     // hostile business name (server-known, still escaped)
   }

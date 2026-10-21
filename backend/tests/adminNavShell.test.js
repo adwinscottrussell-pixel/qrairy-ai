@@ -37,6 +37,7 @@ const ACTIVE = {
   'designer-saved.html': null,
   'smart-qr-detail.html': 'id="sb-smart-pages"',
   'academy.html': 'id="sb-academy"',
+  'studio.html': 'id="sb-smart-pages"',   // Landing Page Studio V3 (tests/studioShell.test.js)
 };
 const canonical = sidebar(read('dashboard.html')).replace(/class="sb-item active"/g, 'class="sb-item"');
 

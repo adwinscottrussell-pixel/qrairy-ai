@@ -1,0 +1,49 @@
+{
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise.",
+  "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
+  "results": [
+    {
+      "design": "localBusiness",
+      "ctx": 0,
+      "bytes": 13947,
+      "sha256": "79648a1efa4685ea7a4e6688e700f20e6f52639f351d107db1a610d5f1f90140",
+      "skipped": [
+        "dealsOffers",
+        "loyalty"
+      ]
+    },
+    {
+      "design": "localBusiness",
+      "ctx": 1,
+      "bytes": 13947,
+      "sha256": "79648a1efa4685ea7a4e6688e700f20e6f52639f351d107db1a610d5f1f90140",
+      "skipped": [
+        "dealsOffers",
+        "loyalty"
+      ]
+    },
+    {
+      "design": "allRenderedVariants",
+      "ctx": 0,
+      "bytes": 16786,
+      "sha256": "58d307ecdb02197eb3c468dc6a56a01b348cfd8101d1e69ba3bdc5eb77954b93",
+      "skipped": []
+    },
+    {
+      "design": "allRenderedVariants",
+      "ctx": 1,
+      "bytes": 16811,
+      "sha256": "26ee949a585a7f49ab5883a447dcef78b10e759ed87a74d3f67b3b63ed79f2a3",
+      "skipped": []
+    }
+  ],
+  "revisions": [
+    {
+      "date": "2026-10-21",
+      "designs": [
+        "allRenderedVariants"
+      ],
+      "reason": "default palette: brown/sepia -> QRAIVY neutral black / gray (Admin #101012, landing #f8f8f8 / #0a0a0a / #555; owner request, no navy); localBusiness (own palette) unchanged"
+    }
+  ]
+}

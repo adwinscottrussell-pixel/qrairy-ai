@@ -76,7 +76,12 @@
     rounded: { head: "'Nunito',system-ui,sans-serif", body: "'Nunito',system-ui,sans-serif", href: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap' },
   };
   var RADII = { none: '0px', sm: '6px', md: '12px', lg: '20px' };
-  var DEFAULT_PALETTE = { brand: '#ff5a1f', onBrand: '#ffffff', background: '#ffffff', surface: '#f7f4f0', text: '#1a1410', muted: '#6b625a', heroText: '#ffffff', dark: '#14100c' };
+  // QRAIVY defaults: the existing neutral black / gray / white with orange as
+  // the accent (no navy, no brown or sepia): dark = the Admin black (#101012),
+  // surface / text / muted = the current landing pages' #f8f8f8 / #0a0a0a /
+  // #555. Owners override any of these in theme.palette.
+  // Contrast: text 19.8:1, muted 7.5:1 on white; heroText on dark 19.0:1.
+  var DEFAULT_PALETTE = { brand: '#ff5a1f', onBrand: '#ffffff', background: '#ffffff', surface: '#f8f8f8', text: '#0a0a0a', muted: '#555555', heroText: '#ffffff', dark: '#101012' };
 
   // ── field specs ──
   function str(max, o) { return Object.assign({ t: 'str', max: max }, o || {}); }
@@ -100,7 +105,7 @@
       variants: ['overlay', 'split', 'simple'],
       data: obj({ eyebrow: str(60), headline: str(120, { required: true }), subheadline: str(300, { multiline: true }), backgroundImage: image(), imageAlt: str(120),
         overlay: int(0, 80, 45), primary: BUTTON, secondary: obj({ text: str(40), target: link(), icon: en(ICONS) }) }) },
-    gallery: { label: 'Gallery', description: 'Images, products or menu items', category: ['media'], rendered: false,
+    gallery: { label: 'Gallery', description: 'Images, products or menu items', category: ['media'], rendered: true,
       variants: ['grid', 'carousel'],
       data: obj({ title: str(80), images: arr(obj({ image: image({ required: true }), alt: str(120), caption: str(120) }), 24) }) },
     dealsOffers: { label: 'Deals / Offers', description: 'Show current offers and promotions', category: ['popular', 'business'], rendered: false,
@@ -109,7 +114,7 @@
     loyalty: { label: 'Loyalty', description: 'Digital stamp card and rewards', category: ['business'], rendered: false,
       variants: ['card'],
       data: obj({ title: str(80), subtitle: str(160), showWalletButtons: bool(true) }) },
-    products: { label: 'Products', description: 'Products with links to shop', category: ['business'], rendered: false,
+    products: { label: 'Products', description: 'Products with links to shop', category: ['business'], rendered: true,
       variants: ['grid', 'list'],
       data: obj({ title: str(80), items: arr(obj({ name: str(80, { required: true }), description: str(200), price: str(20), image: image(), target: link(), buttonText: str(30) }), 24) }) },
     openingHours: { label: 'Opening Hours', description: 'Show your business hours', category: ['business'], rendered: true,
@@ -344,9 +349,20 @@
   // ── rendering ──
   var TEXT = {
     de: { menu: 'Menü', closed: 'Geschlossen', phone: 'Telefon', email: 'E-Mail', directions: 'Route planen', address: 'Adresse', skip: 'Zum Inhalt springen',
-      days: { mon: 'Montag', tue: 'Dienstag', wed: 'Mittwoch', thu: 'Donnerstag', fri: 'Freitag', sat: 'Samstag', sun: 'Sonntag' } },
+      days: { mon: 'Montag', tue: 'Dienstag', wed: 'Mittwoch', thu: 'Donnerstag', fri: 'Freitag', sat: 'Samstag', sun: 'Sonntag' },
+      view: 'Ansehen',
+      // preview only (the Studio)
+      empty: 'Leerer Abschnitt – Inhalte im Editor ergänzen', image: 'Bildplatzhalter', sample: 'Beispiel',
+      dealsNote: 'Vorschau: Hier erscheinen Ihre aktuellen Angebote.', loyaltyNote: 'Vorschau: Hier erscheint Ihre Stempelkarte.',
+      sampleDeals: [['2 für 1', 'Beispielangebot', 'Jeden Montag'], ['-20%', 'Beispielaktion', 'Nur diese Woche'], ['€ 2,50', 'Beispielpreis', 'Freitag & Samstag']],
+      stamps: '3 von 10 Stempeln', walletApple: 'Zu Apple Wallet hinzufügen', walletGoogle: 'Zu Google Wallet hinzufügen' },
     en: { menu: 'Menu', closed: 'Closed', phone: 'Phone', email: 'Email', directions: 'Get directions', address: 'Address', skip: 'Skip to content',
-      days: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' } },
+      days: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' },
+      view: 'View',
+      empty: 'Empty section – add content in the editor', image: 'Image placeholder', sample: 'Sample',
+      dealsNote: 'Preview: your current deals appear here.', loyaltyNote: 'Preview: your stamp card appears here.',
+      sampleDeals: [['2 for 1', 'Sample offer', 'Every Monday'], ['-20%', 'Sample promotion', 'This week only'], ['€ 2.50', 'Sample price', 'Friday & Saturday']],
+      stamps: '3 of 10 stamps', walletApple: 'Add to Apple Wallet', walletGoogle: 'Add to Google Wallet' },
   };
   var SOCIAL_LABEL = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', pinterest: 'Pinterest', whatsapp: 'WhatsApp' };
   var KIND_ICON = { whatsapp: 'chat', call: 'phone', email: 'mail', directions: 'pin', website: 'globe', link: 'arrow' };
@@ -358,7 +374,7 @@
     globe: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18', calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z', info: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM12 11v6M12 7.5h.01',
     chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z', heart: 'M12 20s-7-4.4-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.6-9 9-9 9z',
-    chevron: 'M9 6l6 6-6 6', menu: 'M4 7h16M4 12h16M4 17h16',
+    chevron: 'M9 6l6 6-6 6', menu: 'M4 7h16M4 12h16M4 17h16', image: 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5h.01',
   };
   function icon(name, cls) {
     var d = SVG[name];
@@ -375,96 +391,181 @@
     return ' href="' + esc(href(target)) + '"' + (external ? ' target="_blank" rel="noopener noreferrer"' : '');
   }
   function heading(text, cls) { return text ? '<h2 class="' + cls + '">' + esc(text) + '</h2>' : ''; }
-  function sectionOpen(s, extraClass) {
-    return '<section id="' + esc(s.anchor || s.id) + '" class="v3-s v3-' + esc(s.type) + ' v3-v-' + esc(s.variant) + ' v3-bg-' + esc(s.style.background) +
+  // pv (preview, the Studio only): adds data-v3-id for click-to-select. The
+  // public output never contains it.
+  function selectId(s, pv) { return pv ? ' data-v3-id="' + esc(s.id) + '"' : ''; }
+  function sectionOpen(s, extraClass, pv) {
+    return '<section id="' + esc(s.anchor || s.id) + '"' + selectId(s, pv) + ' class="v3-s v3-' + esc(s.type) + ' v3-v-' + esc(s.variant) + ' v3-bg-' + esc(s.style.background) +
       ' v3-al-' + esc(s.style.align) + ' v3-sp-' + esc(s.style.spacing) + (extraClass ? ' ' + extraClass : '') + '"><div class="v3-wrap">';
   }
   var SECTION_CLOSE = '</div></section>';
+  // Preview only: an empty section stays visible and selectable; a missing
+  // image shows a placeholder. Fixed texts only.
+  function emptySection(s, t, pv) {
+    return pv ? sectionOpen(s, 'v3-ph-section', pv) + '<div class="v3-ph-note">' + icon('info') + '<span>' + esc(t.empty) + '</span></div>' + SECTION_CLOSE : '';
+  }
+  function imagePlaceholder(t, cls) {
+    return '<div class="v3-img-ph' + (cls ? ' ' + cls : '') + '" role="img" aria-label="' + esc(t.image) + '">' + icon('image') + '</div>';
+  }
 
   var RENDER = {
-    hero: function (s) {
+    hero: function (s, t, pv) {
       var d = s.data, out = '';
       var img = s.variant !== 'simple' && d.backgroundImage
         ? '<img class="v3-hero-img" src="' + esc(d.backgroundImage) + '" alt="' + esc(d.imageAlt) + '" width="1600" height="900" fetchpriority="high">' : '';
+      var media = s.variant === 'split' ? (img || (pv ? imagePlaceholder(t) : '')) : '';
       var overlay = s.variant === 'overlay' && img ? '<div class="v3-hero-shade" style="opacity:' + (d.overlay / 100) + '"></div>' : '';
       var btns = '';
       if (d.primary.text && d.primary.target) {
         btns += '<a class="v3-btn v3-btn-primary"' + linkAttrs(d.primary.target) + (d.primary.color ? ' style="background:' + d.primary.color + '"' : '') + '>' + icon(d.primary.icon) + '<span>' + esc(d.primary.text) + '</span></a>';
       }
       if (d.secondary.text && d.secondary.target) btns += '<a class="v3-btn v3-btn-outline"' + linkAttrs(d.secondary.target) + '>' + icon(d.secondary.icon) + '<span>' + esc(d.secondary.text) + '</span></a>';
-      out += '<section id="' + esc(s.anchor || s.id) + '" class="v3-s v3-hero v3-v-' + esc(s.variant) + ' v3-al-' + esc(s.style.align) + (img ? ' v3-has-img' : '') + '">';
+      out += '<section id="' + esc(s.anchor || s.id) + '"' + selectId(s, pv) + ' class="v3-s v3-hero v3-v-' + esc(s.variant) + ' v3-al-' + esc(s.style.align) + (img ? ' v3-has-img' : '') + '">';
       if (s.variant === 'overlay') out += img + overlay;
       out += '<div class="v3-wrap v3-hero-in"><div class="v3-hero-text">' +
         (d.eyebrow ? '<p class="v3-eyebrow">' + esc(d.eyebrow) + '</p>' : '') +
         '<h1 class="v3-h1">' + esc(d.headline) + '</h1>' +
         (d.subheadline ? '<p class="v3-lead">' + escMultiline(d.subheadline) + '</p>' : '') +
         (btns ? '<div class="v3-btns">' + btns + '</div>' : '') + '</div>' +
-        (s.variant === 'split' && img ? '<div class="v3-hero-media">' + img + '</div>' : '') + '</div></section>';
+        (media ? '<div class="v3-hero-media">' + media + '</div>' : '') + '</div></section>';
       return out;
     },
-    buttons: function (s) {
+    buttons: function (s, t, pv) {
       var d = s.data;
-      if (!d.items.length) return '';
+      if (!d.items.length) return emptySection(s, t, pv);
       var items = d.items.map(function (it) {
         var ic = it.icon !== 'none' ? it.icon : KIND_ICON[it.kind];
         if (s.variant === 'buttons') return '<a class="v3-btn v3-btn-primary"' + linkAttrs(it.target) + '>' + icon(ic) + '<span>' + esc(it.label) + '</span></a>';
         return '<a class="v3-card-link"' + linkAttrs(it.target) + '><span class="v3-card-ic">' + icon(ic) + '</span><span class="v3-card-tx"><strong>' + esc(it.label) + '</strong>' +
           (it.subtitle ? '<small>' + esc(it.subtitle) + '</small>' : '') + '</span>' + (s.variant === 'list' ? icon('chevron', 'v3-chev') : '') + '</a>';
       }).join('');
-      return sectionOpen(s) + heading(d.title, 'v3-h2') + (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') +
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') +
         '<div class="v3-items v3-items-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
     },
-    text: function (s) {
+    text: function (s, t, pv) {
       var d = s.data;
-      if (!d.heading && !d.body && !d.image) return '';
-      var img = d.image ? '<figure class="v3-text-fig"><img src="' + esc(d.image) + '" alt="' + esc(d.imageAlt) + '" loading="lazy" width="800" height="600"></figure>' : '';
-      return sectionOpen(s) + '<div class="v3-text-grid">' + (s.variant === 'image-right' || s.variant === 'plain' ? '' : img) +
+      if (!d.heading && !d.body && !d.image) return emptySection(s, t, pv);
+      var img = d.image ? '<figure class="v3-text-fig"><img src="' + esc(d.image) + '" alt="' + esc(d.imageAlt) + '" loading="lazy" width="800" height="600"></figure>'
+        : (pv && s.variant !== 'plain' ? '<figure class="v3-text-fig">' + imagePlaceholder(t) + '</figure>' : '');
+      return sectionOpen(s, '', pv) + '<div class="v3-text-grid">' + (s.variant === 'image-right' || s.variant === 'plain' ? '' : img) +
         '<div class="v3-text-body">' + heading(d.heading, 'v3-h2') + (d.body ? '<p class="v3-body">' + escMultiline(d.body) + '</p>' : '') + '</div>' +
         (s.variant === 'image-right' ? img : '') + (s.variant === 'plain' ? img : '') + '</div>' + SECTION_CLOSE;
     },
-    openingHours: function (s, t) {
+    openingHours: function (s, t, pv) {
       var d = s.data;
-      if (!d.days.length && !d.note) return '';
+      if (!d.days.length && !d.note) return emptySection(s, t, pv);
       var order = DAYS.filter(function (day) { return d.days.some(function (x) { return x.day === day; }); });
       var rows = order.map(function (day) {
         var e = d.days.filter(function (x) { return x.day === day; })[0];
         var hours = e.closed || !e.ranges.length ? esc(t.closed) : e.ranges.map(function (r) { return esc(r.open) + '–' + esc(r.close); }).join(', ');
         return '<tr' + (e.closed ? ' class="v3-closed"' : '') + '><th scope="row">' + esc(t.days[day]) + '</th><td>' + hours + '</td></tr>';
       }).join('');
-      return sectionOpen(s) + heading(d.title, 'v3-h2') + (rows ? '<table class="v3-hours">' + rows + '</table>' : '') +
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + (rows ? '<table class="v3-hours">' + rows + '</table>' : '') +
         (d.note ? '<p class="v3-note">' + escMultiline(d.note) + '</p>' : '') + SECTION_CLOSE;
     },
-    contact: function (s, t) {
+    contact: function (s, t, pv) {
       var d = s.data, a = d.address, parts = [];
       var addr = [a.line1, a.line2, [a.postalCode, a.city].filter(Boolean).join(' '), a.country].filter(Boolean);
       if (addr.length) parts.push('<div class="v3-ct-row">' + icon('pin') + '<address><span class="v3-sr">' + esc(t.address) + ': </span>' + addr.map(esc).join('<br>') + '</address></div>');
       if (d.phone) parts.push('<div class="v3-ct-row">' + icon('phone') + '<a href="' + esc('tel:' + d.phone.replace(/[ ()\/-]/g, '')) + '"><span class="v3-sr">' + esc(t.phone) + ': </span>' + esc(d.phone) + '</a></div>');
       if (d.email) parts.push('<div class="v3-ct-row">' + icon('mail') + '<a href="' + esc('mailto:' + d.email) + '"><span class="v3-sr">' + esc(t.email) + ': </span>' + esc(d.email) + '</a></div>');
       if (d.mapsUrl && d.showMapLink) parts.push('<a class="v3-btn v3-btn-outline"' + linkAttrs(d.mapsUrl) + '>' + icon('pin') + '<span>' + esc(t.directions) + '</span></a>');
-      if (!parts.length) return '';
-      return sectionOpen(s) + heading(d.title, 'v3-h2') + '<div class="v3-contact">' + parts.join('') + '</div>' + SECTION_CLOSE;
+      if (!parts.length) return emptySection(s, t, pv);
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-contact">' + parts.join('') + '</div>' + SECTION_CLOSE;
     },
-    socialMedia: function (s) {
+    socialMedia: function (s, t, pv) {
       var d = s.data;
-      if (!d.links.length) return '';
+      if (!d.links.length) return emptySection(s, t, pv);
       var links = d.links.map(function (l) {
         var label = SOCIAL_LABEL[l.platform];
         return '<a class="v3-social v3-social-' + esc(l.platform) + '"' + linkAttrs(l.url) + ' aria-label="' + esc(label) + '"><span class="v3-social-mark" aria-hidden="true">' + esc(label.charAt(0)) + '</span>' +
           (s.variant === 'buttons' ? '<span>' + esc(label) + '</span>' : '') + '</a>';
       }).join('');
-      return sectionOpen(s) + heading(d.title, 'v3-h2') + '<div class="v3-socials">' + links + '</div>' + SECTION_CLOSE;
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-socials">' + links + '</div>' + SECTION_CLOSE;
+    },
+    gallery: function (s, t, pv) {
+      var d = s.data;
+      if (!d.images.length) return emptySection(s, t, pv);
+      var items = d.images.map(function (im) {
+        return '<figure class="v3-gal-item"><img src="' + esc(im.image) + '" alt="' + esc(im.alt) + '" loading="lazy" width="800" height="600">' +
+          (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>';
+      }).join('');
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal v3-gal-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
+    },
+    products: function (s, t, pv) {
+      var d = s.data;
+      if (!d.items.length) return emptySection(s, t, pv);
+      var items = d.items.map(function (p) {
+        var img = p.image ? '<img class="v3-prod-img" src="' + esc(p.image) + '" alt="' + esc(p.name) + '" loading="lazy" width="800" height="600">'
+          : (pv ? imagePlaceholder(t, 'v3-prod-img') : '');
+        return '<article class="v3-prod">' + img + '<div class="v3-prod-body"><h3 class="v3-prod-name">' + esc(p.name) + '</h3>' +
+          (p.description ? '<p class="v3-prod-desc">' + esc(p.description) + '</p>' : '') +
+          (p.price ? '<p class="v3-prod-price">' + esc(p.price) + '</p>' : '') +
+          (p.target ? '<a class="v3-btn v3-btn-primary v3-prod-btn"' + linkAttrs(p.target) + '><span>' + esc(p.buttonText || t.view) + '</span></a>' : '') + '</div></article>';
+      }).join('');
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-prods v3-prods-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
     },
   };
 
-  function css(design) {
+  // Preview only: Deals / Offers and Loyalty show labelled samples in the
+  // Studio. The public page renders them from real data in a later phase
+  // (until then they are reported as `skipped` and render nothing).
+  var SAMPLE = {
+    dealsOffers: function (s, t) {
+      var d = s.data;
+      var cards = t.sampleDeals.slice(0, d.maxItems).map(function (c) {
+        return '<article class="v3-prod v3-sample-card">' + imagePlaceholder(t, 'v3-prod-img') + '<div class="v3-prod-body"><p class="v3-prod-price">' + esc(c[0]) + '</p>' +
+          '<h3 class="v3-prod-name">' + esc(c[1]) + '</h3><p class="v3-prod-desc">' + esc(c[2]) + '</p></div></article>';
+      }).join('');
+      return sectionOpen(s, 'v3-sample', true) + '<span class="v3-sample-badge">' + esc(t.sample) + '</span>' + heading(d.title, 'v3-h2') +
+        (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') + '<div class="v3-prods v3-prods-grid">' + cards + '</div>' +
+        (d.showAllText && d.showAllTarget ? '<p><a class="v3-more"' + linkAttrs(d.showAllTarget) + '>' + esc(d.showAllText) + ' →</a></p>' : '') +
+        '<p class="v3-note">' + esc(t.dealsNote) + '</p>' + SECTION_CLOSE;
+    },
+    loyalty: function (s, t) {
+      var d = s.data, dots = '';
+      for (var i = 0; i < 10; i++) dots += '<span class="v3-stamp' + (i < 3 ? ' v3-stamp-on' : '') + '"></span>';
+      return sectionOpen(s, 'v3-sample', true) + '<span class="v3-sample-badge">' + esc(t.sample) + '</span>' + heading(d.title, 'v3-h2') +
+        (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') + '<div class="v3-loyalty-card"><div class="v3-stamps" role="img" aria-label="' + esc(t.stamps) + '">' + dots + '</div>' +
+        '<p class="v3-stamps-tx">' + esc(t.stamps) + '</p>' +
+        (d.showWalletButtons ? '<div class="v3-btns"><span class="v3-btn v3-btn-outline">' + esc(t.walletApple) + '</span><span class="v3-btn v3-btn-outline">' + esc(t.walletGoogle) + '</span></div>' : '') +
+        '</div><p class="v3-note">' + esc(t.loyaltyNote) + '</p>' + SECTION_CLOSE;
+    },
+  };
+
+  function css(design, extra) {
     var p = Object.assign({}, DEFAULT_PALETTE);
     Object.keys(design.theme.palette).forEach(function (k) { if (design.theme.palette[k]) p[k] = design.theme.palette[k]; });
     var f = FONT_PAIRS[design.theme.fontPair];
     // Only validated hex colours and constants reach the stylesheet.
     return ':root{--v3-brand:' + p.brand + ';--v3-on-brand:' + p.onBrand + ';--v3-bg:' + p.background + ';--v3-surface:' + p.surface + ';--v3-text:' + p.text +
       ';--v3-muted:' + p.muted + ';--v3-hero-text:' + p.heroText + ';--v3-dark:' + p.dark + ';--v3-radius:' + RADII[design.theme.radius] +
-      ';--v3-font-head:' + f.head + ';--v3-font-body:' + f.body + '}' + BASE_CSS;
+      ';--v3-font-head:' + f.head + ';--v3-font-body:' + f.body + '}' + BASE_CSS + (extra || '');
   }
+  // Added only when a page contains these sections (or in the preview), so
+  // the stylesheet of every other page stays exactly as it was.
+  var GALLERY_CSS = [
+    '.v3-gal{display:grid;gap:12px;margin-top:16px;grid-template-columns:1fr 1fr}.v3-gal-item{margin:0;min-width:0}',
+    '.v3-gal-item img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--v3-radius)}.v3-gal-item figcaption{margin-top:6px;font-size:13px;color:var(--v3-muted)}',
+    '.v3-gal-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px}.v3-gal-carousel .v3-gal-item{flex:0 0 80%;scroll-snap-align:start}',
+    '@media (min-width:768px){.v3-gal-grid{grid-template-columns:repeat(3,1fr)}.v3-gal-carousel .v3-gal-item{flex-basis:40%}}@media (min-width:1200px){.v3-gal-grid{grid-template-columns:repeat(4,1fr)}}',
+  ].join('');
+  var PRODUCTS_CSS = [
+    '.v3-prods{display:grid;gap:16px;margin-top:16px}.v3-prods-grid{grid-template-columns:1fr 1fr}.v3-prods-list{grid-template-columns:1fr}',
+    '.v3-prod{display:flex;flex-direction:column;min-width:0;background:var(--v3-bg);color:var(--v3-text);border:1px solid rgba(0,0,0,.08);border-radius:var(--v3-radius);overflow:hidden}',
+    '.v3-prods-list .v3-prod{flex-direction:row}.v3-prod-img{width:100%;aspect-ratio:4/3;object-fit:cover}.v3-prods-list .v3-prod-img{width:112px;aspect-ratio:1/1;flex-shrink:0}',
+    '.v3-prod-body{display:flex;flex-direction:column;gap:6px;flex:1;padding:12px;min-width:0}.v3-prod-name{margin:0;font-size:16px;line-height:1.3}.v3-prod-desc{margin:0;font-size:14px;color:var(--v3-muted)}',
+    '.v3-prod-price{margin:0;font-weight:700;color:var(--v3-brand)}.v3-prod-btn{align-self:flex-start;min-height:40px;margin-top:auto;padding:8px 14px;font-size:14px}',
+    '@media (min-width:768px){.v3-prods-grid{grid-template-columns:repeat(3,1fr)}}@media (min-width:1200px){.v3-prods-grid{grid-template-columns:repeat(4,1fr)}}',
+  ].join('');
+  var PREVIEW_CSS = [
+    '.v3-ph-note{display:flex;align-items:center;gap:10px;padding:18px;border:2px dashed rgba(0,0,0,.2);border-radius:var(--v3-radius);color:var(--v3-muted)}',
+    '.v3-img-ph{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/3;border:2px dashed rgba(127,127,127,.45);border-radius:var(--v3-radius);background:rgba(127,127,127,.08);color:var(--v3-muted)}',
+    '.v3-img-ph .v3-ic{width:32px;height:32px}.v3-prod .v3-img-ph{border-radius:0;border-width:0 0 2px}',
+    '.v3-sample{position:relative}.v3-sample-badge{display:inline-block;margin-bottom:10px;padding:2px 10px;border-radius:999px;background:var(--v3-muted);color:var(--v3-bg);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}',
+    '.v3-more{font-weight:700;color:var(--v3-brand)}.v3-loyalty-card{max-width:420px;margin-top:16px;padding:18px;border-radius:var(--v3-radius);background:var(--v3-surface)}',
+    '.v3-stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.v3-stamp{aspect-ratio:1/1;border-radius:50%;border:2px solid var(--v3-brand)}.v3-stamp-on{background:var(--v3-brand)}.v3-stamps-tx{margin:12px 0;font-weight:600}',
+  ].join('');
   var BASE_CSS = [
     '*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}',
     'body{margin:0;background:var(--v3-bg);color:var(--v3-text);font-family:var(--v3-font-body);font-size:16px;line-height:1.55;overflow-x:hidden}',
@@ -510,39 +611,86 @@
     '@media (min-width:1200px){.v3-wrap{padding:0 32px}}',
   ].join('');
 
-  // renderDesign(design, ctx, opts) -> { ok, html, errors, skipped }
+  // renderDesign(design, ctx, opts) -> { ok, html, errors, skipped, samples }
   // ctx: { businessName } (server-known facts only). The design is validated
   // here again, whatever the caller did before.
+  // opts: { cloudName } for validation; { preview: true } only for the
+  // Studio's preview frame: section ids for selection (data-v3-id), visible
+  // empty sections, image placeholders and labelled samples for Deals /
+  // Offers and Loyalty. Never use preview for a public page.
   function renderDesign(input, ctx, opts) {
     var v = validateDesign(input, opts);
-    if (!v.ok) return { ok: false, html: '', errors: v.errors, skipped: [] };
+    if (!v.ok) return { ok: false, html: '', errors: v.errors, skipped: [], samples: [] };
+    var pv = !!(opts && opts.preview === true);
     var design = v.design, lang = design.settings.language, t = TEXT[lang];
     var businessName = ctx && typeof ctx.businessName === 'string' ? cleanStr(ctx.businessName, false).slice(0, 120) : '';
-    var skipped = [];
+    var skipped = [], samples = [], used = {};
     var page = design.pages[0];
     var body = page.sections.map(function (s) {
       if (s.hidden) return '';
-      if (!SECTIONS[s.type].rendered) { skipped.push(s.type); return ''; }
-      return RENDER[s.type](s, t);
+      var out;
+      if (SECTIONS[s.type].rendered) out = RENDER[s.type](s, t, pv);
+      else if (pv) { samples.push(s.type); out = SAMPLE[s.type](s, t); }
+      else { skipped.push(s.type); return ''; }
+      if (out) used[s.type] = true;
+      return out;
     }).join('');
+    var extraCss = (used.gallery ? GALLERY_CSS : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
     var h = design.header;
     var navLinks = h.nav.map(function (n) { return '<a' + linkAttrs(n.target) + '>' + esc(n.label) + '</a>'; }).join('');
     var brand = '<a class="v3-brandmark" href="#top">' + (h.logo ? '<img src="' + esc(h.logo) + '" alt="' + esc(h.logoAlt || businessName) + '">' : '') +
       (h.showBusinessName || !h.logo ? '<span>' + esc(businessName) + '</span>' : '') + '</a>';
-    var header = '<header class="v3-header"><div class="v3-wrap">' + brand +
+    var header = '<header class="v3-header"' + (pv ? ' data-v3-part="header"' : '') + '><div class="v3-wrap">' + brand +
       (navLinks ? '<nav class="v3-nav" aria-label="' + esc(t.menu) + '">' + navLinks + '</nav><details class="v3-menu"><summary aria-label="' + esc(t.menu) + '">' + icon('menu') +
         '</summary><nav class="v3-menu-panel" aria-label="' + esc(t.menu) + '">' + navLinks + '</nav></details>' : '') + '</div></header>';
     var f = design.footer;
-    var footer = '<footer class="v3-footer"><div class="v3-wrap"><span>' + (f.text ? escMultiline(f.text) : '© ' + esc(businessName)) + '</span>' +
+    var footer = '<footer class="v3-footer"' + (pv ? ' data-v3-part="footer"' : '') + '><div class="v3-wrap"><span>' + (f.text ? escMultiline(f.text) : '© ' + esc(businessName)) + '</span>' +
       (f.links.length ? '<span>' + f.links.map(function (l) { return '<a' + linkAttrs(l.target) + '>' + esc(l.label) + '</a>'; }).join(' · ') + '</span>' : '') + '</div></footer>';
     var title = design.settings.seo.title || businessName || 'QRAIVY';
     var head = '<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + esc(title) + '</title>' +
       (design.settings.seo.description ? '<meta name="description" content="' + esc(design.settings.seo.description) + '">' : '') +
       '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-      '<link rel="stylesheet" href="' + esc(FONT_PAIRS[design.theme.fontPair].href) + '"><style>' + css(design) + '</style>';
+      '<link rel="stylesheet" href="' + esc(FONT_PAIRS[design.theme.fontPair].href) + '"><style>' + css(design, extraCss) + '</style>';
     var html = '<!DOCTYPE html><html lang="' + lang + '"><head>' + head + '</head><body class="v3-page"><a class="v3-skip" href="#main">' + esc(t.skip) + '</a>' +
       '<div id="top"></div>' + header + '<main id="main">' + body + '</main>' + footer + '</body></html>';
-    return { ok: true, html: html, errors: [], skipped: skipped };
+    return { ok: true, html: html, errors: [], skipped: skipped, samples: samples };
+  }
+
+  // describe(): the editable schema as plain data (no functions), for
+  // building the Studio inspector from the same rules the server enforces.
+  // A fresh copy on every call.
+  var SPEC_KEYS = ['t', 'max', 'min', 'required', 'multiline', 'values', 'def', 'kind', 'kindFrom'];
+  function plainSpec(spec) {
+    var out = {};
+    SPEC_KEYS.forEach(function (k) {
+      if (spec[k] !== undefined) out[k] = Array.isArray(spec[k]) ? spec[k].slice() : spec[k];
+    });
+    if (spec.fields) { out.fields = {}; Object.keys(spec.fields).forEach(function (k) { out.fields[k] = plainSpec(spec.fields[k]); }); }
+    if (spec.item) out.item = plainSpec(spec.item);
+    return out;
+  }
+  function describe() {
+    var sections = {};
+    SECTION_TYPES.forEach(function (type) {
+      var d = SECTIONS[type];
+      sections[type] = { label: d.label, description: d.description, category: d.category.slice(), variants: d.variants.slice(), rendered: d.rendered, data: plainSpec(d.data) };
+    });
+    var F = DESIGN.fields;
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      limits: { designChars: LIMITS.designChars, sections: LIMITS.sections, pages: 1 },
+      design: { theme: plainSpec(F.theme), settings: plainSpec(F.settings), header: plainSpec(F.header), footer: plainSpec(F.footer) },
+      section: {
+        id: { t: 'id', pattern: '^s_[a-z0-9]{4,16}$', required: true },
+        anchor: { t: 'anchor', pattern: '^[a-z0-9][a-z0-9-]{0,39}$', reserved: ['start', 'top'] },
+        hidden: { t: 'bool', def: false },
+        style: plainSpec(STYLE),
+      },
+      sections: sections,
+      choices: { icons: ICONS.slice(), linkKinds: LINK_KINDS.slice(), fontPairs: Object.keys(FONT_PAIRS), radii: Object.keys(RADII), socialPlatforms: Object.keys(SOCIAL_HOSTS),
+        days: DAYS.slice(), languages: ['de', 'en'], mapHosts: MAP_HOSTS.slice() },
+      defaultPalette: Object.assign({}, DEFAULT_PALETTE),
+    };
   }
 
   // The Studio's "Add Section" library (metadata only).
@@ -556,7 +704,7 @@
   return {
     SCHEMA_VERSION: SCHEMA_VERSION, LIMITS: LIMITS, SECTION_TYPES: SECTION_TYPES, ICONS: ICONS, LINK_KINDS: LINK_KINDS, FONT_PAIRS: Object.keys(FONT_PAIRS),
     SOCIAL_PLATFORMS: Object.keys(SOCIAL_HOSTS), DEFAULT_PALETTE: DEFAULT_PALETTE,
-    validateDesign: validateDesign, renderDesign: renderDesign, library: library,
+    validateDesign: validateDesign, renderDesign: renderDesign, library: library, describe: describe,
     _esc: esc,
   };
 });

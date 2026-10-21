@@ -244,7 +244,7 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // same" rather than "only these changed", so it keeps holding as the
   // branch moves on (js/staging-config.js is expected to receive its two
   // values later and is not part of this comparison).
-  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js' && f !== 'deal-image-formats.js' && f !== 'deal-page-picker.js')
+  const scripts = fs.readdirSync(path.join(PUB, 'js')).filter((f) => f !== 'staging-config.js' && f !== 'voice-greeting-editor.js' && f !== 'admin-shell.js' && f !== 'deal-starter-images.js' && f !== 'deals-routing.js' && f !== 'deal-image-formats.js' && f !== 'deal-page-picker.js' && f !== 'lpV3' && f !== 'studio')   // Studio V3: lpV3/core.js (tests/lpV3CoreCopy.test.js), studio/ (tests/studioShell.test.js)
     .map((f) => 'frontend/public/js/' + f)
     .filter((f) => !require('./helpers/academyFiles').ACADEMY_FRONTEND.includes(f));   // Academy: tests/academyPage.test.js
   assert.equal(git('diff', 'a642477', '--stat', '--', ...scripts, 'frontend/public/qds', 'backend/railway.toml').trim(), '');
@@ -255,7 +255,7 @@ test('F. frontend isolation changed no editor code, no backend code, no schema a
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
   // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
-  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, 'frontend/public/js/deal-starter-images.js').trim(), '');
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES, 'frontend/public/js/deal-starter-images.js').trim(), '');
   // smart-qr-detail.html and js/admin-shell.js: unchanged by this step's own commit. They were
   // changed later, on purpose, to give the page the Admin sidebar (see adminNavShell.test.js;
   // the page's own markup is still compared with production in lpVoiceGreetings.test.js).

@@ -288,7 +288,7 @@ test('first visit: the redirect still sends no ?lang, so the welcome screen foll
 
 test('scope: wallet passes, wallet routes, StadtPocket and the database are untouched', () => {
   const changed = git('diff', '3b0804f', '--name-only', '--', 'backend/src/services/passService.js', 'backend/src/services/googleWalletService.js',
-    'backend/src/services/stadtPocketContext.js', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, 'frontend/public/manifest.json', 'frontend/public/sw.js', 'backend/public/sw.js').trim();
+    'backend/src/services/stadtPocketContext.js', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES, 'frontend/public/manifest.json', 'frontend/public/sw.js', 'backend/public/sw.js').trim();
   assert.equal(changed, '');
   // lpRoutes.js: unchanged apart from the push campaign security hotfix (sign-in on two push routes)
   const routes = lf(fs.readFileSync(path.join(ROOT, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "theme": { "palette": { "brand": "#0f766e" }, "fontPair": "modern", "radius": "lg" },
+  "settings": { "language": "en", "seo": { "title": "Every variant", "description": "Reference design for the public V3 output." } },
+  "header": { "showBusinessName": true, "nav": [{ "label": "Hours", "target": "/hours" }, { "label": "Mail", "target": "mailto:hello@example.com" }] },
+  "footer": { "text": "Line one\nLine two", "links": [{ "label": "Imprint", "target": "https://example.com/imprint" }, { "label": "Top", "target": "/" }] },
+  "pages": [
+    {
+      "id": "start",
+      "title": "Start",
+      "sections": [
+        { "id": "s_hero01", "type": "hero", "variant": "overlay", "style": { "align": "center" },
+          "data": { "eyebrow": "New", "headline": "Overlay hero", "subheadline": "Sub", "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/a.jpg", "imageAlt": "A", "overlay": 30,
+            "primary": { "text": "Go", "target": "/hours", "icon": "arrow", "color": "#111111" }, "secondary": { "text": "Call", "target": "tel:+4973112345", "icon": "phone" } } },
+        { "id": "s_hero02", "type": "hero", "variant": "split", "data": { "headline": "Split hero", "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/b.png", "primary": { "text": "Web", "target": "https://example.com" } } },
+        { "id": "s_hero03", "type": "hero", "variant": "simple", "style": { "spacing": "compact" }, "data": { "headline": "Simple hero", "subheadline": "No image" } },
+        { "id": "s_btn01", "type": "buttons", "variant": "buttons", "data": { "title": "Buttons", "items": [{ "label": "WhatsApp", "kind": "whatsapp", "target": "https://wa.me/491701234567" }, { "label": "Mail", "kind": "email", "target": "a@example.com", "icon": "star" }] } },
+        { "id": "s_btn02", "type": "buttons", "variant": "cards", "style": { "background": "alt" }, "data": { "title": "Cards", "subtitle": "Four links", "items": [{ "label": "Map", "subtitle": "Find us", "kind": "directions", "target": "https://maps.apple.com/?q=Ulm" }, { "label": "Site", "kind": "website", "target": "https://example.com" }] } },
+        { "id": "s_btn03", "type": "buttons", "variant": "list", "style": { "background": "dark", "spacing": "roomy" }, "data": { "items": [{ "label": "Call", "subtitle": "Anytime", "kind": "call", "target": "+49 731 1" }] } },
+        { "id": "s_text01", "type": "text", "variant": "plain", "data": { "heading": "Plain", "body": "Text\nwith break", "image": "https://res.cloudinary.com/demo/image/upload/v1/c.webp", "imageAlt": "C" } },
+        { "id": "s_text02", "type": "text", "variant": "image-left", "data": { "heading": "Left", "image": "https://res.cloudinary.com/demo/image/upload/v1/d.jpg" } },
+        { "id": "s_text03", "type": "text", "variant": "image-right", "style": { "background": "brand" }, "data": { "heading": "Right", "body": "Body", "image": "https://res.cloudinary.com/demo/image/upload/v1/e.jpg" } },
+        { "id": "s_text04", "type": "text", "variant": "image-top", "data": { "body": "Only body" } },
+        { "id": "s_hours1", "type": "openingHours", "anchor": "hours", "variant": "table", "data": { "title": "Hours", "days": [{ "day": "sun", "closed": true }, { "day": "mon", "ranges": [{ "open": "08:00", "close": "12:00" }, { "open": "13:00", "close": "24:00" }] }, { "day": "tue" }], "note": "Note\nmore" } },
+        { "id": "s_hours2", "type": "openingHours", "variant": "compact", "data": { "days": [{ "day": "fri", "ranges": [{ "open": "09:00", "close": "17:00" }] }] } },
+        { "id": "s_cont01", "type": "contact", "variant": "card", "data": { "title": "Contact", "address": { "line1": "Main St 1", "line2": "Floor 2", "postalCode": "89073", "city": "Ulm", "country": "Germany" }, "phone": "+49 (731) 123-4", "email": "x@example.com", "mapsUrl": "https://www.google.com/maps/place/Ulm" } },
+        { "id": "s_cont02", "type": "contact", "variant": "split", "data": { "phone": "0731 99", "mapsUrl": "https://maps.app.goo.gl/abc", "showMapLink": false } },
+        { "id": "s_soc01", "type": "socialMedia", "variant": "icons", "data": { "title": "Social", "links": [{ "platform": "x", "url": "https://x.com/example" }, { "platform": "whatsapp", "url": "https://wa.me/4917012345" }] } },
+        { "id": "s_soc02", "type": "socialMedia", "variant": "buttons", "data": { "links": [{ "platform": "linkedin", "url": "https://www.linkedin.com/company/x" }] } },
+        { "id": "s_hide01", "type": "text", "hidden": true, "data": { "heading": "Hidden" } },
+        { "id": "s_empty1", "type": "buttons", "data": {} }
+      ]
+    }
+  ]
+}

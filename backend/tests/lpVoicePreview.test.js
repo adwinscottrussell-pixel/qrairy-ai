@@ -821,7 +821,7 @@ test('K. the QRAIVY Design System, the greetings and the database schema are unc
   // schema with its migration, and the Deals-only files below, are allowed to differ -- they
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
   // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
-  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES).trim(), '');
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES).trim(), '');
 });
 
 // ── runner ──────────────────────────────────────────────────────

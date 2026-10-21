@@ -52,8 +52,10 @@ test('schema.prisma matches the migration', () => {
 test('it is the newest migration and no earlier migration changed', () => {
   const dirs = fs.readdirSync(MIGRATIONS).filter((d) => /^\d{14}_/.test(d)).sort();
   assert.equal(dirs[dirs.length - 1], NAME);
-  const changed = execFileSync('git', ['diff', 'ae2861e', '--name-only', '--', 'backend/prisma/migrations'], { cwd: ROOT, encoding: 'utf8' }).trim();
-  assert.equal(changed, '', 'tracked migrations unchanged');
+  // Committed or not: the only difference from main is this migration, added.
+  const changed = execFileSync('git', ['diff', 'ae2861e', '--name-status', '--', 'backend/prisma/migrations'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  const allowed = 'A\tbackend/prisma/migrations/' + NAME + '/migration.sql';
+  assert.deepEqual(changed.filter((l) => l !== allowed), [], 'earlier migrations unchanged');
 });
 
 (async () => {

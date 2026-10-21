@@ -26,12 +26,21 @@ test('Phase 1 changes only its own files', () => {
 test('customer-facing code is untouched (public pages, routes, server, staging, StadtPocket, scanner, frontend)', () => {
   const protectedPaths = ['backend/src/controllers', 'backend/src/routes', 'backend/src/index.js', 'backend/src/middleware', 'backend/src/services', 'backend/src/utils', 'backend/src/config', 'backend/src/data',
     'frontend', 'vercel.json', 'backend/railway.toml'];
-  assert.deepEqual(git('diff', 'ae2861e', '--name-only', '--', ...protectedPaths), []);
+  // The exceptions are NEW files only: the browser copy of core.js
+  // (lpV3CoreCopy.test.js) and the Studio page with its own css/js
+  // (studioShell.test.js). Every existing file under these paths is unchanged.
+  const { LPV3_NEW_FRONTEND } = require('./helpers/lpV3Files');
+  const isNew = (f) => LPV3_NEW_FRONTEND.some((p) => f === p || f.startsWith(p + '/'));
+  const changed = git('diff', 'ae2861e', '--name-status', '--', ...protectedPaths).concat(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).map((f) => '?\t' + f));
+  assert.deepEqual(changed.filter((l) => !isNew(l.split('\t')[1])), []);
+  for (const l of changed) assert.ok(/^[A?]\t/.test(l), 'only new files, nothing existing replaced: ' + l);
 });
 
-test('older scope guards: exactly these three now allow the V3 files, and only the V3 lines', () => {
-  const guards = git('diff', 'ae2861e', '--name-only', '--', 'backend/tests').filter((f) => !/lpV3|legacyRender|fixtures\//.test(f));
-  assert.deepEqual(guards.sort(), ['backend/tests/academyPage.test.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/pushPageSubscriptions.test.js']);
+test('older scope guards: exactly these now allow the V3 files, and only the V3 lines', () => {
+  // existing tests that were edited (M); every V3 / Studio test is a new file (A)
+  const guards = git('diff', 'ae2861e', '--name-only', '--diff-filter=M', '--', 'backend/tests');
+  assert.deepEqual(guards.sort(), ['backend/tests/academyPage.test.js', 'backend/tests/adminNavShell.test.js', 'backend/tests/dealImageMaster.test.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingFrontend.test.js',
+    'backend/tests/lpStagingRouting.test.js', 'backend/tests/lpVoicePreview.test.js', 'backend/tests/pushLocalization.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'backend/tests/welcomeUnified.test.js']);
   const lf = (s) => s.replace(/\r\n/g, '\n');
   const now = lf(fs.readFileSync(path.join(ROOT, 'backend', 'prisma', 'schema.prisma'), 'utf8'));
   const then = lf(execFileSync('git', ['show', 'ae2861e:backend/prisma/schema.prisma'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));

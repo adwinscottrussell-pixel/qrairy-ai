@@ -41,7 +41,8 @@ test('the section library: the ten approved types, with the mockup labels', () =
   assert.equal(lib.hero.description, 'Eye-catching header with image, text and buttons');
   assert.equal(lib.buttons.description, 'WhatsApp, Call, Directions, Website');
   assert.equal(lib.text.label, 'Text Section');
-  assert.deepEqual(V3.library().filter((s) => s.rendered).map((s) => s.type).sort(), ['buttons', 'contact', 'hero', 'openingHours', 'socialMedia', 'text']);
+  // Phase 2A-1 added Gallery and Products; Deals / Offers and Loyalty follow with their data.
+  assert.deepEqual(V3.library().filter((s) => s.rendered).map((s) => s.type).sort(), ['buttons', 'contact', 'gallery', 'hero', 'openingHours', 'products', 'socialMedia', 'text']);
 });
 
 test('structure: schema version, one "start" page, no unknown fields or types', () => {

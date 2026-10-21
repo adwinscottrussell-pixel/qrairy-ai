@@ -534,7 +534,7 @@ test('G. the change is limited to routing: sign-in, the database schema, the des
   // are pinned to the reviewed Deals commit 3319cc8 instead and tested in deal*.test.js.
   // (backend/src/data/dealImages.js later gained the staging image folder: dealsPreviewSafety.test.js)
   // (Phase 5.5C.3: schema.prisma and its one migration are pinned exactly in pushPageSubscriptions.test.js)
-  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES).trim(), '');
+  assert.equal(git('diff', '3319cc8', '--stat', '--', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES).trim(), '');
   // auth.js: the routing step's own commit left it alone. Its one later change (which
   // function verifies a token) is pinned line by line in lpStagingClerkAuth.test.js.
   assert.equal(git('diff', '10ab8d5', 'fa2c67c', '--stat', '--', 'backend/src/middleware/auth.js').trim(), '');
