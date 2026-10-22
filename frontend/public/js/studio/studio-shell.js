@@ -1,20 +1,25 @@
 /*
- * studio-shell.js — Landing Page Studio V3, Phase 2A-2: the visual shell.
+ * studio-shell.js — Landing Page Studio V3: wires the Studio together.
  *
- * Shows the approved layout with the Local Business placeholder design:
- * Sections / Add panel, live preview (desktop / tablet / mobile), the
- * Content / Style / Settings inspector (read-only, generated from
- * QraivyV3.describe()), the template strip and the Studio appearance
- * (Light / Dark / System). Editing, saving and publishing are not part of
- * this step: Save Draft, Publish and Undo / Redo stay disabled.
+ * The approved layout (Phase 2A-2) with the Local Business placeholder
+ * design: Sections / Add panel, live preview (studio-preview.js), the
+ * Content / Style / Settings inspector (studio-inspector.js), the template
+ * strip and the Studio appearance (Light / Dark / System).
+ *
+ * Phase 2A-3A: the Hero section is editable. The design lives only in
+ * memory (studio-editor.js) with Undo / Redo; nothing is saved: Save Draft
+ * and Publish stay disabled, and a reload starts again from the demo.
+ * Adding, moving or deleting sections and the other section types follow in
+ * later steps.
  *
  * No network: this file never calls an API (studio-routing.js decides where
  * the Studio may run at all). The preview is rendered by the shared
- * js/lpV3/core.js into an iframe sandboxed with no permissions.
+ * js/lpV3/core.js.
  */
 (function () {
   'use strict';
   var V3 = window.QraivyV3;
+  var STORE = window.QraivyStudioStore, PREVIEW = window.QraivyStudioPreview, INSPECTOR = window.QraivyStudioInspector;
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var THEME_KEY = 'qraivy.studio.theme';
   var TEMPLATES_KEY = 'qraivy.studio.templates';
@@ -33,7 +38,7 @@
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
       phone_note: 'Full editing works on a tablet or computer. On a phone you can preview and publish.',
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
-      readonly_note: 'Read-only in this build: editing arrives in the next step.', select_section: 'Select a section on the left to see its settings.',
+      undone: 'Undone', redone: 'Redone', select_section: 'Select a section on the left to see its settings.',
       templates: 'Page Templates', add_later: 'Adding sections arrives in the next step.',
       unavailable_title: "Landing Page Studio isn't available here yet", unavailable_text: 'The new Studio is still being built and tested. Your landing pages keep working as before.', unavailable_back: 'Back to Smart QR Pages',
       chip_all: 'All', chip_popular: 'Popular', chip_business: 'Business', chip_media: 'Media', chip_more: 'More',
@@ -50,7 +55,7 @@
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
       phone_note: 'Vollständig bearbeiten kannst du auf Tablet oder Computer. Auf dem Smartphone: Vorschau und Veröffentlichen.',
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
-      readonly_note: 'In diesem Stand nur zur Ansicht: Bearbeiten folgt im nächsten Schritt.', select_section: 'Wähle links einen Abschnitt, um seine Einstellungen zu sehen.',
+      undone: 'Rückgängig gemacht', redone: 'Wiederholt', select_section: 'Wähle links einen Abschnitt, um seine Einstellungen zu sehen.',
       templates: 'Seitenvorlagen', add_later: 'Abschnitte hinzufügen folgt im nächsten Schritt.',
       unavailable_title: 'Das Landing Page Studio ist hier noch nicht verfügbar', unavailable_text: 'Das neue Studio wird noch gebaut und getestet. Deine Landingpages funktionieren weiter wie bisher.', unavailable_back: 'Zurück zu den Smart-QR-Seiten',
       chip_all: 'Alle', chip_popular: 'Beliebt', chip_business: 'Business', chip_media: 'Medien', chip_more: 'Mehr',
@@ -88,9 +93,9 @@
     { id: 'loyalty', cls: 'st-tpl--loyalty', thumb: 'Unsere Stempelkarte', en: ['Loyalty & Rewards', 'Customer loyalty, rewards and subscriber signup.'], de: ['Treue & Prämien', 'Kundentreue, Prämien und Anmeldungen.'] },
   ];
   var CHIPS = ['all', 'popular', 'business', 'media', 'more'];
-  var FRAMES = { desktop: { w: 1280, h: 800, chrome: 30 }, tablet: { w: 820, h: 1180, pad: 14 }, mobile: { w: 390, h: 844, pad: 12 } };
 
-  var state = { lang: 'en', chip: 'all', leftTab: 'add', insp: 'content', selected: 's_hero01', device: 'desktop', html: '' };
+  var state = { lang: 'en', chip: 'all', leftTab: 'add', insp: 'content' };
+  var editor = null, preview = null, inspector = null;
   function lang() { return window.QraivyShell ? window.QraivyShell.lang() : 'en'; }
   function t(k) { var d = T[state.lang] || T.en; return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : T.en[k]; }
   function sectionText(type) {
@@ -167,24 +172,26 @@
       list.appendChild(el('li', {}, [item]));
     });
   }
-  function demoSections() { return window.QRAIVY_STUDIO_DEMO.design.pages[0].sections; }
   function sectionSummary(s) {
     var d = s.data || {};
     return d.headline || d.title || d.heading || (d.items && d.items[0] && (d.items[0].label || d.items[0].name)) || '';
   }
   function renderOutline() {
-    var list = $('st-outline'); list.textContent = '';
-    demoSections().forEach(function (s) {
+    var list = $('st-outline');
+    var had = list.contains(document.activeElement) ? document.activeElement.getAttribute('data-id') : null;
+    list.textContent = '';
+    editor.draft().pages[0].sections.forEach(function (s) {
       var tx = sectionText(s.type);
-      var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(state.selected === s.id), 'data-id': s.id }, [
+      var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
         el('span', { class: 'st-outline__grip', 'aria-hidden': 'true' }, [icon('st-grip')]),
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
         el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: sectionSummary(s) })]),
         el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon(s.hidden ? 'st-eye-off' : 'st-eye')]),
       ]);
-      item.addEventListener('click', function () { select(s.id); });
+      item.addEventListener('click', function () { select(s.id, 'outline'); });
       list.appendChild(el('li', {}, [item]));
     });
+    if (had) { var back = list.querySelector('[data-id="' + had + '"]'); if (back) back.focus(); }
   }
   function setLeftTab(tab) {
     state.leftTab = tab;
@@ -194,123 +201,48 @@
     });
   }
 
-  // ── right: inspector (read-only, from describe()) ──
-  function input(value, multiline) {
-    return multiline ? el('textarea', { disabled: true, rows: '3', text: value }) : el('input', { type: 'text', disabled: true, value: value == null ? '' : String(value) });
+  // ── selection, editing, Undo / Redo ──
+  // from: 'outline' (the preview scrolls to it), 'preview' (clicked there).
+  function select(id, from) {
+    if (!editor.select(id)) return;
+    if (from === 'preview' && state.leftTab !== 'sections') setLeftTab('sections');
+    renderOutline();
+    inspector.render();
+    preview.select(id, from === 'outline');
   }
-  function fieldNode(key, spec, value) {
-    var label = el('span', { text: fieldLabel(key) });
-    if (spec.t === 'image') {
-      return el('label', { class: 'st-field' }, [label, el('div', { class: 'st-field__img' }, [
-        el('div', { class: 'st-field__thumb', title: t('no_image') }, [icon('st-t-hero')]),
-        el('button', { type: 'button', class: 'st-btn st-btn--ghost', disabled: true, text: t('change_image') }),
-        el('button', { type: 'button', class: 'st-btn st-btn--ghost', disabled: true, text: t('remove') })])]);
-    }
-    if (spec.t === 'bool') return el('label', { class: 'st-field' }, [label, input(value ? t('yes') : t('no'))]);
-    if (spec.t === 'enum') {
-      var sel = el('select', { disabled: true });
-      spec.values.forEach(function (v) { var o = el('option', { value: v, text: v }); if (v === value) o.selected = true; sel.appendChild(o); });
-      return el('label', { class: 'st-field' }, [label, sel]);
-    }
-    if (spec.t === 'arr') return el('label', { class: 'st-field' }, [label, input(t('items').replace('{n}', (value || []).length))]);
-    return el('label', { class: 'st-field' }, [label, input(value, spec.multiline)]);
+  // The page as the shared core renders it, from the last valid design: an
+  // invalid edit never reaches the preview.
+  function pageHtml() {
+    var valid = editor.lastValid();
+    var r = valid ? V3.renderDesign(valid, { businessName: window.QRAIVY_STUDIO_DEMO.businessName }, { preview: true }) : null;
+    return r && r.ok ? r.html : preview.html();
   }
-  function buttonGroup(key, spec, value) {
-    // As in the mockup: text with a link icon, the colour beside it, the link below.
-    var v = value || {};
-    var nodes = [el('div', { class: 'st-group', text: fieldLabel(key) })];
-    var row = el('div', { class: 'st-field__row' }, [input(v.text)]);
-    if (spec.fields.color) row.appendChild(el('span', { class: 'st-swatch', style: 'background:' + (/^#[0-9a-f]{3,6}$/i.test(v.color || '') ? v.color : 'var(--st-accent)') }));
-    nodes.push(el('label', { class: 'st-field' }, [el('span', { text: fieldLabel('text') }), row]));
-    nodes.push(el('label', { class: 'st-field' }, [el('span', { text: fieldLabel('target') }), input(v.target)]));
-    return nodes;
+  function historyButtons() {
+    $('st-undo-btn').disabled = !editor.canUndo();
+    $('st-redo-btn').disabled = !editor.canRedo();
   }
-  function renderInspector() {
-    var box = $('st-fields'); box.textContent = '';
-    document.querySelectorAll('[data-insp]').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-insp') === state.insp)); });
-    var s = demoSections().filter(function (x) { return x.id === state.selected; })[0];
-    $('st-kind').textContent = s ? sectionText(s.type).label : '';
-    if (!s) { box.appendChild(el('p', { class: 'st-empty', text: t('select_section') })); return; }
-    var D = V3.describe();
-    var normalized = V3.validateDesign(window.QRAIVY_STUDIO_DEMO.design).design.pages[0].sections.filter(function (x) { return x.id === s.id; })[0];
-    if (state.insp === 'content') {
-      var spec = D.sections[s.type].data;
-      Object.keys(spec.fields).forEach(function (k) {
-        var f = spec.fields[k], v = normalized.data[k];
-        if (f.t === 'obj' && (k === 'primary' || k === 'secondary')) buttonGroup(k, f, v).forEach(function (n) { box.appendChild(n); });
-        else if (f.t === 'obj') {
-          box.appendChild(el('div', { class: 'st-group', text: fieldLabel(k) }));
-          Object.keys(f.fields).forEach(function (kk) { box.appendChild(fieldNode(kk, f.fields[kk], v[kk])); });
-        } else box.appendChild(fieldNode(k, f, v));
-      });
-    } else if (state.insp === 'style') {
-      box.appendChild(fieldNode('variant', { t: 'enum', values: D.sections[s.type].variants }, normalized.variant));
-      var st = D.section.style.fields;
-      Object.keys(st).forEach(function (k) { box.appendChild(fieldNode(k, st[k], normalized.style[k])); });
-    } else {
-      box.appendChild(el('label', { class: 'st-field' }, [el('span', { text: t('section_id') }), input(normalized.id)]));
-      box.appendChild(el('label', { class: 'st-field' }, [el('span', { text: t('anchor') }), input(normalized.anchor || normalized.id)]));
-      box.appendChild(el('label', { class: 'st-field' }, [el('span', { text: t('visibility') }), input(normalized.hidden ? t('no') : t('yes'))]));
-    }
+  function announce(msg) { var n = $('st-live'); n.textContent = ''; setTimeout(function () { n.textContent = msg; }, 30); }
+  function onStoreChange(kind, info) {
+    if (kind === 'select') return;
+    if (kind === 'history') inspector.render(); else inspector.refresh();
+    renderOutline();
+    historyButtons();
+    // typing: one preview update after a short pause; anything else at once
+    preview.setHtml(pageHtml(), info.typing ? 150 : 0);
   }
-  function select(id) { state.selected = id; renderOutline(); renderInspector(); }
-
-  // ── center: device frames ──
-  function makeFrame(device) {
-    var f = FRAMES[device];
-    var frame = el('div', { class: 'st-frame st-frame--' + device, 'data-device': device });
-    var scale = el('div', { class: 'st-frame__scale' });
-    if (device === 'desktop') scale.appendChild(el('div', { class: 'st-frame__chrome', 'aria-hidden': 'true' }, [el('i'), el('i'), el('i')]));
-    var iframe = el('iframe', { sandbox: '', title: t(device), referrerpolicy: 'no-referrer', width: String(f.w), height: String(f.h), loading: 'eager' });
-    iframe.srcdoc = state.html;
-    scale.appendChild(iframe);
-    frame.appendChild(scale);
-    return frame;
-  }
-  function dual() { return window.matchMedia && window.matchMedia('(min-width: 1920px)').matches && state.device === 'desktop'; }
-  function phoneOnly() { return window.matchMedia && window.matchMedia('(max-width: 767px)').matches; }
-  function renderCanvas() {
-    var c = $('st-canvas'); c.textContent = '';
-    var devices = phoneOnly() ? ['mobile'] : dual() ? ['desktop', 'mobile'] : [state.device];
-    devices.forEach(function (d) { c.appendChild(makeFrame(d)); });
-    document.querySelectorAll('[data-device]').forEach(function (b) { if (b.tagName === 'BUTTON') b.setAttribute('aria-checked', String(b.getAttribute('data-device') === state.device)); });
-    fitFrames();
-  }
-  function fitFrames() {
-    var c = $('st-canvas'); if (!c) return;
-    var cs = window.getComputedStyle(c);
-    var availW = c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    var availH = c.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    var frames = c.querySelectorAll('.st-frame');
-    var gap = 20;
-    var outer = function (d) { var f = FRAMES[d]; return { w: f.w + 2 * (f.pad || 0) + (d === 'desktop' ? 2 : 0), h: f.h + 2 * (f.pad || 0) + (f.chrome || 0) + (d === 'desktop' ? 2 : 0) }; };
-    var sizes = []; frames.forEach(function (fr) { sizes.push(outer(fr.getAttribute('data-device'))); });
-    // Side by side (>= 1920 px): the phone as tall as the space allows, the
-    // desktop frame takes the remaining width (as in the approved mockup).
-    var phoneScale = null;
-    if (frames.length === 2) phoneScale = Math.min(1, availH / sizes[1].h);
-    frames.forEach(function (fr, i) {
-      var d = fr.getAttribute('data-device'), o = sizes[i], s;
-      if (frames.length === 2) {
-        s = d === 'mobile' ? phoneScale : Math.min(1, (availW - gap - sizes[1].w * phoneScale) / o.w, availH / o.h);
-      } else if (d === 'desktop' || phoneOnly()) s = Math.min(1, availW / o.w);
-      else s = Math.min(1, availW / o.w, Math.max(availH, 480) / o.h);
-      s = Math.max(0.1, s);
-      var scaleBox = fr.firstChild, ifr = scaleBox.querySelector('iframe');
-      // A single desktop frame fills the canvas height (taller page window,
-      // same 1280 px layout width); every other frame keeps its device size.
-      if (frames.length === 1 && d === 'desktop' && !phoneOnly()) {
-        var ih = Math.max(FRAMES.desktop.h, Math.floor(availH / s) - FRAMES.desktop.chrome - 2);
-        ifr.setAttribute('height', String(ih));
-        o = { w: o.w, h: ih + FRAMES.desktop.chrome + 2 };
-      } else ifr.setAttribute('height', String(FRAMES[d].h));
-      // the box keeps its real (logical) size; only the transform shrinks it
-      scaleBox.style.width = o.w + 'px';
-      scaleBox.style.height = o.h + 'px';
-      scaleBox.style.transform = 'scale(' + s + ')';
-      fr.style.width = Math.floor(o.w * s) + 'px';
-      fr.style.height = Math.floor(o.h * s) + 'px';
-    });
+  function undo() { if (editor.undo()) announce(t('undone')); }
+  function redo() { if (editor.redo()) announce(t('redone')); }
+  // Ctrl / Cmd + Z, Shift + Ctrl / Cmd + Z, Ctrl + Y. In a text field the
+  // browser's own text undo applies; on phones nothing is edited.
+  function onKey(e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || preview.phoneOnly()) return;
+    var k = String(e.key || '').toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    var a = document.activeElement;
+    if (a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|number|search|url|email|tel)$/.test(a.type)) || a.isContentEditable)) return;
+    if (!$('st-full').hidden) return;
+    e.preventDefault();
+    if (k === 'y' || e.shiftKey) redo(); else undo();
   }
 
   // ── templates strip ──
@@ -338,7 +270,7 @@
     var p = panels();
     $('st-work').classList.toggle('no-left', !p.left);
     $('st-work').classList.toggle('no-right', !p.right);
-    fitFrames();
+    preview.fit();
   }
   function setPanel(side, shown) { var p = panels(); p[side] = shown; store(PANELS_KEY, JSON.stringify(p)); applyPanels(); }
 
@@ -364,8 +296,23 @@
   function bindUi() {
     $('st-tab-sections').addEventListener('click', function () { setLeftTab('sections'); });
     $('st-tab-add').addEventListener('click', function () { setLeftTab('add'); });
-    document.querySelectorAll('[data-insp]').forEach(function (b) { b.addEventListener('click', function () { state.insp = b.getAttribute('data-insp'); renderInspector(); }); });
-    document.querySelectorAll('button[data-device]').forEach(function (b) { b.addEventListener('click', function () { state.device = b.getAttribute('data-device'); renderCanvas(); }); });
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-insp]'));
+    var setInsp = function (b) { state.insp = b.getAttribute('data-insp'); inspTabs(); inspector.render(); };
+    tabs.forEach(function (b, i) {
+      b.addEventListener('click', function () { setInsp(b); });
+      // arrow keys move between the tabs (ARIA tabs)
+      b.addEventListener('keydown', function (e) {
+        var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        var n = tabs[(i + d + tabs.length) % tabs.length];
+        n.focus(); setInsp(n);
+      });
+    });
+    document.querySelectorAll('button[data-device]').forEach(function (b) { b.addEventListener('click', function () { preview.setDevice(b.getAttribute('data-device')); deviceButtons(); }); });
+    $('st-undo-btn').addEventListener('click', undo);
+    $('st-redo-btn').addEventListener('click', redo);
+    document.addEventListener('keydown', onKey);
     // Below 1200 px these open the drawers; on a desktop they bring a hidden panel back.
     $('st-open-left').addEventListener('click', function () { if (desktop()) setPanel('left', true); else openDrawer('st-left'); });
     $('st-open-right').addEventListener('click', function () { if (desktop()) setPanel('right', true); else openDrawer('st-right'); });
@@ -377,12 +324,13 @@
       var open = $('st-templates-toggle').getAttribute('aria-expanded') !== 'true';
       store(TEMPLATES_KEY, open ? 'open' : 'collapsed');
       renderTemplates();
-      fitFrames();
+      preview.fit();
     });
     var more = $('st-more-btn'), menu = $('st-more-menu');
     more.addEventListener('click', function (e) { e.stopPropagation(); menu.hidden = !menu.hidden; more.setAttribute('aria-expanded', String(!menu.hidden)); });
     document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); } });
-    $('st-preview-btn').addEventListener('click', function () { $('st-full-frame').srcdoc = state.html; $('st-full').hidden = false; $('st-full-close').focus(); });
+    // full size: the plain page (sandboxed with no permissions, no Studio script)
+    $('st-preview-btn').addEventListener('click', function () { $('st-full-frame').srcdoc = pageHtml(); $('st-full').hidden = false; $('st-full-close').focus(); });
     $('st-full-close').addEventListener('click', function () { $('st-full').hidden = true; $('st-preview-btn').focus(); });
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
@@ -391,36 +339,50 @@
       closeDrawers();
     });
     var resizeTimer = null;
-    var onResize = function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(function () { renderCanvas(); if (window.innerWidth >= 1200) closeDrawers(); }, 80); };
+    var onResize = function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(function () { preview.render(); if (window.innerWidth >= 1200) closeDrawers(); }, 80); };
     window.addEventListener('resize', onResize);
-    if (window.ResizeObserver) new ResizeObserver(function () { fitFrames(); }).observe($('st-canvas'));
+    if (window.ResizeObserver) new ResizeObserver(function () { preview.fit(); }).observe($('st-canvas'));
   }
+
+  function inspTabs() { document.querySelectorAll('[data-insp]').forEach(function (b) { var on = b.getAttribute('data-insp') === state.insp; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; }); }
+  function deviceButtons() { document.querySelectorAll('button[data-device]').forEach(function (b) { b.setAttribute('aria-checked', String(b.getAttribute('data-device') === preview.device())); }); }
 
   function renderAll() {
     state.lang = lang();
     applyTexts();
-    renderChips(); renderLibrary(); renderOutline(); renderInspector(); renderTemplates();
+    renderChips(); renderLibrary(); renderOutline(); inspTabs(); inspector.render(); renderTemplates();
     localAccount();
   }
 
   function start() {
     bindTheme();
     state.lang = lang();
-    if (ROUTING.blocked || !V3) {
+    if (ROUTING.blocked || !V3 || !STORE || !PREVIEW || !INSPECTOR) {
       $('st-app').setAttribute('data-unavailable', '');
       $('st-unavailable').hidden = false;
       applyTexts();
       return;
     }
     var demo = window.QRAIVY_STUDIO_DEMO;
-    var r = V3.renderDesign(demo.design, { businessName: demo.businessName }, { preview: true });
-    state.html = r.ok ? r.html : '';
+    editor = STORE.createStore({ design: demo.design, validate: V3.validateDesign });
+    editor.select('s_hero01');
+    preview = PREVIEW.createPreview({ canvas: $('st-canvas'), title: function (d) { return t(d); },
+      // a click in the preview selects that section (not on phones: preview only)
+      onSelect: function (id) { if (!preview.phoneOnly() && id !== editor.selected()) select(id, 'preview'); } });
+    inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
+      lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
+      sectionLabel: function (type) { return sectionText(type).label; }, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase() });
+    preview.setHtml(pageHtml(), 0);
+    preview.select(editor.selected(), false);
     renderAll();
     setLeftTab(state.leftTab);
     bindUi();
+    editor.onChange(onStoreChange);
+    historyButtons();
     applyPanels();
-    renderCanvas();
-    window.QraivyStudio = { state: state, fitFrames: fitFrames }; // for local inspection only
+    preview.render();
+    deviceButtons();
+    window.QraivyStudio = { state: state, editor: editor, preview: preview }; // for local inspection only
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

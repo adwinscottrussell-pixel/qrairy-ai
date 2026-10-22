@@ -97,13 +97,13 @@ test('appearance: Dark and System, remembered; the page preview is the same in e
   await sys.page.close();
 });
 
-test('device toggle, preview frames sandboxed without permissions', async () => {
+test('device toggle; preview frames sandboxed with scripts only (2A-3A), the full-size preview with nothing', async () => {
   const { page } = await open(1440, 900);
   await page.click('button[data-device="mobile"]');
   assert.deepEqual((await layout(page)).frames, ['mobile']);
   await page.click('button[data-device="tablet"]');
   assert.deepEqual((await layout(page)).frames, ['tablet']);
-  assert.deepEqual(await page.$$eval('iframe', (fs) => fs.map((f) => f.getAttribute('sandbox'))), ['', '']);
+  assert.deepEqual(await page.$$eval('iframe', (fs) => fs.map((f) => f.getAttribute('sandbox'))), ['allow-scripts', '']);
   await page.close();
 });
 

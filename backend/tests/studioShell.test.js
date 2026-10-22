@@ -1,12 +1,14 @@
 // ============================================================
-// studioShell.test.js — Landing Page Studio V3, Phase 2A-2 (visual shell),
-// static checks on frontend/public/studio.html and js/studio/*:
+// studioShell.test.js — Landing Page Studio V3, Phase 2A-2 (visual shell)
+// and 2A-3A (Hero editing), static checks on frontend/public/studio.html
+// and js/studio/*:
 // - default-deny routing: only localhost / 127.0.0.1 / file: run (local
 //   mode, no API); every other address, production included, is blocked;
 // - no network: no fetch / XHR / WebSocket / beacon / API address anywhere
 //   in the Studio files; no Clerk, no API routing scripts loaded;
-// - Save Draft, Publish and Undo / Redo are disabled; previews are iframes
-//   sandboxed with no permissions;
+// - Save Draft and Publish are disabled and never enabled; Undo / Redo
+//   start disabled (the store enables them after an edit); preview frames
+//   allow scripts only (never same origin), the full-size preview nothing;
 // - no existing page links to the Studio yet;
 // - the demo is the Local Business layout with placeholder content only.
 // Run: node tests/studioShell.test.js
@@ -45,7 +47,8 @@ test('routing: local only, no API; every other address blocked (default deny)', 
 
 test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk, no API routing', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-shell.js']);
+  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/studio/studio-demo.js',
+    'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);
@@ -61,30 +64,39 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
   }
 });
 
-test('Save Draft, Publish, Undo and Redo are disabled; the overflow menu only has disabled items', () => {
+test('Save Draft and Publish are disabled and never enabled; Undo / Redo start disabled; the overflow menu only has disabled items', () => {
   assert.match(HTML, /<button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true"/);
   assert.match(HTML, /<button type="button" class="st-btn st-btn--primary" id="st-publish-btn" disabled aria-disabled="true"/);
-  assert.equal((HTML.match(/<button type="button" class="st-iconbtn" disabled data-st-aria="(undo|redo)">/g) || []).length, 2);
+  assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" /);
+  assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" /);
   const menu = HTML.slice(HTML.indexOf('id="st-more-menu"'), HTML.indexOf('</div>', HTML.indexOf('id="st-more-menu"')));
   assert.equal((menu.match(/<button /g) || []).length, (menu.match(/<button type="button" role="menuitem" disabled/g) || []).length);
-  const shell = read('js/studio/studio-shell.js');
-  assert.ok(!/st-publish-btn'\)\.(disabled\s*=\s*false|removeAttribute)/.test(shell) && !/st-save-btn'\)\.(disabled\s*=\s*false|removeAttribute)/.test(shell), 'never re-enabled');
+  for (const f of STUDIO_JS) assert.ok(!/st-(publish|save)-btn/.test(read(f)), f + ' never touches Save Draft or Publish');
 });
 
-test('previews are iframes sandboxed with no permissions (no scripts, no same origin)', () => {
+const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''); // code, not comments
+test('preview frames: sandbox "allow-scripts" only (never same origin); the full-size preview: no permissions', () => {
   assert.match(HTML, /<iframe class="st-full__frame" id="st-full-frame" sandbox="" title="Preview" referrerpolicy="no-referrer"><\/iframe>/);
+  const pv = read('js/studio/studio-preview.js');
+  assert.ok(pv.includes("var SANDBOX = 'allow-scripts';") && pv.includes("ifr.setAttribute('sandbox', SANDBOX);"));
+  assert.ok(!/allow-same-origin/.test(HTML + STUDIO_JS.map(code).join('')));
+  assert.equal((HTML.match(/<iframe/g) || []).length, 1, 'only the full-size preview is in the page; frames come from studio-preview.js');
   const shell = read('js/studio/studio-shell.js');
-  assert.ok(shell.includes("el('iframe', { sandbox: '', "), 'preview frames: sandbox=""');
-  assert.ok(!/allow-same-origin|allow-scripts/.test(HTML + shell));
   assert.ok(shell.includes('{ preview: true }'), 'rendered by the shared core in preview mode');
+  assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('the inspector is read-only in this step (every generated field is disabled)', () => {
-  const shell = read('js/studio/studio-shell.js');
-  const inputs = shell.match(/el\('(input|textarea|select)', \{[^}]*\}/g) || [];
-  assert.ok(inputs.length >= 3);
-  for (const i of inputs) assert.ok(/disabled: true/.test(i), i);
-  for (const b of shell.match(/el\('button', \{ type: 'button', class: 'st-btn[^}]*\}/g) || []) assert.ok(/disabled: true/.test(b), b);
+test('2A-3A: only the Hero is editable; the shell builds no form controls itself; no adding or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero']);
+  const shell = code('js/studio/studio-shell.js');
+  assert.ok(!/el\('(input|textarea|select)'/.test(shell), 'every control comes from studio-inspector.js');
+  assert.ok(shell.includes("title: t('add_later'), 'data-type': s.type"), 'library items still say "arrives later"');
+  assert.ok(!/insertSection|addSection|applyTemplate|removeSection|deleteSection|moveSection|duplicateSection/.test(shell + code('js/studio/studio-store.js')), 'no add / move / delete / templates in this step');
+});
+
+test('every id in studio.html is unique (an icon and a button once shared "st-undo")', () => {
+  const ids = [...HTML.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), []);
 });
 
 test('no existing page links to the Studio yet', () => {

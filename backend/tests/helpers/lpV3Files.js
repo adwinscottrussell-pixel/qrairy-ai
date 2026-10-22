@@ -35,6 +35,15 @@ const LPV3_FILES = [
   'backend/tests/studioShell.test.js',
   'backend/tests/studioShell.browser.test.js',
   'backend/tests/adminNavShell.test.js',
+  // Phase 2A-3A (Hero editing): in-memory draft with Undo / Redo, inspector,
+  // live preview with click-to-select; still local only, nothing saved
+  'frontend/public/js/studio/studio-store.js',
+  'frontend/public/js/studio/studio-preview.js',
+  'frontend/public/js/studio/studio-inspector.js',
+  'backend/tests/studioStore.test.js',
+  'backend/tests/studioInspector.test.js',
+  'backend/tests/studioPreviewBridge.test.js',
+  'backend/tests/studioEditor.browser.test.js',
   // older scope guards that now allow the files above
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

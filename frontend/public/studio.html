@@ -213,8 +213,8 @@
             <button type="button" class="st-device" role="radio" data-device="mobile" data-st-aria="mobile"><svg class="st-ic" aria-hidden="true"><use href="#st-phone"/></svg></button>
           </div>
           <div class="st-bar__right">
-            <button type="button" class="st-iconbtn" disabled data-st-aria="undo"><svg class="st-ic" aria-hidden="true"><use href="#st-undo"/></svg></button>
-            <button type="button" class="st-iconbtn" disabled data-st-aria="redo"><svg class="st-ic" aria-hidden="true"><use href="#st-redo"/></svg></button>
+            <button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" aria-keyshortcuts="Control+Z Meta+Z"><svg class="st-ic" aria-hidden="true"><use href="#st-undo"/></svg></button>
+            <button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"><svg class="st-ic" aria-hidden="true"><use href="#st-redo"/></svg></button>
             <button type="button" class="st-iconbtn st-only-drawers" id="st-open-right" data-st-aria="open_edit"><svg class="st-ic" aria-hidden="true"><use href="#st-sliders"/></svg></button>
           </div>
         </div>
@@ -237,10 +237,11 @@
             <button type="button" role="tab" class="st-seg__btn" aria-selected="false" data-insp="settings" data-st="insp_settings">Settings</button>
           </div>
           <div class="st-fields" id="st-fields"></div>
-          <p class="st-readonly-note"><svg class="st-ic" aria-hidden="true"><use href="#st-info"/></svg><span data-st="readonly_note">Read-only in this build: editing arrives in the next step.</span></p>
+          <p class="st-readonly-note"><svg class="st-ic" aria-hidden="true"><use href="#st-info"/></svg><span id="st-note"></span></p>
         </div>
       </aside>
       <div class="st-scrim" id="st-scrim" hidden></div>
+      <div class="st-sr" id="st-live" aria-live="polite" aria-atomic="true"></div>
     </div>
 
     <!-- Page templates -->
@@ -261,6 +262,9 @@
 
 <script src="js/lpV3/core.js"></script>
 <script src="js/studio/studio-demo.js"></script>
+<script src="js/studio/studio-store.js"></script>
+<script src="js/studio/studio-preview.js"></script>
+<script src="js/studio/studio-inspector.js"></script>
 <script src="js/studio/studio-shell.js"></script>
 </body>
 </html>
