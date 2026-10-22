@@ -86,8 +86,11 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('2A-3A: only the Hero is editable; the shell builds no form controls itself; no adding or templates yet', () => {
-  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero']);
+test('2A-3B: only the Hero and the Buttons are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons']);
+  // the approved notice while anything is invalid, in English and German
+  assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
+  assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));
   const shell = code('js/studio/studio-shell.js');
   assert.ok(!/el\('(input|textarea|select)'/.test(shell), 'every control comes from studio-inspector.js');
   assert.ok(shell.includes("title: t('add_later'), 'data-type': s.type"), 'library items still say "arrives later"');

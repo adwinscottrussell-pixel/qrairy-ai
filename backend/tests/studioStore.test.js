@@ -234,6 +234,93 @@ test('change events: kind and whether it was typing (the preview waits a moment 
   assert.deepEqual(seen, ['edit:true', 'edit:false', 'history:false', 'select:false']);
 });
 
+// ── lists (2A-3B: the Buttons) ──
+const QUICK = 's_quick01';
+const ITEMS = ['data', 'items'];
+const labels = (store) => store.section(QUICK).data.items.map((x) => x.label);
+
+test('add a button: appended, one Undo step, intentionally incomplete until a destination is chosen', () => {
+  const { store } = make();
+  const i = store.addItem(QUICK, ITEMS, { label: 'New button', kind: 'link', target: '' }, 12);
+  assert.equal(i, 4);
+  assert.deepEqual(labels(store), ['Stempelkarte', 'Angebote', 'Unsere Produkte', 'Kontakt', 'New button']);
+  assert.equal(store.sectionErrors(QUICK)['data.items[4].target'].code, 'required', 'the target waits for a choice');
+  assert.equal(store.isValid(), false);
+  assert.equal(store.lastValid().pages[0].sections[1].data.items.length, 4, 'the preview keeps the last valid page');
+  store.undo();
+  assert.equal(store.section(QUICK).data.items.length, 4, 'one step');
+  assert.ok(store.isValid());
+  store.redo();
+  assert.equal(store.section(QUICK).data.items.length, 5);
+});
+
+test('at most 12 buttons (from describe()); a full list refuses without an Undo step', () => {
+  const max = V3.describe().sections.buttons.data.fields.items.max;
+  assert.equal(max, 12);
+  const { store } = make();
+  for (let n = 4; n < max; n++) assert.equal(store.addItem(QUICK, ITEMS, { label: 'B' + n, kind: 'link', target: '/' }, max), n);
+  assert.ok(store.isValid(), '12 is valid');
+  const before = JSON.stringify(store.draft());
+  let undos = 0; while (store.canUndo()) { store.undo(); undos++; }
+  for (let k = 0; k < undos; k++) store.redo();
+  assert.equal(store.addItem(QUICK, ITEMS, { label: 'B13', kind: 'link', target: '/' }, max), -1);
+  assert.equal(JSON.stringify(store.draft()), before);
+  // and the core agrees that 13 is too many
+  const d = store.draft(); d.pages[0].sections[1].data.items.push({ label: 'x', kind: 'link', target: '/' });
+  assert.equal(V3.validateDesign(d).errors[0].code, 'too_many');
+});
+
+test('remove a button: one Undo step; the last one leaves an empty section (preview note, left out of the public page)', () => {
+  const { store } = make();
+  assert.ok(store.removeItem(QUICK, ITEMS, 1));
+  assert.deepEqual(labels(store), ['Stempelkarte', 'Unsere Produkte', 'Kontakt']);
+  store.undo();
+  assert.deepEqual(labels(store), ['Stempelkarte', 'Angebote', 'Unsere Produkte', 'Kontakt']);
+  for (let k = 0; k < 4; k++) store.removeItem(QUICK, ITEMS, 0);
+  assert.deepEqual(store.section(QUICK).data.items, []);
+  assert.ok(store.isValid());
+  const pv = render(store.lastValid()).html;
+  assert.ok(pv.includes('data-v3-id="s_quick01"') && pv.includes('v3-ph-note'), 'preview: empty-section note');
+  assert.ok(!V3.renderDesign(store.lastValid(), {}).html.includes('id="s_quick01"'), 'public page: left out');
+  assert.equal(store.removeItem(QUICK, ITEMS, 0), false, 'nothing left to remove');
+  assert.equal(store.removeItem(QUICK, ITEMS, -1), false);
+});
+
+test('move a button: one Undo step; out-of-range or same-place moves are refused', () => {
+  const { store } = make();
+  assert.ok(store.moveItem(QUICK, ITEMS, 0, 1));
+  assert.deepEqual(labels(store), ['Angebote', 'Stempelkarte', 'Unsere Produkte', 'Kontakt']);
+  assert.ok(store.moveItem(QUICK, ITEMS, 3, 0));
+  assert.deepEqual(labels(store), ['Kontakt', 'Angebote', 'Stempelkarte', 'Unsere Produkte']);
+  const html = render(store.lastValid()).html;
+  assert.ok(html.indexOf('>Kontakt</strong>') < html.indexOf('>Angebote</strong>'), 'the preview follows the order');
+  store.undo();
+  assert.deepEqual(labels(store), ['Angebote', 'Stempelkarte', 'Unsere Produkte', 'Kontakt']);
+  for (const [a, b] of [[0, 0], [0, 4], [-1, 0], [1.5, 2], [0, -1]]) assert.equal(store.moveItem(QUICK, ITEMS, a, b), false, a + '->' + b);
+  assert.equal(store.addItem(QUICK, ['id'], {}, 12), -1, 'lists only inside data');
+  assert.equal(store.moveItem('s_nope01', ITEMS, 0, 1), false);
+});
+
+test('Buttons: edits by path, a type change keeps the target and reports when it no longer fits', () => {
+  const { store } = make();
+  store.set(QUICK, ['data', 'items', 0, 'kind'], 'call');
+  assert.equal(store.section(QUICK).data.items[0].target, '/stempelkarte', 'kept, not converted');
+  assert.equal(store.sectionErrors(QUICK)['data.items[0].target'].code, 'invalid_phone');
+  store.set(QUICK, ['data', 'items', 0, 'target'], '+49 731 123456');
+  assert.ok(store.isValid());
+  assert.ok(render(store.lastValid()).html.includes('href="tel:+49731123456"'));
+  store.undo(); store.undo();
+  assert.equal(store.section(QUICK).data.items[0].kind, 'link');
+  assert.ok(store.isValid());
+});
+
+test('renaming a link name also moves the Buttons targets that point to it', () => {
+  const { store } = make();
+  assert.equal(store.setAnchor('s_contact1', 'so-finden-sie-uns').relinked, 3, 'Hero secondary, nav, the Kontakt button');
+  assert.equal(store.section(QUICK).data.items[3].target, '/so-finden-sie-uns');
+  assert.ok(store.isValid());
+});
+
 test('pure: no DOM, network or storage in the store', () => {
   const src = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-store.js'), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''); // code only
   for (const re of [/document\./, /window\./, /localStorage/, /sessionStorage/, /indexedDB/, /\bfetch\s*\(/, /XMLHttpRequest/, /postMessage/]) assert.ok(!re.test(src), String(re));

@@ -6,11 +6,12 @@
  * Content / Style / Settings inspector (studio-inspector.js), the template
  * strip and the Studio appearance (Light / Dark / System).
  *
- * Phase 2A-3A: the Hero section is editable. The design lives only in
- * memory (studio-editor.js) with Undo / Redo; nothing is saved: Save Draft
- * and Publish stay disabled, and a reload starts again from the demo.
- * Adding, moving or deleting sections and the other section types follow in
- * later steps.
+ * Phase 2A-3A / 2A-3B: the Hero and Buttons sections are editable. The
+ * design lives only in memory (studio-store.js) with Undo / Redo; nothing is
+ * saved: Save Draft and Publish stay disabled, and a reload starts again
+ * from the demo. While anything is invalid, the preview keeps the last valid
+ * version and says so. Adding, moving or deleting sections and the other
+ * section types follow in later steps.
  *
  * No network: this file never calls an API (studio-routing.js decides where
  * the Studio may run at all). The preview is rendered by the shared
@@ -38,7 +39,7 @@
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
       phone_note: 'Full editing works on a tablet or computer. On a phone you can preview and publish.',
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
-      undone: 'Undone', redone: 'Redone', select_section: 'Select a section on the left to see its settings.',
+      undone: 'Undone', redone: 'Redone', preview_stale: 'Preview shows the last valid version. Fix the highlighted field.', select_section: 'Select a section on the left to see its settings.',
       templates: 'Page Templates', add_later: 'Adding sections arrives in the next step.',
       unavailable_title: "Landing Page Studio isn't available here yet", unavailable_text: 'The new Studio is still being built and tested. Your landing pages keep working as before.', unavailable_back: 'Back to Smart QR Pages',
       chip_all: 'All', chip_popular: 'Popular', chip_business: 'Business', chip_media: 'Media', chip_more: 'More',
@@ -55,7 +56,7 @@
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
       phone_note: 'Vollständig bearbeiten kannst du auf Tablet oder Computer. Auf dem Smartphone: Vorschau und Veröffentlichen.',
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
-      undone: 'Rückgängig gemacht', redone: 'Wiederholt', select_section: 'Wähle links einen Abschnitt, um seine Einstellungen zu sehen.',
+      undone: 'Rückgängig gemacht', redone: 'Wiederholt', preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.', select_section: 'Wähle links einen Abschnitt, um seine Einstellungen zu sehen.',
       templates: 'Seitenvorlagen', add_later: 'Abschnitte hinzufügen folgt im nächsten Schritt.',
       unavailable_title: 'Das Landing Page Studio ist hier noch nicht verfügbar', unavailable_text: 'Das neue Studio wird noch gebaut und getestet. Deine Landingpages funktionieren weiter wie bisher.', unavailable_back: 'Zurück zu den Smart-QR-Seiten',
       chip_all: 'Alle', chip_popular: 'Beliebt', chip_business: 'Business', chip_media: 'Medien', chip_more: 'Mehr',
@@ -221,10 +222,14 @@
     $('st-undo-btn').disabled = !editor.canUndo();
     $('st-redo-btn').disabled = !editor.canRedo();
   }
+  // the approved notice while anything is invalid: the preview keeps the last valid version
+  function staleNote() { $('st-stale').hidden = editor.isValid(); }
   function announce(msg) { var n = $('st-live'); n.textContent = ''; setTimeout(function () { n.textContent = msg; }, 30); }
   function onStoreChange(kind, info) {
     if (kind === 'select') return;
-    if (kind === 'history') inspector.render(); else inspector.refresh();
+    // Undo / Redo and list changes (add, move, remove) rebuild the inspector
+    if (kind === 'history' || info.structure) inspector.render(); else inspector.refresh();
+    staleNote();
     renderOutline();
     historyButtons();
     // typing: one preview update after a short pause; anything else at once
@@ -371,7 +376,7 @@
       onSelect: function (id) { if (!preview.phoneOnly() && id !== editor.selected()) select(id, 'preview'); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase() });
+      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase() });
     preview.setHtml(pageHtml(), 0);
     preview.select(editor.selected(), false);
     renderAll();
@@ -379,6 +384,7 @@
     bindUi();
     editor.onChange(onStoreChange);
     historyButtons();
+    staleNote();
     applyPanels();
     preview.render();
     deviceButtons();

@@ -2,8 +2,8 @@
  * studio-inspector.js — Landing Page Studio V3: the Content / Style /
  * Settings inspector.
  *
- * Phase 2A-3A: only the Hero is editable (EDITABLE). Its controls follow
- * HERO_PLAN, with every rule (limits, choices, required fields) read from
+ * Editable: the Hero (2A-3A) and the Buttons (2A-3B), listed in EDITABLE.
+ * Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -18,7 +18,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero'];
+  var EDITABLE = ['hero', 'buttons'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -47,16 +47,65 @@
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
 
-  // The spec of one Hero path, from describe().
-  function heroSpec(D, path) {
-    if (path[0] === 'variant') return { t: 'enum', values: D.sections.hero.variants.slice(), def: D.sections.hero.variants[0] };
+  // Buttons (2A-3B): every field the Buttons section has; the button list is
+  // one 'items' control whose rows are edited with ITEM (one row open at a time).
+  var BUTTONS_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'subtitle'], control: 'text' },
+    { tab: 'content', path: ['data', 'items'], control: 'items', item: [
+      { path: ['label'], control: 'text' },
+      { path: ['subtitle'], control: 'text', hint: 'subtitle_layouts' },
+      { path: ['kind'], control: 'select' },
+      { path: ['target'], control: 'target', kindFrom: 'kind' },
+      { path: ['icon'], control: 'select', noneLabel: 'i_default' },
+    ] },
+    { tab: 'style', path: ['variant'], control: 'select' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'align'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN };
+
+  // The spec of one path of a section type, from describe(). Numbers in the
+  // path step into a list's item.
+  function specFor(D, type, path) {
+    if (path[0] === 'variant') return { t: 'enum', values: D.sections[type].variants.slice(), def: D.sections[type].variants[0] };
     if (path[0] === 'style') return D.section.style.fields[path[1]];
     if (path[0] === 'anchor') return D.section.anchor;
     if (path[0] === 'hidden') return D.section.hidden;
     if (path[0] === 'id') return D.section.id;
-    var s = D.sections.hero.data;
-    for (var i = 1; i < path.length; i++) s = s && s.fields && s.fields[path[i]];
+    var s = D.sections[type].data;
+    for (var i = 1; i < path.length; i++) {
+      if (!s) return undefined;
+      if (typeof path[i] === 'number') { s = s.t === 'arr' ? s.item : undefined; continue; }
+      s = s.fields && s.fields[path[i]];
+    }
     return s;
+  }
+  function heroSpec(D, path) { return specFor(D, 'hero', path); }
+
+  // The key validateDesign uses for a path inside a section:
+  // ['data','items',2,'label'] -> 'data.items[2].label'.
+  function errKey(path) {
+    return path.reduce(function (k, p) { return typeof p === 'number' ? k + '[' + p + ']' : (k ? k + '.' : '') + p; }, '');
+  }
+
+  // WhatsApp (2A-3B): the owner types a phone number; the design stores the
+  // https://wa.me/<digits> link core.js validates and renders. "+" and "00"
+  // prefixes, spaces and punctuation are dropped.
+  function whatsappLink(number) {
+    var digits = String(number == null ? '' : number).replace(/[^0-9]/g, '');
+    if (/^\s*00/.test(String(number))) digits = digits.replace(/^00/, '');
+    return digits ? 'https://wa.me/' + digits : '';
+  }
+  // the input type for each non-Link button target
+  var TARGET_INPUT = { website: 'url', whatsapp: 'tel', call: 'tel', email: 'email', directions: 'url' };
+  function whatsappNumber(link) {
+    var m = /^https:\/\/wa\.me\/([0-9]+)$/.exec(String(link || ''));
+    return m ? '+' + m[1] : null;
   }
 
   // The length validateDesign measures (core.js cleanStr + len): line breaks
@@ -91,6 +140,22 @@
       e_out_of_range: 'Enter a whole number from {min} to {max}.',
       e_invalid_anchor: 'Use lowercase letters, numbers and hyphens (up to 40), starting with a letter or number.',
       e_reserved: '"start" and "top" are reserved.', e_duplicate: 'Another section already uses this name.', e_other: 'Not valid.',
+      // Buttons (2A-3B)
+      label: 'Label', kind: 'Action', background: 'Background', spacing: 'Spacing', buttons: 'Buttons',
+      v_buttons: 'Buttons', v_cards: 'Cards', v_list: 'List',
+      bg_default: 'Default', bg_alt: 'Alternate', bg_brand: 'Brand colour', bg_dark: 'Dark', sp_normal: 'Normal', sp_compact: 'Compact', sp_roomy: 'Roomy',
+      k_link: 'Link', k_website: 'Website', k_whatsapp: 'WhatsApp', k_call: 'Call', k_email: 'Email', k_directions: 'Directions',
+      t_link: 'Link', t_website: 'Web address', t_whatsapp: 'WhatsApp number', t_call: 'Phone number', t_email: 'Email address', t_directions: 'Map link',
+      p_website: 'https://…', p_whatsapp: '+49 151 2345678', p_call: '+49 731 123456', p_email: 'name@example.com', p_directions: 'https://maps.app.goo.gl/…',
+      hint_whatsapp: 'International format with country code, e.g. +49 151 2345678.', hint_directions: 'A link from {hosts}.',
+      i_default: 'Default for this type', hint_subtitle_layouts: 'Subtitles appear in the Cards and List layouts.',
+      choose_link: 'Choose a destination…', new_button: 'New button', add_button: 'Add button', max_buttons: 'Up to {max} buttons.', no_label: '(no label)',
+      move_up: 'Move up', move_down: 'Move down', remove_button: 'Remove button', removed: 'Button removed. Undo is available.', moved: 'Button moved.',
+      errors_one: '1 error', errors_many: '{n} errors',
+      e_choose_target: 'Choose where this button leads.', e_invalid_url: 'Enter a web address starting with https://.',
+      e_invalid_whatsapp: 'Enter the WhatsApp number in international format, e.g. +49 151 2345678.', e_invalid_phone: 'Enter a phone number, e.g. +49 731 123456.',
+      e_invalid_email: 'Enter an email address, e.g. name@example.com.', e_invalid_maps_link: 'Use a link from Google Maps, Apple Maps or OpenStreetMap.',
+      e_too_many: 'At most {max}.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -110,17 +175,35 @@
       e_out_of_range: 'Gib eine ganze Zahl von {min} bis {max} ein.',
       e_invalid_anchor: 'Kleinbuchstaben, Zahlen und Bindestriche (bis 40), am Anfang ein Buchstabe oder eine Zahl.',
       e_reserved: '„start“ und „top“ sind reserviert.', e_duplicate: 'Diesen Namen nutzt schon ein anderer Abschnitt.', e_other: 'Ungültig.',
+      // Buttons (2A-3B)
+      label: 'Beschriftung', kind: 'Aktion', background: 'Hintergrund', spacing: 'Abstand', buttons: 'Buttons',
+      v_buttons: 'Buttons', v_cards: 'Karten', v_list: 'Liste',
+      bg_default: 'Standard', bg_alt: 'Alternativ', bg_brand: 'Markenfarbe', bg_dark: 'Dunkel', sp_normal: 'Normal', sp_compact: 'Kompakt', sp_roomy: 'Großzügig',
+      k_link: 'Link', k_website: 'Website', k_whatsapp: 'WhatsApp', k_call: 'Anruf', k_email: 'E-Mail', k_directions: 'Route',
+      t_link: 'Link', t_website: 'Webadresse', t_whatsapp: 'WhatsApp-Nummer', t_call: 'Telefonnummer', t_email: 'E-Mail-Adresse', t_directions: 'Karten-Link',
+      p_website: 'https://…', p_whatsapp: '+49 151 2345678', p_call: '+49 731 123456', p_email: 'name@beispiel.de', p_directions: 'https://maps.app.goo.gl/…',
+      hint_whatsapp: 'Internationales Format mit Ländervorwahl, z. B. +49 151 2345678.', hint_directions: 'Ein Link von {hosts}.',
+      i_default: 'Standard für diesen Typ', hint_subtitle_layouts: 'Untertitel erscheinen in den Layouts Karten und Liste.',
+      choose_link: 'Ziel wählen…', new_button: 'Neuer Button', add_button: 'Button hinzufügen', max_buttons: 'Bis zu {max} Buttons.', no_label: '(ohne Beschriftung)',
+      move_up: 'Nach oben', move_down: 'Nach unten', remove_button: 'Button entfernen', removed: 'Button entfernt. Rückgängig ist möglich.', moved: 'Button verschoben.',
+      errors_one: '1 Fehler', errors_many: '{n} Fehler',
+      e_choose_target: 'Wähle, wohin dieser Button führt.', e_invalid_url: 'Gib eine Webadresse mit https:// ein.',
+      e_invalid_whatsapp: 'Gib die WhatsApp-Nummer im internationalen Format ein, z. B. +49 151 2345678.', e_invalid_phone: 'Gib eine Telefonnummer ein, z. B. +49 731 123456.',
+      e_invalid_email: 'Gib eine E-Mail-Adresse ein, z. B. name@beispiel.de.', e_invalid_maps_link: 'Nutze einen Link von Google Maps, Apple Maps oder OpenStreetMap.',
+      e_too_many: 'Höchstens {max}.',
     },
   };
-  function errorText(lang, e) {
+  // field: the last path key; a missing button target gets its own message.
+  function errorText(lang, e, field) {
     var d = TX[lang] || TX.en;
-    var s = d['e_' + e.code] || d.e_other;
+    var code = e.code === 'required' && field === 'target' ? 'choose_target' : e.code;
+    var s = d['e_' + code] || d.e_other;
     return s.replace('{max}', e.max).replace('{min}', e.min);
   }
 
   function getPath(o, path) { var n = o; for (var i = 0; i < path.length; i++) { if (n == null) return undefined; n = n[path[i]]; } return n; }
 
-  // createInspector({ box, note, kind, store, V3, lang(), tab(), t(k), fieldLabel(k), el, icon, sectionLabel(type), brand })
+  // createInspector({ box, note, kind, store, V3, lang(), tab(), t(k), fieldLabel(k), el, icon, sectionLabel(type), announce(msg), brand })
   function createInspector(o) {
     var store = o.store, el = o.el;
     var refreshers = [];
@@ -170,10 +253,10 @@
       }
     }
 
-    // ── Hero editor ──
+    // ── editors (Hero, Buttons): shared controls, driven by PLANS ──
     function labelFor(path) {
       var k = path[path.length - 1];
-      if (k === 'variant' || k === 'align' || k === 'overlay') return tx(k);
+      if (k === 'variant' || k === 'align' || k === 'overlay' || k === 'background' || k === 'spacing' || k === 'kind' || k === 'label') return tx(k);
       if (k === 'anchor') return o.t('anchor');
       if (k === 'hidden') return o.t('visibility');
       if (k === 'id') return o.t('section_id');
@@ -181,16 +264,16 @@
     }
     // the field's error line; every control registers how it refreshes
     function errorLine(id) { return el('p', { class: 'st-err', id: id, role: 'status', hidden: true }); }
-    function showError(input, line, err) {
+    function showError(input, line, err, field) {
       line.hidden = !err;
-      line.textContent = err ? errorText(o.lang(), err) : '';
+      line.textContent = err ? errorText(o.lang(), err, field) : '';
       if (err) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
     }
     function focused(n) { return n.ownerDocument.activeElement === n; }
     function heroValue(sec, path, spec) { var v = getPath(sec, path); return v === undefined && spec && spec.def !== undefined ? spec.def : v; }
 
     function textControl(sec, c, spec) {
-      var multiline = !!spec.multiline, key = c.path.join('.');
+      var multiline = !!spec.multiline, key = errKey(c.path);
       var id = nextId('text'), errId = id + '-err';
       var inp = multiline ? el('textarea', { id: id, rows: '3', 'aria-describedby': errId }) : el('input', { type: 'text', id: id, 'aria-describedby': errId, autocomplete: 'off' });
       inp.value = heroValue(sec, c.path) || '';
@@ -203,6 +286,9 @@
       if (c.color) control = el('div', { class: 'st-field__row' }, [inp, colorControl(sec, c.color)]);
       var node = el('div', { class: 'st-field', 'data-path': key }, [
         el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) }), count]), control, line]);
+      // a Buttons item subtitle: shown on the page only in Cards and List
+      var hint = c.hint ? el('p', { class: 'st-hint', 'data-hint': c.hint, text: tx('hint_' + c.hint) }) : null;
+      if (hint) node.appendChild(hint);
       refreshers.push(function (cur, errs) {
         var v = getPath(cur, c.path) || '';
         if (!focused(inp) && inp.value !== v) inp.value = v;
@@ -210,12 +296,13 @@
         count.textContent = n + ' / ' + spec.max;
         count.classList.toggle('is-over', n > spec.max);
         showError(inp, line, errs[key]);
+        if (hint) hint.hidden = heroValue(cur, ['variant'], specFor(o.V3.describe(), cur.type, ['variant'])) !== 'buttons';
       });
       return node;
     }
 
     function colorControl(sec, path) {
-      var key = path.join('.');
+      var key = errKey(path);
       var wrap = el('span', { class: 'st-color', 'data-path': key });
       var inp = el('input', { type: 'color', class: 'st-swatch st-swatch--input', 'aria-label': tx('color_label'), title: tx('color_label') });
       var reset = el('button', { type: 'button', class: 'st-linkbtn', text: tx('color_default') });
@@ -233,7 +320,7 @@
     }
 
     function imageControl(sec, c) {
-      var key = c.path.join('.');
+      var key = errKey(c.path);
       var thumb = el('div', { class: 'st-field__thumb' });
       var change = el('button', { type: 'button', class: 'st-btn st-btn--ghost', disabled: true, title: tx('change_soon'), text: o.t('change_image') });
       var remove = el('button', { type: 'button', class: 'st-btn st-btn--ghost', 'data-action': 'remove-image', text: o.t('remove') });
@@ -259,7 +346,7 @@
     }
 
     function linkControl(sec, c) {
-      var key = c.path.join('.');
+      var key = errKey(c.path);
       var id = nextId('link'), errId = id + '-err', customId = id + '-custom';
       var sel = el('select', { id: id, 'aria-describedby': errId });
       var custom = el('input', { type: 'text', id: customId, class: 'st-field__sub', placeholder: tx('link_placeholder'), 'aria-label': o.fieldLabel('target'), 'aria-describedby': errId, autocomplete: 'off', inputmode: 'url', hidden: true });
@@ -279,7 +366,8 @@
         if (sig === signature) return list;
         signature = sig;
         sel.textContent = '';
-        sel.appendChild(el('option', { value: '', text: tx('no_link') }));
+        // a required link (a Buttons target) asks for a choice instead of offering "No link"
+        sel.appendChild(el('option', { value: '', text: tx(c.required ? 'choose_link' : 'no_link') }));
         list.forEach(function (x) { sel.appendChild(el('option', { value: x.value, text: x.label })); });
         sel.appendChild(el('option', { value: '__custom', text: tx('custom_link') }));
         return list;
@@ -309,26 +397,61 @@
       });
       custom.addEventListener('input', function () { store.set(sec.id, c.path, custom.value || undefined, 'typing'); });
       custom.addEventListener('blur', function () { store.endMerge(); });
-      refreshers.push(function (cur, errs) { sync(getPath(cur, c.path) || ''); showError(custom.hidden ? sel : custom, line, errs[key]); });
+      refreshers.push(function (cur, errs) { sync(getPath(cur, c.path) || ''); showError(custom.hidden ? sel : custom, line, errs[key], 'target'); });
       return el('div', { class: 'st-field', 'data-path': key }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) })]), sel, custom, line]);
     }
 
+    // A Buttons target: the control follows the button's action type. Link
+    // uses the Hero link control; WhatsApp takes a phone number (stored as the
+    // wa.me link core.js expects); the others are plain fields. A type change
+    // keeps the value; core.js validation reports when it no longer fits.
+    function targetControl(sec, c, spec) {
+      // as core.js: an unknown or missing type is checked as a Link
+      var kind = getPath(sec, c.path.slice(0, -1).concat(c.kindFrom));
+      if (o.V3.describe().choices.linkKinds.indexOf(kind) === -1) kind = 'link';
+      if (kind === 'link') return linkControl(sec, { path: c.path, required: true });
+      var key = errKey(c.path);
+      var id = nextId('target'), errId = id + '-err', hintId = id + '-hint';
+      var inp = el('input', { type: TARGET_INPUT[kind], id: id, 'aria-describedby': errId + ' ' + hintId, 'aria-required': 'true', autocomplete: 'off', spellcheck: 'false', placeholder: tx('p_' + kind) });
+      var shown = function (v) { return kind === 'whatsapp' ? (whatsappNumber(v) || v || '') : (v || ''); };
+      inp.value = shown(getPath(sec, c.path));
+      var line = errorLine(errId);
+      var hintText = kind === 'whatsapp' ? tx('hint_whatsapp') : kind === 'directions' ? tx('hint_directions').replace('{hosts}', o.V3.describe().choices.mapHosts.join(', ')) : '';
+      var hint = el('p', { class: 'st-hint', id: hintId, hidden: !hintText, text: hintText });
+      inp.addEventListener('input', function () {
+        var v = kind === 'whatsapp' ? whatsappLink(inp.value) : inp.value;
+        store.set(sec.id, c.path, v || undefined, 'typing');
+      });
+      inp.addEventListener('blur', function () { store.endMerge(); });
+      refreshers.push(function (cur, errs) {
+        var v = shown(getPath(cur, c.path));
+        if (!focused(inp) && inp.value !== v) inp.value = v;
+        showError(inp, line, errs[key], 'target');
+      });
+      return el('div', { class: 'st-field', 'data-path': key, 'data-kind': kind }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: tx('t_' + kind) })]), inp, line, hint]);
+    }
+
     function selectControl(sec, c, spec) {
-      var key = c.path.join('.');
+      var key = errKey(c.path);
       var id = nextId('sel');
       var sel = el('select', { id: id });
       var k = c.path[c.path.length - 1];
+      var PREFIX = { variant: 'v_', align: 'a_', icon: 'i_', background: 'bg_', spacing: 'sp_', kind: 'k_' };
       spec.values.forEach(function (v) {
-        var label = k === 'variant' ? tx('v_' + v) : k === 'align' ? tx('a_' + v) : k === 'icon' ? tx('i_' + v) : v;
+        var label = k === 'icon' && v === 'none' && c.noneLabel ? tx(c.noneLabel) : PREFIX[k] ? tx(PREFIX[k] + v) : v;
         sel.appendChild(el('option', { value: v, text: label }));
       });
-      sel.addEventListener('change', function () { store.set(sec.id, c.path, sel.value); });
+      sel.addEventListener('change', function () {
+        store.set(sec.id, c.path, sel.value);
+        // a new action type needs a different target control
+        if (k === 'kind') { render(); var again = o.box.querySelector('[data-path="' + key + '"] select'); if (again) again.focus(); }
+      });
       refreshers.push(function (cur) { var v = heroValue(cur, c.path, spec); if (!focused(sel) && sel.value !== v) sel.value = v; });
       return el('div', { class: 'st-field', 'data-path': key }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) })]), sel]);
     }
 
     function numberControl(sec, c, spec) {
-      var key = c.path.join('.');
+      var key = errKey(c.path);
       var id = nextId('num'), errId = id + '-err', hintId = id + '-hint';
       var inp = el('input', { type: 'number', id: id, min: String(spec.min), max: String(spec.max), step: '1', inputmode: 'numeric', 'aria-describedby': errId + ' ' + hintId });
       var line = errorLine(errId);
@@ -390,20 +513,116 @@
       return hint;
     }
 
-    function renderHero(box, sec, D) {
-      HERO_PLAN.filter(function (c) { return c.tab === o.tab(); }).forEach(function (c) {
+    // ── a list of items (the Buttons): one row open at a time ──
+    var openRows = {}; // section id + list key -> the open row's index (-1: none)
+    function itemsControl(sec, c, D) {
+      var key = errKey(c.path), spec = specFor(D, sec.type, c.path), max = spec.max;
+      var stateKey = sec.id + ':' + key;
+      var list = getPath(sec, c.path) || [];
+      var open = openRows[stateKey] === undefined ? -1 : openRows[stateKey];
+      if (open >= list.length) open = openRows[stateKey] = -1;
+      var count = el('span', { class: 'st-items__count' });
+      var ol = el('ol', { class: 'st-items__list' });
+      var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add', 'data-action': 'add-item' }, [tx('add_button')]);
+      var full = el('p', { class: 'st-hint', 'data-hint': 'max', text: tx('max_buttons').replace('{max}', max) });
+      var row = function (i) { return o.box.querySelector('[data-path="' + key + '"] .st-item[data-index="' + i + '"] .st-item__toggle'); };
+      // the open row follows the change; the store event rebuilds the inspector
+      var move = function (from, to) {
+        var before = open;
+        openRows[stateKey] = open === from ? to : open === to ? from : open;
+        if (!store.moveItem(sec.id, c.path, from, to)) { openRows[stateKey] = before; return; }
+        if (o.announce) o.announce(tx('moved'));
+        var r = row(to); if (r) r.focus();
+      };
+      list.forEach(function (it, i) {
+        var isOpen = open === i, bodyId = nextId('item');
+        var name = el('span', { class: 'st-item__name' });
+        var kind = el('small', { class: 'st-item__kind' });
+        var errs = el('small', { class: 'st-item__err', hidden: true });
+        var toggle = el('button', { type: 'button', class: 'st-item__toggle', 'aria-expanded': String(isOpen), 'aria-controls': bodyId, 'aria-keyshortcuts': 'Alt+ArrowUp Alt+ArrowDown' },
+          [el('span', { class: 'st-item__num', text: (i + 1) + '.' }), name, kind, errs]);
+        toggle.addEventListener('click', function () { openRows[stateKey] = isOpen ? -1 : i; render(); var r = row(i); if (r) r.focus(); });
+        toggle.addEventListener('keydown', function (e) {
+          if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+          e.preventDefault();
+          var to = i + (e.key === 'ArrowUp' ? -1 : 1);
+          if (to >= 0 && to < list.length) move(i, to);
+        });
+        var iconBtn = function (action, label, ic, cls, disabled, fn) {
+          var b = el('button', { type: 'button', class: 'st-iconbtn st-item__act', 'data-action': action, 'aria-label': label, title: label, disabled: disabled }, [o.icon(ic, cls)]);
+          b.addEventListener('click', fn);
+          return b;
+        };
+        var li = el('li', { class: 'st-item' + (isOpen ? ' is-open' : ''), 'data-index': String(i) }, [
+          el('div', { class: 'st-item__head' }, [toggle,
+            iconBtn('move-up', tx('move_up'), 'st-chevron', 'st-ic--up', i === 0, function () { move(i, i - 1); }),
+            iconBtn('move-down', tx('move_down'), 'st-chevron', '', i === list.length - 1, function () { move(i, i + 1); }),
+            iconBtn('remove-item', tx('remove_button'), 'st-x', '', false, function () {
+              openRows[stateKey] = open === i ? -1 : open > i ? open - 1 : open;
+              if (!store.removeItem(sec.id, c.path, i)) return;
+              if (o.announce) o.announce(tx('removed'));
+              var next = row(Math.min(i, list.length - 2)) || o.box.querySelector('[data-path="' + key + '"] [data-action="add-item"]');
+              if (next) next.focus();
+            })])]);
+        if (isOpen) {
+          var body = el('div', { class: 'st-item__body', id: bodyId });
+          c.item.forEach(function (f) {
+            var fc = Object.assign({}, f, { path: c.path.concat(i, f.path) });
+            var node = controlFor(sec, fc, D);
+            if (node) body.appendChild(node);
+          });
+          li.appendChild(body);
+        }
+        refreshers.push(function (cur, errMap) {
+          var item = (getPath(cur, c.path) || [])[i] || {};
+          name.textContent = textLength(item.label, false) ? item.label : tx('no_label');
+          kind.textContent = tx('k_' + (item.kind || 'link'));
+          var n = Object.keys(errMap).filter(function (k) { return k.indexOf(key + '[' + i + '].') === 0; }).length;
+          errs.hidden = !n;
+          errs.textContent = n === 1 ? tx('errors_one') : tx('errors_many').replace('{n}', n);
+          li.classList.toggle('has-error', !!n);
+        });
+        ol.appendChild(li);
+      });
+      add.addEventListener('click', function () {
+        var n = (getPath(store.section(sec.id), c.path) || []).length;
+        var before = openRows[stateKey];
+        openRows[stateKey] = n;
+        // intentionally incomplete: the owner chooses where it leads
+        if (store.addItem(sec.id, c.path, { label: tx('new_button'), kind: 'link', target: '' }, max) < 0) { openRows[stateKey] = before; return; }
+        var label = o.box.querySelector('[data-path="' + key + '[' + n + '].label"] input');
+        if (label) { label.focus(); label.select(); }
+      });
+      refreshers.push(function (cur) {
+        var n = (getPath(cur, c.path) || []).length;
+        count.textContent = '(' + n + ' / ' + max + ')';
+        add.disabled = n >= max;
+        full.hidden = n < max;
+      });
+      return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx('buttons') + ' ', count]), ol, add, full]);
+    }
+
+    function controlFor(sec, c, D) {
+      if (c.control === 'color') return null; // shown beside the Hero button text
+      var spec = specFor(D, sec.type, c.path);
+      if (c.control === 'text') return textControl(sec, c, spec);
+      if (c.control === 'image') return imageControl(sec, c);
+      if (c.control === 'link') return linkControl(sec, c);
+      if (c.control === 'target') return targetControl(sec, c, spec);
+      if (c.control === 'select') return selectControl(sec, c, spec);
+      if (c.control === 'number') return numberControl(sec, c, spec);
+      if (c.control === 'items') return itemsControl(sec, c, D);
+      if (c.control === 'anchor') return anchorControl(sec);
+      if (c.control === 'show') return showControl(sec);
+      if (c.control === 'readonly') return readonlyControl(sec);
+      return null;
+    }
+    function renderPlan(box, sec, D, plan) {
+      plan.filter(function (c) { return c.tab === o.tab(); }).forEach(function (c) {
         if (c.group) return box.appendChild(el('div', { class: 'st-group', text: o.fieldLabel(c.group) }));
         if (c.hint) return box.appendChild(buttonHint(sec, c.hint));
-        if (c.control === 'color') return; // shown beside the button text
-        var spec = heroSpec(D, c.path);
-        if (c.control === 'text') box.appendChild(textControl(sec, c, spec));
-        else if (c.control === 'image') box.appendChild(imageControl(sec, c));
-        else if (c.control === 'link') box.appendChild(linkControl(sec, c));
-        else if (c.control === 'select') box.appendChild(selectControl(sec, c, spec));
-        else if (c.control === 'number') box.appendChild(numberControl(sec, c, spec));
-        else if (c.control === 'anchor') box.appendChild(anchorControl(sec));
-        else if (c.control === 'show') box.appendChild(showControl(sec));
-        else if (c.control === 'readonly') box.appendChild(readonlyControl(sec));
+        var node = controlFor(sec, c, D);
+        if (node) box.appendChild(node);
       });
     }
 
@@ -420,7 +639,7 @@
       var editable = EDITABLE.indexOf(sec.type) !== -1;
       box.setAttribute('data-editable', String(editable));
       if (editable) {
-        renderHero(box, sec, D);
+        renderPlan(box, sec, D, PLANS[sec.type]);
         o.note.textContent = tx('note_edit');
       } else {
         var valid = store.lastValid();
@@ -442,5 +661,6 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, heroSpec: heroSpec, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, PLANS: PLANS, TARGET_INPUT: TARGET_INPUT, heroSpec: heroSpec, specFor: specFor, errKey: errKey,
+    whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };
 });

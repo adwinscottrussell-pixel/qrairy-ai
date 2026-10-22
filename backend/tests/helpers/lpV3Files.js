@@ -44,6 +44,8 @@ const LPV3_FILES = [
   'backend/tests/studioInspector.test.js',
   'backend/tests/studioPreviewBridge.test.js',
   'backend/tests/studioEditor.browser.test.js',
+  // Phase 2A-3B (Buttons editing): same files, plus its browser test
+  'backend/tests/studioButtonsEditor.browser.test.js',
   // older scope guards that now allow the files above
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

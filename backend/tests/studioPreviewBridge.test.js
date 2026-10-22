@@ -18,7 +18,8 @@ const V3 = require('../src/lpV3/core');
 const PV = require('../../frontend/public/js/studio/studio-preview.js');
 
 const PUB = path.join(__dirname, '..', '..', 'frontend', 'public');
-const read = (f) => fs.readFileSync(path.join(PUB, f), 'utf8');
+// LF line endings (a git checkout on Windows may give CRLF)
+const read = (f) => fs.readFileSync(path.join(PUB, f), 'utf8').replace(/\r\n/g, '\n');
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 const design = (data) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_hero01', type: 'hero', data: Object.assign({ headline: 'H' }, data) }] }] });

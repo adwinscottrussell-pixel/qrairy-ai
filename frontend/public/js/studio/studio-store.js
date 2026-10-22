@@ -164,6 +164,47 @@
       },
       setHidden: function (id, hidden) { return api.set(id, ['hidden'], !!hidden); },
 
+      // ── lists inside a section (e.g. ['data', 'items']); each one Undo step ──
+      // addItem -> the new index, or -1 when the list is full (max) or not a list.
+      addItem: function (id, path, item, max) {
+        var i = indexOf(id);
+        if (i < 0 || !Array.isArray(path) || !path.length || path[0] !== 'data') return -1;
+        var s = sections()[i];
+        var list = getPath(s, path);
+        if (list === undefined) list = [];
+        if (!Array.isArray(list) || !(list.length < max)) return -1;
+        remember(null);
+        list = list.slice();
+        list.push(clone(item));
+        setPath(s, path, list);
+        revalidate();
+        emit('edit', { id: id, path: path, typing: false, structure: true });
+        return list.length - 1;
+      },
+      removeItem: function (id, path, index) {
+        var i = indexOf(id);
+        if (i < 0 || !Array.isArray(path) || path[0] !== 'data') return false;
+        var list = getPath(sections()[i], path);
+        if (!Array.isArray(list) || index !== Math.floor(index) || index < 0 || index >= list.length) return false;
+        remember(null);
+        list.splice(index, 1);
+        revalidate();
+        emit('edit', { id: id, path: path, typing: false, structure: true });
+        return true;
+      },
+      moveItem: function (id, path, from, to) {
+        var i = indexOf(id);
+        if (i < 0 || !Array.isArray(path) || path[0] !== 'data') return false;
+        var list = getPath(sections()[i], path);
+        var ok = function (n) { return n === Math.floor(n) && n >= 0 && n < list.length; };
+        if (!Array.isArray(list) || !ok(from) || !ok(to) || from === to) return false;
+        remember(null);
+        list.splice(to, 0, list.splice(from, 1)[0]);
+        revalidate();
+        emit('edit', { id: id, path: path, typing: false, structure: true });
+        return true;
+      },
+
       // ── history ──
       undo: function () {
         if (!past.length) return false;

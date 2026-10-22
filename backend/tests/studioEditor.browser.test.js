@@ -105,7 +105,8 @@ test('selection: the Hero starts selected in the Sections list, inspector and pr
   assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'true');
   const fr = await frame(page);
   await until(() => fr.$eval('[data-v3-id="s_hero01"]', (n) => n.classList.contains('st-sel')), 'Hero marked in the preview');
-  for (const id of ['s_quick01', 's_deals01', 's_loyal01', 's_prod01', 's_hours01', 's_contact1', 's_social01']) {
+  // (the Buttons section s_quick01 is editable since 2A-3B: studioButtonsEditor.browser.test.js)
+  for (const id of ['s_deals01', 's_loyal01', 's_prod01', 's_hours01', 's_contact1', 's_social01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     for (const t of ['content', 'style', 'settings']) {
       await tab(page, t);
