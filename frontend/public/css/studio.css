@@ -196,6 +196,19 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-hint { margin: 0; font-size: 12px; line-height: 1.4; color: var(--st-muted); }
 .st-warn { margin: 0; padding-left: 8px; border-left: 3px solid var(--st-accent); font-size: 12.5px; line-height: 1.4; color: var(--st-text); font-weight: 600; }
 .st-warn[hidden] { display: none; }
+/* Opening Hours (2A-3E): one row per weekday */
+.st-days { display: flex; flex-direction: column; gap: 8px; }
+.st-field.st-day { gap: 8px; padding: 8px 10px; border: 1px solid var(--st-border-strong); border-radius: 10px; background: var(--st-surface); }
+.st-day__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.st-day__name { font-size: 13px; font-weight: 600; color: var(--st-text); }
+.st-day[data-state="hidden"] .st-day__name { color: var(--st-muted); }
+.st-field .st-day__head select { width: auto; flex: 0 1 150px; min-width: 0; padding: 6px 9px; }
+.st-range { display: flex; align-items: center; gap: 6px; }
+.st-time-wrap { flex: 1; min-width: 0; }
+.st-field .st-time-wrap input { padding: 7px 9px; font-variant-numeric: tabular-nums; }
+.st-range__dash { color: var(--st-muted); }
+.st-day__add { align-self: flex-start; height: 32px; padding: 0 12px; font-size: 12.5px; }
+.st-day__add:disabled { opacity: .5; cursor: not-allowed; }
 .st-field input.st-readonly { background: var(--st-surface-2); color: var(--st-text-2); }
 .st-color { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .st-field input.st-swatch--input { width: 30px; height: 30px; padding: 0; border-radius: 50%; cursor: pointer; -webkit-appearance: none; appearance: none; background: none; }

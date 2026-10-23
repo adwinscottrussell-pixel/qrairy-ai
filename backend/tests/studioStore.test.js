@@ -384,6 +384,44 @@ test('Contact edits: nested address, typing merged into one Undo step, invalid p
   void clock;
 });
 
+// ── Opening Hours (2A-3E): day entries and their time ranges ──
+test('Opening Hours edits: close / reopen a day keeps its times, hide / show, ranges, typing merged, invalid times keep the last valid page', () => {
+  const { store } = make();
+  const H = 's_hours01', DAYS = ['data', 'days'];
+  const idx = (day) => store.section(H).data.days.findIndex((d) => d.day === day);
+  const valid = () => store.lastValid().pages[0].sections[5].data.days;
+  // Monday closed (whole entry, one step) keeps its times; reopening restores them
+  const mon = idx('mon');
+  store.set(H, DAYS.concat(mon), Object.assign({}, store.section(H).data.days[mon], { closed: true }));
+  assert.ok(store.isValid());
+  assert.deepEqual(store.section(H).data.days[mon].ranges, [{ open: '06:30', close: '18:00' }]);
+  store.undo();
+  assert.notEqual(store.section(H).data.days[mon].closed, true, 'one Undo step');
+  // Sunday not shown, then shown again as Closed
+  assert.ok(store.removeItem(H, DAYS, idx('sun')));
+  assert.equal(idx('sun'), -1);
+  assert.ok(store.addItem(H, DAYS, { day: 'sun', closed: true }, 7) >= 0);
+  // a second Saturday range: incomplete until typed; typing is one step
+  const sat = idx('sat');
+  assert.equal(store.addItem(H, DAYS.concat(sat, 'ranges'), { open: '', close: '' }, 3), 1);
+  assert.deepEqual(Object.keys(store.sectionErrors(H)).sort(), ['data.days[' + sat + '].ranges[1].close', 'data.days[' + sat + '].ranges[1].open']);
+  assert.equal(valid()[sat].ranges.length, 1, 'the preview keeps the last valid hours');
+  store.set(H, DAYS.concat(sat, 'ranges', 1, 'open'), '1', 'typing');
+  store.set(H, DAYS.concat(sat, 'ranges', 1, 'open'), '14:', 'typing');
+  store.set(H, DAYS.concat(sat, 'ranges', 1, 'open'), '14:00', 'typing');
+  store.endMerge();
+  store.set(H, DAYS.concat(sat, 'ranges', 1, 'close'), '12:00');
+  assert.equal(store.sectionErrors(H)['data.days[' + sat + '].ranges[1]'].code, 'closes_before_opening');
+  store.set(H, DAYS.concat(sat, 'ranges', 1, 'close'), '17:00');
+  assert.ok(store.isValid());
+  store.undo(); store.undo(); // the two closing times
+  assert.deepEqual([store.section(H).data.days[sat].ranges[1].open, store.section(H).data.days[sat].ranges[1].close], ['14:00', '']);
+  store.undo();
+  assert.equal(store.section(H).data.days[sat].ranges[1].open, '', 'the typing was one step');
+  assert.equal(store.addItem(H, DAYS.concat(sat, 'ranges'), { open: '', close: '' }, 3), 2);
+  assert.equal(store.addItem(H, DAYS.concat(sat, 'ranges'), { open: '', close: '' }, 3), -1, 'at most 3 ranges');
+});
+
 (async () => {
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {

@@ -50,6 +50,8 @@ const LPV3_FILES = [
   'backend/tests/studioSocialEditor.browser.test.js',
   // Phase 2A-3D (Contact editing): same files, plus its browser test
   'backend/tests/studioContactEditor.browser.test.js',
+  // Phase 2A-3E (Opening Hours editing): same files, plus its browser test
+  'backend/tests/studioHoursEditor.browser.test.js',
   // older scope guards that now allow the files above
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

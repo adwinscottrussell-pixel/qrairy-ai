@@ -82,6 +82,22 @@ test('Contact icons: brand-coloured, except on Brand sections where they use the
   assert.ok(contrast(V3.DEFAULT_PALETTE.onBrand, V3.DEFAULT_PALETTE.brand) >= 3, 'on-brand icons are visible on the brand colour');
 });
 
+// Opening Hours on Dark / Brand (2A-3E): Closed rows and the note used the
+// muted grey (2.4–2.6:1 there). They now take the section colour; the
+// divider lines are light on Dark. Default / Alternate keep the grey; the
+// Deals / Loyalty sample notes are not affected. Computed colours:
+// studioHoursEditor.browser.test.js.
+test('Opening Hours on Dark / Brand: Closed rows and the note follow the section colour; nothing else changes', () => {
+  const html = V3.renderDesign(withSections({ id: 's_hrs77', type: 'openingHours', style: { background: 'dark' }, data: { days: [{ day: 'sun', closed: true }], note: 'N' } }), CTX).html;
+  assert.ok(html.includes('.v3-closed td{color:var(--v3-muted)}') && html.includes('.v3-note{color:var(--v3-muted);margin-top:12px}'), 'the usual muted grey stays for Default / Alternate');
+  assert.ok(html.includes('.v3-bg-dark .v3-closed td,.v3-openingHours.v3-bg-dark .v3-note{color:inherit;opacity:.85}'));
+  assert.ok(html.includes('.v3-bg-brand .v3-closed td,.v3-openingHours.v3-bg-brand .v3-note{color:inherit}'));
+  assert.ok(html.includes('.v3-bg-dark .v3-hours th,.v3-bg-dark .v3-hours td{border-bottom-color:rgba(255,255,255,.14)}'));
+  assert.ok(!/(^|[,}])\.v3-bg-(dark|brand) \.v3-note/.test(html), 'the note rule is scoped to Opening Hours (Deals / Loyalty sample notes unchanged)');
+  const p = V3.DEFAULT_PALETTE;
+  assert.ok(contrast(p.heroText, p.dark) >= 4.5 && contrast(p.onBrand, p.brand) >= 3, 'the section colours are readable on their backgrounds');
+});
+
 test('default palette: QRAIVY neutral black / gray / white, orange accent, no navy, brown or sepia, readable contrast', () => {
   const p = V3.DEFAULT_PALETTE;
   assert.equal(p.brand, '#ff5a1f', 'QRAIVY orange stays the accent');

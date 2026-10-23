@@ -29,11 +29,11 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3D: only the Hero, the Buttons, Social Media and Contact are editable (Gallery, Opening Hours, Text stay read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact']);
+test('2A-3E: only the Hero, the Buttons, Social Media, Contact and Opening Hours are editable (Gallery, Products, Deals, Loyalty, Text stay read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours']);
   assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia']);
-  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'products', 'openingHours', 'text']) {
+  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'products', 'text']) {
     assert.ok(D.sections[t], t);
     assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
   }
@@ -197,6 +197,80 @@ test('Contact HTML: address lines, tel / mailto links, the Directions button onl
   // hostile text is escaped
   const e = html({ title: '<img src=x onerror=alert(1)>', address: { line1: '"><svg onload=alert(2)>' } });
   assert.ok(e.includes('&lt;img src=x onerror=alert(1)&gt;') && e.includes('&quot;&gt;&lt;svg onload=alert(2)&gt;') && !e.includes('<svg onload'));
+});
+
+// ── Opening Hours (2A-3E) ──
+const hoursDesign = (data, extra) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [Object.assign({ id: 's_hrs01', type: 'openingHours', data }, extra)] }] });
+const hoursErrors = (data) => V3.validateDesign(hoursDesign(data)).errors.map((e) => e.path.replace('$.pages[0].sections[0].', '') + ':' + e.code);
+
+test('Contact regression: plan and texts exactly as approved at 5a2bce6', () => {
+  const then = inspectorAt('5a2bce6');
+  if (then) {
+    for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+  }
+});
+
+test('every Opening Hours field from describe() has a control; Layout and Alignment are not offered', () => {
+  const plan = INSP.HOURS_PLAN;
+  const tab = (t) => plan.filter((c) => c.path && c.tab === t).map((c) => c.control + ':' + c.path.join('.'));
+  assert.deepEqual(tab('content'), ['text:data.title', 'hours:data.days', 'text:data.note']);
+  assert.deepEqual(tab('style'), ['select:style.background', 'select:style.spacing'], 'no Layout (Table and Compact render alike), no Alignment (the table stays left)');
+  assert.deepEqual(tab('settings'), ['anchor:anchor', 'show:hidden', 'readonly:id']);
+  assert.deepEqual(Object.keys(D.sections.openingHours.data.fields), ['title', 'days', 'note'], 'nothing else to edit');
+  assert.deepEqual(Object.keys(D.sections.openingHours.data.fields.days.item.fields), ['day', 'closed', 'ranges'], 'the day rows cover day, closed and ranges');
+  const s = (p) => INSP.specFor(D, 'openingHours', p);
+  assert.deepEqual([s(['data', 'title']).max, s(['data', 'note']).max, s(['data', 'note']).multiline, s(['data', 'days']).max, s(['data', 'days', 0, 'ranges']).max], [80, 300, true, 7, 3]);
+  assert.deepEqual(D.choices.days, ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+  assert.deepEqual(INSP.PLANS.openingHours, plan);
+});
+
+test('day status: Open (times), Closed, Not shown (not listed) — as core.js renders them', () => {
+  assert.equal(INSP.dayState(undefined), 'hidden');
+  assert.equal(INSP.dayState({ day: 'mon', closed: true }), 'closed');
+  assert.equal(INSP.dayState({ day: 'mon', closed: true, ranges: [{ open: '08:00', close: '12:00' }] }), 'closed', 'Closed wins over kept times');
+  assert.equal(INSP.dayState({ day: 'mon', ranges: [] }), 'closed', 'a listed day without times is shown as Closed');
+  assert.equal(INSP.dayState({ day: 'mon', ranges: [{ open: '08:00', close: '12:00' }] }), 'open');
+  const html = (days) => V3.renderDesign(hoursDesign({ title: 'Zeiten', days }), {}).html;
+  assert.ok(html([{ day: 'mon', closed: true, ranges: [{ open: '08:00', close: '12:00' }] }]).includes('<tr class="v3-closed"><th scope="row">Montag</th><td>Geschlossen</td></tr>'));
+  assert.ok(html([{ day: 'mon', ranges: [] }]).includes('<th scope="row">Montag</th><td>Geschlossen</td>'));
+  assert.ok(!html([{ day: 'tue', ranges: [{ open: '08:00', close: '12:00' }] }]).includes('Montag'), 'a day not listed is not shown');
+  assert.ok(html([{ day: 'sun', closed: true }, { day: 'mon', ranges: [{ open: '08:00', close: '12:00' }, { open: '13:00', close: '18:00' }] }])
+    .includes('<th scope="row">Montag</th><td>08:00–12:00, 13:00–18:00</td></tr><tr class="v3-closed"><th scope="row">Sonntag</th>'), 'always Monday to Sunday, ranges joined');
+});
+
+test('Opening Hours validation the editor relies on, with an EN/DE message for every code', () => {
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon', ranges: [{ open: '08:00', close: '24:00' }] }] }), [], '24:00 is midnight');
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon', ranges: [{ open: '', close: '' }] }] }), ['data.days[0].ranges[0].open:required', 'data.days[0].ranges[0].close:required'], 'a newly opened day waits for its times');
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon', ranges: [{ open: '8:00', close: '25:00' }] }] }), ['data.days[0].ranges[0].open:invalid_time', 'data.days[0].ranges[0].close:invalid_time']);
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon', ranges: [{ open: '18:00', close: '08:00' }] }] }), ['data.days[0].ranges[0]:closes_before_opening']);
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon' }, { day: 'mon' }] }), ['data.days[1].day:duplicate']);
+  assert.deepEqual(hoursErrors({ days: [{ day: 'mon', ranges: [1, 2, 3, 4].map(() => ({ open: '08:00', close: '09:00' })) }] }), ['data.days[0].ranges:too_many']);
+  for (const lang of ['en', 'de']) {
+    const tx = INSP.TX[lang];
+    assert.equal(INSP.errorText(lang, { code: 'required' }, 'time'), tx.e_enter_time);
+    assert.equal(INSP.errorText(lang, { code: 'duplicate' }, 'day'), tx.e_duplicate_day);
+    assert.equal(INSP.errorText(lang, { code: 'duplicate' }, 'anchor'), tx.e_duplicate, 'the link-name message is unchanged');
+    for (const code of ['invalid_time', 'closes_before_opening']) assert.ok(INSP.errorText(lang, { code }) !== tx.e_other, lang + ' ' + code);
+    for (const d of D.choices.days) assert.ok(tx['d_' + d], lang + ' ' + d);
+    for (const s of ['open', 'closed', 'hidden']) assert.ok(tx['ds_' + s], lang + ' ' + s);
+  }
+  assert.deepEqual(['d_mon', 'd_sun', 'ds_open', 'ds_closed', 'ds_hidden', 'add_range'].map((k) => INSP.TX.de[k]), ['Montag', 'Sonntag', 'Geöffnet', 'Geschlossen', 'Nicht anzeigen', 'Zeitraum hinzufügen']);
+  // the day names match the ones the page shows
+  const page = V3.renderDesign(hoursDesign({ days: D.choices.days.map((day) => ({ day, closed: true })) }), {}).html;
+  for (const d of D.choices.days) assert.ok(page.includes('<th scope="row">' + INSP.TX.de['d_' + d] + '</th>'), d);
+});
+
+test('Opening Hours title / note counters count exactly what validateDesign counts', () => {
+  for (const [field, max, multiline] of [['title', 80, false], ['note', 300, true]]) {
+    for (const t of ['  Zeiten  ', 'Zeile\nzwei', 'ä😀', 'a‮b']) {
+      for (const extra of [max, max + 1].map((n) => n - INSP.textLength(t, multiline))) {
+        if (extra < 0) continue;
+        const v = t + 'x'.repeat(extra);
+        assert.equal(hoursErrors({ [field]: v }).some((e) => e.endsWith(':too_long')), INSP.textLength(v, multiline) > max, field + ' ' + JSON.stringify(v.slice(0, 10)));
+      }
+    }
+  }
 });
 
 test('every Social Media field from describe() has exactly one control, in the approved tab', () => {

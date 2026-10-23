@@ -1,12 +1,12 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified).",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 14024,
-      "sha256": "ec4c6f51176588c22d5809d1da2cde386dc96d332e73873617fde813932f6f04",
+      "bytes": 14284,
+      "sha256": "8814d99b4b2699029a94d11ce3f743bae3e440c806eabfe9dad1fc25bf0e5a2a",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 14024,
-      "sha256": "ec4c6f51176588c22d5809d1da2cde386dc96d332e73873617fde813932f6f04",
+      "bytes": 14284,
+      "sha256": "8814d99b4b2699029a94d11ce3f743bae3e440c806eabfe9dad1fc25bf0e5a2a",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,15 +25,15 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16863,
-      "sha256": "aedb0a2234c3ec8928cd8131bc1f41583700fcc06561d3271df1095520e40321",
+      "bytes": 17123,
+      "sha256": "cafeeb274b7b7ac0002e818864c5286174050348df152c7dec0150edf3d94fa6",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16888,
-      "sha256": "1a9d693919e26ea268a2c55f6fad3e56d9ecb2d7794f07989eb5c0aaa085a381",
+      "bytes": 17148,
+      "sha256": "012f69bff1ff3f7e74dddef35e7b89072eb490d9c4b86377597478d1bc9dc78c",
       "skipped": []
     }
   ],
@@ -60,6 +60,14 @@
         "allRenderedVariants"
       ],
       "reason": "Contact icons on Brand sections (owner request after the 2A-3D visual review): added .v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)} so the location / phone / email icons are white instead of orange on orange; the rendered pages differ from the previous version only by that one rule (verified)"
+    },
+    {
+      "date": "2026-10-23",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants"
+      ],
+      "reason": "Opening Hours on Dark / Brand sections (owner principle: readable foreground on any background, 2A-3E): Closed rows and the note inherit the section colour (opacity .85 on Dark), divider lines light on Dark; the rendered pages differ from the previous version only by those rules (verified)"
     }
   ]
 }

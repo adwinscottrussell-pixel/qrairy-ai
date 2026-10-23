@@ -2,9 +2,10 @@
  * studio-inspector.js — Landing Page Studio V3: the Content / Style /
  * Settings inspector.
  *
- * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C) and
- * Contact (2A-3D), listed in EDITABLE. Their controls follow PLANS
- * (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN), with every rule (limits, choices, required fields) read from
+ * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C),
+ * Contact (2A-3D) and Opening Hours (2A-3E), listed in EDITABLE. Their
+ * controls follow PLANS (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN,
+ * HOURS_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -19,7 +20,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -106,7 +107,26 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN };
+  // Opening Hours (2A-3E): the seven weekdays as fixed rows (the page always
+  // lists them Monday to Sunday, each once). Layout and alignment are not
+  // offered: Table and Compact render alike, and alignment leaves the table
+  // where it is.
+  var HOURS_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'days'], control: 'hours' },
+    { tab: 'content', path: ['data', 'note'], control: 'text' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN };
+
+  // A weekday's state in the design: 'open' (times), 'closed' (shown as
+  // Closed) or 'hidden' (not in the list, so not on the page). As core.js
+  // renders it, a listed day without times shows as Closed too.
+  function dayState(entry) { return !entry ? 'hidden' : entry.closed || !(entry.ranges || []).length ? 'closed' : 'open'; }
 
   // An international number with "(0)" after the country code, e.g.
   // "+49 (0)731 …": the (0) is dialled too. Shown as a hint only; core.js
@@ -225,6 +245,13 @@
       hint_phone: 'International format, e.g. +49 731 123456.', warn_phone_zero: 'Leave out the (0) after the country code: write +49 731 … instead of +49 (0)731 …, otherwise the 0 is dialled too.',
       hint_maps: 'Paste a share link from Google Maps, Apple Maps or OpenStreetMap (starting with https://).',
       hint_show_map: 'The button appears only when a valid map link is entered.',
+      // Opening Hours (2A-3E)
+      g_days: 'Days', d_mon: 'Monday', d_tue: 'Tuesday', d_wed: 'Wednesday', d_thu: 'Thursday', d_fri: 'Friday', d_sat: 'Saturday', d_sun: 'Sunday',
+      ds_open: 'Open', ds_closed: 'Closed', ds_hidden: 'Not shown', day_state: 'Status for {day}', opens: 'Opens', closes: 'Closes',
+      add_range: 'Add time range', remove_range: 'Remove time range', max_ranges: 'Up to {max} time ranges per day.',
+      hint_hours: 'Times as HH:MM, e.g. 08:30. Closing must be after opening (24:00 = midnight). "Not shown" leaves the day out of the table.',
+      e_enter_time: 'Enter a time.', e_invalid_time: 'Use a time like 08:30 (00:00 to 24:00).', e_closes_before_opening: 'The closing time must be after the opening time.',
+      e_duplicate_day: 'This day is listed twice.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -272,13 +299,21 @@
       hint_phone: 'Internationales Format, z. B. +49 731 123456.', warn_phone_zero: 'Lass die (0) nach der Ländervorwahl weg: +49 731 … statt +49 (0)731 …, sonst wird die 0 mitgewählt.',
       hint_maps: 'Füge einen Teilen-Link aus Google Maps, Apple Maps oder OpenStreetMap ein (beginnt mit https://).',
       hint_show_map: 'Der Button erscheint nur, wenn ein gültiger Karten-Link eingetragen ist.',
+      // Opening Hours (2A-3E)
+      g_days: 'Tage', d_mon: 'Montag', d_tue: 'Dienstag', d_wed: 'Mittwoch', d_thu: 'Donnerstag', d_fri: 'Freitag', d_sat: 'Samstag', d_sun: 'Sonntag',
+      ds_open: 'Geöffnet', ds_closed: 'Geschlossen', ds_hidden: 'Nicht anzeigen', day_state: 'Status für {day}', opens: 'Öffnet', closes: 'Schließt',
+      add_range: 'Zeitraum hinzufügen', remove_range: 'Zeitraum entfernen', max_ranges: 'Bis zu {max} Zeiträume pro Tag.',
+      hint_hours: 'Zeiten als HH:MM, z. B. 08:30. Schließen muss nach dem Öffnen liegen (24:00 = Mitternacht). „Nicht anzeigen“ lässt den Tag in der Tabelle weg.',
+      e_enter_time: 'Gib eine Uhrzeit ein.', e_invalid_time: 'Nutze eine Uhrzeit wie 08:30 (00:00 bis 24:00).', e_closes_before_opening: 'Die Schließzeit muss nach der Öffnungszeit liegen.',
+      e_duplicate_day: 'Dieser Tag ist doppelt eingetragen.',
     },
   };
   // field: the last path key; a missing button target or social address gets
   // its own message. e.platform / e.hosts: filled in by the social control.
   function errorText(lang, e, field) {
     var d = TX[lang] || TX.en;
-    var code = e.code === 'required' && field === 'target' ? 'choose_target' : e.code === 'required' && field === 'social' ? 'enter_address' : e.code;
+    var code = e.code === 'required' && field === 'target' ? 'choose_target' : e.code === 'required' && field === 'social' ? 'enter_address'
+      : e.code === 'required' && field === 'time' ? 'enter_time' : e.code === 'duplicate' && field === 'day' ? 'duplicate_day' : e.code;
     var s = d['e_' + code] || d.e_other;
     return s.replace('{max}', e.max).replace('{min}', e.min).replace('{platform}', e.platform).replace('{hosts}', e.hosts);
   }
@@ -784,6 +819,90 @@
       return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx(cfg.heading) + ' ', count]), ol, add, full]);
     }
 
+    // ── Opening Hours (2A-3E): one row per weekday, Monday to Sunday ──
+    // Status Open (1 to 3 time ranges) / Closed / Not shown. Changing the
+    // status is one Undo step; times are typed as HH:MM (typing merged).
+    function hoursControl(sec, c, D) {
+      var key = errKey(c.path);
+      var rangeMax = specFor(D, sec.type, c.path.concat(0, 'ranges')).max;
+      var list = function () { return getPath(store.section(sec.id), c.path) || []; };
+      var indexOf = function (days, day) { for (var k = 0; k < days.length; k++) if (days[k] && days[k].day === day) return k; return -1; };
+      var focus = function (sel) { var n = o.box.querySelector(sel); if (n) n.focus(); };
+      var wrap = el('div', { class: 'st-days', 'data-path': key }, [el('div', { class: 'st-group', text: tx('g_days') }), el('p', { class: 'st-hint', text: tx('hint_hours') })]);
+      D.choices.days.forEach(function (day) {
+        var days = list(), i = indexOf(days, day), entry = i >= 0 ? days[i] : null, state = dayState(entry);
+        var id = nextId('day'), dayErrId = id + '-err';
+        var sel = el('select', { id: id, 'aria-label': tx('day_state').replace('{day}', tx('d_' + day)), 'aria-describedby': dayErrId });
+        ['open', 'closed', 'hidden'].forEach(function (v) { sel.appendChild(el('option', { value: v, text: tx('ds_' + v) })); });
+        sel.value = state;
+        sel.addEventListener('change', function () {
+          var cur = list(), j = indexOf(cur, day), v = sel.value;
+          if (v === 'hidden') { if (j >= 0) store.removeItem(sec.id, c.path, j); }
+          // a newly opened day waits for its times, like a new button waits for its target
+          else if (j < 0) store.addItem(sec.id, c.path, v === 'closed' ? { day: day, closed: true } : { day: day, ranges: [{ open: '', close: '' }] }, D.choices.days.length);
+          else {
+            var e = JSON.parse(JSON.stringify(cur[j]));
+            if (v === 'closed') e.closed = true;
+            else { delete e.closed; if (!(e.ranges || []).length) e.ranges = [{ open: '', close: '' }]; }
+            store.set(sec.id, c.path.concat(j), e); // the times are kept, so Open brings them back
+            render();
+          }
+          focus('[data-day="' + day + '"] select');
+        });
+        var dayErr = errorLine(dayErrId);
+        var row = el('div', { class: 'st-field st-day', 'data-day': day, 'data-state': state }, [
+          el('div', { class: 'st-day__head' }, [el('label', { for: id, class: 'st-day__name', text: tx('d_' + day) }), sel]), dayErr]);
+        var ranges = state === 'open' ? entry.ranges : [];
+        ranges.forEach(function (r, j) {
+          var base = c.path.concat(i, 'ranges', j), rk = errKey(base);
+          var rangeErrId = nextId('range') + '-err', rangeErr = errorLine(rangeErrId);
+          var lines = [];
+          var inputs = ['open', 'close'].map(function (f) {
+            var p = base.concat(f), fk = errKey(p), fid = nextId('time');
+            var inp = el('input', { type: 'text', id: fid, class: 'st-time', inputmode: 'numeric', maxlength: '5', placeholder: 'HH:MM', autocomplete: 'off', spellcheck: 'false',
+              'aria-label': tx('d_' + day) + ', ' + tx(f === 'open' ? 'opens' : 'closes') + (ranges.length > 1 ? ' (' + (j + 1) + ')' : ''), 'aria-describedby': fid + '-err ' + rangeErrId });
+            inp.value = r[f] || '';
+            var line = errorLine(fid + '-err');
+            lines.push(line);
+            inp.addEventListener('input', function () { store.set(sec.id, p, inp.value, 'typing'); });
+            inp.addEventListener('blur', function () { store.endMerge(); });
+            refreshers.push(function (cur, errs) {
+              var v = getPath(cur, p) || '';
+              if (!focused(inp) && inp.value !== v) inp.value = v;
+              showError(inp, line, errs[fk], 'time');
+            });
+            return el('span', { class: 'st-time-wrap', 'data-path': fk }, [inp]);
+          });
+          var remove = el('button', { type: 'button', class: 'st-iconbtn', 'data-action': 'remove-range', 'aria-label': tx('remove_range'), title: tx('remove_range'), disabled: ranges.length <= 1 }, [o.icon('st-x')]);
+          remove.addEventListener('click', function () {
+            if (!store.removeItem(sec.id, c.path.concat(i, 'ranges'), j)) return;
+            focus('[data-day="' + day + '"] [data-action="add-range"]');
+          });
+          row.appendChild(el('div', { class: 'st-range', 'data-path': rk }, [inputs[0], el('span', { class: 'st-range__dash', 'aria-hidden': 'true', text: '–' }), inputs[1], remove]));
+          lines.concat(rangeErr).forEach(function (n) { row.appendChild(n); });
+          refreshers.push(function (cur, errs) { if (errs[rk]) showError(inputs[1].querySelector('input'), rangeErr, errs[rk]); else rangeErr.hidden = true; });
+        });
+        if (state === 'open') {
+          var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-day__add', 'data-action': 'add-range', disabled: ranges.length >= rangeMax, title: ranges.length >= rangeMax ? tx('max_ranges').replace('{max}', rangeMax) : '' }, [tx('add_range')]);
+          add.addEventListener('click', function () {
+            var n = store.addItem(sec.id, c.path.concat(i, 'ranges'), { open: '', close: '' }, rangeMax);
+            if (n >= 0) focus('[data-path="' + errKey(c.path.concat(i, 'ranges', n, 'open')) + '"] input');
+          });
+          row.appendChild(add);
+        }
+        // the day itself: listed twice; or errors in times that are not shown (a Closed day)
+        refreshers.push(function (cur, errs) {
+          if (i < 0) return showError(sel, dayErr, null);
+          if (errs[key + '[' + i + '].day']) return showError(sel, dayErr, errs[key + '[' + i + '].day'], 'day');
+          var n = state === 'open' ? 0 : Object.keys(errs).filter(function (k) { return k.indexOf(key + '[' + i + '].') === 0; }).length;
+          dayErr.hidden = !n;
+          dayErr.textContent = n === 1 ? tx('errors_one') : tx('errors_many').replace('{n}', n);
+        });
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+
     function controlFor(sec, c, D) {
       if (c.control === 'color') return null; // shown beside the Hero button text
       var spec = specFor(D, sec.type, c.path);
@@ -794,6 +913,7 @@
       if (c.control === 'social') return socialControl(sec, c);
       if (c.control === 'input') return inputControl(sec, c, spec);
       if (c.control === 'switch') return switchControl(sec, c, spec);
+      if (c.control === 'hours') return hoursControl(sec, c, D);
       if (c.control === 'select') return selectControl(sec, c, spec);
       if (c.control === 'number') return numberControl(sec, c, spec);
       if (c.control === 'items') return itemsControl(sec, c, D);
@@ -846,7 +966,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
     phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };
