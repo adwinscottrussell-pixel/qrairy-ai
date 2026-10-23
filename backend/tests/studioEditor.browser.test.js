@@ -106,7 +106,7 @@ test('selection: the Hero starts selected in the Sections list, inspector and pr
   const fr = await frame(page);
   await until(() => fr.$eval('[data-v3-id="s_hero01"]', (n) => n.classList.contains('st-sel')), 'Hero marked in the preview');
   // (the Buttons section s_quick01 is editable since 2A-3B: studioButtonsEditor.browser.test.js)
-  for (const id of ['s_deals01', 's_loyal01', 's_prod01', 's_hours01', 's_contact1']) {
+  for (const id of ['s_deals01', 's_loyal01', 's_prod01', 's_hours01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     for (const t of ['content', 'style', 'settings']) {
       await tab(page, t);
@@ -118,7 +118,7 @@ test('selection: the Hero starts selected in the Sections list, inspector and pr
     await tab(page, 'content');
   }
   const f2 = await frame(page);
-  await until(() => f2.$eval('[data-v3-id="s_contact1"]', (n) => n.classList.contains('st-sel')), 'selection follows in the preview');
+  await until(() => f2.$eval('[data-v3-id="s_hours01"]', (n) => n.classList.contains('st-sel')), 'selection follows in the preview');
   assert.deepEqual(errors, []);
   await page.close();
 });

@@ -29,11 +29,11 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3C: only the Hero, the Buttons and Social Media are editable (Gallery stays read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia']);
+test('2A-3D: only the Hero, the Buttons, Social Media and Contact are editable (Gallery, Opening Hours, Text stay read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact']);
   assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia']);
-  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'products', 'openingHours', 'contact', 'text']) {
+  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'products', 'openingHours', 'text']) {
     assert.ok(D.sections[t], t);
     assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
   }
@@ -81,6 +81,122 @@ test('Buttons regression: the generic list settings reproduce the d70d883 list t
     for (const s of ["tx('add_button')", "tx('max_buttons')", "tx('moved')", "tx('remove_button')", "tx('removed')", "tx('buttons')", "{ label: tx('new_button'), kind: 'link', target: '' }",
       "textLength(item.label, false) ? item.label : tx('no_label')", "tx('k_' + (item.kind || 'link'))", '.label"] input', 'label.select()']) assert.ok(body.includes(s), s);
   }
+});
+
+test('Social Media regression: plan and texts exactly as approved at 20e97c6', () => {
+  const then = inspectorAt('20e97c6');
+  if (then) {
+    for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'SOCIAL_HINT_HOSTS', 'SOCIAL_PLACEHOLDER', 'TARGET_INPUT']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const t of ['buttons', 'socialMedia']) for (const k of ['heading', 'add', 'max', 'remove', 'removed', 'moved', 'focus', 'select']) assert.equal(INSP.LISTS[t][k], then.exports.LISTS[t][k], t + ' ' + k);
+  }
+});
+
+// ── Contact (2A-3D) ──
+const contact = (data, extra) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [Object.assign({ id: 's_con01', type: 'contact', data }, extra)] }] });
+const contactErrors = (data) => V3.validateDesign(contact(data)).errors.map((e) => e.path.replace('$.pages[0].sections[0].', '') + ':' + e.code);
+
+test('every Contact field from describe() has exactly one control; Layout and Alignment are not offered', () => {
+  const plan = INSP.CONTACT_PLAN;
+  const planned = plan.filter((c) => c.path).map((c) => c.path.join('.'));
+  assert.equal(new Set(planned).size, planned.length, 'no field twice');
+  const want = leaves(D.sections.contact.data, ['data']).concat(['style.background', 'style.spacing', 'anchor', 'hidden', 'id']);
+  assert.deepEqual(planned.slice().sort(), want.slice().sort());
+  const tab = (t) => plan.filter((c) => c.path && c.tab === t).map((c) => c.control + ':' + c.path.join('.'));
+  assert.deepEqual(tab('content'), ['text:data.title', 'text:data.address.line1', 'text:data.address.line2', 'text:data.address.postalCode', 'text:data.address.city', 'text:data.address.country',
+    'input:data.phone', 'input:data.email', 'input:data.mapsUrl', 'switch:data.showMapLink']);
+  assert.deepEqual(tab('style'), ['select:style.background', 'select:style.spacing'], 'no Layout (Card and Split render alike), no Alignment (it only moves the title)');
+  assert.deepEqual(tab('settings'), ['anchor:anchor', 'show:hidden', 'readonly:id']);
+  assert.deepEqual(plan.filter((c) => c.group).map((c) => c.group), ['address', 'directions']);
+  for (const c of plan.filter((x) => x.path)) assert.ok(INSP.specFor(D, 'contact', c.path), 'spec for ' + c.path.join('.'));
+  assert.deepEqual(INSP.PLANS.contact, plan);
+});
+
+test('Contact rules come from describe(): limits, types, nothing required, Directions on by default', () => {
+  const s = (p) => INSP.specFor(D, 'contact', p.split('.'));
+  assert.deepEqual(['data.title', 'data.address.line1', 'data.address.line2', 'data.address.postalCode', 'data.address.city', 'data.address.country'].map((p) => s(p).max), [80, 100, 100, 12, 60, 60]);
+  assert.deepEqual([s('data.phone').t, s('data.email').t, s('data.mapsUrl').t, s('data.mapsUrl').kind, s('data.showMapLink').t, s('data.showMapLink').def], ['phone', 'email', 'link', 'directions', 'bool', true]);
+  for (const p of ['data.title', 'data.address.line1', 'data.phone', 'data.email', 'data.mapsUrl']) assert.ok(!s(p).required, p);
+  assert.deepEqual(contactErrors({}), [], 'an empty Contact is valid');
+});
+
+test('Contact counters count exactly what validateDesign counts', () => {
+  const cases = [[['title'], 80], [['address', 'line1'], 100], [['address', 'line2'], 100], [['address', 'postalCode'], 12], [['address', 'city'], 60], [['address', 'country'], 60]];
+  for (const [p, max] of cases) {
+    for (const t of ['  Ulm  ', 'Zeile\nzwei', 'ä😀', 'a‮b']) {
+      for (const extra of [max, max + 1].map((n) => n - INSP.textLength(t, false))) {
+        if (extra < 0) continue;
+        const v = t + 'x'.repeat(extra);
+        const data = p.length === 1 ? { [p[0]]: v } : { address: { [p[1]]: v } };
+        assert.equal(contactErrors(data).some((e) => e.endsWith(':too_long')), INSP.textLength(v, false) > max, p.join('.') + ' ' + JSON.stringify(v.slice(0, 10)));
+      }
+    }
+  }
+});
+
+test('Contact phone, email and map link: what core.js accepts and refuses; every error has an EN/DE message', () => {
+  for (const ok of ['+49 731 123456', '0731 99', '+49 (731) 123-4', '+49 (0)731 123456']) assert.deepEqual(contactErrors({ phone: ok }), [], ok);
+  for (const bad of ['---', 'abc', '12', '+49 731 1234567890123456789012345']) assert.deepEqual(contactErrors({ phone: bad }), ['data.phone:invalid_phone'], bad);
+  for (const ok of ['hallo@example.com', 'a.b@sub.example.de']) assert.deepEqual(contactErrors({ email: ok }), [], ok);
+  for (const bad of ['nope', 'x"@y.de', 'a@b.c', 'a b@c.de']) assert.deepEqual(contactErrors({ email: bad }), ['data.email:invalid_email'], bad);
+  for (const ok of ['https://maps.app.goo.gl/abc', 'https://www.google.com/maps/place/Ulm', 'https://maps.apple.com/?q=Ulm', 'https://www.openstreetmap.org/#map=12/48.4/10']) assert.deepEqual(contactErrors({ mapsUrl: ok }), [], ok);
+  for (const bad of ['https://evil.example/', 'https://www.google.com/search?q=ulm', 'http://maps.app.goo.gl/abc', 'maps.app.goo.gl/abc']) assert.deepEqual(contactErrors({ mapsUrl: bad }), ['data.mapsUrl:invalid_maps_link'], bad);
+  for (const lang of ['en', 'de']) for (const code of ['invalid_phone', 'invalid_email', 'invalid_maps_link', 'too_long']) {
+    const msg = INSP.errorText(lang, { code, max: 80 });
+    assert.ok(msg && msg !== INSP.TX[lang].e_other && !/\{|undefined/.test(msg), lang + ' ' + code);
+  }
+  assert.equal(INSP.errorText('en', { code: 'invalid_phone' }, 'phone'), 'Enter a phone number, e.g. +49 731 123456.');
+  assert.equal(INSP.errorText('de', { code: 'invalid_email' }, 'email'), 'Gib eine E-Mail-Adresse ein, z. B. name@beispiel.de.');
+});
+
+test('the "(0)" warning: country code followed by (0); an inspector hint only, core.js keeps the number', () => {
+  for (const v of ['+49 (0)731 123456', '+49 (0) 731 123456', '+49(0)731', '0049 (0)731 12', '+43 ( 0 ) 1 234', '  +41-(0)44 123']) assert.equal(INSP.phoneZeroWarning(v), true, v);
+  for (const v of ['+49 731 123456', '0731 123456', '(0731) 123456', '+49 (731) 123-4', '', null, '+49 731 (0)']) assert.equal(INSP.phoneZeroWarning(v), false, String(v));
+  // stored and validated unchanged
+  assert.deepEqual(contactErrors({ phone: '+49 (0)731 123456' }), []);
+  const html = V3.renderDesign(contact({ phone: '+49 (0)731 123456' }), {}).html;
+  assert.ok(html.includes('href="tel:+490731123456"') && html.includes('+49 (0)731 123456</a>'), 'the renderer is unchanged');
+  for (const lang of ['en', 'de']) assert.match(INSP.TX[lang].warn_phone_zero, /\(0\)/);
+});
+
+test('Contact labels, group headings and hints in English and German', () => {
+  const en = INSP.TX.en, de = INSP.TX.de;
+  assert.deepEqual(['line1', 'line2', 'postalCode', 'city', 'country', 'phone', 'email', 'mapsUrl', 'showMapLink'].map((k) => en['f_' + k]),
+    ['Street and number', 'Address line 2', 'Postal code', 'City', 'Country', 'Phone', 'Email', 'Map link', 'Show directions button']);
+  assert.deepEqual(['line1', 'line2', 'postalCode', 'city', 'country', 'phone', 'email', 'mapsUrl', 'showMapLink'].map((k) => de['f_' + k]),
+    ['Straße und Hausnummer', 'Adresszusatz', 'Postleitzahl', 'Ort', 'Land', 'Telefon', 'E-Mail', 'Karten-Link', 'Routen-Button anzeigen']);
+  assert.deepEqual([en.g_directions, de.g_directions], ['Directions', 'Route']);
+  assert.match(en.hint_show_map, /only when a valid map link/);
+  assert.match(de.hint_show_map, /nur, wenn ein gültiger Karten-Link/);
+  assert.match(en.hint_maps, /Google Maps, Apple Maps or OpenStreetMap/);
+  assert.match(de.hint_maps, /Google Maps, Apple Maps oder OpenStreetMap/);
+  // the Contact labels use their own keys: no Hero, Buttons or Social Media field shares them
+  const others = [INSP.HERO_PLAN, INSP.BUTTONS_PLAN, INSP.SOCIAL_PLAN].flatMap((p) => p.flatMap((c) => (c.item || []).map((f) => f.path).concat(c.path ? [c.path] : []))).map((p) => p[p.length - 1]);
+  for (const k of others) assert.ok(!Object.prototype.hasOwnProperty.call(en, 'f_' + k), k);
+});
+
+test('Contact HTML: address lines, tel / mailto links, the Directions button only with a map link and the switch on; empty -> nothing public', () => {
+  const full = { title: 'Kontakt', address: { line1: 'Musterstraße 1', line2: 'Hinterhaus', postalCode: '89073', city: 'Ulm', country: 'Deutschland' }, phone: '+49 (731) 123-4', email: 'hallo@example.com', mapsUrl: 'https://maps.app.goo.gl/abc' };
+  const html = (data, extra, pv) => V3.renderDesign(contact(data, extra), { businessName: 'B' }, { preview: !!pv }).html;
+  const h = html(full);
+  assert.ok(h.includes('<h2 class="v3-h2">Kontakt</h2>'));
+  assert.ok(h.includes('Musterstraße 1<br>Hinterhaus<br>89073 Ulm<br>Deutschland</address>'), 'address lines, postal code + city together');
+  assert.ok(h.includes('<a href="tel:+497311234">'), 'tel: without spaces, brackets and dashes');
+  assert.ok(h.includes('+49 (731) 123-4</a>'), 'shown as typed');
+  assert.ok(h.includes('<a href="mailto:hallo@example.com">'));
+  assert.ok(h.includes('<a class="v3-btn v3-btn-outline" href="https://maps.app.goo.gl/abc" target="_blank" rel="noopener noreferrer">'), 'Directions button');
+  assert.ok(!html(Object.assign({}, full, { showMapLink: false })).includes('<a class="v3-btn v3-btn-outline"'), 'switch off: no button');
+  assert.ok(!html(Object.assign({}, full, { mapsUrl: '' })).includes('<a class="v3-btn v3-btn-outline"'), 'no map link: no button');
+  assert.ok(!html({ title: 'Kontakt' }).includes('<section'), 'title only: nothing on the public page');
+  assert.ok(html({ title: 'Kontakt' }, {}, true).includes('v3-ph-section'), 'title only: the empty note in the preview');
+  // Card and Split render alike; alignment only reaches the section class (hence not offered)
+  const sectionOf = (x) => x.slice(x.indexOf('<section'), x.indexOf('</section>'));
+  assert.equal(sectionOf(html(full, { variant: 'split' })).replace('v3-v-split', 'v3-v-card'), sectionOf(h));
+  assert.equal(html(full, { variant: 'split' }).replace('v3-contact v3-v-split', 'v3-contact v3-v-card'), h, 'and the page CSS is the same');
+  assert.equal(html(full, { style: { background: 'dark', spacing: 'roomy' } }).includes('class="v3-s v3-contact v3-v-card v3-bg-dark v3-al-left v3-sp-roomy"'), true);
+  // hostile text is escaped
+  const e = html({ title: '<img src=x onerror=alert(1)>', address: { line1: '"><svg onload=alert(2)>' } });
+  assert.ok(e.includes('&lt;img src=x onerror=alert(1)&gt;') && e.includes('&quot;&gt;&lt;svg onload=alert(2)&gt;') && !e.includes('<svg onload'));
 });
 
 test('every Social Media field from describe() has exactly one control, in the approved tab', () => {

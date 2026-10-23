@@ -1,12 +1,12 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified).",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 13968,
-      "sha256": "3ed9c098234a75a2bc7fe4e27c383d5a918bb5ec913700cbd860588dc81c073b",
+      "bytes": 14024,
+      "sha256": "ec4c6f51176588c22d5809d1da2cde386dc96d332e73873617fde813932f6f04",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 13968,
-      "sha256": "3ed9c098234a75a2bc7fe4e27c383d5a918bb5ec913700cbd860588dc81c073b",
+      "bytes": 14024,
+      "sha256": "ec4c6f51176588c22d5809d1da2cde386dc96d332e73873617fde813932f6f04",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,15 +25,15 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16807,
-      "sha256": "842cdfa41220319161474eace1cdcd07d737f9e542c44385be168b262e2300ec",
+      "bytes": 16863,
+      "sha256": "aedb0a2234c3ec8928cd8131bc1f41583700fcc06561d3271df1095520e40321",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16832,
-      "sha256": "78b2143dcf7cfc58c6d3a6a3a06f1d54f4a442d9d92d12a1fe5f41636cd78071",
+      "bytes": 16888,
+      "sha256": "1a9d693919e26ea268a2c55f6fad3e56d9ecb2d7794f07989eb5c0aaa085a381",
       "skipped": []
     }
   ],
@@ -52,6 +52,14 @@
         "allRenderedVariants"
       ],
       "reason": "Social Media contrast fix (owner-authorised after the 2A-3C visual review): .v3-social gained color:var(--v3-text) so the pill text no longer inherits white from Dark / Brand sections; the rendered pages differ from the previous version only in that one CSS rule (verified)"
+    },
+    {
+      "date": "2026-10-23",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants"
+      ],
+      "reason": "Contact icons on Brand sections (owner request after the 2A-3D visual review): added .v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)} so the location / phone / email icons are white instead of orange on orange; the rendered pages differ from the previous version only by that one rule (verified)"
     }
   ]
 }

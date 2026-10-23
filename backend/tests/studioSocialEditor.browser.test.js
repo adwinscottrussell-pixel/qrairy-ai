@@ -530,7 +530,7 @@ test('Social Media links are readable on Default, Alternate, Brand and Dark, in 
   await st.close();
 });
 
-test('after editing: no network beyond this server and Google Fonts; Save Draft and Publish disabled; only Hero, Buttons and Social Media editable', async () => {
+test('after editing: no network beyond this server and Google Fonts; Save Draft and Publish disabled; only Hero, Buttons, Social Media (and since 2A-3D Contact) editable', async () => {
   const { page, net, errors } = await openSocial();
   await page.click('#st-fields [data-action="add-item"]');
   await page.select(it(2, 'platform', 'select'), 'youtube');
@@ -539,11 +539,11 @@ test('after editing: no network beyond this server and Google Fonts; Save Draft 
   await sleep(400);
   assert.deepEqual(onlyLocal(net), []);
   assert.deepEqual(await page.$$eval('#st-save-btn, #st-publish-btn', (n) => n.map((b) => b.disabled)), [true, true]);
-  for (const id of ['s_hero01', 's_quick01', S]) {
+  for (const id of ['s_hero01', 's_quick01', S, 's_contact1']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'true', id + ' editable');
   }
-  for (const id of ['s_deals01', 's_loyal01', 's_prod01', 's_hours01', 's_contact1']) {
+  for (const id of ['s_deals01', 's_loyal01', 's_prod01', 's_hours01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'false', id);
     for (const t of ['content', 'style', 'settings']) {

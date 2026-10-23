@@ -356,6 +356,34 @@ test('social links: add (Instagram, empty address), remove, move; one Undo step 
   assert.ok(store.isValid(), 'duplicate platforms are allowed');
 });
 
+// ── Contact (2A-3D): nested address fields, phone / email / map link, the switch ──
+test('Contact edits: nested address, typing merged into one Undo step, invalid phone keeps the last valid page, the switch', () => {
+  const { store, clock } = make();
+  const C = 's_contact1';
+  store.set(C, ['data', 'address', 'city'], 'U', 'typing');
+  store.set(C, ['data', 'address', 'city'], 'Ul', 'typing');
+  store.set(C, ['data', 'address', 'city'], 'Ulm-Mitte', 'typing');
+  store.endMerge();
+  assert.equal(store.section(C).data.address.city, 'Ulm-Mitte');
+  assert.equal(store.section(C).data.address.line1, 'Musterstraße 1', 'the other address lines are kept');
+  store.undo();
+  assert.equal(store.section(C).data.address.city, 'Ulm', 'one Undo step for the typing');
+  store.set(C, ['data', 'phone'], 'abc');
+  assert.equal(store.sectionErrors(C)['data.phone'].code, 'invalid_phone');
+  assert.equal(store.lastValid().pages[0].sections[6].data.phone, '+49 731 000 00', 'the preview keeps the last valid number');
+  store.set(C, ['data', 'phone'], '+49 (0)731 123456');
+  assert.ok(store.isValid(), '"(0)" is accepted by core.js (the inspector only warns)');
+  store.set(C, ['data', 'mapsUrl'], 'https://evil.example/');
+  assert.equal(store.sectionErrors(C)['data.mapsUrl'].code, 'invalid_maps_link');
+  store.set(C, ['data', 'mapsUrl'], 'https://maps.app.goo.gl/abc');
+  store.set(C, ['data', 'showMapLink'], false);
+  assert.ok(store.isValid());
+  assert.equal(store.section(C).data.showMapLink, false);
+  store.undo();
+  assert.notEqual(store.section(C).data.showMapLink, false, 'the switch is one Undo step');
+  void clock;
+});
+
 (async () => {
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {

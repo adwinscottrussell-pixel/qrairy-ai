@@ -2,9 +2,9 @@
  * studio-inspector.js — Landing Page Studio V3: the Content / Style /
  * Settings inspector.
  *
- * Editable: the Hero (2A-3A), the Buttons (2A-3B) and Social Media (2A-3C),
- * listed in EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN,
- * SOCIAL_PLAN), with every rule (limits, choices, required fields) read from
+ * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C) and
+ * Contact (2A-3D), listed in EDITABLE. Their controls follow PLANS
+ * (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -19,7 +19,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -84,7 +84,35 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN };
+  // Contact (2A-3D): every Contact field. Layout and alignment are not
+  // offered: the renderer draws Card and Split alike, and alignment would
+  // only move the title.
+  var CONTACT_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', group: 'address' },
+    { tab: 'content', path: ['data', 'address', 'line1'], control: 'text' },
+    { tab: 'content', path: ['data', 'address', 'line2'], control: 'text' },
+    { tab: 'content', path: ['data', 'address', 'postalCode'], control: 'text' },
+    { tab: 'content', path: ['data', 'address', 'city'], control: 'text' },
+    { tab: 'content', path: ['data', 'address', 'country'], control: 'text' },
+    { tab: 'content', path: ['data', 'phone'], control: 'input' },
+    { tab: 'content', path: ['data', 'email'], control: 'input' },
+    { tab: 'content', group: 'directions' },
+    { tab: 'content', path: ['data', 'mapsUrl'], control: 'input' },
+    { tab: 'content', path: ['data', 'showMapLink'], control: 'switch' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN };
+
+  // An international number with "(0)" after the country code, e.g.
+  // "+49 (0)731 …": the (0) is dialled too. Shown as a hint only; core.js
+  // accepts the number unchanged.
+  var PHONE_ZERO = /^\s*(?:\+|00)\s*[0-9]{1,4}[\s-]*\(\s*0\s*\)/;
+  function phoneZeroWarning(v) { return PHONE_ZERO.test(String(v == null ? '' : v)); }
 
   // The hosts named in each platform's hint, and its placeholder. core.js
   // (SOCIAL_HOSTS) decides what is accepted; the tests check that every host
@@ -191,6 +219,12 @@
       hint_social: 'A full address starting with https:// on {hosts}.', or: ' or ', no_address: '(no address)',
       add_link: 'Add link', max_links: 'Up to {max} links.', remove_link: 'Remove link', link_removed: 'Link removed. Undo is available.', link_moved: 'Link moved.',
       e_enter_address: 'Enter the profile address.', e_invalid_social_link: '{platform} addresses start with https:// on {hosts}.',
+      // Contact (2A-3D)
+      g_directions: 'Directions', f_line1: 'Street and number', f_line2: 'Address line 2', f_postalCode: 'Postal code', f_city: 'City', f_country: 'Country',
+      f_phone: 'Phone', f_email: 'Email', f_mapsUrl: 'Map link', f_showMapLink: 'Show directions button',
+      hint_phone: 'International format, e.g. +49 731 123456.', warn_phone_zero: 'Leave out the (0) after the country code: write +49 731 … instead of +49 (0)731 …, otherwise the 0 is dialled too.',
+      hint_maps: 'Paste a share link from Google Maps, Apple Maps or OpenStreetMap (starting with https://).',
+      hint_show_map: 'The button appears only when a valid map link is entered.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -232,6 +266,12 @@
       hint_social: 'Eine vollständige Adresse mit https:// auf {hosts}.', or: ' oder ', no_address: '(keine Adresse)',
       add_link: 'Link hinzufügen', max_links: 'Bis zu {max} Links.', remove_link: 'Link entfernen', link_removed: 'Link entfernt. Rückgängig ist möglich.', link_moved: 'Link verschoben.',
       e_enter_address: 'Gib die Profiladresse ein.', e_invalid_social_link: '{platform}-Adressen beginnen mit https:// auf {hosts}.',
+      // Contact (2A-3D)
+      g_directions: 'Route', f_line1: 'Straße und Hausnummer', f_line2: 'Adresszusatz', f_postalCode: 'Postleitzahl', f_city: 'Ort', f_country: 'Land',
+      f_phone: 'Telefon', f_email: 'E-Mail', f_mapsUrl: 'Karten-Link', f_showMapLink: 'Routen-Button anzeigen',
+      hint_phone: 'Internationales Format, z. B. +49 731 123456.', warn_phone_zero: 'Lass die (0) nach der Ländervorwahl weg: +49 731 … statt +49 (0)731 …, sonst wird die 0 mitgewählt.',
+      hint_maps: 'Füge einen Teilen-Link aus Google Maps, Apple Maps oder OpenStreetMap ein (beginnt mit https://).',
+      hint_show_map: 'Der Button erscheint nur, wenn ein gültiger Karten-Link eingetragen ist.',
     },
   };
   // field: the last path key; a missing button target or social address gets
@@ -336,6 +376,8 @@
       if (k === 'anchor') return o.t('anchor');
       if (k === 'hidden') return o.t('visibility');
       if (k === 'id') return o.t('section_id');
+      // the Contact fields have their own labels (2A-3D)
+      if (Object.prototype.hasOwnProperty.call(TX.en, 'f_' + k)) return tx('f_' + k);
       return o.fieldLabel(k);
     }
     // the field's error line; every control registers how it refreshes
@@ -539,6 +581,39 @@
         el('span', { class: 'st-field__label' }, [el('label', { for: id, text: tx(wa ? 't_whatsapp' : 'profile_address') })]), inp, line, hint]);
     }
 
+    // A Contact phone, email or map link (2A-3D): one fixed-type field, stored
+    // as typed; core.js validates it. The phone warns about "(0)".
+    var INPUT = { phone: { type: 'tel', placeholder: 'p_call', hint: 'hint_phone' }, email: { type: 'email', placeholder: 'p_email' }, link: { type: 'url', placeholder: 'p_directions', hint: 'hint_maps' } };
+    function inputControl(sec, c, spec) {
+      var key = errKey(c.path), kind = INPUT[spec.t];
+      var id = nextId('input'), errId = id + '-err', hintId = id + '-hint', warnId = id + '-warn';
+      var inp = el('input', { type: kind.type, id: id, 'aria-describedby': errId + ' ' + warnId + ' ' + hintId, autocomplete: 'off', spellcheck: 'false', placeholder: tx(kind.placeholder) });
+      inp.value = getPath(sec, c.path) || '';
+      var line = errorLine(errId);
+      var warn = spec.t === 'phone' ? el('p', { class: 'st-warn', id: warnId, role: 'status', 'data-warn': 'phone_zero', hidden: true, text: tx('warn_phone_zero') }) : null;
+      var hint = kind.hint ? el('p', { class: 'st-hint', id: hintId, text: tx(kind.hint) }) : null;
+      inp.addEventListener('input', function () { store.set(sec.id, c.path, inp.value || undefined, 'typing'); });
+      inp.addEventListener('blur', function () { store.endMerge(); });
+      refreshers.push(function (cur, errs) {
+        var v = getPath(cur, c.path) || '';
+        if (!focused(inp) && inp.value !== v) inp.value = v;
+        showError(inp, line, errs[key]);
+        if (warn) warn.hidden = !!errs[key] || !phoneZeroWarning(inp.value);
+      });
+      return el('div', { class: 'st-field', 'data-path': key }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) })]), inp, line, warn, hint].filter(Boolean));
+    }
+
+    // A yes / no field of the section data (Contact: Show directions button).
+    function switchControl(sec, c, spec) {
+      var key = errKey(c.path);
+      var id = nextId('switch'), hintId = id + '-hint';
+      var box = el('input', { type: 'checkbox', id: id, role: 'switch', class: 'st-switch', 'aria-describedby': hintId });
+      box.addEventListener('change', function () { store.set(sec.id, c.path, box.checked); });
+      refreshers.push(function (cur) { var v = heroValue(cur, c.path, spec) !== false; box.checked = v; box.setAttribute('aria-checked', String(v)); });
+      return el('div', { class: 'st-field', 'data-path': key }, [el('div', { class: 'st-field st-field--inline' }, [el('label', { for: id, text: labelFor(c.path) }), box]),
+        el('p', { class: 'st-hint', id: hintId, text: tx('hint_show_map') })]);
+    }
+
     function selectControl(sec, c, spec) {
       var key = errKey(c.path);
       var id = nextId('sel');
@@ -717,6 +792,8 @@
       if (c.control === 'link') return linkControl(sec, c);
       if (c.control === 'target') return targetControl(sec, c, spec);
       if (c.control === 'social') return socialControl(sec, c);
+      if (c.control === 'input') return inputControl(sec, c, spec);
+      if (c.control === 'switch') return switchControl(sec, c, spec);
       if (c.control === 'select') return selectControl(sec, c, spec);
       if (c.control === 'number') return numberControl(sec, c, spec);
       if (c.control === 'items') return itemsControl(sec, c, D);
@@ -727,7 +804,7 @@
     }
     function renderPlan(box, sec, D, plan) {
       plan.filter(function (c) { return c.tab === o.tab(); }).forEach(function (c) {
-        if (c.group) return box.appendChild(el('div', { class: 'st-group', text: o.fieldLabel(c.group) }));
+        if (c.group) return box.appendChild(el('div', { class: 'st-group', text: Object.prototype.hasOwnProperty.call(TX.en, 'g_' + c.group) ? tx('g_' + c.group) : o.fieldLabel(c.group) }));
         if (c.hint) return box.appendChild(buttonHint(sec, c.hint));
         var node = controlFor(sec, c, D);
         if (node) box.appendChild(node);
@@ -769,7 +846,8 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+    phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };
 });

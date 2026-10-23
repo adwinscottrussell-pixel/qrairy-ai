@@ -10,6 +10,7 @@
 // - Gallery and Products render publicly (escaped, lazy images, CSS only
 //   when present);
 // - describe() matches what validateDesign enforces.
+// - Contact icons on Brand sections use the on-brand colour (2A-3D).
 // - Social Media pills pair their text colour with their background (2A-3C
 //   contrast fix; golden revision 2026-10-23).
 // Run: node tests/lpV3Preview.test.js
@@ -67,6 +68,18 @@ test('Social Media links: the pill pairs its text colour with its background (re
   assert.ok(!/\.v3-bg-(dark|brand|alt)[^{]*\.v3-social[^{]*\{/.test(html));
   const p = V3.DEFAULT_PALETTE;
   assert.ok(contrast(p.text, p.surface) >= 4.5, 'text on the pill: ' + contrast(p.text, p.surface).toFixed(1));
+});
+
+// Contact icons on Brand sections (2A-3D visual review): the icons are the
+// brand colour, so on a Brand section they take the on-brand colour instead.
+// Computed colours for all four backgrounds: studioContactEditor.browser.test.js.
+test('Contact icons: brand-coloured, except on Brand sections where they use the on-brand colour', () => {
+  const d = withSections({ id: 's_con77', type: 'contact', style: { background: 'brand' }, data: { phone: '+49 731 1' } });
+  const html = V3.renderDesign(d, CTX).html;
+  assert.ok(html.includes('.v3-ct-row .v3-ic{color:var(--v3-brand);margin-top:2px}'), 'the usual icon colour is unchanged');
+  assert.ok(html.includes('.v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)}'), 'on Brand: the on-brand colour');
+  assert.equal((html.match(/\.v3-ct-row \.v3-ic\{/g) || []).length, 2, 'the usual rule and the Brand rule, no other override');
+  assert.ok(contrast(V3.DEFAULT_PALETTE.onBrand, V3.DEFAULT_PALETTE.brand) >= 3, 'on-brand icons are visible on the brand colour');
 });
 
 test('default palette: QRAIVY neutral black / gray / white, orange accent, no navy, brown or sepia, readable contrast', () => {
