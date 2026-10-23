@@ -29,11 +29,11 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3E: only the Hero, the Buttons, Social Media, Contact and Opening Hours are editable (Gallery, Products, Deals, Loyalty, Text stay read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours']);
-  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia']);
-  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'products', 'text']) {
+test('2A-3F: only the Hero, the Buttons, Social Media, Contact, Opening Hours and Products are editable (Gallery, Deals, Loyalty, Text stay read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products']);
+  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products']);
+  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'text']) {
     assert.ok(D.sections[t], t);
     assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
   }
@@ -271,6 +271,98 @@ test('Opening Hours title / note counters count exactly what validateDesign coun
       }
     }
   }
+});
+
+// ── Products (2A-3F) ──
+const productsDesign = (data, extra) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [Object.assign({ id: 's_prd01', type: 'products', data }, extra)] }] });
+const productErrors = (data) => V3.validateDesign(productsDesign(data)).errors.map((e) => e.path.replace('$.pages[0].sections[0].', '') + ':' + e.code);
+
+test('Opening Hours regression: plans and texts exactly as approved at e3e7afc', () => {
+  const then = inspectorAt('e3e7afc');
+  if (then) {
+    for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN', 'HOURS_PLAN']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const t of ['buttons', 'socialMedia']) for (const k of ['heading', 'add', 'max', 'remove', 'removed', 'moved', 'focus', 'select']) assert.equal(INSP.LISTS[t][k], then.exports.LISTS[t][k], t + ' ' + k);
+  }
+});
+
+test('every Products field from describe() has a control; Alignment is not offered', () => {
+  const plan = INSP.PRODUCTS_PLAN;
+  const items = plan.find((c) => c.control === 'items');
+  const tab = (t) => plan.filter((c) => c.path && c.tab === t).map((c) => c.control + ':' + c.path.join('.'));
+  assert.deepEqual(tab('content'), ['text:data.title', 'items:data.items']);
+  assert.deepEqual(tab('style'), ['select:variant', 'select:style.background', 'select:style.spacing'], 'no Alignment (it centres the card texts but not the cards or buttons)');
+  assert.deepEqual(tab('settings'), ['anchor:anchor', 'show:hidden', 'readonly:id']);
+  assert.deepEqual(Object.keys(D.sections.products.data.fields), ['title', 'items']);
+  assert.deepEqual(items.item.map((f) => f.control + ':' + f.path.join('.')), ['text:name', 'text:description', 'text:price', 'imageView:image', 'link:target', 'text:buttonText']);
+  assert.deepEqual(items.item.map((f) => f.path[0]).sort(), Object.keys(D.sections.products.data.fields.items.item.fields).sort(), 'every product field, nothing invented');
+  const s = (p) => INSP.specFor(D, 'products', p);
+  assert.deepEqual([s(['data', 'title']).max, s(['data', 'items']).max], [80, 24]);
+  assert.deepEqual(['name', 'description', 'price', 'buttonText'].map((k) => s(['data', 'items', 0, k]).max), [80, 200, 20, 30]);
+  assert.equal(s(['data', 'items', 0, 'name']).required, true);
+  assert.deepEqual([s(['data', 'items', 0, 'target']).t, s(['data', 'items', 0, 'target']).kind, s(['data', 'items', 0, 'image']).t], ['link', 'link', 'image']);
+  assert.deepEqual(s(['variant']).values, ['grid', 'list']);
+  for (const lang of ['en', 'de']) for (const v of ['grid', 'list']) assert.ok(INSP.TX[lang]['v_' + v], lang + ' ' + v);
+  assert.deepEqual(INSP.PLANS.products, plan);
+});
+
+test('a new product is named, so it is valid at once; closed rows show the name and the price', () => {
+  const P = INSP.LISTS.products, tx = (k) => INSP.TX.en[k], de = (k) => INSP.TX.de[k];
+  assert.deepEqual(P.newItem(tx), { name: 'New product' });
+  assert.deepEqual(P.newItem(de), { name: 'Neues Produkt' });
+  assert.deepEqual(productErrors({ items: [P.newItem(tx)] }), []);
+  assert.deepEqual([P.heading, P.add, P.max, P.remove, P.removed, P.moved, P.focus, P.select], ['products', 'add_product', 'max_products', 'remove_product', 'product_removed', 'product_moved', 'name', true]);
+  assert.equal(P.name({ name: 'Bauernbrot' }, tx), 'Bauernbrot');
+  assert.equal(P.name({ name: '  ' }, tx), '(no name)');
+  assert.equal(P.tag({ price: '4,20 €' }), '4,20 €');
+  assert.equal(P.tag({}), '');
+  assert.deepEqual(productErrors({ items: [{ name: '' }] }), ['data.items[0].name:required']);
+  assert.deepEqual(productErrors({ items: Array.from({ length: 25 }, (x, i) => ({ name: 'P' + i })) }), ['data.items:too_many']);
+  assert.deepEqual(productErrors({ items: [{ name: 'A', target: 'javascript:alert(1)' }] }), ['data.items[0].target:invalid_link']);
+  assert.deepEqual(productErrors({ items: [{ name: 'A', target: '/kontakt' }] }), ['data.items[0].target:unknown_internal_target'], 'internal links must point to a section');
+  for (const ok of ['https://example.com/shop', 'mailto:a@b.de', 'tel:+497311']) assert.deepEqual(productErrors({ items: [{ name: 'A', target: ok }] }), [], ok);
+});
+
+test('Products counters count exactly what validateDesign counts', () => {
+  for (const [field, max] of [['name', 80], ['description', 200], ['price', 20], ['buttonText', 30]]) {
+    for (const t of ['  4,20 €  ', 'Zeile\nzwei', 'ä😀', 'a‮b']) {
+      for (const extra of [max, max + 1].map((n) => n - INSP.textLength(t, false))) {
+        if (extra < 0) continue;
+        const v = t + 'x'.repeat(extra);
+        assert.equal(productErrors({ items: [Object.assign({ name: 'N' }, { [field]: v })] }).some((e) => e.endsWith(':too_long')), INSP.textLength(v, false) > max, field + ' ' + JSON.stringify(v.slice(0, 10)));
+      }
+    }
+  }
+});
+
+test('Products HTML: Grid / List, price as written, the button only with a link (default text from the page language), image only when set; escaped', () => {
+  const html = (data, extra, pv, lang) => V3.renderDesign(Object.assign(productsDesign(data, extra), lang ? { settings: { language: lang } } : {}), { businessName: 'B' }, { preview: !!pv }).html;
+  const items = [{ name: 'Bauernbrot', description: 'Sauerteig, 1 kg', price: 'ab 4,20 €', target: 'https://example.com/brot', buttonText: 'Bestellen' }, { name: 'Croissant', price: '1,40 €', target: 'https://example.com/c' }, { name: 'Brezel' }];
+  const h = html({ title: 'Produkte', items });
+  assert.ok(h.includes('<div class="v3-prods v3-prods-grid">'));
+  assert.ok(html({ items }, { variant: 'list' }).includes('<div class="v3-prods v3-prods-list">'));
+  assert.ok(h.includes('<p class="v3-prod-price">ab 4,20 €</p>'), 'price shown as written');
+  assert.ok(h.includes('<a class="v3-btn v3-btn-primary v3-prod-btn" href="https://example.com/brot" target="_blank" rel="noopener noreferrer"><span>Bestellen</span></a>'));
+  assert.ok(h.includes('href="https://example.com/c" target="_blank" rel="noopener noreferrer"><span>Ansehen</span></a>'), 'empty button text: "Ansehen" (German page)');
+  assert.equal((h.match(/<a class="v3-btn v3-btn-primary v3-prod-btn"/g) || []).length, 2, 'no link, no button');
+  assert.ok(!h.includes('<img class="v3-prod-img"') && !h.includes('v3-img-ph'), 'no image: none on the public page');
+  assert.ok(html({ items }, {}, true).includes('v3-img-ph v3-prod-img'), 'the preview shows a placeholder');
+  const img = 'https://res.cloudinary.com/demo/image/upload/v1/brot.jpg';
+  assert.ok(html({ items: [{ name: 'Brot', image: img }] }).includes('<img class="v3-prod-img" src="' + img + '" alt="Brot"'), 'image with the name as its description');
+  const e = html({ title: '<img src=x onerror=alert(1)>', items: [{ name: '"><svg onload=alert(2)>', price: '<b>9</b>' }] });
+  assert.ok(e.includes('&lt;img src=x onerror=alert(1)&gt;') && e.includes('&quot;&gt;&lt;svg onload=alert(2)&gt;') && e.includes('&lt;b&gt;9&lt;/b&gt;') && !e.includes('<svg onload'));
+});
+
+test('Products labels and hints in English and German', () => {
+  assert.deepEqual(['name', 'description', 'price', 'buttonText', 'image'].map((k) => INSP.TX.en['f_' + k]), ['Product name', 'Description', 'Price', 'Button text', 'Image']);
+  assert.deepEqual(['name', 'description', 'price', 'buttonText', 'image'].map((k) => INSP.TX.de['f_' + k]), ['Produktname', 'Beschreibung', 'Preis', 'Button-Text', 'Bild']);
+  assert.match(INSP.TX.en.product_image_later, /later step/);
+  assert.match(INSP.TX.de.product_image_later, /späteren Schritt/);
+  assert.match(INSP.TX.en.hint_product_button, /"View"/);
+  assert.match(INSP.TX.de.hint_product_button, /„Ansehen“/);
+  // the product labels use their own keys: no earlier editor field shares them
+  const others = [INSP.HERO_PLAN, INSP.BUTTONS_PLAN, INSP.SOCIAL_PLAN, INSP.CONTACT_PLAN, INSP.HOURS_PLAN].flatMap((p) => p.flatMap((c) => (c.item || []).map((f) => f.path).concat(c.path ? [c.path] : []))).map((p) => p[p.length - 1]);
+  for (const k of ['name', 'description', 'price', 'buttonText', 'image']) assert.ok(!others.includes(k), k);
 });
 
 test('every Social Media field from describe() has exactly one control, in the approved tab', () => {

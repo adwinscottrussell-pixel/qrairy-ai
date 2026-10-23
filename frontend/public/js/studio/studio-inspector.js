@@ -3,9 +3,9 @@
  * Settings inspector.
  *
  * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C),
- * Contact (2A-3D) and Opening Hours (2A-3E), listed in EDITABLE. Their
- * controls follow PLANS (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN,
- * HOURS_PLAN), with every rule (limits, choices, required fields) read from
+ * Contact (2A-3D), Opening Hours (2A-3E) and Products (2A-3F), listed in
+ * EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN,
+ * CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -20,7 +20,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -121,7 +121,28 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN };
+  // Products (2A-3F): the title and the product list (rows edited with the
+  // shared list control). The image is shown, not changed (uploads come
+  // later). No Alignment: it centres the card texts but not the cards or
+  // their buttons.
+  var PRODUCTS_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'items'], control: 'items', item: [
+      { path: ['name'], control: 'text' },
+      { path: ['description'], control: 'text' },
+      { path: ['price'], control: 'text', hint: 'price' },
+      { path: ['image'], control: 'imageView' },
+      { path: ['target'], control: 'link' },
+      { path: ['buttonText'], control: 'text', hint: 'product_button' },
+    ] },
+    { tab: 'style', path: ['variant'], control: 'select' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN };
 
   // A weekday's state in the design: 'open' (times), 'closed' (shown as
   // Closed) or 'hidden' (not in the list, so not on the page). As core.js
@@ -252,6 +273,12 @@
       hint_hours: 'Times as HH:MM, e.g. 08:30. Closing must be after opening (24:00 = midnight). "Not shown" leaves the day out of the table.',
       e_enter_time: 'Enter a time.', e_invalid_time: 'Use a time like 08:30 (00:00 to 24:00).', e_closes_before_opening: 'The closing time must be after the opening time.',
       e_duplicate_day: 'This day is listed twice.',
+      // Products (2A-3F)
+      products: 'Products', v_grid: 'Grid', f_name: 'Product name', f_description: 'Description', f_price: 'Price', f_buttonText: 'Button text', f_image: 'Image',
+      hint_price: 'Shown as written, e.g. 4,20 € or from 9 €.', hint_product_button: 'Empty: "View". The button appears only when the product has a link.',
+      product_image_later: 'Image upload arrives in a later step. Without an image the page shows the product without a picture.',
+      new_product: 'New product', add_product: 'Add product', max_products: 'Up to {max} products.', no_name: '(no name)',
+      remove_product: 'Remove product', product_removed: 'Product removed. Undo is available.', product_moved: 'Product moved.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -306,6 +333,12 @@
       hint_hours: 'Zeiten als HH:MM, z. B. 08:30. Schließen muss nach dem Öffnen liegen (24:00 = Mitternacht). „Nicht anzeigen“ lässt den Tag in der Tabelle weg.',
       e_enter_time: 'Gib eine Uhrzeit ein.', e_invalid_time: 'Nutze eine Uhrzeit wie 08:30 (00:00 bis 24:00).', e_closes_before_opening: 'Die Schließzeit muss nach der Öffnungszeit liegen.',
       e_duplicate_day: 'Dieser Tag ist doppelt eingetragen.',
+      // Products (2A-3F)
+      products: 'Produkte', v_grid: 'Raster', f_name: 'Produktname', f_description: 'Beschreibung', f_price: 'Preis', f_buttonText: 'Button-Text', f_image: 'Bild',
+      hint_price: 'Wird so angezeigt, wie du es schreibst, z. B. 4,20 € oder ab 9 €.', hint_product_button: 'Leer: „Ansehen“. Der Button erscheint nur, wenn das Produkt einen Link hat.',
+      product_image_later: 'Bilder hochladen folgt in einem späteren Schritt. Ohne Bild zeigt die Seite das Produkt ohne Foto.',
+      new_product: 'Neues Produkt', add_product: 'Produkt hinzufügen', max_products: 'Bis zu {max} Produkte.', no_name: '(ohne Namen)',
+      remove_product: 'Produkt entfernen', product_removed: 'Produkt entfernt. Rückgängig ist möglich.', product_moved: 'Produkt verschoben.',
     },
   };
   // field: the last path key; a missing button target or social address gets
@@ -349,6 +382,14 @@
         var shown = (item.platform === 'whatsapp' && whatsappNumber(item.url)) || hostOf(item.url);
         return shown.length > 40 ? shown.slice(0, 39) + '…' : shown;
       },
+    },
+    products: {
+      heading: 'products', add: 'add_product', max: 'max_products', remove: 'remove_product', removed: 'product_removed', moved: 'product_moved',
+      // named, so it shows at once; the owner renames it
+      newItem: function (tx) { return { name: tx('new_product') }; },
+      focus: 'name', select: true,
+      name: function (item, tx) { return textLength(item.name, false) ? item.name : tx('no_name'); },
+      tag: function (item) { return textLength(item.price, false) ? String(item.price) : ''; },
     },
   };
 
@@ -449,7 +490,7 @@
         count.textContent = n + ' / ' + spec.max;
         count.classList.toggle('is-over', n > spec.max);
         showError(inp, line, errs[key]);
-        if (hint) hint.hidden = heroValue(cur, ['variant'], specFor(o.V3.describe(), cur.type, ['variant'])) !== 'buttons';
+        if (hint && c.hint === 'subtitle_layouts') hint.hidden = heroValue(cur, ['variant'], specFor(o.V3.describe(), cur.type, ['variant'])) !== 'buttons';
       });
       return node;
     }
@@ -819,6 +860,29 @@
       return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx(cfg.heading) + ' ', count]), ol, add, full]);
     }
 
+    // A product image (2A-3F): shown, not changed. Uploads come later.
+    function imageViewControl(sec, c) {
+      var key = errKey(c.path);
+      var thumb = el('div', { class: 'st-field__thumb' });
+      refreshers.push(function (cur) {
+        var v = getPath(cur, c.path) || '';
+        var img = thumb.querySelector('img');
+        if (v && (!img || img.getAttribute('src') !== v)) {
+          thumb.textContent = '';
+          thumb.appendChild(el('img', { src: v, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }));
+          thumb.classList.add('has-img');
+          thumb.removeAttribute('title');
+        } else if (!v && (img || !thumb.firstChild)) {
+          thumb.textContent = '';
+          thumb.appendChild(o.icon('st-t-hero'));
+          thumb.classList.remove('has-img');
+          thumb.title = o.t('no_image');
+        }
+      });
+      return el('div', { class: 'st-field', 'data-path': key }, [el('span', { text: labelFor(c.path) }),
+        el('div', { class: 'st-field__img' }, [thumb, el('p', { class: 'st-hint', text: tx('product_image_later') })])]);
+    }
+
     // ── Opening Hours (2A-3E): one row per weekday, Monday to Sunday ──
     // Status Open (1 to 3 time ranges) / Closed / Not shown. Changing the
     // status is one Undo step; times are typed as HH:MM (typing merged).
@@ -914,6 +978,7 @@
       if (c.control === 'input') return inputControl(sec, c, spec);
       if (c.control === 'switch') return switchControl(sec, c, spec);
       if (c.control === 'hours') return hoursControl(sec, c, D);
+      if (c.control === 'imageView') return imageViewControl(sec, c);
       if (c.control === 'select') return selectControl(sec, c, spec);
       if (c.control === 'number') return numberControl(sec, c, spec);
       if (c.control === 'items') return itemsControl(sec, c, D);
@@ -966,7 +1031,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
     phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };

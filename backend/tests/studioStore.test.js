@@ -422,6 +422,35 @@ test('Opening Hours edits: close / reopen a day keeps its times, hide / show, ra
   assert.equal(store.addItem(H, DAYS.concat(sat, 'ranges'), { open: '', close: '' }, 3), -1, 'at most 3 ranges');
 });
 
+// ── Products (2A-3F): the same generic list commands ──
+test('Products: add (named, valid), edit with merged typing, empty name keeps the last valid page, move, remove, Undo; at most 24', () => {
+  const { store } = make();
+  const P = 's_prod01', ITEMS = ['data', 'items'];
+  const names = () => store.section(P).data.items.map((x) => x.name);
+  assert.equal(store.addItem(P, ITEMS, { name: 'New product' }, 24), 3);
+  assert.ok(store.isValid(), 'a named product is valid at once');
+  store.set(P, ITEMS.concat(3, 'name'), 'S', 'typing');
+  store.set(P, ITEMS.concat(3, 'name'), 'Sem', 'typing');
+  store.set(P, ITEMS.concat(3, 'name'), 'Semmel', 'typing');
+  store.endMerge();
+  store.set(P, ITEMS.concat(3, 'price'), '0,60 €');
+  store.set(P, ITEMS.concat(3, 'name'), '');
+  assert.equal(store.sectionErrors(P)['data.items[3].name'].code, 'required');
+  assert.equal(store.lastValid().pages[0].sections[4].data.items[3].name, 'Semmel', 'the preview keeps the last valid name');
+  store.undo();
+  assert.equal(names()[3], 'Semmel');
+  store.undo(); store.undo();
+  assert.equal(names()[3], 'New product', 'the typing was one step');
+  assert.ok(store.moveItem(P, ITEMS, 3, 0));
+  assert.deepEqual(names(), ['New product', 'Bauernbrot', 'Butter-Croissant', 'Laugenbrezel']);
+  assert.ok(store.removeItem(P, ITEMS, 2));
+  assert.deepEqual(names(), ['New product', 'Bauernbrot', 'Laugenbrezel']);
+  store.undo();
+  assert.deepEqual(names(), ['New product', 'Bauernbrot', 'Butter-Croissant', 'Laugenbrezel']);
+  for (let n = 4; n < 24; n++) assert.equal(store.addItem(P, ITEMS, { name: 'P' + n }, 24), n);
+  assert.equal(store.addItem(P, ITEMS, { name: 'P25' }, 24), -1, 'at most 24');
+});
+
 (async () => {
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {
