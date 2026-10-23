@@ -326,6 +326,36 @@ test('pure: no DOM, network or storage in the store', () => {
   for (const re of [/document\./, /window\./, /localStorage/, /sessionStorage/, /indexedDB/, /\bfetch\s*\(/, /XMLHttpRequest/, /postMessage/]) assert.ok(!re.test(src), String(re));
 });
 
+// ── lists (2A-3C: the social links), with the same generic commands ──
+const SOCIAL = 's_social01';
+const LINKS = ['data', 'links'];
+const platforms = (store) => store.section(SOCIAL).data.links.map((x) => x.platform);
+
+test('social links: add (Instagram, empty address), remove, move; one Undo step each; the last valid page while incomplete', () => {
+  const { store } = make();
+  const max = V3.describe().sections.socialMedia.data.fields.links.max;
+  assert.equal(max, 8);
+  assert.equal(store.addItem(SOCIAL, LINKS, { platform: 'instagram', url: '' }, max), 2);
+  assert.deepEqual(Object.keys(store.sectionErrors(SOCIAL)), ['data.links[2].url']);
+  assert.equal(store.sectionErrors(SOCIAL)['data.links[2].url'].code, 'required');
+  assert.equal(store.lastValid().pages[0].sections[7].data.links.length, 2, 'the preview keeps the last valid page');
+  store.set(SOCIAL, ['data', 'links', 2, 'url'], 'https://www.tiktok.com/@example');
+  assert.equal(store.sectionErrors(SOCIAL)['data.links[2].url'].code, 'invalid_social_link', 'an address of another platform');
+  store.set(SOCIAL, ['data', 'links', 2, 'platform'], 'tiktok');
+  assert.ok(store.isValid(), 'the platform change makes it fit');
+  assert.ok(store.moveItem(SOCIAL, LINKS, 2, 0));
+  assert.deepEqual(platforms(store), ['tiktok', 'instagram', 'facebook']);
+  assert.ok(store.removeItem(SOCIAL, LINKS, 1));
+  assert.deepEqual(platforms(store), ['tiktok', 'facebook']);
+  store.undo();
+  assert.deepEqual(platforms(store), ['tiktok', 'instagram', 'facebook']);
+  store.undo();
+  assert.deepEqual(platforms(store), ['instagram', 'facebook', 'tiktok']);
+  for (let n = 3; n < max; n++) assert.equal(store.addItem(SOCIAL, LINKS, { platform: 'x', url: 'https://x.com/a' }, max), n);
+  assert.equal(store.addItem(SOCIAL, LINKS, { platform: 'x', url: 'https://x.com/a' }, max), -1, 'at most 8');
+  assert.ok(store.isValid(), 'duplicate platforms are allowed');
+});
+
 (async () => {
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {

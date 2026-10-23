@@ -10,6 +10,8 @@
 // - Gallery and Products render publicly (escaped, lazy images, CSS only
 //   when present);
 // - describe() matches what validateDesign enforces.
+// - Social Media pills pair their text colour with their background (2A-3C
+//   contrast fix; golden revision 2026-10-23).
 // Run: node tests/lpV3Preview.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -50,6 +52,23 @@ function hueSat(hex) {
   let hue = 0; if (d) hue = max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
   return { hue: (hue + 360) % 360, s };
 }
+// Social Media contrast (2A-3C visual review): the pill sets its own text
+// colour, paired with its own background, so Dark / Brand sections (white
+// text) cannot leave white text on the light pill. The computed colours for
+// every background and layout are checked in a real browser in
+// studioSocialEditor.browser.test.js.
+test('Social Media links: the pill pairs its text colour with its background (readable on every section background)', () => {
+  const d = withSections({ id: 's_soc01', type: 'socialMedia', variant: 'buttons', style: { background: 'dark' }, data: { title: 'T', links: [{ platform: 'instagram', url: 'https://instagram.com/a' }] } });
+  const html = V3.renderDesign(d, CTX).html;
+  const rule = (html.match(/\.v3-social\{[^}]*\}/) || [''])[0];
+  assert.match(rule, /background:var\(--v3-surface\)/);
+  assert.match(rule, /color:var\(--v3-text\)/, 'the pill text does not inherit the section colour');
+  // nothing more specific overrides the pill colour for a section background
+  assert.ok(!/\.v3-bg-(dark|brand|alt)[^{]*\.v3-social[^{]*\{/.test(html));
+  const p = V3.DEFAULT_PALETTE;
+  assert.ok(contrast(p.text, p.surface) >= 4.5, 'text on the pill: ' + contrast(p.text, p.surface).toFixed(1));
+});
+
 test('default palette: QRAIVY neutral black / gray / white, orange accent, no navy, brown or sepia, readable contrast', () => {
   const p = V3.DEFAULT_PALETTE;
   assert.equal(p.brand, '#ff5a1f', 'QRAIVY orange stays the accent');

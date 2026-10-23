@@ -2,8 +2,9 @@
  * studio-inspector.js — Landing Page Studio V3: the Content / Style /
  * Settings inspector.
  *
- * Editable: the Hero (2A-3A) and the Buttons (2A-3B), listed in EDITABLE.
- * Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN), with every rule (limits, choices, required fields) read from
+ * Editable: the Hero (2A-3A), the Buttons (2A-3B) and Social Media (2A-3C),
+ * listed in EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN,
+ * SOCIAL_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -18,7 +19,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -67,7 +68,35 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN };
+
+  // Social Media (2A-3C): the title and the link list (platform + address).
+  var SOCIAL_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'links'], control: 'items', item: [
+      { path: ['platform'], control: 'select' },
+      { path: ['url'], control: 'social', platformFrom: 'platform' },
+    ] },
+    { tab: 'style', path: ['variant'], control: 'select' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'align'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN };
+
+  // The hosts named in each platform's hint, and its placeholder. core.js
+  // (SOCIAL_HOSTS) decides what is accepted; the tests check that every host
+  // here is one of them. WhatsApp takes a phone number instead.
+  var SOCIAL_HINT_HOSTS = {
+    instagram: ['instagram.com'], facebook: ['facebook.com', 'fb.com'], tiktok: ['tiktok.com'], youtube: ['youtube.com', 'youtu.be'],
+    linkedin: ['linkedin.com'], x: ['x.com', 'twitter.com'], pinterest: ['pinterest.com', 'pinterest.de'],
+  };
+  var SOCIAL_PLACEHOLDER = {
+    instagram: 'https://www.instagram.com/…', facebook: 'https://www.facebook.com/…', tiktok: 'https://www.tiktok.com/…', youtube: 'https://www.youtube.com/…',
+    linkedin: 'https://www.linkedin.com/…', x: 'https://x.com/…', pinterest: 'https://www.pinterest.com/…',
+  };
 
   // The spec of one path of a section type, from describe(). Numbers in the
   // path step into a list's item.
@@ -156,6 +185,12 @@
       e_invalid_whatsapp: 'Enter the WhatsApp number in international format, e.g. +49 151 2345678.', e_invalid_phone: 'Enter a phone number, e.g. +49 731 123456.',
       e_invalid_email: 'Enter an email address, e.g. name@example.com.', e_invalid_maps_link: 'Use a link from Google Maps, Apple Maps or OpenStreetMap.',
       e_too_many: 'At most {max}.',
+      // Social Media (2A-3C)
+      platform: 'Platform', social_links: 'Social links', profile_address: 'Profile address', v_icons: 'Icons',
+      pf_instagram: 'Instagram', pf_facebook: 'Facebook', pf_tiktok: 'TikTok', pf_youtube: 'YouTube', pf_linkedin: 'LinkedIn', pf_x: 'X', pf_pinterest: 'Pinterest', pf_whatsapp: 'WhatsApp',
+      hint_social: 'A full address starting with https:// on {hosts}.', or: ' or ', no_address: '(no address)',
+      add_link: 'Add link', max_links: 'Up to {max} links.', remove_link: 'Remove link', link_removed: 'Link removed. Undo is available.', link_moved: 'Link moved.',
+      e_enter_address: 'Enter the profile address.', e_invalid_social_link: '{platform} addresses start with https:// on {hosts}.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -191,15 +226,56 @@
       e_invalid_whatsapp: 'Gib die WhatsApp-Nummer im internationalen Format ein, z. B. +49 151 2345678.', e_invalid_phone: 'Gib eine Telefonnummer ein, z. B. +49 731 123456.',
       e_invalid_email: 'Gib eine E-Mail-Adresse ein, z. B. name@beispiel.de.', e_invalid_maps_link: 'Nutze einen Link von Google Maps, Apple Maps oder OpenStreetMap.',
       e_too_many: 'Höchstens {max}.',
+      // Social Media (2A-3C)
+      platform: 'Plattform', social_links: 'Social-Links', profile_address: 'Profiladresse', v_icons: 'Symbole',
+      pf_instagram: 'Instagram', pf_facebook: 'Facebook', pf_tiktok: 'TikTok', pf_youtube: 'YouTube', pf_linkedin: 'LinkedIn', pf_x: 'X', pf_pinterest: 'Pinterest', pf_whatsapp: 'WhatsApp',
+      hint_social: 'Eine vollständige Adresse mit https:// auf {hosts}.', or: ' oder ', no_address: '(keine Adresse)',
+      add_link: 'Link hinzufügen', max_links: 'Bis zu {max} Links.', remove_link: 'Link entfernen', link_removed: 'Link entfernt. Rückgängig ist möglich.', link_moved: 'Link verschoben.',
+      e_enter_address: 'Gib die Profiladresse ein.', e_invalid_social_link: '{platform}-Adressen beginnen mit https:// auf {hosts}.',
     },
   };
-  // field: the last path key; a missing button target gets its own message.
+  // field: the last path key; a missing button target or social address gets
+  // its own message. e.platform / e.hosts: filled in by the social control.
   function errorText(lang, e, field) {
     var d = TX[lang] || TX.en;
-    var code = e.code === 'required' && field === 'target' ? 'choose_target' : e.code;
+    var code = e.code === 'required' && field === 'target' ? 'choose_target' : e.code === 'required' && field === 'social' ? 'enter_address' : e.code;
     var s = d['e_' + code] || d.e_other;
-    return s.replace('{max}', e.max).replace('{min}', e.min);
+    return s.replace('{max}', e.max).replace('{min}', e.min).replace('{platform}', e.platform).replace('{hosts}', e.hosts);
   }
+  // a platform's hint hosts, joined for reading: "facebook.com or fb.com"
+  function socialHosts(lang, platform) {
+    var d = TX[lang] || TX.en, h = SOCIAL_HINT_HOSTS[platform] || [];
+    return h.length > 1 ? h.slice(0, -1).join(', ') + d.or + h[h.length - 1] : h.join('');
+  }
+
+  // The repeatable lists (Buttons 2A-3B, Social Media 2A-3C), by section
+  // type: their texts, a new item, and what a closed row shows.
+  function hostOf(url) {
+    var m = /^https?:\/\/([^\/?#\s]+)/i.exec(String(url || '').trim());
+    return m ? m[1].toLowerCase() : String(url || '').trim();
+  }
+  var LISTS = {
+    buttons: {
+      heading: 'buttons', add: 'add_button', max: 'max_buttons', remove: 'remove_button', removed: 'removed', moved: 'moved',
+      // intentionally incomplete: the owner chooses where it leads
+      newItem: function (tx) { return { label: tx('new_button'), kind: 'link', target: '' }; },
+      focus: 'label', select: true,
+      name: function (item, tx) { return textLength(item.label, false) ? item.label : tx('no_label'); },
+      tag: function (item, tx) { return tx('k_' + (item.kind || 'link')); },
+    },
+    socialMedia: {
+      heading: 'social_links', add: 'add_link', max: 'max_links', remove: 'remove_link', removed: 'link_removed', moved: 'link_moved',
+      // intentionally incomplete: the owner enters the profile address
+      newItem: function () { return { platform: 'instagram', url: '' }; },
+      focus: 'url', select: false,
+      name: function (item, tx) { return (item.platform && tx('pf_' + item.platform)) || String(item.platform || ''); },
+      tag: function (item, tx) {
+        if (!item.url || !String(item.url).trim()) return tx('no_address');
+        var shown = (item.platform === 'whatsapp' && whatsappNumber(item.url)) || hostOf(item.url);
+        return shown.length > 40 ? shown.slice(0, 39) + '…' : shown;
+      },
+    },
+  };
 
   function getPath(o, path) { var n = o; for (var i = 0; i < path.length; i++) { if (n == null) return undefined; n = n[path[i]]; } return n; }
 
@@ -253,10 +329,10 @@
       }
     }
 
-    // ── editors (Hero, Buttons): shared controls, driven by PLANS ──
+    // ── editors (Hero, Buttons) and Social Media: shared controls, driven by PLANS ──
     function labelFor(path) {
       var k = path[path.length - 1];
-      if (k === 'variant' || k === 'align' || k === 'overlay' || k === 'background' || k === 'spacing' || k === 'kind' || k === 'label') return tx(k);
+      if (k === 'variant' || k === 'align' || k === 'overlay' || k === 'background' || k === 'spacing' || k === 'kind' || k === 'label' || k === 'platform') return tx(k);
       if (k === 'anchor') return o.t('anchor');
       if (k === 'hidden') return o.t('visibility');
       if (k === 'id') return o.t('section_id');
@@ -431,20 +507,52 @@
       return el('div', { class: 'st-field', 'data-path': key, 'data-kind': kind }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: tx('t_' + kind) })]), inp, line, hint]);
     }
 
+    // A social profile address: a full https:// address for the platform, or
+    // for WhatsApp a phone number (stored as the wa.me link, as in the Buttons).
+    // A platform change keeps the value; core.js reports when it no longer fits.
+    function socialControl(sec, c) {
+      var platform = getPath(sec, c.path.slice(0, -1).concat(c.platformFrom));
+      var wa = platform === 'whatsapp';
+      var key = errKey(c.path);
+      var id = nextId('social'), errId = id + '-err', hintId = id + '-hint';
+      var inp = el('input', { type: wa ? 'tel' : 'url', id: id, 'aria-describedby': errId + ' ' + hintId, 'aria-required': 'true', autocomplete: 'off', spellcheck: 'false',
+        placeholder: wa ? tx('p_whatsapp') : SOCIAL_PLACEHOLDER[platform] || 'https://…' });
+      var shown = function (v) { return wa ? (whatsappNumber(v) || v || '') : (v || ''); };
+      inp.value = shown(getPath(sec, c.path));
+      var line = errorLine(errId);
+      var hintText = wa ? tx('hint_whatsapp') : SOCIAL_HINT_HOSTS[platform] ? tx('hint_social').replace('{hosts}', socialHosts(o.lang(), platform)) : '';
+      var hint = el('p', { class: 'st-hint', id: hintId, hidden: !hintText, text: hintText });
+      inp.addEventListener('input', function () {
+        var v = wa ? whatsappLink(inp.value) : inp.value;
+        store.set(sec.id, c.path, v || undefined, 'typing');
+      });
+      inp.addEventListener('blur', function () { store.endMerge(); });
+      refreshers.push(function (cur, errs) {
+        var v = shown(getPath(cur, c.path));
+        if (!focused(inp) && inp.value !== v) inp.value = v;
+        var err = errs[key];
+        if (err && wa) err = { code: 'invalid_whatsapp' };
+        else if (err) err = Object.assign({}, err, { platform: tx('pf_' + platform), hosts: socialHosts(o.lang(), platform) });
+        showError(inp, line, err, 'social');
+      });
+      return el('div', { class: 'st-field', 'data-path': key, 'data-platform': platform || '' }, [
+        el('span', { class: 'st-field__label' }, [el('label', { for: id, text: tx(wa ? 't_whatsapp' : 'profile_address') })]), inp, line, hint]);
+    }
+
     function selectControl(sec, c, spec) {
       var key = errKey(c.path);
       var id = nextId('sel');
       var sel = el('select', { id: id });
       var k = c.path[c.path.length - 1];
-      var PREFIX = { variant: 'v_', align: 'a_', icon: 'i_', background: 'bg_', spacing: 'sp_', kind: 'k_' };
+      var PREFIX = { variant: 'v_', align: 'a_', icon: 'i_', background: 'bg_', spacing: 'sp_', kind: 'k_', platform: 'pf_' };
       spec.values.forEach(function (v) {
         var label = k === 'icon' && v === 'none' && c.noneLabel ? tx(c.noneLabel) : PREFIX[k] ? tx(PREFIX[k] + v) : v;
         sel.appendChild(el('option', { value: v, text: label }));
       });
       sel.addEventListener('change', function () {
         store.set(sec.id, c.path, sel.value);
-        // a new action type needs a different target control
-        if (k === 'kind') { render(); var again = o.box.querySelector('[data-path="' + key + '"] select'); if (again) again.focus(); }
+        // a new action type (or platform) needs a different target (address) control
+        if (k === 'kind' || k === 'platform') { render(); var again = o.box.querySelector('[data-path="' + key + '"] select'); if (again) again.focus(); }
       });
       refreshers.push(function (cur) { var v = heroValue(cur, c.path, spec); if (!focused(sel) && sel.value !== v) sel.value = v; });
       return el('div', { class: 'st-field', 'data-path': key }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) })]), sel]);
@@ -513,25 +621,25 @@
       return hint;
     }
 
-    // ── a list of items (the Buttons): one row open at a time ──
+    // ── a list of items (the Buttons, the social links): one row open at a time ──
     var openRows = {}; // section id + list key -> the open row's index (-1: none)
     function itemsControl(sec, c, D) {
-      var key = errKey(c.path), spec = specFor(D, sec.type, c.path), max = spec.max;
+      var key = errKey(c.path), spec = specFor(D, sec.type, c.path), max = spec.max, cfg = LISTS[sec.type];
       var stateKey = sec.id + ':' + key;
       var list = getPath(sec, c.path) || [];
       var open = openRows[stateKey] === undefined ? -1 : openRows[stateKey];
       if (open >= list.length) open = openRows[stateKey] = -1;
       var count = el('span', { class: 'st-items__count' });
       var ol = el('ol', { class: 'st-items__list' });
-      var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add', 'data-action': 'add-item' }, [tx('add_button')]);
-      var full = el('p', { class: 'st-hint', 'data-hint': 'max', text: tx('max_buttons').replace('{max}', max) });
+      var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add', 'data-action': 'add-item' }, [tx(cfg.add)]);
+      var full = el('p', { class: 'st-hint', 'data-hint': 'max', text: tx(cfg.max).replace('{max}', max) });
       var row = function (i) { return o.box.querySelector('[data-path="' + key + '"] .st-item[data-index="' + i + '"] .st-item__toggle'); };
       // the open row follows the change; the store event rebuilds the inspector
       var move = function (from, to) {
         var before = open;
         openRows[stateKey] = open === from ? to : open === to ? from : open;
         if (!store.moveItem(sec.id, c.path, from, to)) { openRows[stateKey] = before; return; }
-        if (o.announce) o.announce(tx('moved'));
+        if (o.announce) o.announce(tx(cfg.moved));
         var r = row(to); if (r) r.focus();
       };
       list.forEach(function (it, i) {
@@ -557,10 +665,10 @@
           el('div', { class: 'st-item__head' }, [toggle,
             iconBtn('move-up', tx('move_up'), 'st-chevron', 'st-ic--up', i === 0, function () { move(i, i - 1); }),
             iconBtn('move-down', tx('move_down'), 'st-chevron', '', i === list.length - 1, function () { move(i, i + 1); }),
-            iconBtn('remove-item', tx('remove_button'), 'st-x', '', false, function () {
+            iconBtn('remove-item', tx(cfg.remove), 'st-x', '', false, function () {
               openRows[stateKey] = open === i ? -1 : open > i ? open - 1 : open;
               if (!store.removeItem(sec.id, c.path, i)) return;
-              if (o.announce) o.announce(tx('removed'));
+              if (o.announce) o.announce(tx(cfg.removed));
               var next = row(Math.min(i, list.length - 2)) || o.box.querySelector('[data-path="' + key + '"] [data-action="add-item"]');
               if (next) next.focus();
             })])]);
@@ -575,8 +683,8 @@
         }
         refreshers.push(function (cur, errMap) {
           var item = (getPath(cur, c.path) || [])[i] || {};
-          name.textContent = textLength(item.label, false) ? item.label : tx('no_label');
-          kind.textContent = tx('k_' + (item.kind || 'link'));
+          name.textContent = cfg.name(item, tx);
+          kind.textContent = cfg.tag(item, tx);
           var n = Object.keys(errMap).filter(function (k) { return k.indexOf(key + '[' + i + '].') === 0; }).length;
           errs.hidden = !n;
           errs.textContent = n === 1 ? tx('errors_one') : tx('errors_many').replace('{n}', n);
@@ -588,10 +696,9 @@
         var n = (getPath(store.section(sec.id), c.path) || []).length;
         var before = openRows[stateKey];
         openRows[stateKey] = n;
-        // intentionally incomplete: the owner chooses where it leads
-        if (store.addItem(sec.id, c.path, { label: tx('new_button'), kind: 'link', target: '' }, max) < 0) { openRows[stateKey] = before; return; }
-        var label = o.box.querySelector('[data-path="' + key + '[' + n + '].label"] input');
-        if (label) { label.focus(); label.select(); }
+        if (store.addItem(sec.id, c.path, cfg.newItem(tx), max) < 0) { openRows[stateKey] = before; return; }
+        var first = o.box.querySelector('[data-path="' + key + '[' + n + '].' + cfg.focus + '"] input');
+        if (first) { first.focus(); if (cfg.select) first.select(); }
       });
       refreshers.push(function (cur) {
         var n = (getPath(cur, c.path) || []).length;
@@ -599,7 +706,7 @@
         add.disabled = n >= max;
         full.hidden = n < max;
       });
-      return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx('buttons') + ' ', count]), ol, add, full]);
+      return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx(cfg.heading) + ' ', count]), ol, add, full]);
     }
 
     function controlFor(sec, c, D) {
@@ -609,6 +716,7 @@
       if (c.control === 'image') return imageControl(sec, c);
       if (c.control === 'link') return linkControl(sec, c);
       if (c.control === 'target') return targetControl(sec, c, spec);
+      if (c.control === 'social') return socialControl(sec, c);
       if (c.control === 'select') return selectControl(sec, c, spec);
       if (c.control === 'number') return numberControl(sec, c, spec);
       if (c.control === 'items') return itemsControl(sec, c, D);
@@ -661,6 +769,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, PLANS: PLANS, TARGET_INPUT: TARGET_INPUT, heroSpec: heroSpec, specFor: specFor, errKey: errKey,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+    SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };
 });

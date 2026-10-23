@@ -86,8 +86,8 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('2A-3B: only the Hero and the Buttons are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
-  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons']);
+test('2A-3C: only the Hero, the Buttons and Social Media are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia']);
   // the approved notice while anything is invalid, in English and German
   assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
   assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));

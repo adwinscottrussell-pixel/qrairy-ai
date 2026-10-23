@@ -1,12 +1,12 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise.",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 13947,
-      "sha256": "79648a1efa4685ea7a4e6688e700f20e6f52639f351d107db1a610d5f1f90140",
+      "bytes": 13968,
+      "sha256": "3ed9c098234a75a2bc7fe4e27c383d5a918bb5ec913700cbd860588dc81c073b",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 13947,
-      "sha256": "79648a1efa4685ea7a4e6688e700f20e6f52639f351d107db1a610d5f1f90140",
+      "bytes": 13968,
+      "sha256": "3ed9c098234a75a2bc7fe4e27c383d5a918bb5ec913700cbd860588dc81c073b",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,15 +25,15 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16786,
-      "sha256": "58d307ecdb02197eb3c468dc6a56a01b348cfd8101d1e69ba3bdc5eb77954b93",
+      "bytes": 16807,
+      "sha256": "842cdfa41220319161474eace1cdcd07d737f9e542c44385be168b262e2300ec",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16811,
-      "sha256": "26ee949a585a7f49ab5883a447dcef78b10e759ed87a74d3f67b3b63ed79f2a3",
+      "bytes": 16832,
+      "sha256": "78b2143dcf7cfc58c6d3a6a3a06f1d54f4a442d9d92d12a1fe5f41636cd78071",
       "skipped": []
     }
   ],
@@ -44,6 +44,14 @@
         "allRenderedVariants"
       ],
       "reason": "default palette: brown/sepia -> QRAIVY neutral black / gray (Admin #101012, landing #f8f8f8 / #0a0a0a / #555; owner request, no navy); localBusiness (own palette) unchanged"
+    },
+    {
+      "date": "2026-10-23",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants"
+      ],
+      "reason": "Social Media contrast fix (owner-authorised after the 2A-3C visual review): .v3-social gained color:var(--v3-text) so the pill text no longer inherits white from Dark / Brand sections; the rendered pages differ from the previous version only in that one CSS rule (verified)"
     }
   ]
 }
