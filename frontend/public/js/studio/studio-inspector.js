@@ -3,9 +3,9 @@
  * Settings inspector.
  *
  * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C),
- * Contact (2A-3D), Opening Hours (2A-3E) and Products (2A-3F), listed in
- * EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN,
- * CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN), with every rule (limits, choices, required fields) read from
+ * Contact (2A-3D), Opening Hours (2A-3E), Products (2A-3F) and Text (2A-3G),
+ * listed in EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN,
+ * SOCIAL_PLAN, CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN, TEXT_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -20,7 +20,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -142,7 +142,27 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN };
+  // Text (2A-3G): heading, body, the image (shown and removable, not
+  // changed: uploads come later) and its description. Layouts offered:
+  // Plain (text only, never an image), Image left, Image right; Image on top
+  // stays valid in the schema and is listed only for a section that uses it.
+  var TEXT_PLAN = [
+    { tab: 'content', path: ['data', 'heading'], control: 'text' },
+    { tab: 'content', path: ['data', 'body'], control: 'text', rows: 6 },
+    { tab: 'content', path: ['data', 'image'], control: 'image', hints: {
+      plain_image: function (v, variant) { return !!v && variant === 'plain'; },
+      text_image_later: function (v, variant) { return !v && variant !== 'plain'; },
+    } },
+    { tab: 'content', path: ['data', 'imageAlt'], control: 'text' },
+    { tab: 'style', path: ['variant'], control: 'select', values: ['plain', 'image-left', 'image-right'] },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'align'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN, text: TEXT_PLAN };
 
   // A weekday's state in the design: 'open' (times), 'closed' (shown as
   // Closed) or 'hidden' (not in the list, so not on the page). As core.js
@@ -279,6 +299,10 @@
       product_image_later: 'Image upload arrives in a later step. Without an image the page shows the product without a picture.',
       new_product: 'New product', add_product: 'Add product', max_products: 'Up to {max} products.', no_name: '(no name)',
       remove_product: 'Remove product', product_removed: 'Product removed. Undo is available.', product_moved: 'Product moved.',
+      // Text (2A-3G)
+      'v_plain': 'Plain: text only', 'v_image-left': 'Image left', 'v_image-right': 'Image right', 'v_image-top': 'Image on top',
+      hint_plain_image: 'The Plain layout shows no image. Choose Image left or Image right to show it.',
+      hint_text_image_later: 'Image upload arrives in a later step. Without an image, the page shows the text only.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -339,6 +363,10 @@
       product_image_later: 'Bilder hochladen folgt in einem späteren Schritt. Ohne Bild zeigt die Seite das Produkt ohne Foto.',
       new_product: 'Neues Produkt', add_product: 'Produkt hinzufügen', max_products: 'Bis zu {max} Produkte.', no_name: '(ohne Namen)',
       remove_product: 'Produkt entfernen', product_removed: 'Produkt entfernt. Rückgängig ist möglich.', product_moved: 'Produkt verschoben.',
+      // Text (2A-3G)
+      'v_plain': 'Schlicht: nur Text', 'v_image-left': 'Bild links', 'v_image-right': 'Bild rechts', 'v_image-top': 'Bild oben',
+      hint_plain_image: 'Das Layout Schlicht zeigt kein Bild. Wähle Bild links oder Bild rechts, um es zu zeigen.',
+      hint_text_image_later: 'Bilder hochladen folgt in einem späteren Schritt. Ohne Bild zeigt die Seite nur den Text.',
     },
   };
   // field: the last path key; a missing button target or social address gets
@@ -469,7 +497,7 @@
     function textControl(sec, c, spec) {
       var multiline = !!spec.multiline, key = errKey(c.path);
       var id = nextId('text'), errId = id + '-err';
-      var inp = multiline ? el('textarea', { id: id, rows: '3', 'aria-describedby': errId }) : el('input', { type: 'text', id: id, 'aria-describedby': errId, autocomplete: 'off' });
+      var inp = multiline ? el('textarea', { id: id, rows: String(c.rows || 3), 'aria-describedby': errId }) : el('input', { type: 'text', id: id, 'aria-describedby': errId, autocomplete: 'off' });
       inp.value = heroValue(sec, c.path) || '';
       if (spec.required) inp.setAttribute('aria-required', 'true');
       var count = el('small', { class: 'st-count', 'aria-hidden': 'true' });
@@ -518,7 +546,9 @@
       var thumb = el('div', { class: 'st-field__thumb' });
       var change = el('button', { type: 'button', class: 'st-btn st-btn--ghost', disabled: true, title: tx('change_soon'), text: o.t('change_image') });
       var remove = el('button', { type: 'button', class: 'st-btn st-btn--ghost', 'data-action': 'remove-image', text: o.t('remove') });
-      var hint = el('p', { class: 'st-hint', hidden: true, text: tx('hint_simple_image') });
+      // c.hints: { key: show(value, variant) }; the Hero's own by default
+      var hints = c.hints || { simple_image: function (v, variant) { return v && variant === 'simple'; } };
+      var hintNodes = Object.keys(hints).map(function (k) { return el('p', { class: 'st-hint', 'data-hint': k, hidden: true, text: tx('hint_' + k) }); });
       remove.addEventListener('click', function () { store.set(sec.id, c.path, undefined); });
       refreshers.push(function (cur) {
         var v = getPath(cur, c.path) || '';
@@ -534,9 +564,10 @@
           thumb.title = o.t('no_image');
         }
         remove.disabled = !v;
-        hint.hidden = !(v && heroValue(cur, ['variant'], heroSpec(o.V3.describe(), ['variant'])) === 'simple');
+        var variant = heroValue(cur, ['variant'], specFor(o.V3.describe(), cur.type, ['variant']));
+        Object.keys(hints).forEach(function (k, i) { hintNodes[i].hidden = !hints[k](v, variant); });
       });
-      return el('div', { class: 'st-field', 'data-path': key }, [el('span', { text: labelFor(c.path) }), el('div', { class: 'st-field__img' }, [thumb, change, remove]), hint]);
+      return el('div', { class: 'st-field', 'data-path': key }, [el('span', { text: labelFor(c.path) }), el('div', { class: 'st-field__img' }, [thumb, change, remove])].concat(hintNodes));
     }
 
     function linkControl(sec, c) {
@@ -696,7 +727,12 @@
       var sel = el('select', { id: id });
       var k = c.path[c.path.length - 1];
       var PREFIX = { variant: 'v_', align: 'a_', icon: 'i_', background: 'bg_', spacing: 'sp_', kind: 'k_', platform: 'pf_' };
-      spec.values.forEach(function (v) {
+      // c.values: the choices offered (a subset of the schema's); a stored
+      // value outside them stays listed, so nothing changes unasked
+      var values = c.values ? c.values.slice() : spec.values;
+      var current = heroValue(sec, c.path, spec);
+      if (c.values && values.indexOf(current) === -1 && spec.values.indexOf(current) !== -1) values.push(current);
+      values.forEach(function (v) {
         var label = k === 'icon' && v === 'none' && c.noneLabel ? tx(c.noneLabel) : PREFIX[k] ? tx(PREFIX[k] + v) : v;
         sel.appendChild(el('option', { value: v, text: label }));
       });
@@ -1031,7 +1067,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, TEXT_PLAN: TEXT_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
     phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };

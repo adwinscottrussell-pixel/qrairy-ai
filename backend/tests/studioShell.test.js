@@ -104,8 +104,8 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('2A-3F: only the Hero, the Buttons, Social Media, Contact, Opening Hours and Products are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
-  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products']);
+test('2A-3G: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products and Text are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
   // the approved notice while anything is invalid, in English and German
   assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
   assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));
@@ -139,7 +139,7 @@ test('demo: the Local Business layout, valid, placeholder content only (no custo
   const text = JSON.stringify(demo);
   assert.ok(!/staib/i.test(text), 'no Bäckerei Staib branding');
   assert.ok(!/res\.cloudinary\.com|https?:\/\/[^"]*\.(?:jpe?g|png|webp)/i.test(text), 'no photos');
-  assert.deepEqual(JSON.parse(JSON.stringify(demo.design.pages[0].sections.map((s) => s.type))),['hero', 'buttons', 'dealsOffers', 'loyalty', 'products', 'openingHours', 'contact', 'socialMedia']);
+  assert.deepEqual(JSON.parse(JSON.stringify(demo.design.pages[0].sections.map((s) => s.type))),['hero', 'buttons', 'dealsOffers', 'loyalty', 'products', 'text', 'openingHours', 'contact', 'socialMedia']);
   const r = V3.renderDesign(JSON.parse(JSON.stringify(demo.design)), { businessName: demo.businessName }, { preview: true });
   assert.ok(r.ok && r.samples.join() === 'dealsOffers,loyalty');
 });

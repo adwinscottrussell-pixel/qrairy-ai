@@ -442,14 +442,15 @@
       return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') +
         '<div class="v3-items v3-items-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
     },
+    // Plain is text only: a stored image is kept but never shown (2A-3G).
     text: function (s, t, pv) {
-      var d = s.data;
-      if (!d.heading && !d.body && !d.image) return emptySection(s, t, pv);
-      var img = d.image ? '<figure class="v3-text-fig"><img src="' + esc(d.image) + '" alt="' + esc(d.imageAlt) + '" loading="lazy" width="800" height="600"></figure>'
-        : (pv && s.variant !== 'plain' ? '<figure class="v3-text-fig">' + imagePlaceholder(t) + '</figure>' : '');
-      return sectionOpen(s, '', pv) + '<div class="v3-text-grid">' + (s.variant === 'image-right' || s.variant === 'plain' ? '' : img) +
+      var d = s.data, plain = s.variant === 'plain';
+      if (!d.heading && !d.body && (!d.image || plain)) return emptySection(s, t, pv);
+      var img = plain ? '' : d.image ? '<figure class="v3-text-fig"><img src="' + esc(d.image) + '" alt="' + esc(d.imageAlt) + '" loading="lazy" width="800" height="600"></figure>'
+        : (pv ? '<figure class="v3-text-fig">' + imagePlaceholder(t) + '</figure>' : '');
+      return sectionOpen(s, '', pv) + '<div class="v3-text-grid">' + (s.variant === 'image-right' ? '' : img) +
         '<div class="v3-text-body">' + heading(d.heading, 'v3-h2') + (d.body ? '<p class="v3-body">' + escMultiline(d.body) + '</p>' : '') + '</div>' +
-        (s.variant === 'image-right' ? img : '') + (s.variant === 'plain' ? img : '') + '</div>' + SECTION_CLOSE;
+        (s.variant === 'image-right' ? img : '') + '</div>' + SECTION_CLOSE;
     },
     openingHours: function (s, t, pv) {
       var d = s.data;

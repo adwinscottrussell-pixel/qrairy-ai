@@ -10,7 +10,7 @@
 // - Change Image stays disabled (uploads come later); the other types keep
 //   the read-only view.
 // 2A-3B / 2A-3C: the Buttons and Social Media plans, the shared list
-// settings (Buttons texts exactly as at d70d883) and the eight platforms.
+/// settings (Buttons texts exactly as at d70d883) and the eight platforms./n// 2A-3G: the Text plan (three layouts, image shown not changed), Plain never/n// renders an image, and the six earlier editors exactly as at e99ac11.
 // Run: node tests/studioInspector.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -29,11 +29,11 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3F: only the Hero, the Buttons, Social Media, Contact, Opening Hours and Products are editable (Gallery, Deals, Loyalty, Text stay read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products']);
+test('2A-3G: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products and Text are editable (Gallery, Deals, Loyalty stay read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
   assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products']);
-  for (const t of ['gallery', 'dealsOffers', 'loyalty', 'text']) {
+  for (const t of ['gallery', 'dealsOffers', 'loyalty']) {
     assert.ok(D.sections[t], t);
     assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
   }
@@ -670,6 +670,103 @@ test('Change Image stays disabled; the read-only view keeps every control disabl
 test('no network, storage or page navigation in the inspector', () => {
   const code = SRC.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
   for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /localStorage/, /sessionStorage/, /innerHTML/, /location\./, /postMessage/]) assert.ok(!re.test(code), String(re));
+});
+
+// ── Text (2A-3G) ──
+test('the six earlier editors: plans and texts exactly as approved at e99ac11 (2A-3F)', () => {
+  const then = inspectorAt('e99ac11');
+  if (!then) return;
+  for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN', 'HOURS_PLAN', 'PRODUCTS_PLAN']) {
+    assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k + ' unchanged');
+  }
+  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+  assert.deepEqual(JSON.parse(JSON.stringify(INSP.LISTS)), JSON.parse(JSON.stringify(then.exports.LISTS)));
+  // the Hero image keeps its own hint (no c.hints on its plan entry)
+  assert.equal(INSP.HERO_PLAN.find((c) => c.control === 'image').hints, undefined);
+});
+
+test('every Text field from describe() has exactly one control; three layouts offered; Style and Settings as for the other sections', () => {
+  const plan = INSP.TEXT_PLAN;
+  const fields = leaves(D.sections.text.data, []);
+  assert.deepEqual(fields, ['heading', 'body', 'image', 'imageAlt']);
+  for (const f of fields) assert.equal(plan.filter((c) => c.path && c.path.join('.') === 'data.' + f).length, 1, f);
+  const by = (p) => plan.find((c) => c.path && c.path.join('.') === p);
+  assert.equal(by('data.heading').control, 'text');
+  assert.equal(by('data.body').control, 'text');
+  assert.equal(by('data.image').control, 'image', 'shown and removable, never changed (uploads later)');
+  assert.equal(by('data.imageAlt').control, 'text');
+  assert.deepEqual(by('variant').values, ['plain', 'image-left', 'image-right']);
+  assert.ok(by('variant').values.every((v) => D.sections.text.variants.includes(v)), 'only schema layouts');
+  assert.deepEqual(D.sections.text.variants, ['plain', 'image-left', 'image-right', 'image-top'], 'the schema is unchanged');
+  assert.deepEqual(plan.filter((c) => c.tab === 'style').map((c) => c.path.join('.')), ['variant', 'style.background', 'style.align', 'style.spacing']);
+  assert.deepEqual(plan.filter((c) => c.tab === 'settings').map((c) => c.control), ['anchor', 'show', 'readonly']);
+  assert.equal(D.sections.text.data.fields.body.multiline, true);
+  assert.equal(INSP.PLANS.text, plan);
+});
+
+test('Text image hints: Plain with an image says it is not shown; Image left / right without one say uploads come later', () => {
+  const h = INSP.TEXT_PLAN.find((c) => c.control === 'image').hints;
+  const IMG = 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg';
+  assert.equal(h.plain_image(IMG, 'plain'), true);
+  assert.equal(h.plain_image(IMG, 'image-left'), false);
+  assert.equal(h.plain_image('', 'plain'), false);
+  assert.equal(h.text_image_later('', 'image-left'), true);
+  assert.equal(h.text_image_later('', 'image-right'), true);
+  assert.equal(h.text_image_later('', 'plain'), false);
+  assert.equal(h.text_image_later(IMG, 'image-left'), false);
+});
+
+test('Text counters count exactly what validateDesign counts (heading 120, body 2000 with line breaks)', () => {
+  const design = (data) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_text09', type: 'text', data }] }] });
+  for (const [f, max, ml] of [['heading', 120, false], ['body', 2000, true]]) {
+    const ok = 'a'.repeat(max - 1) + 'ü', over = ok + 'x';
+    assert.equal(INSP.textLength(ok, ml), max);
+    assert.ok(V3.validateDesign(design({ [f]: ok })).ok, f + ' at the limit');
+    assert.equal(INSP.textLength(over, ml), max + 1);
+    assert.ok(!V3.validateDesign(design({ [f]: over })).ok, f + ' over the limit');
+  }
+  assert.equal(INSP.textLength('a\nb', true), 3, 'a line break counts in the body');
+});
+
+test('Text HTML: Plain never shows an image (public or preview); Image left / right keep image and placeholder; text escaped with line breaks', () => {
+  const IMG = 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg';
+  const base = require('./fixtures/lpV3/localBusiness.json');
+  const page = (variant, data) => {
+    const d = JSON.parse(JSON.stringify(base));
+    d.pages[0].sections.push({ id: 's_text09', type: 'text', variant, data });
+    return (opts) => {
+      const r = V3.renderDesign(d, { businessName: 'X' }, opts);
+      assert.ok(r.ok, JSON.stringify(r.errors));
+      const html = r.html;
+      const m = html.match(/<section id="s_text09"[\s\S]*?<\/section>/);
+      return m ? m[0] : '';
+    };
+  };
+  const full = { heading: 'Über <uns>', body: 'Zeile 1\nZeile 2', image: IMG, imageAlt: 'Theke' };
+  for (const opts of [undefined, { preview: true }]) {
+    const plain = page('plain', full)(opts);
+    assert.ok(plain.includes('Über &lt;uns&gt;') && plain.includes('Zeile 1<br>Zeile 2'), 'text, escaped, line breaks');
+    assert.ok(!/<img|<figure|v3-img-ph/.test(plain), 'Plain: no image, no placeholder');
+    const left = page('image-left', full)(opts), right = page('image-right', full)(opts);
+    for (const s of [left, right]) assert.ok(s.includes('<img src="' + IMG + '" alt="Theke"'), 'the image');
+    assert.ok(left.indexOf('<figure') < left.indexOf('v3-text-body'), 'Image left: image first');
+    assert.ok(right.indexOf('<figure') > right.indexOf('v3-text-body'), 'Image right: image after the text');
+  }
+  const noImg = { heading: 'H', body: 'B' };
+  assert.ok(!/<figure/.test(page('image-left', noImg)()), 'public: no image, no placeholder');
+  assert.ok(page('image-left', noImg)({ preview: true }).includes('v3-img-ph'), 'preview: placeholder');
+  assert.ok(!/v3-img-ph/.test(page('plain', noImg)({ preview: true })), 'Plain preview: no placeholder');
+  // Plain with only an image: nothing to show (the preview marks the empty section)
+  assert.equal(page('plain', { image: IMG })(), '', 'public: left out');
+  assert.ok(page('plain', { image: IMG })({ preview: true }).includes('v3-ph-section'), 'preview: empty-section note');
+});
+
+test('Text labels, layouts and hints in English and German', () => {
+  for (const lang of ['en', 'de']) {
+    for (const k of ['v_plain', 'v_image-left', 'v_image-right', 'v_image-top', 'hint_plain_image', 'hint_text_image_later']) assert.ok(INSP.TX[lang][k], lang + ' ' + k);
+  }
+  assert.equal(INSP.TX.en['v_plain'], 'Plain: text only');
+  assert.equal(INSP.TX.de['v_image-left'], 'Bild links');
 });
 
 (async () => {

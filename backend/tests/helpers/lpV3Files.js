@@ -54,6 +54,9 @@ const LPV3_FILES = [
   'backend/tests/studioHoursEditor.browser.test.js',
   // Phase 2A-3F (Products editing): same files, plus its browser test
   'backend/tests/studioProductsEditor.browser.test.js',
+  // Phase 2A-3G (Text editing): same files, plus its browser test; Plain is
+  // text only in core.js (golden revision 2026-10-24)
+  'backend/tests/studioTextEditor.browser.test.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',

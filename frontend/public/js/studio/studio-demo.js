@@ -29,6 +29,8 @@
         { id: 's_loyal01', type: 'loyalty', anchor: 'stempelkarte', style: { background: 'alt' }, data: { title: 'Unsere Stempelkarte', subtitle: 'Jeder 10. Kaffee geht aufs Haus.' } },
         { id: 's_prod01', type: 'products', anchor: 'produkte', data: { title: 'Unsere Produkte', items: [
           { name: 'Bauernbrot', description: 'Sauerteig, 1 kg', price: '4,20 €' }, { name: 'Butter-Croissant', price: '1,40 €' }, { name: 'Laugenbrezel', price: '0,95 €' }] } },
+        { id: 's_text01', type: 'text', variant: 'plain', anchor: 'ueber-uns', data: { heading: 'Über uns',
+          body: 'Seit drei Generationen backen wir in Ulm nach überlieferten Rezepten – mit Mehl aus der Region und viel Zeit für den Teig.\nJeden Morgen ab 6:30 Uhr frisch aus dem Ofen.' } },
         { id: 's_hours01', type: 'openingHours', style: { background: 'alt' }, data: { title: 'Öffnungszeiten', days: [
           { day: 'mon', ranges: [{ open: '06:30', close: '18:00' }] }, { day: 'tue', ranges: [{ open: '06:30', close: '18:00' }] },
           { day: 'wed', ranges: [{ open: '06:30', close: '18:00' }] }, { day: 'thu', ranges: [{ open: '06:30', close: '18:00' }] },

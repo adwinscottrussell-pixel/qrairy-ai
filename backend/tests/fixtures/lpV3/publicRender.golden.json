@@ -1,5 +1,5 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified).",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified). Re-generated on 2026-10-24 for the owner-decided Text Plain layout (text only): allRenderedVariants changes only by the removed image of its Plain Text section (verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
@@ -25,15 +25,15 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 17123,
-      "sha256": "cafeeb274b7b7ac0002e818864c5286174050348df152c7dec0150edf3d94fa6",
+      "bytes": 16972,
+      "sha256": "fba606e2e46000f207aab6482cf8cc802fa080732547ec6225936a8427fe906d",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 17148,
-      "sha256": "012f69bff1ff3f7e74dddef35e7b89072eb490d9c4b86377597478d1bc9dc78c",
+      "bytes": 16997,
+      "sha256": "b56b7f0eb22646c901584ec9ecbc44deea3aa0f85537b1a017c3b6f99621b4a2",
       "skipped": []
     }
   ],
@@ -68,6 +68,13 @@
         "allRenderedVariants"
       ],
       "reason": "Opening Hours on Dark / Brand sections (owner principle: readable foreground on any background, 2A-3E): Closed rows and the note inherit the section colour (opacity .85 on Dark), divider lines light on Dark; the rendered pages differ from the previous version only by those rules (verified)"
+    },
+    {
+      "date": "2026-10-24",
+      "designs": [
+        "allRenderedVariants"
+      ],
+      "reason": "Text section Plain layout is text only (owner decision before 2A-3G): a stored image is no longer rendered in Plain; the rendered page differs from the previous version only by that one removed <figure> (verified); localBusiness unchanged"
     }
   ]
 }

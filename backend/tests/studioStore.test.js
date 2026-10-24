@@ -34,6 +34,8 @@ function make(design) {
 }
 const HERO = 's_hero01';
 const hero = (d) => d.pages[0].sections.find((s) => s.id === HERO);
+// a demo section by id (positions shift when the demo gains a section)
+const byId = (d, id) => d.pages[0].sections.find((s) => s.id === id);
 const render = (design) => V3.renderDesign(design, { businessName: 'Musterbäckerei' }, { preview: true });
 
 test('starts from the demo, valid, without changing it', () => {
@@ -216,7 +218,7 @@ test('renaming a link name moves every internal link with it, in one Undo step',
 
 test('the page link list: the top of the page and every section by its link name', () => {
   const { store } = make();
-  assert.deepEqual(store.linkTargets().map((x) => x.target), ['/', '/s_hero01', '/s_quick01', '/angebote', '/stempelkarte', '/produkte', '/s_hours01', '/kontakt', '/s_social01']);
+  assert.deepEqual(store.linkTargets().map((x) => x.target), ['/', '/s_hero01', '/s_quick01', '/angebote', '/stempelkarte', '/produkte', '/ueber-uns', '/s_hours01', '/kontakt', '/s_social01']);
   store.setAnchor(HERO, 'willkommen');
   assert.equal(store.linkTargets()[1].target, '/willkommen');
   // every listed target is accepted by the core
@@ -246,7 +248,7 @@ test('add a button: appended, one Undo step, intentionally incomplete until a de
   assert.deepEqual(labels(store), ['Stempelkarte', 'Angebote', 'Unsere Produkte', 'Kontakt', 'New button']);
   assert.equal(store.sectionErrors(QUICK)['data.items[4].target'].code, 'required', 'the target waits for a choice');
   assert.equal(store.isValid(), false);
-  assert.equal(store.lastValid().pages[0].sections[1].data.items.length, 4, 'the preview keeps the last valid page');
+  assert.equal(byId(store.lastValid(), 's_quick01').data.items.length, 4, 'the preview keeps the last valid page');
   store.undo();
   assert.equal(store.section(QUICK).data.items.length, 4, 'one step');
   assert.ok(store.isValid());
@@ -338,7 +340,7 @@ test('social links: add (Instagram, empty address), remove, move; one Undo step 
   assert.equal(store.addItem(SOCIAL, LINKS, { platform: 'instagram', url: '' }, max), 2);
   assert.deepEqual(Object.keys(store.sectionErrors(SOCIAL)), ['data.links[2].url']);
   assert.equal(store.sectionErrors(SOCIAL)['data.links[2].url'].code, 'required');
-  assert.equal(store.lastValid().pages[0].sections[7].data.links.length, 2, 'the preview keeps the last valid page');
+  assert.equal(byId(store.lastValid(), 's_social01').data.links.length, 2, 'the preview keeps the last valid page');
   store.set(SOCIAL, ['data', 'links', 2, 'url'], 'https://www.tiktok.com/@example');
   assert.equal(store.sectionErrors(SOCIAL)['data.links[2].url'].code, 'invalid_social_link', 'an address of another platform');
   store.set(SOCIAL, ['data', 'links', 2, 'platform'], 'tiktok');
@@ -370,7 +372,7 @@ test('Contact edits: nested address, typing merged into one Undo step, invalid p
   assert.equal(store.section(C).data.address.city, 'Ulm', 'one Undo step for the typing');
   store.set(C, ['data', 'phone'], 'abc');
   assert.equal(store.sectionErrors(C)['data.phone'].code, 'invalid_phone');
-  assert.equal(store.lastValid().pages[0].sections[6].data.phone, '+49 731 000 00', 'the preview keeps the last valid number');
+  assert.equal(byId(store.lastValid(), 's_contact1').data.phone, '+49 731 000 00', 'the preview keeps the last valid number');
   store.set(C, ['data', 'phone'], '+49 (0)731 123456');
   assert.ok(store.isValid(), '"(0)" is accepted by core.js (the inspector only warns)');
   store.set(C, ['data', 'mapsUrl'], 'https://evil.example/');
@@ -389,7 +391,7 @@ test('Opening Hours edits: close / reopen a day keeps its times, hide / show, ra
   const { store } = make();
   const H = 's_hours01', DAYS = ['data', 'days'];
   const idx = (day) => store.section(H).data.days.findIndex((d) => d.day === day);
-  const valid = () => store.lastValid().pages[0].sections[5].data.days;
+  const valid = () => byId(store.lastValid(), 's_hours01').data.days;
   // Monday closed (whole entry, one step) keeps its times; reopening restores them
   const mon = idx('mon');
   store.set(H, DAYS.concat(mon), Object.assign({}, store.section(H).data.days[mon], { closed: true }));
@@ -436,7 +438,7 @@ test('Products: add (named, valid), edit with merged typing, empty name keeps th
   store.set(P, ITEMS.concat(3, 'price'), '0,60 €');
   store.set(P, ITEMS.concat(3, 'name'), '');
   assert.equal(store.sectionErrors(P)['data.items[3].name'].code, 'required');
-  assert.equal(store.lastValid().pages[0].sections[4].data.items[3].name, 'Semmel', 'the preview keeps the last valid name');
+  assert.equal(byId(store.lastValid(), 's_prod01').data.items[3].name, 'Semmel', 'the preview keeps the last valid name');
   store.undo();
   assert.equal(names()[3], 'Semmel');
   store.undo(); store.undo();
@@ -449,6 +451,49 @@ test('Products: add (named, valid), edit with merged typing, empty name keeps th
   assert.deepEqual(names(), ['New product', 'Bauernbrot', 'Butter-Croissant', 'Laugenbrezel']);
   for (let n = 4; n < 24; n++) assert.equal(store.addItem(P, ITEMS, { name: 'P' + n }, 24), n);
   assert.equal(store.addItem(P, ITEMS, { name: 'P25' }, 24), -1, 'at most 24');
+});
+
+test('Text: the demo starts with a valid Plain "Über uns" section; edits merged while typing, layout changes one step each, too long keeps the last valid page, image removal, Undo / Redo', () => {
+  const { store } = make();
+  const T = 's_text01';
+  const sec = () => store.section(T);
+  assert.equal(sec().type, 'text');
+  assert.equal(sec().variant, 'plain');
+  assert.equal(sec().anchor, 'ueber-uns');
+  assert.equal(sec().data.heading, 'Über uns');
+  assert.equal(sec().data.image, undefined, 'no photo in the demo');
+  assert.ok(store.isValid());
+  store.set(T, ['data', 'heading'], 'Ü', 'typing');
+  store.set(T, ['data', 'heading'], 'Über', 'typing');
+  store.set(T, ['data', 'heading'], 'Über die Backstube', 'typing');
+  store.endMerge();
+  store.set(T, ['data', 'body'], 'Zeile 1\nZeile 2', 'typing');
+  store.endMerge();
+  assert.ok(render(store.lastValid()).html.includes('Zeile 1<br>Zeile 2'), 'the preview has the new body');
+  store.set(T, ['variant'], 'image-left');
+  store.set(T, ['variant'], 'image-right');
+  assert.equal(sec().variant, 'image-right');
+  store.set(T, ['data', 'heading'], 'x'.repeat(121), 'typing');
+  store.endMerge();
+  assert.equal(store.sectionErrors(T)['data.heading'].code, 'too_long');
+  assert.equal(byId(store.lastValid(), T).data.heading, 'Über die Backstube', 'the preview keeps the last valid heading');
+  store.undo();
+  assert.ok(store.isValid());
+  store.undo();
+  assert.equal(sec().variant, 'image-left', 'each layout change is one step');
+  store.undo(); store.undo();
+  assert.equal(sec().data.body, byId(demo().design, T).data.body, 'the body typing was one step');
+  store.undo();
+  assert.equal(sec().data.heading, 'Über uns', 'the heading typing was one step');
+  store.redo();
+  assert.equal(sec().data.heading, 'Über die Backstube');
+  // an existing image: removable (one step), never replaced here
+  const IMG = 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg';
+  store.set(T, ['data', 'image'], IMG);
+  store.set(T, ['data', 'image'], undefined);
+  assert.equal(sec().data.image, undefined);
+  store.undo();
+  assert.equal(sec().data.image, IMG);
 });
 
 (async () => {
