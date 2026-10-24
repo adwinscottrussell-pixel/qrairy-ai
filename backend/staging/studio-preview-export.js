@@ -37,6 +37,11 @@ const FILES = [
   'js/qraivy-lang.js',
   'js/admin-shell.js',
   'js/lpV3/core.js',
+  // the demo Gallery's starter photos, shown from the Studio's own files
+  // (js/studio/studio-demo-images.js; 2A-3H)
+  'images/deals/starter/bakery-croissants-01.jpg',
+  'images/deals/starter/bakery-bread-01.jpg',
+  'images/deals/starter/bakery-coffee-01.jpg',
 ];
 const DIRS = ['js/studio/'];
 
@@ -86,7 +91,7 @@ function buildUpload(source) {
   if (missing.length) throw new Error('studio.html needs files that are not in the upload: ' + missing.join(', '));
   for (const [n, buf] of files) {
     if (/(^|\/)vercel\.json$/.test(n)) throw new Error('refusing to upload a vercel.json from the repository: ' + n);
-    if (!/\.(png|ico)$/.test(n) && /api\.qraivy\.com/.test(buf.toString('utf8'))) throw new Error(n + ' mentions the production API');
+    if (!/\.(png|ico|jpg)$/.test(n) && /api\.qraivy\.com/.test(buf.toString('utf8'))) throw new Error(n + ' mentions the production API');
   }
   for (const n of Object.keys(GENERATED)) {
     if (files.has(n)) throw new Error('generated file clashes with a copied one: ' + n);

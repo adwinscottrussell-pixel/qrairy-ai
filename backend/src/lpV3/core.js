@@ -548,6 +548,8 @@
   var GALLERY_CSS = [
     '.v3-gal{display:grid;gap:12px;margin-top:16px;grid-template-columns:1fr 1fr}.v3-gal-item{margin:0;min-width:0}',
     '.v3-gal-item img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--v3-radius)}.v3-gal-item figcaption{margin-top:6px;font-size:13px;color:var(--v3-muted)}',
+    // captions on Dark / Brand take the section colour, as the subtitles do (2A-3H)
+    '.v3-gallery.v3-bg-dark .v3-gal-item figcaption{color:inherit;opacity:.85}.v3-gallery.v3-bg-brand .v3-gal-item figcaption{color:inherit}',
     '.v3-gal-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px}.v3-gal-carousel .v3-gal-item{flex:0 0 80%;scroll-snap-align:start}',
     '@media (min-width:768px){.v3-gal-grid{grid-template-columns:repeat(3,1fr)}.v3-gal-carousel .v3-gal-item{flex-basis:40%}}@media (min-width:1200px){.v3-gal-grid{grid-template-columns:repeat(4,1fr)}}',
   ].join('');

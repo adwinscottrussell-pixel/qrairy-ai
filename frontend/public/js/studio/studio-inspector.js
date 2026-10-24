@@ -3,9 +3,10 @@
  * Settings inspector.
  *
  * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C),
- * Contact (2A-3D), Opening Hours (2A-3E), Products (2A-3F) and Text (2A-3G),
- * listed in EDITABLE. Their controls follow PLANS (HERO_PLAN, BUTTONS_PLAN,
- * SOCIAL_PLAN, CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN, TEXT_PLAN), with every rule (limits, choices, required fields) read from
+ * Contact (2A-3D), Opening Hours (2A-3E), Products (2A-3F), Text (2A-3G) and
+ * Gallery (2A-3H), listed in EDITABLE. Their controls follow PLANS (HERO_PLAN,
+ * BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN, TEXT_PLAN,
+ * GALLERY_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -20,7 +21,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -162,7 +163,25 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN, text: TEXT_PLAN };
+  // Gallery (2A-3H): the title and the image list (shown, described and
+  // captioned, removed, reordered; no new images until uploads arrive).
+  // Layout Grid / Carousel; background, alignment, spacing as the schema has them.
+  var GALLERY_PLAN = [
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'images'], control: 'items', item: [
+      { path: ['image'], control: 'imageView', hint: 'gallery_image_later' },
+      { path: ['alt'], control: 'text', hint: 'gallery_alt' },
+      { path: ['caption'], control: 'text' },
+    ] },
+    { tab: 'style', path: ['variant'], control: 'select' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'align'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN, text: TEXT_PLAN, gallery: GALLERY_PLAN };
 
   // A weekday's state in the design: 'open' (times), 'closed' (shown as
   // Closed) or 'hidden' (not in the list, so not on the page). As core.js
@@ -303,6 +322,12 @@
       'v_plain': 'Plain: text only', 'v_image-left': 'Image left', 'v_image-right': 'Image right', 'v_image-top': 'Image on top',
       hint_plain_image: 'The Plain layout shows no image. Choose Image left or Image right to show it.',
       hint_text_image_later: 'Image upload arrives in a later step. Without an image, the page shows the text only.',
+      // Gallery (2A-3H)
+      gallery_images: 'Images', v_carousel: 'Carousel', f_alt: 'Image description', f_caption: 'Caption',
+      add_image: 'Add image', add_image_later: 'Adding images arrives with image upload in a later step.', max_images: 'Up to {max} images.',
+      remove_image: 'Remove image', image_removed: 'Image removed. Undo is available.', image_moved: 'Image moved.', no_caption: '(no caption)',
+      hint_gallery_image_later: 'Replacing an image arrives with image upload in a later step.',
+      hint_gallery_alt: 'Describes the image for people who cannot see it. Empty: screen readers skip the image.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -367,6 +392,12 @@
       'v_plain': 'Schlicht: nur Text', 'v_image-left': 'Bild links', 'v_image-right': 'Bild rechts', 'v_image-top': 'Bild oben',
       hint_plain_image: 'Das Layout Schlicht zeigt kein Bild. Wähle Bild links oder Bild rechts, um es zu zeigen.',
       hint_text_image_later: 'Bilder hochladen folgt in einem späteren Schritt. Ohne Bild zeigt die Seite nur den Text.',
+      // Gallery (2A-3H)
+      gallery_images: 'Bilder', v_carousel: 'Karussell', f_alt: 'Bildbeschreibung', f_caption: 'Bildunterschrift',
+      add_image: 'Bild hinzufügen', add_image_later: 'Bilder hinzufügen folgt mit dem Bilder-Upload in einem späteren Schritt.', max_images: 'Bis zu {max} Bilder.',
+      remove_image: 'Bild entfernen', image_removed: 'Bild entfernt. Rückgängig ist möglich.', image_moved: 'Bild verschoben.', no_caption: '(ohne Bildunterschrift)',
+      hint_gallery_image_later: 'Bilder austauschen folgt mit dem Bilder-Upload in einem späteren Schritt.',
+      hint_gallery_alt: 'Beschreibt das Bild für Menschen, die es nicht sehen können. Leer: Screenreader überspringen das Bild.',
     },
   };
   // field: the last path key; a missing button target or social address gets
@@ -419,11 +450,19 @@
       name: function (item, tx) { return textLength(item.name, false) ? item.name : tx('no_name'); },
       tag: function (item) { return textLength(item.price, false) ? String(item.price) : ''; },
     },
+    gallery: {
+      heading: 'gallery_images', add: 'add_image', max: 'max_images', remove: 'remove_image', removed: 'image_removed', moved: 'image_moved',
+      // no newItem: every image needs a picture, and uploads come later
+      addLater: 'add_image_later', focus: 'alt', select: false,
+      name: function (item, tx) { return textLength(item.caption, false) ? item.caption : textLength(item.alt, false) ? item.alt : tx('no_caption'); },
+      tag: function () { return ''; },
+    },
   };
 
   function getPath(o, path) { var n = o; for (var i = 0; i < path.length; i++) { if (n == null) return undefined; n = n[path[i]]; } return n; }
 
-  // createInspector({ box, note, kind, store, V3, lang(), tab(), t(k), fieldLabel(k), el, icon, sectionLabel(type), announce(msg), brand })
+  // createInspector({ box, note, kind, store, V3, lang(), tab(), t(k), fieldLabel(k), el, icon, sectionLabel(type), announce(msg), brand,
+  //   displaySrc(url), aiLabel(url) })
   function createInspector(o) {
     var store = o.store, el = o.el;
     var refreshers = [];
@@ -541,6 +580,27 @@
       return wrap;
     }
 
+    // An image thumbnail: what the Studio shows for the address (o.displaySrc:
+    // the demo's starter photos come from the Studio's own files, 2A-3H), with
+    // the AI label for an AI-generated one (o.aiLabel). data-src keeps the
+    // stored address.
+    function showThumb(thumb, v, dropTitle) {
+      var img = thumb.querySelector('img');
+      if (v && (!img || img.getAttribute('data-src') !== v)) {
+        thumb.textContent = '';
+        thumb.appendChild(el('img', { src: o.displaySrc ? o.displaySrc(v) : v, 'data-src': v, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }));
+        var ai = o.aiLabel && o.aiLabel(v);
+        if (ai) thumb.appendChild(el('span', { class: 'st-thumb-ai', text: ai }));
+        thumb.classList.add('has-img');
+        if (dropTitle) thumb.removeAttribute('title');
+      } else if (!v && (img || !thumb.firstChild)) {
+        thumb.textContent = '';
+        thumb.appendChild(o.icon('st-t-hero'));
+        thumb.classList.remove('has-img');
+        thumb.title = o.t('no_image');
+      }
+    }
+
     function imageControl(sec, c) {
       var key = errKey(c.path);
       var thumb = el('div', { class: 'st-field__thumb' });
@@ -552,17 +612,7 @@
       remove.addEventListener('click', function () { store.set(sec.id, c.path, undefined); });
       refreshers.push(function (cur) {
         var v = getPath(cur, c.path) || '';
-        var img = thumb.querySelector('img');
-        if (v && (!img || img.getAttribute('src') !== v)) {
-          thumb.textContent = '';
-          thumb.appendChild(el('img', { src: v, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }));
-          thumb.classList.add('has-img');
-        } else if (!v && (img || !thumb.firstChild)) {
-          thumb.textContent = '';
-          thumb.appendChild(o.icon('st-t-hero'));
-          thumb.classList.remove('has-img');
-          thumb.title = o.t('no_image');
-        }
+        showThumb(thumb, v, false);
         remove.disabled = !v;
         var variant = heroValue(cur, ['variant'], specFor(o.V3.describe(), cur.type, ['variant']));
         Object.keys(hints).forEach(function (k, i) { hintNodes[i].hidden = !hints[k](v, variant); });
@@ -818,7 +868,11 @@
       if (open >= list.length) open = openRows[stateKey] = -1;
       var count = el('span', { class: 'st-items__count' });
       var ol = el('ol', { class: 'st-items__list' });
+      // no newItem (Gallery, 2A-3H): Add stays disabled and says why
+      var canAdd = typeof cfg.newItem === 'function';
       var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add', 'data-action': 'add-item' }, [tx(cfg.add)]);
+      if (!canAdd) add.title = tx(cfg.addLater);
+      var later = canAdd ? null : el('p', { class: 'st-hint', 'data-hint': 'add_later', text: tx(cfg.addLater) });
       var full = el('p', { class: 'st-hint', 'data-hint': 'max', text: tx(cfg.max).replace('{max}', max) });
       var row = function (i) { return o.box.querySelector('[data-path="' + key + '"] .st-item[data-index="' + i + '"] .st-item__toggle'); };
       // the open row follows the change; the store event rebuilds the inspector
@@ -880,6 +934,7 @@
         ol.appendChild(li);
       });
       add.addEventListener('click', function () {
+        if (!canAdd) return;
         var n = (getPath(store.section(sec.id), c.path) || []).length;
         var before = openRows[stateKey];
         openRows[stateKey] = n;
@@ -890,33 +945,19 @@
       refreshers.push(function (cur) {
         var n = (getPath(cur, c.path) || []).length;
         count.textContent = '(' + n + ' / ' + max + ')';
-        add.disabled = n >= max;
+        add.disabled = !canAdd || n >= max;
         full.hidden = n < max;
       });
-      return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx(cfg.heading) + ' ', count]), ol, add, full]);
+      return el('div', { class: 'st-items', 'data-path': key }, [el('div', { class: 'st-group st-items__head' }, [tx(cfg.heading) + ' ', count]), ol, add, later, full].filter(Boolean));
     }
 
     // A product image (2A-3F): shown, not changed. Uploads come later.
     function imageViewControl(sec, c) {
       var key = errKey(c.path);
       var thumb = el('div', { class: 'st-field__thumb' });
-      refreshers.push(function (cur) {
-        var v = getPath(cur, c.path) || '';
-        var img = thumb.querySelector('img');
-        if (v && (!img || img.getAttribute('src') !== v)) {
-          thumb.textContent = '';
-          thumb.appendChild(el('img', { src: v, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }));
-          thumb.classList.add('has-img');
-          thumb.removeAttribute('title');
-        } else if (!v && (img || !thumb.firstChild)) {
-          thumb.textContent = '';
-          thumb.appendChild(o.icon('st-t-hero'));
-          thumb.classList.remove('has-img');
-          thumb.title = o.t('no_image');
-        }
-      });
+      refreshers.push(function (cur) { showThumb(thumb, getPath(cur, c.path) || '', true); });
       return el('div', { class: 'st-field', 'data-path': key }, [el('span', { text: labelFor(c.path) }),
-        el('div', { class: 'st-field__img' }, [thumb, el('p', { class: 'st-hint', text: tx('product_image_later') })])]);
+        el('div', { class: 'st-field__img' }, [thumb, el('p', { class: 'st-hint', text: tx(c.hint ? 'hint_' + c.hint : 'product_image_later') })])]);
     }
 
     // ── Opening Hours (2A-3E): one row per weekday, Monday to Sunday ──
@@ -1067,7 +1108,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, TEXT_PLAN: TEXT_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, TEXT_PLAN: TEXT_PLAN, GALLERY_PLAN: GALLERY_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
     phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };

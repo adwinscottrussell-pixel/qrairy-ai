@@ -60,7 +60,7 @@ test('routing: local, and preview on the one Studio staging address (https only)
 test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk, no API routing', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/studio/studio-demo.js',
-    'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js', 'js/studio/studio-shell.js']);
+    'js/studio/studio-demo-images.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);
@@ -104,8 +104,8 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('2A-3G: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products and Text are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
-  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
+test('2A-3H: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text and Gallery are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
   // the approved notice while anything is invalid, in English and German
   assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
   assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));
@@ -129,17 +129,23 @@ test('no existing page links to the Studio yet', () => {
   }
 });
 
-test('demo: the Local Business layout, valid, placeholder content only (no customer branding, no photos)', () => {
+test('demo: the Local Business layout, valid, placeholder content only (no customer branding; the only photos are the three approved starter images, 2A-3H)', () => {
   const ctx = { window: {} };
   vm.runInNewContext(read('js/studio/studio-demo.js'), ctx);
   const demo = ctx.window.QRAIVY_STUDIO_DEMO;
   const V3 = require('../src/lpV3/core');
   const v = V3.validateDesign(JSON.parse(JSON.stringify(demo.design)));
   assert.ok(v.ok, JSON.stringify(v.errors));
-  const text = JSON.stringify(demo);
+  const DEMO_IMAGES = require('../../frontend/public/js/studio/studio-demo-images.js');
+  const starters = DEMO_IMAGES.STARTERS.map(DEMO_IMAGES.cloudinaryUrl);
+  const gal = demo.design.pages[0].sections.filter((s) => s.type === 'gallery');
+  assert.equal(gal.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(gal[0].data.images.map((i) => i.image))), starters, 'the gallery shows exactly the starter images');
+  let text = JSON.stringify(demo);
   assert.ok(!/staib/i.test(text), 'no Bäckerei Staib branding');
-  assert.ok(!/res\.cloudinary\.com|https?:\/\/[^"]*\.(?:jpe?g|png|webp)/i.test(text), 'no photos');
-  assert.deepEqual(JSON.parse(JSON.stringify(demo.design.pages[0].sections.map((s) => s.type))),['hero', 'buttons', 'dealsOffers', 'loyalty', 'products', 'text', 'openingHours', 'contact', 'socialMedia']);
+  for (const u of starters) text = text.split(u).join('');
+  assert.ok(!/res\.cloudinary\.com|https?:\/\/[^"]*\.(?:jpe?g|png|webp)/i.test(text), 'no other photos');
+  assert.deepEqual(JSON.parse(JSON.stringify(demo.design.pages[0].sections.map((s) => s.type))),['hero', 'buttons', 'dealsOffers', 'loyalty', 'products', 'text', 'gallery', 'openingHours', 'contact', 'socialMedia']);
   const r = V3.renderDesign(JSON.parse(JSON.stringify(demo.design)), { businessName: demo.businessName }, { preview: true });
   assert.ok(r.ok && r.samples.join() === 'dealsOffers,loyalty');
 });

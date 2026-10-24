@@ -28,11 +28,19 @@ const fsSource = {
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
-test('the upload: the Studio files, two icons and the generated files, nothing else', () => {
+test('the upload: the Studio files, two icons, the three demo photos and the generated files, nothing else', () => {
   const names = [...X.buildUpload(fsSource).keys()].sort();
   const studio = fs.readdirSync(path.join(PUB, 'js', 'studio')).map((f) => 'js/studio/' + f);
+  const photos = ['bakery-croissants-01', 'bakery-bread-01', 'bakery-coffee-01'].map((id) => 'images/deals/starter/' + id + '.jpg');
   assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/lpV3/core.js', 'js/qraivy-lang.js']
-    .concat(studio, ['robots.txt', 'studio.html', 'vercel.json']).sort());
+    .concat(studio, photos, ['robots.txt', 'studio.html', 'vercel.json']).sort());
+});
+
+test('every local copy the Studio shows for the demo photos is in the upload (2A-3H)', () => {
+  const files = X.buildUpload(fsSource);
+  const DEMO = require('../../frontend/public/js/studio/studio-demo-images.js');
+  assert.ok(DEMO.STARTERS.length >= 3);
+  for (const id of DEMO.STARTERS) assert.ok(files.has(DEMO.localSrc(DEMO.cloudinaryUrl(id))), id);
 });
 
 test('every script, stylesheet and CSS image studio.html loads is in the upload', () => {
@@ -57,7 +65,7 @@ test('generated vercel.json: no rewrites, "/" -> studio.html, noindex / no-store
 });
 
 test('nothing in the upload mentions the production API', () => {
-  for (const [n, buf] of X.buildUpload(fsSource)) if (!/\.(png|ico)$/.test(n)) assert.doesNotMatch(buf.toString('utf8'), /api\.qraivy\.com/, n);
+  for (const [n, buf] of X.buildUpload(fsSource)) if (!/\.(png|ico|jpg)$/.test(n)) assert.doesNotMatch(buf.toString('utf8'), /api\.qraivy\.com/, n);
 });
 
 test('refuses a repository vercel.json and a missing dependency', () => {

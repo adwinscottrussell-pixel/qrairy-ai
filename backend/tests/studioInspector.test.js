@@ -10,7 +10,7 @@
 // - Change Image stays disabled (uploads come later); the other types keep
 //   the read-only view.
 // 2A-3B / 2A-3C: the Buttons and Social Media plans, the shared list
-/// settings (Buttons texts exactly as at d70d883) and the eight platforms./n// 2A-3G: the Text plan (three layouts, image shown not changed), Plain never/n// renders an image, and the six earlier editors exactly as at e99ac11.
+/// settings (Buttons texts exactly as at d70d883) and the eight platforms./n// 2A-3G: the Text plan (three layouts, image shown not changed), Plain never/n/// renders an image, and the six earlier editors exactly as at e99ac11./n// 2A-3H: the Gallery plan (no new images; Add disabled with its reason), its/n// captions readable on Dark / Brand, and Text exactly as at 76b00fa.
 // Run: node tests/studioInspector.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -29,11 +29,11 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3G: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products and Text are editable (Gallery, Deals, Loyalty stay read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text']);
-  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products']);
-  for (const t of ['gallery', 'dealsOffers', 'loyalty']) {
+test('2A-3H: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text and Gallery are editable (Deals, Loyalty stay read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
+  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products', 'gallery']);
+  for (const t of ['dealsOffers', 'loyalty']) {
     assert.ok(D.sections[t], t);
     assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
   }
@@ -680,7 +680,7 @@ test('the six earlier editors: plans and texts exactly as approved at e99ac11 (2
     assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k + ' unchanged');
   }
   for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
-  assert.deepEqual(JSON.parse(JSON.stringify(INSP.LISTS)), JSON.parse(JSON.stringify(then.exports.LISTS)));
+  for (const k of Object.keys(then.exports.LISTS)) assert.deepEqual(JSON.parse(JSON.stringify(INSP.LISTS[k])), JSON.parse(JSON.stringify(then.exports.LISTS[k])), 'LISTS.' + k);
   // the Hero image keeps its own hint (no c.hints on its plan entry)
   assert.equal(INSP.HERO_PLAN.find((c) => c.control === 'image').hints, undefined);
 });
@@ -767,6 +767,88 @@ test('Text labels, layouts and hints in English and German', () => {
   }
   assert.equal(INSP.TX.en['v_plain'], 'Plain: text only');
   assert.equal(INSP.TX.de['v_image-left'], 'Bild links');
+});
+
+// ── Gallery (2A-3H) ──
+test('the seven earlier editors: Text exactly as approved at 76b00fa (2A-3G)', () => {
+  const then = inspectorAt('76b00fa');
+  if (!then) return;
+  assert.deepEqual(JSON.parse(JSON.stringify(INSP.TEXT_PLAN)), JSON.parse(JSON.stringify(then.exports.TEXT_PLAN)));
+  const h = INSP.TEXT_PLAN.find((c) => c.control === 'image').hints, h0 = then.exports.TEXT_PLAN.find((c) => c.control === 'image').hints;
+  assert.equal(String(h.plain_image), String(h0.plain_image));
+  assert.equal(String(h.text_image_later), String(h0.text_image_later));
+  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+});
+
+test('every Gallery field from describe() has exactly one control; no new images (Add disabled with its reason); Style and Settings as the schema has them', () => {
+  const plan = INSP.GALLERY_PLAN;
+  assert.equal(INSP.PLANS.gallery, plan);
+  const spec = D.sections.gallery.data;
+  assert.deepEqual(Object.keys(spec.fields), ['title', 'images']);
+  assert.deepEqual(Object.keys(spec.fields.images.item.fields), ['image', 'alt', 'caption']);
+  assert.equal(spec.fields.images.max, 24);
+  assert.equal(spec.fields.images.item.fields.image.required, true, 'every gallery image needs a picture');
+  const list = plan.find((c) => c.control === 'items');
+  assert.deepEqual(list.path, ['data', 'images']);
+  assert.deepEqual(list.item.map((c) => c.path[0] + ':' + c.control), ['image:imageView', 'alt:text', 'caption:text'], 'the picture is shown, never changed');
+  assert.equal(plan.filter((c) => c.path && c.path.join('.') === 'data.title').length, 1);
+  assert.deepEqual(plan.filter((c) => c.tab === 'style').map((c) => c.path.join('.')), ['variant', 'style.background', 'style.align', 'style.spacing']);
+  assert.equal(plan.find((c) => c.path && c.path[0] === 'variant').values, undefined, 'both schema layouts: Grid and Carousel');
+  assert.deepEqual(D.sections.gallery.variants, ['grid', 'carousel']);
+  assert.deepEqual(plan.filter((c) => c.tab === 'settings').map((c) => c.control), ['anchor', 'show', 'readonly']);
+  const L = INSP.LISTS.gallery;
+  assert.equal(L.newItem, undefined, 'no image-less items');
+  assert.equal(L.addLater, 'add_image_later');
+  assert.ok(SRC.includes("var canAdd = typeof cfg.newItem === 'function';") && SRC.includes('add.disabled = !canAdd || n >= max;') && SRC.includes('if (!canAdd) return;'));
+  const tx = (k) => INSP.TX.en[k];
+  assert.equal(L.name({ caption: 'Brot', alt: 'A' }, tx), 'Brot');
+  assert.equal(L.name({ alt: 'Beschreibung' }, tx), 'Beschreibung');
+  assert.equal(L.name({}, tx), '(no caption)');
+});
+
+test('Gallery counters count exactly what validateDesign counts (title 80, description and caption 120)', () => {
+  const IMG = 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg';
+  const design = (data) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_gal09', type: 'gallery', data }] }] });
+  for (const [f, max] of [['title', 80], ['alt', 120], ['caption', 120]]) {
+    const ok = 'a'.repeat(max - 1) + 'ü', over = ok + 'x';
+    const data = (v) => (f === 'title' ? { title: v, images: [{ image: IMG }] } : { images: [{ image: IMG, [f]: v }] });
+    assert.equal(INSP.textLength(ok, false), max);
+    assert.ok(V3.validateDesign(design(data(ok))).ok, f + ' at the limit');
+    assert.ok(!V3.validateDesign(design(data(over))).ok, f + ' over the limit');
+  }
+  assert.ok(!V3.validateDesign(design({ images: [{ alt: 'no picture' }] })).ok, 'an image-less item is refused');
+});
+
+test('Gallery HTML: Grid and Carousel, alt and captions escaped, order kept; captions readable on Dark and Brand (Gallery rule only)', () => {
+  const IMG = (n) => 'https://res.cloudinary.com/demo/image/upload/v1/' + n + '.jpg';
+  const base = require('./fixtures/lpV3/localBusiness.json');
+  const page = (variant, images, bg) => {
+    const d = JSON.parse(JSON.stringify(base));
+    d.pages[0].sections.push({ id: 's_gal09', type: 'gallery', variant, style: bg ? { background: bg } : undefined, data: { title: 'G', images } });
+    const r = V3.renderDesign(d, { businessName: 'X' });
+    assert.ok(r.ok, JSON.stringify(r.errors));
+    return r.html;
+  };
+  const imgs = [{ image: IMG('a'), alt: 'A <b>', caption: 'Cap "1"' }, { image: IMG('b') }];
+  for (const v of ['grid', 'carousel']) {
+    const h = page(v, imgs);
+    assert.ok(h.includes('<div class="v3-gal v3-gal-' + v + '">'), v);
+    assert.ok(h.includes('<img src="' + IMG('a') + '" alt="A &lt;b&gt;" loading="lazy"') && h.includes('<figcaption>Cap &quot;1&quot;</figcaption>'));
+    assert.ok(h.indexOf(IMG('a')) < h.indexOf(IMG('b')), 'order kept');
+    assert.ok(h.includes('<img src="' + IMG('b') + '" alt=""'), 'no description: alt=""');
+  }
+  const css = page('grid', imgs, 'dark');
+  assert.ok(css.includes('.v3-gallery.v3-bg-dark .v3-gal-item figcaption{color:inherit;opacity:.85}.v3-gallery.v3-bg-brand .v3-gal-item figcaption{color:inherit}'));
+  // a page without a gallery has none of it (unrelated sections unchanged)
+  assert.ok(!V3.renderDesign(base, { businessName: 'X' }).html.includes('figcaption{color:inherit'));
+});
+
+test('Gallery labels, layouts and hints in English and German', () => {
+  for (const lang of ['en', 'de']) {
+    for (const k of ['gallery_images', 'v_carousel', 'f_alt', 'f_caption', 'add_image', 'add_image_later', 'max_images', 'remove_image', 'image_removed', 'image_moved', 'no_caption', 'hint_gallery_image_later', 'hint_gallery_alt']) assert.ok(INSP.TX[lang][k], lang + ' ' + k);
+  }
+  assert.equal(INSP.TX.de.v_carousel, 'Karussell');
+  assert.match(INSP.TX.en.add_image_later, /image upload/);
 });
 
 (async () => {

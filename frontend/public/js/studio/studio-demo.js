@@ -31,6 +31,13 @@
           { name: 'Bauernbrot', description: 'Sauerteig, 1 kg', price: '4,20 €' }, { name: 'Butter-Croissant', price: '1,40 €' }, { name: 'Laugenbrezel', price: '0,95 €' }] } },
         { id: 's_text01', type: 'text', variant: 'plain', anchor: 'ueber-uns', data: { heading: 'Über uns',
           body: 'Seit drei Generationen backen wir in Ulm nach überlieferten Rezepten – mit Mehl aus der Region und viel Zeit für den Teig.\nJeden Morgen ab 6:30 Uhr frisch aus dem Ofen.' } },
+        // Three approved Deals starter images (AI-generated), at their real
+        // addresses in QRAIVY's Cloudinary account; the Studio shows the
+        // identical local copies (js/studio/studio-demo-images.js).
+        { id: 's_gal01', type: 'gallery', variant: 'grid', anchor: 'galerie', data: { title: 'Aus unserer Backstube', images: [
+          { image: 'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_fill,g_auto,h_900,w_1200,f_auto,q_auto/qraivy-deal-starters/bakery-croissants-01.jpg', alt: 'Croissants und Plundergebäck auf einem Holzbrett', caption: 'Croissants & Plunder' },
+          { image: 'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_fill,g_auto,h_900,w_1200,f_auto,q_auto/qraivy-deal-starters/bakery-bread-01.jpg', alt: 'Frisch gebackene, angeschnittene Brote auf einem Holztisch', caption: 'Unsere Brote' },
+          { image: 'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_fill,g_auto,h_900,w_1200,f_auto,q_auto/qraivy-deal-starters/bakery-coffee-01.jpg', alt: 'Cappuccino und ein Stück Beerenkuchen auf einem Holztisch', caption: 'Kaffee & Kuchen' }] } },
         { id: 's_hours01', type: 'openingHours', style: { background: 'alt' }, data: { title: 'Öffnungszeiten', days: [
           { day: 'mon', ranges: [{ open: '06:30', close: '18:00' }] }, { day: 'tue', ranges: [{ open: '06:30', close: '18:00' }] },
           { day: 'wed', ranges: [{ open: '06:30', close: '18:00' }] }, { day: 'thu', ranges: [{ open: '06:30', close: '18:00' }] },

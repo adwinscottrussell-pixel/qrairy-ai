@@ -22,6 +22,8 @@
   'use strict';
   var V3 = window.QraivyV3;
   var STORE = window.QraivyStudioStore, PREVIEW = window.QraivyStudioPreview, INSPECTOR = window.QraivyStudioInspector;
+  // the demo's starter photos: shown from the Studio's own files, with the AI label (2A-3H)
+  var DEMO_IMAGES = window.QraivyStudioDemoImages || { localizeHtml: function (h) { return h; }, localSrc: function () { return null; }, displaySrc: function (u) { return u; } };
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var THEME_KEY = 'qraivy.studio.theme';
   var TEMPLATES_KEY = 'qraivy.studio.templates';
@@ -217,7 +219,7 @@
   function pageHtml() {
     var valid = editor.lastValid();
     var r = valid ? V3.renderDesign(valid, { businessName: window.QRAIVY_STUDIO_DEMO.businessName }, { preview: true }) : null;
-    return r && r.ok ? r.html : preview.html();
+    return r && r.ok ? DEMO_IMAGES.localizeHtml(r.html) : preview.html();
   }
   function historyButtons() {
     $('st-undo-btn').disabled = !editor.canUndo();
@@ -380,7 +382,8 @@
       onSelect: function (id) { if (!preview.phoneOnly() && id !== editor.selected()) select(id, 'preview'); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase() });
+      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
+      displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; } });
     preview.setHtml(pageHtml(), 0);
     preview.select(editor.selected(), false);
     renderAll();

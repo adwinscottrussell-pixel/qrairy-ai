@@ -218,7 +218,7 @@ test('renaming a link name moves every internal link with it, in one Undo step',
 
 test('the page link list: the top of the page and every section by its link name', () => {
   const { store } = make();
-  assert.deepEqual(store.linkTargets().map((x) => x.target), ['/', '/s_hero01', '/s_quick01', '/angebote', '/stempelkarte', '/produkte', '/ueber-uns', '/s_hours01', '/kontakt', '/s_social01']);
+  assert.deepEqual(store.linkTargets().map((x) => x.target), ['/', '/s_hero01', '/s_quick01', '/angebote', '/stempelkarte', '/produkte', '/ueber-uns', '/galerie', '/s_hours01', '/kontakt', '/s_social01']);
   store.setAnchor(HERO, 'willkommen');
   assert.equal(store.linkTargets()[1].target, '/willkommen');
   // every listed target is accepted by the core
@@ -494,6 +494,45 @@ test('Text: the demo starts with a valid Plain "Über uns" section; edits merged
   assert.equal(sec().data.image, undefined);
   store.undo();
   assert.equal(sec().data.image, IMG);
+});
+
+test('Gallery: the demo starts with three described starter images; descriptions and captions merged while typing, move and remove one step each, too long keeps the last valid page, Undo / Redo', () => {
+  const { store } = make();
+  const G = 's_gal01', IMGS = ['data', 'images'];
+  const caps = () => store.section(G).data.images.map((x) => x.caption);
+  assert.equal(store.section(G).type, 'gallery');
+  assert.deepEqual(caps(), ['Croissants & Plunder', 'Unsere Brote', 'Kaffee & Kuchen']);
+  assert.ok(store.isValid());
+  store.set(G, IMGS.concat(1, 'caption'), 'B', 'typing');
+  store.set(G, IMGS.concat(1, 'caption'), 'Brot', 'typing');
+  store.endMerge();
+  store.set(G, IMGS.concat(1, 'alt'), 'Brote auf dem Tisch', 'typing');
+  store.endMerge();
+  assert.ok(render(store.lastValid()).html.includes('<figcaption>Brot</figcaption>'));
+  store.set(G, IMGS.concat(0, 'caption'), 'x'.repeat(121), 'typing');
+  store.endMerge();
+  assert.equal(store.sectionErrors(G)['data.images[0].caption'].code, 'too_long');
+  assert.equal(byId(store.lastValid(), G).data.images[0].caption, 'Croissants & Plunder', 'the preview keeps the last valid caption');
+  store.undo();
+  assert.ok(store.isValid());
+  assert.ok(store.moveItem(G, IMGS, 2, 0));
+  assert.deepEqual(caps(), ['Kaffee & Kuchen', 'Croissants & Plunder', 'Brot']);
+  assert.ok(store.removeItem(G, IMGS, 1));
+  assert.deepEqual(caps(), ['Kaffee & Kuchen', 'Brot']);
+  store.undo();
+  assert.deepEqual(caps(), ['Kaffee & Kuchen', 'Croissants & Plunder', 'Brot']);
+  store.undo();
+  assert.deepEqual(caps(), ['Croissants & Plunder', 'Brot', 'Kaffee & Kuchen']);
+  store.undo(); store.undo();
+  assert.deepEqual(caps(), ['Croissants & Plunder', 'Unsere Brote', 'Kaffee & Kuchen'], 'the caption typing was one step');
+  store.redo();
+  assert.deepEqual(caps(), ['Croissants & Plunder', 'Brot', 'Kaffee & Kuchen']);
+  // removing every image leaves an empty gallery: left out of the page, a note in the preview
+  for (let i = 2; i >= 0; i--) store.removeItem(G, IMGS, i);
+  assert.equal(store.section(G).data.images.length, 0);
+  assert.ok(store.isValid());
+  assert.ok(render(store.lastValid()).html.includes('data-v3-id="' + G + '"'), 'preview: still selectable');
+  assert.ok(!V3.renderDesign(store.lastValid(), { businessName: 'X' }).html.includes('id="galerie"'), 'public: left out');
 });
 
 (async () => {

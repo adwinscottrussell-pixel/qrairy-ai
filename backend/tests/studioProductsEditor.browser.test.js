@@ -353,7 +353,7 @@ test('hostile text stays text: escaped in the preview, nothing injected, no dial
   await sectionHas(page, '&lt;b&gt;9&lt;/b&gt;');
   await sleep(400);
   const fr = await frame(page);
-  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img').length, svg: document.querySelectorAll('svg[onload]').length, b: document.querySelectorAll('.v3-prod-price b').length, scripts: document.scripts.length })), { imgs: 0, svg: 0, b: 0, scripts: 1 });
+  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not([src^="images/deals/starter/"])').length, svg: document.querySelectorAll('svg[onload]').length, b: document.querySelectorAll('.v3-prod-price b').length, scripts: document.scripts.length })), { imgs: 0, svg: 0, b: 0, scripts: 1 });
   assert.deepEqual(errors, []);
   await page.close();
 });
