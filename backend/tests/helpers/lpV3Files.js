@@ -64,6 +64,8 @@ const LPV3_FILES = [
   'backend/tests/studioDemoImages.test.js',
   // the demo photos behind a sign-in (live preview fix, 2A-3H)
   'backend/tests/studioPreviewAuth.browser.test.js',
+  // Gallery carousel navigation without script (CSS ::scroll-button + fallback)
+  'backend/tests/studioGalleryCarousel.browser.test.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',

@@ -832,7 +832,7 @@ test('Gallery HTML: Grid and Carousel, alt and captions escaped, order kept; cap
   const imgs = [{ image: IMG('a'), alt: 'A <b>', caption: 'Cap "1"' }, { image: IMG('b') }];
   for (const v of ['grid', 'carousel']) {
     const h = page(v, imgs);
-    assert.ok(h.includes('<div class="v3-gal v3-gal-' + v + '">'), v);
+    assert.ok(h.includes(v === 'grid' ? '<div class="v3-gal v3-gal-grid">' : '<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="G">'), v);
     assert.ok(h.includes('<img src="' + IMG('a') + '" alt="A &lt;b&gt;" loading="lazy"') && h.includes('<figcaption>Cap &quot;1&quot;</figcaption>'));
     assert.ok(h.indexOf(IMG('a')) < h.indexOf(IMG('b')), 'order kept');
     assert.ok(h.includes('<img src="' + IMG('b') + '" alt=""'), 'no description: alt=""');

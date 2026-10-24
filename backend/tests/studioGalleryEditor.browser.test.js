@@ -222,7 +222,7 @@ test('Style: layout, background, alignment and spacing reach the preview', async
     await page.select(fp('style.align', 'select'), al);
     await page.select(fp('style.spacing', 'select'), sp);
     await sectionHas(page, 'class="v3-s v3-gallery v3-v-' + v + ' v3-bg-' + bg + ' v3-al-' + al + ' v3-sp-' + sp + '"');
-    await sectionHas(page, '<div class="v3-gal v3-gal-' + v + '">');
+    await sectionHas(page, '<div class="v3-gal v3-gal-' + v + '"');
   }
   await page.close();
 });

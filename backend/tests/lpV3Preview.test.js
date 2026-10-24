@@ -173,13 +173,52 @@ test('preview samples: Deals / Offers and Loyalty, labelled, owner text escaped,
 test('Gallery: grid and carousel, lazy images with alt text and captions, escaped', () => {
   const d = withSections({ id: 's_gal01', type: 'gallery', variant: 'carousel', data: { title: 'Fotos & "mehr"', images: [{ image: IMG('a'), alt: 'Brot <frisch>', caption: 'Unsere <Backstube>' }, { image: IMG('b') }] } });
   const h = V3.renderDesign(d, CTX).html;
-  assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal v3-gal-carousel">/);
+  assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Fotos &amp; &quot;mehr&quot;">/);
+  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true">Weitere Bilder: seitlich wischen oder scrollen</p></div></section>'), 'the swipe hint after the strip (CSS shows it only without ::scroll-button)');
   assert.ok(h.includes('<figure class="v3-gal-item"><img src="https://res.cloudinary.com/demo/image/upload/v1/a.jpg" alt="Brot &lt;frisch&gt;" loading="lazy" width="800" height="600"><figcaption>Unsere &lt;Backstube&gt;</figcaption></figure>'));
   assert.ok(h.includes('<img src="https://res.cloudinary.com/demo/image/upload/v1/b.jpg" alt="" loading="lazy"'), 'decorative image: empty alt');
   assert.ok(h.includes('.v3-gal-carousel{display:flex;overflow-x:auto'), 'carousel scrolls inside its box, not the page');
   const grid = withSections({ id: 's_gal02', type: 'gallery', data: { images: [{ image: IMG('c') }] } });
   assert.match(V3.renderDesign(grid, CTX).html, /class="v3-gal v3-gal-grid"/);
   assert.equal(V3.renderDesign(withSections({ id: 's_gal03', type: 'gallery', data: {} }), CTX).html.includes('s_gal03'), false, 'empty gallery: nothing public');
+});
+
+// Carousel navigation (2A-3H): the browser's own ::scroll-button() arrows
+// where supported, otherwise an edge fade and the swipe hint; no script.
+test('Carousel navigation: CSS-only arrows (named per language) behind @supports, the hint otherwise; Grid untouched; no script', () => {
+  const imgs = [{ image: IMG('a'), alt: 'A' }, { image: IMG('b'), alt: 'B' }, { image: IMG('c'), alt: 'C' }];
+  const de = V3.renderDesign(withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { images: imgs } }), CTX).html;
+  const enDesign = withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { title: '"></style><b>', images: imgs } });
+  enDesign.settings.language = 'en';
+  const en = V3.renderDesign(enDesign, CTX).html;
+  // the strip: focusable, a region, named by the title or "Galerie" / "Gallery"
+  assert.ok(de.includes('<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Galerie">'));
+  assert.ok(en.includes('<div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="&quot;&gt;&lt;/style&gt;&lt;b&gt;">'), 'the title, escaped');
+  // arrows only inside @supports, with their accessible names in the page language
+  const sup = (h) => h.slice(h.indexOf('@supports selector(::scroll-button(right)){'), h.indexOf('@supports not selector(::scroll-button(right)){'));
+  assert.ok(sup(de).includes('::scroll-button(left){content:"" / "Vorheriges Bild"') && sup(de).includes('::scroll-button(right){content:"" / "Nächstes Bild"'));
+  assert.ok(sup(en).includes('::scroll-button(left){content:"" / "Previous image"') && sup(en).includes('::scroll-button(right){content:"" / "Next image"'));
+  assert.ok(sup(de).includes('::scroll-button(*):disabled{opacity:.3;'), 'the ends: disabled arrows stay subtly visible (30 %)');
+  assert.ok(sup(de).includes('width:48px;height:48px') && sup(de).includes('rgba(0,0,0,.62) center/28px 28px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '48 px dark semi-transparent circle, large white chevron');
+  assert.ok(sup(de).includes(':hover:not(:disabled){background-color:rgba(0,0,0,.82)}'), 'hover only adds contrast');
+  assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
+  assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 8, 'the @supports check and the seven arrow rules');
+  assert.equal((de.match(/::scroll-button\(/g) || []).length, 9, 'elsewhere only the @supports not check: no arrow rule outside @supports');
+  // the fallback: no button at all, an edge fade and the hint
+  const NOT = '@supports not selector(::scroll-button(right)){';
+  const fallback = de.slice(de.indexOf(NOT) + NOT.length, de.indexOf('</style>'));
+  assert.ok(fallback.includes('.v3-gal-hint{display:flex') && fallback.includes('.v3-gal-wrap::after{content:"";position:absolute') && !fallback.includes('scroll-button'));
+  assert.ok(de.includes('.v3-gal-hint{display:none}'), 'hidden unless the fallback shows it');
+  assert.ok(de.includes('<p class="v3-gal-hint" aria-hidden="true">Weitere Bilder: seitlich wischen oder scrollen</p>'));
+  assert.ok(en.includes('<p class="v3-gal-hint" aria-hidden="true">More photos: swipe or scroll sideways</p>'));
+  // owner text never reaches the stylesheet; no script anywhere
+  const style = (h) => h.slice(h.indexOf('<style>'), h.indexOf('</style>'));
+  assert.ok(!style(en).includes('</style><b>') && !/<b>/.test(style(en)));
+  for (const h of [de, en]) assert.ok(!/<script/i.test(h), 'no script');
+  // one photo: nothing to scroll to, no hint; Grid: none of it
+  assert.ok(!V3.renderDesign(withSections({ id: 's_gal06', type: 'gallery', variant: 'carousel', data: { images: [imgs[0]] } }), CTX).html.includes('<p class="v3-gal-hint"'));
+  const grid = V3.renderDesign(withSections({ id: 's_gal07', type: 'gallery', variant: 'grid', data: { images: imgs } }), CTX).html;
+  assert.ok(grid.includes('<div class="v3-gal v3-gal-grid"><figure') && !/tabindex|v3-gal-wrap"|<p class="v3-gal-hint/.test(grid.slice(grid.indexOf('<main'))), 'Grid markup unchanged');
 });
 
 test('Products: grid and list, price, description, button (internal link same tab, external new tab)', () => {

@@ -351,6 +351,7 @@
     de: { menu: 'Menü', closed: 'Geschlossen', phone: 'Telefon', email: 'E-Mail', directions: 'Route planen', address: 'Adresse', skip: 'Zum Inhalt springen',
       days: { mon: 'Montag', tue: 'Dienstag', wed: 'Mittwoch', thu: 'Donnerstag', fri: 'Freitag', sat: 'Samstag', sun: 'Sonntag' },
       view: 'Ansehen',
+      gallery: 'Galerie', galPrev: 'Vorheriges Bild', galNext: 'Nächstes Bild', galHint: 'Weitere Bilder: seitlich wischen oder scrollen',
       // preview only (the Studio)
       empty: 'Leerer Abschnitt – Inhalte im Editor ergänzen', image: 'Bildplatzhalter', sample: 'Beispiel',
       dealsNote: 'Vorschau: Hier erscheinen Ihre aktuellen Angebote.', loyaltyNote: 'Vorschau: Hier erscheint Ihre Stempelkarte.',
@@ -359,6 +360,7 @@
     en: { menu: 'Menu', closed: 'Closed', phone: 'Phone', email: 'Email', directions: 'Get directions', address: 'Address', skip: 'Skip to content',
       days: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' },
       view: 'View',
+      gallery: 'Gallery', galPrev: 'Previous image', galNext: 'Next image', galHint: 'More photos: swipe or scroll sideways',
       empty: 'Empty section – add content in the editor', image: 'Image placeholder', sample: 'Sample',
       dealsNote: 'Preview: your current deals appear here.', loyaltyNote: 'Preview: your stamp card appears here.',
       sampleDeals: [['2 for 1', 'Sample offer', 'Every Monday'], ['-20%', 'Sample promotion', 'This week only'], ['€ 2.50', 'Sample price', 'Friday & Saturday']],
@@ -491,7 +493,12 @@
         return '<figure class="v3-gal-item"><img src="' + esc(im.image) + '" alt="' + esc(im.alt) + '" loading="lazy" width="800" height="600">' +
           (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>';
       }).join('');
-      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal v3-gal-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
+      if (s.variant !== 'carousel') return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal v3-gal-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
+      // Carousel: a focusable, labelled strip (arrow keys scroll it). Its
+      // arrows are the browser's own ::scroll-button()s (CSS, no script);
+      // where they do not exist the hint says how to see more (2A-3H).
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="' +
+        esc(d.title || t.gallery) + '">' + items + '</div></div>' + (d.images.length > 1 ? '<p class="v3-gal-hint" aria-hidden="true">' + esc(t.galHint) + '</p>' : '') + SECTION_CLOSE;
     },
     products: function (s, t, pv) {
       var d = s.data;
@@ -553,6 +560,36 @@
     '.v3-gal-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px}.v3-gal-carousel .v3-gal-item{flex:0 0 80%;scroll-snap-align:start}',
     '@media (min-width:768px){.v3-gal-grid{grid-template-columns:repeat(3,1fr)}.v3-gal-carousel .v3-gal-item{flex-basis:40%}}@media (min-width:1200px){.v3-gal-grid{grid-template-columns:repeat(4,1fr)}}',
   ].join('');
+  // Carousel navigation without script (2A-3H). Where the browser has
+  // ::scroll-button(), it draws real arrow buttons over the photo edges:
+  // they scroll the strip (snapping still applies), are disabled at the
+  // ends, focusable and named in the page language. Elsewhere (Safari,
+  // Firefox) no button is shown, only an edge fade and the swipe hint.
+  function cssString(s) { return '"' + String(s).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ') + '"'; }
+  function chevron(d) {
+    return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>') + '")';
+  }
+  function carouselCss(t) {
+    return [
+      '.v3-gal-wrap{position:relative}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}.v3-gal-hint{display:none}',
+      '@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}',
+      '.v3-gallery{--v3-gal-fade:var(--v3-bg)}.v3-gallery.v3-bg-alt{--v3-gal-fade:var(--v3-surface)}.v3-gallery.v3-bg-dark{--v3-gal-fade:var(--v3-dark)}.v3-gallery.v3-bg-brand{--v3-gal-fade:var(--v3-brand)}',
+      '@supports selector(::scroll-button(right)){',
+      '.v3-gal-wrap{anchor-scope:--v3-gal}.v3-gal-carousel{anchor-name:--v3-gal}',
+      // 48 px, always visible; centred on the photos (4:3 at 80 % / 40 % of the strip), not the captions
+      '.v3-gal-carousel::scroll-button(*){position:absolute;position-anchor:--v3-gal;top:calc(anchor(top) + anchor-size(width) * .3 - 24px);z-index:3;width:48px;height:48px;padding:0;border:0;',
+      'border-radius:50%;background:rgba(0,0,0,.62) center/28px 28px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}',
+      '.v3-gal-carousel::scroll-button(left){content:"" / ' + cssString(t.galPrev) + ';left:calc(anchor(left) + 10px);background-image:' + chevron('M15 6l-6 6 6 6') + '}',
+      '.v3-gal-carousel::scroll-button(right){content:"" / ' + cssString(t.galNext) + ';right:calc(anchor(right) + 10px);background-image:' + chevron('M9 6l6 6-6 6') + '}',
+      '.v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:rgba(0,0,0,.82)}.v3-gal-carousel::scroll-button(*):disabled{opacity:.3;cursor:default}',
+      '.v3-gal-carousel::scroll-button(*):focus-visible{outline:3px solid #fff;outline-offset:2px}',
+      '@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 24px)}}}',
+      '@supports not selector(::scroll-button(right)){',
+      '.v3-gal-wrap::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}',
+      '.v3-gal-hint{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:13px;color:var(--v3-muted)}.v3-gal-hint::before{content:"\\2194";font-size:16px;line-height:1}',
+      '.v3-gallery.v3-bg-dark .v3-gal-hint{color:inherit;opacity:.85}.v3-gallery.v3-bg-brand .v3-gal-hint{color:inherit}}',
+    ].join('');
+  }
   var PRODUCTS_CSS = [
     '.v3-prods{display:grid;gap:16px;margin-top:16px}.v3-prods-grid{grid-template-columns:1fr 1fr}.v3-prods-list{grid-template-columns:1fr}',
     '.v3-prod{display:flex;flex-direction:column;min-width:0;background:var(--v3-bg);color:var(--v3-text);border:1px solid rgba(0,0,0,.08);border-radius:var(--v3-radius);overflow:hidden}',
@@ -638,7 +675,7 @@
       if (out) used[s.type] = true;
       return out;
     }).join('');
-    var extraCss = (used.gallery ? GALLERY_CSS : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
+    var extraCss = (used.gallery ? GALLERY_CSS + carouselCss(t) : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
     var h = design.header;
     var navLinks = h.nav.map(function (n) { return '<a' + linkAttrs(n.target) + '>' + esc(n.label) + '</a>'; }).join('');
     var brand = '<a class="v3-brandmark" href="#top">' + (h.logo ? '<img src="' + esc(h.logo) + '" alt="' + esc(h.logoAlt || businessName) + '">' : '') +
