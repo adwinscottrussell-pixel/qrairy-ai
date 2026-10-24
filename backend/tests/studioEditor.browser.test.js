@@ -215,7 +215,7 @@ test('hostile text stays text: escaped in the preview, nothing injected, no dial
   await previewHas(page, '&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;alert(2)&lt;/script&gt;');
   await sleep(500);
   const fr = await frame(page);
-  const inside = await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not([src^="images/deals/starter/"])').length, svgOnload: document.querySelectorAll('svg[onload]').length,
+  const inside = await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, svgOnload: document.querySelectorAll('svg[onload]').length,
     scripts: document.scripts.length, h1: document.querySelector('h1').textContent }));
   assert.deepEqual(inside, { imgs: 0, svgOnload: 0, scripts: 1, h1: evil }, 'one script: the Studio\'s own');
   assert.deepEqual(errors, [], 'no alert ran');

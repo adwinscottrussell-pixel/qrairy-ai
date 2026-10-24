@@ -22,7 +22,8 @@
   'use strict';
   var V3 = window.QraivyV3;
   var STORE = window.QraivyStudioStore, PREVIEW = window.QraivyStudioPreview, INSPECTOR = window.QraivyStudioInspector;
-  // the demo's starter photos: shown from the Studio's own files, with the AI label (2A-3H)
+  // the demo's starter photos: shown from the Studio's own files, with the AI label (2A-3H);
+  // the preview frames get them inline (studio-demo-images.js prepare())
   var DEMO_IMAGES = window.QraivyStudioDemoImages || { localizeHtml: function (h) { return h; }, localSrc: function () { return null; }, displaySrc: function (u) { return u; } };
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var THEME_KEY = 'qraivy.studio.theme';
@@ -385,6 +386,8 @@
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; } });
     preview.setHtml(pageHtml(), 0);
+    // the demo photos as inline images for the sandboxed frames; once ready, show them
+    if (DEMO_IMAGES.prepare) DEMO_IMAGES.prepare(function () { preview.setHtml(pageHtml(), 0); });
     preview.select(editor.selected(), false);
     renderAll();
     setLeftTab(state.leftTab);

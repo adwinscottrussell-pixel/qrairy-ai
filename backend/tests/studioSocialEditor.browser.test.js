@@ -386,7 +386,7 @@ test('hostile text stays text: escaped in the preview, refused as an address, no
   const html = await srcdoc(page);
   assert.ok(!html.includes('alert(2)') && !html.includes('alert(3)'));
   const fr = await frame(page);
-  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not([src^="images/deals/starter/"])').length, svg: document.querySelectorAll('svg[onload]').length, scripts: document.scripts.length })),
+  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, svg: document.querySelectorAll('svg[onload]').length, scripts: document.scripts.length })),
     { imgs: 0, svg: 0, scripts: 1 });
   assert.deepEqual(errors, []);
   await page.close();

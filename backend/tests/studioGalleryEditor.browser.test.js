@@ -98,18 +98,19 @@ async function galleryIn(page, device, variant) {
     const gal = n.querySelector('.v3-gal'), cs = getComputedStyle(gal), item = n.querySelector('.v3-gal-item');
     return { display: cs.display, columns: cs.display === 'grid' ? cs.gridTemplateColumns.split(' ').length : 0, overflowX: cs.overflowX,
       scrolls: gal.scrollWidth > gal.clientWidth + 1, itemShare: Math.round(item.getBoundingClientRect().width / gal.clientWidth * 100),
-      imgs: [...n.querySelectorAll('.v3-gal-item img')].map((i) => ({ src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0 })),
+      imgs: [...n.querySelectorAll('.v3-gal-item img')].map((i) => ({ inline: /^data:image\/jpeg;base64,/.test(i.getAttribute('src')), alt: i.getAttribute('alt'), loaded: i.complete && i.naturalWidth > 0 })),
       badges: [...n.querySelectorAll('.st-ai')].map((b) => ({ text: b.textContent, shown: b.getBoundingClientRect().width > 0 && getComputedStyle(b).position === 'absolute' })) };
   });
 }
 
-test('the demo Gallery: three starter photos from the Studio\'s own files with the AI label; no request to Cloudinary', async () => {
+test('the demo Gallery: three starter photos loaded from the Studio\'s own files by the Studio page, shown inline in the preview with the AI label; no request to Cloudinary', async () => {
   const { page, net, urls, errors } = await open(1440, 900);
   const fr = await frame(page);
   await fr.evaluate((id) => document.querySelector('[data-v3-id="' + id + '"]').scrollIntoView(), G);
-  await until(async () => (await galleryIn(page, 'desktop', 'grid')).imgs.every((i) => i.loaded), 'photos loaded');
+  await until(async () => (await galleryIn(page, 'desktop', 'grid')).imgs.every((i) => i.loaded && i.inline), 'inline photos loaded');
   const g = await galleryIn(page, 'desktop', 'grid');
-  assert.deepEqual(g.imgs.map((i) => i.src), IDS.map(LOCAL));
+  assert.equal(g.imgs.length, 3);
+  assert.ok(!(await srcdoc(page)).includes('images/deals/starter/'), 'the frame HTML has no file path (it would miss a sign-in cookie)');
   assert.deepEqual(g.badges, IDS.map(() => ({ text: 'AI · KI-generiert', shown: true })));
   assert.ok(!urls.some((u) => /res\.cloudinary\.com/.test(u)), 'no Cloudinary request');
   assert.deepEqual(onlyLocal(net), []);
@@ -185,7 +186,7 @@ test('remove + Undo; reorder with Move up / down and Alt+arrows; one row open at
   await keys(page, ['Alt'], 'ArrowUp');
   await until(async () => (await captions(page)).join() === 'Unsere Brote,Kaffee & Kuchen,Croissants & Plunder', 'Alt+ArrowUp');
   const g = await galleryIn(page, 'desktop', 'grid');
-  assert.deepEqual(g.imgs.map((i) => i.src), [LOCAL(IDS[1]), LOCAL(IDS[2]), LOCAL(IDS[0])], 'the photos move with their captions');
+  assert.deepEqual(g.imgs.map((i) => i.alt.split(' ')[0]), ['Frisch', 'Cappuccino', 'Croissants'], 'the photos move with their captions');
   await openRow(page, 0);
   await openRow(page, 2);
   assert.equal(await page.$$eval('#st-fields .st-item.is-open', (n) => n.length), 1);
