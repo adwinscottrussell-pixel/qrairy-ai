@@ -199,8 +199,11 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   assert.ok(sup(de).includes('::scroll-button(left){content:"" / "Vorheriges Bild"') && sup(de).includes('::scroll-button(right){content:"" / "Nächstes Bild"'));
   assert.ok(sup(en).includes('::scroll-button(left){content:"" / "Previous image"') && sup(en).includes('::scroll-button(right){content:"" / "Next image"'));
   assert.ok(sup(de).includes('::scroll-button(*):disabled{opacity:.3;'), 'the ends: disabled arrows stay subtly visible (30 %)');
-  assert.ok(sup(de).includes('width:48px;height:48px') && sup(de).includes('rgba(0,0,0,.62) center/28px 28px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '48 px dark semi-transparent circle, large white chevron');
-  assert.ok(sup(de).includes(':hover:not(:disabled){background-color:rgba(0,0,0,.82)}'), 'hover only adds contrast');
+  assert.ok(sup(de).includes('width:48px;height:48px') && sup(de).includes('background:#ff5a1f center/28px 28px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '48 px QRAIVY orange circle, large white chevron');
+  assert.ok(sup(de).includes(':hover:not(:disabled){background-color:#d9480f}'), 'hover: a slightly darker orange only');
+  assert.ok(sup(de).includes(':focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}'), 'focus: white ring between dark rings, visible on light and dark photos');
+  // no visible scrollbar on the strip, which still scrolls (Grid untouched)
+  assert.ok(de.includes('.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}') && de.includes('.v3-gal-carousel{display:flex;overflow-x:auto'));
   assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
   assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 8, 'the @supports check and the seven arrow rules');
   assert.equal((de.match(/::scroll-button\(/g) || []).length, 9, 'elsewhere only the @supports not check: no arrow rule outside @supports');

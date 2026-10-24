@@ -95,7 +95,9 @@ const leftArrow = (s) => ({ x: s.left + 10 + 24, y: s.photoMid });
 // spot with the same page where the arrows are removed (content: none).
 async function painted(page, at) {
   await page.mouse.move(2, 2);
-  const shot = async () => { const y = await page.evaluate(() => scrollY); return page.screenshot({ clip: { x: at.x - 20, y: y + at.y - 20, width: 40, height: 40 }, encoding: 'base64' }); };
+  // captureBeyondViewport: false, or the page's own scrollbar vanishes during
+  // the capture and the layout (and the photo) shifts under the probe
+  const shot = async () => { const y = await page.evaluate(() => scrollY); return page.screenshot({ clip: { x: at.x - 20, y: y + at.y - 20, width: 40, height: 40 }, encoding: 'base64', captureBeyondViewport: false }); };
   const withArrow = await shot();
   const tag = await page.addStyleTag({ content: '.v3-gal-carousel::scroll-button(*){content:none!important}' });
   await sleep(150);
@@ -175,9 +177,10 @@ test('keyboard: the strip is focusable and named; arrow keys scroll it; Tab reac
   await page.close();
 });
 
-test('English labels; sideways scrolling (wheel / trackpad) still works with the arrows present', async () => {
+test('English labels; no visible scrollbar, sideways scrolling (wheel / trackpad) still works with the arrows present', async () => {
   const { page } = await openPage(pageHtml({ lang: 'en' }), 820);
   assert.deepEqual(await arrows(page), [{ name: 'Previous image', disabled: true }, { name: 'Next image', disabled: false }]);
+  assert.deepEqual(await page.$eval('.v3-gal-carousel', (n) => [n.offsetHeight - n.clientHeight, getComputedStyle(n).scrollbarWidth, getComputedStyle(n).overflowX]), [0, 'none', 'auto'], 'scrollbar hidden, the strip still scrolls');
   const s = await strip(page);
   await page.mouse.move((s.left + s.right) / 2, s.photoMid);
   await page.mouse.wheel({ deltaX: 300 });
@@ -210,6 +213,7 @@ test('unsupported browser (simulated: the @supports test fails): no button at al
     await page.mouse.move((s.left + s.right) / 2, s.photoMid);
     await page.mouse.wheel({ deltaX: 300 });
     assert.ok((await settle(page)) > 0, w + 'px: scrolling still works');
+    assert.equal(await page.$eval('.v3-gal-carousel', (n) => n.offsetHeight - n.clientHeight), 0, w + 'px: no visible scrollbar here either; the hint explains');
     await page.close();
   }
 });
@@ -257,7 +261,8 @@ test('the Studio preview: in Carousel the arrows work in the desktop, tablet and
 (async () => {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   base = 'http://127.0.0.1:' + server.address().port;
-  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
+  // real scrollbars, as in desktop Chrome (puppeteer hides them by default)
+  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', ignoreDefaultArgs: ['--hide-scrollbars'] });
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {
     try { await fn(); passed++; console.log('PASS  ' + name); }

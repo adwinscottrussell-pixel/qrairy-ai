@@ -571,18 +571,20 @@
   }
   function carouselCss(t) {
     return [
+      // no visible scrollbar; scrolling (touch, wheel, trackpad, keys) and snapping stay
+      '.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}',
       '.v3-gal-wrap{position:relative}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}.v3-gal-hint{display:none}',
       '@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}',
       '.v3-gallery{--v3-gal-fade:var(--v3-bg)}.v3-gallery.v3-bg-alt{--v3-gal-fade:var(--v3-surface)}.v3-gallery.v3-bg-dark{--v3-gal-fade:var(--v3-dark)}.v3-gallery.v3-bg-brand{--v3-gal-fade:var(--v3-brand)}',
       '@supports selector(::scroll-button(right)){',
       '.v3-gal-wrap{anchor-scope:--v3-gal}.v3-gal-carousel{anchor-name:--v3-gal}',
-      // 48 px, always visible; centred on the photos (4:3 at 80 % / 40 % of the strip), not the captions
+      // 48 px QRAIVY orange, always visible; centred on the photos (4:3 at 80 % / 40 % of the strip), not the captions
       '.v3-gal-carousel::scroll-button(*){position:absolute;position-anchor:--v3-gal;top:calc(anchor(top) + anchor-size(width) * .3 - 24px);z-index:3;width:48px;height:48px;padding:0;border:0;',
-      'border-radius:50%;background:rgba(0,0,0,.62) center/28px 28px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}',
+      'border-radius:50%;background:#ff5a1f center/28px 28px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}',
       '.v3-gal-carousel::scroll-button(left){content:"" / ' + cssString(t.galPrev) + ';left:calc(anchor(left) + 10px);background-image:' + chevron('M15 6l-6 6 6 6') + '}',
       '.v3-gal-carousel::scroll-button(right){content:"" / ' + cssString(t.galNext) + ';right:calc(anchor(right) + 10px);background-image:' + chevron('M9 6l6 6-6 6') + '}',
-      '.v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:rgba(0,0,0,.82)}.v3-gal-carousel::scroll-button(*):disabled{opacity:.3;cursor:default}',
-      '.v3-gal-carousel::scroll-button(*):focus-visible{outline:3px solid #fff;outline-offset:2px}',
+      '.v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#d9480f}.v3-gal-carousel::scroll-button(*):disabled{opacity:.3;cursor:default}',
+      '.v3-gal-carousel::scroll-button(*):focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}',
       '@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 24px)}}}',
       '@supports not selector(::scroll-button(right)){',
       '.v3-gal-wrap::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}',
