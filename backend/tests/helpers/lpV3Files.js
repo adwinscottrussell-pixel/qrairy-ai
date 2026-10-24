@@ -54,6 +54,12 @@ const LPV3_FILES = [
   'backend/tests/studioHoursEditor.browser.test.js',
   // Phase 2A-3F (Products editing): same files, plus its browser test
   'backend/tests/studioProductsEditor.browser.test.js',
+  // Studio preview mode: the private Vercel project qraivy-studio-staging
+  // (routing + shell label above), its Studio-files-only export, its tests
+  'backend/staging/studio-preview-export.js',
+  'backend/staging/README.md',
+  'backend/tests/studioPreviewExport.test.js',
+  'backend/tests/studioPreviewMode.browser.test.js',
   // older scope guards that now allow the files above
   'backend/tests/academyPage.test.js',
   'backend/tests/lpDeleteAuth.test.js',

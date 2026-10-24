@@ -100,3 +100,35 @@ production and preview deployments alike.
 It only governs deployments triggered by a Git push. It does not stop
 someone with access from deploying another branch by hand in the
 dashboard or with the Vercel CLI.
+
+## Landing Page Studio V3: the private preview (qraivy-studio-staging)
+
+A separate Vercel project, `qraivy-studio-staging`
+(`prj_ZqX5JYC9ODlUaNEKN45S3gvOjajk`): root `frontend/public`, framework
+Other, no build, Vercel Authentication on every deployment (only members
+of the Vercel team), no bypass secrets, no Git connection, no custom
+domain. Address: `https://qraivy-studio-staging.vercel.app`, the only
+address `js/studio/studio-routing.js` accepts besides localhost (preview
+mode: the in-memory demo, no API, Save Draft and Publish disabled).
+
+It never receives the repository's `vercel.json` (whose rewrites send
+`/lp`, `/stamp`, `/wallet`, `/manifest` and `/sw.js` to the production
+API). Each deploy is a Studio-files-only upload of one commit:
+
+1. `node backend/staging/studio-preview-export.js <commit> <empty-folder>`
+   copies the Studio files of that commit (`git show`, not the working
+   tree) to `<folder>/upload/frontend/public/`, adds its own `vercel.json`
+   (no rewrites, `/` -> `/studio.html`, noindex / no-store) and
+   `robots.txt`, and writes `<folder>/manifest.json` (commit, size and
+   sha256 per file). It stops if `studio.html` needs a file that is not
+   in the upload.
+2. Only with approval, from `<folder>/upload`:
+   `VERCEL_ORG_ID=team_9DZ0L0zpjwe5NZf21uUfKTF0 VERCEL_PROJECT_ID=prj_ZqX5JYC9ODlUaNEKN45S3gvOjajk npx vercel deploy --prod --yes`
+3. Check signed out: every address of the deployment answers 302 to
+   `vercel.com/sso-api`. Signed in (browser): the Studio starts and reads
+   "Preview · not saved". Do not use `vercel curl` on this project: it
+   works through a protection bypass.
+
+Rollback: `vercel rollback` to the previous deployment of this project,
+or delete the project. Nothing else (main, www, Railway, the other Vercel
+projects) is involved.

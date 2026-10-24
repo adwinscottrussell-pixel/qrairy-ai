@@ -14,8 +14,9 @@
  * section types follow in later steps.
  *
  * No network: this file never calls an API (studio-routing.js decides where
- * the Studio may run at all). The preview is rendered by the shared
- * js/lpV3/core.js.
+ * the Studio may run at all: local mode, or preview mode on the protected
+ * Studio staging address; both work on the in-memory demo only). The preview
+ * is rendered by the shared js/lpV3/core.js.
  */
 (function () {
   'use strict';
@@ -31,7 +32,7 @@
   // ── texts ──
   var T = {
     en: {
-      title: 'Landing Page Studio', subtitle: 'Create a beautiful mobile landing page for your business.', local_mode: 'Local preview · not saved',
+      title: 'Landing Page Studio', subtitle: 'Create a beautiful mobile landing page for your business.', local_mode: 'Local preview · not saved', preview_mode: 'Preview · not saved',
       theme: 'Theme', theme_light: 'Light', theme_dark: 'Dark', theme_system: 'System', preview: 'Preview', save_draft: 'Save Draft', publish: 'Publish',
       save_disabled: 'Saving arrives in a later step.', publish_disabled: 'Publishing is not available yet.', more: 'More',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
@@ -45,10 +46,10 @@
       chip_all: 'All', chip_popular: 'Popular', chip_business: 'Business', chip_media: 'Media', chip_more: 'More',
       hidden: 'Hidden', items: '{n} items', change_image: 'Change Image', remove: 'Remove', no_image: 'No image yet',
       variant: 'Layout', yes: 'Yes', no: 'No', section_id: 'Section ID', anchor: 'Link name (#)', visibility: 'Show on page', section_header: 'Header', section_footer: 'Footer',
-      hide_left: 'Hide sections panel', hide_right: 'Hide edit panel', local_account: 'Local preview', not_signed_in: 'Not signed in',
+      hide_left: 'Hide sections panel', hide_right: 'Hide edit panel', local_account: 'Local preview', preview_account: 'Preview', not_signed_in: 'Not signed in',
     },
     de: {
-      title: 'Landing Page Studio', subtitle: 'Erstelle eine schöne mobile Landingpage für dein Unternehmen.', local_mode: 'Lokale Vorschau · nicht gespeichert',
+      title: 'Landing Page Studio', subtitle: 'Erstelle eine schöne mobile Landingpage für dein Unternehmen.', local_mode: 'Lokale Vorschau · nicht gespeichert', preview_mode: 'Vorschau · nicht gespeichert',
       theme: 'Design', theme_light: 'Hell', theme_dark: 'Dunkel', theme_system: 'System', preview: 'Vorschau', save_draft: 'Entwurf speichern', publish: 'Veröffentlichen',
       save_disabled: 'Speichern folgt in einem späteren Schritt.', publish_disabled: 'Veröffentlichen ist noch nicht verfügbar.', more: 'Mehr',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
@@ -62,7 +63,7 @@
       chip_all: 'Alle', chip_popular: 'Beliebt', chip_business: 'Business', chip_media: 'Medien', chip_more: 'Mehr',
       hidden: 'Ausgeblendet', items: '{n} Einträge', change_image: 'Bild ändern', remove: 'Entfernen', no_image: 'Noch kein Bild',
       variant: 'Layout', yes: 'Ja', no: 'Nein', section_id: 'Abschnitts-ID', anchor: 'Linkname (#)', visibility: 'Auf der Seite zeigen', section_header: 'Kopfzeile', section_footer: 'Fußzeile',
-      hide_left: 'Abschnittsleiste ausblenden', hide_right: 'Bearbeitungsleiste ausblenden', local_account: 'Lokale Vorschau', not_signed_in: 'Nicht angemeldet',
+      hide_left: 'Abschnittsleiste ausblenden', hide_right: 'Bearbeitungsleiste ausblenden', local_account: 'Lokale Vorschau', preview_account: 'Vorschau', not_signed_in: 'Nicht angemeldet',
     },
   };
   var SECTION_TEXT = {
@@ -279,11 +280,12 @@
   }
   function setPanel(side, shown) { var p = panels(); p[side] = shown; store(PANELS_KEY, JSON.stringify(p)); applyPanels(); }
 
-  // The sidebar account in local mode: nobody is signed in, say so plainly.
+  // The sidebar account in local and preview mode: nobody is signed in, say
+  // so plainly.
   function localAccount() {
-    if (ROUTING.mode !== 'local') return;
+    if (ROUTING.mode !== 'local' && ROUTING.mode !== 'preview') return;
     var n = $('sb-username'), a = $('sb-avatar'), role = document.querySelector('#sidebar .sb-user-role');
-    if (n) n.textContent = t('local_account');
+    if (n) n.textContent = t(ROUTING.mode === 'preview' ? 'preview_account' : 'local_account');
     if (a) a.textContent = 'Q';
     if (role) role.textContent = t('not_signed_in');
   }
@@ -368,6 +370,8 @@
       applyTexts();
       return;
     }
+    // preview mode: the same Studio with its own label (texts follow the language)
+    if (ROUTING.mode === 'preview') $('st-mode').setAttribute('data-st', 'preview_mode');
     var demo = window.QRAIVY_STUDIO_DEMO;
     editor = STORE.createStore({ design: demo.design, validate: V3.validateDesign });
     editor.select('s_hero01');
