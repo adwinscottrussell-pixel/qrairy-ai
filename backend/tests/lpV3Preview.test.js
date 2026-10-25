@@ -174,7 +174,7 @@ test('Gallery: grid and carousel, lazy images with alt text and captions, escape
   const d = withSections({ id: 's_gal01', type: 'gallery', variant: 'carousel', data: { title: 'Fotos & "mehr"', images: [{ image: IMG('a'), alt: 'Brot <frisch>', caption: 'Unsere <Backstube>' }, { image: IMG('b') }] } });
   const h = V3.renderDesign(d, CTX).html;
   assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Fotos &amp; &quot;mehr&quot;">/);
-  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true">Weitere Bilder: seitlich wischen oder scrollen</p></div></section>'), 'the swipe hint after the strip (CSS shows it only without ::scroll-button)');
+  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true">← Weitere Bilder: wischen oder scrollen →</p></div></section>'), 'the swipe hint after the strip (every browser)');
   assert.ok(h.includes('<figure class="v3-gal-item"><img src="https://res.cloudinary.com/demo/image/upload/v1/a.jpg" alt="Brot &lt;frisch&gt;" loading="lazy" width="800" height="600"><figcaption>Unsere &lt;Backstube&gt;</figcaption></figure>'));
   assert.ok(h.includes('<img src="https://res.cloudinary.com/demo/image/upload/v1/b.jpg" alt="" loading="lazy"'), 'decorative image: empty alt');
   assert.ok(h.includes('.v3-gal-carousel{display:flex;overflow-x:auto'), 'carousel scrolls inside its box, not the page');
@@ -184,8 +184,8 @@ test('Gallery: grid and carousel, lazy images with alt text and captions, escape
 });
 
 // Carousel navigation (2A-3H): the browser's own ::scroll-button() arrows
-// where supported, otherwise an edge fade and the swipe hint; no script.
-test('Carousel navigation: CSS-only arrows (named per language) behind @supports, the hint otherwise; Grid untouched; no script', () => {
+// where supported, otherwise an edge fade; the swipe hint everywhere; no script.
+test('Carousel navigation: CSS-only arrows (named per language) behind @supports, the hint in every browser; Grid untouched; no script', () => {
   const imgs = [{ image: IMG('a'), alt: 'A' }, { image: IMG('b'), alt: 'B' }, { image: IMG('c'), alt: 'C' }];
   const de = V3.renderDesign(withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { images: imgs } }), CTX).html;
   const enDesign = withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { title: '"></style><b>', images: imgs } });
@@ -199,7 +199,7 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   assert.ok(sup(de).includes('::scroll-button(left){content:"" / "Vorheriges Bild"') && sup(de).includes('::scroll-button(right){content:"" / "Nächstes Bild"'));
   assert.ok(sup(en).includes('::scroll-button(left){content:"" / "Previous image"') && sup(en).includes('::scroll-button(right){content:"" / "Next image"'));
   assert.ok(sup(de).includes('::scroll-button(*):disabled{opacity:.3;'), 'the ends: disabled arrows stay subtly visible (30 %)');
-  assert.ok(sup(de).includes('width:48px;height:48px') && sup(de).includes('background:#ff5a1f center/28px 28px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '48 px QRAIVY orange circle, large white chevron');
+  assert.ok(sup(de).includes('width:56px;height:56px') && sup(de).includes('background:#ff5a1f center/32px 32px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '56 px QRAIVY orange circle, large white chevron');
   assert.ok(sup(de).includes(':hover:not(:disabled){background-color:#d9480f}'), 'hover: a slightly darker orange only');
   assert.ok(sup(de).includes(':focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}'), 'focus: white ring between dark rings, visible on light and dark photos');
   // no visible scrollbar on the strip, which still scrolls (Grid untouched)
@@ -209,13 +209,16 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
   assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 8, 'the @supports check and the seven arrow rules');
   assert.equal((de.match(/::scroll-button\(/g) || []).length, 9, 'elsewhere only the @supports not check: no arrow rule outside @supports');
-  // the fallback: no button at all, an edge fade and the hint
+  // the fallback: no button at all, only the edge fade
   const NOT = '@supports not selector(::scroll-button(right)){';
   const fallback = de.slice(de.indexOf(NOT) + NOT.length, de.indexOf('</style>'));
-  assert.ok(fallback.includes('.v3-gal-hint{display:flex') && fallback.includes('.v3-gal-wrap::after{content:"";position:absolute') && !fallback.includes('scroll-button'));
-  assert.ok(de.includes('.v3-gal-hint{display:none}'), 'hidden unless the fallback shows it');
-  assert.ok(de.includes('<p class="v3-gal-hint" aria-hidden="true">Weitere Bilder: seitlich wischen oder scrollen</p>'));
-  assert.ok(en.includes('<p class="v3-gal-hint" aria-hidden="true">More photos: swipe or scroll sideways</p>'));
+  assert.ok(!fallback.includes('v3-gal-hint') && fallback.includes('.v3-gal-wrap::after{content:"";position:absolute') && !fallback.includes('scroll-button'));
+  // the hint: shown in every browser (no display rule hides it), in the section text colour (light, dark and brand backgrounds)
+  assert.ok(de.includes('.v3-gal-hint{margin:10px 0 0;font-size:15px;font-weight:600;line-height:1.4;color:inherit}') && !/\.v3-gal-hint\{[^}]*display:none/.test(de));
+  // on the brand colour the hint sits on a chip in the page colours (readable whatever the brand colour is)
+  assert.ok(de.includes('.v3-gallery.v3-bg-brand .v3-gal-hint{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--v3-bg);color:var(--v3-text)}'));
+  assert.ok(de.includes('<p class="v3-gal-hint" aria-hidden="true">← Weitere Bilder: wischen oder scrollen →</p>'));
+  assert.ok(en.includes('<p class="v3-gal-hint" aria-hidden="true">← More photos: swipe or scroll →</p>'));
   // owner text never reaches the stylesheet; no script anywhere
   const style = (h) => h.slice(h.indexOf('<style>'), h.indexOf('</style>'));
   assert.ok(!style(en).includes('</style><b>') && !/<b>/.test(style(en)));

@@ -54,6 +54,7 @@ async function open(width, height, { theme = 'light', image = false } = {}) {
     const u = new URL(r.url());
     if (/^https?:$/.test(u.protocol)) net.push(u.host);
     if (u.host === 'res.cloudinary.com') return r.respond({ status: 200, contentType: 'image/png', body: PNG });
+    if (FONT_HOSTS.includes(u.host)) return r.respond({ status: 200, contentType: 'text/css', body: '' }); // no late web-font swap: the layout (and scroll) stays deterministic
     if (image && u.pathname.endsWith('/js/studio/studio-demo.js')) {
       const src = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-demo.js'), 'utf8')
         .replace("{ id: 's_hero01', type: 'hero', variant: 'split', data: {", "{ id: 's_hero01', type: 'hero', variant: 'overlay', data: { backgroundImage: '" + IMAGE + "', imageAlt: 'Theke',");

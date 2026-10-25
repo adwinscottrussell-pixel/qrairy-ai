@@ -9,12 +9,13 @@
 // (German / English), over the photo edges (centred on the photos, not the
 // captions), scrolling the strip with snapping, the start / end arrow
 // disabled; keyboard (arrow keys on the focused strip, Tab + Enter on the
-// arrows); sideways scrolling still works; no hint where the arrows exist;
+// arrows); sideways scrolling still works; the swipe hint shows everywhere;
 // Grid has none of it; desktop / tablet / mobile widths; the page has no
 // script. The unsupported-browser fallback (Safari, Firefox) is simulated
 // by making the @supports test fail: then no button at all, the edge fade
-// and the swipe hint. Finally the Studio preview: the arrows work there too,
-// AI labels and captions stay.
+// and the swipe hint; and checked in a real Firefox when one is installed.
+// Finally the Studio preview: the arrows work there too, AI labels and
+// captions stay.
 // Run: node tests/studioGalleryCarousel.browser.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -48,10 +49,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let browser, base;
 
 // a published page with one gallery, rendered by core.js
-function pageHtml({ lang = 'de', variant = 'carousel', count = 4, unsupported = false } = {}) {
+function pageHtml({ lang = 'de', variant = 'carousel', count = 4, unsupported = false, bg } = {}) {
   const d = JSON.parse(JSON.stringify(BASE));
   d.settings.language = lang;
-  d.pages[0].sections.splice(1, 0, { id: 's_gal09', type: 'gallery', variant, data: { title: 'Fotos', images: Array.from({ length: count }, (x, i) => ({ image: IMG('p' + i), alt: 'Foto ' + (i + 1), caption: 'Bild ' + (i + 1) })) } });
+  d.pages[0].sections.splice(1, 0, { id: 's_gal09', type: 'gallery', variant, style: bg ? { background: bg } : undefined, data: { title: 'Fotos', images: Array.from({ length: count }, (x, i) => ({ image: IMG('p' + i), alt: 'Foto ' + (i + 1), caption: 'Bild ' + (i + 1) })) } });
   const r = V3.renderDesign(d, { businessName: 'Musterbäckerei' });
   assert.ok(r.ok, JSON.stringify(r.errors));
   // simulated Safari / Firefox: the @supports test fails, so the fallback applies
@@ -88,9 +89,9 @@ async function arrows(page) {
   (function walk(n) { if (!n) return; if (n.role === 'button' && /Bild|image/.test(n.name || '')) out.push({ name: n.name, disabled: !!n.disabled }); (n.children || []).forEach(walk); })(ax);
   return out;
 }
-// where the arrows are drawn: 48 px circles 10 px inside the strip edges, centred on the photos
-const rightArrow = (s) => ({ x: s.right - 10 - 24, y: s.photoMid });
-const leftArrow = (s) => ({ x: s.left + 10 + 24, y: s.photoMid });
+// where the arrows are drawn: 56 px circles 10 px inside the strip edges, centred on the photos
+const rightArrow = (s) => ({ x: s.right - 10 - 28, y: s.photoMid });
+const leftArrow = (s) => ({ x: s.left + 10 + 28, y: s.photoMid });
 // is an arrow painted at (x, y) right now, without hovering? Compares that
 // spot with the same page where the arrows are removed (content: none).
 async function painted(page, at) {
@@ -114,13 +115,14 @@ test('Chrome: two real arrow buttons, named in German, the left one disabled at 
     assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: true }, { name: 'Nächstes Bild', disabled: false }], w + 'px');
     const s = await strip(page);
     assert.ok(s.photoMid < s.photoBottom && s.photoMid < s.captionTop, w + 'px: centred on the photo, above the caption');
-    assert.equal(s.hint, 'none', w + 'px: no hint where the arrows exist');
+    assert.equal(s.hint, 'block', w + 'px: the swipe hint shows with the arrows too');
+    assert.equal(s.hintText, '← Weitere Bilder: wischen oder scrollen →');
     assert.equal(s.fade, 'none', w + 'px: no edge fade either');
     // both arrows are painted without hovering: the enabled right one and the dimmed (disabled) left one
     assert.ok(await painted(page, rightArrow(s)), w + 'px: the right arrow is visible without hovering');
     assert.ok(await painted(page, leftArrow(s)), w + 'px: the disabled left arrow stays subtly visible');
-    // the arrow (48 px) stays above the caption
-    assert.ok(s.photoMid + 24 < s.captionTop, w + 'px: away from the caption');
+    // the arrow (56 px) stays above the caption
+    assert.ok(s.photoMid + 28 < s.captionTop, w + 'px: away from the caption');
     // the right arrow is where it is drawn: a click there scrolls
     await page.mouse.click(rightArrow(s).x, rightArrow(s).y);
     assert.ok((await settle(page)) > 0, w + 'px: the right arrow scrolls');
@@ -206,6 +208,23 @@ test('English labels; no visible scrollbar, sideways scrolling (wheel / trackpad
   await page.close();
 });
 
+// WCAG contrast of the hint text against what is behind it (its own chip or the section)
+test('the hint is readable (at least 4.5:1) on light, dark and brand backgrounds, 15 px semi-bold', async () => {
+  for (const bg of ['default', 'alt', 'dark', 'brand']) {
+    const { page } = await openPage(pageHtml({ bg }), 390);
+    const c = await page.evaluate(() => {
+      const lum = (col) => { const v = col.match(/[\d.]+/g).slice(0, 3).map((x) => { x = x / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const h = document.querySelector('.v3-gal-hint'); let n = h, back = 'rgba(0, 0, 0, 0)';
+      while (n && /rgba\(0, 0, 0, 0\)|transparent/.test(back)) { back = getComputedStyle(n).backgroundColor; n = n.parentElement; }
+      const a = lum(getComputedStyle(h).color), b = lum(back);
+      return { ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05), size: getComputedStyle(h).fontSize, weight: getComputedStyle(h).fontWeight };
+    });
+    assert.ok(c.ratio >= 4.5, bg + ': contrast ' + c.ratio.toFixed(2));
+    assert.deepEqual([c.size, c.weight], ['15px', '600'], bg);
+    await page.close();
+  }
+});
+
 test('Grid: no arrows, no hint, no focusable strip; one photo: no hint', async () => {
   const { page } = await openPage(pageHtml({ variant: 'grid' }), 1280);
   assert.deepEqual(await arrows(page), []);
@@ -217,11 +236,11 @@ test('Grid: no arrows, no hint, no focusable strip; one photo: no hint', async (
 });
 
 test('unsupported browser (simulated: the @supports test fails): no button at all, the edge fade and the swipe hint; sideways scrolling works', async () => {
-  for (const [w, lang, text] of [[390, 'de', 'Weitere Bilder: seitlich wischen oder scrollen'], [1280, 'en', 'More photos: swipe or scroll sideways']]) {
+  for (const [w, lang, text] of [[390, 'de', '← Weitere Bilder: wischen oder scrollen →'], [1280, 'en', '← More photos: swipe or scroll →']]) {
     const { page } = await openPage(pageHtml({ lang, unsupported: true }), w);
     assert.deepEqual(await arrows(page), [], w + 'px: no arrow buttons');
     const s = await strip(page);
-    assert.equal(s.hint, 'flex', w + 'px: the hint shows');
+    assert.equal(s.hint, 'block', w + 'px: the hint shows');
     assert.equal(s.hintText, text);
     assert.equal(s.fade, '""', w + 'px: the edge fade');
     assert.ok(await page.$eval('.v3-gal-hint', (n) => n.getAttribute('aria-hidden') === 'true' && n.tagName === 'P' && !n.closest('button, a')), 'the hint is plain text, not a control');
@@ -234,6 +253,43 @@ test('unsupported browser (simulated: the @supports test fails): no button at al
     assert.equal(await page.$eval('.v3-gal-carousel', (n) => n.offsetHeight - n.clientHeight), 0, w + 'px: no visible scrollbar here either; the hint explains');
     await page.close();
   }
+});
+
+// a real Firefox (no ::scroll-button), when one is installed
+const FIREFOX = [process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Mozilla Firefox', 'firefox.exe'), 'C:/Program Files/Mozilla Firefox/firefox.exe', '/usr/bin/firefox', '/Applications/Firefox.app/Contents/MacOS/firefox'].filter((p) => p && fs.existsSync(p));
+test('Firefox (real, no ::scroll-button): no arrows; the hint shows; keyboard scrolls with snapping; no visible scrollbar', async () => {
+  let ff = null;
+  for (const exe of FIREFOX) { try { ff = await puppeteer.launch({ browser: 'firefox', executablePath: exe, headless: true }); break; } catch (e) { ff = null; } }
+  if (!ff) { console.log('      (SKIP: no Firefox could be started)'); return; }
+  try {
+    for (const [w, lang, text] of [[390, 'de', '← Weitere Bilder: wischen oder scrollen →'], [1280, 'en', '← More photos: swipe or scroll →']]) {
+      // photos from the local server (no request interception needed)
+      pages = { '/page.html': pageHtml({ lang }).split('https://res.cloudinary.com/demo/image/upload/v1/').join('/images/deals/starter/bakery-bread-01.jpg?') };
+      const page = await ff.newPage();
+      await page.setViewport({ width: w, height: 900 });
+      await page.goto(base + '/page.html', { waitUntil: 'load' });
+      await page.evaluate(() => document.querySelector('#s_gal09').scrollIntoView());
+      await sleep(300);
+      const info = await page.evaluate(() => {
+        const s = document.querySelector('.v3-gal-carousel'), h = document.querySelector('.v3-gal-hint');
+        return { buttons: CSS.supports('selector(::scroll-button(right))'), hint: getComputedStyle(h).display, hintText: h.textContent, hintH: h.getBoundingClientRect().height,
+          bar: getComputedStyle(s).scrollbarWidth, barPx: s.offsetHeight - s.clientHeight, fade: getComputedStyle(document.querySelector('.v3-gal-wrap'), '::after').content };
+      });
+      assert.deepEqual([info.buttons, info.hint, info.hintText, info.bar, info.barPx, info.fade], [false, 'block', text, 'none', 0, '""'], w + 'px: no arrows, the hint, hidden scrollbar, edge fade');
+      assert.ok(info.hintH > 0, w + 'px: the hint takes space under the photos');
+      const step = await page.evaluate(() => { const it = document.querySelectorAll('.v3-gal-item'); return it[1].getBoundingClientRect().left - it[0].getBoundingClientRect().left; });
+      const max = await page.evaluate(() => { const s = document.querySelector('.v3-gal-carousel'); return s.scrollWidth - s.clientWidth; });
+      const at = async () => { let last = -1, v; for (let i = 0; i < 30; i++) { await sleep(100); v = await page.evaluate(() => document.querySelector('.v3-gal-carousel').scrollLeft); if (v === last) break; last = v; } return v; };
+      await page.focus('.v3-gal-carousel');
+      await page.keyboard.press('ArrowRight');
+      const k = await at();
+      assert.ok(k > 0, w + 'px: ArrowRight scrolls');
+      assert.ok(Math.abs(k - max) < 1 || Math.abs(k / step - Math.round(k / step)) < 0.02, w + 'px: snapped to a photo: ' + k);
+      await page.keyboard.press('ArrowLeft');
+      assert.ok((await at()) < k, w + 'px: ArrowLeft scrolls back');
+      await page.close();
+    }
+  } finally { await ff.close(); }
 });
 
 test('the published page has no script; no request beyond the page, its photos and fonts', async () => {
@@ -266,10 +322,10 @@ test('the Studio preview: in Carousel the arrows work in the desktop, tablet and
       return { right: r.right, mid: img.top + img.height / 2, scrollLeft: s.scrollLeft, max: s.scrollWidth - s.clientWidth,
         labels: s.querySelectorAll('.st-ai').length, captions: s.querySelectorAll('figcaption').length, hint: getComputedStyle(document.querySelector('.v3-gal-hint')).display };
     });
-    assert.deepEqual([g.labels, g.captions, g.hint], [3, 3, 'none'], dev);
+    assert.deepEqual([g.labels, g.captions, g.hint], [3, 3, 'block'], dev + ': labels, captions, the swipe hint');
     if (g.max <= 0) continue; // nothing to scroll at this width
     const f = await ifr.evaluate((n) => { const b = n.getBoundingClientRect(); return { left: b.left, top: b.top, scale: b.width / n.offsetWidth }; });
-    await page.mouse.click(f.left + (g.right - 34) * f.scale, f.top + g.mid * f.scale);
+    await page.mouse.click(f.left + (g.right - 38) * f.scale, f.top + g.mid * f.scale);
     await sleep(900);
     assert.ok((await fr.evaluate(() => document.querySelector('.v3-gal-carousel').scrollLeft)) > 0, dev + ': the right arrow scrolls in the preview');
   }
