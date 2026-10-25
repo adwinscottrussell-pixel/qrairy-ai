@@ -6,8 +6,9 @@
 // Pages are rendered by the shared core.js (the published page and the
 // Studio preview use the same markup and CSS). Checked in Chrome, which has
 // ::scroll-button(): two real arrow buttons named in the page language
-// (German / English), over the photo edges (centred on the photos, not the
-// captions), scrolling the strip with snapping, the start / end arrow
+// (German / English), over the photo edges on tablet / desktop (centred on
+// the photos, not the captions) and in a row under the photos on phones
+// (tapped; white on the brand colour), scrolling the strip with snapping, the start / end arrow
 // disabled; keyboard (arrow keys on the focused strip, Tab + Enter on the
 // arrows); sideways scrolling still works; the swipe hint shows everywhere;
 // Grid has none of it; desktop / tablet / mobile widths; the page has no
@@ -79,8 +80,8 @@ async function openPage(html, width, height = 900) {
 const strip = (page) => page.evaluate(() => {
   const s = document.querySelector('.v3-gal-carousel'), r = s.getBoundingClientRect(), img = s.querySelector('img').getBoundingClientRect(), cap = s.querySelector('figcaption').getBoundingClientRect();
   const hint = document.querySelector('.v3-gal-hint');
-  return { left: r.left, right: r.right, top: r.top, scrollLeft: Math.round(s.scrollLeft), max: s.scrollWidth - s.clientWidth, photoMid: img.top + img.height / 2, photoBottom: img.bottom, captionTop: cap.top,
-    itemWidth: s.querySelector('.v3-gal-item').getBoundingClientRect().width, hint: hint ? getComputedStyle(hint).display : 'absent', hintText: hint ? hint.textContent : '',
+  return { vw: innerWidth, left: r.left, right: r.right, top: r.top, bottom: r.bottom, scrollLeft: Math.round(s.scrollLeft), max: s.scrollWidth - s.clientWidth, photoMid: img.top + img.height / 2, photoBottom: img.bottom, captionTop: cap.top,
+    itemWidth: s.querySelector('.v3-gal-item').getBoundingClientRect().width, hint: hint ? getComputedStyle(hint).display : 'absent', hintText: hint ? hint.innerText.trim() : '',
     fade: getComputedStyle(document.querySelector('.v3-gal-wrap'), '::after').content };
 });
 async function arrows(page) {
@@ -89,9 +90,12 @@ async function arrows(page) {
   (function walk(n) { if (!n) return; if (n.role === 'button' && /Bild|image/.test(n.name || '')) out.push({ name: n.name, disabled: !!n.disabled }); (n.children || []).forEach(walk); })(ax);
   return out;
 }
-// where the arrows are drawn: 56 px circles 10 px inside the strip edges, centred on the photos
-const rightArrow = (s) => ({ x: s.right - 10 - 28, y: s.photoMid });
-const leftArrow = (s) => ({ x: s.left + 10 + 28, y: s.photoMid });
+// where the arrows are drawn: 56 px circles; tablet / desktop 10 px inside the strip edges,
+// centred on the photos; phones (under 768 px) in a row 8 px under the strip, at its edges
+const phone = (s) => s.vw < 768;
+const rightArrow = (s) => (phone(s) ? { x: s.right - 28, y: s.bottom + 8 + 28 } : { x: s.right - 10 - 28, y: s.photoMid });
+const leftArrow = (s) => (phone(s) ? { x: s.left + 28, y: s.bottom + 8 + 28 } : { x: s.left + 10 + 28, y: s.photoMid });
+const LONG = '← Weitere Bilder: wischen oder scrollen →', SHORT = 'Weitere Bilder · Wischen';
 // is an arrow painted at (x, y) right now, without hovering? Compares that
 // spot with the same page where the arrows are removed (content: none).
 async function painted(page, at) {
@@ -109,20 +113,21 @@ async function painted(page, at) {
 }
 async function settle(page) { let last = -1; for (let i = 0; i < 30; i++) { const v = (await strip(page)).scrollLeft; if (v === last) return v; last = v; await sleep(80); } return last; }
 
-test('Chrome: two real arrow buttons, named in German, the left one disabled at the start; over the photo edges, centred on the photos (desktop, tablet, mobile)', async () => {
+test('Chrome: two real arrow buttons, named in German, the left one disabled at the start; over the photo edges on desktop / tablet, under the photos on phones', async () => {
   for (const w of [1280, 820, 390]) {
     const { page, errors } = await openPage(pageHtml(), w);
     assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: true }, { name: 'Nächstes Bild', disabled: false }], w + 'px');
     const s = await strip(page);
-    assert.ok(s.photoMid < s.photoBottom && s.photoMid < s.captionTop, w + 'px: centred on the photo, above the caption');
-    assert.equal(s.hint, 'block', w + 'px: the swipe hint shows with the arrows too');
-    assert.equal(s.hintText, '← Weitere Bilder: wischen oder scrollen →');
+    if (phone(s)) assert.ok(rightArrow(s).y - 28 >= s.bottom, w + 'px: the arrows under the photos and captions');
+    else assert.ok(s.photoMid < s.photoBottom && s.photoMid < s.captionTop, w + 'px: centred on the photo, above the caption');
+    assert.equal(s.hint, phone(s) ? 'flex' : 'block', w + 'px: the swipe hint shows with the arrows too (between them on phones)');
+    assert.equal(s.hintText, phone(s) ? SHORT : LONG, w + 'px: short hint on phones');
     assert.equal(s.fade, 'none', w + 'px: no edge fade either');
     // both arrows are painted without hovering: the enabled right one and the dimmed (disabled) left one
     assert.ok(await painted(page, rightArrow(s)), w + 'px: the right arrow is visible without hovering');
     assert.ok(await painted(page, leftArrow(s)), w + 'px: the disabled left arrow stays subtly visible');
-    // the arrow (56 px) stays above the caption
-    assert.ok(s.photoMid + 28 < s.captionTop, w + 'px: away from the caption');
+    // the arrow (56 px) stays above the caption (tablet / desktop)
+    if (!phone(s)) assert.ok(s.photoMid + 28 < s.captionTop, w + 'px: away from the caption');
     // the right arrow is where it is drawn: a click there scrolls
     await page.mouse.click(rightArrow(s).x, rightArrow(s).y);
     assert.ok((await settle(page)) > 0, w + 'px: the right arrow scrolls');
@@ -208,7 +213,7 @@ test('English labels; no visible scrollbar, sideways scrolling (wheel / trackpad
   await page.close();
 });
 
-// WCAG contrast of the hint text against what is behind it (its own chip or the section)
+// WCAG contrast of the hint text against the section behind it (plain text, no chip)
 test('the hint is readable (at least 4.5:1) on light, dark and brand backgrounds, 15 px semi-bold', async () => {
   for (const bg of ['default', 'alt', 'dark', 'brand']) {
     const { page } = await openPage(pageHtml({ bg }), 390);
@@ -225,6 +230,47 @@ test('the hint is readable (at least 4.5:1) on light, dark and brand backgrounds
   }
 });
 
+// phones (Chrome / Edge): the native buttons in a row under the photos, tapped
+test('phones: the buttons sit under the photos with the short hint between them; taps go forward / back with snapping; end states; swiping; white buttons on the brand colour', async () => {
+  const { PNG } = require('pngjs');
+  const pixel = async (page, x, y) => { const sy = await page.evaluate(() => scrollY); const b = await page.screenshot({ clip: { x: Math.round(x), y: Math.round(sy + y), width: 1, height: 1 }, captureBeyondViewport: false }); return [...PNG.sync.read(Buffer.from(b)).data.slice(0, 3)]; };
+  for (const [w, bg] of [[390, 'default'], [412, 'brand'], [390, 'dark']]) {
+    const { page } = await openPage(pageHtml({ bg }), w, 844);
+    await page.setViewport({ width: w, height: 844, isMobile: true, hasTouch: true });
+    await page.evaluate(() => document.querySelector('#s_gal09').scrollIntoView());
+    await sleep(300);
+    const s = await strip(page);
+    const hint = await page.$eval('.v3-gal-hint', (n) => { const r = n.getBoundingClientRect(); return { top: r.top, mid: r.top + r.height / 2, left: r.left, right: r.right, text: n.innerText.trim() }; });
+    assert.equal(hint.text, SHORT, w + 'px ' + bg);
+    assert.ok(Math.abs(hint.mid - rightArrow(s).y) < 2 && hint.top >= s.bottom, w + 'px ' + bg + ': the hint row and the buttons line up under the photos');
+    // the button colour without hovering: orange, white on the brand colour (sampled inside the circle, off the chevron)
+    const c = await pixel(page, rightArrow(s).x - 20, rightArrow(s).y);
+    if (bg === 'brand') assert.ok(c.every((v) => v > 230), 'brand: a white button, got ' + c);
+    else assert.ok(c[0] > 220 && c[1] > 60 && c[1] < 120 && c[2] < 60, bg + ': an orange button, got ' + c);
+    const stops = [];
+    for (let i = 0; i < 5; i++) { await page.touchscreen.tap(rightArrow(s).x, rightArrow(s).y); stops.push(await settle(page)); }
+    const step = s.itemWidth + 12;
+    assert.equal(stops[stops.length - 1], s.max, w + 'px ' + bg + ': taps reach the end');
+    for (const v of stops) assert.ok(v === s.max || Math.abs(v / step - Math.round(v / step)) < 0.02, 'snapped: ' + v);
+    assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: false }, { name: 'Nächstes Bild', disabled: true }], w + 'px ' + bg + ': at the end');
+    for (let i = 0; i < 5; i++) { await page.touchscreen.tap(leftArrow(s).x, leftArrow(s).y); await settle(page); }
+    assert.equal(await settle(page), 0, w + 'px ' + bg + ': back at the start');
+    assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: true }, { name: 'Nächstes Bild', disabled: false }], w + 'px ' + bg + ': at the start');
+    // a tap on the hint text between the buttons does nothing (plain text)
+    await page.touchscreen.tap((hint.left + hint.right) / 2, hint.mid);
+    assert.equal(await settle(page), 0, 'the hint is not a control');
+    // swiping still scrolls
+    await page.mouse.move((s.left + s.right) / 2, s.photoMid);
+    await page.mouse.wheel({ deltaX: 300 });
+    assert.ok((await settle(page)) > 0, w + 'px ' + bg + ': sideways scrolling');
+    await page.close();
+  }
+  // one photo: nothing to scroll, no buttons and no hint
+  const one = await openPage(pageHtml({ count: 1 }), 390);
+  assert.deepEqual(await arrows(one.page), [], 'one photo: no buttons on phones');
+  await one.page.close();
+});
+
 test('Grid: no arrows, no hint, no focusable strip; one photo: no hint', async () => {
   const { page } = await openPage(pageHtml({ variant: 'grid' }), 1280);
   assert.deepEqual(await arrows(page), []);
@@ -236,7 +282,7 @@ test('Grid: no arrows, no hint, no focusable strip; one photo: no hint', async (
 });
 
 test('unsupported browser (simulated: the @supports test fails): no button at all, the edge fade and the swipe hint; sideways scrolling works', async () => {
-  for (const [w, lang, text] of [[390, 'de', '← Weitere Bilder: wischen oder scrollen →'], [1280, 'en', '← More photos: swipe or scroll →']]) {
+  for (const [w, lang, text] of [[390, 'de', 'Weitere Bilder · Wischen'], [1280, 'en', '← More photos: swipe or scroll →']]) {
     const { page } = await openPage(pageHtml({ lang, unsupported: true }), w);
     assert.deepEqual(await arrows(page), [], w + 'px: no arrow buttons');
     const s = await strip(page);
@@ -244,6 +290,7 @@ test('unsupported browser (simulated: the @supports test fails): no button at al
     assert.equal(s.hintText, text);
     assert.equal(s.fade, '""', w + 'px: the edge fade');
     assert.ok(await page.$eval('.v3-gal-hint', (n) => n.getAttribute('aria-hidden') === 'true' && n.tagName === 'P' && !n.closest('button, a')), 'the hint is plain text, not a control');
+    assert.deepEqual(await page.$eval('.v3-gal-hint', (n) => [getComputedStyle(n).backgroundColor, getComputedStyle(n).borderRadius]), ['rgba(0, 0, 0, 0)', '0px'], w + 'px: no chip, nothing that looks like a button');
     // a click where an arrow would be does nothing
     await page.mouse.click(rightArrow(s).x, rightArrow(s).y);
     assert.equal(await settle(page), 0, w + 'px: nothing clickable at the edge');
@@ -262,7 +309,7 @@ test('Firefox (real, no ::scroll-button): no arrows; the hint shows; keyboard sc
   for (const exe of FIREFOX) { try { ff = await puppeteer.launch({ browser: 'firefox', executablePath: exe, headless: true }); break; } catch (e) { ff = null; } }
   if (!ff) { console.log('      (SKIP: no Firefox could be started)'); return; }
   try {
-    for (const [w, lang, text] of [[390, 'de', '← Weitere Bilder: wischen oder scrollen →'], [1280, 'en', '← More photos: swipe or scroll →']]) {
+    for (const [w, lang, text] of [[390, 'de', 'Weitere Bilder · Wischen'], [1280, 'en', '← More photos: swipe or scroll →']]) {
       // photos from the local server (no request interception needed)
       pages = { '/page.html': pageHtml({ lang }).split('https://res.cloudinary.com/demo/image/upload/v1/').join('/images/deals/starter/bakery-bread-01.jpg?') };
       const page = await ff.newPage();
@@ -272,7 +319,7 @@ test('Firefox (real, no ::scroll-button): no arrows; the hint shows; keyboard sc
       await sleep(300);
       const info = await page.evaluate(() => {
         const s = document.querySelector('.v3-gal-carousel'), h = document.querySelector('.v3-gal-hint');
-        return { buttons: CSS.supports('selector(::scroll-button(right))'), hint: getComputedStyle(h).display, hintText: h.textContent, hintH: h.getBoundingClientRect().height,
+        return { buttons: CSS.supports('selector(::scroll-button(right))'), hint: getComputedStyle(h).display, hintText: h.innerText.trim(), hintH: h.getBoundingClientRect().height,
           bar: getComputedStyle(s).scrollbarWidth, barPx: s.offsetHeight - s.clientHeight, fade: getComputedStyle(document.querySelector('.v3-gal-wrap'), '::after').content };
       });
       assert.deepEqual([info.buttons, info.hint, info.hintText, info.bar, info.barPx, info.fade], [false, 'block', text, 'none', 0, '""'], w + 'px: no arrows, the hint, hidden scrollbar, edge fade');
@@ -319,13 +366,15 @@ test('the Studio preview: in Carousel the arrows work in the desktop, tablet and
     await sleep(300);
     const g = await fr.evaluate(() => {
       const s = document.querySelector('.v3-gal-carousel'), r = s.getBoundingClientRect(), img = s.querySelector('img').getBoundingClientRect();
-      return { right: r.right, mid: img.top + img.height / 2, scrollLeft: s.scrollLeft, max: s.scrollWidth - s.clientWidth,
+      return { vw: innerWidth, right: r.right, bottom: r.bottom, mid: img.top + img.height / 2, scrollLeft: s.scrollLeft, max: s.scrollWidth - s.clientWidth,
         labels: s.querySelectorAll('.st-ai').length, captions: s.querySelectorAll('figcaption').length, hint: getComputedStyle(document.querySelector('.v3-gal-hint')).display };
     });
-    assert.deepEqual([g.labels, g.captions, g.hint], [3, 3, 'block'], dev + ': labels, captions, the swipe hint');
+    assert.deepEqual([g.labels, g.captions, g.hint], [3, 3, g.vw < 768 ? 'flex' : 'block'], dev + ': labels, captions, the swipe hint');
     if (g.max <= 0) continue; // nothing to scroll at this width
     const f = await ifr.evaluate((n) => { const b = n.getBoundingClientRect(); return { left: b.left, top: b.top, scale: b.width / n.offsetWidth }; });
-    await page.mouse.click(f.left + (g.right - 38) * f.scale, f.top + g.mid * f.scale);
+    // phone frame: the right button in the row under the photos; wider frames: over the photo edge
+    const at = g.vw < 768 ? { x: g.right - 28, y: g.bottom + 36 } : { x: g.right - 38, y: g.mid };
+    await page.mouse.click(f.left + at.x * f.scale, f.top + at.y * f.scale);
     await sleep(900);
     assert.ok((await fr.evaluate(() => document.querySelector('.v3-gal-carousel').scrollLeft)) > 0, dev + ': the right arrow scrolls in the preview');
   }

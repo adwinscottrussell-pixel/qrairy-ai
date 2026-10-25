@@ -351,7 +351,7 @@
     de: { menu: 'Menü', closed: 'Geschlossen', phone: 'Telefon', email: 'E-Mail', directions: 'Route planen', address: 'Adresse', skip: 'Zum Inhalt springen',
       days: { mon: 'Montag', tue: 'Dienstag', wed: 'Mittwoch', thu: 'Donnerstag', fri: 'Freitag', sat: 'Samstag', sun: 'Sonntag' },
       view: 'Ansehen',
-      gallery: 'Galerie', galPrev: 'Vorheriges Bild', galNext: 'Nächstes Bild', galHint: '← Weitere Bilder: wischen oder scrollen →',
+      gallery: 'Galerie', galPrev: 'Vorheriges Bild', galNext: 'Nächstes Bild', galHint: '← Weitere Bilder: wischen oder scrollen →', galHintShort: 'Weitere Bilder · Wischen',
       // preview only (the Studio)
       empty: 'Leerer Abschnitt – Inhalte im Editor ergänzen', image: 'Bildplatzhalter', sample: 'Beispiel',
       dealsNote: 'Vorschau: Hier erscheinen Ihre aktuellen Angebote.', loyaltyNote: 'Vorschau: Hier erscheint Ihre Stempelkarte.',
@@ -360,7 +360,7 @@
     en: { menu: 'Menu', closed: 'Closed', phone: 'Phone', email: 'Email', directions: 'Get directions', address: 'Address', skip: 'Skip to content',
       days: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' },
       view: 'View',
-      gallery: 'Gallery', galPrev: 'Previous image', galNext: 'Next image', galHint: '← More photos: swipe or scroll →',
+      gallery: 'Gallery', galPrev: 'Previous image', galNext: 'Next image', galHint: '← More photos: swipe or scroll →', galHintShort: 'More photos · Swipe',
       empty: 'Empty section – add content in the editor', image: 'Image placeholder', sample: 'Sample',
       dealsNote: 'Preview: your current deals appear here.', loyaltyNote: 'Preview: your stamp card appears here.',
       sampleDeals: [['2 for 1', 'Sample offer', 'Every Monday'], ['-20%', 'Sample promotion', 'This week only'], ['€ 2.50', 'Sample price', 'Friday & Saturday']],
@@ -498,7 +498,7 @@
       // arrows are the browser's own ::scroll-button()s (CSS, no script);
       // where they do not exist the hint says how to see more (2A-3H).
       return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="' +
-        esc(d.title || t.gallery) + '">' + items + '</div></div>' + (d.images.length > 1 ? '<p class="v3-gal-hint" aria-hidden="true">' + esc(t.galHint) + '</p>' : '') + SECTION_CLOSE;
+        esc(d.title || t.gallery) + '">' + items + '</div></div>' + (d.images.length > 1 ? '<p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">' + esc(t.galHint) + '</span><span class="v3-gal-hint-s">' + esc(t.galHintShort) + '</span></p>' : '') + SECTION_CLOSE;
     },
     products: function (s, t, pv) {
       var d = s.data;
@@ -541,9 +541,13 @@
     },
   };
 
-  function css(design, extra) {
+  function palette(design) {
     var p = Object.assign({}, DEFAULT_PALETTE);
     Object.keys(design.theme.palette).forEach(function (k) { if (design.theme.palette[k]) p[k] = design.theme.palette[k]; });
+    return p;
+  }
+  function css(design, extra) {
+    var p = palette(design);
     var f = FONT_PAIRS[design.theme.fontPair];
     // Only validated hex colours and constants reach the stylesheet.
     return ':root{--v3-brand:' + p.brand + ';--v3-on-brand:' + p.onBrand + ';--v3-bg:' + p.background + ';--v3-surface:' + p.surface + ';--v3-text:' + p.text +
@@ -561,16 +565,33 @@
     '@media (min-width:768px){.v3-gal-grid{grid-template-columns:repeat(3,1fr)}.v3-gal-carousel .v3-gal-item{flex-basis:40%}}@media (min-width:1200px){.v3-gal-grid{grid-template-columns:repeat(4,1fr)}}',
   ].join('');
   // Carousel navigation without script (2A-3H). Where the browser has
-  // ::scroll-button(), it draws real arrow buttons over the photo edges:
-  // they scroll the strip (snapping still applies), are disabled at the
-  // ends, focusable and named in the page language. Elsewhere (Safari,
+  // ::scroll-button(), it draws real arrow buttons: over the photo edges on
+  // tablet / desktop, in a row under the photos on phones (the hint between
+  // them). They scroll the strip (snapping still applies), are disabled at
+  // the ends, focusable and named in the page language. Elsewhere (Safari,
   // Firefox) no button is shown, only an edge fade. The swipe hint under
-  // the photos shows in every browser.
+  // the photos (shorter on phones) is plain text in every browser.
   function cssString(s) { return '"' + String(s).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ') + '"'; }
-  function chevron(d) {
-    return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>') + '")';
+  function chevron(d, stroke) {
+    return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + stroke + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>') + '")';
   }
-  function carouselCss(t) {
+  // WCAG contrast of two validated hex colours
+  function luminance(hex) {
+    var h = hex.slice(1);
+    if (h.length === 3) h = h.replace(/./g, '$&$&');
+    return [0, 2, 4].reduce(function (sum, i, k) {
+      var c = parseInt(h.substr(i, 2), 16) / 255;
+      return sum + [0.2126, 0.7152, 0.0722][k] * (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    }, 0);
+  }
+  function contrast(a, b) { var x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  // the hint colour on the brand background: the first palette colour that reads at 4.5:1, else black or white
+  function hintOnBrand(p) {
+    var pick = [p.onBrand, p.text, p.background].filter(function (c) { return contrast(c, p.brand) >= 4.5; })[0];
+    return pick || (contrast('#000000', p.brand) >= contrast('#ffffff', p.brand) ? '#000000' : '#ffffff');
+  }
+  var PREV = 'M15 6l-6 6 6 6', NEXT = 'M9 6l6 6-6 6';
+  function carouselCss(t, p) {
     return [
       // no visible scrollbar; scrolling (touch, wheel, trackpad, keys) and snapping stay
       '.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}',
@@ -578,10 +599,11 @@
       // right arrow is disabled there (fractional widths left it 1 px short)
       '.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}',
       '.v3-gal-wrap{position:relative}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}',
-      // the swipe hint under the photos, in every browser, in the section text colour
+      // the swipe hint under the photos, plain text in every browser, in the section text colour;
+      // on the brand colour the colour that reads at 4.5:1 there (chosen here, a validated hex)
       '.v3-gal-hint{margin:10px 0 0;font-size:15px;font-weight:600;line-height:1.4;color:inherit}',
-      // on the brand colour: a chip in the page colours, readable whatever the brand colour is
-      '.v3-gallery.v3-bg-brand .v3-gal-hint{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--v3-bg);color:var(--v3-text)}',
+      '.v3-gallery.v3-bg-brand .v3-gal-hint{color:' + hintOnBrand(p) + '}',
+      '.v3-gal-hint-s{display:none}@media (max-width:767px){.v3-gal-hint-l{display:none}.v3-gal-hint-s{display:inline}}',
       '@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}',
       '.v3-gallery{--v3-gal-fade:var(--v3-bg)}.v3-gallery.v3-bg-alt{--v3-gal-fade:var(--v3-surface)}.v3-gallery.v3-bg-dark{--v3-gal-fade:var(--v3-dark)}.v3-gallery.v3-bg-brand{--v3-gal-fade:var(--v3-brand)}',
       '@supports selector(::scroll-button(right)){',
@@ -589,11 +611,19 @@
       // 56 px QRAIVY orange, always visible; centred on the photos (4:3 at 80 % / 40 % of the strip), not the captions
       '.v3-gal-carousel::scroll-button(*){position:absolute;position-anchor:--v3-gal;top:calc(anchor(top) + anchor-size(width) * .3 - 28px);z-index:3;width:56px;height:56px;padding:0;border:0;',
       'border-radius:50%;background:#ff5a1f center/32px 32px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}',
-      '.v3-gal-carousel::scroll-button(left){content:"" / ' + cssString(t.galPrev) + ';left:calc(anchor(left) + 10px);background-image:' + chevron('M15 6l-6 6 6 6') + '}',
-      '.v3-gal-carousel::scroll-button(right){content:"" / ' + cssString(t.galNext) + ';right:calc(anchor(right) + 10px);background-image:' + chevron('M9 6l6 6-6 6') + '}',
+      '.v3-gal-carousel::scroll-button(left){content:"" / ' + cssString(t.galPrev) + ';left:calc(anchor(left) + 10px);background-image:' + chevron(PREV, '#fff') + '}',
+      '.v3-gal-carousel::scroll-button(right){content:"" / ' + cssString(t.galNext) + ';right:calc(anchor(right) + 10px);background-image:' + chevron(NEXT, '#fff') + '}',
       '.v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#d9480f}.v3-gal-carousel::scroll-button(*):disabled{opacity:.3;cursor:default}',
       '.v3-gal-carousel::scroll-button(*):focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}',
-      '@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 28px)}}}',
+      // on the brand colour: white buttons with QRAIVY orange chevrons
+      '.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*){background-color:#fff}.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#ffe4d6}',
+      '.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(left){background-image:' + chevron(PREV, '#ff5a1f') + '}.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(right){background-image:' + chevron(NEXT, '#ff5a1f') + '}',
+      '@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 28px)}}',
+      // phones: both buttons in a row under the photos, the hint between them (one photo: no buttons)
+      '@media (max-width:767px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(bottom) + 8px)}',
+      '.v3-gal-carousel::scroll-button(left){left:anchor(left)}.v3-gal-carousel::scroll-button(right){right:anchor(right)}',
+      '.v3-gal-carousel:not(:has(> .v3-gal-item + .v3-gal-item))::scroll-button(*){content:none}',
+      '.v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}}}',
       '@supports not selector(::scroll-button(right)){',
       '.v3-gal-wrap::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}}',
     ].join('');
@@ -683,7 +713,7 @@
       if (out) used[s.type] = true;
       return out;
     }).join('');
-    var extraCss = (used.gallery ? GALLERY_CSS + carouselCss(t) : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
+    var extraCss = (used.gallery ? GALLERY_CSS + carouselCss(t, palette(design)) : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
     var h = design.header;
     var navLinks = h.nav.map(function (n) { return '<a' + linkAttrs(n.target) + '>' + esc(n.label) + '</a>'; }).join('');
     var brand = '<a class="v3-brandmark" href="#top">' + (h.logo ? '<img src="' + esc(h.logo) + '" alt="' + esc(h.logoAlt || businessName) + '">' : '') +

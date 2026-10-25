@@ -174,7 +174,7 @@ test('Gallery: grid and carousel, lazy images with alt text and captions, escape
   const d = withSections({ id: 's_gal01', type: 'gallery', variant: 'carousel', data: { title: 'Fotos & "mehr"', images: [{ image: IMG('a'), alt: 'Brot <frisch>', caption: 'Unsere <Backstube>' }, { image: IMG('b') }] } });
   const h = V3.renderDesign(d, CTX).html;
   assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Fotos &amp; &quot;mehr&quot;">/);
-  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true">← Weitere Bilder: wischen oder scrollen →</p></div></section>'), 'the swipe hint after the strip (every browser)');
+  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">← Weitere Bilder: wischen oder scrollen →</span><span class="v3-gal-hint-s">Weitere Bilder · Wischen</span></p></div></section>'), 'the swipe hint after the strip (every browser; long and short text)');
   assert.ok(h.includes('<figure class="v3-gal-item"><img src="https://res.cloudinary.com/demo/image/upload/v1/a.jpg" alt="Brot &lt;frisch&gt;" loading="lazy" width="800" height="600"><figcaption>Unsere &lt;Backstube&gt;</figcaption></figure>'));
   assert.ok(h.includes('<img src="https://res.cloudinary.com/demo/image/upload/v1/b.jpg" alt="" loading="lazy"'), 'decorative image: empty alt');
   assert.ok(h.includes('.v3-gal-carousel{display:flex;overflow-x:auto'), 'carousel scrolls inside its box, not the page');
@@ -207,18 +207,31 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   // whole-pixel photo widths, so snapping reaches the very end (right arrow disabled there)
   assert.ok(de.includes('.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}'));
   assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
-  assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 8, 'the @supports check and the seven arrow rules');
-  assert.equal((de.match(/::scroll-button\(/g) || []).length, 9, 'elsewhere only the @supports not check: no arrow rule outside @supports');
+  // on the brand colour: white buttons with QRAIVY orange chevrons
+  assert.ok(sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*){background-color:#fff}') && sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#ffe4d6}'));
+  assert.ok(sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(left){background-image:url("data:image/svg+xml,') && /scroll-button\(right\)\{background-image:url\("data:image\/svg\+xml,[^"]*stroke%3D%22%23ff5a1f%22/.test(sup(de)), 'orange chevrons');
+  // phones: the buttons in a row under the photos, the hint between them; one photo: no buttons
+  const phone = sup(de).slice(sup(de).indexOf('@media (max-width:767px){'));
+  assert.ok(phone.startsWith('@media (max-width:767px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(bottom) + 8px)}.v3-gal-carousel::scroll-button(left){left:anchor(left)}.v3-gal-carousel::scroll-button(right){right:anchor(right)}'));
+  assert.ok(phone.includes('.v3-gal-carousel:not(:has(> .v3-gal-item + .v3-gal-item))::scroll-button(*){content:none}') && phone.includes('.v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}'));
+  assert.ok(sup(de).includes('@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 28px)}}'), 'tablet / desktop: over the photo edges');
+  assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 16, 'the @supports check and the fifteen arrow rules');
+  assert.equal((de.match(/::scroll-button\(/g) || []).length, 17, 'elsewhere only the @supports not check: no arrow rule outside @supports');
   // the fallback: no button at all, only the edge fade
   const NOT = '@supports not selector(::scroll-button(right)){';
   const fallback = de.slice(de.indexOf(NOT) + NOT.length, de.indexOf('</style>'));
   assert.ok(!fallback.includes('v3-gal-hint') && fallback.includes('.v3-gal-wrap::after{content:"";position:absolute') && !fallback.includes('scroll-button'));
   // the hint: shown in every browser (no display rule hides it), in the section text colour (light, dark and brand backgrounds)
   assert.ok(de.includes('.v3-gal-hint{margin:10px 0 0;font-size:15px;font-weight:600;line-height:1.4;color:inherit}') && !/\.v3-gal-hint\{[^}]*display:none/.test(de));
-  // on the brand colour the hint sits on a chip in the page colours (readable whatever the brand colour is)
-  assert.ok(de.includes('.v3-gallery.v3-bg-brand .v3-gal-hint{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--v3-bg);color:var(--v3-text)}'));
-  assert.ok(de.includes('<p class="v3-gal-hint" aria-hidden="true">← Weitere Bilder: wischen oder scrollen →</p>'));
-  assert.ok(en.includes('<p class="v3-gal-hint" aria-hidden="true">← More photos: swipe or scroll →</p>'));
+  // plain text, never a chip; on the brand colour a text colour that reads at 4.5:1 there
+  assert.ok(!/\.v3-gal-hint\{[^}]*(border-radius|background)/.test(de), 'no chip: nothing makes the hint look like a button');
+  assert.ok(de.includes('.v3-gallery.v3-bg-brand .v3-gal-hint{color:#1a1410}'), 'default orange: the dark page text (white would be 3.1:1)');
+  const brandHint = (brand, onBrand) => { const d = withSections({ id: 's_gal08', type: 'gallery', variant: 'carousel', data: { images: imgs } }); Object.assign(d.theme.palette, { brand }, onBrand ? { onBrand } : {}); return (V3.renderDesign(d, CTX).html.match(/\.v3-gallery\.v3-bg-brand \.v3-gal-hint\{color:(#[0-9a-f]+)\}/i) || [])[1]; };
+  assert.deepEqual([brandHint('#1b3a8a'), brandHint('#ffd400'), brandHint('#1b3a8a', '#ffe08a'), brandHint('#777777')], ['#ffffff', '#1a1410', '#ffe08a', '#000000'], 'dark brand: white; light brand: dark text; a readable onBrand is kept; otherwise black or white');
+  // long text on wider screens, short text on phones
+  assert.ok(de.includes('<p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">← Weitere Bilder: wischen oder scrollen →</span><span class="v3-gal-hint-s">Weitere Bilder · Wischen</span></p>'));
+  assert.ok(en.includes('<p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">← More photos: swipe or scroll →</span><span class="v3-gal-hint-s">More photos · Swipe</span></p>'));
+  assert.ok(de.includes('.v3-gal-hint-s{display:none}@media (max-width:767px){.v3-gal-hint-l{display:none}.v3-gal-hint-s{display:inline}}'));
   // owner text never reaches the stylesheet; no script anywhere
   const style = (h) => h.slice(h.indexOf('<style>'), h.indexOf('</style>'));
   assert.ok(!style(en).includes('</style><b>') && !/<b>/.test(style(en)));
