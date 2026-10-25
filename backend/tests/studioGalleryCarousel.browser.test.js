@@ -149,6 +149,24 @@ test('clicks scroll with snapping to a photo; at the end the right arrow is disa
   await page.close();
 });
 
+// desktop widths with a classic page scrollbar put the strip on a half pixel;
+// with fractional photo widths snapping stopped 1 px short of the end there
+test('desktop end state: the right arrow is disabled at the very end, the last photo fully shown; back to the start', async () => {
+  for (const w of [1024, 1280]) {
+    const { page } = await openPage(pageHtml(), w);
+    const s = await strip(page);
+    let v = 0;
+    for (let i = 0; i < 5; i++) { await page.mouse.click(rightArrow(s).x, rightArrow(s).y); v = await settle(page); }
+    assert.equal(v, s.max, w + 'px: reaches the end');
+    assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: false }, { name: 'Nächstes Bild', disabled: true }], w + 'px');
+    assert.ok(await page.$eval('.v3-gal-carousel', (n) => n.lastElementChild.getBoundingClientRect().right <= n.getBoundingClientRect().right), w + 'px: the last photo fully shown');
+    for (let i = 0; i < 5; i++) { await page.mouse.click(leftArrow(s).x, leftArrow(s).y); v = await settle(page); }
+    assert.equal(v, 0, w + 'px: back at the start');
+    assert.deepEqual(await arrows(page), [{ name: 'Vorheriges Bild', disabled: true }, { name: 'Nächstes Bild', disabled: false }], w + 'px');
+    await page.close();
+  }
+});
+
 test('keyboard: the strip is focusable and named; arrow keys scroll it; Tab reaches the arrows and Enter presses them', async () => {
   const { page } = await openPage(pageHtml(), 1280);
   assert.deepEqual(await page.$eval('.v3-gal-carousel', (n) => [n.tabIndex, n.getAttribute('role'), n.getAttribute('aria-label')]), [0, 'region', 'Fotos']);

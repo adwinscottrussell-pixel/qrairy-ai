@@ -204,6 +204,8 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   assert.ok(sup(de).includes(':focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}'), 'focus: white ring between dark rings, visible on light and dark photos');
   // no visible scrollbar on the strip, which still scrolls (Grid untouched)
   assert.ok(de.includes('.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}') && de.includes('.v3-gal-carousel{display:flex;overflow-x:auto'));
+  // whole-pixel photo widths, so snapping reaches the very end (right arrow disabled there)
+  assert.ok(de.includes('.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}'));
   assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
   assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 8, 'the @supports check and the seven arrow rules');
   assert.equal((de.match(/::scroll-button\(/g) || []).length, 9, 'elsewhere only the @supports not check: no arrow rule outside @supports');

@@ -573,6 +573,9 @@
     return [
       // no visible scrollbar; scrolling (touch, wheel, trackpad, keys) and snapping stay
       '.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}',
+      // whole-pixel photo widths: snapping then lands exactly on the end, so the
+      // right arrow is disabled there (fractional widths left it 1 px short)
+      '.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}',
       '.v3-gal-wrap{position:relative}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}.v3-gal-hint{display:none}',
       '@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}',
       '.v3-gallery{--v3-gal-fade:var(--v3-bg)}.v3-gallery.v3-bg-alt{--v3-gal-fade:var(--v3-surface)}.v3-gallery.v3-bg-dark{--v3-gal-fade:var(--v3-dark)}.v3-gallery.v3-bg-brand{--v3-gal-fade:var(--v3-brand)}',
