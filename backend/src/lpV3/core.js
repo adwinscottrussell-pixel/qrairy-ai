@@ -494,11 +494,14 @@
           (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>';
       }).join('');
       if (s.variant !== 'carousel') return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal v3-gal-' + esc(s.variant) + '">' + items + '</div>' + SECTION_CLOSE;
-      // Carousel: a focusable, labelled strip (arrow keys scroll it). Its
-      // arrows are the browser's own ::scroll-button()s (CSS, no script);
-      // where they do not exist the hint says how to see more (2A-3H).
-      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="' +
-        esc(d.title || t.gallery) + '">' + items + '</div></div>' + (d.images.length > 1 ? '<p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">' + esc(t.galHint) + '</span><span class="v3-gal-hint-s">' + esc(t.galHintShort) + '</span></p>' : '') + SECTION_CLOSE;
+      // Carousel: a focusable, labelled strip (arrow keys scroll it) and, with
+      // more than one photo, previous / next buttons rendered hidden: plain
+      // markup, no script. The trusted controller js/lpV3/gallery-nav.js
+      // (added by the application, never by this renderer) shows and runs
+      // them; without it, swipe, keyboard and the hint remain (2A-3H).
+      var strip = esc(s.id) + '-photos';
+      return sectionOpen(s, '', pv) + heading(d.title, 'v3-h2') + '<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" id="' + strip + '" tabindex="0" role="region" aria-label="' +
+        esc(d.title || t.gallery) + '">' + items + '</div>' + (d.images.length > 1 ? galButton('prev', strip, t.galPrev) + galButton('next', strip, t.galNext) : '') + '</div>' + (d.images.length > 1 ? '<p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">' + esc(t.galHint) + '</span><span class="v3-gal-hint-s">' + esc(t.galHintShort) + '</span></p>' : '') + SECTION_CLOSE;
     },
     products: function (s, t, pv) {
       var d = s.data;
@@ -564,16 +567,17 @@
     '.v3-gal-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px}.v3-gal-carousel .v3-gal-item{flex:0 0 80%;scroll-snap-align:start}',
     '@media (min-width:768px){.v3-gal-grid{grid-template-columns:repeat(3,1fr)}.v3-gal-carousel .v3-gal-item{flex-basis:40%}}@media (min-width:1200px){.v3-gal-grid{grid-template-columns:repeat(4,1fr)}}',
   ].join('');
-  // Carousel navigation without script (2A-3H). Where the browser has
-  // ::scroll-button(), it draws real arrow buttons: over the photo edges on
-  // tablet / desktop, in a row under the photos on phones (the hint between
-  // them). They scroll the strip (snapping still applies), are disabled at
-  // the ends, focusable and named in the page language. Elsewhere (Safari,
-  // Firefox) no button is shown, only an edge fade. The swipe hint under
-  // the photos (shorter on phones) is plain text in every browser.
-  function cssString(s) { return '"' + String(s).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ') + '"'; }
-  function chevron(d, stroke) {
-    return 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + stroke + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>') + '")';
+  // Carousel navigation (2A-3H): previous / next buttons over the photo
+  // edges on tablet / desktop, in a row under the photos on phones (the
+  // hint between them); the same in every browser. The buttons are plain
+  // markup here; the trusted controller js/lpV3/gallery-nav.js shows them
+  // (data-nav="on" on the wrap), scrolls photo by photo (snapping still
+  // applies) and disables them at the ends. Without it: no buttons, the
+  // edge fade and the swipe hint (shorter on phones), plain text.
+  var CHEVRON = { prev: 'M15 6l-6 6 6 6', next: 'M9 6l6 6-6 6' };
+  function galButton(dir, strip, label) {
+    return '<button type="button" class="v3-gal-btn v3-gal-' + dir + '" aria-controls="' + strip + '" aria-label="' + esc(label) + '" hidden>' +
+      '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + CHEVRON[dir] + '"/></svg></button>';
   }
   // WCAG contrast of two validated hex colours
   function luminance(hex) {
@@ -590,15 +594,15 @@
     var pick = [p.onBrand, p.text, p.background].filter(function (c) { return contrast(c, p.brand) >= 4.5; })[0];
     return pick || (contrast('#000000', p.brand) >= contrast('#ffffff', p.brand) ? '#000000' : '#ffffff');
   }
-  var PREV = 'M15 6l-6 6 6 6', NEXT = 'M9 6l6 6-6 6';
   function carouselCss(t, p) {
     return [
       // no visible scrollbar; scrolling (touch, wheel, trackpad, keys) and snapping stay
       '.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}',
       // whole-pixel photo widths: snapping then lands exactly on the end, so the
-      // right arrow is disabled there (fractional widths left it 1 px short)
+      // right button is disabled there (fractional widths left it 1 px short)
       '.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}',
-      '.v3-gal-wrap{position:relative}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}',
+      // the strip starts at the top of its wrap (the wrap takes the gap above), so the buttons can be placed against it
+      '.v3-gal-wrap{position:relative;container-type:inline-size;margin-top:16px}.v3-gal-wrap > .v3-gal-carousel{margin-top:0}.v3-gal-carousel:focus-visible{outline:2px solid var(--v3-brand);outline-offset:4px}',
       // the swipe hint under the photos, plain text in every browser, in the section text colour;
       // on the brand colour the colour that reads at 4.5:1 there (chosen here, a validated hex)
       '.v3-gal-hint{margin:10px 0 0;font-size:15px;font-weight:600;line-height:1.4;color:inherit}',
@@ -606,26 +610,20 @@
       '.v3-gal-hint-s{display:none}@media (max-width:767px){.v3-gal-hint-l{display:none}.v3-gal-hint-s{display:inline}}',
       '@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}',
       '.v3-gallery{--v3-gal-fade:var(--v3-bg)}.v3-gallery.v3-bg-alt{--v3-gal-fade:var(--v3-surface)}.v3-gallery.v3-bg-dark{--v3-gal-fade:var(--v3-dark)}.v3-gallery.v3-bg-brand{--v3-gal-fade:var(--v3-brand)}',
-      '@supports selector(::scroll-button(right)){',
-      '.v3-gal-wrap{anchor-scope:--v3-gal}.v3-gal-carousel{anchor-name:--v3-gal}',
-      // 56 px QRAIVY orange, always visible; centred on the photos (4:3 at 80 % / 40 % of the strip), not the captions
-      '.v3-gal-carousel::scroll-button(*){position:absolute;position-anchor:--v3-gal;top:calc(anchor(top) + anchor-size(width) * .3 - 28px);z-index:3;width:56px;height:56px;padding:0;border:0;',
-      'border-radius:50%;background:#ff5a1f center/32px 32px no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}',
-      '.v3-gal-carousel::scroll-button(left){content:"" / ' + cssString(t.galPrev) + ';left:calc(anchor(left) + 10px);background-image:' + chevron(PREV, '#fff') + '}',
-      '.v3-gal-carousel::scroll-button(right){content:"" / ' + cssString(t.galNext) + ';right:calc(anchor(right) + 10px);background-image:' + chevron(NEXT, '#fff') + '}',
-      '.v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#d9480f}.v3-gal-carousel::scroll-button(*):disabled{opacity:.3;cursor:default}',
-      '.v3-gal-carousel::scroll-button(*):focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}',
+      // the buttons: 56 px QRAIVY orange, white chevron; phones: in a row 8 px under the photos
+      '.v3-gal-btn{position:absolute;z-index:3;top:calc(100% + 8px);display:flex;align-items:center;justify-content:center;width:56px;height:56px;margin:0;padding:0;border:0;',
+      'border-radius:50%;background:#ff5a1f;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}.v3-gal-btn[hidden]{display:none}.v3-gal-btn svg{display:block}',
+      '.v3-gal-prev{left:0}.v3-gal-next{right:0}',
+      '.v3-gal-btn:hover:not(:disabled){background-color:#d9480f}.v3-gal-btn:disabled{opacity:.3;cursor:default}',
+      '.v3-gal-btn:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}',
       // on the brand colour: white buttons with QRAIVY orange chevrons
-      '.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*){background-color:#fff}.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#ffe4d6}',
-      '.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(left){background-image:' + chevron(PREV, '#ff5a1f') + '}.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(right){background-image:' + chevron(NEXT, '#ff5a1f') + '}',
-      '@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 28px)}}',
-      // phones: both buttons in a row under the photos, the hint between them (one photo: no buttons)
-      '@media (max-width:767px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(bottom) + 8px)}',
-      '.v3-gal-carousel::scroll-button(left){left:anchor(left)}.v3-gal-carousel::scroll-button(right){right:anchor(right)}',
-      '.v3-gal-carousel:not(:has(> .v3-gal-item + .v3-gal-item))::scroll-button(*){content:none}',
-      '.v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}}}',
-      '@supports not selector(::scroll-button(right)){',
-      '.v3-gal-wrap::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}}',
+      '.v3-gallery.v3-bg-brand .v3-gal-btn{background-color:#fff;color:#ff5a1f}.v3-gallery.v3-bg-brand .v3-gal-btn:hover:not(:disabled){background-color:#ffe4d6}',
+      // tablet / desktop: over the photo edges, centred on the photos (4:3 at 40 % of the strip), not the captions
+      '@media (min-width:768px){.v3-gal-btn{top:calc(15cqw - 28px)}.v3-gal-prev{left:10px}.v3-gal-next{right:10px}}',
+      // phones with working buttons: the hint sits between them
+      '@media (max-width:767px){.v3-gal-wrap[data-nav=on] + .v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}}',
+      // without the controller (no script): the edge fade says there is more
+      '.v3-gal-wrap:not([data-nav=on])::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}',
     ].join('');
   }
   var PRODUCTS_CSS = [

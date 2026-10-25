@@ -385,6 +385,10 @@
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; } });
+    // the trusted Gallery controller (js/lpV3/gallery-nav.js, loaded by
+    // studio.html): its fixed code for the sandboxed frames, which load
+    // nothing themselves; without it: no buttons, swipe and the hint remain
+    if (window.QraivyGalleryNav) preview.setNavScript(window.QraivyGalleryNav.source);
     preview.setHtml(pageHtml(), 0);
     // the demo photos as inline images for the sandboxed frames; once ready, show them
     if (DEMO_IMAGES.prepare) DEMO_IMAGES.prepare(function () { preview.setHtml(pageHtml(), 0); });

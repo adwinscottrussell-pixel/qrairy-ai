@@ -4,10 +4,14 @@
  * The page is rendered by the shared js/lpV3/core.js (preview mode) and
  * shown in iframes sandboxed with "allow-scripts" only — never
  * allow-same-origin: the frame has an opaque origin and cannot reach the
- * Studio, its storage or cookies. The only script in it is FRAME_SCRIPT
- * below: fixed text, no owner data. It reports clicks on a section and the
- * scroll position, and marks the selected section. Messages are checked
- * both ways (acceptMessage here, the source window in each direction).
+ * Studio, its storage or cookies. Its scripts are FRAME_SCRIPT below
+ * (fixed text, no owner data: it reports clicks on a section and the scroll
+ * position, and marks the selected section) and, on a page with a Gallery
+ * carousel, the trusted first-party controller js/lpV3/gallery-nav.js
+ * (setNavScript: its fixed code, window.QraivyGalleryNav.source from the
+ * copy studio.html loads; it sends no messages). The frames themselves load
+ * nothing. Messages are
+ * checked both ways (acceptMessage here, the source window in each direction).
  *
  * In Node: module.exports (pure parts, for the tests). In the Studio:
  * window.QraivyStudioPreview.
@@ -42,10 +46,18 @@
     'if(d.type==="init"||d.type==="select")mark(typeof d.id==="string"?d.id:null,d.reveal===true);});' +
     '})();</script>';
 
-  // The rendered page plus FRAME_SCRIPT, just before </body>.
-  function previewHtml(html) {
+  // The Gallery controller (gallery-nav.js `source`) is accepted only as
+  // plain script text that cannot close or comment out its element.
+  function navTag(nav) {
+    return typeof nav === 'string' && nav.length > 0 && nav.length < 20000 && !/<\/script|<!--|<script/i.test(nav) ? '<script>' + nav + '</script>' : '';
+  }
+
+  // The rendered page plus FRAME_SCRIPT (and, on a page with a Gallery
+  // carousel, the controller), just before </body>.
+  function previewHtml(html, nav) {
     if (typeof html !== 'string' || !/<\/body><\/html>$/.test(html)) return '';
-    return html.slice(0, html.length - '</body></html>'.length) + FRAME_SCRIPT + '</body></html>';
+    var gallery = html.indexOf('<div class="v3-gal-wrap">') !== -1 ? navTag(nav) : '';
+    return html.slice(0, html.length - '</body></html>'.length) + FRAME_SCRIPT + gallery + '</body></html>';
   }
 
   // A message from a preview frame -> the accepted message, or null.
@@ -58,10 +70,10 @@
     return null;
   }
 
-  // createPreview({ canvas, title(device), onSelect(id), phoneOnly() })
+  // createPreview({ canvas, title(device), onSelect(id) })
   function createPreview(o) {
     var doc = o.canvas.ownerDocument, win = doc.defaultView;
-    var state = { html: '', device: 'desktop', selected: null, scroll: {}, timer: null };
+    var state = { html: '', device: 'desktop', selected: null, scroll: {}, timer: null, nav: '' };
 
     function mq(q) { return win.matchMedia && win.matchMedia(q).matches; }
     function phoneOnly() { return mq('(max-width: 767px)'); }
@@ -93,7 +105,7 @@
       ifr.setAttribute('data-device', device);
       // after every (re)load: back to the same scroll position, selection marked
       ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[device] || 0, reveal: false }); });
-      ifr.srcdoc = previewHtml(state.html);
+      ifr.srcdoc = previewHtml(state.html, state.nav);
       scale.appendChild(ifr);
       frame.appendChild(scale);
       return frame;
@@ -151,10 +163,19 @@
       var apply = function () {
         if (html === state.html) return;
         state.html = html;
-        var doc2 = previewHtml(html);
+        var doc2 = previewHtml(html, state.nav);
         frames().forEach(function (ifr) { ifr.srcdoc = doc2; });
       };
       if (delay) state.timer = setTimeout(apply, delay); else apply();
+    }
+
+    // The Gallery controller's code (set once at start): kept only if
+    // acceptable; every frame (re)load from then on includes it.
+    function setNavScript(text) {
+      if (!navTag(text) || text === state.nav) return;
+      state.nav = text;
+      var doc2 = previewHtml(state.html, state.nav);
+      frames().forEach(function (ifr) { ifr.srcdoc = doc2; });
     }
 
     function select(id, reveal) {
@@ -173,7 +194,7 @@
     });
 
     return {
-      render: render, fit: fit, setHtml: setHtml, select: select, phoneOnly: phoneOnly,
+      render: render, fit: fit, setHtml: setHtml, setNavScript: setNavScript, select: select, phoneOnly: phoneOnly,
       html: function () { return state.html; },
       device: function () { return state.device; },
       setDevice: function (d) { if (FRAMES[d]) { state.device = d; render(); } },

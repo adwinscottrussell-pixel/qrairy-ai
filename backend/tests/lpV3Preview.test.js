@@ -173,8 +173,8 @@ test('preview samples: Deals / Offers and Loyalty, labelled, owner text escaped,
 test('Gallery: grid and carousel, lazy images with alt text and captions, escaped', () => {
   const d = withSections({ id: 's_gal01', type: 'gallery', variant: 'carousel', data: { title: 'Fotos & "mehr"', images: [{ image: IMG('a'), alt: 'Brot <frisch>', caption: 'Unsere <Backstube>' }, { image: IMG('b') }] } });
   const h = V3.renderDesign(d, CTX).html;
-  assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Fotos &amp; &quot;mehr&quot;">/);
-  assert.ok(h.includes('</div></div><p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">← Weitere Bilder: wischen oder scrollen →</span><span class="v3-gal-hint-s">Weitere Bilder · Wischen</span></p></div></section>'), 'the swipe hint after the strip (every browser; long and short text)');
+  assert.match(h, /<section id="s_gal01" class="v3-s v3-gallery v3-v-carousel [^"]*"><div class="v3-wrap"><h2 class="v3-h2">Fotos &amp; &quot;mehr&quot;<\/h2><div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" id="s_gal01-photos" tabindex="0" role="region" aria-label="Fotos &amp; &quot;mehr&quot;">/);
+  assert.ok(/<\/figure><\/div><button type="button" class="v3-gal-btn v3-gal-prev"[^>]*>[\s\S]*?<\/button><button type="button" class="v3-gal-btn v3-gal-next"[^>]*>[\s\S]*?<\/button><\/div><p class="v3-gal-hint" aria-hidden="true"><span class="v3-gal-hint-l">← Weitere Bilder: wischen oder scrollen →<\/span><span class="v3-gal-hint-s">Weitere Bilder · Wischen<\/span><\/p><\/div><\/section>/.test(h), 'the two buttons after the strip, then the swipe hint (long and short text)');
   assert.ok(h.includes('<figure class="v3-gal-item"><img src="https://res.cloudinary.com/demo/image/upload/v1/a.jpg" alt="Brot &lt;frisch&gt;" loading="lazy" width="800" height="600"><figcaption>Unsere &lt;Backstube&gt;</figcaption></figure>'));
   assert.ok(h.includes('<img src="https://res.cloudinary.com/demo/image/upload/v1/b.jpg" alt="" loading="lazy"'), 'decorative image: empty alt');
   assert.ok(h.includes('.v3-gal-carousel{display:flex;overflow-x:auto'), 'carousel scrolls inside its box, not the page');
@@ -183,44 +183,44 @@ test('Gallery: grid and carousel, lazy images with alt text and captions, escape
   assert.equal(V3.renderDesign(withSections({ id: 's_gal03', type: 'gallery', data: {} }), CTX).html.includes('s_gal03'), false, 'empty gallery: nothing public');
 });
 
-// Carousel navigation (2A-3H): the browser's own ::scroll-button() arrows
-// where supported, otherwise an edge fade; the swipe hint everywhere; no script.
-test('Carousel navigation: CSS-only arrows (named per language) behind @supports, the hint in every browser; Grid untouched; no script', () => {
+// Carousel navigation (2A-3H): previous / next buttons rendered as plain,
+// hidden markup (no script, no handler); the trusted controller
+// js/lpV3/gallery-nav.js (added by the application) shows and runs them.
+// Without it: the edge fade and the swipe hint. No ::scroll-button() any more.
+test('Carousel navigation: hidden, named previous / next buttons (no script, no handler), one design for every browser; the hint; Grid untouched', () => {
   const imgs = [{ image: IMG('a'), alt: 'A' }, { image: IMG('b'), alt: 'B' }, { image: IMG('c'), alt: 'C' }];
   const de = V3.renderDesign(withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { images: imgs } }), CTX).html;
   const enDesign = withSections({ id: 's_gal05', type: 'gallery', variant: 'carousel', data: { title: '"></style><b>', images: imgs } });
   enDesign.settings.language = 'en';
   const en = V3.renderDesign(enDesign, CTX).html;
-  // the strip: focusable, a region, named by the title or "Galerie" / "Gallery"
-  assert.ok(de.includes('<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="Galerie">'));
-  assert.ok(en.includes('<div class="v3-gal v3-gal-carousel" tabindex="0" role="region" aria-label="&quot;&gt;&lt;/style&gt;&lt;b&gt;">'), 'the title, escaped');
-  // arrows only inside @supports, with their accessible names in the page language
-  const sup = (h) => h.slice(h.indexOf('@supports selector(::scroll-button(right)){'), h.indexOf('@supports not selector(::scroll-button(right)){'));
-  assert.ok(sup(de).includes('::scroll-button(left){content:"" / "Vorheriges Bild"') && sup(de).includes('::scroll-button(right){content:"" / "Nächstes Bild"'));
-  assert.ok(sup(en).includes('::scroll-button(left){content:"" / "Previous image"') && sup(en).includes('::scroll-button(right){content:"" / "Next image"'));
-  assert.ok(sup(de).includes('::scroll-button(*):disabled{opacity:.3;'), 'the ends: disabled arrows stay subtly visible (30 %)');
-  assert.ok(sup(de).includes('width:56px;height:56px') && sup(de).includes('background:#ff5a1f center/32px 32px') && sup(de).includes('stroke%3D%22%23fff%22%20stroke-width%3D%223%22'), '56 px QRAIVY orange circle, large white chevron');
-  assert.ok(sup(de).includes(':hover:not(:disabled){background-color:#d9480f}'), 'hover: a slightly darker orange only');
-  assert.ok(sup(de).includes(':focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}'), 'focus: white ring between dark rings, visible on light and dark photos');
+  // the strip: focusable, a region, named by the title or "Galerie" / "Gallery"; its id from the (validated) section id
+  assert.ok(de.includes('<div class="v3-gal-wrap"><div class="v3-gal v3-gal-carousel" id="s_gal05-photos" tabindex="0" role="region" aria-label="Galerie">'));
+  assert.ok(en.includes('<div class="v3-gal v3-gal-carousel" id="s_gal05-photos" tabindex="0" role="region" aria-label="&quot;&gt;&lt;/style&gt;&lt;b&gt;">'), 'the title, escaped');
+  // the buttons: real <button>s, hidden until the controller shows them, named in the page language, pointing at the strip
+  const svg = (d) => '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + d + '"/></svg>';
+  const btn = (dir, label, d) => '<button type="button" class="v3-gal-btn v3-gal-' + dir + '" aria-controls="s_gal05-photos" aria-label="' + label + '" hidden>' + svg(d) + '</button>';
+  assert.ok(de.includes('</figure></div>' + btn('prev', 'Vorheriges Bild', 'M15 6l-6 6 6 6') + btn('next', 'Nächstes Bild', 'M9 6l6 6-6 6') + '</div>'));
+  assert.ok(en.includes(btn('prev', 'Previous image', 'M15 6l-6 6 6 6') + btn('next', 'Next image', 'M9 6l6 6-6 6')));
+  assert.ok(!/\son[a-z]+=|javascript:/i.test(de.slice(de.indexOf('<main'))), 'no handler, no script URL');
+  // one design for every browser: 56 px QRAIVY orange, white chevron, darker hover, dimmed when disabled, two-tone focus ring
+  assert.ok(de.includes('.v3-gal-btn{position:absolute;z-index:3;top:calc(100% + 8px);display:flex;align-items:center;justify-content:center;width:56px;height:56px;'));
+  assert.ok(de.includes('border-radius:50%;background:#ff5a1f;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}.v3-gal-btn[hidden]{display:none}'), 'hidden stays hidden');
+  assert.ok(de.includes('.v3-gal-btn:hover:not(:disabled){background-color:#d9480f}.v3-gal-btn:disabled{opacity:.3;cursor:default}'));
+  assert.ok(de.includes('.v3-gal-btn:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 7px rgba(0,0,0,.6)}'));
+  // on the brand colour: white buttons with QRAIVY orange chevrons
+  assert.ok(de.includes('.v3-gallery.v3-bg-brand .v3-gal-btn{background-color:#fff;color:#ff5a1f}.v3-gallery.v3-bg-brand .v3-gal-btn:hover:not(:disabled){background-color:#ffe4d6}'));
+  // phones: a row under the photos (the hint between them, once the controller runs); tablet / desktop: over the photo edges
+  assert.ok(de.includes('.v3-gal-prev{left:0}.v3-gal-next{right:0}') && de.includes('@media (min-width:768px){.v3-gal-btn{top:calc(15cqw - 28px)}.v3-gal-prev{left:10px}.v3-gal-next{right:10px}}'));
+  assert.ok(de.includes('@media (max-width:767px){.v3-gal-wrap[data-nav=on] + .v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}}'));
+  assert.ok(de.includes('.v3-gal-wrap{position:relative;container-type:inline-size;margin-top:16px}.v3-gal-wrap > .v3-gal-carousel{margin-top:0}'), 'the strip at the top of its wrap: the buttons line up with the photos');
+  // without the controller: the edge fade
+  assert.ok(de.includes('.v3-gal-wrap:not([data-nav=on])::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}'));
+  assert.ok(!/scroll-button|anchor-name|anchor\(/.test(de), 'no Chromium-only arrows any more');
   // no visible scrollbar on the strip, which still scrolls (Grid untouched)
   assert.ok(de.includes('.v3-gal-carousel{scrollbar-width:none}.v3-gal-carousel::-webkit-scrollbar{display:none}') && de.includes('.v3-gal-carousel{display:flex;overflow-x:auto'));
-  // whole-pixel photo widths, so snapping reaches the very end (right arrow disabled there)
+  // whole-pixel photo widths, so snapping reaches the very end (next disabled there)
   assert.ok(de.includes('.v3-gal-carousel .v3-gal-item{flex-basis:round(down,80%,1px)}@media (min-width:768px){.v3-gal-carousel .v3-gal-item{flex-basis:round(down,40%,1px)}}'));
-  assert.ok(!/opacity:0[;}]|visibility:hidden|display:none/.test(sup(de)), 'visible without hovering');
-  // on the brand colour: white buttons with QRAIVY orange chevrons
-  assert.ok(sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*){background-color:#fff}') && sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(*):hover:not(:disabled){background-color:#ffe4d6}'));
-  assert.ok(sup(de).includes('.v3-gallery.v3-bg-brand .v3-gal-carousel::scroll-button(left){background-image:url("data:image/svg+xml,') && /scroll-button\(right\)\{background-image:url\("data:image\/svg\+xml,[^"]*stroke%3D%22%23ff5a1f%22/.test(sup(de)), 'orange chevrons');
-  // phones: the buttons in a row under the photos, the hint between them; one photo: no buttons
-  const phone = sup(de).slice(sup(de).indexOf('@media (max-width:767px){'));
-  assert.ok(phone.startsWith('@media (max-width:767px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(bottom) + 8px)}.v3-gal-carousel::scroll-button(left){left:anchor(left)}.v3-gal-carousel::scroll-button(right){right:anchor(right)}'));
-  assert.ok(phone.includes('.v3-gal-carousel:not(:has(> .v3-gal-item + .v3-gal-item))::scroll-button(*){content:none}') && phone.includes('.v3-gal-hint{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:8px;padding:0 64px;text-align:center}'));
-  assert.ok(sup(de).includes('@media (min-width:768px){.v3-gal-carousel::scroll-button(*){top:calc(anchor(top) + anchor-size(width) * .15 - 28px)}}'), 'tablet / desktop: over the photo edges');
-  assert.equal((sup(de).match(/::scroll-button\(/g) || []).length, 16, 'the @supports check and the fifteen arrow rules');
-  assert.equal((de.match(/::scroll-button\(/g) || []).length, 17, 'elsewhere only the @supports not check: no arrow rule outside @supports');
-  // the fallback: no button at all, only the edge fade
-  const NOT = '@supports not selector(::scroll-button(right)){';
-  const fallback = de.slice(de.indexOf(NOT) + NOT.length, de.indexOf('</style>'));
-  assert.ok(!fallback.includes('v3-gal-hint') && fallback.includes('.v3-gal-wrap::after{content:"";position:absolute') && !fallback.includes('scroll-button'));
+  assert.ok(de.includes('@media (prefers-reduced-motion:no-preference){.v3-gal-carousel{scroll-behavior:smooth}}'), 'smooth only without a reduced-motion preference');
   // the hint: shown in every browser (no display rule hides it), in the section text colour (light, dark and brand backgrounds)
   assert.ok(de.includes('.v3-gal-hint{margin:10px 0 0;font-size:15px;font-weight:600;line-height:1.4;color:inherit}') && !/\.v3-gal-hint\{[^}]*display:none/.test(de));
   // plain text, never a chip; on the brand colour a text colour that reads at 4.5:1 there
@@ -236,10 +236,11 @@ test('Carousel navigation: CSS-only arrows (named per language) behind @supports
   const style = (h) => h.slice(h.indexOf('<style>'), h.indexOf('</style>'));
   assert.ok(!style(en).includes('</style><b>') && !/<b>/.test(style(en)));
   for (const h of [de, en]) assert.ok(!/<script/i.test(h), 'no script');
-  // one photo: nothing to scroll to, no hint; Grid: none of it
-  assert.ok(!V3.renderDesign(withSections({ id: 's_gal06', type: 'gallery', variant: 'carousel', data: { images: [imgs[0]] } }), CTX).html.includes('<p class="v3-gal-hint"'));
+  // one photo: nothing to scroll to, no buttons, no hint; Grid: none of it
+  const one = V3.renderDesign(withSections({ id: 's_gal06', type: 'gallery', variant: 'carousel', data: { images: [imgs[0]] } }), CTX).html;
+  assert.ok(!one.includes('<p class="v3-gal-hint"') && !one.includes('<button'));
   const grid = V3.renderDesign(withSections({ id: 's_gal07', type: 'gallery', variant: 'grid', data: { images: imgs } }), CTX).html;
-  assert.ok(grid.includes('<div class="v3-gal v3-gal-grid"><figure') && !/tabindex|v3-gal-wrap"|<p class="v3-gal-hint/.test(grid.slice(grid.indexOf('<main'))), 'Grid markup unchanged');
+  assert.ok(grid.includes('<div class="v3-gal v3-gal-grid"><figure') && !/tabindex|v3-gal-wrap"|<p class="v3-gal-hint|<button/.test(grid.slice(grid.indexOf('<main'))), 'Grid markup unchanged');
 });
 
 test('Products: grid and list, price, description, button (internal link same tab, external new tab)', () => {

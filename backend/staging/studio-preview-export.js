@@ -37,6 +37,8 @@ const FILES = [
   'js/qraivy-lang.js',
   'js/admin-shell.js',
   'js/lpV3/core.js',
+  // the trusted Gallery controller; the Studio puts its code into the preview frames (2A-3H)
+  'js/lpV3/gallery-nav.js',
   // the demo Gallery's starter photos, shown from the Studio's own files
   // (js/studio/studio-demo-images.js; 2A-3H)
   'images/deals/starter/bakery-croissants-01.jpg',

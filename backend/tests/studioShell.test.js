@@ -59,7 +59,7 @@ test('routing: local, and preview on the one Studio staging address (https only)
 
 test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk, no API routing', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/studio/studio-demo.js',
+  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/studio/studio-demo.js',
     'js/studio/studio-demo-images.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);

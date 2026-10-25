@@ -64,8 +64,12 @@ const LPV3_FILES = [
   'backend/tests/studioDemoImages.test.js',
   // the demo photos behind a sign-in (live preview fix, 2A-3H)
   'backend/tests/studioPreviewAuth.browser.test.js',
-  // Gallery carousel navigation without script (CSS ::scroll-button + fallback)
+  // Gallery carousel navigation: buttons rendered by core.js (no script), the
+  // trusted first-party controller that runs them, and its browser tests
+  // (Chrome; Edge, Firefox and WebKit)
   'backend/tests/studioGalleryCarousel.browser.test.js',
+  'frontend/public/js/lpV3/gallery-nav.js',
+  'backend/tests/studioGalleryNavBrowsers.browser.test.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',
@@ -92,7 +96,7 @@ const LPV3_FILES = [
 // the server file) and lpV3Scope.test.js (the only new frontend file).
 // The Studio files (new, loaded only by studio.html) are pinned by
 // tests/studioShell.test.js and lpV3Scope.test.js.
-const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio'];
+const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/js/lpV3/gallery-nav.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio'];
 const LPV3_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261021090000_add_page_design_v3']
   .concat(LPV3_NEW_FRONTEND.map((f) => ':(exclude)' + f));
 
