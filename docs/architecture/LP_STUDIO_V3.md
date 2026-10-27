@@ -116,6 +116,31 @@ links are reported as warnings instead of being copied.
 8. Production pilot (owner's own pages), then selected customers.
 9. Later: sub-pages, Business brand kit, multi-location.
 
+## Deals / Offers (Phase D2: Studio preview only)
+
+One Deal Builder (`deals.html`), one source of truth (`Deal`, one
+`DealPlacement` per channel and target). The Deals / Offers section stores
+display settings only (title, subtitle, 1–3 cards, "show all" link); which
+deals appear is the server's decision for the page (`shownDealIds` from
+`GET /deals/pages`, the same rule as the public deal cards).
+
+- `js/studio/studio-deals-data.js` is the only Studio file with requests:
+  `GET /deals/access`, `GET /deals/pages`, `GET /deals` (existing owner
+  endpoints, `requireAuth`, owner-level scoping; deals have no business or
+  location scoping of their own). Called by the shell with the Clerk session
+  token, never from the preview frames. No address has an API in this
+  phase (`studio-routing.js`), so the Studio shows labelled samples.
+- A deal is shown only if its id is in the page's `shownDealIds`, it is
+  published and running, and it has no unpublished changes (`GET /deals`
+  merges pending edits over the live values; such deals are withheld and
+  counted). Only display fields reach the renderer.
+- `core.js` renders the cards in preview mode only (escaped, Cloudinary
+  images, the "AI · KI-generiert" label). States: sample, loading, live,
+  none, sign in, error, disabled. A failure never shows samples. The public
+  page still skips the section until the publishing phase.
+- Not in D2: saving, publishing, a V3 public route, staging API access,
+  StadtPocket offers.
+
 ## Studio layout (responsive spec, Phases 3–4)
 
 | Width | Sidebar | Left (Sections / Add) | Preview | Right (Edit) |

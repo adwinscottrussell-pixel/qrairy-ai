@@ -29,14 +29,33 @@ function leaves(spec, prefix) {
   return [prefix.join('.')];
 }
 
-test('2A-3H: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text and Gallery are editable (Deals, Loyalty stay read-only)', () => {
-  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
-  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
-  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products', 'gallery']);
-  for (const t of ['dealsOffers', 'loyalty']) {
-    assert.ok(D.sections[t], t);
-    assert.ok(!INSP.EDITABLE.includes(t) && !INSP.PLANS[t], t + ' read-only');
-  }
+test('D2: the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text, Gallery and Deals / Offers are editable (Loyalty stays read-only)', () => {
+  assert.deepEqual(INSP.EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery', 'dealsOffers']);
+  assert.deepEqual(Object.keys(INSP.PLANS), ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery', 'dealsOffers']);
+  assert.deepEqual(Object.keys(INSP.LISTS), ['buttons', 'socialMedia', 'products', 'gallery'], 'no list for Deals: the deals come from the Deal Builder');
+  assert.ok(D.sections.loyalty && !INSP.EDITABLE.includes('loyalty') && !INSP.PLANS.loyalty, 'loyalty read-only');
+});
+
+test('D2 Deals / Offers: only how the section shows the deals; one read-only source block; at most 3 cards', () => {
+  const plan = INSP.DEALS_PLAN;
+  assert.deepEqual(INSP.PLANS.dealsOffers, plan);
+  const planned = plan.filter((c) => c.path).map((c) => c.path.join('.'));
+  assert.deepEqual(planned.filter((p) => p.startsWith('data.')).sort(), leaves(D.sections.dealsOffers.data, ['data']).sort(), 'every display field, nothing else');
+  const tab = (t) => plan.filter((c) => c.tab === t).map((c) => c.control + (c.path ? ':' + c.path.join('.') : ''));
+  assert.deepEqual(tab('content'), ['dealsSource', 'text:data.title', 'text:data.subtitle', 'count:data.maxItems', 'text:data.showAllText', 'link:data.showAllTarget']);
+  assert.deepEqual(tab('style'), ['select:style.background', 'select:style.align', 'select:style.spacing']);
+  assert.deepEqual(tab('settings'), ['anchor:anchor', 'show:hidden', 'readonly:id']);
+  const s = INSP.specFor(D, 'dealsOffers', ['data', 'maxItems']);
+  assert.deepEqual([s.t, s.min, s.max, s.def], ['int', 1, 3, 3], 'the public page shows at most 3 deals');
+  for (const lang of ['en', 'de']) for (const k of ['g_deals', 'deals_page', 'deals_open', 'deals_retry', 'deals_shown', 'deals_not_live', 'deals_withheld', 'hint_deals_count',
+    'deals_s_sample', 'deals_s_loading', 'deals_s_live', 'deals_s_none', 'deals_s_no_pages', 'deals_s_signin', 'deals_s_error', 'deals_s_disabled']) assert.ok(INSP.TX[lang][k], lang + ' ' + k);
+  // the failure texts say plainly that no samples are shown
+  assert.match(INSP.TX.en.deals_s_error, /No samples are shown/);
+  assert.match(INSP.TX.de.deals_s_error, /keine Beispiele/);
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'js', 'studio', 'studio-inspector.js'), 'utf8');
+  const block = src.slice(src.indexOf('function dealsSourceControl'), src.indexOf('function controlFor'));
+  assert.ok(!/store\.(set|add|remove|move|select)\b/.test(block), 'the source block changes nothing in the design');
+  assert.ok(block.includes("href: 'deals.html', target: '_blank', rel: 'noopener noreferrer'"), 'deals are edited in the Deal Builder');
 });
 
 // the inspector module as it was at an approved checkpoint (null when git or the commit is missing)

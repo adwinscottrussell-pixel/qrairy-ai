@@ -462,7 +462,8 @@ test('after editing: no network beyond this server and Google Fonts; Save Draft 
   await sleep(400);
   assert.deepEqual(onlyLocal(net), []);
   assert.deepEqual(await page.$$eval('#st-save-btn, #st-publish-btn', (n) => n.map((b) => b.disabled)), [true, true]);
-  for (const id of ['s_deals01', 's_loyal01']) {
+  // (Deals / Offers is editable since D2: studioDealsPreview.browser.test.js)
+  for (const id of ['s_loyal01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     for (const t of ['content', 'style', 'settings']) {
       await tab(page, t);

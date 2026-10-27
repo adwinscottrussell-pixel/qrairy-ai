@@ -110,7 +110,8 @@
       data: obj({ title: str(80), images: arr(obj({ image: image({ required: true }), alt: str(120), caption: str(120) }), 24) }) },
     dealsOffers: { label: 'Deals / Offers', description: 'Show current offers and promotions', category: ['popular', 'business'], rendered: false,
       variants: ['cards'],
-      data: obj({ title: str(80), subtitle: str(160), maxItems: int(1, 6, 3), showAllText: str(40), showAllTarget: link() }) },
+      // at most 3: the public page shows at most 3 deals (dealService MAX_PUBLIC_DEALS_PER_PAGE)
+      data: obj({ title: str(80), subtitle: str(160), maxItems: int(1, 3, 3), showAllText: str(40), showAllTarget: link() }) },
     loyalty: { label: 'Loyalty', description: 'Digital stamp card and rewards', category: ['business'], rendered: false,
       variants: ['card'],
       data: obj({ title: str(80), subtitle: str(160), showWalletButtons: bool(true) }) },
@@ -356,6 +357,14 @@
       empty: 'Leerer Abschnitt – Inhalte im Editor ergänzen', image: 'Bildplatzhalter', sample: 'Beispiel',
       dealsNote: 'Vorschau: Hier erscheinen Ihre aktuellen Angebote.', loyaltyNote: 'Vorschau: Hier erscheint Ihre Stempelkarte.',
       sampleDeals: [['2 für 1', 'Beispielangebot', 'Jeden Montag'], ['-20%', 'Beispielaktion', 'Nur diese Woche'], ['€ 2,50', 'Beispielpreis', 'Freitag & Samstag']],
+      dealsSampleNote: 'Beispielangebote: Ihre echten Angebote können auf dieser Adresse noch nicht geladen werden.',
+      dealsLive: 'Ihre Angebote', dealsLiveNote: 'Vorschau: Diese Angebote zeigt Ihre Seite gerade.',
+      dealsLoading: 'Ihre Angebote werden geladen …', dealsNone: 'Ihre Seite zeigt gerade keine Angebote.',
+      dealsNoneHint: 'Angebote erstellen Sie im Deal Builder und ordnen sie dort dieser Seite zu.',
+      dealsSignin: 'Melden Sie sich an, um Ihre Angebote hier zu sehen.', dealsError: 'Ihre Angebote konnten nicht geladen werden. Es werden keine Beispiele gezeigt.',
+      dealsDisabled: 'Angebote sind für dieses Konto nicht verfügbar.',
+      dealsWithheld: 'Angebote mit unveröffentlichten Änderungen: {n}. Ihre Live-Fassung kann hier nicht gezeigt werden.',
+      validUntil: 'Gültig bis {date}', aiImage: 'KI-generiertes Bild', locale: 'de-DE', dateParts: { day: '2-digit', month: '2-digit', year: 'numeric' },
       stamps: '3 von 10 Stempeln', walletApple: 'Zu Apple Wallet hinzufügen', walletGoogle: 'Zu Google Wallet hinzufügen' },
     en: { menu: 'Menu', closed: 'Closed', phone: 'Phone', email: 'Email', directions: 'Get directions', address: 'Address', skip: 'Skip to content',
       days: { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' },
@@ -364,6 +373,14 @@
       empty: 'Empty section – add content in the editor', image: 'Image placeholder', sample: 'Sample',
       dealsNote: 'Preview: your current deals appear here.', loyaltyNote: 'Preview: your stamp card appears here.',
       sampleDeals: [['2 for 1', 'Sample offer', 'Every Monday'], ['-20%', 'Sample promotion', 'This week only'], ['€ 2.50', 'Sample price', 'Friday & Saturday']],
+      dealsSampleNote: 'Sample deals: your real deals cannot be loaded on this address yet.',
+      dealsLive: 'Your deals', dealsLiveNote: 'Preview: these are the deals your page shows right now.',
+      dealsLoading: 'Loading your deals …', dealsNone: 'Your page shows no deals right now.',
+      dealsNoneHint: 'Deals are created in the Deal Builder, where you also choose the pages that show them.',
+      dealsSignin: 'Sign in to see your deals here.', dealsError: 'Your deals could not be loaded. No samples are shown.',
+      dealsDisabled: 'Deals are not available for this account.',
+      dealsWithheld: 'Deals with unpublished changes: {n}. Their live version cannot be shown here.',
+      validUntil: 'Valid until {date}', aiImage: 'AI-generated image', locale: 'en-GB', dateParts: { day: 'numeric', month: 'short', year: 'numeric' },
       stamps: '3 of 10 stamps', walletApple: 'Add to Apple Wallet', walletGoogle: 'Add to Google Wallet' },
   };
   var SOCIAL_LABEL = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', pinterest: 'Pinterest', whatsapp: 'WhatsApp' };
@@ -518,20 +535,83 @@
     },
   };
 
+  // ── Deals / Offers in the Studio preview (D2) ──
+  // opts.deals comes from the Studio (js/studio/studio-deals-data.js):
+  // { state, items, withheld }. Without it: the labelled samples. Any other
+  // state never shows samples: the owner's real deals ('live') or a plain
+  // message. Every deal field is checked again here and escaped; an image
+  // must pass the image rule (Cloudinary, the account's cloud when known).
+  var DEAL_STATES = ['sample', 'loading', 'live', 'none', 'signin', 'error', 'disabled'];
+  var MAX_DEAL_CARDS = 3;
+  function dealsState(opts) {
+    if (!opts || opts.deals === undefined) return 'sample';
+    return isObj(opts.deals) && DEAL_STATES.indexOf(opts.deals.state) !== -1 ? opts.deals.state : 'error';
+  }
+  function dealText(v, multiline, max) {
+    if (typeof v !== 'string') return '';
+    var s = cleanStr(v, multiline);
+    return len(s) <= max ? s : null;
+  }
+  function dealItem(x, cloudName) {
+    if (!isObj(x)) return null;
+    var title = dealText(x.title, false, 80), offer = dealText(x.offerText, false, 120), desc = dealText(x.description, true, 400);
+    if (!title || !offer || desc === null) return null;
+    var img = null, src = isObj(x.image) && typeof x.image.src === 'string' ? x.image.src : '';
+    var m = CLOUDINARY.exec(src);
+    if (m && src.length <= 500 && (!cloudName || m[1] === cloudName)) img = { src: src, ai: x.image.ai === true };
+    var ends = typeof x.endsAt === 'string' && x.endsAt.length <= 40 && !isNaN(Date.parse(x.endsAt)) ? x.endsAt : '';
+    return { title: title, offer: offer, desc: desc, img: img, ends: ends };
+  }
+  function dealDate(iso, t) {
+    try { var o = { timeZone: 'Europe/Berlin' }; Object.keys(t.dateParts).forEach(function (k) { o[k] = t.dateParts[k]; }); return new Intl.DateTimeFormat(t.locale, o).format(new Date(iso)); } catch (e) { return ''; }
+  }
+  // The AI label (EU AI Act Art. 50) on every AI-generated image: the same
+  // visible text as the Deal Builder and the deal cards, in every language.
+  var AI_LABEL = 'AI · KI-generiert';
+  function dealCard(d, t) {
+    var media = d.img
+      ? '<div class="v3-deal-media"><img class="v3-prod-img" src="' + esc(d.img.src) + '" alt="" width="800" height="600" loading="lazy" decoding="async">' +
+        (d.img.ai ? '<span class="v3-ai"><span aria-hidden="true">' + esc(AI_LABEL) + '</span><span class="v3-sr">' + esc(t.aiImage) + '</span></span>' : '') + '</div>'
+      : '<div class="v3-deal-media v3-deal-noimg" aria-hidden="true">' + icon('tag') + '</div>';
+    var date = d.ends ? dealDate(d.ends, t) : '';
+    return '<article class="v3-prod v3-deal">' + media + '<div class="v3-prod-body"><p class="v3-prod-price">' + esc(d.offer) + '</p><h3 class="v3-prod-name">' + esc(d.title) + '</h3>' +
+      (d.desc ? '<p class="v3-prod-desc">' + escMultiline(d.desc) + '</p>' : '') +
+      (date ? '<p class="v3-deal-until">' + esc(t.validUntil.split('{date}').join(date)) + '</p>' : '') + '</div></article>';
+  }
+
   // Preview only: Deals / Offers and Loyalty show labelled samples in the
-  // Studio. The public page renders them from real data in a later phase
-  // (until then they are reported as `skipped` and render nothing).
+  // Studio (Deals: or the owner's real deals, above). The public page renders
+  // them from real data in a later phase (until then they are reported as
+  // `skipped` and render nothing).
   var SAMPLE = {
-    dealsOffers: function (s, t) {
-      var d = s.data;
-      var cards = t.sampleDeals.slice(0, d.maxItems).map(function (c) {
-        return '<article class="v3-prod v3-sample-card">' + imagePlaceholder(t, 'v3-prod-img') + '<div class="v3-prod-body"><p class="v3-prod-price">' + esc(c[0]) + '</p>' +
-          '<h3 class="v3-prod-name">' + esc(c[1]) + '</h3><p class="v3-prod-desc">' + esc(c[2]) + '</p></div></article>';
-      }).join('');
-      return sectionOpen(s, 'v3-sample', true) + '<span class="v3-sample-badge">' + esc(t.sample) + '</span>' + heading(d.title, 'v3-h2') +
-        (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '') + '<div class="v3-prods v3-prods-grid">' + cards + '</div>' +
-        (d.showAllText && d.showAllTarget ? '<p><a class="v3-more"' + linkAttrs(d.showAllTarget) + '>' + esc(d.showAllText) + ' →</a></p>' : '') +
-        '<p class="v3-note">' + esc(t.dealsNote) + '</p>' + SECTION_CLOSE;
+    dealsOffers: function (s, t, opts) {
+      var d = s.data, state = dealsState(opts), deals = opts && opts.deals;
+      var head = heading(d.title, 'v3-h2') + (d.subtitle ? '<p class="v3-sub">' + esc(d.subtitle) + '</p>' : '');
+      var more = d.showAllText && d.showAllTarget ? '<p><a class="v3-more"' + linkAttrs(d.showAllTarget) + '>' + esc(d.showAllText) + ' →</a></p>' : '';
+      if (state === 'sample') {
+        var cards = t.sampleDeals.slice(0, d.maxItems).map(function (c) {
+          return '<article class="v3-prod v3-sample-card">' + imagePlaceholder(t, 'v3-prod-img') + '<div class="v3-prod-body"><p class="v3-prod-price">' + esc(c[0]) + '</p>' +
+            '<h3 class="v3-prod-name">' + esc(c[1]) + '</h3><p class="v3-prod-desc">' + esc(c[2]) + '</p></div></article>';
+        }).join('');
+        return sectionOpen(s, 'v3-sample', true) + '<span class="v3-sample-badge">' + esc(t.sample) + '</span>' + head + '<div class="v3-prods v3-prods-grid">' + cards + '</div>' +
+          more + '<p class="v3-note">' + esc(deals === undefined ? t.dealsNote : t.dealsSampleNote) + '</p>' + SECTION_CLOSE;
+      }
+      var withheld = state === 'live' && typeof deals.withheld === 'number' && deals.withheld >= 1 ? Math.min(Math.floor(deals.withheld), MAX_DEAL_CARDS) : 0;
+      var withheldNote = withheld ? '<p class="v3-note v3-deals-withheld">' + esc(t.dealsWithheld.split('{n}').join(String(withheld))) + '</p>' : '';
+      if (state === 'live') {
+        var items = (Array.isArray(deals.items) ? deals.items.slice(0, 10) : []).map(function (x) { return dealItem(x, opts.cloudName); })
+          .filter(Boolean).slice(0, Math.min(MAX_DEAL_CARDS, d.maxItems));
+        if (items.length) {
+          return sectionOpen(s, 'v3-deals v3-deals-live', true) + '<span class="v3-sample-badge v3-live-badge">' + esc(t.dealsLive) + '</span>' + head +
+            '<div class="v3-prods v3-prods-grid">' + items.map(function (x) { return dealCard(x, t); }).join('') + '</div>' + more +
+            '<p class="v3-note">' + esc(t.dealsLiveNote) + '</p>' + withheldNote + SECTION_CLOSE;
+        }
+        if (!withheld) state = 'none';
+      }
+      var msg = { live: '', loading: t.dealsLoading, none: t.dealsNone, signin: t.dealsSignin, error: t.dealsError, disabled: t.dealsDisabled }[state];
+      return sectionOpen(s, 'v3-deals v3-deals-' + state, true) + head +
+        (msg ? '<div class="v3-ph-note" role="status">' + icon('info') + '<span>' + esc(msg) + '</span></div>' : '') +
+        (state === 'none' ? '<p class="v3-note">' + esc(t.dealsNoneHint) + '</p>' : '') + withheldNote + SECTION_CLOSE;
     },
     loyalty: function (s, t) {
       var d = s.data, dots = '';
@@ -641,6 +721,12 @@
     '.v3-sample{position:relative}.v3-sample-badge{display:inline-block;margin-bottom:10px;padding:2px 10px;border-radius:999px;background:var(--v3-muted);color:var(--v3-bg);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}',
     '.v3-more{font-weight:700;color:var(--v3-brand)}.v3-loyalty-card{max-width:420px;margin-top:16px;padding:18px;border-radius:var(--v3-radius);background:var(--v3-surface)}',
     '.v3-stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.v3-stamp{aspect-ratio:1/1;border-radius:50%;border:2px solid var(--v3-brand)}.v3-stamp-on{background:var(--v3-brand)}.v3-stamps-tx{margin:12px 0;font-weight:600}',
+    // Deals / Offers: the owner's real deals (D2)
+    '.v3-live-badge{background:var(--v3-text)}.v3-deal-media{position:relative}.v3-deal-noimg{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;background:var(--v3-surface);color:var(--v3-brand)}',
+    '.v3-deal-noimg .v3-ic{width:40px;height:40px}.v3-ai{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.72);color:#fff;font-size:11px;font-weight:600;line-height:1.5}',
+    '.v3-deal-until{margin:0;font-size:13px;color:var(--v3-muted)}.v3-deals .v3-ph-note{margin-top:16px}',
+    // phones: one full-width deal card per row (Products keeps two)
+    '@media (max-width:767px){.v3-dealsOffers .v3-prods-grid{grid-template-columns:1fr}}',
   ].join('');
   var BASE_CSS = [
     '*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}',
@@ -693,7 +779,9 @@
   // opts: { cloudName } for validation; { preview: true } only for the
   // Studio's preview frame: section ids for selection (data-v3-id), visible
   // empty sections, image placeholders and labelled samples for Deals /
-  // Offers and Loyalty. Never use preview for a public page.
+  // Offers and Loyalty; with { deals } (Studio only) the owner's real deals
+  // or a status message instead of the Deals samples. Never use preview for
+  // a public page: without it opts.deals is ignored and the section is skipped.
   function renderDesign(input, ctx, opts) {
     var v = validateDesign(input, opts);
     if (!v.ok) return { ok: false, html: '', errors: v.errors, skipped: [], samples: [] };
@@ -706,7 +794,7 @@
       if (s.hidden) return '';
       var out;
       if (SECTIONS[s.type].rendered) out = RENDER[s.type](s, t, pv);
-      else if (pv) { samples.push(s.type); out = SAMPLE[s.type](s, t); }
+      else if (pv) { if (s.type !== 'dealsOffers' || dealsState(opts) === 'sample') samples.push(s.type); out = SAMPLE[s.type](s, t, opts); }
       else { skipped.push(s.type); return ''; }
       if (out) used[s.type] = true;
       return out;

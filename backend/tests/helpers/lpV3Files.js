@@ -70,6 +70,14 @@ const LPV3_FILES = [
   'backend/tests/studioGalleryCarousel.browser.test.js',
   'frontend/public/js/lpV3/gallery-nav.js',
   'backend/tests/studioGalleryNavBrowsers.browser.test.js',
+  // Phase D2 (Deals preview): the owner's real deals in the Studio preview,
+  // read only through the existing Deals GET endpoints (one data file), the
+  // Deals renderer in core.js, the inspector's Deals editing, and their tests
+  'frontend/public/js/studio/studio-deals-data.js',
+  'backend/tests/studioDealsData.test.js',
+  'backend/tests/lpV3Deals.test.js',
+  'backend/tests/studioDealsPreview.browser.test.js',
+  'backend/tests/helpers/studioDealsServer.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',

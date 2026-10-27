@@ -4,9 +4,9 @@
  *
  * Editable: the Hero (2A-3A), the Buttons (2A-3B), Social Media (2A-3C),
  * Contact (2A-3D), Opening Hours (2A-3E), Products (2A-3F), Text (2A-3G) and
- * Gallery (2A-3H), listed in EDITABLE. Their controls follow PLANS (HERO_PLAN,
- * BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN, HOURS_PLAN, PRODUCTS_PLAN, TEXT_PLAN,
- * GALLERY_PLAN), with every rule (limits, choices, required fields) read from
+ * Gallery (2A-3H) and Deals / Offers (D2), listed in EDITABLE. Their controls
+ * follow PLANS (HERO_PLAN, BUTTONS_PLAN, SOCIAL_PLAN, CONTACT_PLAN, HOURS_PLAN,
+ * PRODUCTS_PLAN, TEXT_PLAN, GALLERY_PLAN, DEALS_PLAN), with every rule (limits, choices, required fields) read from
  * QraivyV3.describe(), so the inspector cannot drift from what the server
  * enforces. Edits go through the store (studio-store.js); errors come from
  * the shared validation and are shown under the field. The other section
@@ -21,7 +21,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery'];
+  var EDITABLE = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery', 'dealsOffers'];
 
   // Where each Hero field is edited. The Hero renderer ignores
   // style.background and style.spacing, so they are not offered.
@@ -181,7 +181,26 @@
     { tab: 'settings', path: ['hidden'], control: 'show' },
     { tab: 'settings', path: ['id'], control: 'readonly' },
   ];
-  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN, text: TEXT_PLAN, gallery: GALLERY_PLAN };
+  // Deals / Offers (D2): how the section shows the deals, never the deals
+  // themselves -- they are created and changed in the Deal Builder only.
+  // 'dealsSource' shows where they come from (read only): the state, the
+  // owner's page whose deals the preview shows, those deals' titles, and a
+  // link to the Deal Builder.
+  var DEALS_PLAN = [
+    { tab: 'content', control: 'dealsSource' },
+    { tab: 'content', path: ['data', 'title'], control: 'text' },
+    { tab: 'content', path: ['data', 'subtitle'], control: 'text' },
+    { tab: 'content', path: ['data', 'maxItems'], control: 'count' },
+    { tab: 'content', path: ['data', 'showAllText'], control: 'text' },
+    { tab: 'content', path: ['data', 'showAllTarget'], control: 'link' },
+    { tab: 'style', path: ['style', 'background'], control: 'select' },
+    { tab: 'style', path: ['style', 'align'], control: 'select' },
+    { tab: 'style', path: ['style', 'spacing'], control: 'select' },
+    { tab: 'settings', path: ['anchor'], control: 'anchor' },
+    { tab: 'settings', path: ['hidden'], control: 'show' },
+    { tab: 'settings', path: ['id'], control: 'readonly' },
+  ];
+  var PLANS = { hero: HERO_PLAN, buttons: BUTTONS_PLAN, socialMedia: SOCIAL_PLAN, contact: CONTACT_PLAN, openingHours: HOURS_PLAN, products: PRODUCTS_PLAN, text: TEXT_PLAN, gallery: GALLERY_PLAN, dealsOffers: DEALS_PLAN };
 
   // A weekday's state in the design: 'open' (times), 'closed' (shown as
   // Closed) or 'hidden' (not in the list, so not on the page). As core.js
@@ -328,6 +347,14 @@
       remove_image: 'Remove image', image_removed: 'Image removed. Undo is available.', image_moved: 'Image moved.', no_caption: '(no caption)',
       hint_gallery_image_later: 'Replacing an image arrives with image upload in a later step.',
       hint_gallery_alt: 'Describes the image for people who cannot see it. Empty: screen readers skip the image.',
+      g_deals: 'Deals from the Deal Builder', deals_page: 'Deals of the page', deals_open: 'Edit deals in the Deal Builder', deals_retry: 'Try again',
+      deals_shown: 'Shown in the preview:', deals_not_live: '(not live)',
+      deals_s_sample: 'Sample deals. Your real deals cannot be loaded on this address yet.', deals_s_loading: 'Loading your deals …',
+      deals_s_live: 'Your real deals: those this page shows customers right now.', deals_s_none: 'This page shows no deals right now.',
+      deals_s_no_pages: 'Your account has no landing pages yet.', deals_s_signin: 'Sign in to see your deals here.',
+      deals_s_error: 'Your deals could not be loaded. No samples are shown.', deals_s_disabled: 'Deals are not available for this account.',
+      deals_withheld: 'Deals with unpublished changes: {n}. The preview cannot show their live version.',
+      hint_deals_count: 'Your page shows at most 3 deals.',
     },
     de: {
       variant: 'Layout', align: 'Ausrichtung', overlay: 'Bild abdunkeln (%)',
@@ -398,6 +425,14 @@
       remove_image: 'Bild entfernen', image_removed: 'Bild entfernt. Rückgängig ist möglich.', image_moved: 'Bild verschoben.', no_caption: '(ohne Bildunterschrift)',
       hint_gallery_image_later: 'Bilder austauschen folgt mit dem Bilder-Upload in einem späteren Schritt.',
       hint_gallery_alt: 'Beschreibt das Bild für Menschen, die es nicht sehen können. Leer: Screenreader überspringen das Bild.',
+      g_deals: 'Angebote aus dem Deal Builder', deals_page: 'Angebote der Seite', deals_open: 'Angebote im Deal Builder bearbeiten', deals_retry: 'Erneut versuchen',
+      deals_shown: 'In der Vorschau:', deals_not_live: '(nicht live)',
+      deals_s_sample: 'Beispielangebote. Deine echten Angebote können auf dieser Adresse noch nicht geladen werden.', deals_s_loading: 'Deine Angebote werden geladen …',
+      deals_s_live: 'Deine echten Angebote: die, die diese Seite Kunden gerade zeigt.', deals_s_none: 'Diese Seite zeigt gerade keine Angebote.',
+      deals_s_no_pages: 'Dein Konto hat noch keine Landingpages.', deals_s_signin: 'Melde dich an, um deine Angebote hier zu sehen.',
+      deals_s_error: 'Deine Angebote konnten nicht geladen werden. Es werden keine Beispiele gezeigt.', deals_s_disabled: 'Angebote sind für dieses Konto nicht verfügbar.',
+      deals_withheld: 'Angebote mit unveröffentlichten Änderungen: {n}. Die Vorschau kann ihre Live-Fassung nicht zeigen.',
+      hint_deals_count: 'Deine Seite zeigt höchstens 3 Angebote.',
     },
   };
   // field: the last path key; a missing button target or social address gets
@@ -1044,8 +1079,67 @@
       return wrap;
     }
 
+    // How many cards (a whole number from the schema's range), as a choice.
+    function countControl(sec, c, spec) {
+      var key = errKey(c.path);
+      var id = nextId('count'), errId = id + '-err', hintId = id + '-hint';
+      var sel = el('select', { id: id, 'aria-describedby': errId + ' ' + hintId });
+      for (var n = spec.min; n <= spec.max; n++) sel.appendChild(el('option', { value: String(n), text: String(n) }));
+      var line = errorLine(errId);
+      sel.addEventListener('change', function () { store.set(sec.id, c.path, Number(sel.value)); });
+      refreshers.push(function (cur, errs) {
+        var v = heroValue(cur, c.path, spec);
+        if (!focused(sel) && sel.value !== String(v)) sel.value = String(v);
+        showError(sel, line, errs[key]);
+      });
+      return el('div', { class: 'st-field', 'data-path': key }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: labelFor(c.path) })]), sel, line,
+        el('p', { class: 'st-hint', id: hintId, text: tx('hint_deals_count') })]);
+    }
+
+    // Where the deals come from (read only): o.deals() is the shell's
+    // current Deals view (studio-deals-data.js); choosing a page only changes
+    // which page's deals the preview shows (not saved, nothing sent).
+    function dealsSourceControl() {
+      var id = nextId('dealspage');
+      var status = el('p', { class: 'st-hint st-deals__status', role: 'status' });
+      var sel = el('select', { id: id });
+      var pageField = el('div', { class: 'st-field', 'data-path': 'deals.page' }, [el('span', { class: 'st-field__label' }, [el('label', { for: id, text: tx('deals_page') })]), sel]);
+      var list = el('ul', { class: 'st-deals__list' });
+      var shown = el('div', { class: 'st-deals__shown' }, [el('p', { class: 'st-hint', text: tx('deals_shown') }), list]);
+      var withheld = el('p', { class: 'st-hint st-deals__withheld' });
+      var retry = el('button', { type: 'button', class: 'st-btn st-btn--ghost', text: tx('deals_retry') });
+      var open = el('a', { class: 'st-btn st-btn--ghost st-deals__open', href: 'deals.html', target: '_blank', rel: 'noopener noreferrer', text: tx('deals_open') });
+      var signature = null;
+      sel.addEventListener('change', function () { if (o.selectDealsPage) o.selectDealsPage(sel.value); });
+      retry.addEventListener('click', function () { if (o.retryDeals) o.retryDeals(); });
+      refreshers.push(function () {
+        var v = o.deals ? o.deals() : null;
+        var state = v && typeof v.state === 'string' ? v.state : 'sample';
+        var pages = v && Array.isArray(v.pages) ? v.pages : [];
+        status.textContent = tx(state === 'none' && !pages.length ? 'deals_s_no_pages' : 'deals_s_' + state);
+        status.setAttribute('data-state', state);
+        var sig = JSON.stringify(pages);
+        if (sig !== signature) {
+          signature = sig;
+          sel.textContent = '';
+          pages.forEach(function (p) { sel.appendChild(el('option', { value: p.slug, text: p.name + (p.live ? '' : ' ' + tx('deals_not_live')) })); });
+        }
+        if (!focused(sel) && v && v.page) sel.value = v.page;
+        pageField.hidden = !pages.length || state === 'loading';
+        list.textContent = '';
+        (state === 'live' && Array.isArray(v.items) ? v.items : []).forEach(function (x) { list.appendChild(el('li', { text: x.title })); });
+        shown.hidden = !list.childNodes.length;
+        withheld.hidden = !(state === 'live' && v.withheld > 0);
+        withheld.textContent = withheld.hidden ? '' : tx('deals_withheld').replace('{n}', String(v.withheld));
+        retry.hidden = state !== 'error';
+      });
+      return el('div', { class: 'st-deals', 'data-path': 'deals' }, [el('div', { class: 'st-group', text: tx('g_deals') }), status, pageField, shown, withheld,
+        el('div', { class: 'st-deals__actions' }, [retry, open])]);
+    }
+
     function controlFor(sec, c, D) {
       if (c.control === 'color') return null; // shown beside the Hero button text
+      if (c.control === 'dealsSource') return dealsSourceControl();
       var spec = specFor(D, sec.type, c.path);
       if (c.control === 'text') return textControl(sec, c, spec);
       if (c.control === 'image') return imageControl(sec, c);
@@ -1058,6 +1152,7 @@
       if (c.control === 'imageView') return imageViewControl(sec, c);
       if (c.control === 'select') return selectControl(sec, c, spec);
       if (c.control === 'number') return numberControl(sec, c, spec);
+      if (c.control === 'count') return countControl(sec, c, spec);
       if (c.control === 'items') return itemsControl(sec, c, D);
       if (c.control === 'anchor') return anchorControl(sec);
       if (c.control === 'show') return showControl(sec);
@@ -1108,7 +1203,7 @@
     return { render: render, refresh: refresh };
   }
 
-  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, TEXT_PLAN: TEXT_PLAN, GALLERY_PLAN: GALLERY_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
+  return { EDITABLE: EDITABLE, HERO_PLAN: HERO_PLAN, BUTTONS_PLAN: BUTTONS_PLAN, SOCIAL_PLAN: SOCIAL_PLAN, CONTACT_PLAN: CONTACT_PLAN, HOURS_PLAN: HOURS_PLAN, PRODUCTS_PLAN: PRODUCTS_PLAN, TEXT_PLAN: TEXT_PLAN, DEALS_PLAN: DEALS_PLAN, GALLERY_PLAN: GALLERY_PLAN, dayState: dayState, PLANS: PLANS, LISTS: LISTS, TARGET_INPUT: TARGET_INPUT,
     phoneZeroWarning: phoneZeroWarning,
     SOCIAL_HINT_HOSTS: SOCIAL_HINT_HOSTS, SOCIAL_PLACEHOLDER: SOCIAL_PLACEHOLDER, heroSpec: heroSpec, specFor: specFor, errKey: errKey, socialHosts: socialHosts,
     whatsappLink: whatsappLink, whatsappNumber: whatsappNumber, textLength: textLength, errorText: errorText, TX: TX, createInspector: createInspector };

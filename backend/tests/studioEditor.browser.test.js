@@ -107,7 +107,8 @@ test('selection: the Hero starts selected in the Sections list, inspector and pr
   const fr = await frame(page);
   await until(() => fr.$eval('[data-v3-id="s_hero01"]', (n) => n.classList.contains('st-sel')), 'Hero marked in the preview');
   // (the Buttons section s_quick01 is editable since 2A-3B: studioButtonsEditor.browser.test.js)
-  for (const id of ['s_deals01', 's_loyal01']) {
+  // (Deals / Offers is editable since D2: studioDealsPreview.browser.test.js)
+  for (const id of ['s_loyal01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     for (const t of ['content', 'style', 'settings']) {
       await tab(page, t);

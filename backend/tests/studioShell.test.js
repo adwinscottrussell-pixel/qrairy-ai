@@ -6,7 +6,10 @@
 //   mode, no API) and https://qraivy-studio-staging.vercel.app (preview
 //   mode, no API); every other address, production included, is blocked;
 // - no network: no fetch / XHR / WebSocket / beacon / API address anywhere
-//   in the Studio files; no Clerk, no API routing scripts loaded;
+//   in the Studio files; no Clerk, no API routing scripts loaded. The one
+//   exception (D2): js/studio/studio-deals-data.js, which may send only the
+//   three read-only Deals GET requests (allow-list checked below, behaviour
+//   in studioDealsData.test.js);
 // - Save Draft and Publish are disabled and never enabled; Undo / Redo
 //   start disabled (the store enables them after an edit); preview frames
 //   allow scripts only (never same origin), the full-size preview nothing;
@@ -60,7 +63,9 @@ test('routing: local, and preview on the one Studio staging address (https only)
 test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk, no API routing', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/studio/studio-demo.js',
-    'js/studio/studio-demo-images.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js', 'js/studio/studio-shell.js']);
+    'js/studio/studio-demo-images.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js',
+    // D2: the Deal Builder's starter catalog (plain data) and the read-only Deals data file
+    'js/deal-starter-images.js', 'js/studio/studio-deals-data.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);
@@ -79,7 +84,46 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
     for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /serviceWorker/, /api\.qraivy\.com/, /railway\.app/, /\.vercel\.app/]) {
       assert.ok(!re.test(src), f + ' must not contain ' + re);
     }
+    // the request itself is made only in the Deals data file (it calls the browser's fetch through doFetch)
+    if (f !== 'js/studio/studio-deals-data.js') assert.ok(!/\bdoFetch\b|\.fetch\b|'\/deals/.test(src), f + ': no request, no Deals endpoint');
   }
+  // the starter catalog the Studio now loads is plain data
+  const catalog = read('js/deal-starter-images.js');
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /\bimport\s*\(/]) assert.ok(!re.test(catalog), 'deal-starter-images.js must not contain ' + re);
+});
+
+test('D2: the one Studio file with requests sends only the three read-only Deals GET requests (allow-list)', () => {
+  const src = read('js/studio/studio-deals-data.js');
+  const c = code('js/studio/studio-deals-data.js');
+  const DD = require('../../frontend/public/js/studio/studio-deals-data.js');
+  // exactly these endpoints, nothing else
+  assert.deepEqual(JSON.parse(JSON.stringify(DD.PATHS)), { access: '/deals/access', pages: '/deals/pages', deals: '/deals' });
+  assert.deepEqual(DD.ALLOWED, ['/deals/access', '/deals/pages', '/deals']);
+  assert.deepEqual([...new Set(c.match(/'\/[^']*'/g))].sort(), ["'/deals'", "'/deals/access'", "'/deals/pages'"], 'no other path in the code');
+  assert.ok(c.includes('if (ALLOWED.indexOf(path) === -1) return Promise.reject('), 'any other path is refused before a request');
+  // one request site, GET only, no body, no cookies, no redirects
+  assert.equal((c.match(/doFetch\(/g) || []).length, 1, 'one request site');
+  assert.ok(c.includes('return doFetch(api + path, init)'));
+  assert.ok(c.includes("var init = { method: 'GET', headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer' };"));
+  assert.ok(!/'(POST|PUT|PATCH|DELETE|HEAD|OPTIONS)'|\bbody\s*:|FormData|keepalive/i.test(c), 'GET only, never a body');
+  assert.ok(c.includes("var doFetch = typeof o.fetch === 'function' ? o.fetch : typeof root.fetch === 'function' ? root.fetch.bind(root) : null;"));
+  // the API origin is checked; the only address written in the file is the starter images' Cloudinary folder
+  // (read from the source: the comment filter would cut a line at "//")
+  assert.deepEqual(src.match(/'https?:\/\/[^']*'/g), ["'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_fill,g_auto,h_600,w_800,f_auto,q_auto/qraivy-deal-starters/'"]);
+  assert.ok(c.includes("var api = typeof o.api === 'string' && API.test(o.api) ? o.api : '';"), 'only an API origin from the routing, checked');
+  for (const re of [/XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /serviceWorker/, /postMessage/, /localStorage|sessionStorage|document\.cookie/, /\beval\s*\(|new\s+Function/]) {
+    assert.ok(!re.test(c), 'studio-deals-data.js must not contain ' + re);
+  }
+  assert.match(src, /Only the Studio shell calls\s+\* this file, never the sandboxed preview frames/);
+  // only the shell uses it, with the routing's API address and the Clerk session token; the frames never
+  const shell = code('js/studio/studio-shell.js');
+  assert.ok(shell.includes("if (DEALS) dealsData = DEALS.createDealsData({ api: ROUTING.api, getToken: clerkToken, starters: (window.QRAIVY_DEAL_STARTER_IMAGES || {}).images });"));
+  assert.ok(shell.includes("return c && c.session && typeof c.session.getToken === 'function' ? c.session.getToken() : null;"));
+  for (const f of STUDIO_JS.filter((x) => x !== 'js/studio/studio-deals-data.js' && x !== 'js/studio/studio-shell.js')) assert.ok(!/QraivyStudioDeals|createDealsData/.test(code(f)), f);
+  const PV = require('../../frontend/public/js/studio/studio-preview.js');
+  assert.ok(!/fetch|deals/i.test(PV.FRAME_SCRIPT), 'the frames request nothing');
+  // and in this phase no address has an API: no request is ever sent from a real Studio address
+  assert.ok(!/clerk/i.test(HTML), 'no Clerk on the Studio page yet');
 });
 
 test('Save Draft and Publish are disabled and never enabled; Undo / Redo start disabled; the overflow menu only has disabled items', () => {
@@ -100,12 +144,12 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(!/allow-same-origin/.test(HTML + STUDIO_JS.map(code).join('')));
   assert.equal((HTML.match(/<iframe/g) || []).length, 1, 'only the full-size preview is in the page; frames come from studio-preview.js');
   const shell = read('js/studio/studio-shell.js');
-  assert.ok(shell.includes('{ preview: true }'), 'rendered by the shared core in preview mode');
+  assert.ok(shell.includes('{ preview: true, deals: dealsView }'), 'rendered by the shared core in preview mode (with the Deals preview state, D2)');
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('2A-3H: only the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text and Gallery are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
-  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery']);
+test('D2: the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text, Gallery and Deals / Offers are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+  assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery', 'dealsOffers']);
   // the approved notice while anything is invalid, in English and German
   assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
   assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));

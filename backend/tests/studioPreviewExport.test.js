@@ -28,11 +28,11 @@ const fsSource = {
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
-test('the upload: the Studio files, two icons, the three demo photos and the generated files, nothing else', () => {
+test('the upload: the Studio files, two icons, the starter catalog, the three demo photos and the generated files, nothing else', () => {
   const names = [...X.buildUpload(fsSource).keys()].sort();
   const studio = fs.readdirSync(path.join(PUB, 'js', 'studio')).map((f) => 'js/studio/' + f);
   const photos = ['bakery-croissants-01', 'bakery-bread-01', 'bakery-coffee-01'].map((id) => 'images/deals/starter/' + id + '.jpg');
-  assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/qraivy-lang.js']
+  assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/deal-starter-images.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/qraivy-lang.js']
     .concat(studio, photos, ['robots.txt', 'studio.html', 'vercel.json']).sort());
 });
 

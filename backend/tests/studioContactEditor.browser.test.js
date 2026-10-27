@@ -429,7 +429,8 @@ test('after editing: no network beyond this server and Google Fonts; Save Draft 
     await page.click('#st-outline [data-id="' + id + '"]');
     assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'true', id + ' editable');
   }
-  for (const id of ['s_deals01', 's_loyal01']) {
+  // (Deals / Offers is editable since D2: studioDealsPreview.browser.test.js)
+  for (const id of ['s_loyal01']) {
     await page.click('#st-outline [data-id="' + id + '"]');
     assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'false', id);
     for (const t of ['content', 'style', 'settings']) {

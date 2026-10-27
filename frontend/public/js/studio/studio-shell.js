@@ -17,6 +17,12 @@
  * the Studio may run at all: local mode, or preview mode on the protected
  * Studio staging address; both work on the in-memory demo only). The preview
  * is rendered by the shared js/lpV3/core.js.
+ *
+ * Deals / Offers (D2): the owner's real deals come from
+ * studio-deals-data.js (read only, the one file with requests), only when
+ * studio-routing.js gives an API address; this file hands it the Clerk
+ * session token and passes the result to the renderer. Without an address
+ * the preview shows labelled samples.
  */
 (function () {
   'use strict';
@@ -26,6 +32,7 @@
   // the preview frames get them inline (studio-demo-images.js prepare())
   var DEMO_IMAGES = window.QraivyStudioDemoImages || { localizeHtml: function (h) { return h; }, localSrc: function () { return null; }, displaySrc: function (u) { return u; } };
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
+  var DEALS = window.QraivyStudioDeals;
   var THEME_KEY = 'qraivy.studio.theme';
   var TEMPLATES_KEY = 'qraivy.studio.templates';
   var PANELS_KEY = 'qraivy.studio.panels';
@@ -101,6 +108,8 @@
 
   var state = { lang: 'en', chip: 'all', leftTab: 'add', insp: 'content' };
   var editor = null, preview = null, inspector = null;
+  // the Deals / Offers preview: { state, pages, page, items, withheld } (studio-deals-data.js)
+  var dealsData = null, dealsView = { state: 'sample', pages: [], page: '', items: [], withheld: 0 }, dealsLoad = 0;
   function lang() { return window.QraivyShell ? window.QraivyShell.lang() : 'en'; }
   function t(k) { var d = T[state.lang] || T.en; return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : T.en[k]; }
   function sectionText(type) {
@@ -219,8 +228,30 @@
   // invalid edit never reaches the preview.
   function pageHtml() {
     var valid = editor.lastValid();
-    var r = valid ? V3.renderDesign(valid, { businessName: window.QRAIVY_STUDIO_DEMO.businessName }, { preview: true }) : null;
+    var r = valid ? V3.renderDesign(valid, { businessName: window.QRAIVY_STUDIO_DEMO.businessName }, { preview: true, deals: dealsView }) : null;
     return r && r.ok ? DEMO_IMAGES.localizeHtml(r.html) : preview.html();
+  }
+  // The signed-in Clerk session's token (the Deal Builder's mechanism); none without a session.
+  function clerkToken() {
+    var c = window.Clerk;
+    return c && c.session && typeof c.session.getToken === 'function' ? c.session.getToken() : null;
+  }
+  function showDeals(view) {
+    dealsView = view;
+    preview.setHtml(pageHtml(), 0);
+    inspector.refresh();
+  }
+  // (Re)load the owner's deals; only the latest answer is shown.
+  function loadDeals() {
+    if (!dealsData || !dealsData.connected()) return;
+    var n = ++dealsLoad;
+    showDeals({ state: 'loading', pages: dealsView.pages, page: dealsView.page, items: [], withheld: 0 });
+    dealsData.load(dealsView.page).then(function (view) { if (n === dealsLoad) showDeals(view); });
+  }
+  // the page whose deals the preview shows (the inspector's choice; not saved)
+  function selectDealsPage(slug) {
+    var view = dealsData && dealsData.select(slug);
+    if (view) showDeals(view);
   }
   function historyButtons() {
     $('st-undo-btn').disabled = !editor.canUndo();
@@ -384,7 +415,9 @@
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
-      displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; } });
+      displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
+      deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals });
+    if (DEALS) dealsData = DEALS.createDealsData({ api: ROUTING.api, getToken: clerkToken, starters: (window.QRAIVY_DEAL_STARTER_IMAGES || {}).images });
     // the trusted Gallery controller (js/lpV3/gallery-nav.js, loaded by
     // studio.html): its fixed code for the sandboxed frames, which load
     // nothing themselves; without it: no buttons, swipe and the hint remain
@@ -402,6 +435,7 @@
     applyPanels();
     preview.render();
     deviceButtons();
+    loadDeals();
     window.QraivyStudio = { state: state, editor: editor, preview: preview }; // for local inspection only
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
