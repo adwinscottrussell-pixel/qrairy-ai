@@ -164,7 +164,12 @@ test('title, description and caption reach the preview with counters; too long s
   await sectionHas(page, '<figcaption>Sauerteigbrot</figcaption>');
   assert.equal(await page.$eval('#st-fields [data-path="data.images[1].caption"] .st-count', (n) => n.textContent), '13 / 120');
   assert.deepEqual(await rows(page), ['Croissants & Plunder', 'Sauerteigbrot', 'Kaffee & Kuchen'], 'the row follows the caption');
-  await typeInto(page, it(1, 'caption'), 'x'.repeat(121));
+  // replace the selected caption in one input event (like a paste): typed key by key,
+  // the valid 1..120-character values in between would reach the preview whenever
+  // a key gap exceeds its delay
+  await page.click(it(1, 'caption'));
+  await keys(page, ['Control'], 'a');
+  await page.keyboard.sendCharacter('x'.repeat(121));
   await until(async () => /at most 120/.test(await errorOf(page, 'data.images[1].caption')), 'too long');
   assert.equal(await page.$eval('#st-stale', (n) => !n.hidden), true);
   assert.ok((await captions(page)).includes('Sauerteigbrot'), 'the last valid caption stays');
