@@ -174,6 +174,17 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
     'frontend/public/js/academy-catalog.js', 'frontend/public/js/academy.js', 'frontend/public/js/admin-shell.js'].concat(PAGES.map((p) => 'frontend/public/' + p));
   // Phase 0 security release (tests/helpers/phase0Files.js) came after the Academy.
   const { PHASE0_FILES } = require('./helpers/phase0Files');
+  // Loyalty security fix S1 (tests/stampSettingsRead.test.js): sign-in on the settings read route.
+  // Its two edited files must equal 12df76d once exactly the S1 lines are undone.
+  const S1_UNDO = {
+    'backend/src/routes/lpRoutes.js': (s) => s.replace("// Security fix S1: reading them too (owner check in handleGetStampSettings);\n// it was public and handed out the day's stamp code.\nrouter.get('/lp/stamp/settings/:slug', requireAuth, handleGetStampSettings);", "router.get('/lp/stamp/settings/:slug', handleGetStampSettings);"),
+    'backend/tests/pushLocalization.test.js': (s) => s.replace("    // and Loyalty security fix S1 (tests/stampSettingsRead.test.js): sign-in on the settings read route\n    .replace(\"// Security fix S1: reading them too (owner check in handleGetStampSettings);\\n// it was public and handed out the day's stamp code.\\nrouter.get('/lp/stamp/settings/:slug', requireAuth, handleGetStampSettings);\", \"router.get('/lp/stamp/settings/:slug', handleGetStampSettings);\")\n", ''),
+  };
+  for (const [f, undo] of Object.entries(S1_UNDO)) {
+    const lf = (s) => s.replace(/\r\n/g, '\n');
+    assert.equal(undo(lf(fs.readFileSync(path.join(ROOT, f), 'utf8'))), lf(execFileSync('git', ['show', '12df76d:' + f], { cwd: ROOT, encoding: 'utf8' })), f + ': only the S1 lines changed');
+  }
+  allowed.push('backend/tests/stampSettingsRead.test.js', ...Object.keys(S1_UNDO));
   for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f), 'unexpected change: ' + f);
   // each Admin page gained exactly the one sidebar line (smart-qr-detail.html: after undoing
   // exactly the Phase 0 edit, tests/helpers/phase0Revert.js)

@@ -2581,14 +2581,21 @@ async function handleStampSettings(req, res) {
 async function handleGetStampSettings(req, res) {
   try {
     const { slug } = req.params;
+    // Security fix S1: owner-only and read-only. This used to be public and
+    // created and returned the day's stamp code, which stamps AND redeems.
+    // Same owner rule as handleStampSettings above; the codes themselves come
+    // only from their own authorised routes (/lp/stamp/token, /lp/nfc-token).
+    if (!req.userId) return res.status(401).json({ error: 'Unauthorized.' });
+    const page = await prisma.landingPage.findUnique({ where: { slug }, select: { userId: true } });
+    if (!page) return res.status(404).json({ error: 'Not found' });
+    if (!page.userId || page.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
     const settings = await prisma.stampSettings.findUnique({ where: { slug } });
     const serial = 'sqr-' + slug;
     const pass = await prisma.pass.findUnique({ where: { serialNumber: serial } });
     const totalStamps = await prisma.stampEntry.count({ where: { slug } });
     const rewardReady = pass ? pass.rewardReady : false;
     const stampCount = pass ? pass.stampCount : 0;
-    const token = await getOrCreateStampToken(slug);
-    return res.json({ settings, stampCount, rewardReady, totalStamps, stampUrl: `https://www.qraivy.com/stamp/${slug}/${token}`, token });
+    return res.json({ settings, stampCount, rewardReady, totalStamps });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 }
 

@@ -108,7 +108,9 @@ router.get('/lp/stamp/token/:slug', handleGetStampToken);
 // landing page's authenticated owner (requireAuth here + owner check in
 // handleStampSettings) -- previously this accepted anonymous writes.
 router.post('/lp/stamp/settings/:slug', requireAuth, handleStampSettings);
-router.get('/lp/stamp/settings/:slug', handleGetStampSettings);
+// Security fix S1: reading them too (owner check in handleGetStampSettings);
+// it was public and handed out the day's stamp code.
+router.get('/lp/stamp/settings/:slug', requireAuth, handleGetStampSettings);
 // Serve live landing page (public — no auth)
 router.post('/stamp/:slug/customer', handleCustomerStamp); // per-customer stamp
 router.get('/lp/welcome/:slug', handleLoyaltyWelcome); // First-visit enrollment

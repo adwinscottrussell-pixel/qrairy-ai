@@ -133,6 +133,8 @@ test('service worker and VAPID key are untouched (subscribe and storage: Phase 5
     .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory")
     // and the subscriber data hotfix (tests/subscriberDataAuth.test.js): sign-in on the email list route
     .replace("// The page's own account only (the handler checks ownership): subscriber emails.\nrouter.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);", "router.get('/lp/subscribers/:slug', handleGetSubscribers);")
+    // and Loyalty security fix S1 (tests/stampSettingsRead.test.js): sign-in on the settings read route
+    .replace("// Security fix S1: reading them too (owner check in handleGetStampSettings);\n// it was public and handed out the day's stamp code.\nrouter.get('/lp/stamp/settings/:slug', requireAuth, handleGetStampSettings);", "router.get('/lp/stamp/settings/:slug', handleGetStampSettings);")
     // and Phase 5.5C.3 (tests/pushPageSubscriptions.test.js): the per-page unsubscribe route
     .replace('handleWebPushSubscribe, handleWebPushUnsubscribe, handleWebPushVapidKey,', 'handleWebPushSubscribe, handleWebPushVapidKey,')
     .replace("router.post('/lp/webpush/unsubscribe/:slug', handleWebPushUnsubscribe);\n", '');
