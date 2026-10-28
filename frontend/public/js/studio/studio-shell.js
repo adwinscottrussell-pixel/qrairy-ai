@@ -22,7 +22,9 @@
  * studio-deals-data.js (read only, the one file with requests), only when
  * studio-routing.js gives an API address; this file hands it the Clerk
  * session token and passes the result to the renderer. Without an address
- * the preview shows labelled samples.
+ * the preview shows labelled samples. The sign-in (Clerk) is loaded by
+ * studio-auth.js on the connected preview only; the deals load once it is
+ * known, and again when the signed-in account changes.
  */
 (function () {
   'use strict';
@@ -33,6 +35,7 @@
   var DEMO_IMAGES = window.QraivyStudioDemoImages || { localizeHtml: function (h) { return h; }, localSrc: function () { return null; }, displaySrc: function (u) { return u; } };
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var DEALS = window.QraivyStudioDeals;
+  var AUTH = window.QraivyStudioAuth ? window.QraivyStudioAuth.createAuth({ routing: ROUTING }) : null;
   var THEME_KEY = 'qraivy.studio.theme';
   var TEMPLATES_KEY = 'qraivy.studio.templates';
   var PANELS_KEY = 'qraivy.studio.panels';
@@ -248,6 +251,13 @@
     showDeals({ state: 'loading', pages: dealsView.pages, page: dealsView.page, items: [], withheld: 0 });
     dealsData.load(dealsView.page).then(function (view) { if (n === dealsLoad) showDeals(view); });
   }
+  // First load: once the sign-in is known (studio-auth.js); again on a new sign-in.
+  function startDeals() {
+    if (!dealsData || !dealsData.connected()) return;
+    showDeals({ state: 'loading', pages: [], page: '', items: [], withheld: 0 });
+    (AUTH ? AUTH.ready() : Promise.resolve()).then(loadDeals);
+    if (AUTH) AUTH.onChange(loadDeals);
+  }
   // the page whose deals the preview shows (the inspector's choice; not saved)
   function selectDealsPage(slug) {
     var view = dealsData && dealsData.select(slug);
@@ -416,7 +426,8 @@
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
-      deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals });
+      deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
+      signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.builder || 'deals.html' });
     if (DEALS) dealsData = DEALS.createDealsData({ api: ROUTING.api, getToken: clerkToken, starters: (window.QRAIVY_DEAL_STARTER_IMAGES || {}).images });
     // the trusted Gallery controller (js/lpV3/gallery-nav.js, loaded by
     // studio.html): its fixed code for the sandboxed frames, which load
@@ -435,7 +446,7 @@
     applyPanels();
     preview.render();
     deviceButtons();
-    loadDeals();
+    startDeals();
     window.QraivyStudio = { state: state, editor: editor, preview: preview }; // for local inspection only
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

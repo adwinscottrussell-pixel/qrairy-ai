@@ -347,7 +347,7 @@
       remove_image: 'Remove image', image_removed: 'Image removed. Undo is available.', image_moved: 'Image moved.', no_caption: '(no caption)',
       hint_gallery_image_later: 'Replacing an image arrives with image upload in a later step.',
       hint_gallery_alt: 'Describes the image for people who cannot see it. Empty: screen readers skip the image.',
-      g_deals: 'Deals from the Deal Builder', deals_page: 'Deals of the page', deals_open: 'Edit deals in the Deal Builder', deals_retry: 'Try again',
+      g_deals: 'Deals from the Deal Builder', deals_page: 'Deals of the page', deals_open: 'Edit deals in the Deal Builder', deals_retry: 'Try again', deals_signin: 'Sign in',
       deals_shown: 'Shown in the preview:', deals_not_live: '(not live)',
       deals_s_sample: 'Sample deals. Your real deals cannot be loaded on this address yet.', deals_s_loading: 'Loading your deals …',
       deals_s_live: 'Your real deals: those this page shows customers right now.', deals_s_none: 'This page shows no deals right now.',
@@ -425,7 +425,7 @@
       remove_image: 'Bild entfernen', image_removed: 'Bild entfernt. Rückgängig ist möglich.', image_moved: 'Bild verschoben.', no_caption: '(ohne Bildunterschrift)',
       hint_gallery_image_later: 'Bilder austauschen folgt mit dem Bilder-Upload in einem späteren Schritt.',
       hint_gallery_alt: 'Beschreibt das Bild für Menschen, die es nicht sehen können. Leer: Screenreader überspringen das Bild.',
-      g_deals: 'Angebote aus dem Deal Builder', deals_page: 'Angebote der Seite', deals_open: 'Angebote im Deal Builder bearbeiten', deals_retry: 'Erneut versuchen',
+      g_deals: 'Angebote aus dem Deal Builder', deals_page: 'Angebote der Seite', deals_open: 'Angebote im Deal Builder bearbeiten', deals_retry: 'Erneut versuchen', deals_signin: 'Anmelden',
       deals_shown: 'In der Vorschau:', deals_not_live: '(nicht live)',
       deals_s_sample: 'Beispielangebote. Deine echten Angebote können auf dieser Adresse noch nicht geladen werden.', deals_s_loading: 'Deine Angebote werden geladen …',
       deals_s_live: 'Deine echten Angebote: die, die diese Seite Kunden gerade zeigt.', deals_s_none: 'Diese Seite zeigt gerade keine Angebote.',
@@ -1108,10 +1108,13 @@
       var shown = el('div', { class: 'st-deals__shown' }, [el('p', { class: 'st-hint', text: tx('deals_shown') }), list]);
       var withheld = el('p', { class: 'st-hint st-deals__withheld' });
       var retry = el('button', { type: 'button', class: 'st-btn st-btn--ghost', text: tx('deals_retry') });
-      var open = el('a', { class: 'st-btn st-btn--ghost st-deals__open', href: 'deals.html', target: '_blank', rel: 'noopener noreferrer', text: tx('deals_open') });
+      var open = el('a', { class: 'st-btn st-btn--ghost st-deals__open', href: o.dealBuilder || 'deals.html', target: '_blank', rel: 'noopener noreferrer', text: tx('deals_open') });
+      // the QRAIVY sign-in (studio-auth.js), only where one exists
+      var signin = el('button', { type: 'button', class: 'st-btn st-btn--outline st-deals__signin', text: tx('deals_signin') });
       var signature = null;
       sel.addEventListener('change', function () { if (o.selectDealsPage) o.selectDealsPage(sel.value); });
       retry.addEventListener('click', function () { if (o.retryDeals) o.retryDeals(); });
+      signin.addEventListener('click', function () { if (o.signIn) o.signIn(); });
       refreshers.push(function () {
         var v = o.deals ? o.deals() : null;
         var state = v && typeof v.state === 'string' ? v.state : 'sample';
@@ -1131,10 +1134,11 @@
         shown.hidden = !list.childNodes.length;
         withheld.hidden = !(state === 'live' && v.withheld > 0);
         withheld.textContent = withheld.hidden ? '' : tx('deals_withheld').replace('{n}', String(v.withheld));
-        retry.hidden = state !== 'error';
+        retry.hidden = state !== 'error' && state !== 'signin';
+        signin.hidden = state !== 'signin' || !o.signIn;
       });
       return el('div', { class: 'st-deals', 'data-path': 'deals' }, [el('div', { class: 'st-group', text: tx('g_deals') }), status, pageField, shown, withheld,
-        el('div', { class: 'st-deals__actions' }, [retry, open])]);
+        el('div', { class: 'st-deals__actions' }, [retry, signin, open])]);
     }
 
     function controlFor(sec, c, D) {

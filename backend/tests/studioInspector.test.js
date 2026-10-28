@@ -55,7 +55,8 @@ test('D2 Deals / Offers: only how the section shows the deals; one read-only sou
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'js', 'studio', 'studio-inspector.js'), 'utf8');
   const block = src.slice(src.indexOf('function dealsSourceControl'), src.indexOf('function controlFor'));
   assert.ok(!/store\.(set|add|remove|move|select)\b/.test(block), 'the source block changes nothing in the design');
-  assert.ok(block.includes("href: 'deals.html', target: '_blank', rel: 'noopener noreferrer'"), 'deals are edited in the Deal Builder');
+  // the Deal Builder of the same environment (studio-routing.js builder), else this site's
+  assert.ok(block.includes("href: o.dealBuilder || 'deals.html', target: '_blank', rel: 'noopener noreferrer'"), 'deals are edited in the Deal Builder');
 });
 
 // the inspector module as it was at an approved checkpoint (null when git or the commit is missing)

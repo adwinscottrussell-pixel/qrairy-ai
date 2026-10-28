@@ -78,6 +78,10 @@ const LPV3_FILES = [
   'backend/tests/lpV3Deals.test.js',
   'backend/tests/studioDealsPreview.browser.test.js',
   'backend/tests/helpers/studioDealsServer.js',
+  // Deals connection (deals-preview): the QRAIVY sign-in on the one connected
+  // preview address (studio-routing.js), loaded by studio-auth.js only
+  'frontend/public/js/studio/studio-auth.js',
+  'backend/tests/studioDealsConnection.test.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',

@@ -55,6 +55,16 @@ test('routing: local, and preview on the one Studio staging address (https only)
     assert.deepEqual(resolve(h, 'https:'), { mode: 'unavailable', api: '', blocked: true }, String(h));
   }
   for (const p of ['http:', 'file:', '', undefined]) assert.deepEqual(resolve('qraivy-studio-staging.vercel.app', p), { mode: 'unavailable', api: '', blocked: true }, 'preview needs https: ' + p);
+  // Deals connection: exactly one connected preview, https only, with the isolated
+  // Deals preview API (never production) and the Deal Builder of the same environment
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx0.window.QraivyStudioRouting.CONNECTED_HOSTS)), ['studio-preview.qraivy.com'], 'exactly one connected address');
+  const connected = { mode: 'preview', api: 'https://qraivy-deals-api-deals-preview.up.railway.app', blocked: false, clerk: 'pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ', builder: 'https://deals-preview.qraivy.com/deals.html' };
+  assert.deepEqual(resolve('studio-preview.qraivy.com', 'https:'), connected);
+  assert.deepEqual(resolve('STUDIO-PREVIEW.qraivy.com', 'https:'), connected);
+  for (const p of ['http:', 'file:', '', undefined]) assert.deepEqual(resolve('studio-preview.qraivy.com', p), { mode: 'unavailable', api: '', blocked: true }, 'connected preview needs https: ' + p);
+  for (const h of ['studio-preview.qraivy.com.evil.example', 'evil-studio-preview.qraivy.com', 'x.studio-preview.qraivy.com', 'studio-preview.qraivy.com.', 'studio-preview.qraivy.com:443', 'studio.qraivy.com']) {
+    assert.deepEqual(resolve(h, 'https:'), { mode: 'unavailable', api: '', blocked: true }, h);
+  }
   const ctx = { window: { location: { hostname: 'www.qraivy.com', protocol: 'https:' } } };
   vm.runInNewContext(read('js/studio/studio-routing.js'), ctx);
   assert.equal(ctx.window.QRAIVY_STUDIO_ROUTING.blocked, true, 'production: the Studio does not start');
@@ -65,7 +75,9 @@ test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk
   assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/admin-shell.js', 'js/studio/studio-routing.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/studio/studio-demo.js',
     'js/studio/studio-demo-images.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-inspector.js',
     // D2: the Deal Builder's starter catalog (plain data) and the read-only Deals data file
-    'js/deal-starter-images.js', 'js/studio/studio-deals-data.js', 'js/studio/studio-shell.js']);
+    'js/deal-starter-images.js', 'js/studio/studio-deals-data.js',
+    // Deals connection: the sign-in loader (loads Clerk on the connected preview only)
+    'js/studio/studio-auth.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);
@@ -78,8 +90,9 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
     // the routing file names the one preview address it accepts (a hostname
     // it compares, never a URL it calls); no other Vercel address anywhere
     if (f === 'js/studio/studio-routing.js') {
-      assert.doesNotMatch(src, /https?:\/\//, 'the routing file builds no URL');
-      src = src.split('qraivy-studio-staging.vercel.app').join('');
+      // its only addresses: the connected preview's API and Deal Builder (studioDealsConnection.test.js)
+      assert.deepEqual(src.match(/https?:\/\/[^'\s]*/g), ['https://qraivy-deals-api-deals-preview.up.railway.app', 'https://deals-preview.qraivy.com/deals.html'], 'the routing file names exactly the connected addresses');
+      src = src.split('qraivy-studio-staging.vercel.app').join('').split('https://qraivy-deals-api-deals-preview.up.railway.app').join('');
     }
     for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /serviceWorker/, /api\.qraivy\.com/, /railway\.app/, /\.vercel\.app/]) {
       assert.ok(!re.test(src), f + ' must not contain ' + re);
