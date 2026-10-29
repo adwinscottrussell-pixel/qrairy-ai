@@ -14,12 +14,15 @@ const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).tr
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
-const { LPV3_FILES: PHASE1_FILES, withoutV3 } = require('./helpers/lpV3Files');
+const { LPV3_FILES: PHASE1_FILES, withoutV3, indexOnlyStudioMount } = require('./helpers/lpV3Files');
 const fs = require('fs');
+// Phase A: index.js may differ from ae2861e by exactly the Studio pages mount (helpers/lpV3Files.js)
+const INDEX_OK = indexOnlyStudioMount(ROOT, 'ae2861e');
+const mountOnly = (f) => f === 'backend/src/index.js' && INDEX_OK;
 
 test('Phase 1 changes only its own files', () => {
   const changed = git('diff', 'ae2861e', '--name-only').concat(git('ls-files', '--others', '--exclude-standard'));
-  const extra = [...new Set(changed)].filter((f) => !PHASE1_FILES.includes(f));
+  const extra = [...new Set(changed)].filter((f) => !PHASE1_FILES.includes(f) && !mountOnly(f));
   assert.deepEqual(extra, [], 'unexpected changes');
 });
 
@@ -32,8 +35,8 @@ test('customer-facing code is untouched (public pages, routes, server, staging, 
   const { LPV3_NEW_FRONTEND } = require('./helpers/lpV3Files');
   const isNew = (f) => LPV3_NEW_FRONTEND.some((p) => f === p || f.startsWith(p + '/'));
   const changed = git('diff', 'ae2861e', '--name-status', '--', ...protectedPaths).concat(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).map((f) => '?\t' + f));
-  assert.deepEqual(changed.filter((l) => !isNew(l.split('\t')[1])), []);
-  for (const l of changed) assert.ok(/^[A?]\t/.test(l), 'only new files, nothing existing replaced: ' + l);
+  assert.deepEqual(changed.filter((l) => !isNew(l.split('\t')[1]) && !mountOnly(l.split('\t')[1])), []);
+  for (const l of changed) assert.ok(/^[A?]\t/.test(l) || mountOnly(l.split('\t')[1]), 'only new files, nothing existing replaced: ' + l);
 });
 
 test('older scope guards: exactly these now allow the V3 files, and only the V3 lines', () => {
@@ -50,7 +53,8 @@ test('older scope guards: exactly these now allow the V3 files, and only the V3 
 test('nothing outside the new lpV3 module uses it yet', () => {
   let users = [];
   try { users = git('grep', '-l', 'lpV3', '--', 'backend/src'); } catch (e) { if (e.status !== 1) throw e; } // 1 = no match
-  assert.deepEqual(users.filter((f) => !f.startsWith('backend/src/lpV3/')), []);
+  // Phase A: the server entry point mounts the Studio pages routes (exactly that, INDEX_OK)
+  assert.deepEqual(users.filter((f) => !f.startsWith('backend/src/lpV3/') && !mountOnly(f)), []);
 });
 
 (async () => {

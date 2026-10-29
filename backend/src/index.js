@@ -84,6 +84,8 @@ app.use('/tier', tierRoutes);
 app.use('/loyalty', loyaltyAdminRoutes);
 app.use('/customers', customerRoutes);
 app.use('/deals', dealRoutes);
+// Landing Page Studio V3 (Phase A): the signed-in owner's own pages, read only
+app.use('/studio', require('./lpV3/studioPagesRoutes'));
 app.use(errorHandler);
 
 app.listen(PORT, () => {

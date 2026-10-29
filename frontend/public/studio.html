@@ -151,6 +151,15 @@
       <div class="st-top__title">
         <h1 class="st-h1" data-st="title">Landing Page Studio</h1>
         <p class="st-sub" data-st="subtitle">Create a beautiful mobile landing page for your business.</p>
+        <!-- The signed-in owner's own pages (js/studio/studio-pages-data.js); only where the Studio has an API -->
+        <div class="st-pagebar" id="st-pagebar" hidden>
+          <label class="st-pagebar__label" for="st-page-select" data-st="page_label">Page</label>
+          <select class="st-pagebar__select" id="st-page-select"></select>
+          <span class="st-pagebar__status" id="st-page-status" role="status"></span>
+          <button type="button" class="st-pagebar__btn" id="st-page-retry" hidden data-st="page_retry">Try again</button>
+          <button type="button" class="st-pagebar__btn" id="st-page-signin" hidden data-st="page_signin_btn">Sign in</button>
+          <a class="st-pagebar__btn" id="st-page-dashboard" href="dashboard.html?section=sqr" hidden data-st="page_dashboard">Go to dashboard</a>
+        </div>
       </div>
       <span class="st-mode" id="st-mode" data-st="local_mode" title="">Local preview · not saved</span>
       <div class="st-top__actions">
@@ -271,6 +280,7 @@
 <script src="js/deal-starter-images.js"></script>
 <script src="js/studio/studio-deals-data.js"></script>
 <script src="js/studio/studio-auth.js"></script>
+<script src="js/studio/studio-pages-data.js"></script>
 <script src="js/studio/studio-shell.js"></script>
 </body>
 </html>

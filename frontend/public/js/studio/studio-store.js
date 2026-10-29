@@ -226,6 +226,18 @@
         emit('history');
         return true;
       },
+      // ── another page: a fresh start (no undo back into the previous page) ──
+      load: function (design) {
+        var r = validate(design);
+        if (!r.ok) return false;
+        draft = clone(design);
+        past = []; future = [];
+        endMerge();
+        selected = null;
+        revalidate();
+        emit('history', { loaded: true });
+        return true;
+      },
       endMerge: endMerge,
       onChange: function (f) { listeners.push(f); },
     };

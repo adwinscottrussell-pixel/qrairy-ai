@@ -114,7 +114,9 @@ test('shell: the deals are asked for once the sign-in is known, only when connec
   assert.ok(start.includes('if (!dealsData || !dealsData.connected()) return;'));
   assert.ok(start.includes('(AUTH ? AUTH.ready() : Promise.resolve()).then(loadDeals);'));
   assert.ok(start.includes('if (AUTH) AUTH.onChange(loadDeals);'));
-  assert.ok(shell.includes('    startDeals();\n') && !/\n {4}loadDeals\(\);\n/.test(shell), 'start() uses startDeals');
+  // start() itself (Phase A: showSample() reloads the deals for the current sign-in, outside start())
+  const startFn = shell.slice(shell.indexOf('  function start() {'), shell.indexOf('\n  }\n', shell.indexOf('  function start() {')));
+  assert.ok(startFn.includes('    startDeals();\n') && !/\n {4}loadDeals\(\);\n/.test(startFn), 'start() uses startDeals');
   assert.ok(shell.includes("signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.builder || 'deals.html' });"));
 });
 

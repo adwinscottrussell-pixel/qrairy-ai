@@ -82,6 +82,16 @@ const LPV3_FILES = [
   // preview address (studio-routing.js), loaded by studio-auth.js only
   'frontend/public/js/studio/studio-auth.js',
   'backend/tests/studioDealsConnection.test.js',
+  // Phase A (customer pages): the owner's own pages for the Studio, read only
+  // (GET /studio/pages, GET /studio/pages/:slug/design), the Studio's page
+  // selector and their tests
+  'backend/src/lpV3/studioPagesController.js',
+  'backend/src/lpV3/studioPagesRoutes.js',
+  'frontend/public/js/studio/studio-pages-data.js',
+  'backend/tests/studioPages.test.js',
+  'backend/tests/studioPagesData.test.js',
+  'backend/tests/studioPagesLoad.browser.test.js',
+  'backend/tests/helpers/studioPagesServer.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests
   'backend/staging/studio-preview-export.js',
@@ -131,4 +141,18 @@ function withoutV3(schema) {
   return s;
 }
 
-module.exports = { LPV3_FILES, LPV3_EXCLUDES, LPV3_NEW_FRONTEND, withoutV3 };
+// Phase A: the server entry point's only V3 change is the Studio pages mount
+// (these exact two lines). True when index.js, without exactly them, equals
+// index.js at `base` (unchanged from 12df76d to ae2861e); any other change fails.
+const STUDIO_MOUNT = "// Landing Page Studio V3 (Phase A): the signed-in owner's own pages, read only\napp.use('/studio', require('./lpV3/studioPagesRoutes'));\n";
+function indexOnlyStudioMount(root, base) {
+  const fs = require('fs');
+  const path = require('path');
+  const { execFileSync } = require('child_process');
+  const lf = (s) => s.replace(/\r\n/g, '\n');
+  const now = lf(fs.readFileSync(path.join(root, 'backend', 'src', 'index.js'), 'utf8'));
+  if (now.split(STUDIO_MOUNT).length !== 2) return false;
+  return now.replace(STUDIO_MOUNT, '') === lf(execFileSync('git', ['show', base + ':backend/src/index.js'], { cwd: root, encoding: 'utf8' }));
+}
+
+module.exports = { LPV3_FILES, LPV3_EXCLUDES, LPV3_NEW_FRONTEND, withoutV3, STUDIO_MOUNT, indexOnlyStudioMount };

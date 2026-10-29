@@ -77,7 +77,9 @@ test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk
     // D2: the Deal Builder's starter catalog (plain data) and the read-only Deals data file
     'js/deal-starter-images.js', 'js/studio/studio-deals-data.js',
     // Deals connection: the sign-in loader (loads Clerk on the connected preview only)
-    'js/studio/studio-auth.js', 'js/studio/studio-shell.js']);
+    'js/studio/studio-auth.js',
+    // Phase A: the owner's own pages, read only (studioPagesData.test.js)
+    'js/studio/studio-pages-data.js', 'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);
@@ -98,7 +100,9 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
       assert.ok(!re.test(src), f + ' must not contain ' + re);
     }
     // the request itself is made only in the Deals data file (it calls the browser's fetch through doFetch)
-    if (f !== 'js/studio/studio-deals-data.js') assert.ok(!/\bdoFetch\b|\.fetch\b|'\/deals/.test(src), f + ': no request, no Deals endpoint');
+    // ... and, since Phase A, in the pages data file: only the two Studio page GET requests (studioPagesData.test.js), never a Deals endpoint
+    if (f === 'js/studio/studio-pages-data.js') assert.ok(!/'\/deals/.test(src), f + ': no Deals endpoint');
+    else if (f !== 'js/studio/studio-deals-data.js') assert.ok(!/\bdoFetch\b|\.fetch\b|'\/deals/.test(src), f + ': no request, no Deals endpoint');
   }
   // the starter catalog the Studio now loads is plain data
   const catalog = read('js/deal-starter-images.js');

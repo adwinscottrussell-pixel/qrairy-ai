@@ -36,6 +36,7 @@
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var DEALS = window.QraivyStudioDeals;
   var AUTH = window.QraivyStudioAuth ? window.QraivyStudioAuth.createAuth({ routing: ROUTING }) : null;
+  var PAGES = window.QraivyStudioPages;
   var THEME_KEY = 'qraivy.studio.theme';
   var TEMPLATES_KEY = 'qraivy.studio.templates';
   var PANELS_KEY = 'qraivy.studio.panels';
@@ -55,6 +56,13 @@
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
       undone: 'Undone', redone: 'Redone', preview_stale: 'Preview shows the last valid version. Fix the highlighted field.', select_section: 'Select a section on the left to see its settings.',
       templates: 'Page Templates', add_later: 'Adding sections arrives in the next step.',
+      page_label: 'Page', page_src_import: 'Current page', page_src_draft: 'Studio draft', page_loading: 'Loading your pages …',
+      page_loading_short: 'Loading …', page_empty_short: 'No landing page yet', page_signin_short: 'Please sign in', page_error_short: 'Pages not loaded',
+      page_forbidden_short: 'Not one of your pages', page_notfound_short: 'Not one of your pages', page_invalid_short: 'Cannot be opened yet', page_not_live: ' (not live)', page_retry: 'Try again', page_signin_btn: 'Sign in', page_dashboard: 'Go to dashboard',
+      page_loaded_import: 'Your current page “{name}”, opened as a Studio draft. Changes are not saved yet.', page_loaded_draft: 'Your Studio draft of “{name}”. Changes are not saved yet.',
+      page_empty: 'You have no landing page yet. Create one in the dashboard; until then the Studio shows a sample page.', page_signin: 'Sign in to open your landing pages.',
+      page_error: 'Your pages could not be loaded. The Studio shows a sample page.', page_forbidden: 'This page belongs to another account.', page_notfound: 'This page is not one of your pages.',
+      page_invalid: 'This page cannot be opened in the Studio yet.', page_switch_confirm: 'Open another page? Your changes on this page are not saved and will be lost.',
       unavailable_title: "Landing Page Studio isn't available here yet", unavailable_text: 'The new Studio is still being built and tested. Your landing pages keep working as before.', unavailable_back: 'Back to Smart QR Pages',
       chip_all: 'All', chip_popular: 'Popular', chip_business: 'Business', chip_media: 'Media', chip_more: 'More',
       hidden: 'Hidden', items: '{n} items', change_image: 'Change Image', remove: 'Remove', no_image: 'No image yet',
@@ -72,6 +80,13 @@
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
       undone: 'Rückgängig gemacht', redone: 'Wiederholt', preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.', select_section: 'Wähle links einen Abschnitt, um seine Einstellungen zu sehen.',
       templates: 'Seitenvorlagen', add_later: 'Abschnitte hinzufügen folgt im nächsten Schritt.',
+      page_label: 'Seite', page_src_import: 'Aktuelle Seite', page_src_draft: 'Studio-Entwurf', page_loading: 'Ihre Seiten werden geladen …',
+      page_loading_short: 'Wird geladen …', page_empty_short: 'Noch keine Landingpage', page_signin_short: 'Bitte anmelden', page_error_short: 'Seiten nicht geladen',
+      page_forbidden_short: 'Nicht Ihre Seite', page_notfound_short: 'Nicht Ihre Seite', page_invalid_short: 'Noch nicht zu öffnen', page_not_live: ' (nicht live)', page_retry: 'Erneut versuchen', page_signin_btn: 'Anmelden', page_dashboard: 'Zum Dashboard',
+      page_loaded_import: 'Ihre aktuelle Seite „{name}“, als Studio-Entwurf geöffnet. Änderungen werden noch nicht gespeichert.', page_loaded_draft: 'Ihr Studio-Entwurf von „{name}“. Änderungen werden noch nicht gespeichert.',
+      page_empty: 'Sie haben noch keine Landingpage. Erstellen Sie eine im Dashboard – bis dahin zeigt das Studio eine Beispielseite.', page_signin: 'Melden Sie sich an, um Ihre Landingpages zu öffnen.',
+      page_error: 'Ihre Seiten konnten nicht geladen werden. Das Studio zeigt eine Beispielseite.', page_forbidden: 'Diese Seite gehört zu einem anderen Konto.', page_notfound: 'Diese Seite gehört nicht zu Ihren Seiten.',
+      page_invalid: 'Diese Seite kann im Studio noch nicht geöffnet werden.', page_switch_confirm: 'Andere Seite öffnen? Ihre Änderungen an dieser Seite sind nicht gespeichert und gehen verloren.',
       unavailable_title: 'Das Landing Page Studio ist hier noch nicht verfügbar', unavailable_text: 'Das neue Studio wird noch gebaut und getestet. Deine Landingpages funktionieren weiter wie bisher.', unavailable_back: 'Zurück zu den Smart-QR-Seiten',
       chip_all: 'Alle', chip_popular: 'Beliebt', chip_business: 'Business', chip_media: 'Medien', chip_more: 'Mehr',
       hidden: 'Ausgeblendet', items: '{n} Einträge', change_image: 'Bild ändern', remove: 'Entfernen', no_image: 'Noch kein Bild',
@@ -113,6 +128,9 @@
   var editor = null, preview = null, inspector = null;
   // the Deals / Offers preview: { state, pages, page, items, withheld } (studio-deals-data.js)
   var dealsData = null, dealsView = { state: 'sample', pages: [], page: '', items: [], withheld: 0 }, dealsLoad = 0;
+  // the owner's own pages (studio-pages-data.js): state off | loading | ready | empty | signin | error |
+  // forbidden | notfound | invalid; current = the page open in the editor (null: the demo)
+  var pagesData = null, pageView = { state: 'off', pages: [], current: null, source: '' }, pageLoad = 0;
   function lang() { return window.QraivyShell ? window.QraivyShell.lang() : 'en'; }
   function t(k) { var d = T[state.lang] || T.en; return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : T.en[k]; }
   function sectionText(type) {
@@ -231,7 +249,8 @@
   // invalid edit never reaches the preview.
   function pageHtml() {
     var valid = editor.lastValid();
-    var r = valid ? V3.renderDesign(valid, { businessName: window.QRAIVY_STUDIO_DEMO.businessName }, { preview: true, deals: dealsView }) : null;
+    var name = pageView.current ? pageView.current.name : window.QRAIVY_STUDIO_DEMO.businessName;
+    var r = valid ? V3.renderDesign(valid, { businessName: name }, { preview: true, deals: dealsView }) : null;
     return r && r.ok ? DEMO_IMAGES.localizeHtml(r.html) : preview.html();
   }
   // The signed-in Clerk session's token (the Deal Builder's mechanism); none without a session.
@@ -249,7 +268,12 @@
     if (!dealsData || !dealsData.connected()) return;
     var n = ++dealsLoad;
     showDeals({ state: 'loading', pages: dealsView.pages, page: dealsView.page, items: [], withheld: 0 });
-    dealsData.load(dealsView.page).then(function (view) { if (n === dealsLoad) showDeals(view); });
+    dealsData.load(dealsView.page).then(function (view) {
+      if (n !== dealsLoad) return;
+      // the deals of the page open in the editor, when it is one of the owner's pages
+      var loaded = view.state === 'live' || view.state === 'none';
+      showDeals(loaded && pageView.current ? dealsOf(pageView.current.slug) : view);
+    });
   }
   // First load: once the sign-in is known (studio-auth.js); again on a new sign-in.
   function startDeals() {
@@ -262,6 +286,117 @@
   function selectDealsPage(slug) {
     var view = dealsData && dealsData.select(slug);
     if (view) showDeals(view);
+  }
+  // The deals of exactly this page (never another page's: the Deals data
+  // falls back to another page when it does not know the slug).
+  function dealsOf(slug) {
+    var view = dealsData && dealsData.select(slug);
+    if (!view) return dealsView;
+    return view.page === slug ? view : { state: 'none', pages: view.pages, page: slug, items: [], withheld: 0 };
+  }
+
+  // ── the owner's own pages (Phase A: read only, nothing is saved) ──
+  // ?slug=… in the address: that page (when it is one of the owner's)
+  function requestedSlug() {
+    var s = null;
+    try { s = new URLSearchParams(window.location.search).get('slug'); } catch (e) { s = null; }
+    return s && PAGES && PAGES.SLUG.test(s) ? s : null;
+  }
+  function rememberSlug(slug) {
+    try { var u = new URL(window.location.href); u.searchParams.set('slug', slug); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+  }
+  function renderPageBar() {
+    var bar = $('st-pagebar');
+    if (pageView.state === 'off') { bar.hidden = true; return; }
+    bar.hidden = false;
+    $('st-top').querySelector('.st-top__title').setAttribute('data-pages', '');
+    var sel = $('st-page-select');
+    var pages = pageView.pages;
+    sel.textContent = '';
+    pages.forEach(function (p) { sel.appendChild(el('option', { value: p.slug, text: p.name + (p.live ? '' : t('page_not_live')) })); });
+    // nothing chosen while no page of the owner is open (e.g. ?slug of another account's page)
+    if (pageView.current) sel.value = pageView.current.slug; else sel.selectedIndex = -1;
+    sel.hidden = !pages.length;
+    sel.disabled = pageView.state === 'loading';
+    var st = pageView.state, msg = '', shown = '';
+    if (st === 'loaded') {
+      msg = t(pageView.source === 'draft' ? 'page_loaded_draft' : 'page_loaded_import').replace('{name}', pageView.current.name);
+      // short in the bar (the selector already names the page); the full sentence as its title
+      shown = t(pageView.source === 'draft' ? 'page_src_draft' : 'page_src_import');
+    } else { msg = t('page_' + st); shown = t('page_' + st + '_short'); }
+    var status = $('st-page-status');
+    status.textContent = shown;
+    status.title = msg;
+    status.setAttribute('data-state', st);
+    $('st-page-retry').hidden = st !== 'error';
+    $('st-page-signin').hidden = st !== 'signin' || !(AUTH && AUTH.available());
+    $('st-page-dashboard').hidden = st !== 'empty';
+  }
+  // Back to the sample page: the open customer page (if any) leaves the editor.
+  function showSample() {
+    if (!pageView.current) return;
+    pageView.current = null;
+    // the address no longer names that page (a next account starts from its own pages)
+    try { var u = new URL(window.location.href); u.searchParams.delete('slug'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+    editor.load(window.QRAIVY_STUDIO_DEMO.design);
+    select('s_hero01');
+    preview.setHtml(pageHtml(), 0);
+    // and the deals again under the current sign-in (signed out: none; another account: its own)
+    dealsView.page = '';
+    loadDeals();
+  }
+  function showPages(patch) { Object.keys(patch).forEach(function (k) { pageView[k] = patch[k]; }); renderPageBar(); }
+  // Open one of the owner's pages in the editor (its saved draft, or the
+  // current page converted in memory). Only the latest request counts.
+  function openPage(slug) {
+    if (!pagesData) return;
+    if (pageView.current && pageView.current.slug !== slug && editor.canUndo() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
+    var n = ++pageLoad;
+    showPages({ state: 'loading' });
+    pagesData.load(slug).then(function (r) {
+      if (n !== pageLoad) return;
+      if (r.state !== 'loaded') {
+        // signed out or no longer this account's page: its content leaves the editor
+        if (r.state === 'signin' || r.state === 'forbidden' || r.state === 'notfound') { showSample(); showPages({ state: r.state }); }
+        else showPages({ state: 'error' });
+        return;
+      }
+      if (!editor.load(r.design)) { showPages({ state: 'invalid' }); return; }
+      pageView.current = r.page;
+      showPages({ state: 'loaded', source: r.source });
+      rememberSlug(r.page.slug);
+      var first = editor.sectionIds()[0];
+      if (first) select(first);
+      preview.setHtml(pageHtml(), 0);
+      // the Deals / Offers preview follows the open page
+      dealsView.page = r.page.slug;
+      showDeals(dealsOf(r.page.slug));
+    });
+  }
+  // List the owner's pages; open ?slug=… or else the most recently changed one.
+  // No page is ever created here.
+  function listPages() {
+    if (!pagesData || !pagesData.connected()) return;
+    var n = ++pageLoad;
+    showPages({ state: 'loading' });
+    pagesData.list().then(function (r) {
+      if (n !== pageLoad) return;
+      var known = function (s) { return r.pages.some(function (p) { return p.slug === s; }); };
+      // signed out, another account, no pages or a failure: no previous
+      // customer's page stays in the editor (the sample page instead)
+      if (r.state !== 'ready' || (pageView.current && !known(pageView.current.slug))) showSample();
+      if (r.state !== 'ready') { showPages({ state: r.state === 'notfound' ? 'error' : r.state, pages: r.pages }); return; }
+      pageView.pages = r.pages;
+      var want = requestedSlug();
+      if (want && !known(want)) { showSample(); showPages({ state: 'notfound' }); return; }
+      openPage(want || (pageView.current && known(pageView.current.slug) ? pageView.current.slug : r.pages[0].slug));
+    });
+  }
+  function startPages() {
+    if (!pagesData || !pagesData.connected()) return;
+    showPages({ state: 'loading' });
+    (AUTH ? AUTH.ready() : Promise.resolve()).then(listPages);
+    if (AUTH) AUTH.onChange(listPages);
   }
   function historyButtons() {
     $('st-undo-btn').disabled = !editor.canUndo();
@@ -403,6 +538,7 @@
     applyTexts();
     renderChips(); renderLibrary(); renderOutline(); inspTabs(); inspector.render(); renderTemplates();
     localAccount();
+    renderPageBar();
   }
 
   function start() {
@@ -429,6 +565,10 @@
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
       signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.builder || 'deals.html' });
     if (DEALS) dealsData = DEALS.createDealsData({ api: ROUTING.api, getToken: clerkToken, starters: (window.QRAIVY_DEAL_STARTER_IMAGES || {}).images });
+    if (PAGES) pagesData = PAGES.createPagesData({ api: ROUTING.api, getToken: clerkToken });
+    $('st-page-select').addEventListener('change', function () { openPage($('st-page-select').value); });
+    $('st-page-retry').addEventListener('click', listPages);
+    $('st-page-signin').addEventListener('click', function () { if (AUTH) AUTH.signIn(); });
     // the trusted Gallery controller (js/lpV3/gallery-nav.js, loaded by
     // studio.html): its fixed code for the sandboxed frames, which load
     // nothing themselves; without it: no buttons, swipe and the hint remain
@@ -446,6 +586,7 @@
     applyPanels();
     preview.render();
     deviceButtons();
+    startPages();
     startDeals();
     window.QraivyStudio = { state: state, editor: editor, preview: preview }; // for local inspection only
   }
