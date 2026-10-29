@@ -82,15 +82,16 @@ const LPV3_FILES = [
   // preview address (studio-routing.js), loaded by studio-auth.js only
   'frontend/public/js/studio/studio-auth.js',
   'backend/tests/studioDealsConnection.test.js',
-  // Phase A (customer pages): the owner's own pages for the Studio, read only
-  // (GET /studio/pages, GET /studio/pages/:slug/design), the Studio's page
-  // selector and their tests
+  // Phase A / B (customer pages): the owner's own pages for the Studio
+  // (GET /studio/pages, GET and PUT /studio/pages/:slug/design: read, and
+  // save the Studio draft), the Studio's page selector, Save Draft and their tests
   'backend/src/lpV3/studioPagesController.js',
   'backend/src/lpV3/studioPagesRoutes.js',
   'frontend/public/js/studio/studio-pages-data.js',
   'backend/tests/studioPages.test.js',
   'backend/tests/studioPagesData.test.js',
   'backend/tests/studioPagesLoad.browser.test.js',
+  'backend/tests/studioPagesSave.browser.test.js',
   'backend/tests/helpers/studioPagesServer.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests

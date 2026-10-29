@@ -1,12 +1,15 @@
 // ============================================================
-// studioPagesServer.js — a local server for the Studio V3 Phase A tests
-// (studioPages.test.js, studioPagesLoad.browser.test.js).
+// studioPagesServer.js — a local server for the Studio V3 Phase A / B tests
+// (studioPages.test.js, studioPagesLoad.browser.test.js,
+// studioPagesSave.browser.test.js).
 //
 // The REAL Studio page routes (src/lpV3/studioPagesRoutes.js ->
 // studioPagesController -> importLegacy / core) and the REAL Deals routes
 // (src/routes/dealRoutes.js), both behind the real requireAuth, on an
 // in-memory database that refuses every write (each attempt is recorded in
-// `writes`). Mocked by pre-seeding require.cache (the studioDealsServer.js
+// `writes`) except the two the Studio's Save Draft may make:
+// pageDesign.create (landingPageId unique, a clash is Prisma's P2002) and
+// pageDesign.updateMany (each recorded in `designWrites`). Mocked by pre-seeding require.cache (the studioDealsServer.js
 // pattern): the Prisma client, @clerk/backend (a token is a fixed account id)
 // and the deal image upload. frontend/public is served on the same address,
 // and studio-routing.js answers with this server as the API.
@@ -61,7 +64,9 @@ function seed() {
   return { pages, pageDesigns, users, deals, placements };
 }
 const db = seed();
-const opts = { designTableMissing: false, failList: false };
+const opts = { designTableMissing: false, failList: false, failSave: false, saveDelayMs: 0 };
+const DESIGNS_AT_START = structuredClone(db.pageDesigns);
+function resetDesigns() { db.pageDesigns.splice(0, db.pageDesigns.length, ...structuredClone(DESIGNS_AT_START)); designWrites.length = 0; }
 
 // Prisma-style where: equality, { in }, { not }, { gte }, OR
 const instant = (v) => (v instanceof Date ? v.getTime() : typeof v === 'string' ? Date.parse(v) : v);
@@ -88,6 +93,37 @@ function findMany(rows, { where, select, orderBy, take } = {}) {
 }
 const writes = [];
 const reads = [];
+const designWrites = [];
+const pause = (ms) => (ms ? new Promise((r) => setTimeout(r, ms)) : null);
+// Save Draft's writes. Each one checks and changes the rows in one step
+// (no await in between), as the database does in one statement.
+const ALLOWED_DESIGN_FIELDS = ['landingPageId', 'draftRevision', 'draft', 'schemaVersion', 'updatedByUserId', 'updatedAt'];
+function checkDesignData(data) {
+  for (const k of Object.keys(data)) if (!ALLOWED_DESIGN_FIELDS.includes(k)) throw new Error('unexpected PageDesign field: ' + k);
+}
+async function designCreate({ data }) {
+  if (opts.designTableMissing) tableMissing();
+  await pause(opts.saveDelayMs);
+  if (opts.failSave) throw new Error('database unavailable');
+  checkDesignData(data);
+  designWrites.push({ op: 'create', landingPageId: data.landingPageId });
+  if (db.pageDesigns.some((r) => r.landingPageId === data.landingPageId)) { const e = new Error('Unique constraint failed on the fields: (`landingPageId`)'); e.code = 'P2002'; throw e; }
+  const row = Object.assign({ id: 'pd_' + data.landingPageId, schemaVersion: 1, publishedVersionId: null, createdAt: new Date() }, copy(data), { updatedAt: data.updatedAt || new Date() });
+  db.pageDesigns.push(row);
+  return copy(row);
+}
+async function designUpdateMany({ where, data }) {
+  if (opts.designTableMissing) tableMissing();
+  await pause(opts.saveDelayMs);
+  if (opts.failSave) throw new Error('database unavailable');
+  checkDesignData(data);
+  designWrites.push({ op: 'updateMany', landingPageId: where.landingPageId, base: where.draftRevision });
+  const hit = db.pageDesigns.filter((r) => matches(r, where));
+  for (const r of hit) {
+    for (const [k, v] of Object.entries(data)) r[k] = v && typeof v === 'object' && 'increment' in v ? r[k] + v.increment : (k === 'updatedAt' ? v : copy(v));
+  }
+  return { count: hit.length };
+}
 // every model: reads served from the rows, ANY other method is a refused write
 function model(name, rows, extra = {}) {
   const read = {
@@ -106,6 +142,8 @@ const mockPrisma = new Proxy({
   pageDesign: model('pageDesign', () => db.pageDesigns, {
     findUnique: async ({ where, select }) => { if (opts.designTableMissing) tableMissing(); reads.push('pageDesign.findUnique'); const r = db.pageDesigns.find((x) => matches(x, where)); return r ? pick(copy(r), select) : null; },
     findMany: async (q) => { if (opts.designTableMissing) tableMissing(); reads.push('pageDesign.findMany'); return findMany(db.pageDesigns, q); },
+    create: designCreate,
+    updateMany: designUpdateMany,
   }),
   deal: model('deal', () => db.deals),
   dealPlacement: model('dealPlacement', () => db.placements),
@@ -135,10 +173,14 @@ const apiLog = [];
 function start() {
   const app = express();
   app.disable('x-powered-by');
+  // as in src/index.js
+  app.use(express.json({ limit: '10mb' }));
   let origin = '';
   const log = (prefix) => (req, res, next) => { apiLog.push({ method: req.method, path: prefix + (req.path === '/' ? '' : req.path), auth: req.headers.authorization || '' }); next(); };
   app.use('/studio', log('/studio'), (req, res, next) => (opts.failList && req.path === '/pages' ? res.status(500).json({ error: 'x' }) : next()), studioRoutes);
   app.use('/deals', log('/deals'), dealRoutes);
+  // a body that is not JSON: 400 (as the server's error handler answers)
+  app.use((err, req, res, next) => (err && err.type === 'entity.parse.failed' ? res.status(400).json({ error: 'invalid_json' }) : next(err)));
   app.get('/js/studio/studio-routing.js', (req, res) => {
     res.set('Content-Type', TYPES['.js']).send('window.QraivyStudioRouting = { resolve: function () { return null; }, PREVIEW_HOSTS: [] };' +
       'window.QRAIVY_STUDIO_ROUTING = { mode: "local", api: ' + JSON.stringify(origin) + ', blocked: false };');
@@ -157,4 +199,4 @@ function start() {
   });
 }
 
-module.exports = { start, db, opts, apiLog, writes, reads, ANNA, BEN, CARL, SHOP_DRAFT, copy };
+module.exports = { start, db, opts, apiLog, writes, reads, designWrites, resetDesigns, ANNA, BEN, CARL, SHOP_DRAFT, copy };

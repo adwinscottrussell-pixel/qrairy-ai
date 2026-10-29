@@ -76,7 +76,7 @@ test('the owner opens the Studio: only their pages in the selector, the newest o
   assert.equal(b.selected, 'anna-cafe');
   assert.equal(b.url, '?slug=anna-cafe');
   assert.equal(b.status, 'Aktuelle Seite', 'short in the bar');
-  assert.equal(b.title, 'Ihre aktuelle Seite „Anna Café“, als Studio-Entwurf geöffnet. Änderungen werden noch nicht gespeichert.', 'the full sentence as its title');
+  assert.equal(b.title, 'Ihre aktuelle Seite „Anna Café“, im Studio geöffnet. „Entwurf speichern“ sichert Ihre Änderungen; Ihre Live-Seite ändert sich nicht.', 'the full sentence as its title');
   assert.deepEqual(b.outline, ['s_hero', 's_buttons', 's_website'], 'the page’s own sections');
   const html = await srcdoc(page);
   assert.ok(html.includes('Willkommen im Anna Café') && html.includes('Frühstück &amp; Kuchen') && html.includes('Tisch reservieren'));
@@ -85,7 +85,7 @@ test('the owner opens the Studio: only their pages in the selector, the newest o
   const calls = api();
   assert.deepEqual(calls.filter((c) => c.includes('/studio/')), ['GET /studio/pages', 'GET /studio/pages/anna-cafe/design']);
   assert.ok(calls.every((c) => c.startsWith('GET ')), 'GET only: ' + calls.join(', '));
-  assert.ok(await page.$eval('#st-save-btn', (n) => n.disabled) && await page.$eval('#st-publish-btn', (n) => n.disabled), 'Save Draft and Publish stay disabled');
+  assert.ok(await page.$eval('#st-save-btn', (n) => n.disabled) && await page.$eval('#st-publish-btn', (n) => n.disabled), 'freshly opened: nothing to save yet, Publish disabled (Save Draft itself: studioPagesSave.browser.test.js)');
   assert.deepEqual(log.errors, []);
   assert.deepEqual(log.external, []);
   await page.close();
@@ -97,7 +97,7 @@ test('?slug=anna-shop opens the saved draft; its Deals / Offers section shows th
   const b = await bar(page);
   assert.equal(b.selected, 'anna-shop');
   assert.equal(b.status, 'Studio-Entwurf');
-  assert.match(b.title, /Ihr Studio-Entwurf von „Anna Shop“/);
+  assert.match(b.title, /Ihr gespeicherter Studio-Entwurf von „Anna Shop“/);
   assert.deepEqual(b.outline, ['s_hero01', 's_deals01']);
   await until(async () => (await srcdoc(page)).includes('Shop-Angebot'), 'the real deal in the preview');
   const html = await srcdoc(page);

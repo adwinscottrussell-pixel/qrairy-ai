@@ -7,6 +7,10 @@
  * so an invalid edit never corrupts it. Undo / Redo keep up to 100 steps;
  * typing in one field merges into one step.
  *
+ * Unsaved changes (Phase B): the store remembers the design as it was last
+ * opened or saved; dirty() is true while the draft differs from it (Undo
+ * back to that state is clean again). Saving does not touch the history.
+ *
  * In Node: module.exports. In the Studio: window.QraivyStudioStore.
  */
 (function (root, factory) {
@@ -32,6 +36,8 @@
     var selected = null;
     var check = validate(draft);
     var lastValid = check.ok ? check.design : null;
+    // the design as last opened or saved (JSON), for dirty()
+    var saved = JSON.stringify(draft);
     var errors = check.errors;
     var listeners = [];
 
@@ -100,6 +106,12 @@
       selected: function () { return selected; },
       canUndo: function () { return past.length > 0; },
       canRedo: function () { return future.length > 0; },
+      // ── unsaved changes ──
+      // snapshot(): the draft exactly as it is now (JSON), for a save;
+      // markSaved(snapshot): that version is now the saved one.
+      snapshot: function () { return JSON.stringify(draft); },
+      dirty: function () { return JSON.stringify(draft) !== saved; },
+      markSaved: function (snap) { if (typeof snap === 'string') saved = snap; },
       // the page's internal link targets: the page itself and every section
       linkTargets: function () {
         var out = [{ target: '/', id: null, label: null }];
@@ -231,6 +243,7 @@
         var r = validate(design);
         if (!r.ok) return false;
         draft = clone(design);
+        saved = JSON.stringify(draft);
         past = []; future = [];
         endMerge();
         selected = null;

@@ -25,6 +25,16 @@
  * the preview shows labelled samples. The sign-in (Clerk) is loaded by
  * studio-auth.js on the connected preview only; the deals load once it is
  * known, and again when the signed-in account changes.
+ *
+ * Save Draft (Phase B): on one of the owner's own pages, Save Draft (and
+ * Ctrl / Cmd + S) stores the draft through studio-pages-data.js
+ * (PUT /studio/pages/<slug>/design with the revision the editor holds). The
+ * live page never changes; Publish stays disabled. A newer version saved
+ * elsewhere is never overwritten: the owner chooses "Load saved version" or
+ * "Keep editing". Unsaved changes are protected: leaving the page, opening
+ * another page and signing out ask first. When the session ends or another
+ * account signs in, the customer's page and deals leave the Studio at once
+ * (nothing is kept in the browser).
  */
 (function () {
   'use strict';
@@ -48,7 +58,13 @@
     en: {
       title: 'Landing Page Studio', subtitle: 'Create a beautiful mobile landing page for your business.', local_mode: 'Local preview · not saved', preview_mode: 'Preview · not saved',
       theme: 'Theme', theme_light: 'Light', theme_dark: 'Dark', theme_system: 'System', preview: 'Preview', save_draft: 'Save Draft', publish: 'Publish',
-      save_disabled: 'Saving arrives in a later step.', publish_disabled: 'Publishing is not available yet.', more: 'More',
+      save_no_page: 'Open one of your pages to save a draft.', save_hint: 'Save this draft (Ctrl+S / ⌘S). Your live page does not change.', save_invalid: 'Fix the highlighted field to save.',
+      publish_disabled: 'Publishing is not available yet.', more: 'More',
+      save_unsaved: 'Unsaved changes', save_saving: 'Saving …', save_saved: 'Saved', save_failed: 'Save failed', save_conflict: 'Conflict detected',
+      save_unsaved_long: 'Your changes are not saved yet.', save_saving_long: 'Your draft is being saved.', save_saved_long: 'Draft saved {time}. Your live page is unchanged.',
+      save_failed_long: 'Your draft could not be saved. Your changes are kept here; try again.', save_invalid_long: 'The server did not accept this draft. Your changes are kept here.',
+      conflict_text: 'This page was saved in another tab or on another device. Nothing was overwritten.', conflict_load: 'Load saved version', conflict_keep: 'Keep editing',
+      conflict_load_confirm: 'Load the saved version? Your unsaved changes here will be lost.', signout_confirm: 'Sign out? Your unsaved changes on this page will be lost.',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
       tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
@@ -59,7 +75,7 @@
       page_label: 'Page', page_src_import: 'Current page', page_src_draft: 'Studio draft', page_loading: 'Loading your pages …',
       page_loading_short: 'Loading …', page_empty_short: 'No landing page yet', page_signin_short: 'Please sign in', page_error_short: 'Pages not loaded',
       page_forbidden_short: 'Not one of your pages', page_notfound_short: 'Not one of your pages', page_invalid_short: 'Cannot be opened yet', page_not_live: ' (not live)', page_retry: 'Try again', page_signin_btn: 'Sign in', page_dashboard: 'Go to dashboard',
-      page_loaded_import: 'Your current page “{name}”, opened as a Studio draft. Changes are not saved yet.', page_loaded_draft: 'Your Studio draft of “{name}”. Changes are not saved yet.',
+      page_loaded_import: 'Your current page “{name}”, opened in the Studio. Save Draft keeps your changes; your live page does not change.', page_loaded_draft: 'Your saved Studio draft of “{name}”. Your live page does not change.',
       page_empty: 'You have no landing page yet. Create one in the dashboard; until then the Studio shows a sample page.', page_signin: 'Sign in to open your landing pages.',
       page_error: 'Your pages could not be loaded. The Studio shows a sample page.', page_forbidden: 'This page belongs to another account.', page_notfound: 'This page is not one of your pages.',
       page_invalid: 'This page cannot be opened in the Studio yet.', page_switch_confirm: 'Open another page? Your changes on this page are not saved and will be lost.',
@@ -72,7 +88,13 @@
     de: {
       title: 'Landing Page Studio', subtitle: 'Erstelle eine schöne mobile Landingpage für dein Unternehmen.', local_mode: 'Lokale Vorschau · nicht gespeichert', preview_mode: 'Vorschau · nicht gespeichert',
       theme: 'Design', theme_light: 'Hell', theme_dark: 'Dunkel', theme_system: 'System', preview: 'Vorschau', save_draft: 'Entwurf speichern', publish: 'Veröffentlichen',
-      save_disabled: 'Speichern folgt in einem späteren Schritt.', publish_disabled: 'Veröffentlichen ist noch nicht verfügbar.', more: 'Mehr',
+      save_no_page: 'Öffnen Sie eine Ihrer Seiten, um einen Entwurf zu speichern.', save_hint: 'Entwurf speichern (Strg+S / ⌘S). Ihre Live-Seite ändert sich nicht.', save_invalid: 'Korrigieren Sie das markierte Feld, um zu speichern.',
+      publish_disabled: 'Veröffentlichen ist noch nicht verfügbar.', more: 'Mehr',
+      save_unsaved: 'Nicht gespeichert', save_saving: 'Wird gespeichert …', save_saved: 'Gespeichert', save_failed: 'Speichern fehlgeschlagen', save_conflict: 'Konflikt erkannt',
+      save_unsaved_long: 'Ihre Änderungen sind noch nicht gespeichert.', save_saving_long: 'Ihr Entwurf wird gespeichert.', save_saved_long: 'Entwurf gespeichert um {time}. Ihre Live-Seite ist unverändert.',
+      save_failed_long: 'Ihr Entwurf konnte nicht gespeichert werden. Ihre Änderungen bleiben hier erhalten; versuchen Sie es erneut.', save_invalid_long: 'Der Server hat diesen Entwurf nicht angenommen. Ihre Änderungen bleiben hier erhalten.',
+      conflict_text: 'Diese Seite wurde in einem anderen Tab oder auf einem anderen Gerät gespeichert. Es wurde nichts überschrieben.', conflict_load: 'Gespeicherte Fassung laden', conflict_keep: 'Weiter bearbeiten',
+      conflict_load_confirm: 'Gespeicherte Fassung laden? Ihre nicht gespeicherten Änderungen hier gehen verloren.', signout_confirm: 'Abmelden? Ihre nicht gespeicherten Änderungen an dieser Seite gehen verloren.',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
       tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
@@ -83,7 +105,7 @@
       page_label: 'Seite', page_src_import: 'Aktuelle Seite', page_src_draft: 'Studio-Entwurf', page_loading: 'Ihre Seiten werden geladen …',
       page_loading_short: 'Wird geladen …', page_empty_short: 'Noch keine Landingpage', page_signin_short: 'Bitte anmelden', page_error_short: 'Seiten nicht geladen',
       page_forbidden_short: 'Nicht Ihre Seite', page_notfound_short: 'Nicht Ihre Seite', page_invalid_short: 'Noch nicht zu öffnen', page_not_live: ' (nicht live)', page_retry: 'Erneut versuchen', page_signin_btn: 'Anmelden', page_dashboard: 'Zum Dashboard',
-      page_loaded_import: 'Ihre aktuelle Seite „{name}“, als Studio-Entwurf geöffnet. Änderungen werden noch nicht gespeichert.', page_loaded_draft: 'Ihr Studio-Entwurf von „{name}“. Änderungen werden noch nicht gespeichert.',
+      page_loaded_import: 'Ihre aktuelle Seite „{name}“, im Studio geöffnet. „Entwurf speichern“ sichert Ihre Änderungen; Ihre Live-Seite ändert sich nicht.', page_loaded_draft: 'Ihr gespeicherter Studio-Entwurf von „{name}“. Ihre Live-Seite ändert sich nicht.',
       page_empty: 'Sie haben noch keine Landingpage. Erstellen Sie eine im Dashboard – bis dahin zeigt das Studio eine Beispielseite.', page_signin: 'Melden Sie sich an, um Ihre Landingpages zu öffnen.',
       page_error: 'Ihre Seiten konnten nicht geladen werden. Das Studio zeigt eine Beispielseite.', page_forbidden: 'Diese Seite gehört zu einem anderen Konto.', page_notfound: 'Diese Seite gehört nicht zu Ihren Seiten.',
       page_invalid: 'Diese Seite kann im Studio noch nicht geöffnet werden.', page_switch_confirm: 'Andere Seite öffnen? Ihre Änderungen an dieser Seite sind nicht gespeichert und gehen verloren.',
@@ -130,7 +152,10 @@
   var dealsData = null, dealsView = { state: 'sample', pages: [], page: '', items: [], withheld: 0 }, dealsLoad = 0;
   // the owner's own pages (studio-pages-data.js): state off | loading | ready | empty | signin | error |
   // forbidden | notfound | invalid; current = the page open in the editor (null: the demo)
-  var pagesData = null, pageView = { state: 'off', pages: [], current: null, source: '' }, pageLoad = 0;
+  // revision: the saved draft's (null: no draft yet); owner: who opened it (the sign-in)
+  var pagesData = null, pageView = { state: 'off', pages: [], current: null, source: '', revision: null, owner: null }, pageLoad = 0;
+  // Save Draft: state idle | saved | error | conflict; busy while a save runs; gen: answers of an older page / account are ignored
+  var saveView = { state: 'idle', busy: false, savedAt: null, invalid: false }, saveGen = 0, leaving = false;
   function lang() { return window.QraivyShell ? window.QraivyShell.lang() : 'en'; }
   function t(k) { var d = T[state.lang] || T.en; return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : T.en[k]; }
   function sectionText(type) {
@@ -318,8 +343,8 @@
     if (pageView.current) sel.value = pageView.current.slug; else sel.selectedIndex = -1;
     sel.hidden = !pages.length;
     sel.disabled = pageView.state === 'loading';
-    var st = pageView.state, msg = '', shown = '';
-    if (st === 'loaded') {
+    var st = pageView.state === 'loaded' && !pageView.current ? 'loading' : pageView.state, msg = '', shown = '';
+    if (st === 'loaded' && pageView.current) {
       msg = t(pageView.source === 'draft' ? 'page_loaded_draft' : 'page_loaded_import').replace('{name}', pageView.current.name);
       // short in the bar (the selector already names the page); the full sentence as its title
       shown = t(pageView.source === 'draft' ? 'page_src_draft' : 'page_src_import');
@@ -331,11 +356,14 @@
     $('st-page-retry').hidden = st !== 'error';
     $('st-page-signin').hidden = st !== 'signin' || !(AUTH && AUTH.available());
     $('st-page-dashboard').hidden = st !== 'empty';
+    renderSave();
   }
   // Back to the sample page: the open customer page (if any) leaves the editor.
   function showSample() {
     if (!pageView.current) return;
     pageView.current = null;
+    pageView.revision = null; pageView.owner = null;
+    resetSave();
     // the address no longer names that page (a next account starts from its own pages)
     try { var u = new URL(window.location.href); u.searchParams.delete('slug'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
     editor.load(window.QRAIVY_STUDIO_DEMO.design);
@@ -348,10 +376,12 @@
   function showPages(patch) { Object.keys(patch).forEach(function (k) { pageView[k] = patch[k]; }); renderPageBar(); }
   // Open one of the owner's pages in the editor (its saved draft, or the
   // current page converted in memory). Only the latest request counts.
-  function openPage(slug) {
+  // force: no question (the owner already chose, e.g. "Load saved version")
+  function openPage(slug, force) {
     if (!pagesData) return;
-    if (pageView.current && pageView.current.slug !== slug && editor.canUndo() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
+    if (!force && pageView.current && pageView.current.slug !== slug && unsaved() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
     var n = ++pageLoad;
+    resetSave();
     showPages({ state: 'loading' });
     pagesData.load(slug).then(function (r) {
       if (n !== pageLoad) return;
@@ -363,6 +393,9 @@
       }
       if (!editor.load(r.design)) { showPages({ state: 'invalid' }); return; }
       pageView.current = r.page;
+      pageView.revision = r.source === 'draft' ? r.revision : null;
+      pageView.owner = sessionUser();
+      saveView.savedAt = r.savedAt;
       showPages({ state: 'loaded', source: r.source });
       rememberSlug(r.page.slug);
       var first = editor.sectionIds()[0];
@@ -389,6 +422,8 @@
       pageView.pages = r.pages;
       var want = requestedSlug();
       if (want && !known(want)) { showSample(); showPages({ state: 'notfound' }); return; }
+      // the same account again (a new session): the open page stays as it is, unsaved changes too
+      if (pageView.current && known(pageView.current.slug) && (!want || want === pageView.current.slug)) { showPages({ state: 'loaded' }); return; }
       openPage(want || (pageView.current && known(pageView.current.slug) ? pageView.current.slug : r.pages[0].slug));
     });
   }
@@ -396,7 +431,123 @@
     if (!pagesData || !pagesData.connected()) return;
     showPages({ state: 'loading' });
     (AUTH ? AUTH.ready() : Promise.resolve()).then(listPages);
-    if (AUTH) AUTH.onChange(listPages);
+    if (AUTH) AUTH.onChange(function () { accountChanged(); listPages(); });
+  }
+  // The signed-in account (the session's user; the session itself when Clerk does not say).
+  function sessionUser() {
+    var c = window.Clerk;
+    if (!c || !c.session) return null;
+    return (c.user && c.user.id) || (c.session.user && c.session.user.id) || 'session:' + c.session.id;
+  }
+  // Signed out, session expired or another account: the open customer page,
+  // its unsaved changes and the previous account's deals leave the Studio at
+  // once, before anything new is loaded. The same account keeps its page.
+  function accountChanged() {
+    var who = sessionUser();
+    if (who && pageView.current && who === pageView.owner) return;
+    discardCustomer();
+  }
+  function discardCustomer() {
+    saveGen++;
+    dealsLoad++;
+    pageView.pages = [];
+    // nothing of this account is open any more; the next account's pages follow (listPages)
+    if (pageView.state === 'loaded') pageView.state = 'loading';
+    dealsView = { state: dealsData && dealsData.connected() ? 'loading' : 'sample', pages: [], page: '', items: [], withheld: 0 };
+    if (pageView.current) showSample(); else showDeals(dealsView);
+    renderPageBar();
+  }
+
+  // ── Save Draft (Phase B) ──
+  function ownerPageOpen() { return !!(pagesData && pageView.current && pageView.state === 'loaded'); }
+  function unsaved() { return !!(pageView.current && (editor.dirty() || saveView.busy)); }
+  function canSave() { return ownerPageOpen() && !saveView.busy && editor.dirty() && editor.isValid(); }
+  function resetSave() { saveGen++; saveView = { state: 'idle', busy: false, savedAt: null, invalid: false }; }
+  function timeOf(iso) {
+    var d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    try { return d.toLocaleTimeString(state.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
+  }
+  function saveState() {
+    if (!ownerPageOpen()) return '';
+    if (saveView.busy) return 'saving';
+    if (saveView.state === 'conflict') return 'conflict';
+    if (editor.dirty()) return saveView.state === 'error' ? 'failed' : 'unsaved';
+    return pageView.source === 'draft' ? 'saved' : '';
+  }
+  function renderSave() {
+    var btn = $('st-save-btn'), ok = canSave();
+    btn.disabled = !ok;
+    btn.setAttribute('aria-disabled', String(!ok));
+    btn.title = !ownerPageOpen() ? t('save_no_page') : !editor.isValid() ? t('save_invalid') : t('save_hint');
+    var st = saveState(), box = $('st-save-status');
+    box.hidden = !st;
+    box.setAttribute('data-state', st);
+    box.textContent = st ? t('save_' + st) : '';
+    box.title = st === 'saved' ? t('save_saved_long').replace('{time}', timeOf(saveView.savedAt)).replace('  ', ' ')
+      : st === 'failed' ? t(saveView.invalid ? 'save_invalid_long' : 'save_failed_long') : st === 'conflict' ? t('conflict_text') : st ? t('save_' + st + '_long') : '';
+    $('st-conflict').hidden = st !== 'conflict';
+    // "not saved" only where nothing can be saved
+    $('st-mode').hidden = ownerPageOpen();
+  }
+  function saveDraft() {
+    if (!canSave()) return;
+    editor.endMerge();
+    var snap = editor.snapshot(), slug = pageView.current.slug, gen = saveGen;
+    saveView.busy = true;
+    renderSave();
+    pagesData.save(slug, JSON.parse(snap), pageView.revision).then(function (r) {
+      // another page or account meanwhile: this answer no longer applies
+      if (gen !== saveGen || !pageView.current || pageView.current.slug !== slug) return;
+      saveView.busy = false;
+      if (r.state === 'saved') {
+        pageView.revision = r.revision;
+        pageView.source = 'draft';
+        editor.markSaved(snap);
+        saveView.state = 'saved'; saveView.savedAt = r.savedAt; saveView.invalid = false;
+        renderPageBar();
+        announce(t('save_saved'));
+        return;
+      }
+      if (r.state === 'signin' || r.state === 'forbidden' || r.state === 'notfound') {
+        // the session ended or the page is no longer this account's: it leaves the editor
+        discardCustomer();
+        showPages({ state: r.state });
+        return;
+      }
+      // a conflict or a failure: the editor keeps every change
+      saveView.state = r.state === 'conflict' ? 'conflict' : 'error';
+      saveView.invalid = r.state === 'invalid';
+      renderSave();
+      announce(t(r.state === 'conflict' ? 'conflict_text' : 'save_failed'));
+    });
+  }
+  // the newer saved version replaces the editor's (after asking, when there are changes)
+  function loadSavedVersion() {
+    if (!pageView.current) return;
+    if (editor.dirty() && !window.confirm(t('conflict_load_confirm'))) return;
+    openPage(pageView.current.slug, true);
+  }
+  // the changes stay in the editor; the next save is checked against the saved revision again
+  function keepEditing() {
+    saveView.state = 'idle';
+    renderSave();
+    $('st-save-btn').focus();
+  }
+  function onBeforeUnload(e) {
+    if (leaving || !unsaved()) return undefined;
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+  // Sign Out in the sidebar (admin-shell.js): asks first when there are unsaved
+  // changes; then the customer's content leaves the Studio before the sign-out.
+  function onSignOutClick(e) {
+    var out = e.target && e.target.closest ? e.target.closest('#sb-signout') : null;
+    if (!out) return;
+    if (unsaved() && !window.confirm(t('signout_confirm'))) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    leaving = true;
+    discardCustomer();
   }
   function historyButtons() {
     $('st-undo-btn').disabled = !editor.canUndo();
@@ -412,6 +563,7 @@
     staleNote();
     renderOutline();
     historyButtons();
+    renderSave();
     // typing: one preview update after a short pause; anything else at once
     preview.setHtml(pageHtml(), info.typing ? 150 : 0);
   }
@@ -420,8 +572,11 @@
   // Ctrl / Cmd + Z, Shift + Ctrl / Cmd + Z, Ctrl + Y. In a text field the
   // browser's own text undo applies; on phones nothing is edited.
   function onKey(e) {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || preview.phoneOnly()) return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     var k = String(e.key || '').toLowerCase();
+    // Ctrl / Cmd + S: Save Draft (also while typing in a field); never the browser's "Save page"
+    if (k === 's' && !e.shiftKey) { e.preventDefault(); if ($('st-full').hidden) saveDraft(); return; }
+    if (preview.phoneOnly()) return;
     if (k !== 'z' && k !== 'y') return;
     var a = document.activeElement;
     if (a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|number|search|url|email|tel)$/.test(a.type)) || a.isContentEditable)) return;
@@ -499,6 +654,12 @@
     $('st-undo-btn').addEventListener('click', undo);
     $('st-redo-btn').addEventListener('click', redo);
     document.addEventListener('keydown', onKey);
+    $('st-save-btn').addEventListener('click', saveDraft);
+    $('st-conflict-load').addEventListener('click', loadSavedVersion);
+    $('st-conflict-keep').addEventListener('click', keepEditing);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    // capture: before the sidebar's own Sign Out handler
+    document.addEventListener('click', onSignOutClick, true);
     // Below 1200 px these open the drawers; on a desktop they bring a hidden panel back.
     $('st-open-left').addEventListener('click', function () { if (desktop()) setPanel('left', true); else openDrawer('st-left'); });
     $('st-open-right').addEventListener('click', function () { if (desktop()) setPanel('right', true); else openDrawer('st-right'); });
@@ -583,6 +744,7 @@
     editor.onChange(onStoreChange);
     historyButtons();
     staleNote();
+    renderSave();
     applyPanels();
     preview.render();
     deviceButtons();

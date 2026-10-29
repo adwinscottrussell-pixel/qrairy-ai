@@ -143,14 +143,20 @@ test('D2: the one Studio file with requests sends only the three read-only Deals
   assert.ok(!/clerk/i.test(HTML), 'no Clerk on the Studio page yet');
 });
 
-test('Save Draft and Publish are disabled and never enabled; Undo / Redo start disabled; the overflow menu only has disabled items', () => {
+test('Save Draft and Publish start disabled; Publish is never enabled, Save Draft only by the shell (Phase B); Undo / Redo start disabled; the overflow menu only has disabled items', () => {
   assert.match(HTML, /<button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true"/);
   assert.match(HTML, /<button type="button" class="st-btn st-btn--primary" id="st-publish-btn" disabled aria-disabled="true"/);
   assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" /);
   assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" /);
   const menu = HTML.slice(HTML.indexOf('id="st-more-menu"'), HTML.indexOf('</div>', HTML.indexOf('id="st-more-menu"')));
   assert.equal((menu.match(/<button /g) || []).length, (menu.match(/<button type="button" role="menuitem" disabled/g) || []).length);
-  for (const f of STUDIO_JS) assert.ok(!/st-(publish|save)-btn/.test(read(f)), f + ' never touches Save Draft or Publish');
+  for (const f of STUDIO_JS) assert.ok(!/st-publish-btn/.test(read(f)), f + ' never touches Publish');
+  for (const f of STUDIO_JS.filter((x) => x !== 'js/studio/studio-shell.js')) assert.ok(!/st-save-btn/.test(read(f)), f + ' never touches Save Draft');
+  const shell = read('js/studio/studio-shell.js');
+  // Save Draft is enabled only by canSave(): one of the owner’s pages open, unsaved, valid, no save running
+  assert.ok(shell.includes('function canSave() { return ownerPageOpen() && !saveView.busy && editor.dirty() && editor.isValid(); }'));
+  assert.ok(shell.includes("var btn = $('st-save-btn'), ok = canSave();") && shell.includes('btn.disabled = !ok;'));
+  assert.equal((shell.match(/st-save-btn/g) || []).length, 3, 'set in renderSave, bound once, focused after Keep editing');
 });
 
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ''); // code, not comments

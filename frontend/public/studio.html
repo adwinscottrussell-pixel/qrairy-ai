@@ -160,6 +160,12 @@
           <button type="button" class="st-pagebar__btn" id="st-page-signin" hidden data-st="page_signin_btn">Sign in</button>
           <a class="st-pagebar__btn" id="st-page-dashboard" href="dashboard.html?section=sqr" hidden data-st="page_dashboard">Go to dashboard</a>
         </div>
+        <!-- Save Draft found a newer saved version (another tab or device): nothing was overwritten; the owner chooses -->
+        <div class="st-conflict" id="st-conflict" role="alert" hidden>
+          <span class="st-conflict__text" data-st="conflict_text">This page was saved in another tab or on another device. Nothing was overwritten.</span>
+          <button type="button" class="st-pagebar__btn" id="st-conflict-load" data-st="conflict_load">Load saved version</button>
+          <button type="button" class="st-pagebar__btn" id="st-conflict-keep" data-st="conflict_keep">Keep editing</button>
+        </div>
       </div>
       <span class="st-mode" id="st-mode" data-st="local_mode" title="">Local preview · not saved</span>
       <div class="st-top__actions">
@@ -170,7 +176,8 @@
           <button type="button" class="st-theme__opt" role="radio" data-theme-pref="system" data-st-aria="theme_system" aria-label="System"><svg class="st-ic" aria-hidden="true"><use href="#st-monitor"/></svg></button>
         </div>
         <button type="button" class="st-btn st-btn--ghost" id="st-preview-btn"><svg class="st-ic" aria-hidden="true"><use href="#st-eye"/></svg><span data-st="preview">Preview</span></button>
-        <button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true" data-st-title="save_disabled"><span data-st="save_draft">Save Draft</span></button>
+        <span class="st-savestate" id="st-save-status" role="status" hidden></span>
+        <button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true" aria-keyshortcuts="Control+S Meta+S"><span data-st="save_draft">Save Draft</span></button>
         <button type="button" class="st-btn st-btn--primary" id="st-publish-btn" disabled aria-disabled="true" data-st-title="publish_disabled"><span data-st="publish">Publish</span></button>
         <div class="st-menu">
           <button type="button" class="st-iconbtn" id="st-more-btn" aria-haspopup="menu" aria-expanded="false" data-st-aria="more"><svg class="st-ic" aria-hidden="true"><use href="#st-dots"/></svg></button>
