@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "theme": {
+    "palette": {
+      "brand": "#0f766e"
+    },
+    "fontPair": "modern",
+    "radius": "lg"
+  },
+  "settings": {
+    "language": "en",
+    "seo": {
+      "title": "Every variant",
+      "description": "Reference design for the public V3 output."
+    }
+  },
+  "header": {
+    "showBusinessName": true,
+    "nav": [
+      {
+        "label": "Hours",
+        "target": "/hours"
+      },
+      {
+        "label": "Mail",
+        "target": "mailto:hello@example.com"
+      }
+    ]
+  },
+  "footer": {
+    "text": "Line one\nLine two",
+    "links": [
+      {
+        "label": "Imprint",
+        "target": "https://example.com/imprint"
+      },
+      {
+        "label": "Top",
+        "target": "/"
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "start",
+      "title": "Start",
+      "sections": [
+        {
+          "id": "s_hero02",
+          "type": "hero",
+          "variant": "split",
+          "data": {
+            "headline": "Split hero",
+            "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/b.png",
+            "primary": {
+              "text": "Web",
+              "target": "https://example.com"
+            }
+          }
+        },
+        {
+          "id": "s_hours1",
+          "type": "openingHours",
+          "anchor": "hours",
+          "variant": "table",
+          "data": {
+            "title": "Hours",
+            "days": [
+              {
+                "day": "sun",
+                "closed": true
+              },
+              {
+                "day": "mon",
+                "ranges": [
+                  {
+                    "open": "08:00",
+                    "close": "12:00"
+                  },
+                  {
+                    "open": "13:00",
+                    "close": "24:00"
+                  }
+                ]
+              },
+              {
+                "day": "tue"
+              }
+            ],
+            "note": "Note\nmore"
+          }
+        }
+      ]
+    }
+  ]
+}

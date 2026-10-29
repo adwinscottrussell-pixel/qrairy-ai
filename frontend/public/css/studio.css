@@ -153,8 +153,23 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-lib__text small { font-size: 12px; color: var(--st-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-lib__more { color: var(--st-muted); }
 .st-outline__item[aria-current="true"] { border-color: var(--st-accent); box-shadow: inset 3px 0 0 var(--st-accent); }
-.st-outline__grip { color: var(--st-muted); cursor: grab; }
+.st-outline__grip { color: var(--st-muted); }
 .st-outline__item.is-hidden .st-lib__text { opacity: .5; }
+/* Phase C: the selected section's actions, in a bar below its row (also below a row with keyboard focus); never on top of a row */
+.st-outline__actions { display: none; justify-content: flex-end; gap: 4px; padding: 4px 4px 0; }
+.st-outline > li.is-current .st-outline__actions, .st-outline > li:focus-within .st-outline__actions { display: flex; }
+.st-outline__act { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--st-border); border-radius: 8px; background: var(--st-surface); color: var(--st-text-2); cursor: pointer; }
+.st-outline__act:hover { border-color: var(--st-border-strong); background: var(--st-surface-2); color: var(--st-text); }
+.st-outline__act[data-act="remove"]:hover { color: var(--st-accent); }
+.st-outline__act[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+.st-outline__act[aria-disabled="true"]:hover { border-color: var(--st-border); background: var(--st-surface); color: var(--st-text-2); }
+.st-outline__act:focus-visible { outline: 2px solid var(--st-focus); outline-offset: 1px; }
+@media (hover: none) { .st-outline__act { width: 40px; height: 40px; } }
+/* the library: an item that cannot be added says why */
+.st-lib__item[aria-disabled="true"] { cursor: not-allowed; }
+.st-lib__item[aria-disabled="true"] .st-lib__icon, .st-lib__item[aria-disabled="true"] .st-lib__text { opacity: .55; }
+.st-lib__item[aria-disabled="true"]:hover { border-color: var(--st-border); background: var(--st-surface); }
+.st-lib__badge { flex-shrink: 0; max-width: 45%; padding: 2px 8px; border-radius: 999px; background: var(--st-surface-3); color: var(--st-text-2); font-size: 11px; font-weight: 600; text-align: center; line-height: 1.3; }
 
 /* center */
 .st-center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }

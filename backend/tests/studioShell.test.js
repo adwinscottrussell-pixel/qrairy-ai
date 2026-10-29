@@ -171,15 +171,23 @@ test('preview frames: sandbox "allow-scripts" only (never same origin); the full
   assert.ok(shell.includes("$('st-full-frame').srcdoc = pageHtml();"), 'the full-size preview gets the plain page, no Studio script');
 });
 
-test('D2: the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text, Gallery and Deals / Offers are editable; the shell builds no form controls itself; no adding sections or templates yet', () => {
+test('D2: the Hero, the Buttons, Social Media, Contact, Opening Hours, Products, Text, Gallery and Deals / Offers are editable; the shell builds no form controls itself; sections are added, moved, duplicated and removed through the store (Phase C); no templates or drag and drop yet', () => {
   assert.deepEqual(require('../../frontend/public/js/studio/studio-inspector.js').EDITABLE, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'text', 'gallery', 'dealsOffers']);
   // the approved notice while anything is invalid, in English and German
   assert.match(HTML, /<p class="st-stale" id="st-stale" role="status" hidden>.*<span data-st="preview_stale">Preview shows the last valid version\. Fix the highlighted field\.<\/span><\/p>/);
   assert.ok(read('js/studio/studio-shell.js').includes("preview_stale: 'Die Vorschau zeigt die letzte gültige Version. Korrigiere das markierte Feld.'"));
   const shell = code('js/studio/studio-shell.js');
   assert.ok(!/el\('(input|textarea|select)'/.test(shell), 'every control comes from studio-inspector.js');
-  assert.ok(shell.includes("title: t('add_later'), 'data-type': s.type"), 'library items still say "arrives later"');
-  assert.ok(!/insertSection|addSection|applyTemplate|removeSection|deleteSection|moveSection|duplicateSection/.test(shell + code('js/studio/studio-store.js')), 'no add / move / delete / templates in this step');
+  // Phase C: one section system, the store's commands; the shell only calls them
+  const store = code('js/studio/studio-store.js');
+  for (const fn of ['addSection', 'removeSection', 'moveSection', 'duplicateSection']) {
+    assert.ok(store.includes(fn + ': function'), 'store: ' + fn);
+    assert.ok(shell.includes('editor.' + fn + '('), 'shell calls editor.' + fn);
+  }
+  assert.ok(!/\.splice\(|sections\.push|pages\[0\]\.sections\s*=/.test(shell), 'the shell never changes the section list itself');
+  assert.ok(!/applyTemplate|draggable|dragstart|ondrop|dataTransfer/.test(shell + store), 'no templates, no drag and drop');
+  assert.ok(shell.includes("var COMING_SOON = ['loyalty'];"), 'Loyalty: shown, not addable yet');
+  assert.ok(read('js/studio/studio-shell.js').includes("lib_soon: 'Demnächst verfügbar'") && read('js/studio/studio-shell.js').includes("lib_soon: 'Coming soon'"));
 });
 
 test('every id in studio.html is unique (an icon and a button once shared "st-undo")', () => {

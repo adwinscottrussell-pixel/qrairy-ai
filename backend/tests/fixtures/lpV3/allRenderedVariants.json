@@ -12,8 +12,6 @@
         { "id": "s_hero01", "type": "hero", "variant": "overlay", "style": { "align": "center" },
           "data": { "eyebrow": "New", "headline": "Overlay hero", "subheadline": "Sub", "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/a.jpg", "imageAlt": "A", "overlay": 30,
             "primary": { "text": "Go", "target": "/hours", "icon": "arrow", "color": "#111111" }, "secondary": { "text": "Call", "target": "tel:+4973112345", "icon": "phone" } } },
-        { "id": "s_hero02", "type": "hero", "variant": "split", "data": { "headline": "Split hero", "backgroundImage": "https://res.cloudinary.com/demo/image/upload/v1/b.png", "primary": { "text": "Web", "target": "https://example.com" } } },
-        { "id": "s_hero03", "type": "hero", "variant": "simple", "style": { "spacing": "compact" }, "data": { "headline": "Simple hero", "subheadline": "No image" } },
         { "id": "s_btn01", "type": "buttons", "variant": "buttons", "data": { "title": "Buttons", "items": [{ "label": "WhatsApp", "kind": "whatsapp", "target": "https://wa.me/491701234567" }, { "label": "Mail", "kind": "email", "target": "a@example.com", "icon": "star" }] } },
         { "id": "s_btn02", "type": "buttons", "variant": "cards", "style": { "background": "alt" }, "data": { "title": "Cards", "subtitle": "Four links", "items": [{ "label": "Map", "subtitle": "Find us", "kind": "directions", "target": "https://maps.apple.com/?q=Ulm" }, { "label": "Site", "kind": "website", "target": "https://example.com" }] } },
         { "id": "s_btn03", "type": "buttons", "variant": "list", "style": { "background": "dark", "spacing": "roomy" }, "data": { "items": [{ "label": "Call", "subtitle": "Anytime", "kind": "call", "target": "+49 731 1" }] } },

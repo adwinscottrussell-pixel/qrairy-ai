@@ -7,6 +7,13 @@
  * so an invalid edit never corrupts it. Undo / Redo keep up to 100 steps;
  * typing in one field merges into one step.
  *
+ * Sections (Phase C): add (neutral starter content from QraivyV3.starter),
+ * duplicate, move and remove whole sections, each one Undo step. A
+ * structural change is applied only when the design stays valid (while a
+ * field is already invalid: when it adds no error). New sections get a new
+ * unique id and no link name; links to a removed section point to the page
+ * top ("/") in the same step.
+ *
  * Unsaved changes (Phase B): the store remembers the design as it was last
  * opened or saved; dirty() is true while the draft differs from it (Undo
  * back to that state is clean again). Saving does not touch the history.
@@ -26,10 +33,18 @@
 
   function clone(x) { return JSON.parse(JSON.stringify(x)); }
 
-  // createStore({ design, validate, now }) — validate: QraivyV3.validateDesign
+  var ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+  // createStore({ design, validate, now, starter, maxPerPage, maxSections, random })
+  // validate: QraivyV3.validateDesign; starter: QraivyV3.starter;
+  // maxPerPage: QraivyV3.MAX_PER_PAGE; maxSections: QraivyV3.LIMITS.sections
   function createStore(opts) {
     var validate = opts.validate;
     var now = opts.now || function () { return Date.now(); };
+    var starter = typeof opts.starter === 'function' ? opts.starter : null;
+    var maxPerPage = opts.maxPerPage || {};
+    var maxSections = opts.maxSections || 40;
+    var random = opts.random || Math.random;
     var draft = clone(opts.design);
     var past = [], future = [];
     var lastMerge = { key: null, at: 0 };
@@ -61,6 +76,44 @@
       lastMerge = { key: mergeKey || null, at: t };
     }
     function endMerge() { lastMerge = { key: null, at: 0 }; }
+
+    // ── sections (Phase C) ──
+    function listOf(d) { d.pages = d.pages || [{ id: 'start', sections: [] }]; d.pages[0].sections = d.pages[0].sections || []; return d.pages[0].sections; }
+    function indexIn(list, id) { for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return i; return -1; }
+    // a new section id: unique among the ids and link names of the page
+    function newId() {
+      var taken = {};
+      sections().forEach(function (s) { taken[s.id] = true; if (s.anchor) taken[s.anchor] = true; });
+      for (;;) {
+        var id = 's_';
+        for (var i = 0; i < 8; i++) id += ID_CHARS.charAt(Math.floor(random() * ID_CHARS.length) % ID_CHARS.length);
+        if (!taken[id]) return id;
+      }
+    }
+    function countIn(node, name) {
+      var n = 0;
+      if (typeof node === 'string') return node === '/' + name ? 1 : 0;
+      if (Array.isArray(node)) node.forEach(function (x) { n += countIn(x, name); });
+      else if (node && typeof node === 'object') Object.keys(node).forEach(function (k) { n += countIn(node[k], name); });
+      return n;
+    }
+    // One structural change as one Undo step, applied only when the design
+    // stays valid (or, while a field is already invalid, gets no new error).
+    // mutate(copy) changes the copy; false cancels. sel: the selection after.
+    function structural(mutate, info, sel) {
+      var next = clone(draft);
+      if (mutate(next) === false) return false;
+      var r = validate(next);
+      if (!r.ok && (errors.length === 0 || r.errors.length > errors.length)) return false;
+      remember(null);
+      draft = next;
+      endMerge();
+      if (sel !== undefined) selected = sel;
+      if (selected && indexOf(selected) < 0) selected = null;
+      revalidate();
+      emit('edit', Object.assign({ typing: false, structure: true }, info));
+      return true;
+    }
 
     function setPath(obj, path, value) {
       var n = obj;
@@ -112,6 +165,95 @@
       snapshot: function () { return JSON.stringify(draft); },
       dirty: function () { return JSON.stringify(draft) !== saved; },
       markSaved: function (snap) { if (typeof snap === 'string') saved = snap; },
+      // ── sections (Phase C) ──
+      count: function (type) { return sections().filter(function (s) { return s && s.type === type; }).length; },
+      // why a section of this type can't be added, or null
+      canAdd: function (type) {
+        if (!starter || !starter(type, 'de')) return 'unknown_type';
+        if (sections().length >= maxSections) return 'max_sections';
+        if (maxPerPage[type] && api.count(type) >= maxPerPage[type]) return 'only_one';
+        return null;
+      },
+      // addSection(type, afterId, language) -> the new id (selected), or null.
+      // Below afterId, or at the end.
+      addSection: function (type, afterId, language) {
+        if (api.canAdd(type)) return null;
+        var st = starter(type, language), id = newId();
+        var ok = structural(function (next) {
+          var list = listOf(next), i = afterId ? indexIn(list, afterId) : -1;
+          list.splice(i < 0 ? list.length : i + 1, 0, { id: id, type: type, variant: st.variant, data: st.data });
+        }, { id: id, added: true }, id);
+        return ok ? id : null;
+      },
+      // why a section can't be duplicated, or null (one-per-page types never)
+      canDuplicate: function (id) {
+        var i = indexOf(id);
+        if (i < 0) return 'unknown_section';
+        if (maxPerPage[sections()[i].type]) return 'not_duplicable';
+        if (sections().length >= maxSections) return 'max_sections';
+        return null;
+      },
+      // a copy right below, with a new id and without the link name -> the new id (selected), or null
+      duplicateSection: function (id) {
+        if (api.canDuplicate(id)) return null;
+        var copyId = newId();
+        var ok = structural(function (next) {
+          var list = listOf(next), i = indexIn(list, id);
+          var c = clone(list[i]);
+          c.id = copyId;
+          delete c.anchor;
+          list.splice(i + 1, 0, c);
+        }, { id: copyId, duplicated: id }, copyId);
+        return ok ? copyId : null;
+      },
+      // moveSection(id, -1 | 1): one place up or down; false at either end
+      moveSection: function (id, delta) {
+        var i = indexOf(id), j = i + delta;
+        if (i < 0 || (delta !== 1 && delta !== -1) || j < 0 || j >= sections().length) return false;
+        return structural(function (next) {
+          var list = listOf(next);
+          list.splice(j, 0, list.splice(i, 1)[0]);
+        }, { id: id, moved: delta });
+      },
+      // position(id) -> { index (1-based), total }
+      position: function (id) { return { index: indexOf(id) + 1, total: sections().length }; },
+      // how many internal links of the rest of the page point to this section
+      linksTo: function (id) {
+        var i = indexOf(id);
+        if (i < 0) return 0;
+        var s = sections()[i], rest = clone(draft);
+        listOf(rest).splice(i, 1);
+        return countIn(rest, s.id) + (s.anchor ? countIn(rest, s.anchor) : 0);
+      },
+      // removeSection(id) -> { ok, relinked }: links to it point to the page
+      // top in the same Undo step; the selection moves to a neighbour
+      removeSection: function (id) {
+        var i = indexOf(id);
+        if (i < 0) return { ok: false, relinked: 0 };
+        var s = sections()[i], relinked = 0;
+        var list0 = sections(), neighbour = list0[i + 1] || list0[i - 1] || null;
+        var sel = selected === id ? (neighbour ? neighbour.id : null) : selected;
+        var ok = structural(function (next) {
+          listOf(next).splice(i, 1);
+          relinked = relink(next, s.id, '') + (s.anchor ? relink(next, s.anchor, '') : 0);
+        }, { id: id, removed: true }, sel);
+        return { ok: ok, relinked: ok ? relinked : 0 };
+      },
+      // true while a section is exactly its starter content (in either
+      // language): removing it loses nothing of the owner's
+      isUntouched: function (id) {
+        var i = indexOf(id);
+        if (i < 0 || !starter) return false;
+        var s = sections()[i];
+        if (s.anchor || s.hidden) return false;
+        var norm = function (sec) {
+          var r = validate({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_cmp00000', type: sec.type, variant: sec.variant, data: sec.data, style: sec.style }] }] });
+          return r.ok ? JSON.stringify(r.design.pages[0].sections[0]) : null;
+        };
+        var mine = norm(s);
+        return !!mine && ['de', 'en'].some(function (l) { var st = starter(s.type, l); return !!st && norm(st) === mine; });
+      },
+
       // the page's internal link targets: the page itself and every section
       linkTargets: function () {
         var out = [{ target: '/', id: null, label: null }];

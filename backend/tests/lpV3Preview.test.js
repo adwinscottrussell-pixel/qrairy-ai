@@ -27,7 +27,14 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const CTX = { businessName: 'Musterbäckerei' };
 const IMG = (n) => 'https://res.cloudinary.com/demo/image/upload/v1/' + n + '.jpg';
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
-const withSections = (...sections) => { const d = clone(BASE); d.pages[0].sections.push(...sections); return d; };
+// a section of a one-per-page type (Hero, Deals, Loyalty) replaces the base's own (Phase C limits)
+// (keeping the replaced section's link name, which other links point to)
+const withSections = (...sections) => {
+  const d = clone(BASE);
+  const added = sections.map((s) => { const old = V3.MAX_PER_PAGE[s.type] && d.pages[0].sections.find((x) => x.type === s.type); if (!old) return s; d.pages[0].sections = d.pages[0].sections.filter((x) => x !== old); return old.anchor && !s.anchor ? Object.assign({}, s, { anchor: old.anchor }) : s; });
+  d.pages[0].sections.push(...added);
+  return d;
+};
 const PREVIEW_MARKERS = /data-v3-id|data-v3-part|v3-ph-section|v3-img-ph|v3-sample|v3-stamp|Beispiel|Sample offer|\.v3-ph-note/;
 
 test('public output of the earlier section types is unchanged (b04f15e reference)', () => {

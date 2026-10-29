@@ -25,6 +25,8 @@
   var SANDBOX = 'allow-scripts';
   var ID = /^s_[a-z0-9]{4,16}$/;
   var MAX_SCROLL = 10000000;
+  // a reveal asked for this long before a reload still applies to it (Phase C: a section just added)
+  var REVEAL_MS = 2000;
   var FRAMES = { desktop: { w: 1280, h: 800, chrome: 30 }, tablet: { w: 820, h: 1180, pad: 14 }, mobile: { w: 390, h: 844, pad: 12 } };
 
   // Added to the preview only (never to a public page). Links do not
@@ -73,7 +75,7 @@
   // createPreview({ canvas, title(device), onSelect(id) })
   function createPreview(o) {
     var doc = o.canvas.ownerDocument, win = doc.defaultView;
-    var state = { html: '', device: 'desktop', selected: null, scroll: {}, timer: null, nav: '' };
+    var state = { html: '', device: 'desktop', selected: null, scroll: {}, timer: null, nav: '', revealAt: 0 };
 
     function mq(q) { return win.matchMedia && win.matchMedia(q).matches; }
     function phoneOnly() { return mq('(max-width: 767px)'); }
@@ -104,7 +106,8 @@
       ifr.setAttribute('loading', 'eager');
       ifr.setAttribute('data-device', device);
       // after every (re)load: back to the same scroll position, selection marked
-      ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[device] || 0, reveal: false }); });
+      // (a section just asked to be shown, e.g. one just added, is scrolled into view in the reloaded page)
+      ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[device] || 0, reveal: revealPending() }); });
       ifr.srcdoc = previewHtml(state.html, state.nav);
       scale.appendChild(ifr);
       frame.appendChild(scale);
@@ -178,8 +181,10 @@
       frames().forEach(function (ifr) { ifr.srcdoc = doc2; });
     }
 
+    function revealPending() { return !!state.revealAt && Date.now() - state.revealAt < REVEAL_MS; }
     function select(id, reveal) {
       state.selected = id;
+      state.revealAt = reveal ? Date.now() : 0;
       frames().forEach(function (ifr) { post(ifr, { type: 'select', id: id, reveal: !!reveal }); });
     }
 

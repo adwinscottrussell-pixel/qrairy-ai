@@ -13,7 +13,9 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const codes = (r) => r.errors.map((e) => e.code);
-const withSection = (section) => { const d = clone(BASE); d.pages[0].sections.push(section); return d; };
+// a section of a one-per-page type (Hero, Deals, Loyalty) replaces the base's own (Phase C limits)
+// (keeping the replaced section's link name, which other links point to)
+const withSection = (section) => { const d = clone(BASE); const old = V3.MAX_PER_PAGE[section.type] && d.pages[0].sections.find((s) => s.type === section.type); if (old) { d.pages[0].sections = d.pages[0].sections.filter((s) => s !== old); if (old.anchor && !section.anchor) section = Object.assign({}, section, { anchor: old.anchor }); } d.pages[0].sections.push(section); return d; };
 const sectionData = (r, id) => r.design.pages[0].sections.find((s) => s.id === id).data;
 const valid = (d, opts) => { const r = V3.validateDesign(d, opts); assert.ok(r.ok, JSON.stringify(r.errors)); return r; };
 const invalid = (d, code, opts) => { const r = V3.validateDesign(d, opts); assert.equal(r.ok, false, 'expected ' + code); assert.ok(codes(r).includes(code), 'expected ' + code + ', got ' + JSON.stringify(r.errors)); assert.equal(r.design, null); return r; };

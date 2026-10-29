@@ -136,6 +136,44 @@
       data: obj({ heading: str(120), body: str(2000, { multiline: true }), image: image(), imageAlt: str(120) }) },
   };
   var SECTION_TYPES = Object.keys(SECTIONS);
+  // At most this many sections of a type on one page (Phase C); every other
+  // type up to LIMITS.sections.
+  var MAX_PER_PAGE = { hero: 1, dealsOffers: 1, loyalty: 1 };
+
+  // Neutral, valid starter content for a section added in the Studio, in the
+  // page's language. It is ordinary content: stored and reopened as it is.
+  var STARTERS = {
+    de: {
+      hero: ['simple', { headline: 'Ihre Überschrift', subheadline: 'Beschreiben Sie in einem Satz, was Sie anbieten.' }],
+      gallery: ['grid', { title: 'Galerie', images: [] }],
+      dealsOffers: ['cards', { title: 'Aktuelle Angebote' }],
+      loyalty: ['card', { title: 'Unsere Stempelkarte' }],
+      products: ['grid', { title: 'Produkte', items: [] }],
+      openingHours: ['table', { title: 'Öffnungszeiten', days: [] }],
+      contact: ['card', { title: 'Kontakt' }],
+      buttons: ['buttons', { title: 'Links', items: [] }],
+      socialMedia: ['icons', { title: 'Folgen Sie uns', links: [] }],
+      text: ['plain', { heading: 'Überschrift', body: 'Ihr Text.' }],
+    },
+    en: {
+      hero: ['simple', { headline: 'Your headline', subheadline: 'Describe in one sentence what you offer.' }],
+      gallery: ['grid', { title: 'Gallery', images: [] }],
+      dealsOffers: ['cards', { title: 'Current offers' }],
+      loyalty: ['card', { title: 'Our stamp card' }],
+      products: ['grid', { title: 'Products', items: [] }],
+      openingHours: ['table', { title: 'Opening hours', days: [] }],
+      contact: ['card', { title: 'Contact' }],
+      buttons: ['buttons', { title: 'Links', items: [] }],
+      socialMedia: ['icons', { title: 'Follow us', links: [] }],
+      text: ['plain', { heading: 'Heading', body: 'Your text.' }],
+    },
+  };
+  // starter(type, language) -> { type, variant, data } (no id), or null
+  function starter(type, language) {
+    var lang = STARTERS[language] ? language : 'de';
+    var s = STARTERS[lang][type];
+    return s ? { type: type, variant: s[0], data: JSON.parse(JSON.stringify(s[1])) } : null;
+  }
 
   var DESIGN = obj({
     schemaVersion: { t: 'version', required: true },
@@ -300,13 +338,15 @@
     var list = p.sections === undefined ? [] : p.sections;
     if (!Array.isArray(list)) return ctx.err(path + '[0].sections', 'not_list'), [];
     if (list.length > LIMITS.sections) ctx.err(path + '[0].sections', 'too_many', { max: LIMITS.sections });
-    var ids = {}, anchors = { start: true, top: true };
+    var ids = {}, anchors = { start: true, top: true }, perType = {};
     var sections = list.slice(0, LIMITS.sections).map(function (s, i) {
       var sp = path + '[0].sections[' + i + ']';
       if (!isObj(s)) return ctx.err(sp, 'not_object'), null;
       Object.keys(s).forEach(function (k) { if (['id', 'type', 'anchor', 'hidden', 'variant', 'data', 'style'].indexOf(k) === -1) ctx.err(sp + '.' + k, 'unknown_field'); });
       var def = SECTIONS[s.type];
       if (!def) return ctx.err(sp + '.type', 'unknown_section_type'), null;
+      perType[s.type] = (perType[s.type] || 0) + 1;
+      if (MAX_PER_PAGE[s.type] && perType[s.type] > MAX_PER_PAGE[s.type]) ctx.err(sp + '.type', 'too_many_of_type', { max: MAX_PER_PAGE[s.type] });
       if (typeof s.id !== 'string' || !/^s_[a-z0-9]{4,16}$/.test(s.id)) ctx.err(sp + '.id', 'invalid_id');
       else if (ids[s.id]) ctx.err(sp + '.id', 'duplicate');
       ids[s.id] = true;
@@ -842,7 +882,7 @@
     var F = DESIGN.fields;
     return {
       schemaVersion: SCHEMA_VERSION,
-      limits: { designChars: LIMITS.designChars, sections: LIMITS.sections, pages: 1 },
+      limits: { designChars: LIMITS.designChars, sections: LIMITS.sections, pages: 1, perPage: Object.assign({}, MAX_PER_PAGE) },
       design: { theme: plainSpec(F.theme), settings: plainSpec(F.settings), header: plainSpec(F.header), footer: plainSpec(F.footer) },
       section: {
         id: { t: 'id', pattern: '^s_[a-z0-9]{4,16}$', required: true },
@@ -861,14 +901,14 @@
   function library() {
     return SECTION_TYPES.map(function (type) {
       var d = SECTIONS[type];
-      return { type: type, label: d.label, description: d.description, category: d.category.slice(), variants: d.variants.slice(), rendered: d.rendered };
+      return { type: type, label: d.label, description: d.description, category: d.category.slice(), variants: d.variants.slice(), rendered: d.rendered, maxPerPage: MAX_PER_PAGE[type] || LIMITS.sections };
     });
   }
 
   return {
     SCHEMA_VERSION: SCHEMA_VERSION, LIMITS: LIMITS, SECTION_TYPES: SECTION_TYPES, ICONS: ICONS, LINK_KINDS: LINK_KINDS, FONT_PAIRS: Object.keys(FONT_PAIRS),
-    SOCIAL_PLATFORMS: Object.keys(SOCIAL_HOSTS), DEFAULT_PALETTE: DEFAULT_PALETTE,
-    validateDesign: validateDesign, renderDesign: renderDesign, library: library, describe: describe,
+    SOCIAL_PLATFORMS: Object.keys(SOCIAL_HOSTS), DEFAULT_PALETTE: DEFAULT_PALETTE, MAX_PER_PAGE: MAX_PER_PAGE,
+    validateDesign: validateDesign, renderDesign: renderDesign, library: library, describe: describe, starter: starter,
     _esc: esc,
   };
 });

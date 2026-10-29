@@ -22,6 +22,8 @@ const LPV3_FILES = [
   // Products, and the browser copy of core.js for the Studio preview
   'frontend/public/js/lpV3/core.js',
   'backend/tests/fixtures/lpV3/allRenderedVariants.json',
+  'backend/tests/fixtures/lpV3/allRenderedVariantsHeroSplit.json', // Phase C: one Hero per page (fixture split)
+  'backend/tests/fixtures/lpV3/allRenderedVariantsHeroSimple.json',
   'backend/tests/fixtures/lpV3/publicRender.golden.json',
   'backend/tests/lpV3Preview.test.js',
   'backend/tests/lpV3CoreCopy.test.js',
@@ -92,6 +94,9 @@ const LPV3_FILES = [
   'backend/tests/studioPagesData.test.js',
   'backend/tests/studioPagesLoad.browser.test.js',
   'backend/tests/studioPagesSave.browser.test.js',
+  // Phase C: adding, moving, duplicating and removing sections
+  'backend/tests/studioSections.test.js',
+  'backend/tests/studioSections.browser.test.js',
   'backend/tests/helpers/studioPagesServer.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests

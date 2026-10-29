@@ -1,5 +1,5 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified). Re-generated on 2026-10-24 for the owner-decided Text Plain layout (text only): allRenderedVariants changes only by the removed image of its Plain Text section (verified).",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified). Re-generated on 2026-10-24 for the owner-decided Text Plain layout (text only): allRenderedVariants changes only by the removed image of its Plain Text section (verified). Restructured on 2026-10-29 for the owner-approved Phase C one-Hero-per-page rule: allRenderedVariants (three Heroes) split into allRenderedVariants (overlay Hero), allRenderedVariantsHeroSplit and allRenderedVariantsHeroSimple (one Hero each, plus the menu target s_hours1); renderer unchanged, every section byte-identical to the previous page (verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
@@ -25,15 +25,43 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16972,
-      "sha256": "fba606e2e46000f207aab6482cf8cc802fa080732547ec6225936a8427fe906d",
+      "bytes": 16249,
+      "sha256": "44f1fa352461a7ea01f5276e363ad6056c804fd8b5009c9f6523283298248295",
+      "skipped": []
+    },
+    {
+      "design": "allRenderedVariantsHeroSplit",
+      "ctx": 0,
+      "bytes": 8891,
+      "sha256": "4d39743e86e16ee5a9cbacd9edbeecb9251c6a3aa8eb17d85fa0666c6a2c4017",
+      "skipped": []
+    },
+    {
+      "design": "allRenderedVariantsHeroSimple",
+      "ctx": 0,
+      "bytes": 8592,
+      "sha256": "5cb6cf6212cf67c9a85ab4cd80fc58325683edc662207cde87c9b3b8ab2ea05d",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16997,
-      "sha256": "b56b7f0eb22646c901584ec9ecbc44deea3aa0f85537b1a017c3b6f99621b4a2",
+      "bytes": 16274,
+      "sha256": "297b95c0e7ca4fc56a6097079b660d084ad04215bfeb4d3b2aec254504b2932c",
+      "skipped": []
+    },
+    {
+      "design": "allRenderedVariantsHeroSplit",
+      "ctx": 1,
+      "bytes": 8916,
+      "sha256": "ff59d8ce66afd7e250207d2c9afea19e673e2766e8a25734271b3002307926e6",
+      "skipped": []
+    },
+    {
+      "design": "allRenderedVariantsHeroSimple",
+      "ctx": 1,
+      "bytes": 8617,
+      "sha256": "4372ce505b18fa01af456281377120bf21b93fef815a4af43dc0e4f08e626cae",
       "skipped": []
     }
   ],
@@ -75,6 +103,15 @@
         "allRenderedVariants"
       ],
       "reason": "Text section Plain layout is text only (owner decision before 2A-3G): a stored image is no longer rendered in Plain; the rendered page differs from the previous version only by that one removed <figure> (verified); localBusiness unchanged"
+    },
+    {
+      "date": "2026-10-29",
+      "designs": [
+        "allRenderedVariants",
+        "allRenderedVariantsHeroSplit",
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "Phase C section limits (owner-approved Option A): a page may hold at most one Hero, so the three-Hero fixture is split into one-Hero pages. Before the change the pre-Phase-C core.js (50393fd) reproduced all four previous entries exactly; the new entries were generated with that unchanged renderer, the Phase C core.js renders them identically, and the head, header, footer and all 16 rendered sections are byte-identical to the previous allRenderedVariants page in both contexts (verified); localBusiness entries unchanged"
     }
   ]
 }

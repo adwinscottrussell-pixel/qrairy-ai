@@ -40,6 +40,8 @@ function fullDesign() {
     { id: 's_soc02', type: 'socialMedia', variant: 'buttons', data: { title: 'T', links: [{ platform: 'youtube', url: 'https://youtu.be/x' }] } },
   );
   d.header.showBusinessName = true;
+  // one Hero per page (Phase C): the full-field split Hero replaces the base's
+  d.pages[0].sections = d.pages[0].sections.filter((s) => s.type !== 'hero' || s.id === 's_hero02');
   return d;
 }
 

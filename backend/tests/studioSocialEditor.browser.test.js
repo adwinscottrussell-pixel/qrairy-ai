@@ -104,7 +104,7 @@ test('selection from the Sections list and the preview; Content / Style / Settin
   const fr = await frame(page);
   await until(() => fr.$eval('[data-v3-id="' + S + '"]', (n) => n.classList.contains('st-sel')), 'marked in the preview');
   assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'true');
-  assert.match(await page.$eval('#st-note', (n) => n.textContent), /not saved/);
+  assert.match(await page.$eval('#st-note', (n) => n.textContent), /^Changes are saved when you click “Save Draft.” Your published page remains unchanged.$/);
   const paths = () => page.$$eval('#st-fields > [data-path]', (n) => n.map((x) => x.getAttribute('data-path')));
   assert.deepEqual(await paths(), ['data.title', 'data.links']);
   assert.match(await page.$eval('#st-fields .st-items__head', (n) => n.textContent), /^Social links \(2 \/ 8\)$/);

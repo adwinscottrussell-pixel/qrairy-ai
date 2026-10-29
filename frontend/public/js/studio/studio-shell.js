@@ -35,6 +35,16 @@
  * another page and signing out ask first. When the session ends or another
  * account signs in, the customer's page and deals leave the Studio at once
  * (nothing is kept in the browser).
+ *
+ * Sections (Phase C): the Add library adds a section (neutral starter
+ * content in the page's language) below the selected one and opens its
+ * editor; each row of the Sections list can move its section up or down,
+ * duplicate it (not Hero, Deals / Offers, Loyalty: one per page) or remove it
+ * (asking first when it holds the owner's content, is the only Hero or has
+ * links pointing to it; those links then point to the page top). Alt + Up /
+ * Down moves the selected section, Delete in the list removes it. Every
+ * change is one Undo step in studio-store.js. Loyalty is shown as "Coming
+ * soon". No drag and drop.
  */
 (function () {
   'use strict';
@@ -84,6 +94,13 @@
       hidden: 'Hidden', items: '{n} items', change_image: 'Change Image', remove: 'Remove', no_image: 'No image yet',
       variant: 'Layout', yes: 'Yes', no: 'No', section_id: 'Section ID', anchor: 'Link name (#)', visibility: 'Show on page', section_header: 'Header', section_footer: 'Footer',
       hide_left: 'Hide sections panel', hide_right: 'Hide edit panel', local_account: 'Local preview', preview_account: 'Preview', not_signed_in: 'Not signed in',
+      sec_add: 'Add {label}', lib_soon: 'Coming soon', lib_only_one: 'Already on your page', lib_max: 'Maximum of 40 sections reached',
+      sec_actions: 'Actions for {label}', sec_move_up: 'Move {label} up', sec_move_down: 'Move {label} down', sec_duplicate: 'Duplicate {label}', sec_remove: 'Remove {label}',
+      sec_no_dup: 'Only one {label} section per page', sec_added: '{label} added.', sec_duplicated: '{label} duplicated.', sec_moved: '{label} moved to position {i} of {n}.',
+      sec_removed: '{label} removed. Undo brings it back.', sec_removed_links: ' Links to it now point to the page top: {n}.', sec_failed: 'This change would make the page invalid and was not applied.',
+      sec_remove_q: 'Remove “{label}”?', sec_remove_content: 'This section contains your content.', sec_remove_last_hero: 'This is the only Hero on your page: without it, your page has no header area.',
+      sec_remove_link: 'One link on your page points to this section. It will be reset to the page top.', sec_remove_links: '{n} links on your page point to this section. They will be reset to the page top.',
+      sec_remove_undo: 'You can undo this.',
     },
     de: {
       title: 'Landing Page Studio', subtitle: 'Erstelle eine schöne mobile Landingpage für dein Unternehmen.', local_mode: 'Lokale Vorschau · nicht gespeichert', preview_mode: 'Vorschau · nicht gespeichert',
@@ -114,6 +131,13 @@
       hidden: 'Ausgeblendet', items: '{n} Einträge', change_image: 'Bild ändern', remove: 'Entfernen', no_image: 'Noch kein Bild',
       variant: 'Layout', yes: 'Ja', no: 'Nein', section_id: 'Abschnitts-ID', anchor: 'Linkname (#)', visibility: 'Auf der Seite zeigen', section_header: 'Kopfzeile', section_footer: 'Fußzeile',
       hide_left: 'Abschnittsleiste ausblenden', hide_right: 'Bearbeitungsleiste ausblenden', local_account: 'Lokale Vorschau', preview_account: 'Vorschau', not_signed_in: 'Nicht angemeldet',
+      sec_add: '{label} hinzufügen', lib_soon: 'Demnächst verfügbar', lib_only_one: 'Bereits auf Ihrer Seite', lib_max: 'Höchstens 40 Abschnitte möglich',
+      sec_actions: 'Aktionen für {label}', sec_move_up: '{label} nach oben verschieben', sec_move_down: '{label} nach unten verschieben', sec_duplicate: '{label} duplizieren', sec_remove: '{label} entfernen',
+      sec_no_dup: 'Nur ein Abschnitt „{label}“ pro Seite', sec_added: '„{label}“ hinzugefügt.', sec_duplicated: '„{label}“ dupliziert.', sec_moved: '„{label}“ an Position {i} von {n} verschoben.',
+      sec_removed: '„{label}“ entfernt. Mit „Rückgängig“ holen Sie ihn zurück.', sec_removed_links: ' Links dorthin führen jetzt zum Seitenanfang: {n}.', sec_failed: 'Diese Änderung würde die Seite ungültig machen und wurde nicht ausgeführt.',
+      sec_remove_q: '„{label}“ entfernen?', sec_remove_content: 'Dieser Abschnitt enthält Ihre Inhalte.', sec_remove_last_hero: 'Das ist der einzige Hero-Abschnitt Ihrer Seite: Ohne ihn hat Ihre Seite keinen Kopfbereich.',
+      sec_remove_link: 'Ein Link auf Ihrer Seite führt zu diesem Abschnitt. Er wird auf den Seitenanfang zurückgesetzt.', sec_remove_links: '{n} Links auf Ihrer Seite führen zu diesem Abschnitt. Sie werden auf den Seitenanfang zurückgesetzt.',
+      sec_remove_undo: 'Sie können das rückgängig machen.',
     },
   };
   var SECTION_TEXT = {
@@ -220,27 +244,37 @@
       box.appendChild(b);
     });
   }
+  // shown in the library but not addable yet: Loyalty, until the stamp card is connected
+  var COMING_SOON = ['loyalty'];
+  function addReason(type) { return COMING_SOON.indexOf(type) !== -1 ? 'soon' : editor.canAdd(type); }
   function renderLibrary() {
-    var list = $('st-lib'); list.textContent = '';
+    var list = $('st-lib');
+    var had = list.contains(document.activeElement) ? document.activeElement.getAttribute('data-type') : null;
+    list.textContent = '';
     V3.library().filter(function (s) { return state.chip === 'all' || s.category.indexOf(state.chip) !== -1; }).forEach(function (s) {
-      var tx = sectionText(s.type);
-      var item = el('button', { type: 'button', class: 'st-lib__item', title: t('add_later'), 'data-type': s.type }, [
+      var tx = sectionText(s.type), why = addReason(s.type);
+      var note = why === 'soon' ? t('lib_soon') : why === 'only_one' ? t('lib_only_one') : why === 'max_sections' ? t('lib_max') : '';
+      // not addable: still focusable (aria-disabled), so the reason can be read
+      var item = el('button', { type: 'button', class: 'st-lib__item', title: note || t('sec_add').replace('{label}', tx.label), 'data-type': s.type, 'aria-disabled': why ? 'true' : null }, [
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
         el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: tx.description })]),
-        el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-dots')]),
+        note ? el('span', { class: 'st-lib__badge', 'data-why': why, text: note }) : el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-plus')]),
       ]);
+      if (!why) item.addEventListener('click', function () { addSection(s.type); });
       list.appendChild(el('li', {}, [item]));
     });
+    if (had) { var back = list.querySelector('[data-type="' + had + '"]'); if (back) back.focus(); }
   }
   function sectionSummary(s) {
     var d = s.data || {};
     return d.headline || d.title || d.heading || (d.items && d.items[0] && (d.items[0].label || d.items[0].name)) || '';
   }
   function renderOutline() {
-    var list = $('st-outline');
-    var had = list.contains(document.activeElement) ? document.activeElement.getAttribute('data-id') : null;
+    var list = $('st-outline'), a = document.activeElement;
+    var had = list.contains(a) ? { id: a.getAttribute('data-id') || a.getAttribute('data-sec'), act: a.getAttribute('data-act') } : null;
     list.textContent = '';
-    editor.draft().pages[0].sections.forEach(function (s) {
+    var all = editor.draft().pages[0].sections;
+    all.forEach(function (s, i) {
       var tx = sectionText(s.type);
       var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
         el('span', { class: 'st-outline__grip', 'aria-hidden': 'true' }, [icon('st-grip')]),
@@ -249,9 +283,98 @@
         el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon(s.hidden ? 'st-eye-off' : 'st-eye')]),
       ]);
       item.addEventListener('click', function () { select(s.id, 'outline'); });
-      list.appendChild(el('li', {}, [item]));
+      // the row's actions (Phase C); a disabled one stays focusable with its reason
+      var act = function (kind, ic, key, off, why) {
+        var name = t(key).replace('{label}', tx.label);
+        var b = el('button', { type: 'button', class: 'st-outline__act', 'data-sec': s.id, 'data-act': kind, 'aria-label': name, title: why || name, 'aria-disabled': off ? 'true' : null }, [icon(ic)]);
+        if (!off) b.addEventListener('click', function () { sectionAction(kind, s.id); });
+        return b;
+      };
+      var dupWhy = editor.canDuplicate(s.id);
+      var actions = el('span', { class: 'st-outline__actions', role: 'group', 'aria-label': t('sec_actions').replace('{label}', tx.label) }, [
+        act('up', 'st-up', 'sec_move_up', i === 0), act('down', 'st-down', 'sec_move_down', i === all.length - 1),
+        act('duplicate', 'st-copy', 'sec_duplicate', !!dupWhy, dupWhy === 'not_duplicable' ? t('sec_no_dup').replace('{label}', tx.label) : dupWhy === 'max_sections' ? t('lib_max') : ''),
+        act('remove', 'st-trash', 'sec_remove', false),
+      ]);
+      list.appendChild(el('li', { class: editor.selected() === s.id ? 'is-current' : null }, [item, actions]));
     });
-    if (had) { var back = list.querySelector('[data-id="' + had + '"]'); if (back) back.focus(); }
+    if (had && had.id) {
+      var back = (had.act && list.querySelector('[data-sec="' + had.id + '"][data-act="' + had.act + '"]:not([aria-disabled="true"])')) || list.querySelector('.st-outline__item[data-id="' + had.id + '"]');
+      if (back) back.focus();
+    }
+  }
+
+  // ── adding, moving, duplicating, removing sections (Phase C) ──
+  // the edit panel shows the selected section: on a desktop bring it back if hidden, below 1200 px its drawer
+  function openEditor() { if (desktop()) { if (!panels().right) setPanel('right', true); } else openDrawer('st-right'); }
+  function pageLanguage() { var s = editor.draft().settings; return (s && (s.language === 'de' || s.language === 'en')) ? s.language : state.lang; }
+  function label(id) { var s = editor.section(id); return s ? sectionText(s.type).label : ''; }
+  function addSection(type) {
+    if (addReason(type)) return;
+    var id = editor.addSection(type, editor.selected(), pageLanguage());
+    if (!id) { announce(t('sec_failed')); return; }
+    setLeftTab('sections');
+    select(id, 'outline');
+    openEditor();
+    var row = $('st-outline').querySelector('.st-outline__item[data-id="' + id + '"]');
+    if (row && desktop()) row.focus();
+    announce(t('sec_added').replace('{label}', label(id)));
+  }
+  function moveSection(id, delta) {
+    if (!editor.moveSection(id, delta)) return;
+    var p = editor.position(id);
+    preview.select(editor.selected(), false);
+    announce(t('sec_moved').replace('{label}', label(id)).replace('{i}', p.index).replace('{n}', p.total));
+  }
+  function duplicateSection(id) {
+    var copy = editor.duplicateSection(id);
+    if (!copy) { announce(t('sec_failed')); return; }
+    select(copy, 'outline');
+    var row = $('st-outline').querySelector('.st-outline__item[data-id="' + copy + '"]');
+    if (row) row.focus();
+    announce(t('sec_duplicated').replace('{label}', label(copy)));
+  }
+  // Asks first when the section holds the owner's content, is the only Hero or has links pointing to it.
+  function removeSection(id) {
+    var s = editor.section(id);
+    if (!s) return;
+    var name = label(id), links = editor.linksTo(id), why = [];
+    if (!editor.isUntouched(id)) why.push(t('sec_remove_content'));
+    if (s.type === 'hero' && editor.count('hero') === 1) why.push(t('sec_remove_last_hero'));
+    if (links) why.push(links === 1 ? t('sec_remove_link') : t('sec_remove_links').replace('{n}', links));
+    if (why.length && !window.confirm(t('sec_remove_q').replace('{label}', name) + '\n\n' + why.join('\n') + '\n\n' + t('sec_remove_undo'))) return;
+    var r = editor.removeSection(id);
+    if (!r.ok) { announce(t('sec_failed')); return; }
+    var next = editor.selected();
+    if (next) {
+      inspector.render();
+      preview.select(next, false);
+      var row = $('st-outline').querySelector('.st-outline__item[data-id="' + next + '"]');
+      if (row) row.focus();
+    }
+    announce(t('sec_removed').replace('{label}', name) + (r.relinked ? t('sec_removed_links').replace('{n}', r.relinked) : ''));
+  }
+  function sectionAction(kind, id) {
+    if (kind === 'up') moveSection(id, -1);
+    else if (kind === 'down') moveSection(id, 1);
+    else if (kind === 'duplicate') duplicateSection(id);
+    else if (kind === 'remove') removeSection(id);
+  }
+  // Alt + Up / Down in the Sections list (or with nothing focused): move the selected section;
+  // Delete in the Sections list: remove it. In the edit panel Alt + arrows stay the item editors' (Buttons, Products, ...).
+  function onSectionKey(e) {
+    if (e.defaultPrevented || preview.phoneOnly() || !$('st-full').hidden || e.ctrlKey || e.metaKey) return;
+    var a = document.activeElement;
+    if (a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.isContentEditable)) return;
+    var id = editor.selected();
+    if (!id) return;
+    var inList = !!a && $('st-outline').contains(a), nowhere = !a || a === document.body || a === document.documentElement;
+    if (e.altKey && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && (inList || nowhere)) { e.preventDefault(); moveSection(id, e.key === 'ArrowUp' ? -1 : 1); return; }
+    if (!e.altKey && !e.shiftKey && e.key === 'Delete' && inList) {
+      var target = a.getAttribute('data-id') || a.getAttribute('data-sec') || id;
+      e.preventDefault();
+      removeSection(target);
+    }
   }
   function setLeftTab(tab) {
     state.leftTab = tab;
@@ -562,6 +685,7 @@
     if (kind === 'history' || info.structure) inspector.render(); else inspector.refresh();
     staleNote();
     renderOutline();
+    renderLibrary();
     historyButtons();
     renderSave();
     // typing: one preview update after a short pause; anything else at once
@@ -654,6 +778,7 @@
     $('st-undo-btn').addEventListener('click', undo);
     $('st-redo-btn').addEventListener('click', redo);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onSectionKey);
     $('st-save-btn').addEventListener('click', saveDraft);
     $('st-conflict-load').addEventListener('click', loadSavedVersion);
     $('st-conflict-keep').addEventListener('click', keepEditing);
@@ -714,7 +839,7 @@
     // preview mode: the same Studio with its own label (texts follow the language)
     if (ROUTING.mode === 'preview') $('st-mode').setAttribute('data-st', 'preview_mode');
     var demo = window.QRAIVY_STUDIO_DEMO;
-    editor = STORE.createStore({ design: demo.design, validate: V3.validateDesign });
+    editor = STORE.createStore({ design: demo.design, validate: V3.validateDesign, starter: V3.starter, maxPerPage: V3.MAX_PER_PAGE, maxSections: V3.LIMITS.sections });
     editor.select('s_hero01');
     preview = PREVIEW.createPreview({ canvas: $('st-canvas'), title: function (d) { return t(d); },
       // a click in the preview selects that section (not on phones: preview only)

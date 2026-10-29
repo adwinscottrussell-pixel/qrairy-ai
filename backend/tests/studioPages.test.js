@@ -196,6 +196,8 @@ test('save: invalid, hostile and oversized designs are refused (422) and nothing
     [{ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_d0001', type: 'dealsOffers', data: { title: 'A', offerText: '-10%', dealId: 'd_ben' } }] }] }, null],
     [{ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_x0001', type: 'unknownType', data: {} }] }] }, null],
     ['a string', null], [[], null], [big, 'too_large'], [many, 'too_many'],
+    // Phase C: one Hero, one Deals / Offers, one Loyalty per page, enforced by the server too
+    ...['hero', 'dealsOffers', 'loyalty'].map((type) => [{ schemaVersion: 1, pages: [{ id: 'start', sections: [Object.assign({ id: 's_one00001' }, V3.starter(type, 'de')), Object.assign({ id: 's_two00002' }, V3.starter(type, 'de'))] }] }, 'too_many_of_type']),
   ];
   for (const [design, code] of bad) {
     const r = await put('anna-cafe', 'tok_anna', { design, baseRevision: null });
