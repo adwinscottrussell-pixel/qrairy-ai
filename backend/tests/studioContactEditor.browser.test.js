@@ -48,6 +48,12 @@ async function open(width, height, { theme = 'light', lang = 'en' } = {}) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => { errors.push('dialog: ' + d.message()); d.dismiss(); });
   await page.goto(base + '/studio.html', { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   return { page, net, errors };
 }
 // open the Studio with the Contact section selected
@@ -364,7 +370,7 @@ test('hostile text stays text: escaped in the preview, nothing injected, no dial
   await until(async () => (await errorOf(page, 'data.email')) !== '', 'refused email');
   await sleep(400);
   const fr = await frame(page);
-  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, svg: document.querySelectorAll('svg[onload]').length, scripts: document.scripts.length })), { imgs: 0, svg: 0, scripts: 1 });
+  assert.deepEqual(await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, hero: [...document.querySelectorAll('main img:not(.v3-gal-item img)')].map((i) => i.className + (/^data:image\/(jpeg;base64,|svg\+xml,)/.test(i.getAttribute('src')) ? ' (demo photo)' : ' (OTHER SOURCE)')).join(), handlers: [...document.querySelectorAll('*')].filter((n) => [...n.attributes].some((a) => /^on/i.test(a.name))).length, svg: document.querySelectorAll('svg[onload]').length, scripts: document.scripts.length })), { imgs: 1, hero: 'v3-hero-img (demo photo)', handlers: 0, svg: 0, scripts: 1 });
   assert.deepEqual(errors, []);
   await page.close();
 });

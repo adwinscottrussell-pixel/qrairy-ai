@@ -905,7 +905,8 @@
       var ol = el('ol', { class: 'st-items__list' });
       // no newItem (Gallery, 2A-3H): Add stays disabled and says why
       var canAdd = typeof cfg.newItem === 'function';
-      var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add', 'data-action': 'add-item' }, [tx(cfg.add)]);
+      // adding a link (Buttons, Social Media): the green "add link" style (Phase C.1)
+      var add = el('button', { type: 'button', class: 'st-btn st-btn--ghost st-items__add' + (cfg.add === 'add_button' || cfg.add === 'add_link' ? ' st-items__add--link' : ''), 'data-action': 'add-item' }, [tx(cfg.add)]);
       if (!canAdd) add.title = tx(cfg.addLater);
       var later = canAdd ? null : el('p', { class: 'st-hint', 'data-hint': 'add_later', text: tx(cfg.addLater) });
       var full = el('p', { class: 'st-hint', 'data-hint': 'max', text: tx(cfg.max).replace('{max}', max) });

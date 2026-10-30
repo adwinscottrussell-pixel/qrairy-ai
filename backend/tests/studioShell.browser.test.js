@@ -60,8 +60,9 @@ const layout = (page) => page.evaluate(() => {
     theme: document.documentElement.getAttribute('data-studio-theme') };
 });
 
-test('layout at six widths: no overflow, panels or drawers, previews, disabled actions, no errors, no API', async () => {
-  const expect = { 1920: [true, ['desktop', 'mobile']], 1440: [true, ['desktop']], 1280: [true, ['desktop']], 1024: [false, ['desktop']], 820: [false, ['desktop']], 390: [false, ['mobile']] };
+test('layout at six widths: no overflow, panels or drawers, previews (phone-first, Phase C.1), disabled actions, the sidebar rail not stored, no errors, no API', async () => {
+  // phone-first: the phone where the centre is narrow, the desktop where it is wide (tablets: drawers), both from 1600 px
+  const expect = { 1920: [true, ['desktop', 'mobile']], 1440: [true, ['mobile']], 1280: [true, ['mobile']], 1024: [false, ['desktop']], 820: [false, ['mobile']], 390: [false, ['mobile']] };
   for (const [w, h] of [[1920, 1080], [1440, 900], [1280, 800], [1024, 768], [820, 1180], [390, 844]]) {
     for (const theme of ['light', 'dark']) {
       const { page, net, errors } = await open(w, h, { theme });
@@ -71,6 +72,9 @@ test('layout at six widths: no overflow, panels or drawers, previews, disabled a
       assert.equal(l.right, expect[w][0], w + ' right panel');
       assert.deepEqual(l.frames, expect[w][1], w + ' previews');
       assert.ok(l.publish && l.save, w + ' Publish and Save Draft disabled');
+      // the builder workspace: the QRAIVY sidebar as its icon rail (not on phones: a drawer there), never stored
+      const sb = await page.evaluate(() => ({ collapsed: document.getElementById('sidebar').classList.contains('collapsed'), stored: localStorage.getItem('sb-collapsed') }));
+      assert.deepEqual(sb, { collapsed: w > 768, stored: null }, w + ' sidebar');
       assert.equal(l.theme, theme);
       assert.deepEqual(errors, [], w + ' page errors');
       const hosts = [...new Set(net)].filter((x) => x !== new URL(base).host && !FONT_HOSTS.includes(x));
@@ -84,6 +88,10 @@ test('appearance: Dark and System, remembered; the page preview is the same in e
   const { page } = await open(1440, 900);
   const previewOf = () => page.$eval('#st-canvas iframe', (f) => f.srcdoc);
   const before = await previewOf();
+  // the theme lives in the "⋯" menu (Phase C.1)
+  assert.equal(await page.$eval('[data-theme-pref="dark"]', (b) => b.closest('#st-more-menu') !== null), true);
+  await page.click('#st-more-btn');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('data-theme-pref')), 'light', 'focus moves to the current choice');
   await page.click('[data-theme-pref="dark"]');
   assert.equal(await page.$eval('html', (n) => n.getAttribute('data-studio-theme')), 'dark');
   assert.equal(await page.evaluate(() => localStorage.getItem('qraivy.studio.theme')), 'dark');
@@ -130,17 +138,13 @@ test('drawers below 1200 px: one at a time, Escape and the scrim close them', as
   await page.close();
 });
 
-test('template strip: open on a large desktop, collapsible, remembered; collapsed by default on tablets', async () => {
-  const { page } = await open(1920, 1080);
-  assert.equal(await page.$eval('#st-templates-toggle', (b) => b.getAttribute('aria-expanded')), 'true');
-  assert.equal(await page.$$eval('#st-templates-list .st-tpl', (x) => x.length), 5);
-  await page.click('#st-templates-toggle');
-  assert.equal(await page.$eval('#st-templates-list', (x) => x.hidden), true);
-  assert.equal(await page.evaluate(() => localStorage.getItem('qraivy.studio.templates')), 'collapsed');
-  await page.close();
-  const tab = await open(820, 1180);
-  assert.equal(await tab.page.$eval('#st-templates-toggle', (b) => b.getAttribute('aria-expanded')), 'false');
-  await tab.page.close();
+test('template strip: hidden until templates exist (Phase C.1), at every width; its code stays', async () => {
+  for (const [w, h] of [[1920, 1080], [1440, 900], [820, 1180], [390, 844]]) {
+    const { page } = await open(w, h);
+    assert.equal(await page.$eval('#st-templates', (s) => s.hidden && getComputedStyle(s).display === 'none'), true, w + ': hidden');
+    assert.equal(await page.$$eval('#st-templates-list .st-tpl', (x) => x.length), 5, 'still built, just not shown');
+    await page.close();
+  }
 });
 
 test('desktop panels hide independently, are remembered, and the preview takes the space', async () => {
@@ -179,8 +183,7 @@ test('phones: one page scroll (no box scrolling inside another), preview first, 
   assert.equal(s.workOverflow, 'visible');
   assert.deepEqual(s.panels, ['none', 'none']);
   assert.equal(s.overflowX, 0);
-  await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
-  assert.ok(await page.$eval('#st-templates-toggle', (b) => { const r = b.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; }), 'the template strip is reachable by scrolling');
+  assert.equal(await page.$eval('#st-templates', (s) => getComputedStyle(s).display), 'none', 'no template strip (Phase C.1)');
   await page.close();
 });
 

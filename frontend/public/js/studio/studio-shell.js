@@ -45,6 +45,12 @@
  * Down moves the selected section, Delete in the list removes it. Every
  * change is one Undo step in studio-store.js. Loyalty is shown as "Coming
  * soon". No drag and drop.
+ *
+ * Builder workspace (Phase C.1): on this page the QRAIVY sidebar starts as
+ * its icon rail (only here, never stored: the other Admin pages keep their
+ * own setting), "Back to Dashboard" leads to dashboard.html, the theme lives
+ * in the "⋯" menu, Publish says "Coming soon", the demo is labelled "Sample
+ * page", and an opened page starts on its Sections list.
  */
 (function () {
   'use strict';
@@ -101,6 +107,9 @@
       sec_remove_q: 'Remove “{label}”?', sec_remove_content: 'This section contains your content.', sec_remove_last_hero: 'This is the only Hero on your page: without it, your page has no header area.',
       sec_remove_link: 'One link on your page points to this section. It will be reset to the page top.', sec_remove_links: '{n} links on your page point to this section. They will be reset to the page top.',
       sec_remove_undo: 'You can undo this.',
+      back_dashboard: 'Back to Dashboard', sample_page: 'Sample page', coming_soon: 'Coming soon',
+      publish_note: 'Publishing arrives in a later step. Until then your published page stays exactly as it is.',
+      act_up: 'Up', act_down: 'Down', act_duplicate: 'Duplicate', act_remove: 'Remove',
     },
     de: {
       title: 'Landing Page Studio', subtitle: 'Erstelle eine schöne mobile Landingpage für dein Unternehmen.', local_mode: 'Lokale Vorschau · nicht gespeichert', preview_mode: 'Vorschau · nicht gespeichert',
@@ -138,6 +147,9 @@
       sec_remove_q: '„{label}“ entfernen?', sec_remove_content: 'Dieser Abschnitt enthält Ihre Inhalte.', sec_remove_last_hero: 'Das ist der einzige Hero-Abschnitt Ihrer Seite: Ohne ihn hat Ihre Seite keinen Kopfbereich.',
       sec_remove_link: 'Ein Link auf Ihrer Seite führt zu diesem Abschnitt. Er wird auf den Seitenanfang zurückgesetzt.', sec_remove_links: '{n} Links auf Ihrer Seite führen zu diesem Abschnitt. Sie werden auf den Seitenanfang zurückgesetzt.',
       sec_remove_undo: 'Sie können das rückgängig machen.',
+      back_dashboard: 'Zum Dashboard', sample_page: 'Beispielseite', coming_soon: 'Bald verfügbar',
+      publish_note: 'Veröffentlichen folgt in einem späteren Schritt. Bis dahin bleibt Ihre veröffentlichte Seite genau so, wie sie ist.',
+      act_up: 'Nach oben', act_down: 'Nach unten', act_duplicate: 'Duplizieren', act_remove: 'Entfernen',
     },
   };
   var SECTION_TEXT = {
@@ -257,8 +269,8 @@
       // not addable: still focusable (aria-disabled), so the reason can be read
       var item = el('button', { type: 'button', class: 'st-lib__item', title: note || t('sec_add').replace('{label}', tx.label), 'data-type': s.type, 'aria-disabled': why ? 'true' : null }, [
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
-        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: tx.description })]),
-        note ? el('span', { class: 'st-lib__badge', 'data-why': why, text: note }) : el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-plus')]),
+        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: tx.description }), note ? el('span', { class: 'st-lib__badge', 'data-why': why, text: note }) : null]),
+        note ? null : el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-plus')]),
       ]);
       if (!why) item.addEventListener('click', function () { addSection(s.type); });
       list.appendChild(el('li', {}, [item]));
@@ -277,16 +289,16 @@
     all.forEach(function (s, i) {
       var tx = sectionText(s.type);
       var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
-        el('span', { class: 'st-outline__grip', 'aria-hidden': 'true' }, [icon('st-grip')]),
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
         el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: sectionSummary(s) })]),
-        el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon(s.hidden ? 'st-eye-off' : 'st-eye')]),
+        s.hidden ? el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-eye-off')]) : null,
       ]);
       item.addEventListener('click', function () { select(s.id, 'outline'); });
       // the row's actions (Phase C); a disabled one stays focusable with its reason
       var act = function (kind, ic, key, off, why) {
         var name = t(key).replace('{label}', tx.label);
-        var b = el('button', { type: 'button', class: 'st-outline__act', 'data-sec': s.id, 'data-act': kind, 'aria-label': name, title: why || name, 'aria-disabled': off ? 'true' : null }, [icon(ic)]);
+        var b = el('button', { type: 'button', class: 'st-outline__act', 'data-sec': s.id, 'data-act': kind, 'aria-label': name, 'data-tip': why || name, 'aria-description': why || null, 'aria-disabled': off ? 'true' : null },
+          [icon(ic), el('span', { class: 'st-outline__actlabel', 'aria-hidden': 'true', text: t('act_' + kind) })]);
         if (!off) b.addEventListener('click', function () { sectionAction(kind, s.id); });
         return b;
       };
@@ -520,6 +532,7 @@
       pageView.owner = sessionUser();
       saveView.savedAt = r.savedAt;
       showPages({ state: 'loaded', source: r.source });
+      setLeftTab('sections');
       rememberSlug(r.page.slug);
       var first = editor.sectionIds()[0];
       if (first) select(first);
@@ -610,8 +623,8 @@
     box.title = st === 'saved' ? t('save_saved_long').replace('{time}', timeOf(saveView.savedAt)).replace('  ', ' ')
       : st === 'failed' ? t(saveView.invalid ? 'save_invalid_long' : 'save_failed_long') : st === 'conflict' ? t('conflict_text') : st ? t('save_' + st + '_long') : '';
     $('st-conflict').hidden = st !== 'conflict';
-    // "not saved" only where nothing can be saved
-    $('st-mode').hidden = ownerPageOpen();
+    // the demo design is labelled as such while none of the owner's pages is open
+    $('st-sample').hidden = !!pageView.current;
   }
   function saveDraft() {
     if (!canSave()) return;
@@ -761,6 +774,11 @@
   function bindUi() {
     $('st-tab-sections').addEventListener('click', function () { setLeftTab('sections'); });
     $('st-tab-add').addEventListener('click', function () { setLeftTab('add'); });
+    $('st-add-section').addEventListener('click', function () {
+      setLeftTab('add');
+      var first = $('st-lib').querySelector('.st-lib__item:not([aria-disabled="true"])') || $('st-lib').querySelector('.st-lib__item');
+      if (first) first.focus();
+    });
     var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-insp]'));
     var setInsp = function (b) { state.insp = b.getAttribute('data-insp'); inspTabs(); inspector.render(); };
     tabs.forEach(function (b, i) {
@@ -799,7 +817,12 @@
       preview.fit();
     });
     var more = $('st-more-btn'), menu = $('st-more-menu');
-    more.addEventListener('click', function (e) { e.stopPropagation(); menu.hidden = !menu.hidden; more.setAttribute('aria-expanded', String(!menu.hidden)); });
+    more.addEventListener('click', function (e) {
+      e.stopPropagation();
+      menu.hidden = !menu.hidden;
+      more.setAttribute('aria-expanded', String(!menu.hidden));
+      if (!menu.hidden) { var cur = menu.querySelector('[data-theme-pref][aria-checked="true"]') || menu.querySelector('button:not(:disabled)'); if (cur) cur.focus(); }
+    });
     document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); } });
     // full size: the plain page (sandboxed with no permissions, no Studio script)
     $('st-preview-btn').addEventListener('click', function () { $('st-full-frame').srcdoc = pageHtml(); $('st-full').hidden = false; $('st-full-close').focus(); });
@@ -807,7 +830,7 @@
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (!$('st-full').hidden) { $('st-full').hidden = true; return; }
-      if (!menu.hidden) { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); return; }
+      if (!menu.hidden) { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); more.focus(); return; }
       closeDrawers();
     });
     var resizeTimer = null;
@@ -827,6 +850,36 @@
     renderPageBar();
   }
 
+  // The builder workspace: on this page the QRAIVY sidebar starts as its icon
+  // rail. The Studio keeps that state itself and never writes 'sb-collapsed'
+  // (every other Admin page's remembered setting); the sidebar's own toggle
+  // switches it here without storing anything. Phones: the sidebar is a drawer.
+  function builderSidebar() {
+    var sb = $('sidebar');
+    if (!sb || !window.matchMedia) return;
+    var collapsed = true, phone = window.matchMedia('(max-width: 768px)');
+    var apply = function () {
+      if (phone.matches) return;
+      sb.classList.toggle('collapsed', collapsed);
+      document.body.classList.toggle('sb-collapsed', collapsed);
+      preview.fit();
+    };
+    apply();
+    // capture: before admin-shell's own toggle handler (which would store the choice)
+    document.addEventListener('click', function (e) {
+      if (!(e.target && e.target.closest && e.target.closest('#sb-toggle')) || phone.matches) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      collapsed = !collapsed;
+      apply();
+    }, true);
+    // admin-shell re-applies the stored setting when the window crosses its breakpoints: the Studio's state wins
+    ['(max-width: 1099px)', '(max-width: 768px)'].forEach(function (q) {
+      var m = window.matchMedia(q), f = function () { setTimeout(apply, 0); };
+      if (m.addEventListener) m.addEventListener('change', f); else if (m.addListener) m.addListener(f);
+    });
+  }
+
   function start() {
     bindTheme();
     state.lang = lang();
@@ -843,7 +896,9 @@
     editor.select('s_hero01');
     preview = PREVIEW.createPreview({ canvas: $('st-canvas'), title: function (d) { return t(d); },
       // a click in the preview selects that section (not on phones: preview only)
-      onSelect: function (id) { if (!preview.phoneOnly() && id !== editor.selected()) select(id, 'preview'); } });
+      onSelect: function (id) { if (!preview.phoneOnly() && id !== editor.selected()) select(id, 'preview'); },
+      // the device buttons follow the preview's own choice (phone-first, Phase C.1)
+      onLayout: function () { if (preview) deviceButtons(); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
@@ -866,6 +921,7 @@
     renderAll();
     setLeftTab(state.leftTab);
     bindUi();
+    builderSidebar();
     editor.onChange(onStoreChange);
     historyButtons();
     staleNote();

@@ -57,12 +57,20 @@ async function open(width, height, { theme = 'light', image = false } = {}) {
     if (FONT_HOSTS.includes(u.host)) return r.respond({ status: 200, contentType: 'text/css', body: '' }); // no late web-font swap: the layout (and scroll) stays deterministic
     if (image && u.pathname.endsWith('/js/studio/studio-demo.js')) {
       const src = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-demo.js'), 'utf8')
+        // the demo's own Hero image (Phase C.1) makes room for the test image
+        .replace(/\r?\n\s*backgroundImage: 'https:\/\/res\.cloudinary\.com\/dwqc6n7rn\/[^']*',\r?\n\s*imageAlt: '[^']*',/, '')
         .replace("{ id: 's_hero01', type: 'hero', variant: 'split', data: {", "{ id: 's_hero01', type: 'hero', variant: 'overlay', data: { backgroundImage: '" + IMAGE + "', imageAlt: 'Theke',");
       return r.respond({ status: 200, contentType: 'text/javascript', body: src });
     }
     return r.continue();
   });
   await page.goto(base + '/studio.html', { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   return { page, net, errors };
 }
 const srcdoc = (page, device = null) => page.$eval('#st-canvas iframe' + (device ? '[data-device="' + device + '"]' : ''), (f) => f.srcdoc);
@@ -217,9 +225,9 @@ test('hostile text stays text: escaped in the preview, nothing injected, no dial
   await previewHas(page, '&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;alert(2)&lt;/script&gt;');
   await sleep(500);
   const fr = await frame(page);
-  const inside = await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, svgOnload: document.querySelectorAll('svg[onload]').length,
+  const inside = await fr.evaluate(() => ({ imgs: document.querySelectorAll('main img:not(.v3-gal-item img)').length, hero: [...document.querySelectorAll('main img:not(.v3-gal-item img)')].map((i) => i.className + (/^data:image\/(jpeg;base64,|svg\+xml,)/.test(i.getAttribute('src')) ? ' (demo photo)' : ' (OTHER SOURCE)')).join(), handlers: [...document.querySelectorAll('*')].filter((n) => [...n.attributes].some((a) => /^on/i.test(a.name))).length, svgOnload: document.querySelectorAll('svg[onload]').length,
     scripts: document.scripts.length, h1: document.querySelector('h1').textContent }));
-  assert.deepEqual(inside, { imgs: 0, svgOnload: 0, scripts: 1, h1: evil }, 'one script: the Studio\'s own');
+  assert.deepEqual(inside, { imgs: 1, hero: 'v3-hero-img (demo photo)', handlers: 0, svgOnload: 0, scripts: 1, h1: evil }, 'one script: the Studio\'s own');
   assert.deepEqual(errors, [], 'no alert ran');
   await page.close();
 });
@@ -394,7 +402,10 @@ test('Light and Dark: the editor works in both, without overflow; the preview is
     assert.equal(await page.$eval('html', (n) => n.getAttribute('data-studio-theme')), theme);
     await typeInto(page, field('data.headline'), 'Thema');
     await previewHas(page, '>Thema</h1>');
-    html[theme] = await srcdoc(page);
+    // the demo photos (Gallery and, since Phase C.1, the Hero) are ready in both captures
+    await until(async () => !(await srcdoc(page)).includes('data-st-placeholder'), 'demo photos ready');
+    // (the photos' inline JPEG data is re-encoded on every page load: compared without it)
+    html[theme] = (await srcdoc(page)).replace(/data:image\/jpeg;base64,[A-Za-z0-9+\/=]+/g, 'data:image/jpeg');
     const bg = await page.$eval(field('data.headline'), (n) => getComputedStyle(n).backgroundColor);
     assert.equal(bg, theme === 'dark' ? 'rgb(23, 23, 25)' : 'rgb(255, 255, 255)', theme + ': inputs use the Studio surface');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);

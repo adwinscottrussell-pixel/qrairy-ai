@@ -97,6 +97,8 @@ const LPV3_FILES = [
   // Phase C: adding, moving, duplicating and removing sections
   'backend/tests/studioSections.test.js',
   'backend/tests/studioSections.browser.test.js',
+  // Phase C.1: the builder workspace polish
+  'backend/tests/studioWorkspace.browser.test.js',
   'backend/tests/helpers/studioPagesServer.js',
   // Studio preview mode: the private Vercel project qraivy-studio-staging
   // (routing + shell label above), its Studio-files-only export, its tests

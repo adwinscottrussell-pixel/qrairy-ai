@@ -145,11 +145,16 @@ test('D2: the one Studio file with requests sends only the three read-only Deals
 
 test('Save Draft and Publish start disabled; Publish is never enabled, Save Draft only by the shell (Phase B); Undo / Redo start disabled; the overflow menu only has disabled items', () => {
   assert.match(HTML, /<button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true"/);
-  assert.match(HTML, /<button type="button" class="st-btn st-btn--primary" id="st-publish-btn" disabled aria-disabled="true"/);
+  // Phase C.1: Publish is a muted, locked button that says "Coming soon"; still disabled
+  assert.ok(HTML.includes('<button type="button" class="st-btn st-btn--locked" id="st-publish-btn" disabled aria-disabled="true" data-st-title="publish_disabled" aria-describedby="st-publish-soon"><svg class="st-ic" aria-hidden="true"><use href="#st-lock"/></svg><span class="st-locked__text"><span data-st="publish">Publish</span><small id="st-publish-soon" data-st="coming_soon">Coming soon</small></span></button>'));
   assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" /);
   assert.match(HTML, /<button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" /);
-  const menu = HTML.slice(HTML.indexOf('id="st-more-menu"'), HTML.indexOf('</div>', HTML.indexOf('id="st-more-menu"')));
-  assert.equal((menu.match(/<button /g) || []).length, (menu.match(/<button type="button" role="menuitem" disabled/g) || []).length);
+  // the "⋯" menu: the three theme choices, a note about publishing, and only disabled items otherwise
+  const menuStart = HTML.indexOf('id="st-more-menu"'), menu = HTML.slice(menuStart, HTML.indexOf('<p class="st-menu__note"', menuStart));
+  const buttons = menu.match(/<button [^>]*>/g) || [];
+  assert.equal(buttons.filter((b) => /data-theme-pref=/.test(b)).length, 3, 'theme choices');
+  assert.deepEqual(buttons.filter((b) => !/data-theme-pref=/.test(b)).map((b) => /\sdisabled[\s>]/.test(b)), [true, true, true], 'every other item disabled');
+  assert.ok(menu.includes('data-st="publish_note"'), 'the publishing note');
   for (const f of STUDIO_JS) assert.ok(!/st-publish-btn/.test(read(f)), f + ' never touches Publish');
   for (const f of STUDIO_JS.filter((x) => x !== 'js/studio/studio-shell.js')) assert.ok(!/st-save-btn/.test(read(f)), f + ' never touches Save Draft');
   const shell = read('js/studio/studio-shell.js');

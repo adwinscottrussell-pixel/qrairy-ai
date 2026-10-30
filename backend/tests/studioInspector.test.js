@@ -21,6 +21,14 @@ const INSP = require('../../frontend/public/js/studio/studio-inspector.js');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'js', 'studio', 'studio-inspector.js'), 'utf8');
 const tests = [];
+// Texts the owner approved changing after those commits (the regressions below expect
+// these, every other text exactly as then). Phase C (2762278): the editor note now
+// says that Save Draft saves.
+const APPROVED_TEXT = {
+  en: { note_edit: 'Changes are saved when you click “Save Draft.” Your published page remains unchanged.' },
+  de: { note_edit: 'Änderungen werden erst gespeichert, wenn du auf „Entwurf speichern“ klickst. Deine veröffentlichte Seite bleibt unverändert.' },
+};
+const approvedText = (lang, k, then) => (Object.prototype.hasOwnProperty.call(APPROVED_TEXT[lang], k) ? APPROVED_TEXT[lang][k] : then);
 const test = (name, fn) => tests.push({ name, fn });
 const D = V3.describe();
 
@@ -74,7 +82,7 @@ test('Buttons regression: plan and every text exactly as approved at d70d883', (
   const then = inspectorAt('d70d883');
   if (then) {
     assert.deepEqual(JSON.parse(JSON.stringify(INSP.BUTTONS_PLAN)), JSON.parse(JSON.stringify(then.exports.BUTTONS_PLAN)));
-    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
     assert.deepEqual(INSP.TARGET_INPUT, then.exports.TARGET_INPUT);
   }
   assert.deepEqual(INSP.PLANS.buttons, INSP.BUTTONS_PLAN);
@@ -107,7 +115,7 @@ test('Social Media regression: plan and texts exactly as approved at 20e97c6', (
   const then = inspectorAt('20e97c6');
   if (then) {
     for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'SOCIAL_HINT_HOSTS', 'SOCIAL_PLACEHOLDER', 'TARGET_INPUT']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
-    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
     for (const t of ['buttons', 'socialMedia']) for (const k of ['heading', 'add', 'max', 'remove', 'removed', 'moved', 'focus', 'select']) assert.equal(INSP.LISTS[t][k], then.exports.LISTS[t][k], t + ' ' + k);
   }
 });
@@ -227,7 +235,7 @@ test('Contact regression: plan and texts exactly as approved at 5a2bce6', () => 
   const then = inspectorAt('5a2bce6');
   if (then) {
     for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
-    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
   }
 });
 
@@ -301,7 +309,7 @@ test('Opening Hours regression: plans and texts exactly as approved at e3e7afc',
   const then = inspectorAt('e3e7afc');
   if (then) {
     for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN', 'HOURS_PLAN']) assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k);
-    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+    for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
     for (const t of ['buttons', 'socialMedia']) for (const k of ['heading', 'add', 'max', 'remove', 'removed', 'moved', 'focus', 'select']) assert.equal(INSP.LISTS[t][k], then.exports.LISTS[t][k], t + ' ' + k);
   }
 });
@@ -699,7 +707,7 @@ test('the six earlier editors: plans and texts exactly as approved at e99ac11 (2
   for (const k of ['HERO_PLAN', 'BUTTONS_PLAN', 'SOCIAL_PLAN', 'CONTACT_PLAN', 'HOURS_PLAN', 'PRODUCTS_PLAN']) {
     assert.deepEqual(JSON.parse(JSON.stringify(INSP[k])), JSON.parse(JSON.stringify(then.exports[k])), k + ' unchanged');
   }
-  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
   for (const k of Object.keys(then.exports.LISTS)) assert.deepEqual(JSON.parse(JSON.stringify(INSP.LISTS[k])), JSON.parse(JSON.stringify(then.exports.LISTS[k])), 'LISTS.' + k);
   // the Hero image keeps its own hint (no c.hints on its plan entry)
   assert.equal(INSP.HERO_PLAN.find((c) => c.control === 'image').hints, undefined);
@@ -797,7 +805,7 @@ test('the seven earlier editors: Text exactly as approved at 76b00fa (2A-3G)', (
   const h = INSP.TEXT_PLAN.find((c) => c.control === 'image').hints, h0 = then.exports.TEXT_PLAN.find((c) => c.control === 'image').hints;
   assert.equal(String(h.plain_image), String(h0.plain_image));
   assert.equal(String(h.text_image_later), String(h0.text_image_later));
-  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], v, lang + ' ' + k + ' unchanged');
+  for (const lang of ['en', 'de']) for (const [k, v] of Object.entries(then.exports.TX[lang])) assert.equal(INSP.TX[lang][k], approvedText(lang, k, v), lang + ' ' + k + ' unchanged');
 });
 
 test('every Gallery field from describe() has exactly one control; no new images (Add disabled with its reason); Style and Settings as the schema has them', () => {

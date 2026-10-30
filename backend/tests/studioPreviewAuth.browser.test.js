@@ -62,6 +62,12 @@ async function signIn(width = 1440, height = 900) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   await page.goto(base + '/login', { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   return { page, errors };
 }
 async function frame(page, device = 'desktop') { return (await page.$('#st-canvas iframe[data-device="' + device + '"]')).contentFrame(); }

@@ -301,6 +301,12 @@ test('the Studio preview: the controller runs in the sandboxed frames (desktop, 
     if (r.frame() && r.frame() !== page.mainFrame() && /^https?:$/.test(u.protocol) && !/^fonts\./.test(u.host)) frameRequests.push(u.href);
   });
   await page.goto(base + '/studio.html', { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   await page.evaluate(() => window.QraivyStudio.editor.set('s_gal01', ['variant'], 'carousel'));
   // after an edit the frame reloads: the controller is in the new page again and runs
   {

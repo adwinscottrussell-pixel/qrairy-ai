@@ -44,6 +44,8 @@
   <symbol id="st-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
   <symbol id="st-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
   <symbol id="st-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <!-- Phase C.1: the builder workspace -->
+  <symbol id="st-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
   <!-- Phase C: section actions -->
   <symbol id="st-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="st-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
@@ -154,14 +156,18 @@
     </section>
 
     <header class="st-top" id="st-top">
+      <!-- Phase C.1 builder workspace: Back, the page and its status (left); the actions (right) -->
+      <a class="st-back" id="st-back" href="dashboard.html"><svg class="st-ic" aria-hidden="true"><use href="#st-arrow-left"/></svg><span data-st="back_dashboard">Back to Dashboard</span></a>
       <div class="st-top__title">
-        <h1 class="st-h1" data-st="title">Landing Page Studio</h1>
-        <p class="st-sub" data-st="subtitle">Create a beautiful mobile landing page for your business.</p>
+        <h1 class="st-h1 st-sr" data-st="title">Landing Page Studio</h1>
+        <!-- the demo design, shown while none of the owner's pages is open -->
+        <span class="st-sample" id="st-sample" data-st="sample_page" hidden>Sample page</span>
         <!-- The signed-in owner's own pages (js/studio/studio-pages-data.js); only where the Studio has an API -->
         <div class="st-pagebar" id="st-pagebar" hidden>
           <label class="st-pagebar__label" for="st-page-select" data-st="page_label">Page</label>
           <select class="st-pagebar__select" id="st-page-select"></select>
           <span class="st-pagebar__status" id="st-page-status" role="status"></span>
+          <span class="st-savestate" id="st-save-status" role="status" hidden></span>
           <button type="button" class="st-pagebar__btn" id="st-page-retry" hidden data-st="page_retry">Try again</button>
           <button type="button" class="st-pagebar__btn" id="st-page-signin" hidden data-st="page_signin_btn">Sign in</button>
           <a class="st-pagebar__btn" id="st-page-dashboard" href="dashboard.html?section=sqr" hidden data-st="page_dashboard">Go to dashboard</a>
@@ -173,24 +179,31 @@
           <button type="button" class="st-pagebar__btn" id="st-conflict-keep" data-st="conflict_keep">Keep editing</button>
         </div>
       </div>
-      <span class="st-mode" id="st-mode" data-st="local_mode" title="">Local preview · not saved</span>
+      <!-- the former "not saved" badge: kept for the label text only, never shown (Phase C.1) -->
+      <span class="st-mode" id="st-mode" data-st="local_mode" title="" hidden>Local preview · not saved</span>
       <div class="st-top__actions">
-        <div class="st-theme" role="radiogroup" aria-label="Theme" data-st-aria="theme">
-          <span class="st-theme__label" data-st="theme">Theme</span>
-          <button type="button" class="st-theme__opt" role="radio" data-theme-pref="light" data-st-aria="theme_light" aria-label="Light"><svg class="st-ic" aria-hidden="true"><use href="#st-sun"/></svg></button>
-          <button type="button" class="st-theme__opt" role="radio" data-theme-pref="dark" data-st-aria="theme_dark" aria-label="Dark"><svg class="st-ic" aria-hidden="true"><use href="#st-moon"/></svg></button>
-          <button type="button" class="st-theme__opt" role="radio" data-theme-pref="system" data-st-aria="theme_system" aria-label="System"><svg class="st-ic" aria-hidden="true"><use href="#st-monitor"/></svg></button>
-        </div>
+        <button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" aria-keyshortcuts="Control+Z Meta+Z"><svg class="st-ic" aria-hidden="true"><use href="#st-undo"/></svg></button>
+        <button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"><svg class="st-ic" aria-hidden="true"><use href="#st-redo"/></svg></button>
         <button type="button" class="st-btn st-btn--ghost" id="st-preview-btn"><svg class="st-ic" aria-hidden="true"><use href="#st-eye"/></svg><span data-st="preview">Preview</span></button>
-        <span class="st-savestate" id="st-save-status" role="status" hidden></span>
         <button type="button" class="st-btn st-btn--outline" id="st-save-btn" disabled aria-disabled="true" aria-keyshortcuts="Control+S Meta+S"><span data-st="save_draft">Save Draft</span></button>
-        <button type="button" class="st-btn st-btn--primary" id="st-publish-btn" disabled aria-disabled="true" data-st-title="publish_disabled"><span data-st="publish">Publish</span></button>
+        <!-- Publish: never enabled in this phase (a later phase); says so visibly -->
+        <button type="button" class="st-btn st-btn--locked" id="st-publish-btn" disabled aria-disabled="true" data-st-title="publish_disabled" aria-describedby="st-publish-soon"><svg class="st-ic" aria-hidden="true"><use href="#st-lock"/></svg><span class="st-locked__text"><span data-st="publish">Publish</span><small id="st-publish-soon" data-st="coming_soon">Coming soon</small></span></button>
         <div class="st-menu">
-          <button type="button" class="st-iconbtn" id="st-more-btn" aria-haspopup="menu" aria-expanded="false" data-st-aria="more"><svg class="st-ic" aria-hidden="true"><use href="#st-dots"/></svg></button>
-          <div class="st-menu__list" id="st-more-menu" role="menu" hidden>
-            <button type="button" role="menuitem" disabled data-st="menu_history">Version history</button>
-            <button type="button" role="menuitem" disabled data-st="menu_settings">Page settings</button>
-            <button type="button" role="menuitem" disabled data-st="menu_classic">Switch back to the classic page</button>
+          <button type="button" class="st-iconbtn" id="st-more-btn" aria-haspopup="true" aria-expanded="false" aria-controls="st-more-menu" data-st-aria="more"><svg class="st-ic" aria-hidden="true"><use href="#st-dots"/></svg></button>
+          <div class="st-menu__list" id="st-more-menu" role="group" data-st-aria="more" hidden>
+            <div class="st-menu__group">
+              <span class="st-menu__label" id="st-theme-label" data-st="theme">Theme</span>
+              <div class="st-theme" role="radiogroup" aria-labelledby="st-theme-label">
+                <button type="button" class="st-theme__opt" role="radio" data-theme-pref="light"><svg class="st-ic" aria-hidden="true"><use href="#st-sun"/></svg><span data-st="theme_light">Light</span></button>
+                <button type="button" class="st-theme__opt" role="radio" data-theme-pref="dark"><svg class="st-ic" aria-hidden="true"><use href="#st-moon"/></svg><span data-st="theme_dark">Dark</span></button>
+                <button type="button" class="st-theme__opt" role="radio" data-theme-pref="system"><svg class="st-ic" aria-hidden="true"><use href="#st-monitor"/></svg><span data-st="theme_system">System</span></button>
+              </div>
+            </div>
+            <p class="st-menu__info"><svg class="st-ic" aria-hidden="true"><use href="#st-lock"/></svg><span data-st="publish_note">Publishing arrives in a later step. Until then your published page stays exactly as it is.</span></p>
+            <div class="st-menu__sep" aria-hidden="true"></div>
+            <button type="button" disabled data-st="menu_history">Version history</button>
+            <button type="button" disabled data-st="menu_settings">Page settings</button>
+            <button type="button" disabled data-st="menu_classic">Switch back to the classic page</button>
             <p class="st-menu__note" data-st="menu_note">Available once the Studio is connected.</p>
           </div>
         </div>
@@ -218,6 +231,7 @@
           <div id="st-pane-sections" role="tabpanel" aria-labelledby="st-tab-sections" hidden>
             <h2 class="st-h2" data-st="page_sections">Page sections</h2>
             <ol class="st-outline" id="st-outline"></ol>
+            <button type="button" class="st-addbtn" id="st-add-section"><svg class="st-ic" aria-hidden="true"><use href="#st-plus"/></svg><span data-st="add_section">Add Section</span></button>
           </div>
         </div>
       </aside>
@@ -235,8 +249,6 @@
             <button type="button" class="st-device" role="radio" data-device="mobile" data-st-aria="mobile"><svg class="st-ic" aria-hidden="true"><use href="#st-phone"/></svg></button>
           </div>
           <div class="st-bar__right">
-            <button type="button" class="st-iconbtn" id="st-undo-btn" disabled data-st-aria="undo" aria-keyshortcuts="Control+Z Meta+Z"><svg class="st-ic" aria-hidden="true"><use href="#st-undo"/></svg></button>
-            <button type="button" class="st-iconbtn" id="st-redo-btn" disabled data-st-aria="redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"><svg class="st-ic" aria-hidden="true"><use href="#st-redo"/></svg></button>
             <button type="button" class="st-iconbtn st-only-drawers" id="st-open-right" data-st-aria="open_edit"><svg class="st-ic" aria-hidden="true"><use href="#st-sliders"/></svg></button>
           </div>
         </div>
@@ -268,7 +280,7 @@
     </div>
 
     <!-- Page templates -->
-    <section class="st-templates" id="st-templates" aria-label="Page Templates">
+    <section class="st-templates" id="st-templates" aria-label="Page Templates" hidden>
       <button type="button" class="st-templates__toggle" id="st-templates-toggle" aria-expanded="true" aria-controls="st-templates-list">
         <span data-st="templates">Page Templates</span><svg class="st-ic" aria-hidden="true"><use href="#st-chevron"/></svg>
       </button>

@@ -158,7 +158,8 @@ test('the Studio preview (shell): the page HTML it builds has no Cloudinary addr
   const preview = V3.renderDesign(JSON.parse(JSON.stringify(d)), { businessName: 'Musterbäckerei' }, { preview: true }).html;
   const shown = D.localizeHtml(preview);
   assert.ok(!/res\.cloudinary\.com|images\/deals\/starter/.test(shown));
-  assert.equal((shown.match(/class="st-ai"/g) || []).length, 3);
+  // the three Gallery photos and the Hero (Phase C.1: the croissant photo as the demo's Hero image), each labelled
+  assert.equal((shown.match(/class="st-ai"/g) || []).length, 4);
   const shell = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-shell.js'), 'utf8');
   assert.ok(shell.includes('if (DEMO_IMAGES.prepare) DEMO_IMAGES.prepare(function () { preview.setHtml(pageHtml(), 0); });'));
   // the preview frames stay sandboxed with scripts only (never same origin)

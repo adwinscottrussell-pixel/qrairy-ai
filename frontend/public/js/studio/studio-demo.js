@@ -17,7 +17,11 @@
         { label: 'Produkte', target: '/produkte' }, { label: 'Kontakt', target: '/kontakt' }] },
       footer: { text: 'Musterbäckerei · Musterstraße 1 · 89073 Ulm', links: [] },
       pages: [{ id: 'start', title: 'Start', sections: [
+        // Hero image: one of the three approved Deals starter images (as in the Gallery below),
+        // shown with the "AI · KI-generiert" label (js/studio/studio-demo-images.js)
         { id: 's_hero01', type: 'hero', variant: 'split', data: {
+          backgroundImage: 'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_fill,g_auto,h_900,w_1200,f_auto,q_auto/qraivy-deal-starters/bakery-croissants-01.jpg',
+          imageAlt: 'Croissants und Plundergebäck auf einem Holzbrett',
           eyebrow: 'Frisch · Regional · Mit Herz', headline: 'Tradition trifft Genuss', subheadline: 'Unsere Backwaren – täglich frisch\nin Ulm und Umgebung.',
           primary: { text: 'Unsere Angebote', target: '/angebote', icon: 'tag' }, secondary: { text: 'Standorte', target: '/kontakt', icon: 'pin' } } },
         { id: 's_quick01', type: 'buttons', variant: 'cards', data: { items: [

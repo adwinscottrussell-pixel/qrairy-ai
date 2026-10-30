@@ -73,6 +73,12 @@ async function open({ api = true, token = 'tok_anna', lang = 'de', width = 1440,
     return r.continue();
   });
   await page.goto(srv.origin + '/studio.html', { waitUntil: wait });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   return { page, log };
 }
 async function until(fn, what, ms = 5000) {

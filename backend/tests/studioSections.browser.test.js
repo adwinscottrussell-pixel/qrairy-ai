@@ -54,6 +54,12 @@ async function open({ token = 'tok_anna', query = '?slug=anna-cafe', dialog = 'a
     return r.continue();
   });
   await page.goto(srv.origin + '/studio.html' + query, { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   await until(async () => ['loaded', 'signin', 'empty', 'notfound'].includes(await page.$eval('#st-page-status', (n) => n.getAttribute('data-state'))), 'page bar settled');
   return { page, log };
 }
@@ -204,8 +210,8 @@ test('duplicate: a copy right below with a new id; Hero, Deals / Offers, Loyalty
   assert.equal((await state(page)).selected, copy);
   assert.equal(await live(page), '„Buttons“ dupliziert.');
   await page.click('#st-outline .st-outline__item[data-id="s_hero"]');
-  const dup = await page.$eval('#st-outline [data-sec="s_hero"][data-act="duplicate"]', (n) => ({ off: n.getAttribute('aria-disabled'), title: n.title }));
-  assert.deepEqual(dup, { off: 'true', title: 'Nur ein Abschnitt „Hero“ pro Seite' });
+  const dup = await page.$eval('#st-outline [data-sec="s_hero"][data-act="duplicate"]', (n) => ({ off: n.getAttribute('aria-disabled'), title: n.getAttribute('data-tip'), desc: n.getAttribute('aria-description') }));
+  assert.deepEqual(dup, { off: 'true', title: 'Nur ein Abschnitt „Hero“ pro Seite', desc: 'Nur ein Abschnitt „Hero“ pro Seite' });
   await act(page, 's_hero', 'duplicate');
   assert.equal((await types(page)).filter((t) => t === 'hero').length, 1);
   await page.close();
@@ -312,7 +318,7 @@ test('40 sections: Add and Duplicate are refused with the reason; the page stays
   assert.equal((await ids(page)).length, 40);
   await page.click('#st-tab-sections');
   await page.click('#st-outline .st-outline__item[data-id="s_buttons"]');
-  assert.deepEqual(await page.$eval('#st-outline [data-sec="s_buttons"][data-act="duplicate"]', (n) => [n.getAttribute('aria-disabled'), n.title]), ['true', 'Höchstens 40 Abschnitte möglich']);
+  assert.deepEqual(await page.$eval('#st-outline [data-sec="s_buttons"][data-act="duplicate"]', (n) => [n.getAttribute('aria-disabled'), n.getAttribute('data-tip')]), ['true', 'Höchstens 40 Abschnitte möglich']);
   assert.equal((await state(page)).valid, true);
   await page.close();
 });
@@ -341,7 +347,7 @@ test('page switching with unsaved structural changes asks first; another account
   await page.close();
 });
 
-test('desktop and tablet: the selected row’s actions sit below it (never over a row), 32 px / touch 40 px; on a tablet adding opens the edit drawer', async () => {
+test('desktop and tablet: the selected row’s labelled actions sit below it (never over a row), at least 36 px high; on a tablet adding opens the edit drawer', async () => {
   for (const width of [1440, 1280, 1024]) {
     S.resetDesigns();
     const { page, log } = await open({ width });
@@ -352,13 +358,17 @@ test('desktop and tablet: the selected row’s actions sit below it (never over 
       const li = document.querySelector('#st-outline .st-outline__item[data-id="s_buttons"]').parentElement;
       const row = li.querySelector('.st-outline__item').getBoundingClientRect(), bar = li.querySelector('.st-outline__actions').getBoundingClientRect();
       const others = [...document.querySelectorAll('#st-outline > li:not(.is-current) .st-outline__actions')].map((n) => getComputedStyle(n).display);
-      const btn = li.querySelector('.st-outline__act').getBoundingClientRect();
-      return { below: bar.top >= row.bottom - 1, inside: bar.right <= row.right + 1 && bar.left >= row.left - 1, others, btn: Math.round(btn.width), scrollX: document.documentElement.scrollWidth > innerWidth };
+      const acts = [...li.querySelectorAll('.st-outline__act')];
+      const btn = acts[0].getBoundingClientRect();
+      // Phase C.1: labelled actions in two columns, every label shown in full
+      const labels = acts.map((a) => { const s = a.querySelector('.st-outline__actlabel'); return s.scrollWidth <= s.clientWidth + 1 ? s.textContent : 'CUT:' + s.textContent; });
+      return { below: bar.top >= row.bottom - 1, inside: bar.right <= row.right + 1 && bar.left >= row.left - 1, others, btn: Math.round(btn.height), labels, scrollX: document.documentElement.scrollWidth > innerWidth };
     });
     assert.equal(geo.below, true, width + ': actions below the row');
     assert.equal(geo.inside, true, width);
     assert.ok(geo.others.every((d) => d === 'none'), width + ': other rows show no actions');
-    assert.equal(geo.btn, 32);
+    assert.ok(geo.btn >= 36, width + ': action height ' + geo.btn);
+    assert.deepEqual(geo.labels, ['Nach oben', 'Nach unten', 'Duplizieren', 'Entfernen'], width + ': labels in full');
     assert.equal(geo.scrollX, false);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'phaseC-sections-' + width + '.png') });
     await addFromLibrary(page, 'text');

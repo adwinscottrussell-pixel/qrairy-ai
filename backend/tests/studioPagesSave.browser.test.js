@@ -55,6 +55,12 @@ async function open({ token = 'tok_anna', query = '?slug=anna-cafe', dialog = 'a
   });
   const before = S.apiLog.length;
   await page.goto(srv.origin + '/studio.html' + query, { waitUntil: 'networkidle0' });
+  // Phase C.1: the preview starts phone-first; these checks use the desktop frame (picked as an owner would, then loaded)
+  if (await page.evaluate(() => { const b = document.querySelector('button[data-device="desktop"]'); if (!b || !b.offsetParent || b.getAttribute('aria-checked') === 'true') return false; b.click(); return true; })) {
+    const h = await page.$('#st-canvas iframe[data-device="desktop"]'); const f = h && await h.contentFrame();
+    if (f) await f.waitForSelector('[data-v3-id]', { timeout: 5000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 150));
+  }
   await until(async () => ['loaded', 'signin', 'empty', 'notfound', 'error'].includes(await page.$eval('#st-page-status', (n) => n.getAttribute('data-state'))), 'page bar settled');
   return { page, log, api: () => S.apiLog.slice(before).map((c) => c.method + ' ' + c.path) };
 }
@@ -65,7 +71,7 @@ async function until(fn, what, ms = 6000) {
 const ui = (page) => page.evaluate(() => {
   const st = document.getElementById('st-save-status'), btn = document.getElementById('st-save-btn');
   return { save: !btn.disabled, ariaDisabled: btn.getAttribute('aria-disabled'), saveTitle: btn.title, state: st.hidden ? '' : st.getAttribute('data-state'), status: st.hidden ? '' : st.textContent, statusTitle: st.title,
-    conflict: !document.getElementById('st-conflict').hidden, publish: !document.getElementById('st-publish-btn').disabled, mode: !document.getElementById('st-mode').hidden,
+    conflict: !document.getElementById('st-conflict').hidden, publish: !document.getElementById('st-publish-btn').disabled, mode: !document.getElementById('st-sample').hidden,
     page: document.getElementById('st-page-status').getAttribute('data-state'), source: document.getElementById('st-page-status').textContent, selected: document.getElementById('st-page-select').value,
     headline: (window.QraivyStudio.editor.draft().pages[0].sections[0].data || {}).headline, undo: !document.getElementById('st-undo-btn').disabled };
 });
@@ -92,7 +98,7 @@ test('Save Draft: disabled until there is an unsaved change; the states Unsaved 
   const { page, log, api } = await open();
   let u = await ui(page);
   assert.equal(u.page, 'loaded');
-  assert.deepEqual([u.save, u.ariaDisabled, u.state, u.publish, u.mode], [false, 'true', '', false, false], 'freshly opened legacy page: nothing to save, no "not saved" badge');
+  assert.deepEqual([u.save, u.ariaDisabled, u.state, u.publish, u.mode], [false, 'true', '', false, false], 'freshly opened legacy page: nothing to save, no "Beispielseite" label');
   assert.match(u.saveTitle, /Ihre Live-Seite ändert sich nicht/);
   await editHeadline(page, 'Gespeichert im Studio', { replace: true });
   u = await until(async () => { const x = await ui(page); return x.save && x; }, 'Save enabled');
@@ -367,7 +373,7 @@ test('nothing to save without an owner page: the sample page (signed out, anothe
     const { page, api } = await open({ token: tok, query: q });
     await page.evaluate(() => { const ed = window.QraivyStudio.editor; ed.set(ed.sectionIds()[0], ['data', 'headline'], 'Demo geändert'); });
     const u = await ui(page);
-    assert.deepEqual([u.save, u.state, u.mode], [false, '', true], q + ': Save Draft disabled, "not saved" badge stays');
+    assert.deepEqual([u.save, u.state, u.mode], [false, '', true], q + ': Save Draft disabled, labelled "Beispielseite"');
     assert.equal(u.saveTitle, 'Öffnen Sie eine Ihrer Seiten, um einen Entwurf zu speichern.');
     await page.keyboard.down('Control'); await page.keyboard.press('s'); await page.keyboard.up('Control');
     await sleep(150);

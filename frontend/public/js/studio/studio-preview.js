@@ -27,13 +27,27 @@
   var MAX_SCROLL = 10000000;
   // a reveal asked for this long before a reload still applies to it (Phase C: a section just added)
   var REVEAL_MS = 2000;
-  var FRAMES = { desktop: { w: 1280, h: 800, chrome: 30 }, tablet: { w: 820, h: 1180, pad: 14 }, mobile: { w: 390, h: 844, pad: 12 } };
+  // Phase C.1, phone-first: until the owner picks a device, the preview picks
+  // one from the space it has: the phone below AUTO_DESKTOP_MIN px of canvas
+  // width (readable), else the desktop; from DUAL_VIEWPORT px of window width
+  // the desktop and the phone side by side when the canvas has DUAL_MIN px.
+  var AUTO_DESKTOP_MIN = 900, DUAL_VIEWPORT = 1600, DUAL_MIN = 840;
+  // Phase C.2, the phone: a realistic device around the same 390 x 844 page
+  // (the page itself is unchanged): a status bar with the Dynamic Island above
+  // the page (top) and the home indicator below it (bottom), never on it.
+  var FRAMES = { desktop: { w: 1280, h: 800, chrome: 30 }, tablet: { w: 820, h: 1180, pad: 14 }, mobile: { w: 390, h: 844, pad: 16, top: 50, bottom: 22 } };
+  // the status bar's icons (fixed markup: signal, Wi-Fi, battery), decoration only
+  var PHONE_ICONS = '<svg viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>' +
+    '<svg viewBox="0 0 16 12" width="16" height="12" aria-hidden="true"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0z"/><path d="M3.2 6.6a6.8 6.8 0 0 1 9.6 0l-1.5 1.5a4.7 4.7 0 0 0-6.6 0z"/><path d="M.8 4.2a10.2 10.2 0 0 1 14.4 0l-1.5 1.5a8.1 8.1 0 0 0-11.4 0z"/></svg>' +
+    '<svg viewBox="0 0 27 12" width="27" height="12" aria-hidden="true"><rect x=".5" y=".5" width="23" height="11" rx="3.5" fill="none" stroke="currentColor" stroke-opacity=".45"/><rect x="2" y="2" width="20" height="8" rx="2"/><path d="M25 4v4a2 2 0 0 0 0-4z" fill-opacity=".45"/></svg>';
 
   // Added to the preview only (never to a public page). Links do not
   // navigate in the preview: a click selects the section it is in.
   var FRAME_SCRIPT =
     '<style>[data-v3-id]{cursor:pointer}[data-v3-id]:hover{outline:2px dashed rgba(255,90,31,.6);outline-offset:-2px}' +
-    '[data-v3-id].st-sel{outline:3px solid #ff5a1f;outline-offset:-3px}</style>' +
+    '[data-v3-id].st-sel{outline:3px solid #ff5a1f;outline-offset:-3px}' +
+    // the phone frame (390 px wide): no scrollbar, as on a phone (Phase C.2); wider frames unchanged
+    '@media (max-width:480px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}}</style>' +
     '<script>(function(){' +
     'function mark(id,reveal){var all=document.querySelectorAll("[data-v3-id]");for(var i=0;i<all.length;i++){var on=all[i].getAttribute("data-v3-id")===id;' +
     'all[i].classList.toggle("st-sel",on);if(on&&reveal)all[i].scrollIntoView({block:"start",behavior:"smooth"});}}' +
@@ -75,11 +89,20 @@
   // createPreview({ canvas, title(device), onSelect(id) })
   function createPreview(o) {
     var doc = o.canvas.ownerDocument, win = doc.defaultView;
-    var state = { html: '', device: 'desktop', selected: null, scroll: {}, timer: null, nav: '', revealAt: 0 };
+    var state = { html: '', device: 'desktop', auto: true, layout: '', selected: null, scroll: {}, timer: null, nav: '', revealAt: 0 };
 
     function mq(q) { return win.matchMedia && win.matchMedia(q).matches; }
     function phoneOnly() { return mq('(max-width: 767px)'); }
-    function dual() { return mq('(min-width: 1920px)') && state.device === 'desktop'; }
+    function canvasWidth() { var cs = win.getComputedStyle(o.canvas); return o.canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); }
+    function roomForTwo() { return mq('(min-width: ' + DUAL_VIEWPORT + 'px)') && canvasWidth() >= DUAL_MIN; }
+    function dual() { return state.device === 'desktop' && roomForTwo(); }
+    function autoDevice() { return roomForTwo() || canvasWidth() >= AUTO_DESKTOP_MIN ? 'desktop' : 'mobile'; }
+    // the frames to show now (phones: the phone only)
+    function layout() {
+      if (phoneOnly()) return ['mobile'];
+      if (state.auto) state.device = autoDevice();
+      return dual() ? ['desktop', 'mobile'] : [state.device];
+    }
     function frames() { return Array.prototype.slice.call(o.canvas.querySelectorAll('iframe')); }
     function post(ifr, msg) { if (ifr.contentWindow) ifr.contentWindow.postMessage(msg, '*'); }
 
@@ -109,28 +132,58 @@
       // (a section just asked to be shown, e.g. one just added, is scrolled into view in the reloaded page)
       ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[device] || 0, reveal: revealPending() }); });
       ifr.srcdoc = previewHtml(state.html, state.nav);
-      scale.appendChild(ifr);
+      if (device === 'mobile') scale.appendChild(phoneScreen(ifr));
+      else scale.appendChild(ifr);
       frame.appendChild(scale);
       return frame;
+    }
+    // The phone's screen: status bar (time, Dynamic Island, signal, Wi-Fi,
+    // battery), the page, the home indicator; and the side buttons. All of it
+    // decoration (aria-hidden, no pointer events) outside the page itself.
+    function phoneScreen(ifr) {
+      var screen = doc.createElement('div');
+      screen.className = 'st-phone__screen';
+      var bar = doc.createElement('div');
+      bar.className = 'st-phone__status';
+      bar.setAttribute('aria-hidden', 'true');
+      var time = doc.createElement('span'); time.className = 'st-phone__time'; time.textContent = '9:41';
+      var island = doc.createElement('span'); island.className = 'st-phone__island';
+      var icons = doc.createElement('span'); icons.className = 'st-phone__icons'; icons.innerHTML = PHONE_ICONS;
+      bar.appendChild(time); bar.appendChild(island); bar.appendChild(icons);
+      var home = doc.createElement('div');
+      home.className = 'st-phone__home';
+      home.setAttribute('aria-hidden', 'true');
+      home.appendChild(doc.createElement('i'));
+      screen.appendChild(bar); screen.appendChild(ifr); screen.appendChild(home);
+      var frag = doc.createDocumentFragment();
+      ['action', 'up', 'down', 'power'].forEach(function (k) {
+        var b = doc.createElement('span'); b.className = 'st-phone__btn st-phone__btn--' + k; b.setAttribute('aria-hidden', 'true'); frag.appendChild(b);
+      });
+      frag.appendChild(screen);
+      return frag;
     }
 
     function render() {
       o.canvas.textContent = '';
-      var devices = phoneOnly() ? ['mobile'] : dual() ? ['desktop', 'mobile'] : [state.device];
+      var devices = layout();
+      state.layout = devices.join(',');
+      if (o.onLayout) o.onLayout(state.device);
       devices.forEach(function (d) { o.canvas.appendChild(makeFrame(d)); });
-      fit();
+      fit(true);
     }
 
-    function fit() {
+    function fit(rendered) {
+      // the space changed so much that other frames fit better (phone-first, side by side)
+      if (rendered !== true && layout().join(',') !== state.layout) { render(); return; }
       var c = o.canvas;
       var cs = win.getComputedStyle(c);
       var availW = c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
       var availH = c.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       var list = c.querySelectorAll('.st-frame');
       var gap = 20;
-      var outer = function (d) { var f = FRAMES[d]; return { w: f.w + 2 * (f.pad || 0) + (d === 'desktop' ? 2 : 0), h: f.h + 2 * (f.pad || 0) + (f.chrome || 0) + (d === 'desktop' ? 2 : 0) }; };
+      var outer = function (d) { var f = FRAMES[d]; return { w: f.w + 2 * (f.pad || 0) + (d === 'desktop' ? 2 : 0), h: f.h + 2 * (f.pad || 0) + (f.chrome || 0) + (f.top || 0) + (f.bottom || 0) + (d === 'desktop' ? 2 : 0) }; };
       var sizes = []; list.forEach(function (fr) { sizes.push(outer(fr.getAttribute('data-device'))); });
-      // Side by side (>= 1920 px): the phone as tall as the space allows, the
+      // Side by side (from DUAL_VIEWPORT px): the phone as tall as the space allows, the
       // desktop frame takes the remaining width (as in the approved mockup).
       var phoneScale = null;
       if (list.length === 2) phoneScale = Math.min(1, availH / sizes[1].h);
@@ -202,7 +255,8 @@
       render: render, fit: fit, setHtml: setHtml, setNavScript: setNavScript, select: select, phoneOnly: phoneOnly,
       html: function () { return state.html; },
       device: function () { return state.device; },
-      setDevice: function (d) { if (FRAMES[d]) { state.device = d; render(); } },
+      // a device the owner picks stays (no more automatic choice)
+      setDevice: function (d) { if (FRAMES[d]) { state.auto = false; state.device = d; render(); } },
     };
   }
 
