@@ -15,6 +15,17 @@
  *                                         the owner's real deals, read only
  *                                         (studio-deals-data.js). Never the
  *                                         production API.
+ *   qraivy-studio-v3-staging.vercel.app  Studio V3 staging. The isolated
+ *   (https, exact name only)              Studio V3 staging API (Railway
+ *                                         project qraivy-studio-v3-staging,
+ *                                         its own private database, signed-in
+ *                                         allowlist) with the sign-in of the
+ *                                         separate Clerk DEVELOPMENT
+ *                                         application (pk_test). That Vercel
+ *                                         project serves the Studio files
+ *                                         only and is behind Vercel
+ *                                         Authentication. Never the
+ *                                         production API or production Clerk.
  *   anything else (www.qraivy.com, the   not available yet. The Studio does
  *   staging sites, the public qraivy-ai   not start and sends no request.
  *   Vercel previews, per-deployment
@@ -39,6 +50,9 @@
   // Clerk key (the same as deals.html)
   var CONNECTED = {
     'studio-preview.qraivy.com': { api: 'https://qraivy-deals-api-deals-preview.up.railway.app', clerk: 'pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ', builder: 'https://deals-preview.qraivy.com/deals.html' },
+    // Studio V3 staging: the isolated Studio V3 staging API (never production) and the
+    // separate Clerk DEVELOPMENT application's public key. No Deal Builder in that environment.
+    'qraivy-studio-v3-staging.vercel.app': { api: 'https://studio-v3-api-production.up.railway.app', clerk: 'pk_test_YnJpZWYtc3dpbmUtNDEzMy5jbGVyay5hY2NvdW50cy5kZXYk' },
   };
   function resolve(hostname, protocol) {
     var host = String(hostname || '').toLowerCase();

@@ -57,7 +57,8 @@ test('routing: local, and preview on the one Studio staging address (https only)
   for (const p of ['http:', 'file:', '', undefined]) assert.deepEqual(resolve('qraivy-studio-staging.vercel.app', p), { mode: 'unavailable', api: '', blocked: true }, 'preview needs https: ' + p);
   // Deals connection: exactly one connected preview, https only, with the isolated
   // Deals preview API (never production) and the Deal Builder of the same environment
-  assert.deepEqual(JSON.parse(JSON.stringify(ctx0.window.QraivyStudioRouting.CONNECTED_HOSTS)), ['studio-preview.qraivy.com'], 'exactly one connected address');
+  // (D0 Step 4B: plus the Studio V3 staging address, tests/studioV3StagingRouting.test.js)
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx0.window.QraivyStudioRouting.CONNECTED_HOSTS)), ['studio-preview.qraivy.com', 'qraivy-studio-v3-staging.vercel.app'], 'exactly two connected addresses');
   const connected = { mode: 'preview', api: 'https://qraivy-deals-api-deals-preview.up.railway.app', blocked: false, clerk: 'pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ', builder: 'https://deals-preview.qraivy.com/deals.html' };
   assert.deepEqual(resolve('studio-preview.qraivy.com', 'https:'), connected);
   assert.deepEqual(resolve('STUDIO-PREVIEW.qraivy.com', 'https:'), connected);
@@ -92,8 +93,10 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
     // the routing file names the one preview address it accepts (a hostname
     // it compares, never a URL it calls); no other Vercel address anywhere
     if (f === 'js/studio/studio-routing.js') {
-      // its only addresses: the connected preview's API and Deal Builder (studioDealsConnection.test.js)
-      assert.deepEqual(src.match(/https?:\/\/[^'\s]*/g), ['https://qraivy-deals-api-deals-preview.up.railway.app', 'https://deals-preview.qraivy.com/deals.html'], 'the routing file names exactly the connected addresses');
+      // its only addresses: the connected preview's API and Deal Builder (studioDealsConnection.test.js),
+      // and the Studio V3 staging API (D0 Step 4B, studioV3StagingRouting.test.js)
+      assert.deepEqual(src.match(/https?:\/\/[^'\s]*/g), ['https://qraivy-deals-api-deals-preview.up.railway.app', 'https://deals-preview.qraivy.com/deals.html', 'https://studio-v3-api-production.up.railway.app'], 'the routing file names exactly the connected addresses');
+      src = src.split('qraivy-studio-v3-staging.vercel.app').join('').split('https://studio-v3-api-production.up.railway.app').join('');
       src = src.split('qraivy-studio-staging.vercel.app').join('').split('https://qraivy-deals-api-deals-preview.up.railway.app').join('');
     }
     for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /serviceWorker/, /api\.qraivy\.com/, /railway\.app/, /\.vercel\.app/]) {
