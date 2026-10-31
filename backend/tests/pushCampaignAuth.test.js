@@ -134,8 +134,13 @@ test('managers: no other account (StadtPocket business members, city managers) g
     'backend/src/services/staffPin.js'];   // Phase 0 S2/S5: staff PIN hashing and limits (tests/staffPinAuth.test.js)
   // Studio V3 Phase D1: its middleware edits (pinned exactly by lpV3Scope.test.js, helpers/studioD1Files.js);
   // lpController.js stays listed: its push handlers are compared below
-  const { isD1Change } = require('./helpers/studioD1Files');
-  const d1 = (f) => f !== 'backend/src/controllers/lpController.js' && isD1Change(path.join(__dirname, '..', '..'), f);
+  // ...and its one new middleware file, only while it is exactly as D1 created it (9323b29)
+  const { isD1Change, D1_NEW_FILES } = require('./helpers/studioD1Files');
+  const root = path.join(__dirname, '..', '..');
+  const lf = (s) => s.replace(/\r\n/g, '\n');
+  const d1New = (f) => f === 'backend/src/middleware/publicDraftGuard.js' && D1_NEW_FILES.includes(f)
+    && lf(fs.readFileSync(path.join(root, f), 'utf8')) === lf(execFileSync('git', ['show', '9323b29:' + f], { cwd: root, encoding: 'utf8' }));
+  const d1 = (f) => f !== 'backend/src/controllers/lpController.js' && (isD1Change(root, f) || d1New(f));
   assert.deepEqual(changed.filter((f) => !later.includes(f) && !d1(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
