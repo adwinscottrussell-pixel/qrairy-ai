@@ -226,7 +226,9 @@ const phoneGeo = (page) => page.evaluate(() => {
   const cx = fr.left + fr.width / 2, cy = fr.top + fr.height / 2;
   const deco = [...f.querySelectorAll('.st-phone__status, .st-phone__home, .st-phone__btn')];
   return { w: ifr.getAttribute('width'), h: ifr.getAttribute('height'), above: br.bottom <= fr.top + 0.5, below: hr.top >= fr.bottom - 0.5, islandInBar: ir.top >= br.top && ir.bottom <= br.bottom,
-    hit: document.elementFromPoint(cx, cy) === ifr, hitTop: document.elementFromPoint(cx, fr.top + 3) === ifr, hitBottom: document.elementFromPoint(cx, fr.bottom - 3) === ifr,
+    hit: document.elementFromPoint(cx, cy) === ifr, hitTop: document.elementFromPoint(cx, fr.top + 3) === ifr,
+    // the phone keeps its full size and may be taller than the canvas, which then scrolls: check the bottom scrolled into view
+    hitBottom: (() => { const c = document.getElementById('st-canvas'), top = c.scrollTop; c.scrollTop = c.scrollHeight; const b = r(ifr); const hitB = document.elementFromPoint(b.left + b.width / 2, b.bottom - 3) === ifr; c.scrollTop = top; return hitB; })(),
     decoHidden: deco.every((n) => n.getAttribute('aria-hidden') === 'true'), decoNoPointer: deco.every((n) => getComputedStyle(n).pointerEvents === 'none'),
     time: bar.textContent.trim(), icons: bar.querySelectorAll('svg').length, inside: r(f).right <= innerWidth && r(f).left >= 0, frameW: Math.round(r(f).width) };
 });

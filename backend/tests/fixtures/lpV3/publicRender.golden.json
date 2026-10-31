@@ -5,8 +5,8 @@
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 14284,
-      "sha256": "8814d99b4b2699029a94d11ce3f743bae3e440c806eabfe9dad1fc25bf0e5a2a",
+      "bytes": 14383,
+      "sha256": "85a9dd3629c79ab647d347a33df0a2bccf0ca4c84e9063f6d0a2d561cb858827",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 14284,
-      "sha256": "8814d99b4b2699029a94d11ce3f743bae3e440c806eabfe9dad1fc25bf0e5a2a",
+      "bytes": 14383,
+      "sha256": "85a9dd3629c79ab647d347a33df0a2bccf0ca4c84e9063f6d0a2d561cb858827",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,43 +25,43 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16249,
-      "sha256": "44f1fa352461a7ea01f5276e363ad6056c804fd8b5009c9f6523283298248295",
+      "bytes": 16348,
+      "sha256": "f891511d13d6990c89ea6077868e210abed93ae826e43b239157a751eb3b7b7c",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 0,
-      "bytes": 8891,
-      "sha256": "4d39743e86e16ee5a9cbacd9edbeecb9251c6a3aa8eb17d85fa0666c6a2c4017",
+      "bytes": 8990,
+      "sha256": "796cb5193b1d6c2aec05f4a6380a2d511e9ec3e5f0fb728c9420f7f6c0732a85",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 0,
-      "bytes": 8592,
-      "sha256": "5cb6cf6212cf67c9a85ab4cd80fc58325683edc662207cde87c9b3b8ab2ea05d",
+      "bytes": 8691,
+      "sha256": "a49a7a0c57768ea5f243b02a4efcc379860d2edd41696ebe122d4070d0ecc3c0",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16274,
-      "sha256": "297b95c0e7ca4fc56a6097079b660d084ad04215bfeb4d3b2aec254504b2932c",
+      "bytes": 16373,
+      "sha256": "a8118cdea0057739c797982a0435069dae35886c620558f062d0655e690ad3fe",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 1,
-      "bytes": 8916,
-      "sha256": "ff59d8ce66afd7e250207d2c9afea19e673e2766e8a25734271b3002307926e6",
+      "bytes": 9015,
+      "sha256": "fb939506a5525200e2c8bb74a6d7485d60d47eb3664edb87df0396ae69abd02f",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 1,
-      "bytes": 8617,
-      "sha256": "4372ce505b18fa01af456281377120bf21b93fef815a4af43dc0e4f08e626cae",
+      "bytes": 8716,
+      "sha256": "679a837f19e7344baa1a5fcb231063ab25b0b73384c497156386d54237f2b42e",
       "skipped": []
     }
   ],
@@ -112,6 +112,16 @@
         "allRenderedVariantsHeroSimple"
       ],
       "reason": "Phase C section limits (owner-approved Option A): a page may hold at most one Hero, so the three-Hero fixture is split into one-Hero pages. Before the change the pre-Phase-C core.js (50393fd) reproduced all four previous entries exactly; the new entries were generated with that unchanged renderer, the Phase C core.js renders them identically, and the head, header, footer and all 16 rendered sections are byte-identical to the previous allRenderedVariants page in both contexts (verified); localBusiness entries unchanged"
+    },
+    {
+      "date": "2026-10-31",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants",
+        "allRenderedVariantsHeroSplit",
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "Hero mobile spacing and badge (owner-approved after the Studio V3 staging visual review): .v3-eyebrow font-size 11px -> 12px; split Hero on phones .v3-hero-media{margin-top:20px} (20px between the buttons and the stacked image), reset to margin-top:0 from 768px (side-by-side grid unchanged). Before the change the committed core.js (14b0fb6) reproduced every previous entry exactly; each new render equals that render with exactly these three CSS edits and nothing else (verified)"
     }
   ]
 }

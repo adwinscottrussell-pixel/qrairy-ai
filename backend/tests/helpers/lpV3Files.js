@@ -87,6 +87,8 @@ const LPV3_FILES = [
   // Phase D0 Step 4B: the Studio V3 staging address in studio-routing.js
   // (the Clerk DEVELOPMENT key and the isolated staging API only)
   'backend/tests/studioV3StagingRouting.test.js',
+  // Hero mobile spacing, badge size and the phone preview scale (2026-10-31 visual review)
+  'backend/tests/studioHeroMobile.browser.test.js',
   // Phase A / B (customer pages): the owner's own pages for the Studio
   // (GET /studio/pages, GET and PUT /studio/pages/:slug/design: read, and
   // save the Studio draft), the Studio's page selector, Save Draft and their tests

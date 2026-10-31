@@ -32,6 +32,8 @@
   // width (readable), else the desktop; from DUAL_VIEWPORT px of window width
   // the desktop and the phone side by side when the canvas has DUAL_MIN px.
   var AUTO_DESKTOP_MIN = 900, DUAL_VIEWPORT = 1600, DUAL_MIN = 840;
+  // side by side: the phone at least this scale (when the width allows), the desktop at least this wide
+  var PHONE_MIN_DUAL = 0.9, DESKTOP_MIN_DUAL = 400;
   // Phase C.2, the phone: a realistic device around the same 390 x 844 page
   // (the page itself is unchanged): a status bar with the Dynamic Island above
   // the page (top) and the home indicator below it (bottom), never on it.
@@ -183,15 +185,17 @@
       var gap = 20;
       var outer = function (d) { var f = FRAMES[d]; return { w: f.w + 2 * (f.pad || 0) + (d === 'desktop' ? 2 : 0), h: f.h + 2 * (f.pad || 0) + (f.chrome || 0) + (f.top || 0) + (f.bottom || 0) + (d === 'desktop' ? 2 : 0) }; };
       var sizes = []; list.forEach(function (fr) { sizes.push(outer(fr.getAttribute('data-device'))); });
-      // Side by side (from DUAL_VIEWPORT px): the phone as tall as the space allows, the
-      // desktop frame takes the remaining width (as in the approved mockup).
+      // Side by side (from DUAL_VIEWPORT px): the phone as tall as the space allows, but
+      // not below PHONE_MIN_DUAL (readable; the canvas scrolls) while the desktop frame
+      // keeps at least DESKTOP_MIN_DUAL px; the desktop takes the remaining width.
       var phoneScale = null;
-      if (list.length === 2) phoneScale = Math.min(1, availH / sizes[1].h);
+      if (list.length === 2) phoneScale = Math.min(1, Math.max(availH / sizes[1].h, PHONE_MIN_DUAL), (availW - gap - DESKTOP_MIN_DUAL) / sizes[1].w);
       list.forEach(function (fr, i) {
         var d = fr.getAttribute('data-device'), sz = sizes[i], s;
         if (list.length === 2) {
           s = d === 'mobile' ? phoneScale : Math.min(1, (availW - gap - sizes[1].w * phoneScale) / sz.w, availH / sz.h);
-        } else if (d === 'desktop' || phoneOnly()) s = Math.min(1, availW / sz.w);
+        // the phone (and every frame on phones) by width only: a taller phone scrolls in the canvas
+        } else if (d === 'desktop' || d === 'mobile' || phoneOnly()) s = Math.min(1, availW / sz.w);
         else s = Math.min(1, availW / sz.w, Math.max(availH, 480) / sz.h);
         s = Math.max(0.1, s);
         var scaleBox = fr.firstChild, ifr = scaleBox.querySelector('iframe');
