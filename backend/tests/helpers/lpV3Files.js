@@ -120,6 +120,13 @@ const LPV3_FILES = [
   'backend/tests/welcomeUnified.test.js',
   'backend/tests/slugReservation.test.js',
   'docs/architecture/LP_STUDIO_V3.md',
+  // Phase D1 (secure draft creation): its new files (helpers/studioD1Files.js),
+  // and the older scope guards that now allow its exact edits
+  ...require('./studioD1Files').D1_NEW_FILES,
+  'backend/tests/lpStagingClerkAuth.test.js',
+  'backend/tests/lpStagingGate.test.js',
+  'backend/tests/dealsPreviewSafety.test.js',
+  'backend/tests/pushCampaignAuth.test.js',
 ];
 
 // The browser copy of core.js is pinned by tests/lpV3CoreCopy.test.js (byte for byte
@@ -127,12 +134,18 @@ const LPV3_FILES = [
 // The Studio files (new, loaded only by studio.html) are pinned by
 // tests/studioShell.test.js and lpV3Scope.test.js.
 const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/js/lpV3/gallery-nav.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio'];
+// Phase D1: its new files, and the five production files it changes. Older
+// guards skip them; lpV3Scope.test.js pins each changed file to exactly its
+// D1 edits on top of ae2861e (helpers/studioD1Files.js d1Only).
+const D1 = require('./studioD1Files');
 const LPV3_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261021090000_add_page_design_v3']
-  .concat(LPV3_NEW_FRONTEND.map((f) => ':(exclude)' + f));
+  .concat(LPV3_NEW_FRONTEND.map((f) => ':(exclude)' + f))
+  .concat(D1.D1_NEW_FILES.concat(D1.D1_CHANGED_FILES).map((f) => ':(exclude)' + f));
 
 // schema.prisma (LF line endings) without the V3 column block and models.
+// Phase D1: also without its StudioDraftCreation model (studioD1Files.js).
 function withoutV3(schema) {
-  let s = schema;
+  let s = D1.withoutD1(schema);
   const colStart = s.indexOf('  // Landing Page Studio V3 (2026-10, additive). Which renderer');
   if (colStart !== -1) {
     const colEnd = s.indexOf('pageDesign PageDesign?\n\n', colStart);

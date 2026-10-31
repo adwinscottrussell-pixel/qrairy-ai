@@ -1295,6 +1295,12 @@ async function handlePublishLP(req, res) {
       if (existing.userId !== userId) {
         return res.status(403).json({ error: 'Forbidden' });
       }
+      // Studio V3 (Phase D1): an unpublished Studio draft is never written or
+      // made live through this legacy route, not even by its owner. It is
+      // changed in the Studio only (and published there, later).
+      if (existing.status === 'draft') {
+        return res.status(409).json({ error: 'studio_draft', message: 'This page is an unpublished Studio draft. Please open it in the Studio.' });
+      }
     }
     // ── A deleted page's address stays reserved while its data remains ─
     // (services/slugReservation.js): a new page on that slug would inherit

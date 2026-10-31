@@ -183,7 +183,11 @@ test('the only page-creating path is guarded, after the ownership gate and befor
   const root = path.join(__dirname, '..', 'src');
   const creators = [];
   (function walk(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else if (f.endsWith('.js') && /landingPage\.(create|upsert|createMany)\(/.test(fs.readFileSync(p, 'utf8'))) creators.push(path.relative(root, p).split(path.sep).join('/')); } })(root);
-  assert.deepEqual(creators, ['controllers/lpController.js']);
+  // ...and Studio V3 drafts (Phase D1): a draft's address is checked the same way before it is taken
+  assert.deepEqual(creators, ['controllers/lpController.js', 'lpV3/studioDraftsController.js']);
+  const studio = lf(fs.readFileSync(resolve('src', 'lpV3', 'studioDraftsController.js'), 'utf8'));
+  assert.ok(studio.includes('if ((await retainedDataFor(slug)).length) continue;'));
+  assert.equal(studio.split('landingPage.create(').length - 1, 1);
   assert.equal((src.match(/landingPage\.upsert\(/g) || []).length, 2, 'both upserts are inside handlePublishLP');
   assert.equal((fn.match(/landingPage\.upsert\(/g) || []).length, 2);
 });

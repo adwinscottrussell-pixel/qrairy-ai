@@ -178,7 +178,9 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
   const { LPV3_FILES, indexOnlyStudioMount } = require('./helpers/lpV3Files');
   // and Studio V3 Phase A: index.js differs from 12df76d by exactly the Studio pages mount
   const indexOk = indexOnlyStudioMount(ROOT, '12df76d');
-  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f) || LPV3_FILES.includes(f) || (f === 'backend/src/index.js' && indexOk), 'unexpected change: ' + f);
+  // and Studio V3 Phase D1: its production edits, exactly (tests/helpers/studioD1Files.js)
+  const { isD1Change } = require('./helpers/studioD1Files');
+  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f) || LPV3_FILES.includes(f) || (f === 'backend/src/index.js' && indexOk) || isD1Change(ROOT, f), 'unexpected change: ' + f);
   // each Admin page gained exactly the one sidebar line (smart-qr-detail.html: after undoing
   // exactly the Phase 0 edit, tests/helpers/phase0Revert.js)
   const { revertSqd0 } = require('./helpers/phase0Revert');

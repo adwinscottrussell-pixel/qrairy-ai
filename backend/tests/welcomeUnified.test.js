@@ -291,7 +291,8 @@ test('scope: wallet passes, wallet routes, StadtPocket and the database are unto
     'backend/src/services/stadtPocketContext.js', 'backend/prisma', ...require('./helpers/push55c3Revert').PRISMA_EXCLUDES, ...require('./helpers/lpV3Files').LPV3_EXCLUDES, 'frontend/public/manifest.json', 'frontend/public/sw.js', 'backend/public/sw.js').trim();
   assert.equal(changed, '');
   // lpRoutes.js: unchanged apart from the push campaign security hotfix (sign-in on two push routes)
-  const routes = lf(fs.readFileSync(path.join(ROOT, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
+  // (Studio V3 Phase D1's draft guard taken out exactly first: helpers/studioD1Files.js)
+  const routes = require('./helpers/studioD1Files').revertD1('backend/src/routes/lpRoutes.js', fs.readFileSync(path.join(ROOT, 'backend', 'src', 'routes', 'lpRoutes.js'), 'utf8'))
     .replace("// The page's own account only (handlers check ownership): device counts and\n// campaign texts are that business's data.\n", '')
     .replace("count', requireAuth, handlePushCount", "count', handlePushCount").replace("history', requireAuth, handlePushHistory", "history', handlePushHistory")
     // and the subscriber data hotfix (tests/subscriberDataAuth.test.js): sign-in on the email list route

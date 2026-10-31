@@ -192,7 +192,8 @@ test('isPlatformAdmin follows requireAdmin exactly and denies on any doubt', asy
   assert.ok(mw.includes("if (meta.role !== 'admin') {"), 'requireAdmin uses the same rule');
   const svc = lf(fs.readFileSync(resolve('src', 'services', 'platformAdmin.js'), 'utf8'));
   assert.ok(svc.includes(".role === 'admin';"));
-  assert.equal(execFileSync('git', ['diff', '4ed4287', '--name-only', '--', 'backend/src/middleware'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim(), '', 'sign-in middleware unchanged');
+  // (Studio V3 Phase D1's middleware edits are pinned exactly by lpV3Scope.test.js, helpers/studioD1Files.js)
+  assert.equal(execFileSync('git', ['diff', '4ed4287', '--name-only', '--', 'backend/src/middleware', ...require('./helpers/studioD1Files').D1_EXCLUDES], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8' }).trim(), '', 'sign-in middleware unchanged');
 });
 
 test('after deletion the address cannot be taken over: anyone (also signed out, also the old owner) gets 409', async () => {

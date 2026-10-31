@@ -19,10 +19,14 @@ const fs = require('fs');
 // Phase A: index.js may differ from ae2861e by exactly the Studio pages mount (helpers/lpV3Files.js)
 const INDEX_OK = indexOnlyStudioMount(ROOT, 'ae2861e');
 const mountOnly = (f) => f === 'backend/src/index.js' && INDEX_OK;
+// Phase D1: the existing production files it changes, each by exactly its own edits (helpers/studioD1Files.js)
+const { D1_CHANGED_FILES, d1Only, withoutD1 } = require('./helpers/studioD1Files');
+const D1_OK = new Set(D1_CHANGED_FILES.filter((f) => d1Only(ROOT, 'ae2861e', f)));
+const allowedChange = (f) => mountOnly(f) || D1_OK.has(f);
 
 test('Phase 1 changes only its own files', () => {
   const changed = git('diff', 'ae2861e', '--name-only').concat(git('ls-files', '--others', '--exclude-standard'));
-  const extra = [...new Set(changed)].filter((f) => !PHASE1_FILES.includes(f) && !mountOnly(f));
+  const extra = [...new Set(changed)].filter((f) => !PHASE1_FILES.includes(f) && !allowedChange(f));
   assert.deepEqual(extra, [], 'unexpected changes');
 });
 
@@ -35,26 +39,31 @@ test('customer-facing code is untouched (public pages, routes, server, staging, 
   const { LPV3_NEW_FRONTEND } = require('./helpers/lpV3Files');
   const isNew = (f) => LPV3_NEW_FRONTEND.some((p) => f === p || f.startsWith(p + '/'));
   const changed = git('diff', 'ae2861e', '--name-status', '--', ...protectedPaths).concat(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).map((f) => '?\t' + f));
-  assert.deepEqual(changed.filter((l) => !isNew(l.split('\t')[1]) && !mountOnly(l.split('\t')[1])), []);
-  for (const l of changed) assert.ok(/^[A?]\t/.test(l) || mountOnly(l.split('\t')[1]), 'only new files, nothing existing replaced: ' + l);
+  // Phase D1 also adds its own new backend files (draft policy and controller, the public draft guard)
+  const { D1_NEW_FILES } = require('./helpers/studioD1Files');
+  const isNewFile = (f) => isNew(f) || D1_NEW_FILES.includes(f);
+  assert.deepEqual(changed.filter((l) => !isNewFile(l.split('\t')[1]) && !allowedChange(l.split('\t')[1])), []);
+  for (const l of changed) assert.ok(/^[A?]\t/.test(l) || allowedChange(l.split('\t')[1]), 'only new files, nothing existing replaced: ' + l);
+  assert.deepEqual([...D1_OK].sort(), D1_CHANGED_FILES.slice().sort(), 'each D1 production file differs by exactly the D1 edits');
 });
 
 test('older scope guards: exactly these now allow the V3 files, and only the V3 lines', () => {
   // existing tests that were edited (M); every V3 / Studio test is a new file (A)
   const guards = git('diff', 'ae2861e', '--name-only', '--diff-filter=M', '--', 'backend/tests');
-  assert.deepEqual(guards.sort(), ['backend/tests/academyPage.test.js', 'backend/tests/adminNavShell.test.js', 'backend/tests/dealImageMaster.test.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingFrontend.test.js',
-    'backend/tests/lpStagingRouting.test.js', 'backend/tests/lpVoicePreview.test.js', 'backend/tests/pushLocalization.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'backend/tests/welcomeUnified.test.js']);
+  assert.deepEqual(guards.sort(), ['backend/tests/academyPage.test.js', 'backend/tests/adminNavShell.test.js', 'backend/tests/dealImageMaster.test.js', 'backend/tests/dealsPreviewSafety.test.js', 'backend/tests/lpDeleteAuth.test.js', 'backend/tests/lpStagingClerkAuth.test.js', 'backend/tests/lpStagingFrontend.test.js', 'backend/tests/lpStagingGate.test.js',
+    'backend/tests/lpStagingRouting.test.js', 'backend/tests/lpVoicePreview.test.js', 'backend/tests/pushCampaignAuth.test.js', 'backend/tests/pushLocalization.test.js', 'backend/tests/pushPageSubscriptions.test.js', 'backend/tests/slugReservation.test.js', 'backend/tests/welcomeUnified.test.js']);
   const lf = (s) => s.replace(/\r\n/g, '\n');
   const now = lf(fs.readFileSync(path.join(ROOT, 'backend', 'prisma', 'schema.prisma'), 'utf8'));
   const then = lf(execFileSync('git', ['show', 'ae2861e:backend/prisma/schema.prisma'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
-  assert.equal(withoutV3(now), then, 'schema.prisma: only the V3 blocks were added');
+  assert.equal(withoutV3(withoutD1(now)), then, 'schema.prisma: only the V3 blocks (and the D1 model) were added');
 });
 
 test('nothing outside the new lpV3 module uses it yet', () => {
   let users = [];
   try { users = git('grep', '-l', 'lpV3', '--', 'backend/src'); } catch (e) { if (e.status !== 1) throw e; } // 1 = no match
   // Phase A: the server entry point mounts the Studio pages routes (exactly that, INDEX_OK)
-  assert.deepEqual(users.filter((f) => !f.startsWith('backend/src/lpV3/') && !mountOnly(f)), []);
+  // Phase D1: its production edits name lpV3/draftPolicy.js in comments only (pinned by d1Only)
+  assert.deepEqual(users.filter((f) => !f.startsWith('backend/src/lpV3/') && !allowedChange(f)), []);
 });
 
 (async () => {

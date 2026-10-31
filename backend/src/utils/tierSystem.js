@@ -158,11 +158,13 @@ function requireCap(cap) {
 
 // ── Smart QR Page usage ───────────────────────────────────────────────────────
 // Authoritative Smart QR Page usage: LandingPage records owned by the user
-// (drafts and StadtPocket-linked pages included). Legacy QR.businessName
-// records and basic/static QR codes are not Smart QR Pages.
+// (StadtPocket-linked pages included). Unpublished Studio drafts
+// (status 'draft', Phase D1) are not counted: they have their own limit
+// (lpV3/draftPolicy.js). Legacy QR.businessName records and basic/static QR
+// codes are not Smart QR Pages.
 async function countSmartPages(userId) {
   const prisma = require('./prismaClient');
-  return prisma.landingPage.count({ where: { userId } });
+  return prisma.landingPage.count({ where: { userId, status: { not: 'draft' } } });
 }
 
 // ── Start trial for a user ────────────────────────────────────────────────────

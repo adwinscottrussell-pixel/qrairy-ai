@@ -24,6 +24,8 @@ const V3 = require('../src/lpV3/core');
 const { requireAuth } = require('../src/middleware/auth');
 const studioRoutes = require('../src/lpV3/studioPagesRoutes');
 const C = require('../src/lpV3/studioPagesController');
+const { requireVerifiedEmail } = require('../src/lpV3/draftPolicy');
+const { createStudioDraft } = require('../src/lpV3/studioDraftsController');
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -38,16 +40,15 @@ async function get(p, token, init) {
 const pagesBefore = S.copy(S.db.pages);
 const designsBefore = S.copy(S.db.pageDesigns);
 
-test('every route runs requireAuth first, then the controller; mounted at /studio in the server entry point', () => {
+test('every route runs requireAuth first, then the controller (writes: the verified-email check in between); mounted at /studio in the server entry point', () => {
   const routes = studioRoutes.stack.filter((l) => l.route).map((l) => ({ path: l.route.path, methods: Object.keys(l.route.methods), handlers: l.route.stack.map((s) => s.handle) }));
-  assert.deepEqual(routes.map((r) => r.path + ' ' + r.methods.join(',')), ['/pages get', '/pages/:slug/design get', '/pages/:slug/design put'], 'two GETs and the one PUT (Save Draft)');
-  assert.equal(routes[0].handlers[0], requireAuth);
-  assert.equal(routes[0].handlers[1], C.listStudioPages);
-  assert.equal(routes[1].handlers[0], requireAuth);
-  assert.equal(routes[1].handlers[1], C.getStudioPageDesign);
-  assert.equal(routes[2].handlers[0], requireAuth);
-  assert.equal(routes[2].handlers[1], C.saveStudioPageDesign);
-  assert.equal(routes.every((r) => r.handlers.length === 2), true, 'nothing else in between (no plan or trial check)');
+  assert.deepEqual(routes.map((r) => r.path + ' ' + r.methods.join(',')), ['/pages get', '/pages/:slug/design get', '/pages/:slug/design put', '/drafts post'], 'two GETs, the PUT (Save Draft) and the POST (create a draft, Phase D1)');
+  assert.deepEqual(routes[0].handlers, [requireAuth, C.listStudioPages]);
+  assert.deepEqual(routes[1].handlers, [requireAuth, C.getStudioPageDesign]);
+  // Phase D1: creating and changing a draft need a verified email address
+  assert.deepEqual(routes[2].handlers, [requireAuth, requireVerifiedEmail, C.saveStudioPageDesign]);
+  assert.deepEqual(routes[3].handlers, [requireAuth, requireVerifiedEmail, createStudioDraft]);
+  // nothing else in between (no plan or trial check)
   const index = require('fs').readFileSync(path.join(__dirname, '..', 'src', 'index.js'), 'utf8');
   assert.ok(index.includes("app.use('/studio', require('./lpV3/studioPagesRoutes'));"));
 });

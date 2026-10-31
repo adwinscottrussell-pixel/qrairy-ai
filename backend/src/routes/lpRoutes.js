@@ -1,7 +1,14 @@
 const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
+const { publicDraftGuard } = require('../middleware/publicDraftGuard');
 const router  = express.Router();
+// Studio V3 drafts are private (Phase D1): every signed-out route below that
+// works with a page's slug answers 404 for a draft (middleware/publicDraftGuard.js).
+// Not guarded, on purpose: GET /lp/:slug (handleServeLP answers 404 for a
+// draft itself and never caches one), GET /lp/wallet-hero/:slug (reads no
+// page), POST /lp (refuses drafts itself), and the signed-in owner routes.
+const draft = publicDraftGuard();
 const { handleVoicePreview } = require('../controllers/lpVoiceController');
 const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListLPs,
   handleLoyaltyCardPage, handleGetNFCToken, handleGenerateAppleWalletPass, handleUploadLogo, handleUploadStrip, handleChatLP, handleSendPush, handlePushCount, handlePushHistory, handleWebPushSubscribe, handleWebPushUnsubscribe, handleWebPushVapidKey, handleSubscribe, handleGetSubscribers,
@@ -12,9 +19,9 @@ const { handlePublishLP, handleDeleteLP, handleServeLP, handleGetLP, handleListL
 } = require('../controllers/lpController');
 
 // Apple Wallet pass download (must be before /lp/:slug)
-router.get('/lp/nfc-token/:slug', handleGetNFCToken);
-router.get('/lp/card/:slug', handleLoyaltyCardPage);
-router.get('/lp/wallet/apple/:slug', handleGenerateAppleWalletPass);
+router.get('/lp/nfc-token/:slug', draft, handleGetNFCToken);
+router.get('/lp/card/:slug', draft, handleLoyaltyCardPage);
+router.get('/lp/wallet/apple/:slug', draft, handleGenerateAppleWalletPass);
 
 // Business logo upload (Brand Center) — image only, 5MB cap, memory storage
 // (no temp files on disk — buffer goes straight to Cloudinary).
@@ -54,7 +61,7 @@ router.post('/lp/upload-strip/:slug', requireAuth, (req, res, next) => {
 }, handleUploadStrip);
 
 // Google Wallet save URL
-router.get('/lp/wallet/google/:slug', async (req, res) => {
+router.get('/lp/wallet/google/:slug', draft, async (req, res) => {
   try {
     const { slug } = req.params;
     const prisma = require('../utils/prismaClient');
@@ -97,25 +104,25 @@ router.get('/lp/wallet-hero/:slug', (req, res) => {
 });
 
 // Loyalty stamp (public — no auth — QR and NFC target)
-router.get('/stamp/:slug/:token', handleStamp);
-router.post('/stamp/:slug/:token/confirm', handleStampConfirm);
+router.get('/stamp/:slug/:token', draft, handleStamp);
+router.post('/stamp/:slug/:token/confirm', draft, handleStampConfirm);
 // Loyalty redeem (public — no auth — second physical NFC tag, same token as stamp)
-router.get('/redeem/:slug/:token', handleRedeemTap);
-router.post('/redeem/:slug/:token/confirm', handleRedeemTapConfirm);
+router.get('/redeem/:slug/:token', draft, handleRedeemTap);
+router.post('/redeem/:slug/:token/confirm', draft, handleRedeemTapConfirm);
 // Stamp dashboard API (auth required via frontend)
-router.get('/lp/stamp/token/:slug', handleGetStampToken);
+router.get('/lp/stamp/token/:slug', draft, handleGetStampToken);
 // Security hotfix: writing a program's loyalty settings requires the
 // landing page's authenticated owner (requireAuth here + owner check in
 // handleStampSettings) -- previously this accepted anonymous writes.
 router.post('/lp/stamp/settings/:slug', requireAuth, handleStampSettings);
-router.get('/lp/stamp/settings/:slug', handleGetStampSettings);
+router.get('/lp/stamp/settings/:slug', draft, handleGetStampSettings);
 // Serve live landing page (public — no auth)
-router.post('/stamp/:slug/customer', handleCustomerStamp); // per-customer stamp
-router.get('/lp/welcome/:slug', handleLoyaltyWelcome); // First-visit enrollment
-router.get('/manifest/:slug', handleLPManifest);
+router.post('/stamp/:slug/customer', draft, handleCustomerStamp); // per-customer stamp
+router.get('/lp/welcome/:slug', draft, handleLoyaltyWelcome); // First-visit enrollment
+router.get('/manifest/:slug', draft, handleLPManifest);
 router.get('/lp/:slug', handleServeLP);
 // AI chat endpoint
-router.post('/lp/chat', handleChatLP);
+router.post('/lp/chat', publicDraftGuard((req) => req.body && req.body.slug), handleChatLP);
 // Push notification endpoint
 // Voice tab of the editor: listen to the greeting before publishing.
 router.post('/lp/voice/preview/:slug', requireAuth, handleVoicePreview);
@@ -124,17 +131,17 @@ router.post('/lp/push/:slug', requireAuth, handleSendPush);
 // campaign texts are that business's data.
 router.get('/lp/push/:slug/count', requireAuth, handlePushCount);
 router.get('/lp/push/:slug/history', requireAuth, handlePushHistory);
-router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);
-router.post('/lp/webpush/unsubscribe/:slug', handleWebPushUnsubscribe);
-router.get('/lp/webpush/vapid-key/:slug', handleWebPushVapidKey);
-router.post('/lp/subscribe/:slug', handleSubscribe);
+router.post('/lp/webpush/subscribe/:slug', draft, handleWebPushSubscribe);
+router.post('/lp/webpush/unsubscribe/:slug', draft, handleWebPushUnsubscribe);
+router.get('/lp/webpush/vapid-key/:slug', draft, handleWebPushVapidKey);
+router.post('/lp/subscribe/:slug', draft, handleSubscribe);
 // The page's own account only (the handler checks ownership): subscriber emails.
 router.get('/lp/subscribers/:slug', requireAuth, handleGetSubscribers);
 // Staff PIN — set (owner auth), status (no auth, existence check only),
 // verify (no auth, validates an entered PIN)
 router.post('/lp/staff-pin/:slug', requireAuth, handleSetStaffPin);
-router.get('/lp/staff-pin/:slug/status', handleGetStaffPinStatus);
-router.post('/lp/staff-pin/:slug/verify', handleVerifyStaffPin);
+router.get('/lp/staff-pin/:slug/status', draft, handleGetStaffPinStatus);
+router.post('/lp/staff-pin/:slug/verify', draft, handleVerifyStaffPin);
 
 // API: publish a new landing page
 router.post('/lp', handlePublishLP);

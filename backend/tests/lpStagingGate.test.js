@@ -135,9 +135,14 @@ async function through(gate, method, url, user) {
 }
 
 test('B. exactly seven kinds of request are allowed, and only two of them without sign-in beyond page playback and its welcome screen', () => {
-  // ...plus the owner Deals routes, all "user" (dealsPreviewSafety.test.js)
+  // ...plus the owner Deals routes, all "user" (dealsPreviewSafety.test.js),
+  // and the four Studio V3 routes (Phase D1), all "user"
   assert.deepEqual(ALLOWED_ROUTES.slice(0, 7).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
-  assert.ok(ALLOWED_ROUTES.slice(7).every((r) => r.access === 'user' && r.path.source.startsWith('^\\/deals')), 'everything after the seven is a signed-in Deals route');
+  const studio = ALLOWED_ROUTES.filter((r) => r.path.source.startsWith('^\\/studio'));
+  assert.deepEqual(studio.map((r) => r.method + ' ' + r.access), ['GET user', 'GET user', 'PUT user', 'POST user']);
+  assert.ok(ALLOWED_ROUTES.slice(7).every((r) => r.access === 'user' && (r.path.source.startsWith('^\\/deals') || studio.includes(r))), 'everything after the seven is a signed-in Deals or Studio route');
+  for (const [m, p] of [['GET', '/studio/pages'], ['GET', '/studio/pages/casa-lumi-ab1/design'], ['PUT', '/studio/pages/casa-lumi-ab1/design'], ['POST', '/studio/drafts']]) assert.ok(matchRoute(m, p), m + ' ' + p);
+  for (const [m, p] of [['GET', '/studio/drafts'], ['DELETE', '/studio/drafts'], ['POST', '/studio/pages'], ['PUT', '/studio/pages/a'], ['DELETE', '/studio/pages/a/design'], ['GET', '/studio/pages/a/b/design'], ['POST', '/studio/drafts/x'], ['GET', '/STUDIO/pages']]) assert.equal(matchRoute(m, p), null, m + ' ' + p);
   const allowed = [['GET', '/health'], ['GET', '/sw.js'], ['GET', '/lp/casa-lumi-ab1'], ['HEAD', '/lp/casa-lumi-ab1'], ['GET', '/lp/welcome/casa-lumi-ab1'], ['HEAD', '/lp/welcome/casa-lumi-ab1'], ['GET', '/api/lp/casa-lumi-ab1'], ['POST', '/lp'], ['POST', '/lp/voice/preview/casa-lumi-ab1']];
   for (const [m, p] of allowed) assert.ok(matchRoute(m, p), m + ' ' + p);
 });

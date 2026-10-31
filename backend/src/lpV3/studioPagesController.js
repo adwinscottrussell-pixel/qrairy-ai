@@ -9,7 +9,8 @@
  *   PUT /studio/pages/:slug/design  Phase B: save the Studio draft
  *                                   { design, baseRevision }
  *
- * All run behind requireAuth (the Clerk session, req.userId). Ownership is
+ * All run behind requireAuth (the Clerk session, req.userId); the PUT also
+ * behind requireVerifiedEmail (Phase D1, draftPolicy.js). Ownership is
  * LandingPage.userId === req.userId and nothing else; pages without an owner
  * (StadtPocket, platform pages) are never listed and answer 404. The two
  * GETs write nothing; converting a legacy page happens in memory.
@@ -162,4 +163,4 @@ async function saveStudioPageDesign(req, res) {
   }
 }
 
-module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, kindOf, SLUG, MAX_PAGES };
+module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, kindOf, summary, SLUG, MAX_PAGES };

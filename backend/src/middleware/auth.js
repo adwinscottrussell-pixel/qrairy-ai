@@ -12,7 +12,8 @@ const { verifyClerkToken } = require('../utils/clerkVerify');
 /**
  * requireAuth
  * Verifies Clerk Bearer token cryptographically.
- * Attaches req.userId on success.
+ * Attaches req.userId on success, and the verified token payload as
+ * req.authClaims (read-only use: lpV3/draftPolicy.js on staging).
  */
 async function requireAuth(req, res, next) {
   try {
@@ -31,6 +32,7 @@ async function requireAuth(req, res, next) {
     }
 
     req.userId = payload.sub;
+    req.authClaims = payload;
     next();
 
   } catch (err) {

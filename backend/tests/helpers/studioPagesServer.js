@@ -10,8 +10,16 @@
 // `writes`) except the two the Studio's Save Draft may make:
 // pageDesign.create (landingPageId unique, a clash is Prisma's P2002) and
 // pageDesign.updateMany (each recorded in `designWrites`). Mocked by pre-seeding require.cache (the studioDealsServer.js
-// pattern): the Prisma client, @clerk/backend (a token is a fixed account id)
-// and the deal image upload. frontend/public is served on the same address,
+// pattern): the Prisma client, @clerk/backend (a token is a fixed account id;
+// the Clerk user lookup answers whether its email is verified) and the deal
+// image upload.
+//
+// Phase D1 (POST /studio/drafts): interactive transactions ($transaction)
+// with the per-account advisory lock ($executeRaw: one holder per key at a
+// time, as PostgreSQL's pg_advisory_xact_lock), and the three writes a draft
+// creation may make inside one: landingPage.create, pageDesign.create,
+// studioDraftCreation.create (+ deleteMany of old log rows). A transaction
+// that throws is undone. Every draft write is recorded in `draftWrites`. frontend/public is served on the same address,
 // and studio-routing.js answers with this server as the API.
 //
 // Must be required before anything else that loads src/ modules.
@@ -26,7 +34,10 @@ const PUB = path.join(__dirname, '..', '..', '..', 'frontend', 'public');
 const ANNA = 'user_anna';
 const BEN = 'user_ben';
 const CARL = 'user_carl'; // signed in, no pages
-const TOKENS = { tok_anna: ANNA, tok_ben: BEN, tok_carl: CARL };
+const DANA = 'user_dana'; // signed in, email NOT verified (Phase D1)
+const TOKENS = { tok_anna: ANNA, tok_ben: BEN, tok_carl: CARL, tok_dana: DANA };
+// Clerk: whose primary email is verified (the live lookup, draftPolicy.js)
+const VERIFIED = new Set([ANNA, BEN, CARL]);
 const DAY = 864e5;
 const at = (ms) => new Date(Date.now() + ms);
 
@@ -64,7 +75,7 @@ function seed() {
   return { pages, pageDesigns, users, deals, placements };
 }
 const db = seed();
-const opts = { designTableMissing: false, failList: false, failSave: false, saveDelayMs: 0 };
+const opts = { designTableMissing: false, failList: false, failSave: false, saveDelayMs: 0, draftTableMissing: false, clerkDown: false, draftDelayMs: 0, failDraftAfterPage: false };
 const DESIGNS_AT_START = structuredClone(db.pageDesigns);
 function resetDesigns() { db.pageDesigns.splice(0, db.pageDesigns.length, ...structuredClone(DESIGNS_AT_START)); designWrites.length = 0; }
 
@@ -77,6 +88,8 @@ const matches = (row, where = {}) => Object.keys(where).every((k) => {
     if ('in' in c) return c.in.includes(row[k]);
     if ('not' in c) return row[k] !== c.not;
     if ('gte' in c) return row[k] != null && instant(row[k]) >= instant(c.gte);
+    if ('gt' in c) return row[k] != null && instant(row[k]) > instant(c.gt);
+    if ('lt' in c) return row[k] != null && instant(row[k]) < instant(c.lt);
   }
   return row[k] === c;
 });
@@ -135,6 +148,99 @@ function model(name, rows, extra = {}) {
   Object.assign(read, extra);
   return new Proxy(read, { get: (t, k) => (k in t ? t[k] : typeof k === 'string' ? async () => { writes.push(name + '.' + k); throw new Error('read-only test database: ' + name + '.' + k); } : undefined) });
 }
+// ── Phase D1: draft creation ──
+db.draftLog = [];
+db.reserved = {};
+const RESERVATION_MODELS = ['subscriber', 'webPushSubscription', 'webPushPageSubscription', 'pass', 'loyaltyCustomer', 'stampEntry', 'rewardEvent', 'stampSettings', 'stampToken', 'pushCampaign', 'customer', 'customerIdentity', 'supportAction'];
+const draftWrites = [];
+const emailChecks = [];
+const locks = new Map(); // advisory lock key -> promise chain
+const lockEvents = [];
+let nextId = 1;
+const clash = (field) => { const e = new Error('Unique constraint failed on the fields: (`' + field + '`)'); e.code = 'P2002'; e.meta = { target: [field] }; throw e; };
+const draftTableMissing = () => { const e = new Error('The table `public.StudioDraftCreation` does not exist in the current database.'); e.code = 'P2021'; throw e; };
+const ALLOWED_PAGE_FIELDS = ['slug', 'businessName', 'userId', 'status', 'renderer', 'useCase', 'sections'];
+const ALLOWED_LOG_FIELDS = ['userId', 'landingPageId', 'requestId', 'requestHash', 'createdAt'];
+function onlyFields(model, data, allowed) { for (const k of Object.keys(data)) if (!allowed.includes(k)) throw new Error('unexpected ' + model + ' field: ' + k); }
+function txModels(undo) {
+  return {
+    landingPage: Object.assign(Object.create(mockPrisma.landingPage), {
+      create: async ({ data }) => {
+        onlyFields('LandingPage', data, ALLOWED_PAGE_FIELDS);
+        draftWrites.push({ op: 'landingPage.create', userId: data.userId, status: data.status });
+        await pause(opts.draftDelayMs);
+        if (opts.beforePageCreate) opts.beforePageCreate(data);
+        if (db.pages.some((p) => p.slug === data.slug)) clash('slug');
+        const row = Object.assign({ id: 'lp_new_' + nextId++, brandColor: '#ff5a1f', logoUrl: null, websiteUrl: null, scanCount: 0, createdAt: new Date(), updatedAt: new Date() }, copy(data));
+        db.pages.push(row);
+        undo.push(() => db.pages.splice(db.pages.indexOf(row), 1));
+        if (opts.failDraftAfterPage) throw new Error('database unavailable');
+        return copy(row);
+      },
+    }),
+    pageDesign: Object.assign(Object.create(mockPrisma.pageDesign), {
+      create: async (args) => {
+        const row = await designCreate(args);
+        draftWrites.push({ op: 'pageDesign.create', landingPageId: args.data.landingPageId, revision: args.data.draftRevision });
+        undo.push(() => db.pageDesigns.splice(db.pageDesigns.findIndex((r) => r.landingPageId === args.data.landingPageId), 1));
+        return row;
+      },
+    }),
+    studioDraftCreation: Object.assign(Object.create(mockPrisma.studioDraftCreation), {
+      create: async ({ data }) => {
+        if (opts.draftTableMissing) draftTableMissing();
+        onlyFields('StudioDraftCreation', data, ALLOWED_LOG_FIELDS);
+        draftWrites.push({ op: 'studioDraftCreation.create', userId: data.userId });
+        if (data.requestId && db.draftLog.some((r) => r.userId === data.userId && r.requestId === data.requestId)) clash('requestId');
+        const row = Object.assign({ id: 'log_' + nextId++, createdAt: new Date() }, copy(data), { createdAt: data.createdAt || new Date() });
+        db.draftLog.push(row);
+        undo.push(() => db.draftLog.splice(db.draftLog.indexOf(row), 1));
+        return copy(row);
+      },
+      deleteMany: async ({ where }) => {
+        if (opts.draftTableMissing) draftTableMissing();
+        const gone = db.draftLog.filter((r) => matches(r, where));
+        draftWrites.push({ op: 'studioDraftCreation.deleteMany', userId: where.userId, count: gone.length });
+        for (const r of gone) db.draftLog.splice(db.draftLog.indexOf(r), 1);
+        undo.push(() => db.draftLog.push(...gone));
+        return { count: gone.length };
+      },
+    }),
+  };
+}
+// prisma.$transaction(fn): fn runs with the transaction client; an advisory
+// lock taken inside is held until fn ends; a throw undoes its writes
+async function transaction(fn) {
+  if (typeof fn !== 'function') { writes.push('prisma.$transaction(batch)'); throw new Error('read-only test database: batch transaction'); }
+  const undo = [];
+  const held = [];
+  const tx = Object.assign(txModels(undo), {
+    $executeRaw: async (strings, ...values) => {
+      const sql = strings.join('?');
+      if (sql !== 'SELECT pg_advisory_xact_lock(hashtextextended(?, 0))' || values.length !== 1 || typeof values[0] !== 'string') { writes.push('tx.$executeRaw'); throw new Error('unexpected raw SQL: ' + sql); }
+      const key = values[0];
+      const before = locks.get(key) || Promise.resolve();
+      let release;
+      const mine = new Promise((r) => { release = r; });
+      locks.set(key, before.then(() => mine));
+      await before;
+      lockEvents.push({ key, at: 'acquired' });
+      held.push(() => { lockEvents.push({ key, at: 'released' }); release(); });
+      return 1;
+    },
+  });
+  try { return await fn(tx); }
+  catch (e) { for (const u of undo.reverse()) u(); throw e; }
+  finally { for (const r of held) r(); }
+}
+function resetDrafts() {
+  db.pages.splice(0, db.pages.length, ...db.pages.filter((p) => !String(p.id).startsWith('lp_new_')));
+  db.pageDesigns.splice(0, db.pageDesigns.length, ...db.pageDesigns.filter((d) => !String(d.landingPageId).startsWith('lp_new_')));
+  for (const k of Object.keys(db.reserved)) delete db.reserved[k];
+  db.draftLog.length = 0; draftWrites.length = 0; emailChecks.length = 0; lockEvents.length = 0;
+  Object.assign(opts, { draftTableMissing: false, clerkDown: false, draftDelayMs: 0, failDraftAfterPage: false, beforePageCreate: null });
+}
+
 const tableMissing = () => { const e = new Error('The table `public.PageDesign` does not exist in the current database.'); e.code = 'P2021'; throw e; };
 const mockPrisma = new Proxy({
   user: model('user', () => db.users),
@@ -145,6 +251,19 @@ const mockPrisma = new Proxy({
     create: designCreate,
     updateMany: designUpdateMany,
   }),
+  studioDraftCreation: model('studioDraftCreation', () => db.draftLog, {
+    findUnique: async ({ where }) => {
+      if (opts.draftTableMissing) draftTableMissing();
+      reads.push('studioDraftCreation.findUnique');
+      const k = where.userId_requestId;
+      const r = db.draftLog.find((x) => x.userId === k.userId && x.requestId === k.requestId);
+      return r ? copy(r) : null;
+    },
+    findMany: async (q) => { if (opts.draftTableMissing) draftTableMissing(); reads.push('studioDraftCreation.findMany'); return findMany(db.draftLog, q); },
+  }),
+  $transaction: (fn) => transaction(fn),
+  // a deleted page's leftover data reserves its slug (services/slugReservation.js): rows in db.reserved[model]
+  ...Object.fromEntries(RESERVATION_MODELS.map((m) => [m, model(m, () => db.reserved[m] || [])])),
   deal: model('deal', () => db.deals),
   dealPlacement: model('dealPlacement', () => db.placements),
   business: model('business', () => []),
@@ -153,7 +272,16 @@ const mockPrisma = new Proxy({
 
 const seedModule = (file, exports) => { require.cache[file] = { id: file, filename: file, loaded: true, exports }; };
 seedModule(SRC('utils', 'prismaClient.js'), mockPrisma);
-seedModule(require.resolve('@clerk/backend'), { verifyToken: async (token) => { if (!TOKENS[token]) throw new Error('invalid token'); return { sub: TOKENS[token] }; } });
+seedModule(require.resolve('@clerk/backend'), {
+  verifyToken: async (token) => { if (!TOKENS[token]) throw new Error('invalid token'); return { sub: TOKENS[token] }; },
+  // the live Clerk user lookup (utils/clerkEmailSync.js): the primary email and its verification
+  createClerkClient: () => ({ users: { getUser: async (id) => {
+    emailChecks.push(id);
+    if (opts.clerkDown) throw new Error('Clerk unavailable');
+    if (!Object.values(TOKENS).includes(id)) throw new Error('not found');
+    return { id, primaryEmailAddressId: 'em_1', emailAddresses: [{ id: 'em_1', emailAddress: id + '@example.test', verification: { status: VERIFIED.has(id) ? 'verified' : 'unverified' } }] };
+  } } }),
+});
 seedModule(SRC('services', 'dealImageUploadService.js'), { isDealImageStorageConfigured: () => false, uploadDealImage: async () => { writes.push('upload'); throw new Error('no uploads'); } });
 
 process.env.DEALS_PILOT_USER_IDS = ANNA + ',' + BEN;
@@ -161,7 +289,7 @@ delete process.env.DEALS_ENABLED;
 process.env.DEALS_ON_LANDING_PAGES = '1';
 process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 const realError = console.error;
-console.error = (...a) => { if (!/^\[(auth|DealAPI|StudioPages)\]/.test(String(a[0]))) realError(...a); };
+console.error = (...a) => { if (!/^\[(auth|DealAPI|StudioPages|StudioDrafts|clerkEmailSync)\]/.test(String(a[0]))) realError(...a); };
 
 const express = require('express');
 const dealRoutes = require(SRC('routes', 'dealRoutes.js'));
@@ -199,4 +327,5 @@ function start() {
   });
 }
 
-module.exports = { start, db, opts, apiLog, writes, reads, designWrites, resetDesigns, ANNA, BEN, CARL, SHOP_DRAFT, copy };
+module.exports = { start, db, opts, apiLog, writes, reads, designWrites, resetDesigns, ANNA, BEN, CARL, DANA, VERIFIED, SHOP_DRAFT, copy,
+  draftWrites, emailChecks, lockEvents, resetDrafts };

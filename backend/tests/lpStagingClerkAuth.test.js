@@ -296,8 +296,13 @@ test('F. no bypass, no built-in identity, and nothing outside sign-in verificati
   assert.deepEqual(diff('backend/src/middleware/auth.js'), [
     "-const { verifyToken } = require('@clerk/backend');",
     "+const { verifyClerkToken } = require('../utils/clerkVerify');",
+    // Studio V3 Phase D1: requireAuth also keeps the verified payload (read only)
+    '- * Attaches req.userId on success.',
+    '+ * Attaches req.userId on success, and the verified token payload as',
+    '+ * req.authClaims (read-only use: lpV3/draftPolicy.js on staging).',
     '-    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });',
     '+    const payload = await verifyClerkToken(token);',
+    '+    req.authClaims = payload;',
     '-      const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });',
     '+      const payload = await verifyClerkToken(token);',
   ]);

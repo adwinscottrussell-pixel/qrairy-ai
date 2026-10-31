@@ -25,6 +25,10 @@
  * "user" -- signed in AND on the allowlist. Exactly its routes (deals,
  * image, placements, own pages); anything else under /deals is refused
  * like every other path.
+ *
+ * Landing Page Studio V3 (Phase D1): the Studio API (lpV3/studioPagesRoutes.js)
+ * is allowed as "user": list own pages, load and save a page's draft, create
+ * a draft. Its own checks still apply (ownership, verified email, limits).
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -54,6 +58,10 @@ const ALLOWED_ROUTES = [
   { method: 'GET',    path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: list placements' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements$'), access: 'user', what: 'Deals: add a placement (own pages only)' },
   { method: 'POST',   path: new RegExp('^/deals/' + DEAL_ID + '/placements/' + DEAL_ID + '/(?:publish|archive)$'), access: 'user', what: 'Deals: publish or archive a placement' },
+  { method: 'GET',    path: /^\/studio\/pages$/,                                access: 'user', what: 'Studio: list own pages' },
+  { method: 'GET',    path: new RegExp('^/studio/pages/' + SLUG + '/design$'),  access: 'user', what: 'Studio: load a page\'s draft (own pages only)' },
+  { method: 'PUT',    path: new RegExp('^/studio/pages/' + SLUG + '/design$'),  access: 'user', what: 'Studio: save a draft (own pages, verified email)' },
+  { method: 'POST',   path: /^\/studio\/drafts$/,                               access: 'user', what: 'Studio: create a draft (verified email, limits)' },
 ];
 
 function matchRoute(method, path) {

@@ -143,6 +143,25 @@ model PageDesignVersion {
   @@unique([designId, version])
 }
 
+// Landing Page Studio V3 (Phase D1, additive). One row per Studio draft
+// created, kept when the draft is deleted: the rolling 24-hour creation limit
+// (lpV3/draftPolicy.js) and the idempotent replay of a creation request.
+// No relation on purpose: the row outlives the page. Rows older than 7 days
+// are removed by the next creation of the same account.
+model StudioDraftCreation {
+  id            String   @id @default(cuid())
+  userId        String
+  landingPageId String?
+  // the client's idempotency key (UUID), unique per account; NULLs are distinct
+  requestId     String?
+  // sha256 of the request's name, language and kind
+  requestHash   String?
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, requestId])
+  @@index([userId, createdAt])
+}
+
 model Pass {
   id            String             @id @default(cuid())
   serialNumber  String             @unique

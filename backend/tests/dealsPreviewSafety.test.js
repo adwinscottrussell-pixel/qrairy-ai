@@ -38,10 +38,12 @@ const ALICE = 'user_aliceAAAAAAAA', MALLORY = 'user_malloryMMMMMM';
 // Phase 5.5B adds one public, read-only route: the welcome screen. It is set
 // aside here so the guarantees about the original routes stay exactly as they were.
 const WELCOME_ROUTE = 'GET public ^\\/lp\\/welcome\\/[A-Za-z0-9][A-Za-z0-9_-]{0,119}$';
-const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE);
+// (and without the four Studio V3 routes of Phase D1: tests/lpStagingGate.test.js)
+const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE && !/^\^\\\/studio/.test(r.path.source));
 
 test('A. the original six staging routes are exactly as before', () => {
-  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1, 'exactly one welcome-screen route on top');
+  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1 + 4, 'exactly one welcome-screen route (and the four Studio routes) on top');
+  assert.equal(ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` === WELCOME_ROUTE).length, 1);
   assert.deepEqual(BASE_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access} ${r.path.source}`), [
     'GET public ^\\/health$',
     'GET public ^\\/sw\\.js$',
@@ -263,7 +265,8 @@ test('C. no other page\'s routing changed: api-base.js, lp-routing.js and stagin
   const changed = execFileSync('git', ['diff', '4ac9e84', '--name-only', '--', 'frontend/public/js/api-base.js', 'frontend/public/js/lp-routing.js', 'frontend/public/js/staging-config.js',
     'frontend/public/smart-editor.js', 'frontend/public/index.html',
     'backend/src/utils/corsOriginPolicy.js', 'backend/src/middleware/auth.js', 'backend/src/utils/clerkVerify.js', 'backend/src/config/publicOrigins.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
-  assert.equal(changed, '');
+  // Studio V3 Phase D1: auth.js keeps the verified payload (req.authClaims), exactly that (helpers/studioD1Files.js)
+  assert.equal(changed.split('\n').filter((f) => f && !require('./helpers/studioD1Files').isD1Change(ROOT, f)).join('\n'), '');
   // js/voice-greeting-editor.js: production's, apart from Phase 0 (S4) sending the sign-in with the
   // page record request (tests/helpers/phase0Revert.js undoes exactly that).
   assert.equal(require('./helpers/phase0Revert').revertVoiceEditor0(read('frontend/public/js/voice-greeting-editor.js')),

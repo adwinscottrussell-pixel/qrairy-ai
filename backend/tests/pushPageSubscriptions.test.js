@@ -273,7 +273,8 @@ test('subscribe input: invalid addresses rejected, unknown pages 404, errors say
   try { const r = await optIn('biz-a', EP(1)); assert.deepEqual([r.statusCode, r.body], [500, { error: 'Could not save the subscription.' }]); }
   finally { mockPrisma.webPushSubscription.upsert = broken; }
   // routes
-  const routes = lf(fs.readFileSync(resolve('src', 'routes', 'lpRoutes.js'), 'utf8'));
+  // (Studio V3 Phase D1's draft guard taken out exactly first: helpers/studioD1Files.js)
+  const routes = require('./helpers/studioD1Files').revertD1('backend/src/routes/lpRoutes.js', fs.readFileSync(resolve('src', 'routes', 'lpRoutes.js'), 'utf8'));
   assert.ok(routes.includes("router.post('/lp/webpush/subscribe/:slug', handleWebPushSubscribe);\nrouter.post('/lp/webpush/unsubscribe/:slug', handleWebPushUnsubscribe);"));
 });
 

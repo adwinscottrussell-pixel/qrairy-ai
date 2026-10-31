@@ -132,7 +132,11 @@ test('managers: no other account (StadtPocket business members, city managers) g
     'backend/src/services/welcomeView.js',   // 5.5C.4: account-wide welcome flag (tests/welcomeUnified.test.js)
     'backend/src/services/platformAdmin.js',   // 5.5C.4A: page-deletion admin check (tests/lpDeleteAuth.test.js)
     'backend/src/services/staffPin.js'];   // Phase 0 S2/S5: staff PIN hashing and limits (tests/staffPinAuth.test.js)
-  assert.deepEqual(changed.filter((f) => !later.includes(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
+  // Studio V3 Phase D1: its middleware edits (pinned exactly by lpV3Scope.test.js, helpers/studioD1Files.js);
+  // lpController.js stays listed: its push handlers are compared below
+  const { isD1Change } = require('./helpers/studioD1Files');
+  const d1 = (f) => f !== 'backend/src/controllers/lpController.js' && isD1Change(path.join(__dirname, '..', '..'), f);
+  assert.deepEqual(changed.filter((f) => !later.includes(f) && !d1(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 
 test('internal workflows are unchanged: stamp and reward pushes, the Wallet owner push, the subscribe and key routes', () => {
