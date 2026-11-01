@@ -242,6 +242,56 @@ test('O0.1 previews: real QRAIVY pages in sandboxed phone frames; AI label on th
   await page.close();
 });
 
+// The header (approved design): solid black, white Sign out and Back to Studio, EN/DE with the chosen language
+// a white pill; one header for all four steps and the sign-in screens; readable contrast; a visible focus ring.
+async function header(page) {
+  return page.evaluate(() => {
+    const lum = (c) => { const v = c.match(/[\d.]+/g).slice(0, 3).map((x) => { x = x / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+    const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const cs = (sel) => getComputedStyle(document.querySelector(sel));
+    const top = cs('.ob-top').backgroundColor, track = cs('.ob-lang').backgroundColor;
+    const on = document.querySelector('.ob-lang__btn[aria-pressed="true"]'), off = document.querySelector('.ob-lang__btn[aria-pressed="false"]');
+    const exit = document.getElementById('ob-exit'), out = document.getElementById('ob-signout');
+    const r = document.querySelector('.ob-top').getBoundingClientRect();
+    return { top, count: document.querySelectorAll('header').length, exitColor: getComputedStyle(exit).color, outColor: getComputedStyle(out).color, outShown: !out.hidden,
+      onBg: getComputedStyle(on).backgroundColor, onColor: getComputedStyle(on).color, onRatio: ratio(getComputedStyle(on).color, getComputedStyle(on).backgroundColor),
+      offRatio: ratio(getComputedStyle(off).color, track), linkRatio: ratio(getComputedStyle(exit).color, top), logo: document.querySelector('.ob-brand__logo').getBoundingClientRect().left < 60,
+      h: Math.round(r.height), sw: document.documentElement.scrollWidth, iw: innerWidth };
+  });
+}
+test('header: solid black, white links, EN/DE readable with the chosen language clear; the same on every step and the sign-in screen; desktop and phone; focus ring', async () => {
+  for (const viewport of [DESKTOP, PHONE]) {
+    const { page, api } = await onboarding({ viewport });
+    const seen = [];
+    for (let step = 0; step < 4; step++) {
+      const h = await header(page);
+      assert.equal(h.top, 'rgb(0, 0, 0)', 'black header, step ' + (step + 1));
+      assert.ok(h.exitColor === 'rgb(255, 255, 255)' && h.outColor === 'rgb(255, 255, 255)' && h.outShown, 'white Sign out and Back to Studio: ' + JSON.stringify(h));
+      assert.ok(h.onBg === 'rgb(255, 255, 255)' && h.onColor === 'rgb(0, 0, 0)', 'the chosen language: white pill, black text');
+      assert.ok(h.onRatio >= 7 && h.offRatio >= 4.5 && h.linkRatio >= 7, 'contrast: ' + JSON.stringify(h));
+      assert.ok(h.logo && h.count === 1 && h.sw <= h.iw, 'logo left, one header, no sideways scroll');
+      seen.push(h.h);
+      if (step === 0) await page.click('[data-option="scratch"]');
+      if (step < 3) await page.click('#ob-next');
+    }
+    assert.ok(seen.every((x) => x === seen[0]), 'the same header height on all four steps: ' + seen);
+    // keyboard: the focus ring on the black header is white and visible
+    await page.focus('.ob-lang__btn[data-lang="de"]');
+    await page.keyboard.press('Tab'); await page.keyboard.down('Shift'); await page.keyboard.press('Tab'); await page.keyboard.up('Shift');
+    const ring = await page.evaluate(() => { const a = document.activeElement, c = getComputedStyle(a); return { lang: a.dataset.lang, style: c.outlineStyle, color: c.outlineColor, width: c.outlineWidth }; });
+    assert.ok(ring.lang === 'de' && ring.style === 'solid' && ring.color === 'rgb(255, 255, 255)' && ring.width === '3px', 'white focus ring: ' + JSON.stringify(ring));
+    await page.keyboard.press('Enter');
+    assert.equal(await text(page, '#ob-progress-count'), 'Schritt 4 von 4', 'the language switch still works by keyboard');
+    assert.deepEqual(api, []);
+    await page.close();
+  }
+  // the sign-in screen has the same header
+  const g = await onboarding({ clerk: 'signedout', viewport: PHONE });
+  const gh = await header(g.page);
+  assert.ok(gh.top === 'rgb(0, 0, 0)' && gh.exitColor === 'rgb(255, 255, 255)' && !gh.outShown, 'signed out: black header, Back to Studio white, no Sign out');
+  await g.page.close();
+});
+
 test('every other address: the notice only; no sign-in loaded, no request, no link', async () => {
   for (const host of ['www.qraivy.com', 'studio-preview.qraivy.com', 'qraivy-studio-staging.vercel.app', 'qraivy-studio-v3-staging-8p5n97clr.vercel.app', 'evil-qraivy-studio-v3-staging.vercel.app']) {
     for (const clerk of ['none', 'verified']) {
