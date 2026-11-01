@@ -95,12 +95,17 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   // no form that could be submitted anywhere, no file input (the logo upload is "Coming soon")
   for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<form\b/, /type="file"/, /\baction=/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
   assert.match(HTML, /<meta name="robots" content="noindex, nofollow" \/>/);
-  // O0.1: three preview frames, O1: the live preview; all sandboxed with no permissions, not focusable, inside a part hidden from screen readers, outside the buttons
+  // O0.1: three preview frames, O1: the live preview, sandboxed with no permissions; O2: Step 3's live phone, scripts only
+  // (never allow-same-origin); all not focusable, inside a part hidden from screen readers, outside the buttons
   const frames = [...HTML.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">')
-    .concat('<iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">'));
-  const live = HTML.slice(HTML.indexOf('<aside class="ob-live"'), HTML.indexOf('</aside>'));
-  assert.ok(live.indexOf('<div class="ob-live__stage" aria-hidden="true">') < live.indexOf('<iframe'), 'the live frame in the hidden part');
+    .concat('<iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">',
+      '<iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">'));
+  assert.ok(!/allow-same-origin|allow-popups|allow-top-navigation|allow-forms|allow-modals/.test(HTML), 'no other sandbox permission anywhere');
+  for (const [from, to] of [['<aside class="ob-live" aria-labelledby="ob-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-sections-live-label"', '</aside>']]) {
+    const live = HTML.slice(HTML.indexOf(from), HTML.indexOf(to, HTML.indexOf(from)));
+    assert.ok(/<div class="ob-live__stage[^"]*" aria-hidden="true">/.test(live) && live.search(/aria-hidden="true">/) < live.indexOf('<iframe'), from + ': the frame in the hidden part');
+  }
   for (const id of ['instagram', 'website', 'scratch']) {
     const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
     assert.ok(card.indexOf('<div class="ob-card__media" aria-hidden="true">') < card.indexOf('<iframe') && card.indexOf('<iframe') < card.indexOf('<button'), id + ': the frame in the hidden part, before (not inside) the button');
@@ -139,10 +144,16 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.match(HTML, /<button type="button" class="ob-upload" id="ob-logo" disabled aria-disabled="true" aria-describedby="ob-logo-note">/, 'the logo: disabled');
   const step2 = HTML.slice(HTML.indexOf('id="ob-step-1"'), HTML.indexOf('id="ob-step-2"'));
   assert.equal((step2.match(/<input\b/g) || []).length, 1, 'Step 2 markup: one input (the name); link rows are added by the script');
-  for (const n of [2, 3]) {
-    const step = HTML.slice(HTML.indexOf('id="ob-step-' + n + '"'), HTML.indexOf('</div>\n      </div>', HTML.indexOf('id="ob-step-' + n + '"')));
-    assert.ok(!/<input|<textarea|<select|<button/.test(step), 'step ' + (n + 1) + ' collects nothing');
-  }
+  // Step 3: the two lists (filled by the script), the status for screen readers, the info note; no field
+  const step3 = HTML.slice(HTML.indexOf('id="ob-step-2"'), HTML.indexOf('id="ob-step-3"'));
+  assert.match(step3, /<ol class="ob-chosen" id="ob-chosen"><\/ol>/);
+  assert.match(step3, /<ul class="ob-more" id="ob-more"><\/ul>/);
+  assert.match(step3, /<p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"><\/p>/);
+  assert.match(step3, /data-ob="sections_info"/);
+  assert.ok(!/<input|<textarea|<select|<button/.test(step3), 'Step 3 markup: no field, no button (added by the script)');
+  // Step 4: still the placeholder
+  const step4 = HTML.slice(HTML.indexOf('id="ob-step-3"'), HTML.indexOf('<div class="ob-nav">'));
+  assert.ok(!/<input|<textarea|<select|<button/.test(step4) && /data-ob="review_placeholder"/.test(step4), 'Step 4 collects nothing');
 });
 
 test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial calls; storage only this tab\'s sessionStorage under the per-user key', () => {
@@ -176,13 +187,17 @@ test('O1 progress: one key per user (a hash, not the id); a restore is checked (
   assert.ok(!a.includes('user_2abc'), 'the id itself is not in the key');
   for (const x of [undefined, null, '', 42, {}]) assert.equal(OB.storeKey(x), null, 'no user: memory only');
   const good = { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] };
-  assert.deepEqual(OB.restore({ step: 2, choice: 'scratch', answers: good }, M, V3), { step: 2, choice: 'scratch', answers: good });
+  assert.deepEqual(OB.restore({ step: 2, choice: 'scratch', answers: good }, M, V3), { step: 2, choice: 'scratch', answers: Object.assign({ sections: null, social: 'auto' }, good) });
+  // O2: the section list and Social Media's mode come back cleaned; Step 4 only with a valid page
+  const withSections = OB.restore({ step: 3, choice: 'scratch', answers: Object.assign({ sections: ['gallery', 'hero', 'evil', 'gallery'], social: 'removed' }, good) }, M, V3);
+  assert.deepEqual([withSections.step, withSections.answers.sections, withSections.answers.social], [3, ['hero', 'gallery'], 'removed']);
+  assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: Object.assign({}, good, { social: 'everything' }) }, M, V3).answers.social, 'auto');
   assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: { name: '' } }, M, V3).step, 1, 'invalid answers: back to Step 2');
   assert.equal(OB.restore({ step: 2, choice: 'instagram', answers: good }, M, V3).step, 0, 'no valid choice: Step 1');
   for (const bad of [null, 'x', 7, [], { step: 99, choice: 'scratch' }, { step: -1 }, { step: 1.5, choice: 'scratch' }]) {
     const r = OB.restore(bad, M, V3);
     assert.ok(r.step >= 0 && r.step <= 1, JSON.stringify(bad));
-    assert.deepEqual(Object.keys(r.answers).sort(), ['description', 'links', 'name']);
+    assert.deepEqual(Object.keys(r.answers).sort(), ['description', 'links', 'name', 'sections', 'social']);
   }
   const r = OB.restore({ step: 1, choice: 'scratch', answers: { name: 5, links: [{ platform: 'myspace', url: 'x', token: 't' }, ...Array(12).fill({ platform: 'x', url: '' })], token: 'secret' } }, M, V3);
   assert.deepEqual(r.answers.links[0], { platform: 'instagram', url: 'x' }, 'unknown platform -> the first; unknown fields dropped');
@@ -265,6 +280,80 @@ test('O1 model: the page the answers make is the draft starter (Hero: name, desc
   assert.ok(V3.validateDesign(d).ok);
   const src = code(read('js/studio/onboarding-model.js'));
   for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.|window\./, /innerHTML|outerHTML/, /\beval\s*\(|new\s+Function/]) assert.ok(!re.test(src), 'onboarding-model.js must not contain ' + re);
+});
+
+test('O2 model: the eight section types; defaults Hero, Buttons, Opening Hours, Contact (+ Social Media with links); each once, Hero first; all valid by core.js rules', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  assert.deepEqual(M.SECTION_TYPES, ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'gallery', 'text']);
+  assert.ok(M.SECTION_TYPES.every((t) => V3.describe().sections[t] && V3.describe().sections[t].rendered), 'only types the public page renders');
+  for (const t of M.SECTION_TYPES) assert.match(M.SECTION_IDS[t], /^s_[a-z0-9]{4,16}$/);
+  assert.equal(new Set(Object.values(M.SECTION_IDS)).size, 8, 'distinct ids');
+  const links = [{ platform: 'instagram', url: 'instagram.com/sonne' }];
+  assert.deepEqual(M.checkPage(V3, { name: 'A' }).sections, ['hero', 'buttons', 'openingHours', 'contact'], 'defaults without links');
+  assert.deepEqual(M.checkPage(V3, { name: 'A', links }).sections, ['hero', 'buttons', 'openingHours', 'contact', 'socialMedia'], 'Social Media with links');
+  // the list is cleaned: known types, once each, Hero first
+  assert.deepEqual(M.cleanSections(['text', 'gallery', 'hero', 'text', 'dealsOffers', 'loyalty', 'x', 7, null]), ['hero', 'text', 'gallery']);
+  assert.deepEqual(M.cleanSections([]), ['hero'], 'the Hero is always there');
+  assert.equal(M.cleanSections('hero'), null, 'not a list: the defaults');
+  // all eight at once: valid, one Hero (MAX_PER_PAGE), in the chosen order
+  for (const l of ['en', 'de']) {
+    const r = M.checkPage(V3, { name: 'Café', description: 'Kaffee', links, sections: ['hero', 'text', 'gallery', 'products', 'openingHours', 'contact', 'socialMedia', 'buttons'], social: 'auto' }, l);
+    assert.ok(r.pageOk, l);
+    assert.deepEqual(r.page.pages[0].sections.map((s) => s.type), ['hero', 'text', 'gallery', 'products', 'openingHours', 'contact', 'socialMedia', 'buttons']);
+    assert.deepEqual(r.page.pages[0].sections.map((s) => s.id), r.sections.map((t) => M.SECTION_IDS[t]));
+    const s = Object.fromEntries(r.page.pages[0].sections.map((x) => [x.type, x]));
+    assert.equal(s.hero.data.headline, 'Café'); assert.equal(s.hero.data.subheadline, 'Kaffee');
+    assert.deepEqual(s.socialMedia.data.links, [{ platform: 'instagram', url: 'https://instagram.com/sonne' }]);
+    assert.deepEqual([s.text.data.heading, s.text.data.body], ['', ''], 'the Text section starts empty');
+    for (const t of ['buttons', 'contact', 'openingHours', 'products', 'gallery']) assert.equal(s[t].variant, V3.starter(t, l).variant, t + ': core.js starter');
+    assert.ok(V3.validateDesign(r.page).ok);
+  }
+  // the empty sections are hidden on the public page, shown as core.js placeholders in the preview; no fake content, no placeholder text
+  const all = M.checkPage(V3, { name: 'Café', sections: M.SECTION_TYPES, social: 'added' }, 'en');
+  const pub = V3.renderDesign(all.page, {}, {}).html, pv = V3.renderDesign(all.page, {}, { preview: true }).html;
+  assert.equal((pv.match(/data-v3-id="s_ob/g) || []).length, 8, 'the preview shows all eight');
+  assert.equal((pv.match(/Empty section – add content in the editor/g) || []).length, 7, 'seven empty placeholders (all but the Hero)');
+  assert.ok(!pub.includes('Empty section') && !pub.includes('Your text') && !/v3-social|v3-btns|v3-hours/.test(pub.replace(/<style[\s\S]*?<\/style>/g, '')), 'public page: only the Hero');
+});
+
+test('O2 Social Media: follows Step 2 links while untouched; a deliberate add or remove is kept; its place is remembered', () => {
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  assert.deepEqual(M.sectionsFor({}, true).slice(-1), ['socialMedia']);
+  assert.ok(!M.sectionsFor({}, false).includes('socialMedia'));
+  // moved while auto: kept at its place with links, left out without
+  const moved = { sections: ['hero', 'socialMedia', 'buttons', 'contact'], social: 'auto' };
+  assert.deepEqual(M.sectionsFor(moved, true), ['hero', 'socialMedia', 'buttons', 'contact']);
+  assert.deepEqual(M.sectionsFor(moved, false), ['hero', 'buttons', 'contact']);
+  // added by the customer: stays even without links; removed: stays out even with links
+  assert.deepEqual(M.sectionsFor({ sections: ['hero', 'socialMedia'], social: 'added' }, false), ['hero', 'socialMedia']);
+  assert.deepEqual(M.sectionsFor({ sections: ['hero'], social: 'added' }, false), ['hero', 'socialMedia']);
+  assert.deepEqual(M.sectionsFor({ sections: ['hero', 'socialMedia'], social: 'removed' }, true), ['hero']);
+  assert.deepEqual(M.sectionsFor({ social: 'removed' }, true), ['hero', 'buttons', 'openingHours', 'contact']);
+});
+
+test('O2 live frame: the fixed script (no customer data) blocks clicks and links, restores the scroll, reveals a section; only exact scroll messages accepted', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const PV = require('../../frontend/public/js/studio/onboarding-previews.js');
+  const html = V3.renderDesign(M.checkPage(V3, { name: '<b>Sonne</b>', sections: M.SECTION_TYPES, social: 'added' }).page, {}, { preview: true }).html;
+  const live = PV.liveHtml(html);
+  assert.ok(live.endsWith(PV.FRAME_SCRIPT + '</body></html>') && live.startsWith(html.slice(0, -'</body></html>'.length)), 'the page plus the script, once');
+  assert.equal((live.match(/<script>/g) || []).length, 1, 'one script: the fixed one');
+  assert.ok(!PV.FRAME_SCRIPT.includes('Sonne') && !/https?:|fetch|XMLHttp|localStorage|sessionStorage|cookie|eval|Function\(|innerHTML|top\.|parent\.location|window\.open/.test(PV.FRAME_SCRIPT), 'fixed text, no request, no storage, no navigation');
+  assert.ok(PV.FRAME_SCRIPT.includes('["click","auxclick","dblclick","submit"].forEach(function(t){document.addEventListener(t,stop,true);})'), 'every click and form blocked (capture)');
+  assert.ok(PV.FRAME_SCRIPT.includes('setAttribute("tabindex","-1")'), 'the page\'s controls out of the keyboard order');
+  assert.ok(PV.FRAME_SCRIPT.includes('if(e.source!==parent)return;'), 'messages from the wizard only');
+  for (const bad of [null, '', '<html>', html + 'x']) assert.equal(PV.liveHtml(bad), '');
+  // from the frame: exactly { type: 'scroll', y }
+  assert.deepEqual(PV.acceptFrameMessage({ type: 'scroll', y: 120 }), { type: 'scroll', y: 120 });
+  for (const bad of [null, [], 'scroll', { type: 'scroll' }, { type: 'scroll', y: -1 }, { type: 'scroll', y: 1.5 }, { type: 'scroll', y: 1e9 }, { type: 'scroll', y: '5' }, { type: 'scroll', y: 5, x: 1 }, { type: 'select', id: 's_obhero01' }, Object.create({ type: 'scroll', y: 1 })]) {
+    assert.equal(PV.acceptFrameMessage(bad), null, JSON.stringify(bad));
+  }
+  // to the frame: a whole, bounded scroll position and a valid section id only
+  assert.deepEqual(PV.initMessage(250.7, 's_obgallery1'), { type: 'init', y: 250, reveal: 's_obgallery1' });
+  assert.deepEqual(PV.initMessage(-5, '"]<script>'), { type: 'init', y: 0, reveal: null });
+  assert.deepEqual(PV.initMessage(NaN, null), { type: 'init', y: 0, reveal: null });
 });
 
 test('O0.1 previews: real QRAIVY pages from core.js; examples from the Studio demo, the scratch page is the draft starter; no request', () => {

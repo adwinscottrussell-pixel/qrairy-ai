@@ -251,6 +251,45 @@ body.ob-page {
 .ob-live .ob-phone__screen { border-radius: 28px; }
 .ob-live__note { margin: 0; font-size: 12.5px; color: var(--ob-muted); text-align: center; }
 
+/* ── Step 3 (O2): choose sections. "On your page" (ordered, Move up / Move down / Remove),
+   then "Add more" (green "+ Add"); the live phone can be scrolled (its page cannot navigate). ── */
+.ob-secgroup { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ob-h2 { margin: 0; font: 700 16px/1.3 'Space Grotesk', Inter, sans-serif; color: var(--ob-navy); }
+.ob-h2:focus { outline: none; }
+.ob-chosen, .ob-more { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ob-more:empty { display: none; }
+.ob-sec {
+  display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 10px 10px 12px;
+  border: 1px solid var(--ob-border); border-radius: 12px; background: var(--ob-surface);
+}
+.ob-sec--locked { background: var(--ob-surface-2); }
+.ob-sec__num { display: inline-grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--ob-accent-soft); color: var(--ob-accent); font: 700 13px/1 Inter, sans-serif; }
+.ob-sec--locked .ob-sec__num { background: var(--ob-accent); color: var(--ob-on-accent); }
+.ob-sec__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.ob-sec__title { font: 600 15px/1.3 Inter, sans-serif; color: var(--ob-navy); }
+.ob-sec__text { font-size: 13px; color: var(--ob-muted); }
+.ob-sec__tag { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; background: #eef0f4; color: var(--ob-muted); font: 600 11.5px/1.5 Inter, sans-serif; }
+.ob-sec__tag .ob-ic { width: 13px; height: 13px; }
+.ob-sec__tag--links { background: var(--ob-info-bg); color: var(--ob-info-text); }
+.ob-sec__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ob-iconbtn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ob-border-strong); border-radius: 12px;
+  background: var(--ob-surface); color: var(--ob-text-2); cursor: pointer;
+}
+.ob-iconbtn:hover:not(:disabled) { border-color: var(--ob-navy); color: var(--ob-navy); }
+.ob-iconbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ob-sec .ob-remove { min-height: 44px; }
+.ob-more .ob-sec { border-style: dashed; background: var(--ob-surface-2); }
+.ob-more .ob-btn--add { align-self: center; min-height: 44px; }
+.ob-live__stage--scroll, .ob-live__stage--scroll .ob-phone__frame { pointer-events: auto; }
+/* phones: the buttons below the text */
+@media (max-width: 599px) {
+  .ob-sec { flex-wrap: wrap; }
+  .ob-sec__body { flex-basis: calc(100% - 40px); }
+  .ob-sec__actions { width: 100%; justify-content: flex-end; }
+  .ob-more .ob-sec__actions { width: auto; margin-left: 40px; justify-content: flex-start; }
+}
+
 /* ── Back / Next ── */
 .ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-border); }
 .ob-nav .ob-btn { flex: 1; }
@@ -279,11 +318,11 @@ body.ob-page {
   /* Step 2: link rows on one line (platform, address, Remove) */
   .ob-link-row { grid-template-columns: 170px minmax(0, 1fr) auto; grid-template-areas: 'platform url remove' 'error error error'; }
 }
-/* Step 2 from 960 px: two columns, the phone stays in view */
+/* Steps 2 and 3 from 960 px: two columns, the phone stays in view */
 @media (min-width: 960px) {
-  .ob-main:has(#ob-step-1:not([hidden])) { max-width: 1080px; }
-  /* the progress and the four step labels keep the width and place of Steps 1, 3 and 4 (920 px less the 16 px gutters) */
-  .ob-main:has(#ob-step-1:not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
+  .ob-main:has(:is(#ob-step-1, #ob-step-2):not([hidden])) { max-width: 1080px; }
+  /* the progress and the four step labels keep the width and place of Steps 1 and 4 (920 px less the 16 px gutters) */
+  .ob-main:has(:is(#ob-step-1, #ob-step-2):not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
   .ob-business { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
   .ob-live { position: sticky; top: 20px; padding: 18px 16px 16px; }
   .ob-live .ob-phone { --s: 0.62; border-radius: 40px; padding: 7px; }      /* 242 px wide */

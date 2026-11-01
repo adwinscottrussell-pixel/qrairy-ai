@@ -15,6 +15,13 @@
  * description as the Hero sub-headline (300), at most 8 links (the Social
  * Media section).
  *
+ * Step 3 (Phase O2): the sections the page starts with. The eight types the
+ * public page renders, each at most once, the Hero always first; the Hero and
+ * Social Media come from Step 2, the others are core.js's own starters (empty,
+ * so they stay hidden on the public page until filled in the Studio; the Text
+ * section starts empty too, so no placeholder text can be published). Social
+ * Media follows Step 2's links until the customer adds or removes it.
+ *
  * No request, no storage, no DOM. In Node: module.exports (for the tests).
  * In the browser: window.QraivyOnboardingModel.
  */
@@ -50,6 +57,13 @@
     return /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : 'https://' + s;
   }
 
+  // Step 3: the eight section types, in the order "Add more" lists them; fixed ids (core.js: s_ + 4-16 of a-z0-9)
+  var SECTION_TYPES = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'gallery', 'text'];
+  var SECTION_IDS = { hero: 's_obhero01', buttons: 's_obbuttons1', socialMedia: 's_obsocial1', contact: 's_obcontact1',
+    openingHours: 's_obhours01', products: 's_obproducts1', gallery: 's_obgallery1', text: 's_obtext01' };
+  var DEFAULT_SECTIONS = ['hero', 'buttons', 'openingHours', 'contact'];   // plus Social Media when Step 2 has links
+  var SOCIAL_MODES = ['auto', 'added', 'removed'];
+
   function hero(V3, l, name, description) {
     var h = V3.starter('hero', l);
     h.data.headline = name;
@@ -61,12 +75,57 @@
     s.data.links = links.map(function (x) { return { platform: x.platform, url: x.url }; });
     return Object.assign({ id: 's_obsocial1' }, s);
   }
-  // The page the answers make (not yet checked): the Hero, then Social Media when there are links
-  function buildDesign(V3, values, language) {
+  // a Step 3 section: the Hero and Social Media from Step 2, the Text section empty, the others core.js's starter
+  function section(V3, l, type, values) {
+    if (type === 'hero') return hero(V3, l, values.name || PLACEHOLDER_NAME[l], values.description || '');
+    if (type === 'socialMedia') return social(V3, l, values.links || []);
+    var s = V3.starter(type, l);
+    if (type === 'text') s.data = { heading: '', body: '' };
+    return Object.assign({ id: SECTION_IDS[type] }, s);
+  }
+  // The page the answers make (not yet checked). Without a section list (Step 2): the Hero, then Social
+  // Media when there are links. With one (Step 3): those sections, in that order.
+  function buildDesign(V3, values, language, types) {
     var l = lang(language);
-    var sections = [hero(V3, l, values.name || PLACEHOLDER_NAME[l], values.description || '')];
-    if (values.links && values.links.length) sections.push(social(V3, l, values.links));
+    var sections;
+    if (Array.isArray(types)) sections = types.map(function (t) { return section(V3, l, t, values); });
+    else {
+      sections = [hero(V3, l, values.name || PLACEHOLDER_NAME[l], values.description || '')];
+      if (values.links && values.links.length) sections.push(social(V3, l, values.links));
+    }
     return { schemaVersion: V3.SCHEMA_VERSION, settings: { language: l }, pages: [{ id: 'start', title: l === 'en' ? 'Home' : 'Start', sections: sections }] };
+  }
+
+  // A kept section list, cleaned: known types only, each once, the Hero first (null: not chosen yet, the defaults apply)
+  function cleanSections(list) {
+    if (!Array.isArray(list)) return null;
+    var out = ['hero'];
+    list.forEach(function (t) { if (SECTION_TYPES.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t); });
+    return out;
+  }
+  // The sections the page has now: the customer's list (or the defaults), with Social Media following
+  // Step 2's links while its mode is 'auto' (kept at its place when there are links, left out without);
+  // 'added' keeps it even without links, 'removed' leaves it out.
+  function sectionsFor(answers, hasLinks) {
+    var a = answers || {};
+    var list = cleanSections(a.sections) || DEFAULT_SECTIONS.slice();
+    var mode = SOCIAL_MODES.indexOf(a.social) !== -1 ? a.social : 'auto';
+    var has = list.indexOf('socialMedia') !== -1;
+    if (mode === 'removed' || (mode === 'auto' && !hasLinks)) return list.filter(function (t) { return t !== 'socialMedia'; });
+    if (!has) list.push('socialMedia');
+    return list;
+  }
+
+  // checkPage(V3, answers, language) -> Step 2's check plus { sections, page }: the full page with the sections,
+  // checked by core.validateDesign (page: its normalized copy when valid, else null)
+  function checkPage(V3, answers, language) {
+    var r = check(V3, answers, language);
+    var types = sectionsFor(answers, r.values.links.length > 0);
+    var v = V3.validateDesign(buildDesign(V3, r.values, language, types));
+    r.sections = types;
+    r.page = r.ok && v.ok ? v.design : null;
+    r.pageOk = !!r.page;
+    return r;
   }
 
   // One link, by core.js's own rules: null when valid, else an error code
@@ -116,7 +175,8 @@
     else errors.name = errors.name || (e.code === 'too_long' ? 'name_too_long' : 'name_invalid');
   }
 
-  // The answers as kept between steps and across a reload (no token, nothing else)
+  // The answers as kept between steps and across a reload (no token, nothing else).
+  // sections: null until the customer changes Step 3 (then the ordered list); social: Social Media's mode.
   function sanitize(a) {
     a = a && typeof a === 'object' ? a : {};
     return {
@@ -125,6 +185,8 @@
       links: (Array.isArray(a.links) ? a.links : []).slice(0, LIMITS.links).map(function (r) {
         return { platform: PLATFORMS.indexOf(r && r.platform) !== -1 ? r.platform : PLATFORMS[0], url: str(r && r.url).slice(0, 500) };
       }),
+      sections: cleanSections(a.sections),
+      social: SOCIAL_MODES.indexOf(a.social) !== -1 ? a.social : 'auto',
     };
   }
   // the platform a new row starts with: the first one not used yet
@@ -136,5 +198,6 @@
 
   return { LIMITS: LIMITS, PLATFORMS: PLATFORMS, LABELS: LABELS, EXAMPLES: EXAMPLES, PLACEHOLDER_NAME: PLACEHOLDER_NAME,
     chars: chars, cleanName: cleanName, cleanDescription: cleanDescription, normalizeUrl: normalizeUrl,
-    buildDesign: buildDesign, linkError: linkError, check: check, sanitize: sanitize, nextPlatform: nextPlatform };
+    buildDesign: buildDesign, linkError: linkError, check: check, sanitize: sanitize, nextPlatform: nextPlatform,
+    SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections, sectionsFor: sectionsFor, checkPage: checkPage };
 });

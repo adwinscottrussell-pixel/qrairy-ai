@@ -19,6 +19,13 @@
  * live phone preview (core.js renderDesign, a frame sandboxed without
  * permissions). The logo upload is shown disabled, "Coming soon".
  *
+ * Step 3 (Phase O2) chooses the page's sections: the Hero (from Step 2,
+ * always first), the defaults and "Add more", each type once, Move up / Move
+ * down / Remove. The live phone shows the whole page (core.js renderDesign)
+ * in a frame sandboxed with "allow-scripts" only, running just the fixed
+ * script of onboarding-previews.js: nothing in it navigates, the scroll
+ * position is kept and a section just added or moved is scrolled into view.
+ *
  * The answers and the step are kept in memory and, for a reload, in this
  * tab's sessionStorage under a key for the signed-in user (a hash of the
  * Clerk user id; never a token). Sign-out clears them.
@@ -26,7 +33,7 @@
  * Nothing is sent: no fetch, no draft, no save. The sign-in (studio-auth.js)
  * only tells it who is signed in and whether the email is verified; the
  * server checks that again before any draft is created (lpV3/draftPolicy.js,
- * later phases). Steps 3 and 4 are placeholders. Instagram and Website import
+ * later phases). Step 4 is a placeholder. Instagram and Website import
  * are shown as "Coming soon" and cannot be chosen.
  *
  * In Node: module.exports (the pure parts, for the tests). In the browser:
@@ -60,7 +67,6 @@
       business_text: 'Your business name, a short description and your social media links.',
       sections_text: 'Pick the sections for your page, put them in order and see a live phone preview.',
       review_text: 'Check your page, then save it as an unpublished draft and continue in the Studio.',
-      placeholder_text: 'This step is still being built. Nothing is collected or saved yet.',
       review_placeholder: 'This step is still being built. No draft is created yet.',
       back: 'Back', next: 'Next', finish_soon: 'Create draft — coming soon', exit: 'Back to Studio', sign_out: 'Sign out',
       unavailable_title: "Onboarding isn't available here yet", unavailable_text: 'The new onboarding is still being built and tested. Your landing pages keep working as before.',
@@ -86,6 +92,23 @@
       name_invalid: 'Please check your business name.', description_too_long: 'The description can have at most 300 characters.',
       link_invalid: 'Enter a {platform} address, for example {example}', link_platform: 'Please choose a platform.',
       links_too_many: 'You can add at most 8 links.',
+      // Step 3 (O2)
+      chosen_title: 'On your page', more_title: 'Add more', more_none: 'All eight sections are on your page.',
+      sections_info: 'Empty sections stay hidden on your public page until you add their content in the Studio.',
+      live_note_sections: 'Scroll the phone to see every section. Nothing is saved yet.',
+      add: 'Add', add_section_label: 'Add {name}', move_up_label: 'Move {name} up', move_down_label: 'Move {name} down', remove_section_label: 'Remove {name}',
+      hero_locked: 'Always first · from Step 2', social_links: '{n} links from Step 2', social_links_one: '1 link from Step 2',
+      social_none: 'No links yet · add them in Step 2', sec_empty: 'Add your content in the Studio',
+      sec_added: '{name} added, position {n} of {total}.', sec_removed: '{name} removed.', sec_moved: '{name} moved to position {n} of {total}.',
+      sections_invalid: "This page can't be built yet. Please go back to Step 2 and check your answers.",
+      sec_hero: 'Hero', sec_hero_text: 'Header with your business name and description',
+      sec_buttons: 'Buttons', sec_buttons_text: 'WhatsApp, call, directions, website',
+      sec_socialMedia: 'Social Media', sec_socialMedia_text: 'Your social media profiles',
+      sec_contact: 'Contact', sec_contact_text: 'Address, phone, email and map',
+      sec_openingHours: 'Opening Hours', sec_openingHours_text: 'Your business hours',
+      sec_products: 'Products', sec_products_text: 'Products with links to your shop',
+      sec_gallery: 'Gallery', sec_gallery_text: 'Photos of your business, products or menu',
+      sec_text: 'Text', sec_text_text: 'A heading and your own text',
     },
     de: {
       page_title: 'Loslegen — QRAIVY', lang_group: 'Sprache', progress_label: 'Fortschritt', step_of: 'Schritt {n} von {total}',
@@ -99,7 +122,6 @@
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
       review_text: 'Prüfen Sie Ihre Seite, speichern Sie sie als unveröffentlichten Entwurf und arbeiten Sie im Studio weiter.',
-      placeholder_text: 'Dieser Schritt wird noch gebaut. Es wird noch nichts erfasst oder gespeichert.',
       review_placeholder: 'Dieser Schritt wird noch gebaut. Es wird noch kein Entwurf erstellt.',
       back: 'Zurück', next: 'Weiter', finish_soon: 'Entwurf erstellen – demnächst', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
       unavailable_title: 'Das Onboarding ist hier noch nicht verfügbar', unavailable_text: 'Das neue Onboarding wird noch gebaut und getestet. Ihre Landingpages funktionieren weiter wie bisher.',
@@ -124,6 +146,22 @@
       name_invalid: 'Bitte prüfen Sie Ihren Unternehmensnamen.', description_too_long: 'Die Beschreibung darf höchstens 300 Zeichen haben.',
       link_invalid: 'Geben Sie eine {platform}-Adresse ein, zum Beispiel {example}', link_platform: 'Bitte wählen Sie eine Plattform.',
       links_too_many: 'Sie können höchstens 8 Links hinzufügen.',
+      chosen_title: 'Auf Ihrer Seite', more_title: 'Weitere hinzufügen', more_none: 'Alle acht Abschnitte sind auf Ihrer Seite.',
+      sections_info: 'Leere Abschnitte bleiben auf Ihrer öffentlichen Seite verborgen, bis Sie im Studio Inhalte ergänzen.',
+      live_note_sections: 'Scrollen Sie im Smartphone, um alle Abschnitte zu sehen. Noch wird nichts gespeichert.',
+      add: 'Hinzufügen', add_section_label: '{name} hinzufügen', move_up_label: '{name} nach oben verschieben', move_down_label: '{name} nach unten verschieben', remove_section_label: '{name} entfernen',
+      hero_locked: 'Immer zuerst · aus Schritt 2', social_links: '{n} Links aus Schritt 2', social_links_one: '1 Link aus Schritt 2',
+      social_none: 'Noch keine Links · in Schritt 2 hinzufügen', sec_empty: 'Inhalte später im Studio hinzufügen',
+      sec_added: '{name} hinzugefügt, Position {n} von {total}.', sec_removed: '{name} entfernt.', sec_moved: '{name} auf Position {n} von {total} verschoben.',
+      sections_invalid: 'Diese Seite kann noch nicht erstellt werden. Bitte prüfen Sie Ihre Angaben in Schritt 2.',
+      sec_hero: 'Hero', sec_hero_text: 'Kopfbereich mit Ihrem Unternehmensnamen und Ihrer Beschreibung',
+      sec_buttons: 'Buttons', sec_buttons_text: 'WhatsApp, Anruf, Route, Website',
+      sec_socialMedia: 'Social Media', sec_socialMedia_text: 'Ihre Social-Media-Profile',
+      sec_contact: 'Kontakt', sec_contact_text: 'Adresse, Telefon, E-Mail und Karte',
+      sec_openingHours: 'Öffnungszeiten', sec_openingHours_text: 'Ihre Geschäftszeiten',
+      sec_products: 'Produkte', sec_products_text: 'Produkte mit Links zu Ihrem Shop',
+      sec_gallery: 'Galerie', sec_gallery_text: 'Fotos von Ihrem Geschäft, Ihren Produkten oder Ihrer Speisekarte',
+      sec_text: 'Text', sec_text_text: 'Eine Überschrift und Ihr eigener Text',
     },
   };
 
@@ -147,15 +185,15 @@
   }
 
   // The wizard's navigation state: { step, choice }. Pure.
-  // Step 2 leads on only with valid answers (businessOk: onboarding-model.js check().ok);
-  // without it (undefined) Next may be tried and shows the errors.
+  // Step 2 leads on only with valid answers (businessOk: onboarding-model.js check().ok), Step 3 only
+  // with a valid page (checkPage().pageOk); without it (undefined) Next may be tried and shows the errors.
   function choose(s, id) {
     var o = OPTIONS.filter(function (x) { return x.id === id; })[0];
     return o && o.available ? { step: s.step, choice: id } : s;
   }
   function canNext(s, businessOk) {
     if (s.step === 0) return s.choice === 'scratch';
-    if (s.step === 1) return businessOk !== false;
+    if (s.step === 1 || s.step === 2) return businessOk !== false;
     return s.step > 0 && s.step < STEPS.length - 1;
   }
   function next(s, businessOk) { return canNext(s, businessOk) ? { step: s.step + 1, choice: s.choice } : s; }
@@ -171,7 +209,7 @@
     for (var i = 0; i < userId.length; i++) { h ^= userId.charCodeAt(i); h = Math.imul(h, 0x01000193); }
     return STORE_PREFIX + hex(h >>> 0);
   }
-  // The kept progress, checked: { step, choice, answers }. Steps past 2 only with valid answers.
+  // The kept progress, checked: { step, choice, answers }. Steps past 2 only with valid answers, past 3 with a valid page.
   function restore(saved, M, V3) {
     var s = saved && typeof saved === 'object' ? saved : {};
     var answers = M.sanitize(s.answers);
@@ -179,6 +217,7 @@
     var step = typeof s.step === 'number' && s.step >= 0 && s.step < STEPS.length ? Math.floor(s.step) : 0;
     if (!choice) step = 0;
     if (step > 1 && !M.check(V3, answers, 'en').ok) step = 1;
+    if (step > 2 && !M.checkPage(V3, answers, 'en').pageOk) step = 2;
     return { step: step, choice: choice, answers: answers };
   }
 
@@ -239,14 +278,14 @@
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
       if (M && V3) { var r = restore(saved, M, V3); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
-      tried = false; touched = {}; last = { name: '', description: '' };
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null;
       fields();
     }
     function forget() {
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
-      tried = false; touched = {}; last = { name: '', description: '' };
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null;
       fields();
     }
     function check() { return M && V3 ? M.check(V3, answers, current) : null; }
@@ -389,6 +428,140 @@
       live(true);
     }
 
+    // ── Step 3: the sections (answers.sections and answers.social, kept with the other answers) and the
+    // live phone (the whole page; its scroll position kept; a section just added or moved shown) ──
+    var frameY = 0, reveal = null;
+    function page() { return M && V3 ? M.checkPage(V3, answers, current) : null; }
+    function secName(type) { return t('sec_' + type); }
+    function icon(name) { return $('ob-tpl-icons').content.querySelector('[data-icon="' + name + '"]').cloneNode(true); }
+    function say(msg) {
+      var s = $('ob-sections-status');
+      s.textContent = '';
+      win.setTimeout(function () { s.textContent = msg; }, 40);   // cleared first, so a repeat is spoken again
+    }
+    function tag(type, r) {
+      var n = r.values.links.length, text, cls = 'ob-sec__tag';
+      if (type === 'hero') text = t('hero_locked');
+      else if (type === 'socialMedia') { text = n === 1 ? t('social_links_one') : n ? t('social_links').replace('{n}', String(n)) : t('social_none'); if (n) cls += ' ob-sec__tag--links'; }
+      else text = t('sec_empty');
+      var s = el('span', cls);
+      if (type === 'hero') s.appendChild(icon('lock'));
+      s.appendChild(doc.createTextNode(text));
+      return s;
+    }
+    function body(type, r) {
+      var b = el('span', 'ob-sec__body'), title = el('span', 'ob-sec__title'), text = el('span', 'ob-sec__text');
+      title.textContent = secName(type);
+      text.textContent = t('sec_' + type + '_text');
+      b.appendChild(title); b.appendChild(text);
+      if (r) b.appendChild(tag(type, r));
+      return b;
+    }
+    function moveButton(dir, type, disabled) {
+      var b = el('button', 'ob-iconbtn', { type: 'button', 'data-act': dir, 'aria-label': t(dir === 'up' ? 'move_up_label' : 'move_down_label').replace('{name}', secName(type)) });
+      b.appendChild(icon(dir));
+      b.disabled = disabled;
+      b.addEventListener('click', function () { moveSection(type, dir); });
+      return b;
+    }
+    function chosenItem(type, i, total, r) {
+      var li = el('li', 'ob-sec' + (type === 'hero' ? ' ob-sec--locked' : ''), { 'data-type': type });
+      var num = el('span', 'ob-sec__num', { 'aria-hidden': 'true' });
+      num.textContent = String(i + 1);
+      li.appendChild(num);
+      li.appendChild(body(type, r));
+      if (type === 'hero') return li;                       // locked: always first, never removed
+      var acts = el('span', 'ob-sec__actions');
+      acts.appendChild(moveButton('up', type, i <= 1));
+      acts.appendChild(moveButton('down', type, i >= total - 1));
+      var rm = el('button', 'ob-remove', { type: 'button', 'data-act': 'remove', 'aria-label': t('remove_section_label').replace('{name}', secName(type)) });
+      rm.textContent = t('remove');
+      rm.addEventListener('click', function () { removeSection(type); });
+      acts.appendChild(rm);
+      li.appendChild(acts);
+      return li;
+    }
+    function moreItem(type) {
+      var li = el('li', 'ob-sec', { 'data-type': type });
+      li.appendChild(body(type, null));
+      var acts = el('span', 'ob-sec__actions');
+      var add = el('button', 'ob-btn ob-btn--add', { type: 'button', 'data-act': 'add', 'aria-label': t('add_section_label').replace('{name}', secName(type)) });
+      var plus = el('span', '', { 'aria-hidden': 'true' });
+      plus.textContent = '+';
+      var label = el('span', '');
+      label.textContent = t('add');
+      add.appendChild(plus); add.appendChild(label);
+      add.addEventListener('click', function () { addSection(type); });
+      acts.appendChild(add);
+      li.appendChild(acts);
+      return li;
+    }
+    function sections() {
+      if (!M || !$('ob-chosen')) return;
+      var r = page(), list = r.sections, chosen = $('ob-chosen'), more = $('ob-more');
+      while (chosen.firstChild) chosen.removeChild(chosen.firstChild);
+      while (more.firstChild) more.removeChild(more.firstChild);
+      list.forEach(function (type, i) { chosen.appendChild(chosenItem(type, i, list.length, r)); });
+      var rest = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; });
+      rest.forEach(function (type) { more.appendChild(moreItem(type)); });
+      $('ob-more-none').hidden = rest.length > 0;
+      $('ob-sections-error').textContent = r.pageOk ? '' : t('sections_invalid');
+      drawSections();
+    }
+    function addSection(type) {
+      var list = page().sections;
+      if (list.indexOf(type) !== -1 || M.SECTION_TYPES.indexOf(type) === -1) return;
+      var restIndex = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; }).indexOf(type);
+      list.push(type);
+      answers.sections = list;
+      if (type === 'socialMedia') answers.social = 'added';
+      reveal = M.SECTION_IDS[type];
+      save(); sections();
+      var now = page().sections;
+      say(t('sec_added').replace('{name}', secName(type)).replace('{n}', String(now.indexOf(type) + 1)).replace('{total}', String(now.length)));
+      // focus: the next "+ Add" (or the one before), else the list's heading
+      var adds = $('ob-more').querySelectorAll('[data-act="add"]');
+      (adds[restIndex] || adds[restIndex - 1] || $('ob-chosen-title')).focus();
+    }
+    function removeSection(type) {
+      var list = page().sections, i = list.indexOf(type);
+      if (i < 1) return;                                     // the Hero cannot be removed
+      list.splice(i, 1);
+      answers.sections = list;
+      if (type === 'socialMedia') answers.social = 'removed';
+      reveal = null;
+      save(); sections();
+      say(t('sec_removed').replace('{name}', secName(type)));
+      // focus: the section that took its place (or the one before), else the list's heading
+      var items = $('ob-chosen').children, to = items[i] || items[i - 1];
+      var b = to && to.querySelector('[data-act="remove"]');
+      (b || $('ob-chosen-title')).focus();
+    }
+    function moveSection(type, dir) {
+      var list = page().sections, i = list.indexOf(type), j = i + (dir === 'up' ? -1 : 1);
+      if (i < 1 || j < 1 || j >= list.length) return;        // the Hero stays first
+      list[i] = list[j]; list[j] = type;
+      answers.sections = list;
+      reveal = M.SECTION_IDS[type];
+      save(); sections();
+      say(t('sec_moved').replace('{name}', secName(type)).replace('{n}', String(j + 1)).replace('{total}', String(list.length)));
+      // focus: the same button on the moved section (the other one when it reached the end)
+      var li = $('ob-chosen').querySelector('[data-type="' + type + '"]');
+      var b = li.querySelector('[data-act="' + dir + '"]');
+      if (b.disabled) b = li.querySelector('[data-act="' + (dir === 'up' ? 'down' : 'up') + '"]');
+      b.focus();
+    }
+    // the page into the scriptable live frame (onboarding-previews.js liveHtml); unchanged HTML is not reloaded,
+    // a reveal then goes to the page as it is
+    function drawSections() {
+      var r = page(), frame = $('ob-sections-frame');
+      if (!r || !frame || !PV) return;
+      var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
+      var html = out && out.ok ? PV.liveHtml(out.html) : '';
+      if (html && frame.srcdoc !== html) frame.srcdoc = html;
+      else if (reveal && frame.contentWindow) { frame.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*'); reveal = null; }
+    }
+
     function texts() {
       doc.documentElement.lang = current;
       doc.title = t('page_title');
@@ -437,6 +610,7 @@
       $('ob-finish').hidden = !last;
       if (s === 0) previews(false);
       if (s === 1) business();
+      if (s === 2) sections();
       if (focus) { var h = $('ob-step-' + s).querySelector('.ob-h1'); if (h) h.focus(); }
     }
     function render(focus) {
@@ -484,6 +658,11 @@
         ok = !!(r && r.ok);
         if (!ok) { tried = true; errors(); focusInvalid(r); return; }
       }
+      if (nav.step === 2) {
+        var p = page();
+        ok = !!(p && p.pageOk);
+        if (!ok) { sections(); $('ob-chosen-title').focus(); return; }
+      }
       var n = next(nav, ok);
       if (n !== nav) { nav = n; save(); wizard(true); }
     });
@@ -493,6 +672,20 @@
       $('ob-name').addEventListener('input', function (e) { answers.name = e.target.value; changed(); });
       $('ob-description').addEventListener('input', function (e) { answers.description = e.target.value; changed(); });
       $('ob-add-link').addEventListener('click', addRow);
+    }
+    // Step 3's live frame: after each load, the scroll position and the section to reveal; from it, only its scroll position
+    if (PV && $('ob-sections-frame')) {
+      $('ob-sections-frame').addEventListener('load', function () {
+        var f = $('ob-sections-frame');
+        if (f.contentWindow) f.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*');
+        reveal = null;
+      });
+      win.addEventListener('message', function (e) {
+        var f = $('ob-sections-frame');
+        if (!f || e.source !== f.contentWindow) return;
+        var m = PV.acceptFrameMessage(e.data);
+        if (m) frameY = m.y;
+      });
     }
 
     // the sign-in: Clerk of this address only (studio-auth.js)

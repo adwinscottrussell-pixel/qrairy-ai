@@ -56,6 +56,9 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
   await page.evaluateOnNewDocument((l, mode) => {
     try { localStorage.setItem('qraivy_lang', l); localStorage.setItem('qraivy.studio.theme', 'light'); } catch (e) {}
     window.__calls = [];
+    // Step 3's live frame: the scroll positions it reports
+    window.__frameY = [];
+    addEventListener('message', (e) => { if (e.data && e.data.type === 'scroll') window.__frameY.push(e.data.y); });
     if (mode === 'none') return;
     const listeners = [];
     const status = mode === 'verified' ? 'verified' : 'unverified';
@@ -472,7 +475,7 @@ test('Step 2 progress: kept across a reload for the same user; another user sees
   const stored = await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding')).map((k) => [k, JSON.parse(sessionStorage.getItem(k))]));
   assert.equal(stored.length, 1);
   assert.match(stored[0][0], /^qraivy\.onboarding\.v1:[0-9a-f]{8}$/, 'a per-user key, not the id');
-  assert.deepEqual(stored[0][1], { step: 1, choice: 'scratch', answers: { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] } });
+  assert.deepEqual(stored[0][1], { step: 1, choice: 'scratch', answers: { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }], sections: null, social: 'auto' } });
   assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter((k) => /onboarding/.test(k) || /Sonne/.test(localStorage.getItem(k)))), [], 'nothing in localStorage');
   // reload: the same user is back on Step 2 with the answers
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
@@ -495,6 +498,219 @@ test('Step 2 progress: kept across a reload for the same user; another user sees
   assert.equal(await page.$eval('#ob-name', (n) => n.value), '');
   assert.deepEqual(api, []);
   await page.close();
+});
+
+// ── Step 3 (O2): choose sections ──
+async function toStep3(page, { name = 'Café Sonne', link = '' } = {}) {
+  await toStep2(page);
+  await page.type('#ob-name', name);
+  if (link) { await page.click('#ob-add-link'); await page.type('#ob-link-url-' + (await rowKeys(page))[0], link); }
+  await page.click('#ob-next');
+  await sleep(150);
+}
+const chosen = (page) => page.$$eval('#ob-chosen > li', (ns) => ns.map((n) => n.dataset.type));
+const more = (page) => page.$$eval('#ob-more > li', (ns) => ns.map((n) => n.dataset.type));
+const secFrame = (page) => page.$eval('#ob-sections-frame', (f) => f.srcdoc);
+const waitSec = (page, id, present = true) => page.waitForFunction((x, p) => document.getElementById('ob-sections-frame').srcdoc.includes('data-v3-id="' + x + '"') === p, { timeout: 3000 }, id, present);
+const status = (page) => page.waitForFunction(() => document.getElementById('ob-sections-status').textContent, { timeout: 2000 }).then(() => text(page, '#ob-sections-status'));
+const frameIds = async (page) => [...(await secFrame(page)).matchAll(/data-v3-id="(s_[a-z0-9]+)"/g)].map((m) => m[1]);
+
+test('Step 3, desktop, English: defaults Hero (locked), Buttons, Opening Hours, Contact; "Add more" the rest; live phone with the whole page; two columns; no request', async () => {
+  const { page, api, external, missing } = await onboarding();
+  await toStep3(page);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-sections-title', 'focus on the step heading');
+  assert.deepEqual(await chosen(page), ['hero', 'buttons', 'openingHours', 'contact']);
+  assert.deepEqual(await more(page), ['socialMedia', 'products', 'gallery', 'text']);
+  // the Hero: locked (no button), "Always first"; the others: Move up / Move down / Remove with their names
+  const items = await page.$$eval('#ob-chosen > li', (ns) => ns.map((n) => ({ type: n.dataset.type, num: n.querySelector('.ob-sec__num').textContent, title: n.querySelector('.ob-sec__title').textContent, tag: n.querySelector('.ob-sec__tag').textContent,
+    buttons: [...n.querySelectorAll('button')].map((b) => (b.disabled ? '-' : '') + b.getAttribute('aria-label')) })));
+  assert.deepEqual(items[0], { type: 'hero', num: '1', title: 'Hero', tag: 'Always first · from Step 2', buttons: [] });
+  assert.deepEqual(items[1].buttons, ['-Move Buttons up', 'Move Buttons down', 'Remove Buttons'], 'the first movable: no Move up');
+  assert.deepEqual(items[3].buttons, ['Move Contact up', '-Move Contact down', 'Remove Contact'], 'the last: no Move down');
+  assert.equal(items[2].tag, 'Add your content in the Studio');
+  assert.deepEqual(await page.$$eval('#ob-more [data-act="add"]', (ns) => ns.map((b) => b.getAttribute('aria-label') + '|' + b.textContent + '|' + getComputedStyle(b).color)),
+    ['Add Social Media|+Add|rgb(21, 128, 61)', 'Add Products|+Add|rgb(21, 128, 61)', 'Add Gallery|+Add|rgb(21, 128, 61)', 'Add Text|+Add|rgb(21, 128, 61)'], 'green Add buttons');
+  assert.equal(await text(page, '[data-ob="sections_info"]'), 'Empty sections stay hidden on your public page until you add their content in the Studio.');
+  // the live phone: the page with exactly these sections, in order; scripts only, never same-origin; the fixed script once
+  await waitSec(page, 's_obcontact1');
+  assert.deepEqual(await frameIds(page), ['s_obhero01', 's_obbuttons1', 's_obhours01', 's_obcontact1']);
+  const fr = await page.$eval('#ob-sections-frame', (f) => ({ sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), scripts: (f.srcdoc.match(/<script>/g) || []).length, name: f.srcdoc.includes('Café Sonne'), ph: (f.srcdoc.match(/Empty section – add content in the editor/g) || []).length }));
+  assert.deepEqual(fr, { sandbox: 'allow-scripts', tab: -1, hidden: true, scripts: 1, name: true, ph: 3 });
+  const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-2 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-2 .ob-live').getBoundingClientRect();
+    return { side: l.left >= f.right, sticky: getComputedStyle(document.querySelector('#ob-step-2 .ob-live')).position, phone: Math.round(document.getElementById('ob-sections-frame').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth }; });
+  assert.ok(lay.side && lay.sticky === 'sticky' && Math.abs(lay.phone - 242) <= 1 && lay.sw <= lay.iw, JSON.stringify(lay));
+  // Steps 1, 2 and 4 unchanged: Step 4 is still the placeholder, the Step 1 and 2 frames still without scripts
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
+  assert.match(await text(page, '#ob-step-3'), /No draft is created yet/);
+  assert.deepEqual(await page.$$eval('[data-preview], #ob-live-frame', (ns) => ns.map((f) => f.getAttribute('sandbox'))), ['', '', '', '']);
+  assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
+  assert.ok(!(await calls(page)).includes('getToken'));
+  await page.close();
+});
+
+test('Step 3: add, remove, Move up / Move down; the Hero stays first; each type once; announcements and focus; the phone follows, keeps its scroll and shows the change', async () => {
+  const { page, api } = await onboarding();
+  await toStep3(page);
+  await waitSec(page, 's_obcontact1');
+  // add Gallery: at the end, announced, focus on the next "+ Add"; the phone scrolls to it
+  await page.click('#ob-more [data-act="add"][aria-label="Add Gallery"]');
+  assert.deepEqual(await chosen(page), ['hero', 'buttons', 'openingHours', 'contact', 'gallery']);
+  assert.deepEqual(await more(page), ['socialMedia', 'products', 'text'], 'Gallery only once');
+  assert.equal(await status(page), 'Gallery added, position 5 of 5.');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Add Text', 'focus: the next Add');
+  await waitSec(page, 's_obgallery1');
+  await page.waitForFunction(() => window.__frameY.length && window.__frameY[window.__frameY.length - 1] > 200, { timeout: 4000 });
+  const revealedAt = await page.evaluate(() => window.__frameY[window.__frameY.length - 1]);
+  // remove Buttons: no reveal, the scroll position is kept (the frame restores it after the reload)
+  await page.click('#ob-chosen [data-type="buttons"] [data-act="remove"]');
+  assert.deepEqual(await chosen(page), ['hero', 'openingHours', 'contact', 'gallery']);
+  assert.equal(await status(page), 'Buttons removed.');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove Opening Hours', 'focus: the section that took its place');
+  await waitSec(page, 's_obbuttons1', false);
+  await page.evaluate(() => { window.__frameY = []; });
+  await page.waitForFunction(() => window.__frameY.length > 0, { timeout: 4000 });
+  const kept = await page.evaluate(() => window.__frameY[0]);
+  const maxY = await (await (await page.$('#ob-sections-frame')).contentFrame()).evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  assert.ok(kept > 0 && kept === Math.min(revealedAt, maxY), 'scroll kept after the re-render (as far as the shorter page allows): ' + kept + ' (was ' + revealedAt + ', max ' + maxY + ')');
+  // Move Gallery up twice: announced, focus stays on its Move up; the Hero stays first
+  await page.click('#ob-chosen [data-type="gallery"] [data-act="up"]');
+  assert.equal(await status(page), 'Gallery moved to position 3 of 4.');
+  await page.click('#ob-chosen [data-type="gallery"] [data-act="up"]');
+  assert.deepEqual(await chosen(page), ['hero', 'gallery', 'openingHours', 'contact']);
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Move Gallery down', 'at the top: focus moves to Move down');
+  assert.equal(await page.$eval('#ob-chosen [data-type="gallery"] [data-act="up"]', (b) => b.disabled), true, 'cannot pass the Hero');
+  await page.evaluate(() => document.querySelector('#ob-chosen [data-type="gallery"] [data-act="up"]').click());
+  assert.deepEqual(await chosen(page), ['hero', 'gallery', 'openingHours', 'contact'], 'a click on the disabled button does nothing');
+  await page.waitForFunction(() => /s_obhero01[\s\S]*s_obgallery1[\s\S]*s_obhours01/.test(document.getElementById('ob-sections-frame').srcdoc), { timeout: 3000 });
+  await page.click('#ob-chosen [data-type="gallery"] [data-act="down"]');
+  assert.deepEqual(await chosen(page), ['hero', 'openingHours', 'gallery', 'contact']);
+  assert.equal(await status(page), 'Gallery moved to position 3 of 4.');
+  // all eight: "Add more" is empty with its note; each type once
+  for (const n of ['Social Media', 'Products', 'Text', 'Buttons']) await page.click('#ob-more [data-act="add"][aria-label="Add ' + n + '"]');
+  assert.equal((await chosen(page)).length, 8);
+  assert.equal(new Set(await chosen(page)).size, 8);
+  assert.equal(await visible(page, '#ob-more-none'), true);
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-chosen-title', 'nothing left to add: focus on the list heading');
+  await waitSec(page, 's_obtext01');
+  assert.equal((await frameIds(page)).length, 8, 'the phone shows all eight');
+  assert.ok(!(await secFrame(page)).includes('Your text'), 'the Text section has no placeholder text');
+  // keyboard: the frame and its page are out of the Tab order; Tab moves through the section buttons
+  const f = await (await page.$('#ob-sections-frame')).contentFrame();
+  assert.deepEqual(await f.evaluate(() => [...document.querySelectorAll('a,button')].filter((n) => n.tabIndex !== -1).length), 0);
+  await page.focus('#ob-chosen [data-type="openingHours"] [data-act="up"]');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Move Opening Hours down');
+  await page.keyboard.press('Enter');
+  assert.equal((await chosen(page))[2], 'openingHours', 'Enter moves it');
+  // touch targets: every section button at least 44 px
+  assert.ok((await page.$$eval('#ob-step-2 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && (r.height < 44 || r.width < 44)).length)) === 0, 'buttons at least 44 x 44');
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('Step 3 live frame: links and clicks do nothing (no navigation, no request); the page cannot reach the wizard', async () => {
+  const { page, api, external } = await onboarding();
+  await toStep3(page, { link: 'instagram.com/sonne' });
+  await waitSec(page, 's_obsocial1');
+  const f = await (await page.$('#ob-sections-frame')).contentFrame();
+  const a = await f.waitForSelector('a.v3-social');
+  await a.evaluate((n) => n.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await sleep(150);
+  await a.click();
+  await f.evaluate(() => { const a = document.querySelector('a.v3-social'); a.removeAttribute('target'); a.click(); });
+  await sleep(300);
+  assert.equal(f.url(), 'about:srcdoc', 'the frame did not navigate');
+  assert.deepEqual(external, [], 'nothing requested from elsewhere');
+  const reach = await f.evaluate(() => { const r = {}; try { r.parent = !!parent.document; } catch (e) { r.parent = 'blocked'; } try { r.storage = !!sessionStorage; } catch (e) { r.storage = 'blocked'; } r.origin = location.origin; return r; });
+  assert.deepEqual(reach, { parent: 'blocked', storage: 'blocked', origin: 'null' }, 'opaque origin: no wizard, no storage');
+  assert.equal(page.url(), 'https://qraivy-studio-v3-staging.vercel.app/studio-onboarding.html');
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('Step 3 Social Media: included with Step 2 links ("1 link from Step 2"); follows Step 2 while untouched; a deliberate remove or add is kept', async () => {
+  const { page } = await onboarding();
+  await toStep3(page);
+  assert.ok(!(await chosen(page)).includes('socialMedia'), 'no links: not included');
+  // back to Step 2, add a link: Social Media joins at the end
+  await page.click('#ob-back');
+  await page.click('#ob-add-link');
+  await page.type('#ob-link-url-' + (await rowKeys(page))[0], 'instagram.com/sonne');
+  await page.click('#ob-next');
+  assert.deepEqual(await chosen(page), ['hero', 'buttons', 'openingHours', 'contact', 'socialMedia']);
+  assert.equal(await text(page, '#ob-chosen [data-type="socialMedia"] .ob-sec__tag'), '1 link from Step 2');
+  await waitSec(page, 's_obsocial1');
+  assert.ok((await secFrame(page)).includes('https://instagram.com/sonne'));
+  // removed deliberately: stays out after Step 2 gets another link
+  await page.click('#ob-chosen [data-type="socialMedia"] [data-act="remove"]');
+  await page.click('#ob-back');
+  await page.click('#ob-add-link');
+  await page.type('#ob-link-url-' + (await rowKeys(page))[1], 'facebook.com/sonne');
+  await page.click('#ob-next');
+  assert.ok(!(await chosen(page)).includes('socialMedia'), 'the customer\'s remove is kept');
+  // added deliberately without links: stays, "No links yet"
+  await page.click('#ob-back');
+  for (const b of await page.$$('#ob-links .ob-remove')) await page.click('#ob-links .ob-remove');
+  await page.click('#ob-next');
+  await page.click('#ob-more [data-act="add"][aria-label="Add Social Media"]');
+  assert.equal(await text(page, '#ob-chosen [data-type="socialMedia"] .ob-sec__tag'), 'No links yet · add them in Step 2');
+  await page.click('#ob-back'); await page.click('#ob-next');
+  assert.ok((await chosen(page)).includes('socialMedia'), 'the customer\'s add is kept without links');
+  await waitSec(page, 's_obsocial1');
+  assert.ok((await secFrame(page)).includes('Empty section – add content in the editor'), 'an empty Social Media: the core.js placeholder');
+  await page.close();
+});
+
+test('Step 3 progress: the sections come back after a reload (same user); Step 2 answers intact; sign-out clears them', async () => {
+  const { page, api } = await onboarding();
+  await toStep3(page, { link: 'instagram.com/sonne' });
+  await page.click('#ob-more [data-act="add"][aria-label="Add Text"]');
+  await page.click('#ob-chosen [data-type="text"] [data-act="up"]');
+  await page.click('#ob-chosen [data-type="buttons"] [data-act="remove"]');
+  const before = await chosen(page);
+  assert.deepEqual(before, ['hero', 'openingHours', 'contact', 'text', 'socialMedia']);
+  const stored = await page.evaluate(() => JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding')))));
+  assert.deepEqual([stored.step, stored.answers.sections, stored.answers.social], [2, ['hero', 'openingHours', 'contact', 'text', 'socialMedia'], 'auto']);
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.deepEqual(await chosen(page), before);
+  await page.click('#ob-back');
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonne', 'Step 2 answers intact');
+  await page.click('#ob-signout'); await sleep(100);
+  assert.deepEqual(await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding'))), []);
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('Step 3, phone, English and German: one column (on your page, add more, phone, Back / Next); no sideways scroll; German texts and announcements', async () => {
+  for (const lang of ['en', 'de']) {
+    const { page, api } = await onboarding({ lang, viewport: PHONE });
+    await toStep3(page, { name: lang === 'de' ? 'Bäckerei Sonne' : 'Café Sonne', link: 'instagram.com/sonne' });
+    await waitSec(page, 's_obsocial1');
+    const lay = await page.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const a = r('#ob-chosen'), b = r('#ob-more'), c = r('#ob-step-2 .ob-live'), d = r('.ob-nav');
+      return { order: a.bottom <= b.top && b.bottom <= c.top && c.bottom <= d.top, sw: document.documentElement.scrollWidth, iw: innerWidth, phone: Math.round(document.getElementById('ob-sections-frame').getBoundingClientRect().width) };
+    });
+    assert.ok(lay.order && lay.sw <= lay.iw && Math.abs(lay.phone - 195) <= 1, lang + ': ' + JSON.stringify(lay));
+    assert.ok((await page.$$eval('#ob-step-2 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length)) === 0, 'touch targets');
+    if (lang === 'de') {
+      assert.equal(await text(page, '#ob-sections-title'), 'Abschnitte wählen');
+      assert.equal(await text(page, '#ob-chosen-title'), 'Auf Ihrer Seite');
+      assert.equal(await text(page, '#ob-more-title'), 'Weitere hinzufügen');
+      assert.deepEqual(await page.$$eval('#ob-chosen .ob-sec__title', (ns) => ns.map((n) => n.textContent)), ['Hero', 'Buttons', 'Öffnungszeiten', 'Kontakt', 'Social Media']);
+      assert.equal(await text(page, '#ob-chosen [data-type="socialMedia"] .ob-sec__tag'), '1 Link aus Schritt 2');
+      assert.equal(await text(page, '#ob-chosen [data-type="contact"] .ob-sec__tag'), 'Inhalte später im Studio hinzufügen');
+      await page.click('#ob-more [data-act="add"][aria-label="Galerie hinzufügen"]');
+      assert.equal(await status(page), 'Galerie hinzugefügt, Position 6 von 6.');
+      await waitSec(page, 's_obgallery1');
+      assert.ok((await secFrame(page)).includes('Leerer Abschnitt – Inhalte im Editor ergänzen'), 'the German core.js placeholder');
+    }
+    assert.deepEqual(api, []);
+    await page.close();
+  }
 });
 
 // The header (approved design): solid black, white Sign out and Back to Studio, EN/DE with the chosen language

@@ -18,6 +18,15 @@
  * label through js/studio/studio-demo-images.js (localize, passed in).
  * No request, no storage.
  *
+ * Step 3's live phone (Phase O2): liveHtml adds FRAME_SCRIPT, fixed text with
+ * no customer data, to a core.js page. The page is shown in a frame sandboxed
+ * with "allow-scripts" only (never allow-same-origin: an opaque origin, no
+ * access to the wizard, its storage or cookies), as the Studio's preview is.
+ * The script blocks every click, form and link (nothing navigates), takes
+ * the page's controls out of the keyboard order, reports the scroll position
+ * and, on the wizard's message, restores it and scrolls to a section just
+ * added or moved. acceptFrameMessage accepts exactly { type: 'scroll', y }.
+ *
  * In Node: module.exports (for the tests). In the browser:
  * window.QraivyOnboardingPreviews.
  */
@@ -79,5 +88,40 @@
     };
   }
 
-  return { EXAMPLES: EXAMPLES, SCRATCH_NAME: SCRATCH_NAME, exampleDesign: exampleDesign, scratchDesign: scratchDesign, previews: previews };
+  // ── Step 3's live phone ──
+  var SECTION_ID = /^s_[a-z0-9]{4,16}$/;
+  var MAX_SCROLL = 10000000;
+  var FRAME_SCRIPT =
+    '<style>html{scrollbar-width:none}html::-webkit-scrollbar{display:none}' +
+    '[data-v3-id].ob-new{outline:3px solid #ff5a1f;outline-offset:-3px;transition:outline-color .6s ease}[data-v3-id].ob-new.ob-fade{outline-color:transparent}</style>' +
+    '<script>(function(){' +
+    'function stop(e){e.preventDefault();e.stopPropagation();}' +
+    '["click","auxclick","dblclick","submit"].forEach(function(t){document.addEventListener(t,stop,true);});' +
+    'var all=document.querySelectorAll("a,button,input,select,textarea,summary,iframe,[tabindex]");for(var i=0;i<all.length;i++)all[i].setAttribute("tabindex","-1");' +
+    'var t=null;addEventListener("scroll",function(){if(t)return;t=setTimeout(function(){t=null;parent.postMessage({type:"scroll",y:Math.round(scrollY)},"*");},120);},{passive:true});' +
+    'function reveal(id){var s=document.querySelectorAll("[data-v3-id]");for(var i=0;i<s.length;i++){if(s[i].getAttribute("data-v3-id")!==id)continue;var n=s[i];' +
+    'scrollTo({top:Math.max(0,n.getBoundingClientRect().top+scrollY-56),behavior:"smooth"});n.classList.add("ob-new");' +
+    'setTimeout(function(){n.classList.add("ob-fade");},1400);setTimeout(function(){n.classList.remove("ob-new","ob-fade");},2100);return;}}' +
+    'addEventListener("message",function(e){if(e.source!==parent)return;var d=e.data;if(!d||typeof d!=="object"||d.type!=="init")return;' +
+    'if(typeof d.y==="number")scrollTo({top:d.y,behavior:"instant"});' +
+    'if(typeof d.reveal==="string"&&/^s_[a-z0-9]{4,16}$/.test(d.reveal))reveal(d.reveal);});' +
+    '})();</script>';
+  // the core.js page plus FRAME_SCRIPT, just before </body> ('' for anything else)
+  function liveHtml(html) {
+    if (typeof html !== 'string' || !/<\/body><\/html>$/.test(html)) return '';
+    return html.slice(0, html.length - '</body></html>'.length) + FRAME_SCRIPT + '</body></html>';
+  }
+  // a message from the live frame -> { type: 'scroll', y } or null (nothing else is accepted)
+  function acceptFrameMessage(d) {
+    if (!d || typeof d !== 'object' || Array.isArray(d) || Object.getPrototypeOf(d) !== Object.prototype) return null;
+    if (d.type === 'scroll' && Object.keys(d).sort().join(',') === 'type,y' && typeof d.y === 'number' && isFinite(d.y) && Math.floor(d.y) === d.y && d.y >= 0 && d.y <= MAX_SCROLL) return { type: 'scroll', y: d.y };
+    return null;
+  }
+  // the message the wizard sends after each render: the scroll position, and the section to reveal (or none)
+  function initMessage(y, revealId) {
+    return { type: 'init', y: typeof y === 'number' && isFinite(y) && y >= 0 ? Math.min(Math.floor(y), MAX_SCROLL) : 0, reveal: typeof revealId === 'string' && SECTION_ID.test(revealId) ? revealId : null };
+  }
+
+  return { EXAMPLES: EXAMPLES, SCRATCH_NAME: SCRATCH_NAME, exampleDesign: exampleDesign, scratchDesign: scratchDesign, previews: previews,
+    FRAME_SCRIPT: FRAME_SCRIPT, liveHtml: liveHtml, acceptFrameMessage: acceptFrameMessage, initMessage: initMessage };
 });

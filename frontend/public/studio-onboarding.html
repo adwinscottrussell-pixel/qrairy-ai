@@ -23,9 +23,13 @@
   <symbol id="ob-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
   <symbol id="ob-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
   <symbol id="ob-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="ob-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="ob-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
 </svg>
+<!-- Step 3's button icons, cloned by the script -->
+<template id="ob-tpl-icons"><svg class="ob-ic" data-icon="up" aria-hidden="true"><use href="#ob-arrow-up"/></svg><svg class="ob-ic" data-icon="down" aria-hidden="true"><use href="#ob-arrow-down"/></svg><svg class="ob-ic" data-icon="lock" aria-hidden="true"><use href="#ob-lock"/></svg></template>
 
-<!-- Landing Page Studio V3 onboarding (Phases O0, O1): the frame, Step 1 and Step 2.
+<!-- Landing Page Studio V3 onboarding (Phases O0-O2): the frame and Steps 1-3.
      Starts only on the isolated Studio V3 staging address (js/studio/studio-routing.js);
      everywhere else it shows a notice and loads nothing. No dashboard sidebar, no Studio controls. -->
 <header class="ob-top">
@@ -68,7 +72,7 @@
     </div>
   </section>
 
-  <!-- The wizard: four steps; Steps 1 and 2 work (O0, O1), Steps 3 and 4 are placeholders -->
+  <!-- The wizard: four steps; Steps 1-3 work (O0-O2), Step 4 is a placeholder -->
   <section class="ob-wizard" id="ob-wizard" hidden>
     <nav class="ob-progress" aria-label="Progress" data-ob-aria="progress_label">
       <p class="ob-progress__count" id="ob-progress-count"></p>
@@ -193,15 +197,41 @@
           </aside>
         </div>
       </div>
-      <!-- Steps 3-4: placeholders (nothing is collected or saved) -->
+      <!-- Step 3: Choose sections (Phase O2). The list stays in this browser tab with the other
+           answers; nothing is sent or saved. -->
       <div class="ob-step" id="ob-step-2" data-step="2" hidden>
-        <h1 class="ob-h1" tabindex="-1" data-ob="step_sections">Choose sections</h1>
+        <h1 class="ob-h1" id="ob-sections-title" tabindex="-1" data-ob="step_sections">Choose sections</h1>
         <p class="ob-lead" data-ob="sections_text">Pick the sections for your page, put them in order and see a live phone preview.</p>
-        <div class="ob-info ob-info--placeholder">
-          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
-          <p data-ob="placeholder_text">This step is still being built. Nothing is collected or saved yet.</p>
+        <div class="ob-business ob-sections">
+          <div class="ob-fields">
+            <section class="ob-secgroup" aria-labelledby="ob-chosen-title">
+              <h2 class="ob-h2" id="ob-chosen-title" tabindex="-1" data-ob="chosen_title">On your page</h2>
+              <ol class="ob-chosen" id="ob-chosen"></ol>
+            </section>
+            <section class="ob-secgroup" aria-labelledby="ob-more-title">
+              <h2 class="ob-h2" id="ob-more-title" tabindex="-1" data-ob="more_title">Add more</h2>
+              <ul class="ob-more" id="ob-more"></ul>
+              <p class="ob-hint" id="ob-more-none" data-ob="more_none" hidden>All eight sections are on your page.</p>
+            </section>
+            <div class="ob-info ob-info--compact">
+              <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+              <p data-ob="sections_info">Empty sections stay hidden on your public page until you add their content in the Studio.</p>
+            </div>
+            <p class="ob-error" id="ob-sections-error"></p>
+            <p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"></p>
+          </div>
+          <!-- the live preview: the whole page, rendered by core.js; the frame may run only the fixed
+               onboarding-previews.js script (sandbox allow-scripts, no same-origin: no access to this page) -->
+          <aside class="ob-live" aria-labelledby="ob-sections-live-label">
+            <p class="ob-live__label" id="ob-sections-live-label"><span class="ob-live__dot" aria-hidden="true"></span><span data-ob="live_preview">Live preview</span></p>
+            <div class="ob-live__stage ob-live__stage--scroll" aria-hidden="true">
+              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
+            </div>
+            <p class="ob-live__note" data-ob="live_note_sections">Scroll the phone to see every section. Nothing is saved yet.</p>
+          </aside>
         </div>
       </div>
+      <!-- Step 4: placeholder (nothing is saved, no draft) -->
       <div class="ob-step" id="ob-step-3" data-step="3" hidden>
         <h1 class="ob-h1" tabindex="-1" data-ob="step_review">Review &amp; save</h1>
         <p class="ob-lead" data-ob="review_text">Check your page, then save it as an unpublished draft and continue in the Studio.</p>
