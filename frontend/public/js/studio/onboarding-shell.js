@@ -79,7 +79,7 @@
       review_text: 'Check your page before you save it as a draft.',
       back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out',
       // Step 4 (O3A)
-      draft_status: 'Unpublished draft · not saved yet',
+      draft_status: 'Ready to save · Not saved yet',
       draft_free: "Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.",
       sum_business: 'Business information', sum_sections: 'Sections ({n})', sum_no_description: 'No description', sum_no_links: 'No social media links',
       edit: 'Edit', edit_business_label: 'Edit business information', edit_sections_label: 'Edit sections',
@@ -144,7 +144,7 @@
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
       review_text: 'Prüfen Sie Ihre Seite, bevor Sie sie als Entwurf speichern.',
       back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
-      draft_status: 'Unveröffentlichter Entwurf · noch nicht gespeichert',
+      draft_status: 'Bereit zum Speichern · Noch nicht gespeichert',
       draft_free: 'Das Erstellen eines Entwurfs ist kostenlos und startet nicht Ihre 14-tägige Testphase. Die Testphase beginnt erst, wenn Sie veröffentlichen.',
       sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
       edit: 'Bearbeiten', edit_business_label: 'Unternehmensdaten bearbeiten', edit_sections_label: 'Abschnitte bearbeiten',

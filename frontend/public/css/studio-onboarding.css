@@ -419,12 +419,13 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 }
 
 /* ── Step 4 (O3A): review. The draft status, the summary of Steps 2 and 3 with Edit, the page in the phone;
-   Save Draft disabled with its note (nothing is saved yet). ── */
+   Save Draft disabled with its note (nothing is saved yet). The status badge is green ("Ready to save · Not saved
+   yet": the page is ready, nothing is saved), a plain paragraph, not a control. ── */
 .ob-draft-badge {
   display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin: 0; padding: 6px 12px;
-  border: 1.5px solid var(--ob-accent); border-radius: 999px; background: var(--ob-accent-soft); color: var(--ob-accent-text); font: 700 13px/1.3 Inter, sans-serif;
+  border: 1.5px solid var(--ob-add); border-radius: 999px; background: var(--ob-add-bg); color: var(--ob-add); font: 700 13px/1.3 Inter, sans-serif;
 }
-.ob-draft-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ob-accent); flex-shrink: 0; }
+.ob-draft-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ob-add); flex-shrink: 0; }
 .ob-summary { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ob-border); border-radius: 14px; background: var(--ob-surface); }
 .ob-summary__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ob-edit {

@@ -950,7 +950,7 @@ test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order)
   assert.equal(s.sectionsTitle, 'Sections (7)');
   assert.deepEqual(s.sections, ['hero', 'buttons', 'openingHours', 'contact', 'socialMedia', 'gallery', 'text'], 'the Step 3 order');
   assert.ok(s.tags[0] === 'Always first · from Step 2' && s.tags[4] === '2 links from Step 2' && s.tags[5] === 'Add your content in the Studio', JSON.stringify(s.tags));
-  assert.equal(s.status, 'Unpublished draft · not saved yet');
+  assert.equal(s.status, 'Ready to save · Not saved yet');
   assert.match(s.free, /free and doesn't start your 14-day trial/);
   assert.deepEqual(s.save, { text: 'Save Draft', disabled: true, aria: 'true', note: 'ob-save-note', shown: true });
   assert.equal(s.note, 'Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.');
@@ -1023,7 +1023,7 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
     assert.equal(s.save.text, de ? 'Entwurf speichern' : 'Save Draft');
     assert.ok(s.save.disabled);
     if (de) {
-      assert.equal(s.status, 'Unveröffentlichter Entwurf · noch nicht gespeichert');
+      assert.equal(s.status, 'Bereit zum Speichern · Noch nicht gespeichert');
       assert.match(s.note, /Es wurde noch nichts gespeichert/);
       assert.deepEqual(await page.$$eval('.ob-edit', (ns) => ns.map((b) => b.getAttribute('aria-label') + '|' + b.textContent)), ['Unternehmensdaten bearbeiten|Bearbeiten', 'Abschnitte bearbeiten|Bearbeiten']);
     }
@@ -1033,6 +1033,10 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
       const r = await contrast(page, sel);
       assert.ok(r >= 4.5, lang + ' ' + th + ' ' + viewport.width + ': ' + sel + ' contrast ' + r);
     }
+    // the status badge: green (QRAIVY add tokens), a plain paragraph (not a control), the agreed text
+    const badge = await page.$eval('.ob-draft-badge', (n) => ({ tag: n.tagName, role: n.getAttribute('role'), tab: n.tabIndex, color: getComputedStyle(n).color, border: getComputedStyle(n).borderTopColor, dot: getComputedStyle(n.querySelector('.ob-draft-badge__dot')).backgroundColor, text: n.textContent }));
+    const green = th === 'light' ? 'rgb(21, 128, 61)' : 'rgb(74, 222, 128)';
+    assert.deepEqual(badge, { tag: 'P', role: null, tab: -1, color: green, border: green, dot: green, text: de ? 'Bereit zum Speichern · Noch nicht gespeichert' : 'Ready to save · Not saved yet' }, lang + ' ' + th + ': green status badge');
     const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, small: [...document.querySelectorAll('#ob-step-3 button')].map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length }));
     assert.ok(lay.sw <= lay.iw && lay.small === 0, lang + ' ' + viewport.width + ': ' + JSON.stringify(lay));
     if (viewport === PHONE) {
