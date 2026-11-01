@@ -519,3 +519,39 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-phone__btn--up { left: -3px; top: 176px; height: 58px; }
 .st-phone__btn--down { left: -3px; top: 246px; height: 58px; }
 .st-phone__btn--power { right: -3px; top: 206px; height: 92px; }
+
+/* ============================================================
+   Top toolbar: solid black (approved QRAIVY branding, both Studio
+   themes). Only the toolbar's own controls are restyled, by id so the
+   theme rules cannot win; the shared tokens are untouched, so the
+   panels, the workspace, the phone preview and the "⋯" menu keep their
+   look. QRAIVY orange stays the primary action, blue the information.
+   ============================================================ */
+#st-top { background: #000000; border-bottom-color: #000000; color: #ffffff; }
+#st-top .st-back { background: #18181b; border-color: rgba(255, 255, 255, 0.24); color: #ffffff; }
+#st-top .st-back:hover { background: #26262b; border-color: rgba(255, 255, 255, 0.45); }
+/* the page selector: dark field, subtle border, white text */
+#st-top .st-pagebar { color: #d4d4d8; }
+#st-top .st-pagebar__select { background: #18181b; border-color: rgba(255, 255, 255, 0.24); color: #ffffff; color-scheme: dark; }
+#st-top .st-pagebar__btn:not(.st-pagebar__btn--primary) { background: #18181b; border-color: rgba(255, 255, 255, 0.24); color: #ffffff; }
+#st-top .st-savestate:not([data-state="failed"]):not([data-state="conflict"]) { color: #d4d4d8; }
+#st-top .st-conflict { background: rgba(255, 90, 31, 0.16); color: #ffffff; }
+#st-top .st-sample { border-color: rgba(147, 197, 253, 0.45); background: rgba(59, 130, 246, 0.18); color: #bfdbfe; }
+/* undo, redo, "⋯": white icons, visible when disabled too */
+#st-top .st-top__actions .st-iconbtn { background: transparent; border-color: rgba(255, 255, 255, 0.24); color: #ffffff; }
+#st-top .st-top__actions .st-iconbtn:hover:not(:disabled) { background: #26262b; color: #ffffff; }
+#st-top .st-top__actions .st-iconbtn:disabled { opacity: 0.5; }
+/* Preview and Save Draft: dark buttons, white text */
+#st-top .st-btn--ghost, #st-top .st-btn--outline { background: #18181b; border-color: rgba(255, 255, 255, 0.32); color: #ffffff; }
+#st-top .st-btn--ghost:hover:not(:disabled), #st-top .st-btn--outline:hover:not(:disabled) { background: #26262b; border-color: rgba(255, 255, 255, 0.6); }
+/* Publish stays disabled with its "Coming soon" */
+#st-top .st-btn--locked { background: #18181b; border-color: rgba(255, 255, 255, 0.16); color: #a1a1aa; }
+/* focus on black: a white ring (the dropdown menu keeps its own) */
+#st-top :focus-visible:not(.st-menu__list *) { outline: 2px solid #ffffff; outline-offset: 2px; }
+/* the "⋯" dropdown is a light panel: its text keeps the theme colour */
+#st-top .st-menu__list { color: var(--st-text); }
+/* phones: the gap kept above the toolbar for the sidebar button (dashboard-shell.css, 52 px)
+   is black too, so the header reads as one bar; colour only, the layout is unchanged */
+@media (max-width: 768px) {
+  body.studio-page #main-content { background: linear-gradient(#000000, #000000) top / 100% 52px no-repeat; }
+}
