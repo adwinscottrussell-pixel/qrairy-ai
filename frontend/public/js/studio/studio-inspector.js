@@ -1139,7 +1139,8 @@
         signin.hidden = state !== 'signin' || !o.signIn;
       });
       return el('div', { class: 'st-deals', 'data-path': 'deals' }, [el('div', { class: 'st-group', text: tx('g_deals') }), status, pageField, shown, withheld,
-        el('div', { class: 'st-deals__actions' }, [retry, signin, open])]);
+        // dealBuilder null: no Deal Builder on this address (Studio V3 staging), no link to it
+        el('div', { class: 'st-deals__actions' }, o.dealBuilder === null ? [retry, signin] : [retry, signin, open])]);
     }
 
     function controlFor(sec, c, D) {

@@ -92,7 +92,8 @@
       page_loading_short: 'Loading …', page_empty_short: 'No landing page yet', page_signin_short: 'Please sign in', page_error_short: 'Pages not loaded',
       page_forbidden_short: 'Not one of your pages', page_notfound_short: 'Not one of your pages', page_invalid_short: 'Cannot be opened yet', page_not_live: ' (not live)', page_retry: 'Try again', page_signin_btn: 'Sign in', page_dashboard: 'Go to dashboard',
       page_loaded_import: 'Your current page “{name}”, opened in the Studio. Save Draft keeps your changes; your live page does not change.', page_loaded_draft: 'Your saved Studio draft of “{name}”. Your live page does not change.',
-      page_empty: 'You have no landing page yet. Create one in the dashboard; until then the Studio shows a sample page.', page_signin: 'Sign in to open your landing pages.',
+      page_empty: 'You have no landing page yet. Create one in the dashboard; until then the Studio shows a sample page.',
+      page_empty_isolated: 'You have no landing page yet. This test environment has no dashboard; until a draft exists the Studio shows a sample page.', page_empty_isolated_short: 'No landing page yet', page_signin: 'Sign in to open your landing pages.',
       page_error: 'Your pages could not be loaded. The Studio shows a sample page.', page_forbidden: 'This page belongs to another account.', page_notfound: 'This page is not one of your pages.',
       page_invalid: 'This page cannot be opened in the Studio yet.', page_switch_confirm: 'Open another page? Your changes on this page are not saved and will be lost.',
       unavailable_title: "Landing Page Studio isn't available here yet", unavailable_text: 'The new Studio is still being built and tested. Your landing pages keep working as before.', unavailable_back: 'Back to Smart QR Pages',
@@ -132,7 +133,8 @@
       page_loading_short: 'Wird geladen …', page_empty_short: 'Noch keine Landingpage', page_signin_short: 'Bitte anmelden', page_error_short: 'Seiten nicht geladen',
       page_forbidden_short: 'Nicht Ihre Seite', page_notfound_short: 'Nicht Ihre Seite', page_invalid_short: 'Noch nicht zu öffnen', page_not_live: ' (nicht live)', page_retry: 'Erneut versuchen', page_signin_btn: 'Anmelden', page_dashboard: 'Zum Dashboard',
       page_loaded_import: 'Ihre aktuelle Seite „{name}“, im Studio geöffnet. „Entwurf speichern“ sichert Ihre Änderungen; Ihre Live-Seite ändert sich nicht.', page_loaded_draft: 'Ihr gespeicherter Studio-Entwurf von „{name}“. Ihre Live-Seite ändert sich nicht.',
-      page_empty: 'Sie haben noch keine Landingpage. Erstellen Sie eine im Dashboard – bis dahin zeigt das Studio eine Beispielseite.', page_signin: 'Melden Sie sich an, um Ihre Landingpages zu öffnen.',
+      page_empty: 'Sie haben noch keine Landingpage. Erstellen Sie eine im Dashboard – bis dahin zeigt das Studio eine Beispielseite.',
+      page_empty_isolated: 'Sie haben noch keine Landingpage. Diese Testumgebung hat kein Dashboard – bis ein Entwurf existiert, zeigt das Studio eine Beispielseite.', page_empty_isolated_short: 'Noch keine Landingpage', page_signin: 'Melden Sie sich an, um Ihre Landingpages zu öffnen.',
       page_error: 'Ihre Seiten konnten nicht geladen werden. Das Studio zeigt eine Beispielseite.', page_forbidden: 'Diese Seite gehört zu einem anderen Konto.', page_notfound: 'Diese Seite gehört nicht zu Ihren Seiten.',
       page_invalid: 'Diese Seite kann im Studio noch nicht geöffnet werden.', page_switch_confirm: 'Andere Seite öffnen? Ihre Änderungen an dieser Seite sind nicht gespeichert und gehen verloren.',
       unavailable_title: 'Das Landing Page Studio ist hier noch nicht verfügbar', unavailable_text: 'Das neue Studio wird noch gebaut und getestet. Deine Landingpages funktionieren weiter wie bisher.', unavailable_back: 'Zurück zu den Smart-QR-Seiten',
@@ -483,14 +485,19 @@
       msg = t(pageView.source === 'draft' ? 'page_loaded_draft' : 'page_loaded_import').replace('{name}', pageView.current.name);
       // short in the bar (the selector already names the page); the full sentence as its title
       shown = t(pageView.source === 'draft' ? 'page_src_draft' : 'page_src_import');
-    } else { msg = t('page_' + st); shown = t('page_' + st + '_short'); }
+    } else {
+      // Studio V3 staging (isolated): no dashboard to send the owner to
+      var key = st === 'empty' && ROUTING.isolated ? 'empty_isolated' : st;
+      msg = t('page_' + key); shown = t('page_' + key + '_short');
+    }
     var status = $('st-page-status');
     status.textContent = shown;
     status.title = msg;
     status.setAttribute('data-state', st);
     $('st-page-retry').hidden = st !== 'error';
     $('st-page-signin').hidden = st !== 'signin' || !(AUTH && AUTH.available());
-    $('st-page-dashboard').hidden = st !== 'empty';
+    // (none on the Studio V3 staging address: isolateNav())
+    if ($('st-page-dashboard')) $('st-page-dashboard').hidden = st !== 'empty';
     renderSave();
   }
   // Back to the sample page: the open customer page (if any) leaves the editor.
@@ -684,6 +691,24 @@
     if (unsaved() && !window.confirm(t('signout_confirm'))) { e.preventDefault(); e.stopImmediatePropagation(); return; }
     leaving = true;
     discardCustomer();
+    // Studio V3 staging (isolated): there is no login.html (the sidebar's own target); back to the Studio
+    if (ROUTING.isolated) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      var back = function () { window.location.href = 'studio.html'; };
+      try { if (window.Clerk && window.Clerk.signOut) { Promise.resolve(window.Clerk.signOut()).then(back, back); return; } } catch (err) {}
+      back();
+    }
+  }
+  // Studio V3 staging (isolated, studio-routing.js): that deployment serves the
+  // Studio files only, so the links to the other Admin pages (dashboard,
+  // analytics, deals, …) would end in a 404: they are removed there. Sign Out
+  // and the Studio itself stay. Every other address keeps its links.
+  function isolateNav() {
+    var gone = document.querySelectorAll('#sidebar a.sb-item, #st-back, #st-page-dashboard, #st-unavailable a');
+    for (var i = 0; i < gone.length; i++) gone[i].parentNode.removeChild(gone[i]);
+    var tabs = document.querySelectorAll('#sidebar .sb-tab');
+    for (var j = 0; j < tabs.length; j++) if (!tabs[j].querySelector('a')) tabs[j].parentNode.removeChild(tabs[j]);
   }
   function historyButtons() {
     $('st-undo-btn').disabled = !editor.canUndo();
@@ -904,7 +929,7 @@
       sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
-      signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.builder || 'deals.html' });
+      signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });
     if (DEALS) dealsData = DEALS.createDealsData({ api: ROUTING.api, getToken: clerkToken, starters: (window.QRAIVY_DEAL_STARTER_IMAGES || {}).images });
     if (PAGES) pagesData = PAGES.createPagesData({ api: ROUTING.api, getToken: clerkToken });
     $('st-page-select').addEventListener('change', function () { openPage($('st-page-select').value); });
@@ -921,6 +946,7 @@
     renderAll();
     setLeftTab(state.leftTab);
     bindUi();
+    if (ROUTING.isolated) isolateNav();
     builderSidebar();
     editor.onChange(onStoreChange);
     historyButtons();

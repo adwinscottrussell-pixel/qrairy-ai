@@ -36,7 +36,8 @@
  *
  * window.QRAIVY_STUDIO_ROUTING = { mode, api, blocked } (+ clerk, builder on
  * the connected preview: the sign-in key for studio-auth.js and the Deal
- * Builder of the same environment)
+ * Builder of the same environment; + isolated on the Studio V3 staging
+ * address: no other Admin page there, studio-shell.js hides those links)
  * window.QraivyStudioRouting.resolve(hostname, protocol) is the same decision
  * as a pure function (backend/tests/studioRouting.test.js).
  */
@@ -52,7 +53,9 @@
     'studio-preview.qraivy.com': { api: 'https://qraivy-deals-api-deals-preview.up.railway.app', clerk: 'pk_live_Y2xlcmsucXJhaXZ5LmNvbSQ', builder: 'https://deals-preview.qraivy.com/deals.html' },
     // Studio V3 staging: the isolated Studio V3 staging API (never production) and the
     // separate Clerk DEVELOPMENT application's public key. No Deal Builder in that environment.
-    'qraivy-studio-v3-staging.vercel.app': { api: 'https://studio-v3-api-production.up.railway.app', clerk: 'pk_test_YnJpZWYtc3dpbmUtNDEzMy5jbGVyay5hY2NvdW50cy5kZXYk' },
+    // isolated: that deployment serves the Studio files only, so the Studio hides its links
+    // to the other Admin pages (dashboard, deals, …) there instead of sending the owner to a 404.
+    'qraivy-studio-v3-staging.vercel.app': { isolated: true, api: 'https://studio-v3-api-production.up.railway.app', clerk: 'pk_test_YnJpZWYtc3dpbmUtNDEzMy5jbGVyay5hY2NvdW50cy5kZXYk' },
   };
   function resolve(hostname, protocol) {
     var host = String(hostname || '').toLowerCase();
@@ -61,7 +64,7 @@
     if (String(protocol || '') === 'https:' && PREVIEW_HOSTS.indexOf(host) !== -1) return { mode: 'preview', api: '', blocked: false };
     if (String(protocol || '') === 'https:' && Object.prototype.hasOwnProperty.call(CONNECTED, host)) {
       var c = CONNECTED[host];
-      return { mode: 'preview', api: c.api, blocked: false, clerk: c.clerk, builder: c.builder };
+      return { mode: 'preview', api: c.api, blocked: false, clerk: c.clerk, builder: c.builder, isolated: c.isolated };
     }
     return { mode: 'unavailable', api: '', blocked: true };
   }

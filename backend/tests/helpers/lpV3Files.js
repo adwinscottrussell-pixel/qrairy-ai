@@ -89,6 +89,8 @@ const LPV3_FILES = [
   'backend/tests/studioV3StagingRouting.test.js',
   // Hero mobile spacing, badge size and the phone preview scale (2026-10-31 visual review)
   'backend/tests/studioHeroMobile.browser.test.js',
+  // Studio V3 staging (isolated): no links to Admin pages outside the Studio-only upload
+  'backend/tests/studioIsolatedNav.browser.test.js',
   // Phase A / B (customer pages): the owner's own pages for the Studio
   // (GET /studio/pages, GET and PUT /studio/pages/:slug/design: read, and
   // save the Studio draft), the Studio's page selector, Save Draft and their tests

@@ -117,7 +117,8 @@ test('shell: the deals are asked for once the sign-in is known, only when connec
   // start() itself (Phase A: showSample() reloads the deals for the current sign-in, outside start())
   const startFn = shell.slice(shell.indexOf('  function start() {'), shell.indexOf('\n  }\n', shell.indexOf('  function start() {')));
   assert.ok(startFn.includes('    startDeals();\n') && !/\n {4}loadDeals\(\);\n/.test(startFn), 'start() uses startDeals');
-  assert.ok(shell.includes("signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.builder || 'deals.html' });"));
+  // (null on the Studio V3 staging address, isolated: no Deal Builder there, tests/studioIsolatedNav.browser.test.js)
+  assert.ok(shell.includes("signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });"));
 });
 
 test('inspector: in the sign-in state a Sign in button (and Try again); elsewhere hidden; texts in both languages', () => {

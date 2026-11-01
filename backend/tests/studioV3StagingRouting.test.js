@@ -46,7 +46,10 @@ const STAGING = resolve(HOST, 'https:');
 const keyHost = (k) => Buffer.from(String(k).replace(/^pk_(live|test)_/, ''), 'base64').toString('utf8').replace(/\$$/, '');
 
 test('the staging address: preview mode with the staging API and the development key, no Deal Builder', () => {
-  assert.deepEqual(Object.keys(STAGING).sort(), ['api', 'blocked', 'clerk', 'mode']);
+  assert.deepEqual(Object.keys(STAGING).sort(), ['api', 'blocked', 'clerk', 'isolated', 'mode']);
+  // isolated: the Studio files only there; studio-shell.js hides the links to the other Admin pages
+  assert.equal(STAGING.isolated, true);
+  assert.equal(resolve('studio-preview.qraivy.com', 'https:').isolated, undefined, 'the other connected preview keeps its links');
   assert.equal(STAGING.mode, 'preview');
   assert.equal(STAGING.blocked, false);
   assert.equal(STAGING.api, API);
