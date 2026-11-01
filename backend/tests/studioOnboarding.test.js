@@ -78,14 +78,23 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
   assert.equal(OB.back(s), s, 'no Back before Step 1');
 });
 
-test('page: no Admin sidebar, no Studio controls; only the language file, the routing, the sign-in loader and its own script', () => {
+test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 4, 'no inline script');
+  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
+    'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 8, 'no inline script');
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'css/studio-onboarding.css']);
-  for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<iframe/, /<form\b/, /<input\b/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
+  for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<form\b/, /<input\b/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
   assert.match(HTML, /<meta name="robots" content="noindex, nofollow" \/>/);
+  // O0.1: exactly three preview frames, sandboxed with no permissions, not focusable, inside a part hidden from screen readers, outside the buttons
+  const frames = [...HTML.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
+  assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">'));
+  for (const id of ['instagram', 'website', 'scratch']) {
+    const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
+    assert.ok(card.indexOf('<div class="ob-card__media" aria-hidden="true">') < card.indexOf('<iframe') && card.indexOf('<iframe') < card.indexOf('<button'), id + ': the frame in the hidden part, before (not inside) the button');
+  }
+  assert.equal((HTML.match(/data-ob="example"/g) || []).length, 2, 'the two Coming soon cards say Example');
   // the header logo: the approved file, at its own proportions (square, 1254 x 1254), the only image
   assert.deepEqual([...HTML.matchAll(/<img\b[^>]*>/g)].map((m) => m[0]), ['<img class="ob-brand__logo" src="images/qraivy-onboarding-logo.jpg" width="1254" height="1254" alt="QRAIVY" decoding="async" />']);
   const logo = fs.readFileSync(path.join(PUB, 'images', 'qraivy-onboarding-logo.jpg'));
@@ -125,6 +134,41 @@ test('no request in Phase O0: no fetch, XHR, sockets, beacons, storage writes, A
   // the sign-in comes from studio-auth.js only, created only after canStart
   assert.equal((c.match(/createAuth\(/g) || []).length, 1);
   assert.ok(c.indexOf('if (!canStart(ROUTING)) return;') < c.indexOf('createAuth('), 'no sign-in before the address is checked');
+});
+
+test('O0.1 previews: real QRAIVY pages from core.js; examples from the Studio demo, the scratch page is the draft starter; no request', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const PV = require('../../frontend/public/js/studio/onboarding-previews.js');
+  const ctx = { window: {} };
+  vm.runInNewContext(read('js/studio/studio-demo.js'), ctx);
+  const demo = JSON.parse(JSON.stringify(ctx.window.QRAIVY_STUDIO_DEMO));
+  const demoIds = demo.design.pages[0].sections.map((s) => s.id);
+  for (const id of ['instagram', 'website']) {
+    const d = PV.exampleDesign(demo, id);
+    const v = V3.validateDesign(d);
+    assert.ok(v.ok, id + ' is a valid design: ' + JSON.stringify(v.errors));
+    assert.deepEqual(d.pages[0].sections.map((s) => s.id), PV.EXAMPLES[id], id);
+    for (const s of d.pages[0].sections) assert.ok(demoIds.includes(s.id), 'demo content only: ' + s.id);
+    assert.ok(d.pages[0].sections.every((s) => V3.describe().sections[s.type].rendered), id + ': only sections the public page renders');
+  }
+  assert.deepEqual(demo, JSON.parse(JSON.stringify(ctx.window.QRAIVY_STUDIO_DEMO)), 'the demo itself is not changed');
+  for (const l of ['en', 'de']) {
+    const d = PV.scratchDesign(V3, l);
+    assert.ok(V3.validateDesign(d).ok, 'scratch ' + l);
+    const hero = V3.starter('hero', l);
+    assert.deepEqual(d.pages[0].sections.map((s) => [s.type, s.variant]), [['hero', hero.variant]], 'one starter Hero, as POST /studio/drafts creates');
+    assert.equal(d.pages[0].sections[0].data.subheadline, hero.data.subheadline);
+    assert.equal(d.pages[0].sections[0].data.headline, PV.SCRATCH_NAME[l]);
+    assert.equal(d.settings.language, l);
+  }
+  const html = PV.previews({ V3, demo, lang: 'de', localize: (h) => h + '<!--localized-->' });
+  for (const id of ['instagram', 'website', 'scratch']) assert.ok(/^<!DOCTYPE html>/.test(html[id]) && html[id].endsWith('<!--localized-->'), id + ': rendered by core.js, then localized');
+  assert.ok(html.instagram.includes('Aus unserer Backstube') && html.website.includes('Öffnungszeiten') && html.scratch.includes('Ihr Unternehmen'));
+  assert.ok(!/<script/i.test(html.instagram + html.website + html.scratch), 'no script in the pages');
+  const src = code(read('js/studio/onboarding-previews.js'));
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.cookie/, /https?:\/\//, /innerHTML|document\.write/, /\beval\s*\(|new\s+Function|toString\s*\(/]) assert.ok(!re.test(src), 'onboarding-previews.js must not contain ' + re);
+  // the frames get the page only through srcdoc
+  assert.ok(code(SRC).includes('frames[i].srcdoc = page;'));
 });
 
 test('English and German: the same texts, none empty', () => {

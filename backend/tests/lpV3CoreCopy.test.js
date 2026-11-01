@@ -41,7 +41,8 @@ test('the browser copy runs without Node (window.QraivyV3) and renders like the 
 test('only the Studio page loads it (Phase 2A-2); no customer page does', () => {
   const pages = fs.readdirSync(path.join(ROOT, 'frontend', 'public')).filter((f) => f.endsWith('.html'));
   const loaders = pages.filter((p) => fs.readFileSync(path.join(ROOT, 'frontend', 'public', p), 'utf8').includes('lpV3/core.js'));
-  assert.deepEqual(loaders, ['studio.html']);
+  // O0.1: and the Studio's own onboarding page (its Step 1 previews; studioOnboarding.test.js)
+  assert.deepEqual(loaders, ['studio-onboarding.html', 'studio.html']);
 });
 
 (async () => {

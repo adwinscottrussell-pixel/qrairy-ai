@@ -8,6 +8,10 @@
  * on every other address, production included, it shows a notice, loads no
  * sign-in and sends nothing.
  *
+ * Step 1's cards show real QRAIVY pages in phones (Phase O0.1,
+ * onboarding-previews.js: rendered by core.js, shown in frames sandboxed
+ * without permissions).
+ *
  * Phase O0 sends no request at all: no fetch, no draft, no save. The sign-in
  * (studio-auth.js) only tells it who is signed in and whether the email is
  * verified; the server checks that again before any draft is created
@@ -41,7 +45,7 @@
       opt_instagram: 'Instagram', opt_instagram_text: 'Start with your Instagram profile.',
       opt_website: 'Existing Website', opt_website_text: 'Bring your existing website into QRAIVY.',
       opt_scratch: 'Start from Scratch', opt_scratch_text: 'Build your landing page your way.',
-      soon: 'Coming soon', available: 'Available',
+      soon: 'Coming soon', available: 'Available', example: 'Example',
       start_help: 'Instagram and website import are coming soon. Nothing is imported in this version.',
       business_text: 'Your business name, a short description and your social media links.',
       sections_text: 'Pick the sections for your page, put them in order and see a live phone preview.',
@@ -66,7 +70,7 @@
       opt_instagram: 'Instagram', opt_instagram_text: 'Starten Sie mit Ihrem Instagram-Profil.',
       opt_website: 'Bestehende Website', opt_website_text: 'Bringen Sie Ihre bestehende Website zu QRAIVY.',
       opt_scratch: 'Neu beginnen', opt_scratch_text: 'Gestalten Sie Ihre Landingpage ganz nach Ihren Wünschen.',
-      soon: 'Demnächst', available: 'Verfügbar',
+      soon: 'Demnächst', available: 'Verfügbar', example: 'Beispiel',
       start_help: 'Der Import von Instagram und Websites folgt bald. In dieser Version wird nichts importiert.',
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
@@ -128,6 +132,22 @@
     var AUTH = null, clerk = null;
 
     function t(k) { return tx(current, k); }
+    // Step 1 previews: real QRAIVY pages (core.js) in the cards' phones, drawn once per
+    // language and again when the demo photos are ready (inline, with the AI label)
+    var PV = win.QraivyOnboardingPreviews, V3 = win.QraivyV3, DEMO = win.QRAIVY_STUDIO_DEMO, IMAGES = win.QraivyStudioDemoImages;
+    var drawn = null;
+    function previews(force) {
+      if (!PV || !V3 || !DEMO || (!force && drawn === current)) return;
+      drawn = current;
+      var html = PV.previews({ V3: V3, demo: DEMO, lang: current, localize: IMAGES ? IMAGES.localizeHtml : null });
+      var frames = doc.querySelectorAll('.ob-phone__frame');
+      for (var i = 0; i < frames.length; i++) {
+        var page = html[frames[i].getAttribute('data-preview')];
+        // only a changed page is reloaded (no blank frame while an unchanged one reloads)
+        if (page && frames[i].srcdoc !== page) frames[i].srcdoc = page;
+      }
+      if (IMAGES && IMAGES.prepare) IMAGES.prepare(function () { previews(true); });
+    }
     function texts() {
       doc.documentElement.lang = current;
       doc.title = t('page_title');
@@ -174,6 +194,7 @@
       $('ob-next').hidden = last;
       $('ob-next').disabled = !canNext(nav);
       $('ob-finish').hidden = !last;
+      if (s === 0) previews(false);
       if (focus) { var h = $('ob-step-' + s).querySelector('.ob-h1'); if (h) h.focus(); }
     }
     function render(focus) {
