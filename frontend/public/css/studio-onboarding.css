@@ -418,6 +418,37 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
+/* ── Step 4 (O3A): review. The draft status, the summary of Steps 2 and 3 with Edit, the page in the phone;
+   Save Draft disabled with its note (nothing is saved yet). ── */
+.ob-draft-badge {
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin: 0; padding: 6px 12px;
+  border: 1.5px solid var(--ob-accent); border-radius: 999px; background: var(--ob-accent-soft); color: var(--ob-accent-text); font: 700 13px/1.3 Inter, sans-serif;
+}
+.ob-draft-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ob-accent); flex-shrink: 0; }
+.ob-summary { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ob-border); border-radius: 14px; background: var(--ob-surface); }
+.ob-summary__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ob-edit {
+  min-height: 44px; min-width: 44px; padding: 0 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px;
+  background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1 Inter, sans-serif; cursor: pointer;
+}
+.ob-edit:hover { border-color: var(--ob-navy); color: var(--ob-navy); }
+.ob-summary__list { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.ob-summary__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.ob-summary__row dt { font: 600 12.5px/1.4 Inter, sans-serif; color: var(--ob-muted); }
+.ob-summary__row dd { margin: 0; min-width: 0; font: 400 15px/1.45 Inter, sans-serif; color: var(--ob-text); overflow-wrap: anywhere; white-space: pre-line; }
+.ob-summary__row dd[data-empty="true"] { color: var(--ob-muted); font-style: italic; }
+#ob-sum-name { font-weight: 700; color: var(--ob-navy); }
+.ob-sum-links { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ob-sum-links__platform { font-weight: 600; }
+.ob-sum-links__url { color: var(--ob-text-2); }
+.ob-sum-sections .ob-sec { padding: 8px 10px 8px 12px; }
+.ob-save-note { margin: 10px 0 0; font-size: 13px; color: var(--ob-muted); text-align: right; }
+/* Save Draft while saving is not built: clearly disabled and still readable (not faded to 45 %): a muted
+   surface, a dashed border, muted text at 4.5:1 or more in Light and Dark; no hover */
+#ob-finish:disabled { opacity: 1; background: var(--ob-surface-2); border: 1.5px dashed var(--ob-border-strong); color: var(--ob-muted); box-shadow: none; }
+@media (min-width: 600px) { .ob-summary__row { grid-template-columns: 150px minmax(0, 1fr); gap: 12px; } }
+@media (max-width: 599px) { .ob-save-note { text-align: left; } }
+
 /* ── Back / Next ── */
 .ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-border); }
 .ob-nav .ob-btn { flex: 1; }
@@ -446,11 +477,11 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
   /* Step 2: link rows on one line (platform, address, Remove) */
   .ob-link-row { grid-template-columns: 170px minmax(0, 1fr) auto; grid-template-areas: 'platform url remove' 'error error error'; }
 }
-/* Steps 2 and 3 from 960 px: two columns, the phone stays in view */
+/* Steps 2, 3 and 4 from 960 px: two columns, the phone stays in view */
 @media (min-width: 960px) {
-  .ob-main:has(:is(#ob-step-1, #ob-step-2):not([hidden])) { max-width: 1080px; }
-  /* the progress and the four step labels keep the width and place of Steps 1 and 4 (920 px less the 16 px gutters) */
-  .ob-main:has(:is(#ob-step-1, #ob-step-2):not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
+  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3):not([hidden])) { max-width: 1080px; }
+  /* the progress and the four step labels keep the width and place of Step 1 (920 px less the 16 px gutters) */
+  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3):not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
   .ob-business { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
   .ob-live { position: sticky; top: 20px; padding: 18px 16px 16px; }
   .ob-live .ob-phone { --s: 0.62; border-radius: 40px; padding: 7px; }      /* 242 px wide */

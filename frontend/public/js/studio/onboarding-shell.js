@@ -30,6 +30,12 @@
  * tab's sessionStorage under a key for the signed-in user (a hash of the
  * Clerk user id; never a token). Sign-out clears them.
  *
+ * Step 4 (Phase O3A) reviews the page: the answers of Steps 2 and 3 (read
+ * only, as checkPage() returns them) with Edit buttons back to those steps,
+ * and the same page in the same script-only frame as Step 3. Save Draft is
+ * shown but disabled, with a note: no draft is saved, nothing is sent (draft
+ * saving is a later, separately approved phase).
+ *
  * O2.1: the appearance (Light / Dark) is onboarding-theme.js's; this file only
  * tells the page which screen is shown (body data-ob-step: the background is
  * fuller on Step 1, calmer elsewhere) and gives the toggle its EN/DE labels.
@@ -37,7 +43,7 @@
  * Nothing is sent: no fetch, no draft, no save. The sign-in (studio-auth.js)
  * only tells it who is signed in and whether the email is verified; the
  * server checks that again before any draft is created (lpV3/draftPolicy.js,
- * later phases). Step 4 is a placeholder. Instagram and Website import
+ * later phases). Instagram and Website import
  * are shown as "Coming soon" and cannot be chosen.
  *
  * In Node: module.exports (the pure parts, for the tests). In the browser:
@@ -70,9 +76,16 @@
       start_help: 'Instagram and website import are coming soon. Nothing is imported in this version.',
       business_text: 'Your business name, a short description and your social media links.',
       sections_text: 'Pick the sections for your page, put them in order and see a live phone preview.',
-      review_text: 'Check your page, then save it as an unpublished draft and continue in the Studio.',
-      review_placeholder: 'This step is still being built. No draft is created yet.',
-      back: 'Back', next: 'Next', finish_soon: 'Create draft — coming soon', exit: 'Back to Studio', sign_out: 'Sign out',
+      review_text: 'Check your page before you save it as a draft.',
+      back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out',
+      // Step 4 (O3A)
+      draft_status: 'Unpublished draft · not saved yet',
+      draft_free: "Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.",
+      sum_business: 'Business information', sum_sections: 'Sections ({n})', sum_no_description: 'No description', sum_no_links: 'No social media links',
+      edit: 'Edit', edit_business_label: 'Edit business information', edit_sections_label: 'Edit sections',
+      review_live_label: 'Your page as a draft', review_live_note: 'Scroll the phone to see the whole page.',
+      save_draft: 'Save Draft', save_note: 'Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.',
+      review_invalid: "This page can't be built yet. Please check Step 2 or Step 3.",
       unavailable_title: "Onboarding isn't available here yet", unavailable_text: 'The new onboarding is still being built and tested. Your landing pages keep working as before.',
       loading_title: 'Checking your sign-in …', loading_text: 'One moment.',
       signedout_title: 'Create your landing page', signedout_text: 'Sign in or create a free account to start. No payment card needed.',
@@ -129,9 +142,15 @@
       start_help: 'Der Import von Instagram und Websites folgt bald. In dieser Version wird nichts importiert.',
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
-      review_text: 'Prüfen Sie Ihre Seite, speichern Sie sie als unveröffentlichten Entwurf und arbeiten Sie im Studio weiter.',
-      review_placeholder: 'Dieser Schritt wird noch gebaut. Es wird noch kein Entwurf erstellt.',
-      back: 'Zurück', next: 'Weiter', finish_soon: 'Entwurf erstellen – demnächst', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
+      review_text: 'Prüfen Sie Ihre Seite, bevor Sie sie als Entwurf speichern.',
+      back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
+      draft_status: 'Unveröffentlichter Entwurf · noch nicht gespeichert',
+      draft_free: 'Das Erstellen eines Entwurfs ist kostenlos und startet nicht Ihre 14-tägige Testphase. Die Testphase beginnt erst, wenn Sie veröffentlichen.',
+      sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
+      edit: 'Bearbeiten', edit_business_label: 'Unternehmensdaten bearbeiten', edit_sections_label: 'Abschnitte bearbeiten',
+      review_live_label: 'Ihre Seite als Entwurf', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
+      save_draft: 'Entwurf speichern', save_note: 'Das Speichern folgt im nächsten Update. Es wurde noch nichts gespeichert – Ihre Angaben bleiben in diesem Browser-Tab.',
+      review_invalid: 'Diese Seite kann noch nicht erstellt werden. Bitte prüfen Sie Schritt 2 oder 3.',
       unavailable_title: 'Das Onboarding ist hier noch nicht verfügbar', unavailable_text: 'Das neue Onboarding wird noch gebaut und getestet. Ihre Landingpages funktionieren weiter wie bisher.',
       loading_title: 'Anmeldung wird geprüft …', loading_text: 'Einen Moment bitte.',
       signedout_title: 'Erstellen Sie Ihre Landingpage', signedout_text: 'Melden Sie sich an oder erstellen Sie ein kostenloses Konto. Keine Zahlungskarte nötig.',
@@ -289,14 +308,14 @@
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
       if (M && V3) { var r = restore(saved, M, V3); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
-      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null;
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0;
       fields();
     }
     function forget() {
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
-      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null;
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0;
       fields();
     }
     function check() { return M && V3 ? M.check(V3, answers, current) : null; }
@@ -441,7 +460,7 @@
 
     // ── Step 3: the sections (answers.sections and answers.social, kept with the other answers) and the
     // live phone (the whole page; its scroll position kept; a section just added or moved shown) ──
-    var frameY = 0, reveal = null;
+    var frameY = 0, reveal = null, reviewY = 0;
     function page() { return M && V3 ? M.checkPage(V3, answers, current) : null; }
     function secName(type) { return t('sec_' + type); }
     function icon(name) { return $('ob-tpl-icons').content.querySelector('[data-icon="' + name + '"]').cloneNode(true); }
@@ -573,6 +592,60 @@
       else if (reveal && frame.contentWindow) { frame.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*'); reveal = null; }
     }
 
+    // ── Step 4: the review. Read only: the values and the page come from checkPage(), exactly what a draft will
+    // hold later; text only through textContent; the phone shows the same page in the same frame as Step 3 ──
+    function setText(id, value, empty) {
+      var n = $(id);
+      n.textContent = value || t(empty);
+      if (value) n.removeAttribute('data-empty'); else n.setAttribute('data-empty', 'true');
+    }
+    function review() {
+      if (!M || !$('ob-sum-name')) return;
+      var r = page();
+      setText('ob-sum-name', r.values.name || M.cleanName(answers.name), 'name_required');
+      setText('ob-sum-description', r.values.description, 'sum_no_description');
+      var links = $('ob-sum-links');
+      while (links.firstChild) links.removeChild(links.firstChild);
+      if (r.values.links.length) {
+        links.removeAttribute('data-empty');
+        var ul = el('ul', 'ob-sum-links');
+        r.values.links.forEach(function (l) {
+          var li = el('li', ''), pf = el('span', 'ob-sum-links__platform'), url = el('span', 'ob-sum-links__url');
+          pf.textContent = M.LABELS[l.platform] + ': ';
+          url.textContent = l.url;                        // shown as text, not a link: nothing leaves the wizard
+          li.appendChild(pf); li.appendChild(url); ul.appendChild(li);
+        });
+        links.appendChild(ul);
+      } else setText('ob-sum-links', '', 'sum_no_links');
+      $('ob-sum-sections-title').textContent = t('sum_sections').replace('{n}', String(r.sections.length));
+      var list = $('ob-sum-sections');
+      while (list.firstChild) list.removeChild(list.firstChild);
+      r.sections.forEach(function (type, i) {
+        var li = el('li', 'ob-sec' + (type === 'hero' ? ' ob-sec--locked' : ''), { 'data-type': type });
+        var num = el('span', 'ob-sec__num', { 'aria-hidden': 'true' });
+        num.textContent = String(i + 1);
+        li.appendChild(num);
+        li.appendChild(body(type, r));
+        list.appendChild(li);
+      });
+      $('ob-review-error').textContent = r.pageOk ? '' : t('review_invalid');
+      drawReview(r);
+    }
+    function drawReview(r) {
+      var frame = $('ob-review-frame');
+      if (!frame || !PV) return;
+      var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
+      var html = out && out.ok ? PV.liveHtml(out.html) : '';
+      if (html && frame.srcdoc !== html) frame.srcdoc = html;
+    }
+    // Edit: back to the step, its answers as they are (saved first), focus where the change starts
+    function editStep(step, focusId) {
+      nav = { step: step, choice: nav.choice };
+      save();
+      wizard(false);
+      $(focusId).focus();
+    }
+
     function texts() {
       doc.documentElement.lang = current;
       doc.title = t('page_title');
@@ -621,10 +694,12 @@
       var last = s === STEPS.length - 1;
       $('ob-next').hidden = last;
       $('ob-next').disabled = !canNext(nav);
-      $('ob-finish').hidden = !last;
+      $('ob-finish').hidden = !last;          // O3A: shown on Step 4, always disabled (no draft is saved yet)
+      $('ob-save-note').hidden = !last;
       if (s === 0) previews(false);
       if (s === 1) business();
       if (s === 2) sections();
+      if (s === 3) review();
       if (focus) { var h = $('ob-step-' + s).querySelector('.ob-h1'); if (h) h.focus(); }
     }
     function render(focus) {
@@ -686,6 +761,22 @@
       $('ob-name').addEventListener('input', function (e) { answers.name = e.target.value; changed(); });
       $('ob-description').addEventListener('input', function (e) { answers.description = e.target.value; changed(); });
       $('ob-add-link').addEventListener('click', addRow);
+    }
+    // Step 4: Edit back to Steps 2 and 3
+    $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
+    $('ob-edit-sections').addEventListener('click', function () { editStep(2, 'ob-chosen-title'); });
+    // Step 4's frame: after each load its scroll position (no reveal); from it, only its scroll position
+    if (PV && $('ob-review-frame')) {
+      $('ob-review-frame').addEventListener('load', function () {
+        var f = $('ob-review-frame');
+        if (f.contentWindow) f.contentWindow.postMessage(PV.initMessage(reviewY, null), '*');
+      });
+      win.addEventListener('message', function (e) {
+        var f = $('ob-review-frame');
+        if (!f || e.source !== f.contentWindow) return;
+        var m = PV.acceptFrameMessage(e.data);
+        if (m) reviewY = m.y;
+      });
     }
     // Step 3's live frame: after each load, the scroll position and the section to reveal; from it, only its scroll position
     if (PV && $('ob-sections-frame')) {

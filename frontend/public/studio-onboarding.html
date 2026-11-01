@@ -57,7 +57,7 @@
 <!-- Step 3's button icons, cloned by the script -->
 <template id="ob-tpl-icons"><svg class="ob-ic" data-icon="up" aria-hidden="true"><use href="#ob-arrow-up"/></svg><svg class="ob-ic" data-icon="down" aria-hidden="true"><use href="#ob-arrow-down"/></svg><svg class="ob-ic" data-icon="lock" aria-hidden="true"><use href="#ob-lock"/></svg></template>
 
-<!-- Landing Page Studio V3 onboarding (Phases O0-O2): the frame and Steps 1-3.
+<!-- Landing Page Studio V3 onboarding (Phases O0-O3A): the frame and Steps 1-4.
      Starts only on the isolated Studio V3 staging address (js/studio/studio-routing.js);
      everywhere else it shows a notice and loads nothing. No dashboard sidebar, no Studio controls. -->
 <header class="ob-top">
@@ -105,7 +105,7 @@
     </div>
   </section>
 
-  <!-- The wizard: four steps; Steps 1-3 work (O0-O2), Step 4 is a placeholder -->
+  <!-- The wizard: four steps (O0-O3A); Step 4 reviews the page, saving a draft is not built yet -->
   <section class="ob-wizard" id="ob-wizard" hidden>
     <!-- O2.1: Step 1, large desktops only: the benefits checklist (decoration; the same facts are in the texts) -->
     <aside class="ob-benefits" aria-hidden="true">
@@ -280,21 +280,56 @@
           </aside>
         </div>
       </div>
-      <!-- Step 4: placeholder (nothing is saved, no draft) -->
+      <!-- Step 4: Review & save (Phase O3A). A read-only summary of Steps 2 and 3 with Edit buttons and the page
+           in the phone. Nothing is saved yet: Save Draft stays disabled until draft saving is built and approved. -->
       <div class="ob-step" id="ob-step-3" data-step="3" hidden>
-        <h1 class="ob-h1" tabindex="-1" data-ob="step_review">Review &amp; save</h1>
-        <p class="ob-lead" data-ob="review_text">Check your page, then save it as an unpublished draft and continue in the Studio.</p>
-        <div class="ob-info ob-info--placeholder">
-          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
-          <p data-ob="review_placeholder">This step is still being built. No draft is created yet.</p>
+        <h1 class="ob-h1" id="ob-review-title" tabindex="-1" data-ob="step_review">Review &amp; save</h1>
+        <p class="ob-lead" data-ob="review_text">Check your page before you save it as a draft.</p>
+        <div class="ob-business ob-review">
+          <div class="ob-fields">
+            <p class="ob-draft-badge"><span class="ob-draft-badge__dot" aria-hidden="true"></span><span data-ob="draft_status">Unpublished draft · not saved yet</span></p>
+            <div class="ob-info ob-info--compact">
+              <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+              <p data-ob="draft_free">Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.</p>
+            </div>
+            <section class="ob-summary" aria-labelledby="ob-sum-business-title">
+              <div class="ob-summary__head">
+                <h2 class="ob-h2" id="ob-sum-business-title" tabindex="-1" data-ob="sum_business">Business information</h2>
+                <button type="button" class="ob-edit" id="ob-edit-business" aria-label="Edit business information" data-ob-aria="edit_business_label"><span data-ob="edit">Edit</span></button>
+              </div>
+              <dl class="ob-summary__list">
+                <div class="ob-summary__row"><dt data-ob="name_label">Business name</dt><dd id="ob-sum-name"></dd></div>
+                <div class="ob-summary__row"><dt data-ob="description_label">Short description</dt><dd id="ob-sum-description"></dd></div>
+                <div class="ob-summary__row"><dt data-ob="links_label">Social media links</dt><dd id="ob-sum-links"></dd></div>
+              </dl>
+            </section>
+            <section class="ob-summary" aria-labelledby="ob-sum-sections-title">
+              <div class="ob-summary__head">
+                <h2 class="ob-h2" id="ob-sum-sections-title" tabindex="-1"></h2>
+                <button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label"><span data-ob="edit">Edit</span></button>
+              </div>
+              <ol class="ob-chosen ob-sum-sections" id="ob-sum-sections"></ol>
+            </section>
+            <p class="ob-error" id="ob-review-error"></p>
+          </div>
+          <!-- the page as it would be saved: the same core.js page as Step 3, in the same script-only frame (no same-origin) -->
+          <aside class="ob-live" aria-labelledby="ob-review-live-label">
+            <p class="ob-live__label" id="ob-review-live-label"><span class="ob-live__dot" aria-hidden="true"></span><span data-ob="review_live_label">Your page as a draft</span></p>
+            <div class="ob-live__stage ob-live__stage--scroll" aria-hidden="true">
+              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" id="ob-review-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
+            </div>
+            <p class="ob-live__note" data-ob="review_live_note">Scroll the phone to see the whole page.</p>
+          </aside>
         </div>
       </div>
 
       <div class="ob-nav">
         <button type="button" class="ob-btn ob-btn--ghost" id="ob-back"><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span data-ob="back">Back</span></button>
         <button type="button" class="ob-btn ob-btn--primary" id="ob-next"><span data-ob="next">Next</span><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-right"/></svg></button>
-        <button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled data-ob="finish_soon">Create draft — coming soon</button>
+        <!-- O3A: disabled on purpose; nothing is saved until authenticated draft saving is built and approved -->
+        <button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled aria-disabled="true" aria-describedby="ob-save-note" data-ob="save_draft">Save Draft</button>
       </div>
+      <p class="ob-save-note" id="ob-save-note" hidden data-ob="save_note">Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.</p>
     </div>
   </section>
 </main>

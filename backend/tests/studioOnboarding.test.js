@@ -103,9 +103,10 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   const frames = [...HTML.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">')
     .concat('<iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">',
-      '<iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">'));
+      '<iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">',
+      '<iframe class="ob-phone__frame" id="ob-review-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">'));
   assert.ok(!/allow-same-origin|allow-popups|allow-top-navigation|allow-forms|allow-modals/.test(HTML), 'no other sandbox permission anywhere');
-  for (const [from, to] of [['<aside class="ob-live" aria-labelledby="ob-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-sections-live-label"', '</aside>']]) {
+  for (const [from, to] of [['<aside class="ob-live" aria-labelledby="ob-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-sections-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-review-live-label"', '</aside>']]) {
     const live = HTML.slice(HTML.indexOf(from), HTML.indexOf(to, HTML.indexOf(from)));
     assert.ok(/<div class="ob-live__stage[^"]*" aria-hidden="true">/.test(live) && live.search(/aria-hidden="true">/) < live.indexOf('<iframe'), from + ': the frame in the hidden part');
   }
@@ -127,14 +128,14 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'unique ids');
 });
 
-test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fields with labels and error slots, the logo disabled; Steps 3-4 placeholders only', () => {
+test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fields with labels and error slots, the logo disabled; Step 3 lists; Step 4 review with a disabled Save Draft', () => {
   const cards = [...HTML.matchAll(/<button type="button" class="ob-option"[^>]*>/g)].map((m) => m[0]);
   assert.equal(cards.length, 3);
   assert.match(cards[0], /data-option="instagram" disabled aria-disabled="true"/);
   assert.match(cards[1], /data-option="website" disabled aria-disabled="true"/);
   assert.ok(/data-option="scratch"/.test(cards[2]) && !/disabled/.test(cards[2]));
   assert.equal((HTML.match(/data-ob="soon"/g) || []).length, 3, 'three "Coming soon" badges: Instagram, Website, the logo');
-  assert.match(HTML, /<button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled data-ob="finish_soon">/, 'no working finish button');
+  assert.match(HTML, /<button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled aria-disabled="true" aria-describedby="ob-save-note" data-ob="save_draft">Save Draft<\/button>/, 'Save Draft: disabled, with its note');
   // Step 2: labelled name (required) and description, errors and counters described; the links' list and the green Add link
   assert.match(HTML, /<label class="ob-label" for="ob-name">/);
   assert.match(HTML, /<input class="ob-input" id="ob-name" type="text" autocomplete="organization" spellcheck="false" aria-required="true" aria-describedby="ob-name-error ob-name-count-sr" \/>/);
@@ -154,9 +155,21 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.match(step3, /<p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"><\/p>/);
   assert.match(step3, /data-ob="sections_info"/);
   assert.ok(!/<input|<textarea|<select|<button/.test(step3), 'Step 3 markup: no field, no button (added by the script)');
-  // Step 4: still the placeholder
+  // Step 4 (O3A): the status, the free / trial note, the two summaries with named Edit buttons, the save note; no field
   const step4 = HTML.slice(HTML.indexOf('id="ob-step-3"'), HTML.indexOf('<div class="ob-nav">'));
-  assert.ok(!/<input|<textarea|<select|<button/.test(step4) && /data-ob="review_placeholder"/.test(step4), 'Step 4 collects nothing');
+  assert.ok(!/<input|<textarea|<select|<form/.test(step4), 'Step 4 collects nothing');
+  assert.deepEqual([...step4.matchAll(/<button\b[^>]*>/g)].map((m) => m[0]), [
+    '<button type="button" class="ob-edit" id="ob-edit-business" aria-label="Edit business information" data-ob-aria="edit_business_label">',
+    '<button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label">'], 'only the two Edit buttons');
+  for (const k of ['draft_status', 'draft_free', 'sum_business', 'review_live_label']) assert.ok(step4.includes('data-ob="' + k + '"'), k);
+  assert.match(HTML, /<p class="ob-save-note" id="ob-save-note" hidden data-ob="save_note">/);
+  assert.ok(!/review_placeholder|finish_soon/.test(HTML + SRC), 'the placeholder texts are gone');
+  // honest copy: never claims a saved draft
+  for (const l of ['en', 'de']) assert.ok(!/\b(saved successfully|draft (was|has been) (created|saved)|erfolgreich gespeichert|wurde (erstellt|gespeichert))\b/i.test(Object.values(OB.TX[l]).join(' ')), l + ': no success wording');
+  assert.equal(OB.TX.en.save_draft, 'Save Draft'); assert.equal(OB.TX.de.save_draft, 'Entwurf speichern');
+  assert.ok(/free/.test(OB.TX.en.draft_free) && /14-day trial/.test(OB.TX.en.draft_free) && /kostenlos/.test(OB.TX.de.draft_free) && /14-tägige Testphase/.test(OB.TX.de.draft_free));
+  // the save button has no handler: nothing in the shell listens to it
+  assert.ok(!code(SRC).includes("$('ob-finish').addEventListener") && !/ob-finish'\)\.disabled\s*=/.test(code(SRC)), 'Save Draft never enabled, never handled');
 });
 
 test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial calls; storage only this tab\'s sessionStorage under the per-user key', () => {
