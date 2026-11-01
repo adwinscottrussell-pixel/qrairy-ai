@@ -90,7 +90,7 @@
       templates: 'Page Templates', add_later: 'Adding sections arrives in the next step.',
       page_label: 'Page', page_src_import: 'Current page', page_src_draft: 'Studio draft', page_loading: 'Loading your pages …',
       page_loading_short: 'Loading …', page_empty_short: 'No landing page yet', page_signin_short: 'Please sign in', page_error_short: 'Pages not loaded',
-      page_forbidden_short: 'Not one of your pages', page_notfound_short: 'Not one of your pages', page_invalid_short: 'Cannot be opened yet', page_not_live: ' (not live)', page_retry: 'Try again', page_signin_btn: 'Sign in', page_dashboard: 'Go to dashboard',
+      page_forbidden_short: 'Not one of your pages', page_notfound_short: 'Not one of your pages', page_invalid_short: 'Cannot be opened yet', page_not_live: ' (not live)', page_retry: 'Try again', page_signin_btn: 'Sign in', page_dashboard: 'Go to dashboard', page_onboard: 'Create your first page',
       page_loaded_import: 'Your current page “{name}”, opened in the Studio. Save Draft keeps your changes; your live page does not change.', page_loaded_draft: 'Your saved Studio draft of “{name}”. Your live page does not change.',
       page_empty: 'You have no landing page yet. Create one in the dashboard; until then the Studio shows a sample page.',
       page_empty_isolated: 'You have no landing page yet. This test environment has no dashboard; until a draft exists the Studio shows a sample page.', page_empty_isolated_short: 'No landing page yet', page_signin: 'Sign in to open your landing pages.',
@@ -131,7 +131,7 @@
       templates: 'Seitenvorlagen', add_later: 'Abschnitte hinzufügen folgt im nächsten Schritt.',
       page_label: 'Seite', page_src_import: 'Aktuelle Seite', page_src_draft: 'Studio-Entwurf', page_loading: 'Ihre Seiten werden geladen …',
       page_loading_short: 'Wird geladen …', page_empty_short: 'Noch keine Landingpage', page_signin_short: 'Bitte anmelden', page_error_short: 'Seiten nicht geladen',
-      page_forbidden_short: 'Nicht Ihre Seite', page_notfound_short: 'Nicht Ihre Seite', page_invalid_short: 'Noch nicht zu öffnen', page_not_live: ' (nicht live)', page_retry: 'Erneut versuchen', page_signin_btn: 'Anmelden', page_dashboard: 'Zum Dashboard',
+      page_forbidden_short: 'Nicht Ihre Seite', page_notfound_short: 'Nicht Ihre Seite', page_invalid_short: 'Noch nicht zu öffnen', page_not_live: ' (nicht live)', page_retry: 'Erneut versuchen', page_signin_btn: 'Anmelden', page_dashboard: 'Zum Dashboard', page_onboard: 'Erste Seite erstellen',
       page_loaded_import: 'Ihre aktuelle Seite „{name}“, im Studio geöffnet. „Entwurf speichern“ sichert Ihre Änderungen; Ihre Live-Seite ändert sich nicht.', page_loaded_draft: 'Ihr gespeicherter Studio-Entwurf von „{name}“. Ihre Live-Seite ändert sich nicht.',
       page_empty: 'Sie haben noch keine Landingpage. Erstellen Sie eine im Dashboard – bis dahin zeigt das Studio eine Beispielseite.',
       page_empty_isolated: 'Sie haben noch keine Landingpage. Diese Testumgebung hat kein Dashboard – bis ein Entwurf existiert, zeigt das Studio eine Beispielseite.', page_empty_isolated_short: 'Noch keine Landingpage', page_signin: 'Melden Sie sich an, um Ihre Landingpages zu öffnen.',
@@ -498,6 +498,8 @@
     $('st-page-signin').hidden = st !== 'signin' || !(AUTH && AUTH.available());
     // (none on the Studio V3 staging address: isolateNav())
     if ($('st-page-dashboard')) $('st-page-dashboard').hidden = st !== 'empty';
+    // (only on the Studio V3 staging address: removed elsewhere in start())
+    if ($('st-page-onboard')) $('st-page-onboard').hidden = st !== 'empty';
     renderSave();
   }
   // Back to the sample page: the open customer page (if any) leaves the editor.
@@ -908,6 +910,9 @@
   function start() {
     bindTheme();
     state.lang = lang();
+    // the onboarding exists on the Studio V3 staging address only (isolated, onboarding-shell.js)
+    var onboard = $('st-page-onboard');
+    if (onboard && !ROUTING.isolated) onboard.parentNode.removeChild(onboard);
     if (ROUTING.blocked || !V3 || !STORE || !PREVIEW || !INSPECTOR) {
       $('st-app').setAttribute('data-unavailable', '');
       $('st-unavailable').hidden = false;

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Get started — QRAIVY</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/studio-onboarding.css"/>
+  <script src="js/qraivy-lang.js"></script>
+  <script src="js/studio/studio-routing.js"></script>
+</head>
+<body class="ob-page">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ob-instagram" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></symbol>
+  <symbol id="ob-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="ob-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="ob-check" viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7"/></symbol>
+  <symbol id="ob-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="ob-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="ob-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="ob-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+  <symbol id="ob-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<!-- Landing Page Studio V3 onboarding (Phase O0): the frame and Step 1 only.
+     Starts only on the isolated Studio V3 staging address (js/studio/studio-routing.js);
+     everywhere else it shows a notice and loads nothing. No dashboard sidebar, no Studio controls. -->
+<header class="ob-top">
+  <!-- brand: the approved QRAIVY onboarding logo (square, shown at its own proportions) -->
+  <span class="ob-brand"><img class="ob-brand__logo" src="images/qraivy-onboarding-logo.jpg" width="1254" height="1254" alt="QRAIVY" decoding="async" /></span>
+  <div class="ob-top__actions">
+    <div class="ob-lang" role="group" aria-label="Language" data-ob-aria="lang_group">
+      <button type="button" class="ob-lang__btn" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" class="ob-lang__btn" data-lang="de" aria-pressed="false">DE</button>
+    </div>
+    <button type="button" class="ob-link" id="ob-signout" hidden data-ob="sign_out">Sign out</button>
+    <a class="ob-link ob-link--exit" id="ob-exit" href="studio.html" hidden><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span class="ob-link__label" data-ob="exit">Back to Studio</span></a>
+  </div>
+</header>
+
+<main class="ob-main" id="ob-main">
+
+  <!-- Not available on this address: nothing is loaded, no link -->
+  <section class="ob-card-panel ob-notice-panel" id="ob-unavailable" hidden>
+    <svg class="ob-ic ob-ic--lg" aria-hidden="true"><use href="#ob-lock"/></svg>
+    <h1 class="ob-h1" data-ob="unavailable_title">Onboarding isn't available here yet</h1>
+    <p class="ob-lead" data-ob="unavailable_text">The new onboarding is still being built and tested. Your landing pages keep working as before.</p>
+  </section>
+
+  <!-- Before the wizard: checking the sign-in, signed out, email not verified, sign-in not loaded -->
+  <section class="ob-card-panel ob-notice-panel" id="ob-gate" hidden aria-live="polite">
+    <svg class="ob-ic ob-ic--lg" id="ob-gate-icon" aria-hidden="true"><use href="#ob-lock"/></svg>
+    <h1 class="ob-h1" id="ob-gate-title"></h1>
+    <p class="ob-lead" id="ob-gate-text"></p>
+    <div class="ob-info" id="ob-gate-info" hidden>
+      <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+      <p id="ob-gate-info-text"></p>
+    </div>
+    <div class="ob-gate__actions">
+      <button type="button" class="ob-btn ob-btn--primary" id="ob-signin" hidden data-ob="sign_in">Sign in</button>
+      <button type="button" class="ob-btn ob-btn--secondary" id="ob-signup" hidden data-ob="sign_up">Create account</button>
+      <button type="button" class="ob-btn ob-btn--primary" id="ob-verify" hidden data-ob="verify_open">Verify my email</button>
+      <button type="button" class="ob-btn ob-btn--secondary" id="ob-recheck" hidden data-ob="verify_recheck">I have verified it</button>
+      <button type="button" class="ob-btn ob-btn--secondary" id="ob-retry" hidden data-ob="retry">Try again</button>
+    </div>
+  </section>
+
+  <!-- The wizard: four steps; only Step 1 works in Phase O0 -->
+  <section class="ob-wizard" id="ob-wizard" hidden>
+    <nav class="ob-progress" aria-label="Progress" data-ob-aria="progress_label">
+      <p class="ob-progress__count" id="ob-progress-count"></p>
+      <div class="ob-progress__bar" aria-hidden="true"><span class="ob-progress__fill" id="ob-progress-fill"></span></div>
+      <ol class="ob-steps" id="ob-steps">
+        <li class="ob-steps__item" data-step="0"><span class="ob-steps__dot" aria-hidden="true">1</span><span class="ob-steps__label" data-ob="step_start">Get started</span></li>
+        <li class="ob-steps__item" data-step="1"><span class="ob-steps__dot" aria-hidden="true">2</span><span class="ob-steps__label" data-ob="step_business">Business information</span></li>
+        <li class="ob-steps__item" data-step="2"><span class="ob-steps__dot" aria-hidden="true">3</span><span class="ob-steps__label" data-ob="step_sections">Choose sections</span></li>
+        <li class="ob-steps__item" data-step="3"><span class="ob-steps__dot" aria-hidden="true">4</span><span class="ob-steps__label" data-ob="step_review">Review &amp; save</span></li>
+      </ol>
+    </nav>
+
+    <div class="ob-card-panel">
+      <!-- Step 1: Get started -->
+      <div class="ob-step" id="ob-step-0" data-step="0">
+        <h1 class="ob-h1" id="ob-start-title" tabindex="-1" data-ob="start_title">How would you like to start?</h1>
+        <p class="ob-lead" data-ob="start_text">Choose how to create your landing page. You can change everything later in the Studio.</p>
+        <div class="ob-options" role="radiogroup" aria-labelledby="ob-start-title" id="ob-options">
+          <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="instagram" disabled aria-disabled="true">
+            <span class="ob-option__icon ob-option__icon--instagram" aria-hidden="true"><svg class="ob-ic"><use href="#ob-instagram"/></svg></span>
+            <span class="ob-option__body">
+              <span class="ob-option__title" data-ob="opt_instagram">Instagram</span>
+              <span class="ob-option__text" data-ob="opt_instagram_text">Start with your Instagram profile.</span>
+            </span>
+            <span class="ob-badge ob-badge--soon" data-ob="soon">Coming soon</span>
+          </button>
+          <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="website" disabled aria-disabled="true">
+            <span class="ob-option__icon ob-option__icon--website" aria-hidden="true"><svg class="ob-ic"><use href="#ob-globe"/></svg></span>
+            <span class="ob-option__body">
+              <span class="ob-option__title" data-ob="opt_website">Existing Website</span>
+              <span class="ob-option__text" data-ob="opt_website_text">Bring your existing website into QRAIVY.</span>
+            </span>
+            <span class="ob-badge ob-badge--soon" data-ob="soon">Coming soon</span>
+          </button>
+          <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="scratch">
+            <span class="ob-option__icon ob-option__icon--scratch" aria-hidden="true"><svg class="ob-ic"><use href="#ob-spark"/></svg></span>
+            <span class="ob-option__body">
+              <span class="ob-option__title" data-ob="opt_scratch">Start from Scratch</span>
+              <span class="ob-option__text" data-ob="opt_scratch_text">Build your landing page your way.</span>
+            </span>
+            <span class="ob-badge ob-badge--ready" data-ob="available">Available</span>
+            <span class="ob-option__check" aria-hidden="true"><svg class="ob-ic"><use href="#ob-check"/></svg></span>
+          </button>
+        </div>
+        <div class="ob-info">
+          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+          <p data-ob="start_help">Instagram and website import are coming soon. Nothing is imported in this version.</p>
+        </div>
+      </div>
+
+      <!-- Steps 2-4: placeholders in Phase O0 (nothing is collected or saved) -->
+      <div class="ob-step" id="ob-step-1" data-step="1" hidden>
+        <h1 class="ob-h1" tabindex="-1" data-ob="step_business">Business information</h1>
+        <p class="ob-lead" data-ob="business_text">Your business name, a short description and your social media links.</p>
+        <div class="ob-info ob-info--placeholder">
+          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+          <p data-ob="placeholder_text">This step is still being built. Nothing is collected or saved yet.</p>
+        </div>
+      </div>
+      <div class="ob-step" id="ob-step-2" data-step="2" hidden>
+        <h1 class="ob-h1" tabindex="-1" data-ob="step_sections">Choose sections</h1>
+        <p class="ob-lead" data-ob="sections_text">Pick the sections for your page, put them in order and see a live phone preview.</p>
+        <div class="ob-info ob-info--placeholder">
+          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+          <p data-ob="placeholder_text">This step is still being built. Nothing is collected or saved yet.</p>
+        </div>
+      </div>
+      <div class="ob-step" id="ob-step-3" data-step="3" hidden>
+        <h1 class="ob-h1" tabindex="-1" data-ob="step_review">Review &amp; save</h1>
+        <p class="ob-lead" data-ob="review_text">Check your page, then save it as an unpublished draft and continue in the Studio.</p>
+        <div class="ob-info ob-info--placeholder">
+          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+          <p data-ob="review_placeholder">This step is still being built. No draft is created yet.</p>
+        </div>
+      </div>
+
+      <div class="ob-nav">
+        <button type="button" class="ob-btn ob-btn--ghost" id="ob-back"><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span data-ob="back">Back</span></button>
+        <button type="button" class="ob-btn ob-btn--primary" id="ob-next"><span data-ob="next">Next</span><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-right"/></svg></button>
+        <button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled data-ob="finish_soon">Create draft — coming soon</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/studio/studio-auth.js"></script>
+<script src="js/studio/onboarding-shell.js"></script>
+</body>
+</html>

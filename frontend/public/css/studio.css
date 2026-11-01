@@ -99,6 +99,9 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-pagebar__status[data-state="error"], .st-pagebar__status[data-state="forbidden"], .st-pagebar__status[data-state="notfound"], .st-pagebar__status[data-state="invalid"] { color: var(--st-accent); }
 .st-pagebar__btn { flex-shrink: 0; padding: 2px 8px; border: 1px solid var(--st-border); border-radius: 6px; background: var(--st-surface); color: var(--st-text); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
 .st-pagebar__btn[hidden] { display: none; }
+/* the onboarding entry (Studio V3 staging only): a primary action, QRAIVY orange */
+.st-pagebar__btn--primary { background: var(--st-accent); border-color: var(--st-accent); color: var(--st-on-accent); }
+.st-pagebar__btn--primary:hover { background: var(--st-accent-hover); border-color: var(--st-accent-hover); }
 /* Save Draft (Phase B): the save state next to the button; a conflict asks the owner to choose */
 .st-savestate { flex-shrink: 1; min-width: 0; max-width: 180px; font-size: 12px; font-weight: 600; color: var(--st-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-savestate[hidden] { display: none; }

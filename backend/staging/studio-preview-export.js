@@ -27,10 +27,14 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = 'frontend/public/';
-// Every file studio.html needs, besides js/studio/* (taken whole).
+// Every file studio.html (and studio-onboarding.html) needs, besides js/studio/* (taken whole).
 const FILES = [
   'studio.html',
   'css/studio.css',
+  // the onboarding (Phase O0): its page, stylesheet and approved header logo; its script is in js/studio/
+  'studio-onboarding.html',
+  'css/studio-onboarding.css',
+  'images/qraivy-onboarding-logo.jpg',
   'dashboard-shell.css',
   'apple-touch-icon.png', // the sidebar logo (dashboard-shell.css)
   'favicon.ico', // browsers ask for it on every page
@@ -67,14 +71,19 @@ const GENERATED = {
   'robots.txt': 'User-agent: *\nDisallow: /\n',
 };
 
-// The local files studio.html and the copied CSS load (scripts, stylesheets,
-// url(...)); links to other pages (the sidebar) are not dependencies.
+// The local files the pages (studio.html, studio-onboarding.html) and the
+// copied CSS load (scripts, stylesheets, images, url(...)); links to other
+// pages (the sidebar) are not dependencies.
 function dependencies(files) {
   const out = new Set();
-  const html = files.get('studio.html').toString('utf8');
-  for (const m of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) out.add(m[1]);
-  for (const l of html.match(/<link\b[^>]*>/g) || []) {
-    if (/rel="stylesheet"/.test(l)) out.add((l.match(/href="([^"]+)"/) || [])[1]);
+  for (const [name, buf] of files) {
+    if (!name.endsWith('.html')) continue;
+    const html = buf.toString('utf8');
+    for (const m of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)) out.add(m[1]);
+    for (const m of html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)) out.add(m[1]);
+    for (const l of html.match(/<link\b[^>]*>/g) || []) {
+      if (/rel="stylesheet"/.test(l)) out.add((l.match(/href="([^"]+)"/) || [])[1]);
+    }
   }
   for (const [name, buf] of files) {
     if (!name.endsWith('.css')) continue;
@@ -93,7 +102,7 @@ function buildUpload(source) {
   const files = new Map();
   for (const n of [...new Set(names)].sort()) files.set(n, source.read(n));
   const missing = dependencies(files).filter((d) => !files.has(d));
-  if (missing.length) throw new Error('studio.html needs files that are not in the upload: ' + missing.join(', '));
+  if (missing.length) throw new Error('the Studio pages need files that are not in the upload: ' + missing.join(', '));
   for (const [n, buf] of files) {
     if (/(^|\/)vercel\.json$/.test(n)) throw new Error('refusing to upload a vercel.json from the repository: ' + n);
     if (!/\.(png|ico|jpg)$/.test(n) && /api\.qraivy\.com/.test(buf.toString('utf8'))) throw new Error(n + ' mentions the production API');

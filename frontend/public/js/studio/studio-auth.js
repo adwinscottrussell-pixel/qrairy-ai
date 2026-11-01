@@ -10,7 +10,8 @@
  * A Clerk already on the page (the browser tests' stand-in) is used as it is.
  *
  * Nothing here reads or changes a deal; the session token is handed to
- * studio-deals-data.js by the shell.
+ * studio-deals-data.js by the shell. The onboarding (onboarding-shell.js)
+ * uses the same loader, plus Clerk's own sign-up.
  *
  * In Node: module.exports (for the tests). In the Studio:
  * window.QraivyStudioAuth.
@@ -65,6 +66,13 @@
       c.openSignIn({});
       return true;
     }
+    // Opens Clerk's own sign-up (the onboarding, studio-onboarding.html); false when there is none
+    function signUp() {
+      var c = clerk();
+      if (!c || typeof c.openSignUp !== 'function') return false;
+      c.openSignUp({});
+      return true;
+    }
     // fn() whenever the signed-in session changes (to reload the deals)
     function onChange(fn) {
       ready().then(function (c) {
@@ -76,7 +84,7 @@
         });
       });
     }
-    return { ready: ready, signIn: signIn, onChange: onChange, available: function () { return !!key || !!clerk(); } };
+    return { ready: ready, signIn: signIn, signUp: signUp, onChange: onChange, available: function () { return !!key || !!clerk(); } };
   }
 
   return { CLERK_SRC: CLERK_SRC, createAuth: createAuth };

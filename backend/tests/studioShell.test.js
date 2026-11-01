@@ -204,7 +204,8 @@ test('every id in studio.html is unique (an icon and a button once shared "st-un
 });
 
 test('no existing page links to the Studio yet', () => {
-  for (const f of fs.readdirSync(PUB).filter((x) => x.endsWith('.html') && x !== 'studio.html')) {
+  // (the onboarding is a Studio page itself: studioOnboarding.test.js)
+  for (const f of fs.readdirSync(PUB).filter((x) => x.endsWith('.html') && x !== 'studio.html' && x !== 'studio-onboarding.html')) {
     assert.ok(!/(^|[^-\w])studio\.html/.test(read(f)), f);   // (wallet-pass-studio.html is another page)
   }
   for (const f of fs.readdirSync(path.join(PUB, 'js')).filter((x) => x.endsWith('.js'))) {

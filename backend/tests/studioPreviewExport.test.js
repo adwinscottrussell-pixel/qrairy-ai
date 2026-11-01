@@ -32,8 +32,9 @@ test('the upload: the Studio files, two icons, the starter catalog, the three de
   const names = [...X.buildUpload(fsSource).keys()].sort();
   const studio = fs.readdirSync(path.join(PUB, 'js', 'studio')).map((f) => 'js/studio/' + f);
   const photos = ['bakery-croissants-01', 'bakery-bread-01', 'bakery-coffee-01'].map((id) => 'images/deals/starter/' + id + '.jpg');
-  assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/deal-starter-images.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/qraivy-lang.js']
-    .concat(studio, photos, ['robots.txt', 'studio.html', 'vercel.json']).sort());
+  // (Phase O0: plus the onboarding page, its stylesheet and its approved logo)
+  assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio-onboarding.css', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/deal-starter-images.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/qraivy-lang.js']
+    .concat(studio, photos, ['images/qraivy-onboarding-logo.jpg', 'robots.txt', 'studio-onboarding.html', 'studio.html', 'vercel.json']).sort());
 });
 
 test('every local copy the Studio shows for the demo photos is in the upload (2A-3H)', () => {
@@ -43,10 +44,10 @@ test('every local copy the Studio shows for the demo photos is in the upload (2A
   for (const id of DEMO.STARTERS) assert.ok(files.has(DEMO.localSrc(DEMO.cloudinaryUrl(id))), id);
 });
 
-test('every script, stylesheet and CSS image studio.html loads is in the upload', () => {
+test('every script, stylesheet and CSS image studio.html and studio-onboarding.html load is in the upload', () => {
   const files = X.buildUpload(fsSource);
   const deps = X.dependencies(files);
-  for (const d of ['js/studio/studio-routing.js', 'js/lpV3/core.js', 'css/studio.css', 'dashboard-shell.css', 'apple-touch-icon.png']) assert.ok(deps.includes(d), d);
+  for (const d of ['js/studio/studio-routing.js', 'js/lpV3/core.js', 'css/studio.css', 'dashboard-shell.css', 'apple-touch-icon.png', 'css/studio-onboarding.css', 'js/studio/onboarding-shell.js', 'images/qraivy-onboarding-logo.jpg']) assert.ok(deps.includes(d), d);
   for (const d of deps) assert.ok(files.has(d), d);
 });
 
@@ -74,6 +75,9 @@ test('refuses a repository vercel.json and a missing dependency', () => {
   const html = fsSource.read('studio.html').toString('utf8').replace('<script src="js/studio/studio-shell.js"></script>', '<script src="js/studio/studio-shell.js"></script><script src="js/extra.js"></script>');
   const extra = { list: fsSource.list, read: (n) => (n === 'studio.html' ? Buffer.from(html) : fsSource.read(n)) };
   assert.throws(() => X.buildUpload(extra), /not in the upload: js\/extra\.js/);
+  // an image a page shows is a dependency too (the onboarding logo)
+  const noLogo = { list: fsSource.list, read: (n) => (n === 'studio-onboarding.html' ? Buffer.from(fsSource.read(n).toString('utf8').replace('images/qraivy-onboarding-logo.jpg', 'images/missing-logo.jpg')) : fsSource.read(n)) };
+  assert.throws(() => X.buildUpload(noLogo), /not in the upload: images\/missing-logo\.jpg/);
 });
 
 test('export: reads the commit (not the working tree), writes upload + manifest, refuses a non-empty folder', () => {

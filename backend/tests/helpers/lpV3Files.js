@@ -91,6 +91,14 @@ const LPV3_FILES = [
   'backend/tests/studioHeroMobile.browser.test.js',
   // Studio V3 staging (isolated): no links to Admin pages outside the Studio-only upload
   'backend/tests/studioIsolatedNav.browser.test.js',
+  // Onboarding Phase O0 (the wizard frame and Step 1, isolated staging only): its page,
+  // stylesheet, script and its tests
+  'frontend/public/studio-onboarding.html',
+  'frontend/public/css/studio-onboarding.css',
+  'frontend/public/js/studio/onboarding-shell.js',
+  'frontend/public/images/qraivy-onboarding-logo.jpg', // the approved onboarding logo
+  'backend/tests/studioOnboarding.test.js',
+  'backend/tests/studioOnboarding.browser.test.js',
   // Phase A / B (customer pages): the owner's own pages for the Studio
   // (GET /studio/pages, GET and PUT /studio/pages/:slug/design: read, and
   // save the Studio draft), the Studio's page selector, Save Draft and their tests
@@ -140,7 +148,9 @@ const LPV3_FILES = [
 // the server file) and lpV3Scope.test.js (the only new frontend file).
 // The Studio files (new, loaded only by studio.html) are pinned by
 // tests/studioShell.test.js and lpV3Scope.test.js.
-const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/js/lpV3/gallery-nav.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio'];
+const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/js/lpV3/gallery-nav.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio',
+  // Onboarding Phase O0
+  'frontend/public/studio-onboarding.html', 'frontend/public/css/studio-onboarding.css', 'frontend/public/images/qraivy-onboarding-logo.jpg'];
 // Phase D1: its new files, and the five production files it changes. Older
 // guards skip them; lpV3Scope.test.js pins each changed file to exactly its
 // D1 edits on top of ae2861e (helpers/studioD1Files.js d1Only).
