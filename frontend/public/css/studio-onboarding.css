@@ -194,6 +194,63 @@ body.ob-page {
 .ob-phone__screen::after { content: ''; position: absolute; bottom: calc(8px * var(--s)); left: 50%; width: calc(134px * var(--s)); height: max(2px, calc(5px * var(--s))); transform: translateX(-50%); border-radius: 3px; background: rgba(255, 255, 255, 0.85); }
 .ob-phone__frame { display: block; width: 390px; height: 844px; border: 0; background: #fff; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
 
+/* ── Step 2 (O1): business information. Phones: the form, then a compact live
+   preview, then Back / Next. From 960 px: the form left, the phone right (stays in view). ── */
+.ob-business { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.ob-fields { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.ob-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.ob-field__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ob-label { padding: 0; font: 600 14px/1.35 Inter, sans-serif; color: var(--ob-navy); }
+.ob-req, .ob-opt { margin-left: 4px; font-weight: 500; font-size: 12.5px; color: var(--ob-muted); }
+.ob-count { font: 500 12.5px/1 Inter, sans-serif; color: var(--ob-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ob-count[data-over="true"] { color: #b91c1c; font-weight: 700; }
+.ob-hint { margin: 0; font-size: 13px; color: var(--ob-muted); }
+.ob-input {
+  width: 100%; min-height: 46px; padding: 11px 13px; border: 1.5px solid var(--ob-border-strong); border-radius: 12px;
+  background: var(--ob-surface); color: var(--ob-text); font: 400 15px/1.4 Inter, sans-serif;
+}
+.ob-input::placeholder { color: #94a3b8; }
+.ob-input:hover { border-color: #b4bbc8; }
+.ob-input:focus { outline: none; border-color: var(--ob-accent); box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.18); }
+.ob-input--area { min-height: 92px; resize: vertical; }
+.ob-input[aria-invalid="true"] { border-color: #dc2626; }
+.ob-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18); }
+.ob-error { margin: 0; font: 600 13px/1.4 Inter, sans-serif; color: #b91c1c; }
+.ob-error:empty { display: none; }
+
+/* social links: platform, address, Remove; the green "+ Add link" */
+.ob-links__list { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 2px; padding: 0; list-style: none; }
+.ob-links__list:empty { display: none; }
+.ob-link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'platform remove' 'url url' 'error error'; gap: 8px; padding: 10px; border: 1px solid var(--ob-border); border-radius: 12px; background: var(--ob-surface-2); }
+.ob-link-row__platform { grid-area: platform; }
+.ob-link-row__url { grid-area: url; }
+.ob-link-row__remove { grid-area: remove; }
+.ob-link-row .ob-error { grid-area: error; }
+.ob-select { appearance: none; padding-right: 36px; background: var(--ob-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center; cursor: pointer; }
+.ob-remove { min-height: 46px; padding: 0 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px; background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1 Inter, sans-serif; cursor: pointer; }
+.ob-remove:hover { border-color: #dc2626; color: #b91c1c; }
+.ob-btn--add { align-self: flex-start; min-height: 42px; padding: 0 16px; background: var(--ob-add-bg); color: var(--ob-add); border-color: #86efac; }
+.ob-btn--add:hover:not(:disabled) { background: #dcfce7; border-color: var(--ob-add); }
+.ob-btn--add > span[aria-hidden] { font-size: 19px; line-height: 1; }
+
+/* the logo: disabled, "Coming soon" */
+.ob-upload {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 16px;
+  border: 1.5px dashed var(--ob-border-strong); border-radius: 12px; background: var(--ob-surface-2); color: var(--ob-muted);
+  font: 600 14px/1 Inter, sans-serif; cursor: not-allowed;
+}
+.ob-info--compact { margin-top: 2px; padding: 10px 12px; }
+.ob-info--compact p { font-size: 13px; }
+
+/* the live preview */
+.ob-live { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; padding: 16px 12px 14px; border-radius: 16px; background: linear-gradient(180deg, #eef1f6, #e4e8ef); }
+.ob-live__label { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 700 12px/1 Inter, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ob-text-2); }
+.ob-live__dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18); }
+.ob-live__stage { pointer-events: none; }
+.ob-live .ob-phone { --s: 0.5; border-radius: 34px; padding: 6px; }          /* 195 px wide on phones */
+.ob-live .ob-phone__screen { border-radius: 28px; }
+.ob-live__note { margin: 0; font-size: 12.5px; color: var(--ob-muted); text-align: center; }
+
 /* ── Back / Next ── */
 .ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-border); }
 .ob-nav .ob-btn { flex: 1; }
@@ -219,4 +276,16 @@ body.ob-page {
   .ob-option .ob-badge { margin-top: 4px; align-self: flex-start; }
   .ob-option[aria-checked="true"] .ob-badge--ready { visibility: visible; }
   .ob-top { padding: 14px 28px; }
+  /* Step 2: link rows on one line (platform, address, Remove) */
+  .ob-link-row { grid-template-columns: 170px minmax(0, 1fr) auto; grid-template-areas: 'platform url remove' 'error error error'; }
+}
+/* Step 2 from 960 px: two columns, the phone stays in view */
+@media (min-width: 960px) {
+  .ob-main:has(#ob-step-1:not([hidden])) { max-width: 1080px; }
+  /* the progress and the four step labels keep the width and place of Steps 1, 3 and 4 (920 px less the 16 px gutters) */
+  .ob-main:has(#ob-step-1:not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
+  .ob-business { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
+  .ob-live { position: sticky; top: 20px; padding: 18px 16px 16px; }
+  .ob-live .ob-phone { --s: 0.62; border-radius: 40px; padding: 7px; }      /* 242 px wide */
+  .ob-live .ob-phone__screen { border-radius: 33px; }
 }

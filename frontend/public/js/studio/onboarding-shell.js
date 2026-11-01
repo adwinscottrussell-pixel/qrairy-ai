@@ -1,6 +1,7 @@
 /*
- * onboarding-shell.js — Landing Page Studio V3 onboarding (Phase O0): the
- * four-step wizard frame and Step 1 (Get started).
+ * onboarding-shell.js — Landing Page Studio V3 onboarding (Phases O0, O1): the
+ * four-step wizard frame, Step 1 (Get started) and Step 2 (Business
+ * information).
  *
  * Only studio-onboarding.html loads this file. It starts only on the
  * isolated Studio V3 staging address (studio-routing.js isolated: the
@@ -12,12 +13,21 @@
  * onboarding-previews.js: rendered by core.js, shown in frames sandboxed
  * without permissions).
  *
- * Phase O0 sends no request at all: no fetch, no draft, no save. The sign-in
- * (studio-auth.js) only tells it who is signed in and whether the email is
- * verified; the server checks that again before any draft is created
- * (lpV3/draftPolicy.js, later phases). Steps 2-4 are placeholders: nothing is
- * collected or stored. Instagram and Website import are shown as "Coming
- * soon" and cannot be chosen.
+ * Step 2 (Phase O1) asks for the business name (required), a short
+ * description and up to 8 social media links, checks them with
+ * onboarding-model.js (core.js's own rules) and shows the page they make in a
+ * live phone preview (core.js renderDesign, a frame sandboxed without
+ * permissions). The logo upload is shown disabled, "Coming soon".
+ *
+ * The answers and the step are kept in memory and, for a reload, in this
+ * tab's sessionStorage under a key for the signed-in user (a hash of the
+ * Clerk user id; never a token). Sign-out clears them.
+ *
+ * Nothing is sent: no fetch, no draft, no save. The sign-in (studio-auth.js)
+ * only tells it who is signed in and whether the email is verified; the
+ * server checks that again before any draft is created (lpV3/draftPolicy.js,
+ * later phases). Steps 3 and 4 are placeholders. Instagram and Website import
+ * are shown as "Coming soon" and cannot be chosen.
  *
  * In Node: module.exports (the pure parts, for the tests). In the browser:
  * window.QraivyOnboarding, and it starts itself.
@@ -62,6 +72,20 @@
       unverified_info: 'For your security, pages can only be created with a verified email address.',
       verify_open: 'Verify my email', verify_recheck: 'I have verified it',
       error_title: 'The sign-in could not be loaded', error_text: 'Check your connection and try again.', retry: 'Try again',
+      // Step 2 (O1)
+      name_label: 'Business name', name_placeholder: 'e.g. Café Sonnenschein', required: 'required', optional: 'optional',
+      description_label: 'Short description', description_placeholder: 'e.g. Fresh coffee and homemade cakes in the heart of the old town.',
+      description_hint: 'A sentence or two about what you offer.',
+      links_label: 'Social media links', links_hint: 'Add up to 8 links. Empty rows are ignored.', add_link: 'Add link',
+      links_full: 'You have added the maximum of 8 links.',
+      link_platform_label: 'Platform, link {n}', link_url_label: 'Address, link {n}', remove: 'Remove', remove_label: 'Remove link {n}',
+      logo_label: 'Logo', logo_button: 'Upload logo', logo_note: 'Logo upload is coming soon. You can add images later in the Studio.',
+      live_preview: 'Live preview', live_note: 'Updates as you type. Nothing is saved yet.',
+      count: '{n} / {max}', chars_left: '{n} characters left', chars_over: '{n} characters too many',
+      name_required: 'Please enter your business name.', name_too_long: 'The business name can have at most 80 characters.',
+      name_invalid: 'Please check your business name.', description_too_long: 'The description can have at most 300 characters.',
+      link_invalid: 'Enter a {platform} address, for example {example}', link_platform: 'Please choose a platform.',
+      links_too_many: 'You can add at most 8 links.',
     },
     de: {
       page_title: 'Loslegen — QRAIVY', lang_group: 'Sprache', progress_label: 'Fortschritt', step_of: 'Schritt {n} von {total}',
@@ -87,6 +111,19 @@
       unverified_info: 'Zu Ihrer Sicherheit können Seiten nur mit einer bestätigten E-Mail-Adresse erstellt werden.',
       verify_open: 'E-Mail bestätigen', verify_recheck: 'Ich habe sie bestätigt',
       error_title: 'Die Anmeldung konnte nicht geladen werden', error_text: 'Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.', retry: 'Erneut versuchen',
+      name_label: 'Unternehmensname', name_placeholder: 'z. B. Café Sonnenschein', required: 'Pflichtfeld', optional: 'optional',
+      description_label: 'Kurzbeschreibung', description_placeholder: 'z. B. Frischer Kaffee und hausgemachte Kuchen mitten in der Altstadt.',
+      description_hint: 'Ein bis zwei Sätze dazu, was Sie anbieten.',
+      links_label: 'Social-Media-Links', links_hint: 'Fügen Sie bis zu 8 Links hinzu. Leere Zeilen werden ignoriert.', add_link: 'Link hinzufügen',
+      links_full: 'Sie haben die maximale Anzahl von 8 Links erreicht.',
+      link_platform_label: 'Plattform, Link {n}', link_url_label: 'Adresse, Link {n}', remove: 'Entfernen', remove_label: 'Link {n} entfernen',
+      logo_label: 'Logo', logo_button: 'Logo hochladen', logo_note: 'Der Logo-Upload folgt bald. Bilder können Sie später im Studio hinzufügen.',
+      live_preview: 'Live-Vorschau', live_note: 'Aktualisiert sich beim Tippen. Noch wird nichts gespeichert.',
+      count: '{n} / {max}', chars_left: 'Noch {n} Zeichen', chars_over: '{n} Zeichen zu viel',
+      name_required: 'Bitte geben Sie Ihren Unternehmensnamen ein.', name_too_long: 'Der Unternehmensname darf höchstens 80 Zeichen haben.',
+      name_invalid: 'Bitte prüfen Sie Ihren Unternehmensnamen.', description_too_long: 'Die Beschreibung darf höchstens 300 Zeichen haben.',
+      link_invalid: 'Geben Sie eine {platform}-Adresse ein, zum Beispiel {example}', link_platform: 'Bitte wählen Sie eine Plattform.',
+      links_too_many: 'Sie können höchstens 8 Links hinzufügen.',
     },
   };
 
@@ -110,16 +147,40 @@
   }
 
   // The wizard's navigation state: { step, choice }. Pure.
+  // Step 2 leads on only with valid answers (businessOk: onboarding-model.js check().ok);
+  // without it (undefined) Next may be tried and shows the errors.
   function choose(s, id) {
     var o = OPTIONS.filter(function (x) { return x.id === id; })[0];
     return o && o.available ? { step: s.step, choice: id } : s;
   }
-  function canNext(s) {
+  function canNext(s, businessOk) {
     if (s.step === 0) return s.choice === 'scratch';
+    if (s.step === 1) return businessOk !== false;
     return s.step > 0 && s.step < STEPS.length - 1;
   }
-  function next(s) { return canNext(s) ? { step: s.step + 1, choice: s.choice } : s; }
+  function next(s, businessOk) { return canNext(s, businessOk) ? { step: s.step + 1, choice: s.choice } : s; }
   function back(s) { return s.step > 0 ? { step: s.step - 1, choice: s.choice } : s; }
+
+  // Progress kept for a reload: this tab's sessionStorage, one key per signed-in user
+  // (a hash of the Clerk user id, not the id itself). Holds the step and the answers only.
+  var STORE_PREFIX = 'qraivy.onboarding.v1:';
+  function hex(n) { var s = ''; for (var i = 7; i >= 0; i--) s += '0123456789abcdef'.charAt((n >>> (i * 4)) & 15); return s; }
+  function storeKey(userId) {
+    if (typeof userId !== 'string' || !userId) return null;
+    var h = 0x811c9dc5;
+    for (var i = 0; i < userId.length; i++) { h ^= userId.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return STORE_PREFIX + hex(h >>> 0);
+  }
+  // The kept progress, checked: { step, choice, answers }. Steps past 2 only with valid answers.
+  function restore(saved, M, V3) {
+    var s = saved && typeof saved === 'object' ? saved : {};
+    var answers = M.sanitize(s.answers);
+    var choice = s.choice === 'scratch' ? 'scratch' : null;
+    var step = typeof s.step === 'number' && s.step >= 0 && s.step < STEPS.length ? Math.floor(s.step) : 0;
+    if (!choice) step = 0;
+    if (step > 1 && !M.check(V3, answers, 'en').ok) step = 1;
+    return { step: step, choice: choice, answers: answers };
+  }
 
   // ── the page ──
   function start(win) {
@@ -140,7 +201,7 @@
       if (!PV || !V3 || !DEMO || (!force && drawn === current)) return;
       drawn = current;
       var html = PV.previews({ V3: V3, demo: DEMO, lang: current, localize: IMAGES ? IMAGES.localizeHtml : null });
-      var frames = doc.querySelectorAll('.ob-phone__frame');
+      var frames = doc.querySelectorAll('.ob-phone__frame[data-preview]');
       for (var i = 0; i < frames.length; i++) {
         var page = html[frames[i].getAttribute('data-preview')];
         // only a changed page is reloaded (no blank frame while an unchanged one reloads)
@@ -148,6 +209,186 @@
       }
       if (IMAGES && IMAGES.prepare) IMAGES.prepare(function () { previews(true); });
     }
+
+    // ── Step 2: the answers (memory; this tab's sessionStorage for the signed-in user),
+    // the errors that show, the live preview ──
+    var M = win.QraivyOnboardingModel;
+    var answers = M ? M.sanitize({}) : { name: '', description: '', links: [] };
+    var rowKeys = [], rowSeq = 0;                // a stable key per link row (its element ids)
+    var tried = false, touched = {};             // after a Next attempt every error shows; a link's after leaving it filled in
+    var last = { name: '', description: '' };    // the last valid name and description: the preview keeps them while a field is too long
+    var adopted = false, owner = null;           // whose progress this is (owner: the store key; null: memory only)
+    var liveTimer = null, spoken = {};
+
+    function store() { try { return win.sessionStorage || null; } catch (e) { return null; } }
+    function save() {
+      var st = store();
+      if (!owner || !st) return;
+      try { st.setItem(owner, JSON.stringify({ step: nav.step, choice: nav.choice, answers: answers })); } catch (e) {}
+    }
+    function clearStore() {
+      var st = store();
+      if (!st) return;
+      try { for (var i = st.length - 1; i >= 0; i--) { var k = st.key(i); if (k && k.indexOf(STORE_PREFIX) === 0) st.removeItem(k); } } catch (e) {}
+    }
+    // the signed-in user: their own kept progress; another user's never shows
+    function adopt(c) {
+      var key = storeKey(c && c.user && c.user.id);
+      if (adopted && key === owner) return;
+      adopted = true; owner = key;
+      var st = store(), saved = null;
+      if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
+      if (M && V3) { var r = restore(saved, M, V3); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
+      tried = false; touched = {}; last = { name: '', description: '' };
+      fields();
+    }
+    function forget() {
+      adopted = false; owner = null;
+      nav = { step: 0, choice: null };
+      answers = M ? M.sanitize({}) : answers;
+      tried = false; touched = {}; last = { name: '', description: '' };
+      fields();
+    }
+    function check() { return M && V3 ? M.check(V3, answers, current) : null; }
+
+    // the inputs from the answers (after a restore or a reset)
+    function fields() {
+      if (!M || !$('ob-name')) return;
+      $('ob-name').value = answers.name;
+      $('ob-description').value = answers.description;
+      rowKeys = answers.links.map(function () { return 'r' + (++rowSeq); });
+      rows();
+    }
+    function rowIndex(key) { return rowKeys.indexOf(key); }
+    function rows() {
+      var list = $('ob-links');
+      while (list.firstChild) list.removeChild(list.firstChild);
+      for (var i = 0; i < answers.links.length; i++) list.appendChild(row(rowKeys[i], answers.links[i]));
+      rowTexts();
+    }
+    function el(tag, cls, attrs) {
+      var n = doc.createElement(tag);
+      if (cls) n.className = cls;
+      Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+      return n;
+    }
+    function row(key, link) {
+      var li = el('li', 'ob-link-row', { 'data-row': key });
+      var pl = el('label', 'ob-sr', { for: 'ob-link-platform-' + key, 'data-row-text': 'link_platform_label' });
+      var sel = el('select', 'ob-input ob-select ob-link-row__platform', { id: 'ob-link-platform-' + key });
+      M.PLATFORMS.forEach(function (p) { var o = el('option', '', { value: p }); o.textContent = M.LABELS[p]; sel.appendChild(o); });
+      sel.value = link.platform;
+      var ul = el('label', 'ob-sr', { for: 'ob-link-url-' + key, 'data-row-text': 'link_url_label' });
+      var inp = el('input', 'ob-input ob-link-row__url', { id: 'ob-link-url-' + key, type: 'url', inputmode: 'url', autocomplete: 'url', spellcheck: 'false', 'aria-describedby': 'ob-link-error-' + key });
+      inp.value = link.url;
+      var rm = el('button', 'ob-remove ob-link-row__remove', { type: 'button', 'data-row-text': 'remove' });
+      var err = el('p', 'ob-error', { id: 'ob-link-error-' + key });
+      sel.addEventListener('change', function () { var i = rowIndex(key); if (i < 0) return; answers.links[i].platform = sel.value; rowTexts(); changed(); });
+      inp.addEventListener('input', function () { var i = rowIndex(key); if (i < 0) return; answers.links[i].url = inp.value; changed(); });
+      inp.addEventListener('blur', function () { if (inp.value.trim()) { touched[key] = true; errors(); } });
+      rm.addEventListener('click', function () { removeRow(key); });
+      [pl, sel, ul, inp, rm, err].forEach(function (n) { li.appendChild(n); });
+      return li;
+    }
+    // the rows' labels in the language, numbered; the address example follows the platform
+    function rowTexts() {
+      var items = $('ob-links').children;
+      for (var i = 0; i < items.length; i++) {
+        var n = String(i + 1), key = items[i].getAttribute('data-row');
+        var labels = items[i].querySelectorAll('[data-row-text]');
+        for (var j = 0; j < labels.length; j++) labels[j].textContent = t(labels[j].getAttribute('data-row-text')).replace('{n}', n);
+        items[i].querySelector('.ob-remove').setAttribute('aria-label', t('remove_label').replace('{n}', n));
+        $('ob-link-url-' + key).placeholder = M.EXAMPLES[answers.links[i].platform] || '';
+      }
+      var full = answers.links.length >= M.LIMITS.links;
+      $('ob-add-link').disabled = full;
+      $('ob-links-full').hidden = !full;
+    }
+    function addRow() {
+      if (!M || answers.links.length >= M.LIMITS.links) return;
+      answers.links.push({ platform: M.nextPlatform(answers.links), url: '' });
+      rowKeys.push('r' + (++rowSeq));
+      rows();
+      $('ob-link-platform-' + rowKeys[rowKeys.length - 1]).focus();
+      changed();
+    }
+    function removeRow(key) {
+      var i = rowIndex(key);
+      if (i < 0) return;
+      answers.links.splice(i, 1); rowKeys.splice(i, 1); delete touched[key];
+      rows();
+      // focus: the row that took its place, else the one before, else "+ Add link"
+      var to = rowKeys[i] || rowKeys[i - 1];
+      (to ? $('ob-link-platform-' + to) : $('ob-add-link')).focus();
+      changed();
+    }
+    function changed() { save(); errors(); live(false); }
+
+    // counters: "12 / 80"; screen readers hear only the last 10 characters and going over
+    function counter(id, value, max) {
+      var n = M.chars(value);
+      $(id + '-count').textContent = t('count').replace('{n}', String(n)).replace('{max}', String(max));
+      $(id + '-count').setAttribute('data-over', String(n > max));
+      var say = n > max ? t('chars_over').replace('{n}', String(n - max)) : max - n <= 10 ? t('chars_left').replace('{n}', String(max - n)) : '';
+      if (spoken[id] !== say) { spoken[id] = say; $(id + '-count-sr').textContent = say; }
+    }
+    function setError(input, msg) {
+      var e = $(input.getAttribute('aria-describedby').split(' ').filter(function (x) { return /-error(-|$)/.test(x); })[0]);
+      e.textContent = msg;
+      if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+    }
+    function linkMessage(code, platform) {
+      return t(code).replace('{platform}', M.LABELS[platform] || '').replace('{example}', M.EXAMPLES[platform] || '');
+    }
+    // the errors that show: too long at once; a missing name after a Next attempt; a link after leaving it filled in (or a Next attempt)
+    function errors() {
+      var r = check();
+      if (!r) return null;
+      var ne = r.errors.name && (tried || r.errors.name !== 'name_required') ? r.errors.name : '';
+      setError($('ob-name'), ne ? t(ne) : '');
+      setError($('ob-description'), r.errors.description ? t(r.errors.description) : '');
+      rowKeys.forEach(function (key, i) {
+        var code = r.errors.links[i];
+        setError($('ob-link-url-' + key), code && (tried || touched[key]) ? linkMessage(code, answers.links[i].platform) : '');
+      });
+      counter('ob-name', M.cleanName(answers.name), M.LIMITS.name);
+      counter('ob-description', M.cleanDescription(answers.description), M.LIMITS.description);
+      return r;
+    }
+    function focusInvalid(r) {
+      if (!r || r.errors.name) return $('ob-name').focus();
+      if (r.errors.description) return $('ob-description').focus();
+      var i = Object.keys(r.errors.links).map(Number).sort(function (a, b) { return a - b; })[0];
+      if (i !== undefined && rowKeys[i]) $('ob-link-url-' + rowKeys[i]).focus();
+    }
+
+    // the live preview: the page the valid answers make, rendered by core.js into the sandboxed frame
+    // (about 150 ms after typing stops); an invalid field keeps its last valid content, an empty name the placeholder
+    function live(now) {
+      if (liveTimer) win.clearTimeout(liveTimer);
+      liveTimer = null;
+      if (now) draw(); else liveTimer = win.setTimeout(draw, 150);
+    }
+    function draw() {
+      var r = check(), frame = $('ob-live-frame');
+      if (!r || !frame) return;
+      var name = r.errors.name === 'name_too_long' ? last.name : r.values.name;
+      var description = r.errors.description ? last.description : r.values.description;
+      if (!r.errors.name) last.name = r.values.name;
+      if (!r.errors.description) last.description = r.values.description;
+      var out = V3.renderDesign(M.buildDesign(V3, { name: name, description: description, links: r.values.links }, current),
+        { businessName: name || M.PLACEHOLDER_NAME[current] }, { preview: true });
+      if (out && out.ok && frame.srcdoc !== out.html) frame.srcdoc = out.html;
+    }
+    function business() {
+      if (!M || !$('ob-name')) return;
+      $('ob-name').placeholder = t('name_placeholder');
+      $('ob-description').placeholder = t('description_placeholder');
+      rowTexts();
+      errors();
+      live(true);
+    }
+
     function texts() {
       doc.documentElement.lang = current;
       doc.title = t('page_title');
@@ -195,6 +436,7 @@
       $('ob-next').disabled = !canNext(nav);
       $('ob-finish').hidden = !last;
       if (s === 0) previews(false);
+      if (s === 1) business();
       if (focus) { var h = $('ob-step-' + s).querySelector('.ob-h1'); if (h) h.focus(); }
     }
     function render(focus) {
@@ -205,7 +447,11 @@
       if (auth === 'ready') { show('ob-wizard'); wizard(focus); }
       else { show('ob-gate'); gate(auth); }
     }
-    function refresh() { auth = authState(clerk); render(false); }
+    function refresh() {
+      auth = authState(clerk);
+      if (auth === 'ready') adopt(clerk); else if (adopted) forget();
+      render(false);
+    }
 
     // language: the shared QRAIVY setting (js/qraivy-lang.js)
     var langs = doc.querySelectorAll('.ob-lang__btn');
@@ -227,11 +473,27 @@
         var b = e.currentTarget;
         if (b.disabled) return;
         nav = choose(nav, b.getAttribute('data-option'));
+        save();
         wizard(false);
       });
     }
-    $('ob-next').addEventListener('click', function () { var n = next(nav); if (n !== nav) { nav = n; wizard(true); } });
-    $('ob-back').addEventListener('click', function () { var b = back(nav); if (b !== nav) { nav = b; wizard(true); } });
+    $('ob-next').addEventListener('click', function () {
+      var ok;
+      if (nav.step === 1) {
+        var r = check();
+        ok = !!(r && r.ok);
+        if (!ok) { tried = true; errors(); focusInvalid(r); return; }
+      }
+      var n = next(nav, ok);
+      if (n !== nav) { nav = n; save(); wizard(true); }
+    });
+    $('ob-back').addEventListener('click', function () { var b = back(nav); if (b !== nav) { nav = b; save(); wizard(true); } });
+    // Step 2's fields
+    if (M) {
+      $('ob-name').addEventListener('input', function (e) { answers.name = e.target.value; changed(); });
+      $('ob-description').addEventListener('input', function (e) { answers.description = e.target.value; changed(); });
+      $('ob-add-link').addEventListener('click', addRow);
+    }
 
     // the sign-in: Clerk of this address only (studio-auth.js)
     AUTH = win.QraivyStudioAuth ? win.QraivyStudioAuth.createAuth({ routing: ROUTING }) : null;
@@ -245,7 +507,9 @@
     });
     $('ob-retry').addEventListener('click', function () { win.location.reload(); });
     $('ob-signout').addEventListener('click', function () {
-      nav = { step: 0, choice: null };
+      // sign-out: the kept progress goes (this tab), and the answers in memory
+      clearStore();
+      forget();
       Promise.resolve(clerk && typeof clerk.signOut === 'function' ? clerk.signOut() : null).then(refresh, refresh);
     });
     AUTH.ready().then(function (c) {
@@ -255,5 +519,6 @@
     });
   }
 
-  return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back, start: start };
+  return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, STORE_PREFIX: STORE_PREFIX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back,
+    storeKey: storeKey, restore: restore, start: start };
 });

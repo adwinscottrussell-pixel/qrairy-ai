@@ -1,15 +1,20 @@
 // ============================================================
-// studioOnboarding.test.js — Landing Page Studio V3 onboarding, Phase O0
-// (the wizard frame and Step 1), static and pure checks:
+// studioOnboarding.test.js — Landing Page Studio V3 onboarding, Phases O0
+// and O1 (the wizard frame, Step 1, Step 2), static and pure checks:
 // - it starts only on the isolated Studio V3 staging address (routing
 //   isolated, the staging API and the Clerk development key); every other
 //   address, production included, gets the notice;
 // - the wizard opens only for a signed-in user with a verified email;
 // - Step 1: Instagram and Website cannot be chosen, Start from Scratch
-//   leads to Step 2; Steps 2-4 are placeholders (no field, no draft);
-// - no request in Phase O0: no fetch / XHR / beacon, no API path, no
-//   payment or trial call; the page loads only the language file, the
-//   routing, the sign-in loader and its own script; no Admin sidebar;
+//   leads to Step 2; Steps 3-4 are placeholders (no field, no draft);
+// - Step 2 (O1, onboarding-model.js): name required (80), description
+//   (300), up to 8 social links on each platform's own domains (core.js
+//   rules), the page they make, errors mapped to the fields; the progress
+//   kept per user (hash key) and checked when restored; logo "Coming soon";
+// - no request: no fetch / XHR / beacon, no API path, no payment or trial
+//   call; storage only this tab's sessionStorage under the per-user key;
+//   the page loads only the language file, the routing, the sign-in loader,
+//   the renderer and its own scripts; no Admin sidebar;
 // - English and German have the same texts;
 // - the Studio's entry point exists on the isolated staging address only.
 // Behaviour in the browser: studioOnboarding.browser.test.js.
@@ -59,7 +64,7 @@ test('the wizard opens only for a signed-in user with a verified primary email',
   assert.equal(OB.authState({ session: { id: 's' }, user: { primaryEmailAddress: { verification: null } } }), 'unverified');
 });
 
-test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads on; four steps, Steps 2-4 cannot finish', () => {
+test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads on; Step 2 only with valid answers; four steps, none can finish', () => {
   assert.deepEqual(OB.STEPS, ['start', 'business', 'sections', 'review']);
   assert.deepEqual(OB.OPTIONS, [{ id: 'instagram', available: false }, { id: 'website', available: false }, { id: 'scratch', available: true }]);
   let s = { step: 0, choice: null };
@@ -69,7 +74,9 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
   assert.deepEqual(s, { step: 0, choice: 'scratch' });
   assert.equal(OB.canNext(s), true);
   s = OB.next(s); assert.equal(s.step, 1);
-  s = OB.next(s); assert.equal(s.step, 2);
+  assert.equal(OB.next(s, false), s, 'Step 2: invalid answers, no Next');
+  assert.equal(OB.canNext(s), true, 'Step 2: Next can be tried (it shows the errors)');
+  s = OB.next(s, true); assert.equal(s.step, 2);
   s = OB.next(s); assert.equal(s.step, 3);
   assert.equal(OB.canNext(s), false, 'the last step has no Next');
   assert.equal(OB.next(s), s);
@@ -81,15 +88,19 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
-    'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 8, 'no inline script');
+    'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 9, 'no inline script');
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'css/studio-onboarding.css']);
-  for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<form\b/, /<input\b/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
+  // no form that could be submitted anywhere, no file input (the logo upload is "Coming soon")
+  for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<form\b/, /type="file"/, /\baction=/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
   assert.match(HTML, /<meta name="robots" content="noindex, nofollow" \/>/);
-  // O0.1: exactly three preview frames, sandboxed with no permissions, not focusable, inside a part hidden from screen readers, outside the buttons
+  // O0.1: three preview frames, O1: the live preview; all sandboxed with no permissions, not focusable, inside a part hidden from screen readers, outside the buttons
   const frames = [...HTML.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
-  assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">'));
+  assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">')
+    .concat('<iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">'));
+  const live = HTML.slice(HTML.indexOf('<aside class="ob-live"'), HTML.indexOf('</aside>'));
+  assert.ok(live.indexOf('<div class="ob-live__stage" aria-hidden="true">') < live.indexOf('<iframe'), 'the live frame in the hidden part');
   for (const id of ['instagram', 'website', 'scratch']) {
     const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
     assert.ok(card.indexOf('<div class="ob-card__media" aria-hidden="true">') < card.indexOf('<iframe') && card.indexOf('<iframe') < card.indexOf('<button'), id + ': the frame in the hidden part, before (not inside) the button');
@@ -108,23 +119,35 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'unique ids');
 });
 
-test('Step 1 markup: three cards, Instagram and Website disabled with "Coming soon"; Steps 2-4 placeholders only', () => {
+test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fields with labels and error slots, the logo disabled; Steps 3-4 placeholders only', () => {
   const cards = [...HTML.matchAll(/<button type="button" class="ob-option"[^>]*>/g)].map((m) => m[0]);
   assert.equal(cards.length, 3);
   assert.match(cards[0], /data-option="instagram" disabled aria-disabled="true"/);
   assert.match(cards[1], /data-option="website" disabled aria-disabled="true"/);
   assert.ok(/data-option="scratch"/.test(cards[2]) && !/disabled/.test(cards[2]));
-  assert.equal((HTML.match(/data-ob="soon"/g) || []).length, 2, 'two "Coming soon" badges');
+  assert.equal((HTML.match(/data-ob="soon"/g) || []).length, 3, 'three "Coming soon" badges: Instagram, Website, the logo');
   assert.match(HTML, /<button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled data-ob="finish_soon">/, 'no working finish button');
-  for (const n of [1, 2, 3]) {
+  // Step 2: labelled name (required) and description, errors and counters described; the links' list and the green Add link
+  assert.match(HTML, /<label class="ob-label" for="ob-name">/);
+  assert.match(HTML, /<input class="ob-input" id="ob-name" type="text" autocomplete="organization" spellcheck="false" aria-required="true" aria-describedby="ob-name-error ob-name-count-sr" \/>/);
+  assert.match(HTML, /<label class="ob-label" for="ob-description">/);
+  assert.match(HTML, /<textarea class="ob-input ob-input--area" id="ob-description" rows="3" aria-describedby="ob-description-hint ob-description-error ob-description-count-sr"><\/textarea>/);
+  for (const id of ['ob-name-error', 'ob-description-error']) assert.match(HTML, new RegExp('<p class="ob-error" id="' + id + '"></p>'));
+  for (const id of ['ob-name-count-sr', 'ob-description-count-sr']) assert.match(HTML, new RegExp('<span class="ob-sr" id="' + id + '" aria-live="polite"></span>'));
+  assert.match(HTML, /<fieldset class="ob-field ob-links">\s*<legend class="ob-label">/);
+  assert.match(HTML, /<button type="button" class="ob-btn ob-btn--add" id="ob-add-link" aria-describedby="ob-links-hint">/);
+  assert.match(HTML, /<button type="button" class="ob-upload" id="ob-logo" disabled aria-disabled="true" aria-describedby="ob-logo-note">/, 'the logo: disabled');
+  const step2 = HTML.slice(HTML.indexOf('id="ob-step-1"'), HTML.indexOf('id="ob-step-2"'));
+  assert.equal((step2.match(/<input\b/g) || []).length, 1, 'Step 2 markup: one input (the name); link rows are added by the script');
+  for (const n of [2, 3]) {
     const step = HTML.slice(HTML.indexOf('id="ob-step-' + n + '"'), HTML.indexOf('</div>\n      </div>', HTML.indexOf('id="ob-step-' + n + '"')));
     assert.ok(!/<input|<textarea|<select|<button/.test(step), 'step ' + (n + 1) + ' collects nothing');
   }
 });
 
-test('no request in Phase O0: no fetch, XHR, sockets, beacons, storage writes, API paths, payment or trial calls', () => {
+test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial calls; storage only this tab\'s sessionStorage under the per-user key', () => {
   const c = code(SRC);
-  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /localStorage|sessionStorage|document\.cookie/, /getToken/,
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /EventSource/, /sendBeacon/, /\bimport\s*\(/, /localStorage|document\.cookie|indexedDB/, /getToken/,
     /\/studio\/|\/deals|\/lp\b|\/stripe|\/billing|\/checkout|\/trial|\/api\//, /https?:\/\//, /railway\.app|vercel\.app|qraivy\.com/, /\beval\s*\(|new\s+Function|toString\s*\(/, /innerHTML|outerHTML|insertAdjacentHTML|document\.write/,
     /createElement\('script'\)/]) {
     assert.ok(!re.test(c), 'onboarding-shell.js must not contain ' + re);
@@ -134,6 +157,114 @@ test('no request in Phase O0: no fetch, XHR, sockets, beacons, storage writes, A
   // the sign-in comes from studio-auth.js only, created only after canStart
   assert.equal((c.match(/createAuth\(/g) || []).length, 1);
   assert.ok(c.indexOf('if (!canStart(ROUTING)) return;') < c.indexOf('createAuth('), 'no sign-in before the address is checked');
+  // O1: sessionStorage read in one place; written only under the user's key, with the step and the answers
+  assert.equal((c.match(/sessionStorage/g) || []).length, 1);
+  assert.equal((c.match(/\.setItem\(/g) || []).length, 1);
+  assert.ok(c.includes('st.setItem(owner, JSON.stringify({ step: nav.step, choice: nav.choice, answers: answers }));'));
+  assert.ok(c.includes("var key = storeKey(c && c.user && c.user.id);"), 'the key: the signed-in Clerk user');
+  // sign-out clears the kept progress before signing out
+  const out = c.slice(c.indexOf("$('ob-signout').addEventListener"));
+  assert.ok(out.indexOf('clearStore();') < out.indexOf('clerk.signOut()') && out.indexOf('forget();') < out.indexOf('clerk.signOut()'));
+});
+
+test('O1 progress: one key per user (a hash, not the id); a restore is checked (bad data -> safe defaults, no skipping past Step 2 with invalid answers)', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const a = OB.storeKey('user_2abcDEF123'), b = OB.storeKey('user_2abcDEF124');
+  assert.match(a, /^qraivy\.onboarding\.v1:[0-9a-f]{8}$/);
+  assert.ok(a !== b && a === OB.storeKey('user_2abcDEF123'), 'stable, per user');
+  assert.ok(!a.includes('user_2abc'), 'the id itself is not in the key');
+  for (const x of [undefined, null, '', 42, {}]) assert.equal(OB.storeKey(x), null, 'no user: memory only');
+  const good = { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] };
+  assert.deepEqual(OB.restore({ step: 2, choice: 'scratch', answers: good }, M, V3), { step: 2, choice: 'scratch', answers: good });
+  assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: { name: '' } }, M, V3).step, 1, 'invalid answers: back to Step 2');
+  assert.equal(OB.restore({ step: 2, choice: 'instagram', answers: good }, M, V3).step, 0, 'no valid choice: Step 1');
+  for (const bad of [null, 'x', 7, [], { step: 99, choice: 'scratch' }, { step: -1 }, { step: 1.5, choice: 'scratch' }]) {
+    const r = OB.restore(bad, M, V3);
+    assert.ok(r.step >= 0 && r.step <= 1, JSON.stringify(bad));
+    assert.deepEqual(Object.keys(r.answers).sort(), ['description', 'links', 'name']);
+  }
+  const r = OB.restore({ step: 1, choice: 'scratch', answers: { name: 5, links: [{ platform: 'myspace', url: 'x', token: 't' }, ...Array(12).fill({ platform: 'x', url: '' })], token: 'secret' } }, M, V3);
+  assert.deepEqual(r.answers.links[0], { platform: 'instagram', url: 'x' }, 'unknown platform -> the first; unknown fields dropped');
+  assert.equal(r.answers.links.length, 8, 'at most 8 rows');
+  assert.equal(r.answers.name, '');
+  assert.ok(!JSON.stringify(r).includes('secret') && !JSON.stringify(r).includes('token'));
+});
+
+test('O1 model: name required, cleaned like the draft endpoint, at most 80 characters; description at most 300 with line breaks', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  assert.equal(M.check(V3, {}).errors.name, 'name_required');
+  assert.equal(M.check(V3, { name: '   \n\t ' }).errors.name, 'name_required');
+  assert.equal(M.cleanName('  Café\u0000 \u202eSonne\n\nUlm  '), 'Café Sonne Ulm', 'control and direction characters removed, spaces collapsed');
+  assert.equal(M.check(V3, { name: 'a'.repeat(80) }).ok, true);
+  assert.equal(M.check(V3, { name: 'a'.repeat(81) }).errors.name, 'name_too_long');
+  assert.equal(M.check(V3, { name: '😀'.repeat(80) }).ok, true, 'characters, not UTF-16 units');
+  assert.equal(M.check(V3, { name: '<script>alert(1)</script>' }).ok, true, 'text is text: core.js escapes it');
+  const html = V3.renderDesign(M.check(V3, { name: '<img src=x onerror=alert(1)>' }).design, {}, { preview: true }).html;
+  assert.ok(!html.includes('<img src=x') && html.includes('&lt;img src=x'), 'escaped in the page');
+  assert.equal(M.cleanDescription('Line one\r\nLine two\n\n\n\nEnd\t!'), 'Line one\nLine two\n\nEnd !');
+  assert.equal(M.check(V3, { name: 'A', description: 'd'.repeat(300) }).ok, true);
+  assert.equal(M.check(V3, { name: 'A', description: 'd'.repeat(301) }).errors.description, 'description_too_long');
+  assert.deepEqual(M.LIMITS, { name: 80, description: 300, links: 8 });
+});
+
+test('O1 model: all eight platforms, each on its own domains only (core.js rules); https:// added when missing; unsafe and lookalike addresses refused; 8 links at most', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  assert.deepEqual(M.PLATFORMS, V3.SOCIAL_PLATFORMS, 'the platforms core.js supports, all eight');
+  assert.equal(M.PLATFORMS.length, 8);
+  const ok = { instagram: 'instagram.com/cafe', facebook: 'www.facebook.com/cafe', tiktok: 'tiktok.com/@cafe', youtube: 'youtu.be/abc', linkedin: 'linkedin.com/company/cafe', x: 'twitter.com/cafe', pinterest: 'pinterest.de/cafe', whatsapp: 'wa.me/491701234567' };
+  for (const p of M.PLATFORMS) {
+    assert.equal(M.linkError(V3, p, M.normalizeUrl(ok[p])), null, p + ' accepted');
+    assert.equal(M.linkError(V3, p, M.normalizeUrl(M.EXAMPLES[p])), null, p + ': its own example is valid');
+    const other = M.PLATFORMS.find((q) => q !== p && q !== 'x');
+    assert.equal(M.linkError(V3, p, M.normalizeUrl(ok[other === p ? 'x' : other])), 'link_invalid', p + ' refuses another platform');
+  }
+  assert.equal(M.normalizeUrl('instagram.com/a'), 'https://instagram.com/a');
+  assert.equal(M.normalizeUrl('  //instagram.com/a '), 'https://instagram.com/a');
+  assert.equal(M.normalizeUrl('https://instagram.com/a'), 'https://instagram.com/a');
+  assert.equal(M.normalizeUrl(''), '');
+  for (const bad of ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'http://instagram.com/a', 'data:text/html,x', 'https://instagram.com.evil.com/a', 'https://evil.com/instagram.com', 'https://evilinstagram.com/a',
+    'https://user@instagram.com/a', 'https://instagram.com/a b', 'https://instagram.com/"onmouseover=x', 'instagram', 'ftp://instagram.com/a']) {
+    assert.equal(M.linkError(V3, 'instagram', M.normalizeUrl(bad)), 'link_invalid', bad);
+  }
+  assert.equal(M.linkError(V3, 'myspace', 'https://myspace.com/a'), 'link_platform');
+  // empty rows ignored; errors on their rows; only valid links reach the page
+  const r = M.check(V3, { name: 'Café', links: [{ platform: 'instagram', url: 'instagram.com/c' }, { platform: 'facebook', url: '  ' }, { platform: 'x', url: 'javascript:alert(1)' }, { platform: 'whatsapp', url: 'wa.me/491701234567' }] });
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.errors.links, { 2: 'link_invalid' });
+  assert.deepEqual(r.values.links.map((l) => [l.platform, l.url, l.row]), [['instagram', 'https://instagram.com/c', 0], ['whatsapp', 'https://wa.me/491701234567', 3]]);
+  const nine = Array.from({ length: 9 }, () => ({ platform: 'instagram', url: 'instagram.com/c' }));
+  assert.deepEqual(M.check(V3, { name: 'A', links: nine }).errors.links, { 8: 'links_too_many' });
+  assert.equal(M.check(V3, { name: 'A', links: nine.slice(0, 8) }).ok, true);
+  assert.equal(M.nextPlatform([{ platform: 'instagram' }, { platform: 'facebook' }]), 'tiktok');
+});
+
+test('O1 model: the page the answers make is the draft starter (Hero: name, description) plus Social Media only with links; checked by core.validateDesign', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  for (const l of ['en', 'de']) {
+    const plain = M.check(V3, { name: 'Café Sonne', description: 'Frischer Kaffee' }, l);
+    assert.ok(plain.ok);
+    const hero = V3.starter('hero', l);
+    assert.deepEqual(plain.design.pages[0].sections.map((s) => [s.type, s.variant]), [['hero', hero.variant]], 'no links: the Hero only');
+    assert.equal(plain.design.pages[0].sections[0].data.headline, 'Café Sonne');
+    assert.equal(plain.design.pages[0].sections[0].data.subheadline, 'Frischer Kaffee');
+    assert.equal(plain.design.settings.language, l);
+    const withLinks = M.check(V3, { name: 'Café Sonne', links: [{ platform: 'tiktok', url: 'tiktok.com/@sonne' }] }, l);
+    const s = withLinks.design.pages[0].sections;
+    assert.deepEqual(s.map((x) => x.type), ['hero', 'socialMedia']);
+    assert.deepEqual(s[1].data.links, [{ platform: 'tiktok', url: 'https://tiktok.com/@sonne' }]);
+    assert.equal(s[1].data.title, V3.starter('socialMedia', l).data.title);
+    assert.ok(V3.validateDesign(withLinks.design).ok, 'valid by the server rules');
+  }
+  // the preview's page with no name yet: the placeholder
+  const d = M.buildDesign(V3, { name: '', description: '', links: [] }, 'de');
+  assert.equal(d.pages[0].sections[0].data.headline, 'Ihr Unternehmen');
+  assert.ok(V3.validateDesign(d).ok);
+  const src = code(read('js/studio/onboarding-model.js'));
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.|window\./, /innerHTML|outerHTML/, /\beval\s*\(|new\s+Function/]) assert.ok(!re.test(src), 'onboarding-model.js must not contain ' + re);
 });
 
 test('O0.1 previews: real QRAIVY pages from core.js; examples from the Studio demo, the scratch page is the draft starter; no request', () => {

@@ -25,7 +25,7 @@
   <symbol id="ob-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
 </svg>
 
-<!-- Landing Page Studio V3 onboarding (Phase O0): the frame and Step 1 only.
+<!-- Landing Page Studio V3 onboarding (Phases O0, O1): the frame, Step 1 and Step 2.
      Starts only on the isolated Studio V3 staging address (js/studio/studio-routing.js);
      everywhere else it shows a notice and loads nothing. No dashboard sidebar, no Studio controls. -->
 <header class="ob-top">
@@ -68,7 +68,7 @@
     </div>
   </section>
 
-  <!-- The wizard: four steps; only Step 1 works in Phase O0 -->
+  <!-- The wizard: four steps; Steps 1 and 2 work (O0, O1), Steps 3 and 4 are placeholders -->
   <section class="ob-wizard" id="ob-wizard" hidden>
     <nav class="ob-progress" aria-label="Progress" data-ob-aria="progress_label">
       <p class="ob-progress__count" id="ob-progress-count"></p>
@@ -137,15 +137,63 @@
         </div>
       </div>
 
-      <!-- Steps 2-4: placeholders in Phase O0 (nothing is collected or saved) -->
+      <!-- Step 2: Business information (Phase O1). The answers stay in this browser tab
+           (memory, and sessionStorage for the signed-in user); nothing is sent or saved. -->
       <div class="ob-step" id="ob-step-1" data-step="1" hidden>
-        <h1 class="ob-h1" tabindex="-1" data-ob="step_business">Business information</h1>
+        <h1 class="ob-h1" id="ob-business-title" tabindex="-1" data-ob="step_business">Business information</h1>
         <p class="ob-lead" data-ob="business_text">Your business name, a short description and your social media links.</p>
-        <div class="ob-info ob-info--placeholder">
-          <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
-          <p data-ob="placeholder_text">This step is still being built. Nothing is collected or saved yet.</p>
+        <div class="ob-business">
+          <div class="ob-fields">
+            <div class="ob-field">
+              <div class="ob-field__head">
+                <label class="ob-label" for="ob-name"><span data-ob="name_label">Business name</span> <span class="ob-req" data-ob="required">required</span></label>
+                <span class="ob-count" id="ob-name-count" aria-hidden="true"></span>
+              </div>
+              <input class="ob-input" id="ob-name" type="text" autocomplete="organization" spellcheck="false" aria-required="true" aria-describedby="ob-name-error ob-name-count-sr" />
+              <p class="ob-error" id="ob-name-error"></p>
+              <span class="ob-sr" id="ob-name-count-sr" aria-live="polite"></span>
+            </div>
+            <div class="ob-field">
+              <div class="ob-field__head">
+                <label class="ob-label" for="ob-description"><span data-ob="description_label">Short description</span> <span class="ob-opt" data-ob="optional">optional</span></label>
+                <span class="ob-count" id="ob-description-count" aria-hidden="true"></span>
+              </div>
+              <textarea class="ob-input ob-input--area" id="ob-description" rows="3" aria-describedby="ob-description-hint ob-description-error ob-description-count-sr"></textarea>
+              <p class="ob-hint" id="ob-description-hint" data-ob="description_hint">A sentence or two about what you offer.</p>
+              <p class="ob-error" id="ob-description-error"></p>
+              <span class="ob-sr" id="ob-description-count-sr" aria-live="polite"></span>
+            </div>
+            <fieldset class="ob-field ob-links">
+              <legend class="ob-label"><span data-ob="links_label">Social media links</span> <span class="ob-opt" data-ob="optional">optional</span></legend>
+              <p class="ob-hint" id="ob-links-hint" data-ob="links_hint">Add up to 8 links. Empty rows are ignored.</p>
+              <ul class="ob-links__list" id="ob-links"></ul>
+              <button type="button" class="ob-btn ob-btn--add" id="ob-add-link" aria-describedby="ob-links-hint"><span aria-hidden="true">+</span><span data-ob="add_link">Add link</span></button>
+              <p class="ob-hint" id="ob-links-full" data-ob="links_full" hidden>You have added the maximum of 8 links.</p>
+            </fieldset>
+            <div class="ob-field ob-field--soon">
+              <div class="ob-field__head">
+                <span class="ob-label" data-ob="logo_label">Logo</span>
+                <span class="ob-badge ob-badge--soon" data-ob="soon">Coming soon</span>
+              </div>
+              <button type="button" class="ob-upload" id="ob-logo" disabled aria-disabled="true" aria-describedby="ob-logo-note"><svg class="ob-ic" aria-hidden="true"><use href="#ob-lock"/></svg><span data-ob="logo_button">Upload logo</span></button>
+              <div class="ob-info ob-info--compact">
+                <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+                <p id="ob-logo-note" data-ob="logo_note">Logo upload is coming soon. You can add images later in the Studio.</p>
+              </div>
+            </div>
+          </div>
+          <!-- the live preview: the page these answers make, rendered by core.js into a frame sandboxed
+               without permissions; decoration only (the form is the accessible version) -->
+          <aside class="ob-live" aria-labelledby="ob-live-label">
+            <p class="ob-live__label" id="ob-live-label"><span class="ob-live__dot" aria-hidden="true"></span><span data-ob="live_preview">Live preview</span></p>
+            <div class="ob-live__stage" aria-hidden="true">
+              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
+            </div>
+            <p class="ob-live__note" data-ob="live_note">Updates as you type. Nothing is saved yet.</p>
+          </aside>
         </div>
       </div>
+      <!-- Steps 3-4: placeholders (nothing is collected or saved) -->
       <div class="ob-step" id="ob-step-2" data-step="2" hidden>
         <h1 class="ob-h1" tabindex="-1" data-ob="step_sections">Choose sections</h1>
         <p class="ob-lead" data-ob="sections_text">Pick the sections for your page, put them in order and see a live phone preview.</p>
@@ -178,6 +226,8 @@
 <script src="js/studio/studio-demo.js"></script>
 <script src="js/studio/studio-demo-images.js"></script>
 <script src="js/studio/onboarding-previews.js"></script>
+<!-- Step 2 (O1): the answers' checks and the page they make -->
+<script src="js/studio/onboarding-model.js"></script>
 <script src="js/studio/onboarding-shell.js"></script>
 </body>
 </html>

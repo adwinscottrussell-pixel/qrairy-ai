@@ -1,6 +1,6 @@
 // ============================================================
 // studioOnboarding.browser.test.js — Landing Page Studio V3 onboarding,
-// Phase O0 (the wizard frame and Step 1), in headless Chrome (LOCAL ONLY:
+// Phases O0 and O1 (the wizard frame, Step 1, Step 2), in headless Chrome (LOCAL ONLY:
 // needs Chrome and puppeteer-core; prints SKIP and passes when missing).
 //
 // The pages are served from exactly the Studio-files-only upload
@@ -11,8 +11,10 @@
 // - https://qraivy-studio-v3-staging.vercel.app: signed out (Sign in /
 //   Create account), email not verified (notice, no wizard), verified (the
 //   wizard); Step 1: Instagram and Website disabled, Start from Scratch ->
-//   Step 2; Steps 2-4 placeholders; Back / Next; "Step n of 4"; English
-//   and German; desktop and phone (no sideways scroll);
+//   Step 2; Step 2 (O1): the form, its checks and errors, links, the live
+//   preview, the logo "Coming soon", progress kept per user across a reload
+//   and cleared on sign-out; Steps 3-4 placeholders; Back / Next; "Step n
+//   of 4"; English and German; desktop and phone (no sideways scroll);
 // - every other address (production, the other Studio previews, the
 //   per-deployment address): the notice only, no sign-in loaded, no request;
 // - no API request at all, no draft, no billing;
@@ -45,6 +47,7 @@ const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let browser;
+const pageErrors = [];   // any script error on any page fails the run
 
 // The page on `host`. clerk: 'none' | 'signedout' | 'unverified' | 'verified'
 async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}' } = {}) {
@@ -56,12 +59,16 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
     if (mode === 'none') return;
     const listeners = [];
     const status = mode === 'verified' ? 'verified' : 'unverified';
-    const user = mode === 'signedout' ? null : { primaryEmailAddress: { verification: { status } },
+    // the user id: user_test_A unless the test set another one for this tab (a second account)
+    let uid = 'user_test_A';
+    try { uid = sessionStorage.getItem('__test_uid') || uid; } catch (e) {}
+    const user = mode === 'signedout' ? null : { id: uid, primaryEmailAddress: { verification: { status } },
       reload: async () => { window.__calls.push('reload'); if (window.__verifyOnReload) user.primaryEmailAddress.verification.status = 'verified'; } };
     window.Clerk = { loaded: true, load: async () => { window.__calls.push('load'); }, user, session: user ? { id: 'sess_x', getToken: async () => { window.__calls.push('getToken'); return 'tok'; } } : null,
       addListener: (fn) => listeners.push(fn), openSignIn: () => window.__calls.push('openSignIn'), openSignUp: () => window.__calls.push('openSignUp'),
       openUserProfile: () => window.__calls.push('openUserProfile'), signOut: async () => { window.__calls.push('signOut'); window.Clerk.user = null; window.Clerk.session = null; } };
   }, lang, clerk);
+  page.on('pageerror', (e) => pageErrors.push(String(e.message)));
   await page.setRequestInterception(true);
   const api = [], external = [], missing = [];
   page.on('request', (r) => {
@@ -129,7 +136,7 @@ test('email not verified (German): the notice, no wizard; "I have verified it" c
   await page.close();
 });
 
-test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from Scratch -> Step 2; placeholders; Back / Next', async () => {
+test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from Scratch -> Step 2; Next needs the name; placeholders; Back / Next', async () => {
   const { page, api, external, missing } = await onboarding();
   assert.equal(await visible(page, '#ob-wizard'), true);
   assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 4');
@@ -161,8 +168,9 @@ test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from 
   assert.equal(await visible(page, '#ob-step-1'), true);
   assert.equal(await visible(page, '#ob-step-0'), false);
   assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.textContent), 'Business information', 'focus on the step heading');
-  assert.match(await text(page, '#ob-step-1'), /Nothing is collected or saved yet/);
-  assert.equal(await page.$$eval('#ob-wizard input, #ob-wizard textarea, #ob-wizard select', (ns) => ns.length), 0, 'nothing is collected');
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4', 'no name: no Next');
+  await page.type('#ob-name', 'Café Sonne');
   await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
   await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
   assert.equal(await visible(page, '#ob-next'), false);
@@ -208,10 +216,10 @@ test('phone, German: one column, no sideways scroll, Back / Next reachable; lang
 
 test('O0.1 previews: real QRAIVY pages in sandboxed phone frames; AI label on the photos; a click on the phone selects the card', async () => {
   const { page, api, external, missing } = await onboarding();
-  await page.waitForFunction(() => [...document.querySelectorAll('.ob-phone__frame')].every((f) => f.srcdoc.length > 1000), { timeout: 5000 });
+  await page.waitForFunction(() => [...document.querySelectorAll('.ob-phone__frame[data-preview]')].every((f) => f.srcdoc.length > 1000), { timeout: 5000 });
   // the photos become inline images with the AI label once loaded
   await page.waitForFunction(() => document.querySelector('[data-preview="instagram"]').srcdoc.includes('AI · KI-generiert'), { timeout: 8000 });
-  const fr = await page.$$eval('.ob-phone__frame', (ns) => ns.map((f) => ({ id: f.dataset.preview, sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), inButton: !!f.closest('button'),
+  const fr = await page.$$eval('.ob-phone__frame[data-preview]', (ns) => ns.map((f) => ({ id: f.dataset.preview, sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), inButton: !!f.closest('button'),
     musterbaeckerei: f.srcdoc.includes('Musterbäckerei'), ai: (f.srcdoc.match(/AI · KI-generiert/g) || []).length, imgs: (f.srcdoc.match(/<img\b/g) || []).length,
     remote: /src="https?:/.test(f.srcdoc), script: /<script/i.test(f.srcdoc), scratch: f.srcdoc.includes('Your business'), w: Math.round(f.getBoundingClientRect().width) })));
   for (const f of fr) {
@@ -239,6 +247,253 @@ test('O0.1 previews: real QRAIVY pages in sandboxed phone frames; AI label on th
   await page.waitForFunction(() => document.querySelector('[data-preview="scratch"]').srcdoc.includes('Ihr Unternehmen'), { timeout: 3000 });
   assert.deepEqual(await page.$$eval('.ob-card__example', (ns) => ns.map((n) => n.textContent)), ['Beispiel', 'Beispiel']);
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, [], 'nothing from elsewhere (photos are local, inline)'); assert.deepEqual(missing, []);
+  await page.close();
+});
+
+// ── Step 2 (O1): business information ──
+// to Step 2 (Start from Scratch, Next)
+async function toStep2(page) { await page.click('[data-option="scratch"]'); await page.click('#ob-next'); }
+const live = (page) => page.$eval('#ob-live-frame', (f) => f.srcdoc);
+const waitLive = (page, s) => page.waitForFunction((x) => document.getElementById('ob-live-frame').srcdoc.includes(x), { timeout: 3000 }, s);
+const field = (page, id) => page.$eval('#' + id, (n) => ({ invalid: n.getAttribute('aria-invalid'), error: (document.getElementById(n.getAttribute('aria-describedby').split(' ').find((x) => /-error(-|$)/.test(x))) || {}).textContent || '', focused: document.activeElement === n }));
+const rowKeys = (page) => page.$$eval('#ob-links .ob-link-row', (ns) => ns.map((n) => n.dataset.row));
+// a screenshot of the whole page with every frame painted: the viewport as tall as the page (a full-page capture leaves sandboxed frames below the fold blank)
+async function tallShot(page, name, viewport) {
+  if (!SHOTS) return;
+  fs.mkdirSync(SHOTS, { recursive: true });
+  const h = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.setViewport(Object.assign({}, viewport, { height: Math.max(viewport.height, h) }));
+  await sleep(250);
+  await page.screenshot({ path: path.join(SHOTS, name) });
+  await page.setViewport(viewport);
+}
+
+test('Step 2, desktop, English: the form left, the live phone right; name required with an error and focus; description; logo disabled "Coming soon"; no request', async () => {
+  const { page, api, external, missing } = await onboarding();
+  await toStep2(page);
+  // layout: two columns, the phone beside the form and staying in view
+  const lay = await page.evaluate(() => {
+    const f = document.querySelector('.ob-fields').getBoundingClientRect(), l = document.querySelector('.ob-live').getBoundingClientRect();
+    return { side: l.left >= f.right, top: Math.abs(l.top - f.top) < 4, sticky: getComputedStyle(document.querySelector('.ob-live')).position, phone: Math.round(document.getElementById('ob-live-frame').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth };
+  });
+  assert.ok(lay.side && lay.top && lay.sticky === 'sticky' && lay.sw <= lay.iw, 'two columns: ' + JSON.stringify(lay));
+  assert.ok(Math.abs(lay.phone - 242) <= 1, 'desktop live phone 242 px wide: ' + lay.phone);
+  // labels and texts
+  assert.equal(await text(page, 'label[for="ob-name"]'), 'Business name required');
+  assert.equal(await text(page, 'label[for="ob-description"]'), 'Short description optional');
+  assert.equal(await page.$eval('#ob-name', (n) => n.placeholder), 'e.g. Café Sonnenschein');
+  assert.equal(await text(page, '#ob-name-count'), '0 / 80');
+  assert.equal(await text(page, '#ob-description-count'), '0 / 300');
+  assert.equal(await text(page, '.ob-live__label'), 'Live preview');
+  // the logo: disabled, "Coming soon", a blue note; no file input
+  const logo = await page.$eval('#ob-logo', (n) => ({ disabled: n.disabled, badge: n.closest('.ob-field').querySelector('.ob-badge').textContent, note: document.getElementById('ob-logo-note').textContent }));
+  assert.deepEqual(logo, { disabled: true, badge: 'Coming soon', note: 'Logo upload is coming soon. You can add images later in the Studio.' });
+  assert.equal(await page.$$eval('input[type="file"]', (ns) => ns.length), 0);
+  // the empty preview: the starter page with the placeholder name
+  await waitLive(page, 'Your business');
+  await tallShot(page, 'onboarding-step2-desktop-en-empty.png', DESKTOP);
+  // Next without a name: an error on the field, focus moves there, still Step 2
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.deepEqual(await field(page, 'ob-name'), { invalid: 'true', error: 'Please enter your business name.', focused: true });
+  // typing fixes it; the preview follows (escaped by core.js; the frame stays sandboxed, no script)
+  await page.type('#ob-name', 'Café <Sonne>');
+  assert.deepEqual(await field(page, 'ob-name'), { invalid: null, error: '', focused: true });
+  assert.equal(await text(page, '#ob-name-count'), '12 / 80');
+  await waitLive(page, 'Café &lt;Sonne&gt;');
+  await page.type('#ob-description', 'Fresh coffee and homemade cakes in the heart of the old town.');
+  await waitLive(page, 'homemade cakes');
+  const fr = await page.$eval('#ob-live-frame', (f) => ({ sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), script: /<script/i.test(f.srcdoc), raw: f.srcdoc.includes('<Sonne>') }));
+  assert.deepEqual(fr, { sandbox: '', tab: -1, hidden: true, script: false, raw: false });
+  // too long: an error at once, the counter red, the preview keeps the last valid name
+  await page.$eval('#ob-name', (n) => { n.value = 'N'.repeat(81); n.dispatchEvent(new Event('input', { bubbles: true })); });
+  assert.equal((await field(page, 'ob-name')).error, 'The business name can have at most 80 characters.');
+  assert.equal(await page.$eval('#ob-name-count', (n) => n.dataset.over), 'true');
+  assert.equal(await text(page, '#ob-name-count-sr'), '1 characters too many');
+  await sleep(300);
+  assert.ok((await live(page)).includes('Café &lt;Sonne&gt;'), 'the preview keeps the last valid name');
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4', 'too long: no Next');
+  await page.$eval('#ob-name', (n) => { n.value = ''; n.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('#ob-name', 'Café Sonnenschein');
+  assert.equal(await text(page, '#ob-name-count-sr'), '', 'quiet while far from the limit');
+  await tallShot(page, 'onboarding-step2-desktop-en-filled.png', DESKTOP);
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  await page.click('#ob-back');
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonnenschein', 'Back keeps the answers');
+  assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
+  assert.ok(!(await calls(page)).includes('getToken'), 'no session token');
+  await page.close();
+});
+
+test('Step 2 links: the green "+ Add link"; all eight platforms; https:// added; unsafe and wrong-platform addresses refused with an error; Remove; at most 8', async () => {
+  const { page, api } = await onboarding();
+  await toStep2(page);
+  await page.type('#ob-name', 'Café Sonne');
+  const add = await page.$eval('#ob-add-link', (n) => ({ bg: getComputedStyle(n).backgroundColor, color: getComputedStyle(n).color, text: n.textContent.trim() }));
+  assert.ok(add.text === '+Add link' && add.color === 'rgb(21, 128, 61)', 'green Add link: ' + JSON.stringify(add));
+  await page.click('#ob-add-link');
+  let keys = await rowKeys(page);
+  assert.equal(keys.length, 1);
+  assert.equal(await page.evaluate(() => document.activeElement.tagName + ' ' + document.activeElement.value), 'SELECT instagram', 'focus on the new row\'s platform');
+  assert.deepEqual(await page.$$eval('#ob-links select option', (ns) => ns.map((n) => n.value)), ['instagram', 'facebook', 'tiktok', 'youtube', 'linkedin', 'x', 'pinterest', 'whatsapp']);
+  assert.equal(await text(page, 'label[for="ob-link-platform-' + keys[0] + '"]'), 'Platform, link 1');
+  assert.equal(await page.$eval('#ob-link-url-' + keys[0], (n) => n.placeholder), 'instagram.com/yourbusiness');
+  await page.type('#ob-link-url-' + keys[0], 'instagram.com/cafesonne');
+  await waitLive(page, 'https://instagram.com/cafesonne');
+  // a bad address: the error after leaving the field; Next blocked with focus on it
+  await page.click('#ob-add-link');
+  keys = await rowKeys(page);
+  await page.select('#ob-link-platform-' + keys[1], 'tiktok');
+  await page.type('#ob-link-url-' + keys[1], 'javascript:alert(1)');
+  await page.focus('#ob-name');
+  assert.deepEqual(await field(page, 'ob-link-url-' + keys[1]), { invalid: 'true', error: 'Enter a TikTok address, for example tiktok.com/@yourbusiness', focused: false });
+  await sleep(300);
+  assert.ok(!(await live(page)).includes('javascript'), 'never in the page');
+  await tallShot(page, 'onboarding-step2-desktop-en-errors.png', DESKTOP);
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal((await field(page, 'ob-link-url-' + keys[1])).focused, true, 'focus on the bad link');
+  // another platform's address is refused too; the right one is accepted
+  await page.$eval('#ob-link-url-' + keys[1], (n) => { n.value = 'instagram.com/x'; n.dispatchEvent(new Event('input', { bubbles: true })); });
+  assert.match((await field(page, 'ob-link-url-' + keys[1])).error, /TikTok/);
+  await page.$eval('#ob-link-url-' + keys[1], (n) => { n.value = 'https://www.tiktok.com/@cafesonne'; n.dispatchEvent(new Event('input', { bubbles: true })); });
+  assert.equal((await field(page, 'ob-link-url-' + keys[1])).error, '');
+  await waitLive(page, 'tiktok.com/@cafesonne');
+  // Remove: focus moves to the row that took its place / before it
+  await page.click('#ob-links .ob-link-row[data-row="' + keys[0] + '"] .ob-remove');
+  assert.deepEqual(await rowKeys(page), [keys[1]]);
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-link-platform-' + keys[1]);
+  assert.equal(await page.$eval('#ob-links .ob-remove', (n) => n.getAttribute('aria-label')), 'Remove link 1', 'renumbered');
+  // up to 8: then "+ Add link" is disabled with a note; empty rows are ignored by Next
+  for (let i = 0; i < 7; i++) await page.click('#ob-add-link');
+  assert.equal((await rowKeys(page)).length, 8);
+  assert.equal(await page.$eval('#ob-add-link', (n) => n.disabled), true);
+  assert.equal(await visible(page, '#ob-links-full'), true);
+  assert.deepEqual(await page.$$eval('#ob-links select', (ns) => ns.map((n) => n.value)), ['tiktok', 'instagram', 'facebook', 'youtube', 'linkedin', 'x', 'pinterest', 'whatsapp'], 'each new row starts with an unused platform');
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4', 'empty rows ignored');
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('Step 2, phone, German: one column (form, preview, Back / Next), no sideways scroll; German texts and errors; language switch keeps the answers', async () => {
+  const { page, api } = await onboarding({ lang: 'de', viewport: PHONE });
+  await toStep2(page);
+  await waitLive(page, 'Ihr Unternehmen');
+  const lay = await page.evaluate(() => {
+    const f = document.querySelector('.ob-fields').getBoundingClientRect(), l = document.querySelector('.ob-live').getBoundingClientRect(), n = document.querySelector('.ob-nav').getBoundingClientRect();
+    return { order: f.bottom <= l.top && l.bottom <= n.top, phone: Math.round(document.getElementById('ob-live-frame').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth };
+  });
+  assert.ok(lay.order && lay.sw <= lay.iw, 'one column: ' + JSON.stringify(lay));
+  assert.ok(Math.abs(lay.phone - 195) <= 1, 'compact phone 195 px wide: ' + lay.phone);
+  assert.equal(await text(page, 'label[for="ob-name"]'), 'Unternehmensname Pflichtfeld');
+  assert.equal(await text(page, '#ob-add-link'), '+Link hinzufügen');
+  assert.equal(await text(page, '.ob-live__label'), 'Live-Vorschau');
+  await tallShot(page, 'onboarding-step2-phone-de-empty.png', PHONE);
+  await page.click('#ob-next');
+  assert.equal((await field(page, 'ob-name')).error, 'Bitte geben Sie Ihren Unternehmensnamen ein.');
+  await tallShot(page, 'onboarding-step2-phone-de-errors.png', PHONE);
+  await page.type('#ob-name', 'Bäckerei Sonnenschein');
+  await page.type('#ob-description', 'Frisches Brot und Kuchen aus eigener Backstube.');
+  await page.click('#ob-add-link');
+  const k = (await rowKeys(page))[0];
+  await page.type('#ob-link-url-' + k, 'instagram.com/baeckerei');
+  await page.click('#ob-add-link');
+  const k2 = (await rowKeys(page))[1];
+  await page.type('#ob-link-url-' + k2, 'facebook.com/baeckerei');
+  await waitLive(page, 'facebook.com/baeckerei');
+  assert.ok((await live(page)).includes('Folgen Sie uns'), 'the Social Media section in German');
+  const sw = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+  assert.ok(sw, 'no sideways scroll with link rows');
+  await tallShot(page, 'onboarding-step2-phone-de-filled.png', PHONE);
+  // switch to English: the answers stay, the texts and the page follow
+  await page.click('.ob-lang__btn[data-lang="en"]');
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Bäckerei Sonnenschein');
+  assert.equal(await (await rowKeys(page)).length, 2);
+  assert.equal(await text(page, 'label[for="ob-name"]'), 'Business name required');
+  await waitLive(page, 'Follow us');
+  await tallShot(page, 'onboarding-step2-phone-en-filled.png', PHONE);
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('the progress and the four step labels keep one width and place on Steps 1-4 (Step 2 only widens its card); desktop and phone', async () => {
+  for (const viewport of [DESKTOP, { width: 1024, height: 800 }, PHONE]) {
+    const { page } = await onboarding({ viewport });
+    const seen = [];
+    for (let step = 0; step < 4; step++) {
+      seen.push(await page.evaluate(() => {
+        const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return [Math.round(b.left), Math.round(b.width)]; };
+        return { progress: r('.ob-progress'), bar: r('.ob-progress__bar'), labels: r('.ob-steps'), card: r('#ob-wizard .ob-card-panel') };
+      }));
+      if (step === 0) await page.click('[data-option="scratch"]');
+      if (step === 1) await page.type('#ob-name', 'Café Sonne');
+      if (step < 3) await page.click('#ob-next');
+    }
+    for (const s of seen) assert.deepEqual([s.progress, s.bar, s.labels], [seen[0].progress, seen[0].bar, seen[0].labels], viewport.width + ': ' + JSON.stringify(seen));
+    if (viewport.width >= 960) assert.ok(seen[1].card[1] > seen[0].card[1], 'Step 2 keeps its wider two-column card');
+    else assert.deepEqual(seen[1].card, seen[0].card, 'phone: one width');
+    await page.close();
+  }
+});
+
+test('Step 2, desktop, German: texts, link error and the page in German', async () => {
+  const { page, api } = await onboarding({ lang: 'de' });
+  await toStep2(page);
+  assert.equal(await text(page, '#ob-business-title'), 'Unternehmensdaten');
+  assert.equal(await text(page, '#ob-logo'), 'Logo hochladen');
+  await page.type('#ob-name', 'Bäckerei Sonnenschein');
+  await page.type('#ob-description', 'Frisches Brot und Kuchen aus eigener Backstube.');
+  await page.click('#ob-add-link');
+  await page.type('#ob-link-url-' + (await rowKeys(page))[0], 'instagram.com/baeckerei');
+  await page.click('#ob-add-link');
+  const k = (await rowKeys(page))[1];
+  await page.type('#ob-link-url-' + k, 'http://facebook.com/baeckerei');
+  await page.focus('#ob-name');
+  assert.equal((await field(page, 'ob-link-url-' + k)).error, 'Geben Sie eine Facebook-Adresse ein, zum Beispiel facebook.com/yourbusiness');
+  await waitLive(page, 'Folgen Sie uns');
+  await tallShot(page, 'onboarding-step2-desktop-de-errors.png', DESKTOP);
+  await page.$eval('#ob-link-url-' + k, (n) => { n.value = 'facebook.com/baeckerei'; n.dispatchEvent(new Event('input', { bubbles: true })); });
+  await waitLive(page, 'facebook.com/baeckerei');
+  await tallShot(page, 'onboarding-step2-desktop-de-filled.png', DESKTOP);
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('Step 2 progress: kept across a reload for the same user; another user sees none; sign-out clears it; only the step and answers are stored', async () => {
+  const { page, api } = await onboarding();
+  await toStep2(page);
+  await page.type('#ob-name', 'Café Sonne');
+  await page.type('#ob-description', 'Kaffee');
+  await page.click('#ob-add-link');
+  await page.type('#ob-link-url-' + (await rowKeys(page))[0], 'instagram.com/sonne');
+  const stored = await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding')).map((k) => [k, JSON.parse(sessionStorage.getItem(k))]));
+  assert.equal(stored.length, 1);
+  assert.match(stored[0][0], /^qraivy\.onboarding\.v1:[0-9a-f]{8}$/, 'a per-user key, not the id');
+  assert.deepEqual(stored[0][1], { step: 1, choice: 'scratch', answers: { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] } });
+  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter((k) => /onboarding/.test(k) || /Sonne/.test(localStorage.getItem(k)))), [], 'nothing in localStorage');
+  // reload: the same user is back on Step 2 with the answers
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonne');
+  assert.equal(await page.$eval('#ob-description', (n) => n.value), 'Kaffee');
+  assert.equal(await page.$eval('#ob-links input', (n) => n.value), 'instagram.com/sonne');
+  await waitLive(page, 'Café Sonne');
+  // another account in this tab: none of the first one's answers
+  await page.evaluate(() => sessionStorage.setItem('__test_uid', 'user_test_B'));
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 4', 'another user starts at Step 1');
+  await toStep2(page);
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), '', 'another user: empty');
+  assert.equal((await rowKeys(page)).length, 0);
+  await page.type('#ob-name', 'B');
+  // sign-out: every kept progress in this tab is gone, the answers too
+  await page.click('#ob-signout'); await sleep(100);
+  assert.deepEqual(await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding'))), []);
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), '');
+  assert.deepEqual(api, []);
   await page.close();
 });
 
@@ -272,6 +527,7 @@ test('header: solid black, white links, EN/DE readable with the chosen language 
       assert.ok(h.logo && h.count === 1 && h.sw <= h.iw, 'logo left, one header, no sideways scroll');
       seen.push(h.h);
       if (step === 0) await page.click('[data-option="scratch"]');
+      if (step === 1) await page.type('#ob-name', 'Café Sonne');
       if (step < 3) await page.click('#ob-next');
     }
     assert.ok(seen.every((x) => x === seen[0]), 'the same header height on all four steps: ' + seen);
@@ -340,5 +596,6 @@ test('the Studio: "Create your first page" in the empty state on the isolated ad
   }
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed (' + tests.length + ' total)');
+  if (pageErrors.length) { failed++; console.error('  FAIL script errors on the pages: ' + [...new Set(pageErrors)].join(' | ')); }
   if (failed) process.exitCode = 1;
 })();
