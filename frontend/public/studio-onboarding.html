@@ -6,8 +6,10 @@
   <title>Get started — QRAIVY</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/studio-onboarding.css"/>
+  <!-- O2.1: Light / Dark (the Studio's preference), applied before anything is drawn -->
+  <script src="js/studio/onboarding-theme.js"></script>
   <script src="js/qraivy-lang.js"></script>
   <script src="js/studio/studio-routing.js"></script>
 </head>
@@ -25,7 +27,33 @@
   <symbol id="ob-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="ob-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
   <symbol id="ob-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="ob-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="ob-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
 </svg>
+
+<!-- O2.1: the gradient-wave background (decoration only; Step 1 fully, the other screens calmer) -->
+<div class="ob-bg" aria-hidden="true">
+  <svg class="ob-bg__wave ob-bg__wave--left" viewBox="0 0 360 1000" preserveAspectRatio="none" focusable="false">
+    <defs>
+      <linearGradient id="ob-g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="ob-w1a"/><stop offset="1" class="ob-w1b"/></linearGradient>
+      <linearGradient id="ob-g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="ob-w2a"/><stop offset="1" class="ob-w2b"/></linearGradient>
+      <linearGradient id="ob-g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="ob-w3a"/><stop offset="1" class="ob-w3b"/></linearGradient>
+    </defs>
+    <path d="M0 0H230C176 118 96 176 64 300C42 384 22 424 0 452Z" fill="url(#ob-g1)"/>
+    <path d="M0 560C92 522 170 600 200 702C230 804 300 884 360 1000H0Z" fill="url(#ob-g2)"/>
+    <path class="ob-bg__ribbon" d="M0 650C122 618 212 704 242 806C262 872 300 932 332 1000H296C266 940 228 882 208 822C178 734 110 672 0 690Z" fill="url(#ob-g3)"/>
+  </svg>
+  <svg class="ob-bg__wave ob-bg__wave--right" viewBox="0 0 360 1000" preserveAspectRatio="none" focusable="false">
+    <defs>
+      <linearGradient id="ob-g4" x1="1" y1="0" x2="0" y2="1"><stop offset="0" class="ob-w4a"/><stop offset="1" class="ob-w4b"/></linearGradient>
+      <linearGradient id="ob-g5" x1="1" y1="0" x2="0" y2="1"><stop offset="0" class="ob-w5a"/><stop offset="1" class="ob-w5b"/></linearGradient>
+      <linearGradient id="ob-g6" x1="1" y1="0" x2="0" y2="1"><stop offset="0" class="ob-w6a"/><stop offset="1" class="ob-w6b"/></linearGradient>
+    </defs>
+    <path d="M360 0V380C300 332 252 252 242 162C234 92 262 40 300 0Z" fill="url(#ob-g4)"/>
+    <path d="M360 520C282 580 204 662 172 762C142 862 92 932 40 1000H360Z" fill="url(#ob-g5)"/>
+    <path class="ob-bg__ribbon" d="M360 604C302 652 242 722 216 802C196 872 160 932 122 1000H160C196 936 226 876 246 812C272 736 320 672 360 642Z" fill="url(#ob-g6)"/>
+  </svg>
+</div>
 <!-- Step 3's button icons, cloned by the script -->
 <template id="ob-tpl-icons"><svg class="ob-ic" data-icon="up" aria-hidden="true"><use href="#ob-arrow-up"/></svg><svg class="ob-ic" data-icon="down" aria-hidden="true"><use href="#ob-arrow-down"/></svg><svg class="ob-ic" data-icon="lock" aria-hidden="true"><use href="#ob-lock"/></svg></template>
 
@@ -39,6 +67,11 @@
     <div class="ob-lang" role="group" aria-label="Language" data-ob-aria="lang_group">
       <button type="button" class="ob-lang__btn" data-lang="en" aria-pressed="true">EN</button>
       <button type="button" class="ob-lang__btn" data-lang="de" aria-pressed="false">DE</button>
+    </div>
+    <!-- O2.1: Light / Dark (onboarding-theme.js; the Studio's own preference) -->
+    <div class="ob-theme" role="group" aria-label="Appearance" data-ob-aria="theme_group">
+      <button type="button" class="ob-theme__btn" data-ob-theme-choice="light" aria-pressed="true" aria-label="Light mode" data-ob-aria="theme_light"><svg class="ob-ic" aria-hidden="true"><use href="#ob-sun"/></svg></button>
+      <button type="button" class="ob-theme__btn" data-ob-theme-choice="dark" aria-pressed="false" aria-label="Dark mode" data-ob-aria="theme_dark"><svg class="ob-ic" aria-hidden="true"><use href="#ob-moon"/></svg></button>
     </div>
     <button type="button" class="ob-link" id="ob-signout" hidden data-ob="sign_out">Sign out</button>
     <a class="ob-link ob-link--exit" id="ob-exit" href="studio.html" hidden><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span class="ob-link__label" data-ob="exit">Back to Studio</span></a>
@@ -74,6 +107,22 @@
 
   <!-- The wizard: four steps; Steps 1-3 work (O0-O2), Step 4 is a placeholder -->
   <section class="ob-wizard" id="ob-wizard" hidden>
+    <!-- O2.1: Step 1, large desktops only: the benefits checklist (decoration; the same facts are in the texts) -->
+    <aside class="ob-benefits" aria-hidden="true">
+      <ul class="ob-benefits__list">
+        <li class="ob-benefits__item"><span class="ob-benefits__check"><svg class="ob-ic"><use href="#ob-check"/></svg></span><span data-ob="benefit_code">No coding required</span></li>
+        <li class="ob-benefits__item"><span class="ob-benefits__check"><svg class="ob-ic"><use href="#ob-check"/></svg></span><span data-ob="benefit_mobile">Mobile optimized</span></li>
+        <li class="ob-benefits__item"><span class="ob-benefits__check"><svg class="ob-ic"><use href="#ob-check"/></svg></span><span data-ob="benefit_update">Easy to update</span></li>
+        <li class="ob-benefits__item"><span class="ob-benefits__check"><svg class="ob-ic"><use href="#ob-check"/></svg></span><span data-ob="benefit_free">Start for free</span></li>
+      </ul>
+    </aside>
+    <!-- O2.1: Step 1, large desktops only: the handwritten note on the right, its orange underline and an arrow
+         to the cards (decoration; hidden from screen readers) -->
+    <div class="ob-note" aria-hidden="true">
+      <p class="ob-note__text" data-ob="note_text">Create your digital business page in minutes!</p>
+      <svg class="ob-note__line" viewBox="0 0 130 14" focusable="false"><path d="M3 10C34 4 82 2 127 7"/></svg>
+      <svg class="ob-note__arrow" viewBox="0 0 96 64" focusable="false"><path d="M88 4C86 30 64 50 14 52"/><path d="M28 39L13 52l16 9"/></svg>
+    </div>
     <nav class="ob-progress" aria-label="Progress" data-ob-aria="progress_label">
       <p class="ob-progress__count" id="ob-progress-count"></p>
       <div class="ob-progress__bar" aria-hidden="true"><span class="ob-progress__fill" id="ob-progress-fill"></span></div>

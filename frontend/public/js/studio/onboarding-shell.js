@@ -30,6 +30,10 @@
  * tab's sessionStorage under a key for the signed-in user (a hash of the
  * Clerk user id; never a token). Sign-out clears them.
  *
+ * O2.1: the appearance (Light / Dark) is onboarding-theme.js's; this file only
+ * tells the page which screen is shown (body data-ob-step: the background is
+ * fuller on Step 1, calmer elsewhere) and gives the toggle its EN/DE labels.
+ *
  * Nothing is sent: no fetch, no draft, no save. The sign-in (studio-auth.js)
  * only tells it who is signed in and whether the email is verified; the
  * server checks that again before any draft is created (lpV3/draftPolicy.js,
@@ -109,6 +113,10 @@
       sec_products: 'Products', sec_products_text: 'Products with links to your shop',
       sec_gallery: 'Gallery', sec_gallery_text: 'Photos of your business, products or menu',
       sec_text: 'Text', sec_text_text: 'A heading and your own text',
+      // O2.1: appearance and the Step 1 benefits
+      theme_group: 'Appearance', theme_light: 'Light mode', theme_dark: 'Dark mode',
+      benefit_code: 'No coding required', benefit_mobile: 'Mobile optimized', benefit_update: 'Easy to update', benefit_free: 'Start for free',
+      note_text: 'Create your digital business page in minutes!',
     },
     de: {
       page_title: 'Loslegen — QRAIVY', lang_group: 'Sprache', progress_label: 'Fortschritt', step_of: 'Schritt {n} von {total}',
@@ -162,6 +170,9 @@
       sec_products: 'Produkte', sec_products_text: 'Produkte mit Links zu Ihrem Shop',
       sec_gallery: 'Galerie', sec_gallery_text: 'Fotos von Ihrem Geschäft, Ihren Produkten oder Ihrer Speisekarte',
       sec_text: 'Text', sec_text_text: 'Eine Überschrift und Ihr eigener Text',
+      theme_group: 'Darstellung', theme_light: 'Heller Modus', theme_dark: 'Dunkler Modus',
+      benefit_code: 'Ganz ohne Programmieren', benefit_mobile: 'Für Smartphones optimiert', benefit_update: 'Einfach zu aktualisieren', benefit_free: 'Kostenlos starten',
+      note_text: 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!',
     },
   };
 
@@ -575,6 +586,8 @@
 
     function show(id) {
       ['ob-unavailable', 'ob-gate', 'ob-wizard'].forEach(function (x) { $(x).hidden = x !== id; });
+      // O2.1: which screen is shown, for the background (Step 1 full, everything else calmer)
+      doc.body.setAttribute('data-ob-step', id === 'ob-wizard' ? String(nav.step) : 'notice');
     }
     function gate(state) {
       var icon = { loading: 'ob-lock', signedout: 'ob-lock', unverified: 'ob-mail', error: 'ob-info' }[state];
@@ -601,6 +614,7 @@
         items[i].setAttribute('data-state', n < s ? 'done' : n === s ? 'current' : 'todo');
       }
       for (var k = 0; k < STEPS.length; k++) $('ob-step-' + k).hidden = k !== s;
+      doc.body.setAttribute('data-ob-step', String(s));
       var opts = doc.querySelectorAll('.ob-option');
       for (var j = 0; j < opts.length; j++) opts[j].setAttribute('aria-checked', String(opts[j].getAttribute('data-option') === nav.choice));
       $('ob-back').hidden = s === 0;

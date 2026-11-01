@@ -87,11 +87,14 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(scripts, ['js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
+  assert.deepEqual(scripts, ['js/studio/onboarding-theme.js', 'js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
     'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 9, 'no inline script');
+  assert.equal((HTML.match(/<script\b/g) || []).length, 10, 'no inline script');
+  // O2.1: the theme script in <head>, after the stylesheet and before the body (no flash of the other appearance)
+  const head = HTML.slice(0, HTML.indexOf('</head>'));
+  assert.ok(head.indexOf('css/studio-onboarding.css') < head.indexOf('js/studio/onboarding-theme.js'), 'the theme script in the head, after the stylesheet');
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
-  assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'css/studio-onboarding.css']);
+  assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Caveat:wght@600&display=swap', 'css/studio-onboarding.css']);
   // no form that could be submitted anywhere, no file input (the logo upload is "Coming soon")
   for (const re of [/id="sidebar"/, /sb-item/, /admin-shell/, /dashboard-shell/, /st-save-btn|st-publish-btn|st-inspector|st-canvas/, /<form\b/, /type="file"/, /\baction=/, /clerk/i]) assert.ok(!re.test(HTML), String(re));
   assert.match(HTML, /<meta name="robots" content="noindex, nofollow" \/>/);
@@ -389,6 +392,70 @@ test('O0.1 previews: real QRAIVY pages from core.js; examples from the Studio de
   for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.cookie/, /https?:\/\//, /innerHTML|document\.write/, /\beval\s*\(|new\s+Function|toString\s*\(/]) assert.ok(!re.test(src), 'onboarding-previews.js must not contain ' + re);
   // the frames get the page only through srcdoc
   assert.ok(code(SRC).includes('frames[i].srcdoc = page;'));
+});
+
+test('O2.1 appearance: the Studio\'s preference (light / dark / system, Light by default); stored only there; no request; the markup', () => {
+  const TH = require('../../frontend/public/js/studio/onboarding-theme.js');
+  assert.equal(TH.KEY, 'qraivy.studio.theme', 'the Studio\'s own key (studio-shell.js THEME_KEY)');
+  assert.ok(read('js/studio/studio-shell.js').includes("var THEME_KEY = 'qraivy.studio.theme';"), 'the same key as the Studio');
+  assert.deepEqual(TH.PREFS, ['light', 'dark', 'system']);
+  for (const x of [null, undefined, '', 'DARK', 'blue', 1]) assert.equal(TH.clean(x), 'light', 'nothing stored or unknown: Light');
+  assert.deepEqual(['light', 'dark', 'system', 'system'].map((p, i) => TH.resolve(p, i === 3)), ['light', 'dark', 'light', 'dark'], 'system follows the device');
+  const c = code(read('js/studio/onboarding-theme.js'));
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /sessionStorage|document\.cookie|indexedDB/, /innerHTML|document\.write/, /\beval\s*\(|new\s+Function/, /https?:\/\//]) assert.ok(!re.test(c), 'onboarding-theme.js must not contain ' + re);
+  assert.equal((c.match(/localStorage\.(get|set)Item\(/g) || []).length, 2, 'one read, one write');
+  assert.ok(c.includes('win.localStorage.getItem(KEY)') && c.includes('win.localStorage.setItem(KEY, pref)'), 'only the preference key');
+  assert.ok(c.includes("pref = p === 'dark' ? 'dark' : 'light';"), 'the toggle writes light or dark only');
+  assert.ok(!/localStorage/.test(code(SRC)), 'the wizard itself still uses no localStorage');
+  // markup: the toggle beside EN / DE in the black header; the background and the checklist are decoration
+  const top = HTML.slice(HTML.indexOf('<header class="ob-top">'), HTML.indexOf('</header>'));
+  assert.ok(top.indexOf('class="ob-lang"') < top.indexOf('class="ob-theme"') && top.indexOf('class="ob-theme"') < top.indexOf('id="ob-signout"'), 'the toggle right after EN / DE');
+  assert.match(top, /<div class="ob-theme" role="group" aria-label="Appearance" data-ob-aria="theme_group">/);
+  for (const t of ['light', 'dark']) assert.match(top, new RegExp('<button type="button" class="ob-theme__btn" data-ob-theme-choice="' + t + '" aria-pressed="(true|false)" aria-label="[^"]+" data-ob-aria="theme_' + t + '">'));
+  assert.match(HTML, /<div class="ob-bg" aria-hidden="true">/);
+  assert.match(HTML, /<aside class="ob-benefits" aria-hidden="true">/);
+  assert.equal((HTML.match(/class="ob-benefits__item"/g) || []).length, 4);
+  // the handwritten note (approved later in O2.1): only in its decorative, hidden part
+  assert.equal((HTML.match(/digital business page/g) || []).length, 1);
+  const note = HTML.slice(HTML.indexOf('<div class="ob-note" aria-hidden="true">'), HTML.indexOf('</div>', HTML.indexOf('<div class="ob-note"')));
+  assert.ok(note.includes('data-ob="note_text">Create your digital business page in minutes!</p>'), 'in the hidden note');
+  assert.equal(OB.TX.de.note_text, 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!');
+  assert.equal((HTML.match(/<img\b/g) || []).length, 1, 'the approved logo is still the only image');
+});
+
+test('O2.1 colours: QDS tokens in Dark, dark text on orange, black header in both; readable contrast for every text pair in Light and Dark', () => {
+  const css = read('css/studio-onboarding.css');
+  const block = (sel) => { const i = css.indexOf(sel + ' {'); const b = css.slice(i, css.indexOf('\n}', i)); return Object.fromEntries([...b.matchAll(/(--ob-[a-z0-9-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()])); };
+  const light = block(':root'), dark = Object.assign({}, light, block(':root[data-ob-theme="dark"]'));
+  // QDS (frontend/public/qds/foundation/colors.css)
+  const qds = read('qds/foundation/colors.css');
+  for (const [k, v] of [['--ob-bg', '#0a0a0a'], ['--ob-surface', '#111111'], ['--ob-surface-2', '#1a1a1a'], ['--ob-text', '#f0ece0'], ['--ob-text-2', '#c8c8c0'], ['--ob-muted', '#a0a09a']]) {
+    assert.equal(dark[k], v, 'Dark ' + k); assert.ok(qds.includes(v), v + ' is a QDS value');
+  }
+  for (const t of [light, dark]) { assert.equal(t['--ob-accent'], '#ff5a1f'); assert.equal(t['--ob-on-accent'], '#0a0a0a'); assert.equal(t['--ob-accent-hover'], '#ff7a45'); assert.equal(t['--ob-accent-active'], '#e6490f'); }
+  assert.ok(css.includes('.ob-btn--primary { background: var(--ob-accent); color: var(--ob-on-accent); }'), 'primary: orange, dark text');
+  assert.ok(css.includes('padding: 12px 16px; background: #000000; border-bottom: 1px solid #000000; color: #ffffff;'), 'the header: solid black, not a token (the same in both)');
+  assert.ok(css.includes('background: #fff; color-scheme: light;'), 'the phone frames keep the customer page\'s appearance');
+  // contrast (WCAG): text on its surface, rgba backgrounds composed over the card
+  const rgb = (v, under) => {
+    let m = /^#([0-9a-f]{6})$/i.exec(v);
+    if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+    m = /^rgba\(([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\)$/.exec(v);
+    if (m) { const a = +m[4]; return [1, 2, 3].map((i, j) => Math.round(+m[i] * a + under[j] * (1 - a))); }
+    throw new Error('colour ' + v);
+  };
+  const lum = (c) => { const v = c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const pairs = [['--ob-text', '--ob-surface'], ['--ob-text-2', '--ob-surface'], ['--ob-muted', '--ob-surface'], ['--ob-muted', '--ob-surface-2'], ['--ob-navy', '--ob-surface'],
+    ['--ob-accent-text', '--ob-surface'], ['--ob-accent-text', '--ob-accent-soft'], ['--ob-on-accent', '--ob-accent'], ['--ob-on-accent', '--ob-accent-hover'], ['--ob-on-accent', '--ob-accent-active'],
+    ['--ob-info-text', '--ob-info-bg'], ['--ob-add', '--ob-add-bg'], ['--ob-danger', '--ob-surface'], ['--ob-muted', '--ob-tag-bg'], ['--ob-text', '--ob-bg']];
+  for (const [name, t] of [['Light', light], ['Dark', dark]]) {
+    const card = rgb(t['--ob-surface'], [255, 255, 255]);
+    for (const [fg, bg] of pairs) {
+      const r = ratio(rgb(t[fg], card), rgb(t[bg], card));
+      assert.ok(r >= 4.5, name + ': ' + fg + ' on ' + bg + ' = ' + r.toFixed(2));
+    }
+  }
 });
 
 test('English and German: the same texts, none empty', () => {

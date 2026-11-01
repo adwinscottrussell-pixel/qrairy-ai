@@ -50,11 +50,14 @@ let browser;
 const pageErrors = [];   // any script error on any page fails the run
 
 // The page on `host`. clerk: 'none' | 'signedout' | 'unverified' | 'verified'
-async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}' } = {}) {
+// theme: the Studio appearance preference set before each load ('light' by default; null: leave it as it is)
+async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}', theme = 'light' } = {}) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
-  await page.evaluateOnNewDocument((l, mode) => {
-    try { localStorage.setItem('qraivy_lang', l); localStorage.setItem('qraivy.studio.theme', 'light'); } catch (e) {}
+  await page.evaluateOnNewDocument((l, mode, th) => {
+    try { localStorage.setItem('qraivy_lang', l); if (th !== null) localStorage.setItem('qraivy.studio.theme', th); } catch (e) {}
+    // the appearance when <body> first appears (it must already be set: no flash)
+    new MutationObserver((r, o) => { if (document.body) { window.__themeAtBody = document.documentElement.getAttribute('data-ob-theme'); o.disconnect(); } }).observe(document, { childList: true, subtree: true });
     window.__calls = [];
     // Step 3's live frame: the scroll positions it reports
     window.__frameY = [];
@@ -70,7 +73,7 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
     window.Clerk = { loaded: true, load: async () => { window.__calls.push('load'); }, user, session: user ? { id: 'sess_x', getToken: async () => { window.__calls.push('getToken'); return 'tok'; } } : null,
       addListener: (fn) => listeners.push(fn), openSignIn: () => window.__calls.push('openSignIn'), openSignUp: () => window.__calls.push('openSignUp'),
       openUserProfile: () => window.__calls.push('openUserProfile'), signOut: async () => { window.__calls.push('signOut'); window.Clerk.user = null; window.Clerk.session = null; } };
-  }, lang, clerk);
+  }, lang, clerk, theme);
   page.on('pageerror', (e) => pageErrors.push(String(e.message)));
   await page.setRequestInterception(true);
   const api = [], external = [], missing = [];
@@ -711,6 +714,199 @@ test('Step 3, phone, English and German: one column (on your page, add more, pho
     assert.deepEqual(api, []);
     await page.close();
   }
+});
+
+// ── O2.1: the visual theme (Light / Dark, the gradient waves, the Step 1 checklist) ──
+const theme = (page) => page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-ob-theme'), pref: document.documentElement.getAttribute('data-ob-theme-pref'),
+  stored: localStorage.getItem('qraivy.studio.theme'), pressed: [...document.querySelectorAll('[data-ob-theme-choice]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.obThemeChoice),
+  atBody: window.__themeAtBody, header: getComputedStyle(document.querySelector('.ob-top')).backgroundColor, bg: getComputedStyle(document.body).backgroundColor }));
+// WCAG contrast of an element's text against its own (or the nearest painted) background
+const contrast = (page, sel) => page.evaluate((s) => {
+  const n = document.querySelector(s); if (!n) return null;
+  const lum = (c) => { const v = c.match(/[\d.]+/g).slice(0, 3).map((x) => { x = x / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const parse = (c) => { const m = c.match(/[\d.]+/g).map(Number); return { c: m.slice(0, 3), a: m.length > 3 ? m[3] : 1 }; };
+  const layers = []; let e = n;
+  while (e) { const b = parse(getComputedStyle(e).backgroundColor); if (b.a > 0) layers.push(b); if (b.a === 1) break; e = e.parentElement; }
+  let base = [255, 255, 255];
+  for (let i = layers.length - 1; i >= 0; i--) base = base.map((x, j) => Math.round(layers[i].c[j] * layers[i].a + x * (1 - layers[i].a)));
+  const fg = getComputedStyle(n).color, x = lum(fg), y = lum('rgb(' + base.join(',') + ')');
+  return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 100) / 100;
+}, sel);
+
+test('O2.1: Light by default; the sun / moon toggle beside EN / DE switches, is the Studio\'s preference, survives steps and reloads, applied before the page is drawn', async () => {
+  const { page, api } = await onboarding({ theme: null });
+  // no preference at all (this browser's earlier pages set one): cleared, then a fresh load
+  await page.evaluate(() => localStorage.removeItem('qraivy.studio.theme'));
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  let t = await theme(page);
+  assert.deepEqual([t.theme, t.pref, t.stored, t.pressed, t.atBody], ['light', 'light', null, ['light'], 'light'], 'nothing stored: Light');
+  assert.equal(t.header, 'rgb(0, 0, 0)');
+  assert.deepEqual(await page.$$eval('.ob-theme__btn', (ns) => ns.map((b) => b.getAttribute('aria-label'))), ['Light mode', 'Dark mode']);
+  await page.click('.ob-theme__btn[data-ob-theme-choice="dark"]');
+  t = await theme(page);
+  assert.deepEqual([t.theme, t.stored, t.pressed, t.header, t.bg], ['dark', 'dark', ['dark'], 'rgb(0, 0, 0)', 'rgb(10, 10, 10)'], 'Dark: QDS background, the header still black');
+  // through the steps and a reload: still Dark, set before <body> exists
+  await toStep3(page);
+  assert.equal((await theme(page)).theme, 'dark');
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  t = await theme(page);
+  assert.deepEqual([t.theme, t.atBody, t.pressed], ['dark', 'dark', ['dark']], 'applied before the body: no flash');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4', 'the answers and the step are not touched by the theme');
+  // keyboard: the toggle is reachable and works with Enter; German labels
+  await page.focus('.ob-theme__btn[data-ob-theme-choice="light"]');
+  await page.keyboard.press('Enter');
+  assert.deepEqual([(await theme(page)).theme, (await theme(page)).stored], ['light', 'light']);
+  await page.click('.ob-lang__btn[data-lang="de"]');
+  assert.deepEqual(await page.$$eval('.ob-theme__btn', (ns) => ns.map((b) => b.getAttribute('aria-label'))), ['Heller Modus', 'Dunkler Modus']);
+  assert.equal(await page.$eval('.ob-theme', (n) => n.getAttribute('aria-label')), 'Darstellung');
+  // the onboarding progress stores no appearance
+  const kept = await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding'))));
+  assert.ok(!/theme|dark|light/.test(kept), 'the theme is not part of the answers');
+  assert.deepEqual(api, []);
+  await page.close();
+});
+
+test('O2.1: System (set in the Studio) follows the device; a toggle press sets Light or Dark', async () => {
+  const { page } = await onboarding({ theme: 'system' });
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+  await sleep(150);
+  let t = await theme(page);
+  assert.deepEqual([t.pref, t.theme, t.pressed], ['system', 'dark', ['dark']], 'device dark');
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  await sleep(150);
+  t = await theme(page);
+  assert.deepEqual([t.pref, t.theme], ['system', 'light'], 'device light: follows at once');
+  await page.click('.ob-theme__btn[data-ob-theme-choice="dark"]');
+  t = await theme(page);
+  assert.deepEqual([t.pref, t.theme, t.stored], ['dark', 'dark', 'dark'], 'a press: an explicit choice');
+  await page.close();
+});
+
+test('O2.1: readable contrast in Light and Dark on every step; dark text on orange; the customer\'s pages in the phones identical in both themes', async () => {
+  const frames = {};
+  for (const th of ['light', 'dark']) {
+    const { page, api } = await onboarding({ theme: th });
+    const checks = [];
+    const at = async (label, sels) => { for (const s of sels) { const r = await contrast(page, s); checks.push([label + ' ' + s, r]); } };
+    await page.waitForFunction(() => [...document.querySelectorAll('.ob-phone__frame[data-preview]')].every((f) => f.srcdoc.length > 1000), { timeout: 5000 });
+    await page.click('[data-option="scratch"]');
+    await at('Step 1', ['#ob-start-title', '[data-ob="start_text"]', '.ob-option[data-option="scratch"] .ob-option__title', '.ob-option[data-option="scratch"] .ob-option__text', '.ob-badge--ready', '.ob-badge--soon', '[data-ob="start_help"]', '#ob-next', '.ob-card__example']);
+    frames.step1 = frames.step1 || [];
+    frames.step1.push(await page.$$eval('.ob-phone__frame[data-preview]', (ns) => ns.map((f) => f.srcdoc).join('|')));
+    const btn = await page.$eval('#ob-next', (b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).color]);
+    assert.deepEqual(btn, ['rgb(255, 90, 31)', 'rgb(10, 10, 10)'], th + ': orange Next with dark text');
+    await page.click('#ob-next');
+    await page.type('#ob-name', 'Café Sonne');
+    await page.click('#ob-add-link');
+    await page.type('#ob-link-url-' + (await rowKeys(page))[0], 'instagram.com/sonne');
+    await waitLive(page, 'instagram.com/sonne');
+    await at('Step 2', ['label[for="ob-name"]', '#ob-name', '#ob-description-hint', '#ob-add-link', '#ob-logo-note', '.ob-live__label', '.ob-live__note', '#ob-name-count', '.ob-progress__count', '.ob-steps__item[data-step="1"] .ob-steps__label']);
+    frames.step2 = frames.step2 || [];
+    frames.step2.push(await live(page));
+    await page.click('#ob-next');
+    await waitSec(page, 's_obsocial1');
+    await at('Step 3', ['#ob-chosen-title', '#ob-chosen [data-type="contact"] .ob-sec__title', '#ob-chosen [data-type="contact"] .ob-sec__text', '#ob-chosen [data-type="contact"] .ob-sec__tag', '#ob-chosen [data-type="socialMedia"] .ob-sec__tag', '#ob-chosen [data-type="contact"] .ob-sec__num', '#ob-more [data-act="add"]', '#ob-chosen .ob-remove', '[data-ob="sections_info"]']);
+    frames.step3 = frames.step3 || [];
+    frames.step3.push(await secFrame(page));
+    await page.click('#ob-next');
+    await at('Step 4', ['#ob-step-3 .ob-h1', '#ob-step-3 .ob-lead', '#ob-step-3 .ob-info p', '#ob-back']);
+    for (const [label, r] of checks) assert.ok(r !== null && r >= 4.5, th + ': ' + label + ' contrast ' + r);
+    assert.deepEqual(await page.$$eval('.ob-phone__frame', (ns) => [...new Set(ns.map((f) => getComputedStyle(f).colorScheme))]), ['light'], 'the phone frames stay light');
+    assert.deepEqual(api, []);
+    await page.close();
+  }
+  for (const k of ['step1', 'step2', 'step3']) assert.equal(frames[k][0], frames[k][1], k + ': the customer\'s page is the same in Light and Dark');
+});
+
+test('O2.1: the gradient waves behind everything (never clickable), fuller on Step 1, calmer on Steps 2-4; the checklist on Step 1 at 1400 px and wider only; no sideways scroll at 1440 / 1024 / 768 / 390 in both themes', async () => {
+  const { page } = await onboarding();
+  const bg = () => page.evaluate(() => { const b = document.querySelector('.ob-bg'), c = getComputedStyle(b); return { opacity: +c.opacity, pe: c.pointerEvents, z: c.zIndex, pos: c.position, hidden: b.getAttribute('aria-hidden') }; });
+  const one = await bg();
+  assert.deepEqual([one.pe, one.pos, one.hidden], ['none', 'fixed', 'true']);
+  assert.equal(await page.evaluate(() => { const n = document.elementFromPoint(40, 800); return !!(n && n.closest('.ob-bg')); }), false, 'a click on the waves reaches the page, not the decoration');
+  // the checklist: Step 1, beside (never over) the card
+  const bx = await page.evaluate(() => { const b = document.querySelector('.ob-benefits'), r = b.getBoundingClientRect(), c = document.querySelector('#ob-wizard .ob-card-panel').getBoundingClientRect();
+    return { shown: getComputedStyle(b).display !== 'none', right: r.right, left: r.left, card: c.left, items: [...b.querySelectorAll('.ob-benefits__item')].map((n) => n.textContent.trim()) }; });
+  assert.ok(bx.shown && bx.right <= bx.card - 16 && bx.left >= 0, 'beside the card: ' + JSON.stringify(bx));
+  assert.deepEqual(bx.items, ['No coding required', 'Mobile optimized', 'Easy to update', 'Start for free']);
+  await page.click('[data-option="scratch"]'); await page.click('#ob-next');
+  const two = await bg();
+  assert.ok(two.opacity < one.opacity, 'calmer on Step 2: ' + two.opacity + ' < ' + one.opacity);
+  assert.equal(await page.$eval('.ob-benefits', (b) => getComputedStyle(b).display), 'none', 'no checklist on Step 2');
+  await page.close();
+  for (const th of ['light', 'dark']) {
+    for (const viewport of [DESKTOP, { width: 1024, height: 800 }, { width: 768, height: 1024 }, PHONE]) {
+      const o = await onboarding({ theme: th, viewport });
+      const seen = [];
+      for (let step = 0; step < 4; step++) {
+        seen.push(await o.page.evaluate((st) => ({ step: st, sw: document.documentElement.scrollWidth, iw: innerWidth, benefits: getComputedStyle(document.querySelector('.ob-benefits')).display !== 'none' }), step));
+        if (step === 0) await o.page.click('[data-option="scratch"]');
+        if (step === 1) await o.page.type('#ob-name', 'Café Sonne');
+        if (step < 3) await o.page.click('#ob-next');
+      }
+      assert.ok(seen.every((x) => x.sw <= x.iw), th + ' ' + viewport.width + ': no sideways scroll ' + JSON.stringify(seen));
+      assert.ok(seen.every((x) => x.benefits === (x.step === 0 && viewport.width >= 1400)), th + ' ' + viewport.width + ': the checklist on Step 1 at 1400 px and wider only ' + JSON.stringify(seen));
+      await o.page.close();
+    }
+  }
+});
+
+test('O2.1 handwritten note: Step 1 right side at 1400 px and wider, EN / DE, Light / Dark; never over the wizard, the checklist or the header; hidden on smaller screens and Steps 2-4', async () => {
+  const rect = (r) => ({ l: Math.round(r.left), t: Math.round(r.top), r: Math.round(r.right), b: Math.round(r.bottom) });
+  const apart = (a, b) => a.r <= b.l || b.r <= a.l || a.b <= b.t || b.b <= a.t;
+  for (const th of ['light', 'dark']) {
+    for (const lang of ['en', 'de']) {
+      for (const width of [1400, 1440, 1920]) {
+        const { page, api } = await onboarding({ theme: th, lang, viewport: { width, height: 1000 } });
+        const m = await page.evaluate(() => {
+          const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { left: b.left, top: b.top, right: b.right, bottom: b.bottom }; };
+          const n = document.querySelector('.ob-note');
+          return { shown: getComputedStyle(n).display !== 'none', hidden: n.getAttribute('aria-hidden'), text: n.querySelector('.ob-note__text').textContent, color: getComputedStyle(n.querySelector('.ob-note__text')).color,
+            stroke: getComputedStyle(n.querySelector('.ob-note__arrow')).stroke, note: r('.ob-note'), wizard: r('#ob-wizard .ob-card-panel'), progress: r('.ob-progress'), benefits: r('.ob-benefits'), top: r('.ob-top'),
+            sw: document.documentElement.scrollWidth, iw: innerWidth };
+        });
+        const label = th + ' ' + lang + ' ' + width + ': ';
+        assert.ok(m.shown && m.hidden === 'true', label + 'shown, decoration');
+        assert.equal(m.text, lang === 'de' ? 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!' : 'Create your digital business page in minutes!');
+        assert.equal(m.color, th === 'light' ? 'rgb(11, 22, 51)' : 'rgb(240, 236, 224)', label + 'dark text in Light, light text in Dark');
+        assert.equal(m.stroke, 'rgb(255, 90, 31)', label + 'orange underline and arrow');
+        const note = rect(m.note);
+        for (const k of ['wizard', 'progress', 'benefits', 'top']) assert.ok(apart(note, rect(m[k])), label + 'not over the ' + k + ': ' + JSON.stringify([note, rect(m[k])]));
+        assert.ok(note.l > rect(m.wizard).r && note.r <= m.iw, label + 'right of the wizard, inside the window: ' + JSON.stringify(note));
+        assert.ok(m.sw <= m.iw, label + 'no sideways scroll');
+        // the checklist's lines stay inside its card (long German words included)
+        const spill = await page.$$eval('.ob-benefits__item', (ns) => { const c = document.querySelector('.ob-benefits').getBoundingClientRect(); return ns.filter((n) => n.getBoundingClientRect().right > c.right - 1 || n.scrollWidth > n.clientWidth).map((n) => n.textContent); });
+        assert.deepEqual(spill, [], label + 'checklist text inside its card');
+        if (th === 'light' && lang === 'en' && width === 1440) {
+          await page.click('[data-option="scratch"]'); await page.click('#ob-next');
+          assert.equal(await page.$eval('.ob-note', (n) => getComputedStyle(n).display), 'none', 'not on Step 2');
+        }
+        assert.deepEqual(api, []);
+        await page.close();
+      }
+    }
+  }
+  for (const viewport of [{ width: 1366, height: 800 }, { width: 1280, height: 800 }, { width: 1024, height: 800 }, { width: 768, height: 1024 }, PHONE]) {
+    const { page } = await onboarding({ viewport });
+    const m = await page.evaluate(() => ({ shown: getComputedStyle(document.querySelector('.ob-note')).display !== 'none', sw: document.documentElement.scrollWidth, iw: innerWidth }));
+    assert.ok(!m.shown && m.sw <= m.iw, viewport.width + ': hidden, no sideways scroll');
+    await page.close();
+  }
+});
+
+test('O2.1: reduced motion: no transitions on the page, and the Step 3 phone jumps to a new section without smooth scrolling', async () => {
+  const { page } = await onboarding();
+  await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('.ob-progress__fill')).transitionDuration, getComputedStyle(document.querySelector('.ob-card')).transitionDuration]), ['0s', '0s']);
+  await toStep3(page);
+  await waitSec(page, 's_obcontact1');
+  await page.evaluate(() => { window.__frameY = []; });
+  await page.click('#ob-more [data-act="add"][aria-label="Add Gallery"]');
+  await page.waitForFunction(() => window.__frameY.length > 0, { timeout: 4000 });
+  await sleep(400);
+  const ys = await page.evaluate(() => window.__frameY.slice());
+  assert.ok(ys[ys.length - 1] > 200 && ys.length <= 2, 'one jump to the new section, not a smooth scroll: ' + ys);
+  await page.close();
 });
 
 // The header (approved design): solid black, white Sign out and Back to Studio, EN/DE with the chosen language

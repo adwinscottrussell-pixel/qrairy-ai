@@ -4,6 +4,12 @@
    the three Step 1 cards side by side from 760 px. No Admin sidebar.
    Colours: QRAIVY orange for primary actions, blue for help and
    information, green for adding links (later steps).
+   O2.1: Light (default) and Dark, chosen on <html data-ob-theme>
+   (js/studio/onboarding-theme.js, the Studio's own preference). Dark follows
+   the QRAIVY Design System (frontend/public/qds/foundation/colors.css):
+   near-black surfaces, warm light text, #ff5a1f with dark text on primary
+   buttons. The header stays solid black in both; the phone previews keep
+   the customer's own page appearance.
    ============================================================ */
 
 :root {
@@ -14,29 +20,90 @@
   --ob-border-strong: #cfd4dd;
   --ob-text: #0f172a;
   --ob-text-2: #334155;
-  --ob-muted: #64748b;
-  --ob-navy: #0b1633;
-  --ob-accent: #ff5a1f;          /* QRAIVY orange: primary actions */
-  --ob-accent-hover: #e94c12;
+  --ob-muted: #5b6a7f;           /* O2.1: a touch darker, 4.5:1 also on --ob-surface-2 */
+  --ob-navy: #0b1633;             /* headings */
+  --ob-accent: #ff5a1f;          /* QRAIVY orange (QDS brand-primary): primary actions */
+  --ob-accent-hover: #ff7a45;    /* QDS brand-hover */
+  --ob-accent-active: #e6490f;   /* QDS brand-active */
   --ob-accent-soft: rgba(255, 90, 31, 0.08);
-  --ob-on-accent: #ffffff;
+  --ob-accent-text: #c2410c;     /* orange as small text on a light surface (readable) */
+  --ob-on-accent: #0a0a0a;       /* dark text on orange (QDS text-inverse) */
   --ob-info: #1d4ed8;            /* blue: help and information */
   --ob-info-bg: #eff6ff;
   --ob-info-border: #bfdbfe;
   --ob-info-text: #1e3a8a;
   --ob-add: #15803d;             /* green: adding links (Step 2, later phase) */
   --ob-add-bg: #f0fdf4;
+  --ob-add-border: #86efac;
+  --ob-add-hover: #dcfce7;
+  --ob-ready-border: #bbf7d0;
+  --ob-danger: #b91c1c;
+  --ob-danger-border: #dc2626;
+  --ob-danger-ring: rgba(220, 38, 38, 0.18);
+  --ob-placeholder: #94a3b8;
+  --ob-border-hover: #b4bbc8;
+  --ob-tag-bg: #eef0f4;
+  --ob-example-bg: rgba(15, 23, 42, 0.07);
+  --ob-stage: linear-gradient(180deg, #eef1f6, #e4e8ef);
+  --ob-input-ring: rgba(255, 90, 31, 0.18);
   --ob-focus: rgba(255, 90, 31, 0.55);
   --ob-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.07);
   --ob-radius: 16px;
+  /* the background: a soft warm wash, orange / pink waves left, pink / purple waves right */
+  --ob-page: linear-gradient(160deg, #fff6f1 0%, #fdf5fa 48%, #f6f2ff 100%);
+  --ob-w1a: #ffe0cf; --ob-w1b: #ffb48c;
+  --ob-w2a: #ff7a45; --ob-w2b: #f472b6;
+  --ob-w3a: #ffc7a8; --ob-w3b: #f9a8d4;
+  --ob-w4a: #fce7f3; --ob-w4b: #f5c2e7;
+  --ob-w5a: #c4b5fd; --ob-w5b: #8b5cf6;
+  --ob-w6a: #ede9fe; --ob-w6b: #c4b5fd;
+  --ob-waves: 1;                 /* Step 1; Steps 2-4 are calmer */
+  --ob-waves-calm: 0.5;
   color-scheme: light;
+}
+/* Dark: the QDS near-black foundation, the same accents, subtler waves */
+:root[data-ob-theme="dark"] {
+  --ob-bg: #0a0a0a;
+  --ob-surface: #111111;
+  --ob-surface-2: #1a1a1a;
+  --ob-border: rgba(255, 255, 255, 0.12);
+  --ob-border-strong: rgba(255, 255, 255, 0.2);
+  --ob-border-hover: rgba(255, 255, 255, 0.34);
+  --ob-text: #f0ece0;
+  --ob-text-2: #c8c8c0;
+  --ob-muted: #a0a09a;
+  --ob-navy: #f0ece0;
+  --ob-accent-soft: rgba(255, 90, 31, 0.14);
+  --ob-accent-text: #ff7a45;
+  --ob-info: #60a5fa;
+  --ob-info-bg: rgba(59, 130, 246, 0.12);
+  --ob-info-border: rgba(59, 130, 246, 0.38);
+  --ob-info-text: #c7dcfd;
+  --ob-add: #4ade80;
+  --ob-add-bg: rgba(34, 197, 94, 0.12);
+  --ob-add-border: rgba(34, 197, 94, 0.42);
+  --ob-add-hover: rgba(34, 197, 94, 0.2);
+  --ob-ready-border: rgba(34, 197, 94, 0.42);
+  --ob-danger: #f87171;
+  --ob-danger-border: #ef4444;
+  --ob-danger-ring: rgba(239, 68, 68, 0.28);
+  --ob-placeholder: #8a8a84;
+  --ob-tag-bg: rgba(255, 255, 255, 0.08);
+  --ob-example-bg: rgba(255, 255, 255, 0.1);
+  --ob-stage: linear-gradient(180deg, #1c1c1c, #141414);
+  --ob-input-ring: rgba(255, 90, 31, 0.3);
+  --ob-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --ob-page: radial-gradient(120% 90% at 50% 0%, #121212 0%, #0a0a0a 60%);
+  --ob-waves: 0.42;
+  --ob-waves-calm: 0.24;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
 body.ob-page {
   min-height: 100vh;
-  background: var(--ob-bg);
+  background: var(--ob-bg) var(--ob-page) no-repeat fixed;
   color: var(--ob-text);
   font: 400 15px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -49,6 +116,7 @@ body.ob-page {
 
 /* ── top bar: solid black, white actions (approved header design) ── */
 .ob-top {
+  position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 16px; background: #000000; border-bottom: 1px solid #000000; color: #ffffff;
 }
@@ -64,6 +132,12 @@ body.ob-page {
 .ob-lang__btn { min-width: 38px; min-height: 30px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: #c7c7cc; font: 600 12px/1 Inter, sans-serif; cursor: pointer; }
 .ob-lang__btn:hover:not([aria-pressed="true"]) { color: #ffffff; }
 .ob-lang__btn[aria-pressed="true"] { background: #ffffff; color: #000000; }
+/* O2.1, Light / Dark beside EN / DE: the same dark track and white pill, a sun and a moon */
+.ob-theme { display: inline-flex; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.24); border-radius: 999px; background: #1a1a1d; }
+.ob-theme__btn { display: inline-grid; place-items: center; min-width: 34px; min-height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: #c7c7cc; cursor: pointer; }
+.ob-theme__btn .ob-ic { width: 16px; height: 16px; }
+.ob-theme__btn:hover:not([aria-pressed="true"]) { color: #ffffff; }
+.ob-theme__btn[aria-pressed="true"] { background: #ffffff; color: #000000; }
 .ob-link { padding: 6px 4px; border: 0; background: none; color: #ffffff; font: 600 13px/1.2 Inter, sans-serif; text-decoration: none; cursor: pointer; }
 .ob-link:hover { color: var(--ob-accent); }
 .ob-link--exit { display: inline-flex; align-items: center; gap: 6px; }
@@ -77,7 +151,7 @@ body.ob-page {
 }
 
 /* ── page body ── */
-.ob-main { width: 100%; max-width: 920px; margin: 0 auto; padding: 20px 16px 40px; }
+.ob-main { position: relative; z-index: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 20px 16px 40px; }
 .ob-card-panel {
   background: var(--ob-surface); border: 1px solid var(--ob-border); border-radius: var(--ob-radius);
   box-shadow: var(--ob-shadow); padding: 22px 18px;
@@ -104,6 +178,7 @@ body.ob-page {
 }
 .ob-btn--primary { background: var(--ob-accent); color: var(--ob-on-accent); }
 .ob-btn--primary:hover:not(:disabled) { background: var(--ob-accent-hover); }
+.ob-btn--primary:active:not(:disabled) { background: var(--ob-accent-active); }
 .ob-btn--secondary { background: var(--ob-surface); color: var(--ob-navy); border-color: var(--ob-border-strong); }
 .ob-btn--secondary:hover:not(:disabled) { border-color: var(--ob-navy); }
 .ob-btn--ghost { background: transparent; color: var(--ob-text-2); border-color: var(--ob-border); }
@@ -119,7 +194,7 @@ body.ob-page {
 .ob-steps__item { display: flex; align-items: center; gap: 8px; color: var(--ob-muted); font-size: 13px; font-weight: 600; }
 .ob-steps__dot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ob-border-strong); background: var(--ob-surface); font-size: 12px; flex-shrink: 0; }
 .ob-steps__item[data-state="done"] { color: var(--ob-text-2); }
-.ob-steps__item[data-state="done"] .ob-steps__dot { border-color: var(--ob-accent); color: var(--ob-accent); }
+.ob-steps__item[data-state="done"] .ob-steps__dot { border-color: var(--ob-accent); color: var(--ob-accent-text); }
 .ob-steps__item[aria-current="step"] { color: var(--ob-navy); }
 .ob-steps__item[aria-current="step"] .ob-steps__dot { border-color: var(--ob-accent); background: var(--ob-accent); color: var(--ob-on-accent); }
 
@@ -157,22 +232,22 @@ body.ob-page {
 .ob-option:disabled .ob-option__title { color: var(--ob-text-2); }
 .ob-option__text { font-size: 14px; color: var(--ob-muted); }
 .ob-badge { flex-shrink: 0; align-self: flex-start; padding: 3px 9px; border-radius: 999px; font: 700 11px/1.4 Inter, sans-serif; letter-spacing: 0.02em; white-space: nowrap; }
-.ob-badge--soon { background: #eef0f4; color: var(--ob-muted); border: 1px solid var(--ob-border); }
-.ob-badge--ready { background: var(--ob-add-bg); color: var(--ob-add); border: 1px solid #bbf7d0; }
-.ob-option__check { display: none; position: absolute; top: 10px; right: 10px; z-index: 1; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--ob-accent); color: #fff; }
+.ob-badge--soon { background: var(--ob-tag-bg); color: var(--ob-muted); border: 1px solid var(--ob-border); }
+.ob-badge--ready { background: var(--ob-add-bg); color: var(--ob-add); border: 1px solid var(--ob-ready-border); }
+.ob-option__check { display: none; position: absolute; top: 10px; right: 10px; z-index: 1; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--ob-accent); color: var(--ob-on-accent); }
 .ob-option__check .ob-ic { width: 15px; height: 15px; stroke-width: 2.6; }
 .ob-option[aria-checked="true"] .ob-option__check { display: inline-grid; }
 .ob-option[aria-checked="true"] .ob-badge--ready { visibility: hidden; }
 
 /* the page behind the phone: a quiet stage */
-.ob-card__media { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; padding: 10px 12px 8px; border-radius: 12px; background: linear-gradient(180deg, #eef1f6, #e4e8ef); pointer-events: none; }
+.ob-card__media { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; padding: 10px 12px 8px; border-radius: 12px; background: var(--ob-stage); pointer-events: none; }
 /* phones: beside the phone, the title, text and badge one below the other (the phone is the picture; no icon) */
 @media (max-width: 759px) {
   .ob-option { flex-direction: column; align-items: flex-start; gap: 6px; }
   .ob-option__icon { display: none; }
   .ob-card__media { padding: 8px 10px 6px; }
 }
-.ob-card__example { padding: 1px 8px; border-radius: 999px; background: rgba(15, 23, 42, 0.07); color: var(--ob-muted); font: 600 10.5px/1.6 Inter, sans-serif; letter-spacing: 0.02em; }
+.ob-card__example { padding: 1px 8px; border-radius: 999px; background: var(--ob-example-bg); color: var(--ob-muted); font: 600 10.5px/1.6 Inter, sans-serif; letter-spacing: 0.02em; }
 
 /* ── the phone: the Studio phone's look (studio.css Phase C.2: metal edge, black
    bezel, status bar with the Dynamic Island, home indicator), at --s of the
@@ -192,7 +267,7 @@ body.ob-page {
 }
 .ob-phone__island { position: absolute; z-index: 1; top: calc(10px * var(--s)); left: 50%; width: calc(120px * var(--s)); height: calc(32px * var(--s)); transform: translateX(-50%); border-radius: 999px; background: #000; }
 .ob-phone__screen::after { content: ''; position: absolute; bottom: calc(8px * var(--s)); left: 50%; width: calc(134px * var(--s)); height: max(2px, calc(5px * var(--s))); transform: translateX(-50%); border-radius: 3px; background: rgba(255, 255, 255, 0.85); }
-.ob-phone__frame { display: block; width: 390px; height: 844px; border: 0; background: #fff; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
+.ob-phone__frame { display: block; width: 390px; height: 844px; border: 0; background: #fff; color-scheme: light; transform: scale(var(--s)); transform-origin: 0 0; pointer-events: none; }
 
 /* ── Step 2 (O1): business information. Phones: the form, then a compact live
    preview, then Back / Next. From 960 px: the form left, the phone right (stays in view). ── */
@@ -203,19 +278,19 @@ body.ob-page {
 .ob-label { padding: 0; font: 600 14px/1.35 Inter, sans-serif; color: var(--ob-navy); }
 .ob-req, .ob-opt { margin-left: 4px; font-weight: 500; font-size: 12.5px; color: var(--ob-muted); }
 .ob-count { font: 500 12.5px/1 Inter, sans-serif; color: var(--ob-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ob-count[data-over="true"] { color: #b91c1c; font-weight: 700; }
+.ob-count[data-over="true"] { color: var(--ob-danger); font-weight: 700; }
 .ob-hint { margin: 0; font-size: 13px; color: var(--ob-muted); }
 .ob-input {
   width: 100%; min-height: 46px; padding: 11px 13px; border: 1.5px solid var(--ob-border-strong); border-radius: 12px;
   background: var(--ob-surface); color: var(--ob-text); font: 400 15px/1.4 Inter, sans-serif;
 }
-.ob-input::placeholder { color: #94a3b8; }
-.ob-input:hover { border-color: #b4bbc8; }
-.ob-input:focus { outline: none; border-color: var(--ob-accent); box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.18); }
+.ob-input::placeholder { color: var(--ob-placeholder); }
+.ob-input:hover { border-color: var(--ob-border-hover); }
+.ob-input:focus { outline: none; border-color: var(--ob-accent); box-shadow: 0 0 0 3px var(--ob-input-ring); }
 .ob-input--area { min-height: 92px; resize: vertical; }
-.ob-input[aria-invalid="true"] { border-color: #dc2626; }
-.ob-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18); }
-.ob-error { margin: 0; font: 600 13px/1.4 Inter, sans-serif; color: #b91c1c; }
+.ob-input[aria-invalid="true"] { border-color: var(--ob-danger-border); }
+.ob-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--ob-danger-ring); }
+.ob-error { margin: 0; font: 600 13px/1.4 Inter, sans-serif; color: var(--ob-danger); }
 .ob-error:empty { display: none; }
 
 /* social links: platform, address, Remove; the green "+ Add link" */
@@ -228,9 +303,9 @@ body.ob-page {
 .ob-link-row .ob-error { grid-area: error; }
 .ob-select { appearance: none; padding-right: 36px; background: var(--ob-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 13px center; cursor: pointer; }
 .ob-remove { min-height: 46px; padding: 0 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px; background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1 Inter, sans-serif; cursor: pointer; }
-.ob-remove:hover { border-color: #dc2626; color: #b91c1c; }
-.ob-btn--add { align-self: flex-start; min-height: 42px; padding: 0 16px; background: var(--ob-add-bg); color: var(--ob-add); border-color: #86efac; }
-.ob-btn--add:hover:not(:disabled) { background: #dcfce7; border-color: var(--ob-add); }
+.ob-remove:hover { border-color: var(--ob-danger-border); color: var(--ob-danger); }
+.ob-btn--add { align-self: flex-start; min-height: 42px; padding: 0 16px; background: var(--ob-add-bg); color: var(--ob-add); border-color: var(--ob-add-border); }
+.ob-btn--add:hover:not(:disabled) { background: var(--ob-add-hover); border-color: var(--ob-add); }
 .ob-btn--add > span[aria-hidden] { font-size: 19px; line-height: 1; }
 
 /* the logo: disabled, "Coming soon" */
@@ -243,7 +318,7 @@ body.ob-page {
 .ob-info--compact p { font-size: 13px; }
 
 /* the live preview */
-.ob-live { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; padding: 16px 12px 14px; border-radius: 16px; background: linear-gradient(180deg, #eef1f6, #e4e8ef); }
+.ob-live { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; padding: 16px 12px 14px; border-radius: 16px; background: var(--ob-stage); }
 .ob-live__label { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 700 12px/1 Inter, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ob-text-2); }
 .ob-live__dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18); }
 .ob-live__stage { pointer-events: none; }
@@ -263,12 +338,12 @@ body.ob-page {
   border: 1px solid var(--ob-border); border-radius: 12px; background: var(--ob-surface);
 }
 .ob-sec--locked { background: var(--ob-surface-2); }
-.ob-sec__num { display: inline-grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--ob-accent-soft); color: var(--ob-accent); font: 700 13px/1 Inter, sans-serif; }
+.ob-sec__num { display: inline-grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--ob-accent-soft); color: var(--ob-accent-text); font: 700 13px/1 Inter, sans-serif; }
 .ob-sec--locked .ob-sec__num { background: var(--ob-accent); color: var(--ob-on-accent); }
 .ob-sec__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .ob-sec__title { font: 600 15px/1.3 Inter, sans-serif; color: var(--ob-navy); }
 .ob-sec__text { font-size: 13px; color: var(--ob-muted); }
-.ob-sec__tag { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; background: #eef0f4; color: var(--ob-muted); font: 600 11.5px/1.5 Inter, sans-serif; }
+.ob-sec__tag { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; background: var(--ob-tag-bg); color: var(--ob-muted); font: 600 11.5px/1.5 Inter, sans-serif; }
 .ob-sec__tag .ob-ic { width: 13px; height: 13px; }
 .ob-sec__tag--links { background: var(--ob-info-bg); color: var(--ob-info-text); }
 .ob-sec__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -288,6 +363,59 @@ body.ob-page {
   .ob-sec__body { flex-basis: calc(100% - 40px); }
   .ob-sec__actions { width: 100%; justify-content: flex-end; }
   .ob-more .ob-sec__actions { width: auto; margin-left: 40px; justify-content: flex-start; }
+}
+
+/* ── O2.1: the gradient-wave background (decoration only, behind everything, never clickable).
+   Step 1 shows it fully; Steps 2-4, the sign-in screens and the notice a calmer version. ── */
+.ob-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--ob-waves-calm); }
+body[data-ob-step="0"] .ob-bg { opacity: var(--ob-waves); }
+.ob-bg__wave { position: absolute; top: 0; height: 100%; width: clamp(150px, 26vw, 440px); }
+.ob-bg__wave--left { left: 0; }
+.ob-bg__wave--right { right: 0; }
+.ob-bg__ribbon { display: none; }
+body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
+.ob-w1a { stop-color: var(--ob-w1a); } .ob-w1b { stop-color: var(--ob-w1b); }
+.ob-w2a { stop-color: var(--ob-w2a); } .ob-w2b { stop-color: var(--ob-w2b); }
+.ob-w3a { stop-color: var(--ob-w3a); } .ob-w3b { stop-color: var(--ob-w3b); }
+.ob-w4a { stop-color: var(--ob-w4a); } .ob-w4b { stop-color: var(--ob-w4b); }
+.ob-w5a { stop-color: var(--ob-w5a); } .ob-w5b { stop-color: var(--ob-w5b); }
+.ob-w6a { stop-color: var(--ob-w6a); } .ob-w6b { stop-color: var(--ob-w6b); }
+/* phones and tablets: the waves stay at the edges, quieter */
+@media (max-width: 759px) { .ob-bg__wave { width: 34vw; } .ob-bg { opacity: calc(var(--ob-waves-calm) * 0.8); } body[data-ob-step="0"] .ob-bg { opacity: calc(var(--ob-waves) * 0.8); } }
+
+/* Step 1: a short orange-to-pink stroke under the lead (decoration) */
+#ob-step-0 .ob-lead::after { content: ''; display: block; width: 64px; height: 4px; margin-top: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--ob-accent), #f472b6); }
+
+/* Step 1, large desktops only: the benefits checklist beside the card (decoration; hidden from screen readers) */
+.ob-wizard { position: relative; }
+.ob-benefits { display: none; }
+@media (min-width: 1400px) {
+  body[data-ob-step="0"] .ob-benefits {
+    display: block; position: absolute; top: 236px; right: calc(100% + 36px); width: 196px; padding: 16px 18px;
+    border: 1px solid var(--ob-border); border-radius: var(--ob-radius); background: var(--ob-surface); box-shadow: var(--ob-shadow);
+  }
+}
+.ob-benefits__list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.ob-benefits__item { display: flex; align-items: center; gap: 10px; font: 600 14px/1.3 Inter, sans-serif; color: var(--ob-text); }
+.ob-benefits__check { display: inline-grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--ob-add-bg); color: var(--ob-add); border: 1px solid var(--ob-ready-border); }
+.ob-benefits__check .ob-ic { width: 15px; height: 15px; stroke-width: 2.6; }
+
+/* Step 1, large desktops only: the handwritten note on the right with an orange underline and an arrow to the
+   cards (decoration; hidden from screen readers). Beside the wizard, never over it. */
+.ob-note { display: none; }
+@media (min-width: 1400px) {
+  body[data-ob-step="0"] .ob-note {
+    display: block; position: absolute; top: 246px; left: calc(100% + 26px); width: 194px;
+    transform: rotate(-6deg); transform-origin: 0 0; pointer-events: none;
+  }
+}
+.ob-note__text { margin: 0; font: 600 25px/1.16 'Caveat', 'Segoe Print', 'Bradley Hand', cursive; color: var(--ob-navy); }
+.ob-note__line { display: block; width: 130px; height: 14px; margin: 6px 0 0 34px; fill: none; stroke: var(--ob-accent); stroke-width: 3; stroke-linecap: round; }
+.ob-note__arrow { display: block; width: 96px; height: 64px; margin: 8px 0 0 6px; fill: none; stroke: var(--ob-accent); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* reduced motion: no transitions on this page (the progress bar, cards and buttons change at once) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
 /* ── Back / Next ── */

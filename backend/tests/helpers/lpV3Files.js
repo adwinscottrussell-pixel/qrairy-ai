@@ -98,6 +98,7 @@ const LPV3_FILES = [
   'frontend/public/js/studio/onboarding-shell.js',
   'frontend/public/js/studio/onboarding-previews.js', // O0.1: the Step 1 previews (core.js output)
   'frontend/public/js/studio/onboarding-model.js', // O1: Step 2's checks and the page it makes
+  'frontend/public/js/studio/onboarding-theme.js', // O2.1: Light / Dark (the Studio's preference)
   'frontend/public/images/qraivy-onboarding-logo.jpg', // the approved onboarding logo
   'backend/tests/studioOnboarding.test.js',
   'backend/tests/studioOnboarding.browser.test.js',
