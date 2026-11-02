@@ -88,8 +88,8 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/studio/onboarding-theme.js', 'js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
-    'js/lpV3/core.js', 'js/studio/studio-demo.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 10, 'no inline script');
+    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 9, 'no inline script');
   // O2.1: the theme script in <head>, after the stylesheet and before the body (no flash of the other appearance)
   const head = HTML.slice(0, HTML.indexOf('</head>'));
   assert.ok(head.indexOf('css/studio-onboarding.css') < head.indexOf('js/studio/onboarding-theme.js'), 'the theme script in the head, after the stylesheet');
@@ -114,7 +114,14 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
     const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
     assert.ok(card.indexOf('<div class="ob-card__media" aria-hidden="true">') < card.indexOf('<iframe') && card.indexOf('<iframe') < card.indexOf('<button'), id + ': the frame in the hidden part, before (not inside) the button');
   }
-  assert.equal((HTML.match(/data-ob="example"/g) || []).length, 2, 'the two Coming soon cards say Example');
+  // the DEMO label on each of the three example pictures (inside the phone), never on the card or its button
+  assert.equal((HTML.match(/<div class="ob-phone"><span class="ob-card__demo" data-ob="demo">DEMO<\/span><div class="ob-phone__screen">/g) || []).length, 3);
+  for (const id of ['instagram', 'website', 'scratch']) {
+    const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
+    assert.ok(card.indexOf('ob-card__demo') > card.indexOf('<div class="ob-card__media ob-card__media--' + id + '" aria-hidden="true">') && card.indexOf('ob-card__demo') < card.indexOf('<button'), id + ': DEMO in the hidden picture, not in the button');
+  }
+  assert.ok(!/data-ob="example"|ob-card__example/.test(HTML));
+  assert.equal(OB.TX.en.demo, 'DEMO'); assert.equal(OB.TX.de.demo, 'DEMO');
   // the header logo: the approved file, at its own proportions (square, 1254 x 1254), the only image
   assert.deepEqual([...HTML.matchAll(/<img\b[^>]*>/g)].map((m) => m[0]), ['<img class="ob-brand__logo" src="images/qraivy-onboarding-logo.jpg" width="1254" height="1254" alt="QRAIVY" decoding="async" />']);
   const logo = fs.readFileSync(path.join(PUB, 'images', 'qraivy-onboarding-logo.jpg'));
@@ -372,39 +379,48 @@ test('O2 live frame: the fixed script (no customer data) blocks clicks and links
   assert.deepEqual(PV.initMessage(NaN, null), { type: 'init', y: 0, reveal: null });
 });
 
-test('O0.1 previews: real QRAIVY pages from core.js; examples from the Studio demo, the scratch page is the draft starter; no request', () => {
+test('Step 1 demo pages: three fictional V3 designs (creator, Bäckerei MorgenGold, finished café page), EN / DE, valid by core.js; only the three local AI photos; no request', () => {
   const V3 = require('../src/lpV3/core.js');
   const PV = require('../../frontend/public/js/studio/onboarding-previews.js');
-  const ctx = { window: {} };
-  vm.runInNewContext(read('js/studio/studio-demo.js'), ctx);
-  const demo = JSON.parse(JSON.stringify(ctx.window.QRAIVY_STUDIO_DEMO));
-  const demoIds = demo.design.pages[0].sections.map((s) => s.id);
-  for (const id of ['instagram', 'website']) {
-    const d = PV.exampleDesign(demo, id);
-    const v = V3.validateDesign(d);
-    assert.ok(v.ok, id + ' is a valid design: ' + JSON.stringify(v.errors));
-    assert.deepEqual(d.pages[0].sections.map((s) => s.id), PV.EXAMPLES[id], id);
-    for (const s of d.pages[0].sections) assert.ok(demoIds.includes(s.id), 'demo content only: ' + s.id);
-    assert.ok(d.pages[0].sections.every((s) => V3.describe().sections[s.type].rendered), id + ': only sections the public page renders');
-  }
-  assert.deepEqual(demo, JSON.parse(JSON.stringify(ctx.window.QRAIVY_STUDIO_DEMO)), 'the demo itself is not changed');
+  const IM = require('../../frontend/public/js/studio/studio-demo-images.js');
+  assert.deepEqual(PV.CARDS, ['instagram', 'website', 'scratch']);
+  assert.deepEqual(Object.values(PV.PHOTOS).sort(), IM.STARTERS.slice().sort(), 'the three starter photos, nothing else');
+  const photoUrls = IM.STARTERS.map(IM.cloudinaryUrl);
   for (const l of ['en', 'de']) {
-    const d = PV.scratchDesign(V3, l);
-    assert.ok(V3.validateDesign(d).ok, 'scratch ' + l);
-    const hero = V3.starter('hero', l);
-    assert.deepEqual(d.pages[0].sections.map((s) => [s.type, s.variant]), [['hero', hero.variant]], 'one starter Hero, as POST /studio/drafts creates');
-    assert.equal(d.pages[0].sections[0].data.subheadline, hero.data.subheadline);
-    assert.equal(d.pages[0].sections[0].data.headline, PV.SCRATCH_NAME[l]);
-    assert.equal(d.settings.language, l);
+    const all = PV.demos(V3, IM.cloudinaryUrl, l);
+    for (const id of PV.CARDS) {
+      const v = V3.validateDesign(all[id].design);
+      assert.ok(v.ok, l + ' ' + id + ' is a valid design: ' + JSON.stringify(v.errors));
+      assert.equal(all[id].design.settings.language, l);
+      assert.ok(all[id].design.pages[0].sections.every((s) => V3.describe().sections[s.type].rendered), id + ': only sections the public page renders');
+      // every image is one of the three local, AI-labelled photos
+      const imgs = JSON.stringify(all[id].design).match(/https:\/\/res\.cloudinary\.com[^"]+/g) || [];
+      assert.ok(imgs.every((u) => photoUrls.includes(u)), id + ': only the starter photos');
+    }
+    assert.deepEqual(PV.CARDS.map((k) => all[k].name), ['Mia backt', 'Bäckerei MorgenGold', 'Café Sonnenschein']);
+    const types = (k) => all[k].design.pages[0].sections.map((s) => s.type);
+    assert.deepEqual(types('instagram'), ['hero', 'gallery', 'socialMedia', 'products'], 'creator storefront: profile header, photo feed, social links, shop');
+    assert.equal(all.instagram.design.pages[0].sections[1].data.images.length, 4, 'the feed: a 2 x 2 grid on the phone');
+    assert.ok(all.instagram.design.pages[0].sections[3].data.items.every((p) => p.price && p.image), 'the shop: products with prices and photos');
+    assert.deepEqual(types('website'), ['hero', 'products', 'openingHours', 'contact'], 'bakery: photo hero, products, hours, contact');
+    assert.deepEqual(types('scratch'), ['hero', 'buttons', 'text', 'openingHours'], 'finished page: hero, buttons, sections');
+    assert.ok(JSON.stringify(all.website.design).includes('Ulm'));
+    assert.deepEqual([all.scratch.design.pages[0].sections[0].variant, all.scratch.design.pages[0].sections[0].data.backgroundImage], ['overlay', IM.cloudinaryUrl('bakery-coffee-01')], 'the finished page: a photo hero (overlay keeps the text readable)');
   }
-  const html = PV.previews({ V3, demo, lang: 'de', localize: (h) => h + '<!--localized-->' });
-  for (const id of ['instagram', 'website', 'scratch']) assert.ok(/^<!DOCTYPE html>/.test(html[id]) && html[id].endsWith('<!--localized-->'), id + ': rendered by core.js, then localized');
-  assert.ok(html.instagram.includes('Aus unserer Backstube') && html.website.includes('Öffnungszeiten') && html.scratch.includes('Ihr Unternehmen'));
+  // rendered by core.js, localized, no script; each photo marked by the localizer (the AI label) in the browser
+  const html = PV.previews({ V3, imageUrl: IM.cloudinaryUrl, lang: 'de', localize: (h) => h + '<!--localized-->' });
+  for (const id of PV.CARDS) assert.ok(/^<!DOCTYPE html>/.test(html[id]) && html[id].endsWith('<!--localized-->'), id + ': rendered by core.js, then localized');
+  assert.ok(html.instagram.includes('Neueste Beiträge') && html.instagram.includes('Zum Shop') && html.website.includes('Jeden Morgen ofenfrisch') && html.scratch.includes('Tisch reservieren'));
   assert.ok(!/<script/i.test(html.instagram + html.website + html.scratch), 'no script in the pages');
+  assert.equal(PV.previews({ V3, imageUrl: IM.cloudinaryUrl, lang: 'en' }).website.includes('Fresh from the oven every morning'), true);
   const src = code(read('js/studio/onboarding-previews.js'));
-  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.cookie/, /https?:\/\//, /innerHTML|document\.write/, /\beval\s*\(|new\s+Function|toString\s*\(/]) assert.ok(!re.test(src), 'onboarding-previews.js must not contain ' + re);
-  // the frames get the page only through srcdoc
+  for (const re of [/\bfetch\b/, /XMLHttpRequest/, /WebSocket/, /sendBeacon/, /localStorage|sessionStorage|document\.cookie/, /innerHTML|document\.write/, /\beval\s*\(|new\s+Function|toString\s*\(/]) assert.ok(!re.test(src), 'onboarding-previews.js must not contain ' + re);
+  // the only addresses in the file are the demo pages' own social / map links (page content in frames that cannot navigate), never an image or script
+  const urls = src.match(/https?:\/\/[^'"\s]+/g) || [];
+  assert.ok(urls.every((u) => /^https:\/\/(www\.instagram\.com|www\.tiktok\.com|www\.youtube\.com|www\.pinterest\.de|wa\.me|maps\.google\.com)\//.test(u)), 'only demo link targets: ' + urls);
+  // the frames get the page only through srcdoc; the Studio demo is no longer loaded here
   assert.ok(code(SRC).includes('frames[i].srcdoc = page;'));
+  assert.ok(!HTML.includes('studio-demo.js"') && !code(SRC).includes('QRAIVY_STUDIO_DEMO'));
 });
 
 test('O2.1 appearance: the Studio\'s preference (light / dark / system, Light by default); stored only there; no request; the markup', () => {

@@ -72,7 +72,7 @@
       opt_instagram: 'Instagram', opt_instagram_text: 'Start with your Instagram profile.',
       opt_website: 'Existing Website', opt_website_text: 'Bring your existing website into QRAIVY.',
       opt_scratch: 'Start from Scratch', opt_scratch_text: 'Build your landing page your way.',
-      soon: 'Coming soon', available: 'Available', example: 'Example',
+      soon: 'Coming soon', available: 'Available', demo: 'DEMO',
       start_help: 'Instagram and website import are coming soon. Nothing is imported in this version.',
       business_text: 'Your business name, a short description and your social media links.',
       sections_text: 'Pick the sections for your page, put them in order and see a live phone preview.',
@@ -138,7 +138,7 @@
       opt_instagram: 'Instagram', opt_instagram_text: 'Starten Sie mit Ihrem Instagram-Profil.',
       opt_website: 'Bestehende Website', opt_website_text: 'Bringen Sie Ihre bestehende Website zu QRAIVY.',
       opt_scratch: 'Neu beginnen', opt_scratch_text: 'Gestalten Sie Ihre Landingpage ganz nach Ihren Wünschen.',
-      soon: 'Demnächst', available: 'Verfügbar', example: 'Beispiel',
+      soon: 'Demnächst', available: 'Verfügbar', demo: 'DEMO',
       start_help: 'Der Import von Instagram und Websites folgt bald. In dieser Version wird nichts importiert.',
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
@@ -262,14 +262,14 @@
     var AUTH = null, clerk = null;
 
     function t(k) { return tx(current, k); }
-    // Step 1 previews: real QRAIVY pages (core.js) in the cards' phones, drawn once per
-    // language and again when the demo photos are ready (inline, with the AI label)
-    var PV = win.QraivyOnboardingPreviews, V3 = win.QraivyV3, DEMO = win.QRAIVY_STUDIO_DEMO, IMAGES = win.QraivyStudioDemoImages;
+    // Step 1 previews: three DEMO pages (onboarding-previews.js, rendered by core.js) in the cards' phones, drawn once
+    // per language and again when the demo photos are ready (inline, with the AI label)
+    var PV = win.QraivyOnboardingPreviews, V3 = win.QraivyV3, IMAGES = win.QraivyStudioDemoImages;
     var drawn = null;
     function previews(force) {
-      if (!PV || !V3 || !DEMO || (!force && drawn === current)) return;
+      if (!PV || !V3 || !IMAGES || (!force && drawn === current)) return;
       drawn = current;
-      var html = PV.previews({ V3: V3, demo: DEMO, lang: current, localize: IMAGES ? IMAGES.localizeHtml : null });
+      var html = PV.previews({ V3: V3, imageUrl: IMAGES.cloudinaryUrl, lang: current, localize: IMAGES.localizeHtml });
       var frames = doc.querySelectorAll('.ob-phone__frame[data-preview]');
       for (var i = 0; i < frames.length; i++) {
         var page = html[frames[i].getAttribute('data-preview')];

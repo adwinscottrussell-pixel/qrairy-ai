@@ -43,8 +43,11 @@
   --ob-placeholder: #94a3b8;
   --ob-border-hover: #b4bbc8;
   --ob-tag-bg: #eef0f4;
-  --ob-example-bg: rgba(15, 23, 42, 0.07);
   --ob-stage: linear-gradient(180deg, #eef1f6, #e4e8ef);
+  /* Step 1 demo stages: each card its own soft tint */
+  --ob-stage-instagram: linear-gradient(140deg, #fde4ee 0%, #f6e3fb 55%, #ece6ff 100%);
+  --ob-stage-website: linear-gradient(140deg, #fbf0de 0%, #f6e5cf 100%);
+  --ob-stage-scratch: linear-gradient(140deg, #dcf2ee 0%, #e9f6f3 100%);
   --ob-input-ring: rgba(255, 90, 31, 0.18);
   --ob-focus: rgba(255, 90, 31, 0.55);
   --ob-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.07);
@@ -89,8 +92,10 @@
   --ob-danger-ring: rgba(239, 68, 68, 0.28);
   --ob-placeholder: #8a8a84;
   --ob-tag-bg: rgba(255, 255, 255, 0.08);
-  --ob-example-bg: rgba(255, 255, 255, 0.1);
   --ob-stage: linear-gradient(180deg, #1c1c1c, #141414);
+  --ob-stage-instagram: linear-gradient(140deg, #2a1420 0%, #23142b 55%, #1b1630 100%);
+  --ob-stage-website: linear-gradient(140deg, #2a1d10 0%, #20170e 100%);
+  --ob-stage-scratch: linear-gradient(140deg, #0f2421 0%, #111c1b 100%);
   --ob-input-ring: rgba(255, 90, 31, 0.3);
   --ob-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
   --ob-page: radial-gradient(120% 90% at 50% 0%, #121212 0%, #0a0a0a 60%);
@@ -211,7 +216,6 @@ body.ob-page {
 .ob-card:hover:has(.ob-option:not(:disabled)) { border-color: var(--ob-accent); }
 .ob-card:has(.ob-option[aria-checked="true"]) { border-color: var(--ob-accent); background: var(--ob-accent-soft); box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.15); }
 .ob-card:has(.ob-option:disabled) { background: var(--ob-surface-2); }
-.ob-card:has(.ob-option:disabled) .ob-card__media { filter: saturate(0.75); opacity: 0.92; }
 
 .ob-option {
   position: static; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; padding: 0; text-align: left;
@@ -241,19 +245,27 @@ body.ob-page {
 
 /* the page behind the phone: a quiet stage */
 .ob-card__media { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; padding: 10px 12px 8px; border-radius: 12px; background: var(--ob-stage); pointer-events: none; }
+.ob-card__media--instagram { background: var(--ob-stage-instagram); }
+.ob-card__media--website { background: var(--ob-stage-website); }
+.ob-card__media--scratch { background: var(--ob-stage-scratch); }
 /* phones: beside the phone, the title, text and badge one below the other (the phone is the picture; no icon) */
 @media (max-width: 759px) {
   .ob-option { flex-direction: column; align-items: flex-start; gap: 6px; }
   .ob-option__icon { display: none; }
   .ob-card__media { padding: 8px 10px 6px; }
 }
-.ob-card__example { padding: 1px 8px; border-radius: 999px; background: var(--ob-example-bg); color: var(--ob-muted); font: 600 10.5px/1.6 Inter, sans-serif; letter-spacing: 0.02em; }
+/* DEMO: on each example picture (the phone), never on the card; black with white text in both themes, a light edge in Dark */
+.ob-card__demo {
+  position: absolute; z-index: 2; top: 10%; right: -10px; padding: 3px 9px; border-radius: 6px;
+  background: #0a0a0a; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.28); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  font: 800 10.5px/1.4 Inter, sans-serif; letter-spacing: 0.14em; transform: rotate(6deg); pointer-events: none;
+}
 
 /* ── the phone: the Studio phone's look (studio.css Phase C.2: metal edge, black
    bezel, status bar with the Dynamic Island, home indicator), at --s of the
    390 x 844 page. Appearance only; the page inside is core.js output. ── */
 .ob-phone {
-  --s: 0.2154;                      /* 84 px wide on phones */
+  --s: 0.2462;                      /* 96 px wide on phones */
   position: relative; padding: 4px; border: 2px solid transparent; border-radius: 22px;
   background:
     linear-gradient(#0a0a0c, #0a0a0c) padding-box,

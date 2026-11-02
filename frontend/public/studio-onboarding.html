@@ -141,10 +141,10 @@
         <p class="ob-lead" data-ob="start_text">Choose how to create your landing page. You can change everything later in the Studio.</p>
         <div class="ob-options" role="radiogroup" aria-labelledby="ob-start-title" id="ob-options">
           <div class="ob-card" data-card="instagram">
-            <!-- a real QRAIVY page (core.js), decoration only: sandboxed frame without permissions, not focusable, hidden from screen readers -->
-            <div class="ob-card__media" aria-hidden="true">
-              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="instagram" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
-              <span class="ob-card__example" data-ob="example">Example</span>
+            <!-- a DEMO page rendered by core.js (fictional, nothing imported), decoration only: sandboxed frame without permissions,
+                 not focusable, hidden from screen readers; the DEMO label sits on the picture, not on the card -->
+            <div class="ob-card__media ob-card__media--instagram" aria-hidden="true">
+              <div class="ob-phone"><span class="ob-card__demo" data-ob="demo">DEMO</span><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="instagram" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
             </div>
             <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="instagram" disabled aria-disabled="true">
               <span class="ob-option__icon ob-option__icon--instagram" aria-hidden="true"><svg class="ob-ic"><use href="#ob-instagram"/></svg></span>
@@ -156,9 +156,8 @@
             </button>
           </div>
           <div class="ob-card" data-card="website">
-            <div class="ob-card__media" aria-hidden="true">
-              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="website" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
-              <span class="ob-card__example" data-ob="example">Example</span>
+            <div class="ob-card__media ob-card__media--website" aria-hidden="true">
+              <div class="ob-phone"><span class="ob-card__demo" data-ob="demo">DEMO</span><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="website" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
             </div>
             <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="website" disabled aria-disabled="true">
               <span class="ob-option__icon ob-option__icon--website" aria-hidden="true"><svg class="ob-ic"><use href="#ob-globe"/></svg></span>
@@ -170,8 +169,8 @@
             </button>
           </div>
           <div class="ob-card" data-card="scratch">
-            <div class="ob-card__media" aria-hidden="true">
-              <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="scratch" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
+            <div class="ob-card__media ob-card__media--scratch" aria-hidden="true">
+              <div class="ob-phone"><span class="ob-card__demo" data-ob="demo">DEMO</span><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" data-preview="scratch" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
             </div>
             <button type="button" class="ob-option" role="radio" aria-checked="false" data-option="scratch">
               <span class="ob-option__icon ob-option__icon--scratch" aria-hidden="true"><svg class="ob-ic"><use href="#ob-spark"/></svg></span>
@@ -335,9 +334,8 @@
 </main>
 
 <script src="js/studio/studio-auth.js"></script>
-<!-- Step 1 previews (O0.1): the shared renderer, the Studio demo and its photos, the preview builder -->
+<!-- Step 1 previews: the shared renderer, the three local AI-labelled photos, the DEMO pages -->
 <script src="js/lpV3/core.js"></script>
-<script src="js/studio/studio-demo.js"></script>
 <script src="js/studio/studio-demo-images.js"></script>
 <script src="js/studio/onboarding-previews.js"></script>
 <!-- Step 2 (O1): the answers' checks and the page they make -->

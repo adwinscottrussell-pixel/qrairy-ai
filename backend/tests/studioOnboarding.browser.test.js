@@ -220,24 +220,30 @@ test('phone, German: one column, no sideways scroll, Back / Next reachable; lang
   await page.close();
 });
 
-test('O0.1 previews: real QRAIVY pages in sandboxed phone frames; AI label on the photos; a click on the phone selects the card', async () => {
+test('Step 1 demo pages: three DEMO pages in sandboxed phone frames, DEMO on each picture, AI label on every photo; Coming soon cards disabled; a click on the scratch phone selects it', async () => {
   const { page, api, external, missing } = await onboarding();
   await page.waitForFunction(() => [...document.querySelectorAll('.ob-phone__frame[data-preview]')].every((f) => f.srcdoc.length > 1000), { timeout: 5000 });
   // the photos become inline images with the AI label once loaded
   await page.waitForFunction(() => document.querySelector('[data-preview="instagram"]').srcdoc.includes('AI · KI-generiert'), { timeout: 8000 });
   const fr = await page.$$eval('.ob-phone__frame[data-preview]', (ns) => ns.map((f) => ({ id: f.dataset.preview, sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), inButton: !!f.closest('button'),
-    musterbaeckerei: f.srcdoc.includes('Musterbäckerei'), ai: (f.srcdoc.match(/AI · KI-generiert/g) || []).length, imgs: (f.srcdoc.match(/<img\b/g) || []).length,
-    remote: /src="https?:/.test(f.srcdoc), script: /<script/i.test(f.srcdoc), scratch: f.srcdoc.includes('Your business'), w: Math.round(f.getBoundingClientRect().width) })));
+    name: ['Mia backt', 'Bäckerei MorgenGold', 'Café Sonnenschein'].find((n) => f.srcdoc.includes(n)) || null, ai: (f.srcdoc.match(/AI · KI-generiert/g) || []).length, imgs: (f.srcdoc.match(/<img\b/g) || []).length,
+    remote: /src="https?:/.test(f.srcdoc), script: /<script/i.test(f.srcdoc), w: Math.round(f.getBoundingClientRect().width) })));
   for (const f of fr) {
     assert.equal(f.sandbox, '', f.id + ': sandboxed with no permissions');
     assert.ok(f.tab === -1 && f.hidden && !f.inButton, f.id + ': decoration only');
     assert.ok(!f.remote && !f.script, f.id + ': no remote image, no script');
   }
   const by = Object.fromEntries(fr.map((f) => [f.id, f]));
-  assert.ok(by.instagram.musterbaeckerei && by.website.musterbaeckerei, 'the examples are the Studio demo');
-  assert.equal(by.instagram.ai, by.instagram.imgs, 'every photo in the Instagram example carries the AI label');
-  assert.equal(by.website.ai, by.website.imgs, 'and in the Website example');
-  assert.ok(by.scratch.scratch && by.scratch.imgs === 0, 'Start from Scratch: the starter page, no photo');
+  assert.deepEqual([by.instagram.name, by.website.name, by.scratch.name], ['Mia backt', 'Bäckerei MorgenGold', 'Café Sonnenschein'], 'the three demo pages');
+  assert.ok(by.instagram.imgs === 7 && by.instagram.ai === 7, 'creator storefront (feed + shop): every photo carries the AI label');
+  assert.ok(by.website.imgs === 4 && by.website.ai === 4, 'bakery page: every photo carries the AI label');
+  assert.ok(by.scratch.imgs === 1 && by.scratch.ai === 1, 'the finished page: its photo hero carries the AI label');
+  // DEMO: on each picture (over the phone), readable, never on the button; the import cards still Coming soon and disabled
+  const demo = await page.$$eval('.ob-card', (cs) => cs.map((c) => { const d = c.querySelector('.ob-card__demo'), r = d.getBoundingClientRect(), p = c.querySelector('.ob-phone').getBoundingClientRect(), cr = c.getBoundingClientRect(), st = getComputedStyle(d);
+    return { card: c.dataset.card, text: d.textContent, onPhone: r.left < p.right && r.right > p.left && r.top < p.bottom && r.bottom > p.top, inCard: r.left >= cr.left && r.right <= cr.right, inButton: !!d.closest('button'),
+      bg: st.backgroundColor, color: st.color, disabled: c.querySelector('.ob-option').disabled, badge: c.querySelector('.ob-badge').textContent }; }));
+  assert.deepEqual(demo.map((d) => [d.card, d.text, d.onPhone, d.inCard, d.inButton, d.bg, d.color]), ['instagram', 'website', 'scratch'].map((k) => [k, 'DEMO', true, true, false, 'rgb(10, 10, 10)', 'rgb(255, 255, 255)']));
+  assert.deepEqual(demo.map((d) => [d.disabled, d.badge]), [[true, 'Coming soon'], [true, 'Coming soon'], [false, 'Available']]);
   assert.ok(Math.abs(fr[0].w - 132) <= 1, 'desktop phone screen 132 px wide: ' + fr[0].w);
   // a click on the phone (the card's picture) selects the card; on a Coming soon card nothing happens
   const at = async (id) => { const b = await page.$eval('[data-card="' + id + '"] .ob-phone', (n) => { const r = n.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }); await page.mouse.click(b.x, b.y); };
@@ -248,10 +254,14 @@ test('O0.1 previews: real QRAIVY pages in sandboxed phone frames; AI label on th
   // keyboard: the three frames are never focused; Tab reaches Start from Scratch
   const focusable = await page.$$eval('#ob-options [tabindex], #ob-options button, #ob-options iframe', (ns) => ns.filter((n) => n.tabIndex >= 0 && !n.disabled).map((n) => n.dataset.option || n.tagName));
   assert.deepEqual(focusable, ['scratch']);
-  // German: the scratch page follows the language
+  // German: the demo pages follow the language; DEMO stays DEMO; the badges are German
   await page.click('.ob-lang__btn[data-lang="de"]');
-  await page.waitForFunction(() => document.querySelector('[data-preview="scratch"]').srcdoc.includes('Ihr Unternehmen'), { timeout: 3000 });
-  assert.deepEqual(await page.$$eval('.ob-card__example', (ns) => ns.map((n) => n.textContent)), ['Beispiel', 'Beispiel']);
+  await page.waitForFunction(() => document.querySelector('[data-preview="scratch"]').srcdoc.includes('Tisch reservieren') && document.querySelector('[data-preview="website"]').srcdoc.includes('Jeden Morgen ofenfrisch'), { timeout: 3000 });
+  assert.deepEqual(await page.$$eval('.ob-card__demo', (ns) => ns.map((n) => n.textContent)), ['DEMO', 'DEMO', 'DEMO']);
+  assert.deepEqual(await page.$$eval('.ob-option .ob-badge', (ns) => ns.map((n) => n.textContent)), ['Demnächst', 'Demnächst', 'Verfügbar']);
+  // Next with Start from Scratch still leads to Step 2
+  await page.click('#ob-next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 2 von 4');
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, [], 'nothing from elsewhere (photos are local, inline)'); assert.deepEqual(missing, []);
   await page.close();
 });
@@ -790,7 +800,7 @@ test('O2.1: readable contrast in Light and Dark on every step; dark text on oran
     const at = async (label, sels) => { for (const s of sels) { const r = await contrast(page, s); checks.push([label + ' ' + s, r]); } };
     await page.waitForFunction(() => [...document.querySelectorAll('.ob-phone__frame[data-preview]')].every((f) => f.srcdoc.length > 1000), { timeout: 5000 });
     await page.click('[data-option="scratch"]');
-    await at('Step 1', ['#ob-start-title', '[data-ob="start_text"]', '.ob-option[data-option="scratch"] .ob-option__title', '.ob-option[data-option="scratch"] .ob-option__text', '.ob-badge--ready', '.ob-badge--soon', '[data-ob="start_help"]', '#ob-next', '.ob-card__example']);
+    await at('Step 1', ['#ob-start-title', '[data-ob="start_text"]', '.ob-option[data-option="scratch"] .ob-option__title', '.ob-option[data-option="scratch"] .ob-option__text', '.ob-badge--ready', '.ob-badge--soon', '[data-ob="start_help"]', '#ob-next', '.ob-card__demo']);
     frames.step1 = frames.step1 || [];
     frames.step1.push(await page.$$eval('.ob-phone__frame[data-preview]', (ns) => ns.map((f) => f.srcdoc).join('|')));
     const btn = await page.$eval('#ob-next', (b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).color]);
