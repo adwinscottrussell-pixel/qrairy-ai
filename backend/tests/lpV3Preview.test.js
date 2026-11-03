@@ -37,6 +37,30 @@ const withSections = (...sections) => {
 };
 const PREVIEW_MARKERS = /data-v3-id|data-v3-part|v3-ph-section|v3-img-ph|v3-sample|v3-stamp|Beispiel|Sample offer|\.v3-ph-note/;
 
+test('Social Media: every platform shows its own fixed icon (no initial), in the page text colour; links, names and order unchanged', () => {
+  const URLS = { instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a', tiktok: 'https://www.tiktok.com/@a', youtube: 'https://www.youtube.com/@a',
+    linkedin: 'https://www.linkedin.com/in/a', x: 'https://x.com/a', pinterest: 'https://www.pinterest.com/a', whatsapp: 'https://wa.me/491701234567' };
+  const NAMES = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', pinterest: 'Pinterest', whatsapp: 'WhatsApp' };
+  const order = V3.SOCIAL_PLATFORMS.slice().reverse();
+  for (const variant of ['icons', 'buttons']) {
+    const d = { schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_soc01', type: 'socialMedia', variant, data: { title: 'T', links: order.map((p) => ({ platform: p, url: URLS[p] })) } }] }] };
+    const r = V3.renderDesign(d, { businessName: 'B' });
+    assert.ok(r.ok, JSON.stringify(r.errors));
+    const chips = [...r.html.matchAll(/<a class="v3-social v3-social-(\w+)" href="([^"]+)" target="_blank" rel="noopener noreferrer" aria-label="([^"]+)"><span class="v3-social-mark" aria-hidden="true">(.*?)<\/span>(<span>[^<]*<\/span>)?<\/a>/g)];
+    assert.deepEqual(chips.map((c) => c[1]), order, variant + ': the stored order');
+    for (const c of chips) {
+      assert.equal(c[2], URLS[c[1]], c[1] + ' address');
+      assert.equal(c[3], NAMES[c[1]], c[1] + ' accessible name');
+      assert.match(c[4], /^<svg class="v3-social-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="[0-9A-Za-z .,-]+"\/><\/svg>$/, c[1] + ': a fixed icon, no initial');
+      assert.ok(!c[4].includes(URLS[c[1]]) && !/[<>"']/.test(c[4].replace(/^<svg[^>]*><path d="/, '').replace(/"\/><\/svg>$/, '')), c[1] + ': nothing from the link in the icon');
+      if (variant === 'buttons') assert.equal(c[5], '<span>' + NAMES[c[1]] + '</span>', c[1] + ': the name stays next to the icon');
+    }
+    assert.equal(new Set(chips.map((c) => c[4])).size, 8, variant + ': eight different icons');
+  }
+  const css = V3.renderDesign({ schemaVersion: 1, pages: [{ id: 'start', sections: [] }] }, {}).html;
+  assert.ok(css.includes('.v3-social-ic{display:block;width:20px;height:20px;fill:currentColor;stroke:none}'), 'the icon takes the chip\'s text colour');
+});
+
 test('public output of the earlier section types is unchanged (b04f15e reference)', () => {
   const ctxs = [CTX, { businessName: '"><script>x</script>' }];
   assert.equal(GOLDEN.generatedFrom, 'b04f15e90c2ebeae1d2079991ccfa3c10821505a');

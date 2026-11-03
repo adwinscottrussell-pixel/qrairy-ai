@@ -240,7 +240,7 @@ test('one row open at a time', async () => {
   await page.close();
 });
 
-test('all eight platforms: invalid address -> inline error and the last valid preview; valid -> the link with its letter mark', async () => {
+test('all eight platforms: invalid address -> inline error and the last valid preview; valid -> the link with its platform icon', async () => {
   const { page } = await openSocial();
   await openRow(page, 0);
   const cases = [
@@ -268,7 +268,7 @@ test('all eight platforms: invalid address -> inline error and the last valid pr
     await sleep(250);
     assert.equal(await first(), lastValid, p + ': the preview keeps the last valid link');
     await typeInto(page, it(0, 'url'), good);
-    await previewHas(page, '<a class="v3-social v3-social-' + p + '" href="' + good + '" target="_blank" rel="noopener noreferrer" aria-label="' + label + '"><span class="v3-social-mark" aria-hidden="true">' + label[0] + '</span></a>');
+    await previewHas(page, '<a class="v3-social v3-social-' + p + '" href="' + good + '" target="_blank" rel="noopener noreferrer" aria-label="' + label + '"><span class="v3-social-mark" aria-hidden="true"><svg class="v3-social-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="');  // the platform's icon (no letter)
     assert.equal(await errorOf(page, 'data.links[0].url'), '');
     assert.equal(await stale(page), false);
     assert.equal((await rows(page))[0], label + ' · ' + new URL(good).host);
@@ -282,7 +282,7 @@ test('all eight platforms: invalid address -> inline error and the last valid pr
   await typeInto(page, it(0, 'url'), 'abc');
   await until(async () => (await errorOf(page, 'data.links[0].url')) === 'Enter the WhatsApp number in international format, e.g. +49 151 2345678.', 'no digits');
   await typeInto(page, it(0, 'url'), '+49 151 2345678');
-  await previewHas(page, '<a class="v3-social v3-social-whatsapp" href="https://wa.me/491512345678" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><span class="v3-social-mark" aria-hidden="true">W</span></a>');
+  await previewHas(page, '<a class="v3-social v3-social-whatsapp" href="https://wa.me/491512345678" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><span class="v3-social-mark" aria-hidden="true"><svg class="v3-social-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="');
   assert.equal(await errorOf(page, 'data.links[0].url'), '');
   await page.close();
 });
@@ -333,7 +333,7 @@ test('Style: Icons / Buttons layouts, background, alignment (the links are centr
   const { page } = await openSocial();
   await tab(page, 'style');
   await page.select(fp('variant', 'select'), 'buttons');
-  await previewHas(page, '<span class="v3-social-mark" aria-hidden="true">I</span><span>Instagram</span></a>');
+  await previewHas(page, '</svg></span><span>Instagram</span></a>');  // the icon, then the platform name
   await page.select(fp('variant', 'select'), 'icons');
   await previewLacks(page, '<span>Instagram</span>');
   await page.select(fp('variant', 'select'), 'buttons');

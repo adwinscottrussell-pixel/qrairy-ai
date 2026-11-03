@@ -238,6 +238,8 @@ test('remove: Cancel keeps everything; untouched starter content goes without a 
   await act(o.page, fresh, 'remove');
   assert.equal(o.log.dialogs.length, n, 'starter content only: no question');
   assert.ok(!(await ids(o.page)).includes(fresh));
+  // wait for the removal's own announcement (the previous one, "hinzugefügt", may still be showing for a moment)
+  await until(async () => /entfernt/.test(await o.page.$eval('#st-live', (n) => n.textContent)), 'the removal announcement');
   assert.match(await live(o.page), /^„Textabschnitt“ entfernt\. Mit „Rückgängig“ holen Sie ihn zurück\.$/);
   assert.equal((await state(o.page)).selected, 's_website', 'the neighbour is selected');
   // Delete key in the Sections list

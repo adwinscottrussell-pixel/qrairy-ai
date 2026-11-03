@@ -5,8 +5,8 @@
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 14383,
-      "sha256": "85a9dd3629c79ab647d347a33df0a2bccf0ca4c84e9063f6d0a2d561cb858827",
+      "bytes": 16086,
+      "sha256": "8626dfa683bd856d7dfddf6fe2e7768cf459699ea690653436c5daaf811c9480",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 14383,
-      "sha256": "85a9dd3629c79ab647d347a33df0a2bccf0ca4c84e9063f6d0a2d561cb858827",
+      "bytes": 16086,
+      "sha256": "8626dfa683bd856d7dfddf6fe2e7768cf459699ea690653436c5daaf811c9480",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,43 +25,43 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 16348,
-      "sha256": "f891511d13d6990c89ea6077868e210abed93ae826e43b239157a751eb3b7b7c",
+      "bytes": 18567,
+      "sha256": "ae812bc62d8e540ef09f32f05fe56c526d2bc1117a2ea4849fde176a9730ed33",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 0,
-      "bytes": 8990,
-      "sha256": "796cb5193b1d6c2aec05f4a6380a2d511e9ec3e5f0fb728c9420f7f6c0732a85",
+      "bytes": 9091,
+      "sha256": "a36011d6785048e182f196caaf9cb416e3c3280f474c092c4e83d27e98d64c9c",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 0,
-      "bytes": 8691,
-      "sha256": "a49a7a0c57768ea5f243b02a4efcc379860d2edd41696ebe122d4070d0ecc3c0",
+      "bytes": 8792,
+      "sha256": "0441c81074a04fe21547cadf3ca4ffbcd5cf2e8ce4cf5947d63907fc96f90a7f",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 16373,
-      "sha256": "a8118cdea0057739c797982a0435069dae35886c620558f062d0655e690ad3fe",
+      "bytes": 18592,
+      "sha256": "f50d5cd3c85077d40df13356b8fa3dcf3bbc522f252bb2528778a32cb8325860",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 1,
-      "bytes": 9015,
-      "sha256": "fb939506a5525200e2c8bb74a6d7485d60d47eb3664edb87df0396ae69abd02f",
+      "bytes": 9116,
+      "sha256": "c84a374f592336f30b856c2072f6cfb1d5ba9e50119406b58e4c02ef6d24f822",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 1,
-      "bytes": 8716,
-      "sha256": "679a837f19e7344baa1a5fcb231063ab25b0b73384c497156386d54237f2b42e",
+      "bytes": 8817,
+      "sha256": "e6165318ee1020602e4f175af076725a5f841ccca64c24bae2546c825fa5af8e",
       "skipped": []
     }
   ],
@@ -122,6 +122,16 @@
         "allRenderedVariantsHeroSimple"
       ],
       "reason": "Hero mobile spacing and badge (owner-approved after the Studio V3 staging visual review): .v3-eyebrow font-size 11px -> 12px; split Hero on phones .v3-hero-media{margin-top:20px} (20px between the buttons and the stacked image), reset to margin-top:0 from 768px (side-by-side grid unchanged). Before the change the committed core.js (14b0fb6) reproduced every previous entry exactly; each new render equals that render with exactly these three CSS edits and nothing else (verified)"
+    },
+    {
+      "date": "2026-11-02",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants",
+        "allRenderedVariantsHeroSplit",
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "Social Media icons (owner-approved, narrowly scoped core.js change): each social chip shows the platform's fixed SVG mark (Instagram, Facebook, TikTok, YouTube, LinkedIn, WhatsApp from controllers/lpController.js; current X and Pinterest marks) instead of its initial, in the page text colour; .v3-social-mark gained display:inline-flex and .v3-social-ic sizes the mark (20px). The rendered pages differ from the previous version only in those chips and that rule (verified); links, labels and order unchanged"
     }
   ]
 }
