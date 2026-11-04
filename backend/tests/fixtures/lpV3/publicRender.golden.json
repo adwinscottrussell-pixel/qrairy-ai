@@ -6,7 +6,7 @@
       "design": "localBusiness",
       "ctx": 0,
       "bytes": 16086,
-      "sha256": "8626dfa683bd856d7dfddf6fe2e7768cf459699ea690653436c5daaf811c9480",
+      "sha256": "188384caa5b2b5b4ac9a7e97ffab47debe8d85f512af508d5edb476832fc416f",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -16,7 +16,7 @@
       "design": "localBusiness",
       "ctx": 1,
       "bytes": 16086,
-      "sha256": "8626dfa683bd856d7dfddf6fe2e7768cf459699ea690653436c5daaf811c9480",
+      "sha256": "188384caa5b2b5b4ac9a7e97ffab47debe8d85f512af508d5edb476832fc416f",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -26,42 +26,42 @@
       "design": "allRenderedVariants",
       "ctx": 0,
       "bytes": 18567,
-      "sha256": "ae812bc62d8e540ef09f32f05fe56c526d2bc1117a2ea4849fde176a9730ed33",
+      "sha256": "b980791fa17487a9124e550775707f401ea4bfab101268e15313806d2be29325",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 0,
       "bytes": 9091,
-      "sha256": "a36011d6785048e182f196caaf9cb416e3c3280f474c092c4e83d27e98d64c9c",
+      "sha256": "7c3737ce1bae883c9eacb886891ed24448304b97fce5aa38f27d4ede3a2640b9",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 0,
       "bytes": 8792,
-      "sha256": "0441c81074a04fe21547cadf3ca4ffbcd5cf2e8ce4cf5947d63907fc96f90a7f",
+      "sha256": "d63322231e8b32bb1e6a9c906b613e15de9d7a660bd6538f68f798bac306c15d",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
       "bytes": 18592,
-      "sha256": "f50d5cd3c85077d40df13356b8fa3dcf3bbc522f252bb2528778a32cb8325860",
+      "sha256": "891bdb028d3ff45409b7f797f8dd5fde507350409b13f1a53f2e576fb7dd025e",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 1,
       "bytes": 9116,
-      "sha256": "c84a374f592336f30b856c2072f6cfb1d5ba9e50119406b58e4c02ef6d24f822",
+      "sha256": "699d865b8fc2a055960f3919c83f68fe8f4b5861eadbd0f7ba3290f2ffe9dc80",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 1,
       "bytes": 8817,
-      "sha256": "e6165318ee1020602e4f175af076725a5f841ccca64c24bae2546c825fa5af8e",
+      "sha256": "5e9e975659b1f67d2e80ce32dff4727c52545e02a33d82ce82b2698300d26de2",
       "skipped": []
     }
   ],
@@ -132,6 +132,16 @@
         "allRenderedVariantsHeroSimple"
       ],
       "reason": "Social Media icons (owner-approved, narrowly scoped core.js change): each social chip shows the platform's fixed SVG mark (Instagram, Facebook, TikTok, YouTube, LinkedIn, WhatsApp from controllers/lpController.js; current X and Pinterest marks) instead of its initial, in the page text colour; .v3-social-mark gained display:inline-flex and .v3-social-ic sizes the mark (20px). The rendered pages differ from the previous version only in those chips and that rule (verified); links, labels and order unchanged"
+    },
+    {
+      "date": "2026-11-03",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants",
+        "allRenderedVariantsHeroSplit",
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "Social Media icon size (owner-approved 24/48, CSS only): .v3-social-ic 20px -> 24px; .v3-social min-height/min-width 44px -> 48px (padding unchanged, 12+24+12 = 48px circle). Verified: output differs from 9316c65 only by these values."
     }
   ]
 }

@@ -58,7 +58,8 @@ test('Social Media: every platform shows its own fixed icon (no initial), in the
     assert.equal(new Set(chips.map((c) => c[4])).size, 8, variant + ': eight different icons');
   }
   const css = V3.renderDesign({ schemaVersion: 1, pages: [{ id: 'start', sections: [] }] }, {}).html;
-  assert.ok(css.includes('.v3-social-ic{display:block;width:20px;height:20px;fill:currentColor;stroke:none}'), 'the icon takes the chip\'s text colour');
+  assert.ok(css.includes('.v3-social-ic{display:block;width:24px;height:24px;fill:currentColor;stroke:none}'), 'the icon takes the chip\'s text colour');
+  assert.ok(css.includes('min-height:48px;min-width:48px;justify-content:center;padding:0 12px;'), 'a 48 px circle around the 24 px icon (12 + 24 + 12)');
 });
 
 test('public output of the earlier section types is unchanged (b04f15e reference)', () => {
