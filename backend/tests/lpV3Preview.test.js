@@ -295,6 +295,29 @@ test('Gallery and Products CSS is added only when such a section is on the page'
   assert.ok(pv.includes('.v3-img-ph{') && pv.includes('.v3-prods{'), 'preview styles and the sample cards');
 });
 
+test('Hero spacing "compact" (T0): its own class and CSS, only on such pages; every other Hero and page unchanged', () => {
+  const heroOf = (d) => d.pages[0].sections.find((s) => s.type === 'hero');
+  const plain = V3.renderDesign(BASE, CTX).html;
+  assert.ok(!plain.includes('v3-hero-compact'), 'a normal Hero: no class, no CSS');
+  for (const variant of ['overlay', 'split', 'simple']) {
+    const d = clone(BASE); const h = heroOf(d);
+    h.variant = variant; h.style = Object.assign({}, h.style, { spacing: 'compact' });
+    const html = V3.renderDesign(d, CTX).html;
+    assert.match(html, /<section id="[^"]+" class="v3-s v3-hero v3-v-[a-z]+ v3-al-[a-z]+( v3-has-img)? v3-hero-compact">/, variant);
+    assert.ok(html.includes('.v3-hero.v3-hero-compact{padding-top:16px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:36px}'), variant + ' phones: 16 + 36 = 52 px above the text');
+    assert.ok(html.includes('@media (min-width:768px){.v3-hero.v3-hero-compact{padding-top:24px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:64px}}'), variant + ' tablet and up: 24 + 64 = 88 px');
+    assert.equal(html.split('.v3-hero.v3-hero-compact{padding-top:16px}').length, 2, 'the CSS once');
+  }
+  for (const spacing of ['normal', 'roomy']) {
+    const d = clone(BASE); heroOf(d).style = Object.assign({}, heroOf(d).style, { spacing });
+    assert.ok(!V3.renderDesign(d, CTX).html.includes('v3-hero-compact'), spacing + ': unchanged');
+  }
+  // another section's compact spacing keeps its own class, never the Hero's
+  const d = clone(BASE); const other = d.pages[0].sections.find((s) => s.type !== 'hero'); other.style = Object.assign({}, other.style, { spacing: 'compact' });
+  const html = V3.renderDesign(d, CTX).html;
+  assert.ok(html.includes('v3-sp-compact') && !html.includes('v3-hero-compact'));
+});
+
 test('preview is only switched on by { preview: true } exactly', () => {
   for (const opts of [{ preview: 'true' }, { preview: 1 }, { preview: {} }, {}, null]) {
     assert.ok(!/data-v3-id/.test(V3.renderDesign(BASE, CTX, opts).html), JSON.stringify(opts));

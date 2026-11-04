@@ -498,7 +498,7 @@
         btns += '<a class="v3-btn v3-btn-primary"' + linkAttrs(d.primary.target) + (d.primary.color ? ' style="background:' + d.primary.color + '"' : '') + '>' + icon(d.primary.icon) + '<span>' + esc(d.primary.text) + '</span></a>';
       }
       if (d.secondary.text && d.secondary.target) btns += '<a class="v3-btn v3-btn-outline"' + linkAttrs(d.secondary.target) + '>' + icon(d.secondary.icon) + '<span>' + esc(d.secondary.text) + '</span></a>';
-      out += '<section id="' + esc(s.anchor || s.id) + '"' + selectId(s, pv) + ' class="v3-s v3-hero v3-v-' + esc(s.variant) + ' v3-al-' + esc(s.style.align) + (img ? ' v3-has-img' : '') + '">';
+      out += '<section id="' + esc(s.anchor || s.id) + '"' + selectId(s, pv) + ' class="v3-s v3-hero v3-v-' + esc(s.variant) + ' v3-al-' + esc(s.style.align) + (img ? ' v3-has-img' : '') + (s.style.spacing === 'compact' ? ' v3-hero-compact' : '') + '">';
       if (s.variant === 'overlay') out += img + overlay;
       out += '<div class="v3-wrap v3-hero-in"><div class="v3-hero-text">' +
         (d.eyebrow ? '<p class="v3-eyebrow">' + esc(d.eyebrow) + '</p>' : '') +
@@ -765,6 +765,11 @@
       '.v3-gal-wrap:not([data-nav=on])::after{content:"";position:absolute;top:0;right:0;bottom:8px;width:48px;pointer-events:none;background:linear-gradient(to left,var(--v3-gal-fade),transparent)}',
     ].join('');
   }
+  // A Hero with style.spacing 'compact' (T0, the Creator and Services starter templates):
+  // about half the space above its text (phones 96 -> 52 px, tablet and up 152 -> 88 px);
+  // added only to such pages, every other Hero keeps its spacing.
+  var HERO_COMPACT_CSS = '.v3-hero.v3-hero-compact{padding-top:16px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:36px}' +
+    '@media (min-width:768px){.v3-hero.v3-hero-compact{padding-top:24px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:64px}}';
   var PRODUCTS_CSS = [
     '.v3-prods{display:grid;gap:16px;margin-top:16px}.v3-prods-grid{grid-template-columns:1fr 1fr}.v3-prods-list{grid-template-columns:1fr}',
     '.v3-prod{display:flex;flex-direction:column;min-width:0;background:var(--v3-bg);color:var(--v3-text);border:1px solid rgba(0,0,0,.08);border-radius:var(--v3-radius);overflow:hidden}',
@@ -858,9 +863,11 @@
       else if (pv) { if (s.type !== 'dealsOffers' || dealsState(opts) === 'sample') samples.push(s.type); out = SAMPLE[s.type](s, t, opts); }
       else { skipped.push(s.type); return ''; }
       if (out) used[s.type] = true;
+      if (out && s.type === 'hero' && s.style.spacing === 'compact') used.heroCompact = true;
       return out;
     }).join('');
-    var extraCss = (used.gallery ? GALLERY_CSS + carouselCss(t, palette(design)) : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') + (pv ? PREVIEW_CSS : '');
+    var extraCss = (used.gallery ? GALLERY_CSS + carouselCss(t, palette(design)) : '') + (used.products || used.dealsOffers ? PRODUCTS_CSS : '') +
+      (used.heroCompact ? HERO_COMPACT_CSS : '') + (pv ? PREVIEW_CSS : '');
     var h = design.header;
     var navLinks = h.nav.map(function (n) { return '<a' + linkAttrs(n.target) + '>' + esc(n.label) + '</a>'; }).join('');
     var brand = '<a class="v3-brandmark" href="#top">' + (h.logo ? '<img src="' + esc(h.logo) + '" alt="' + esc(h.logoAlt || businessName) + '">' : '') +

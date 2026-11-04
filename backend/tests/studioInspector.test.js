@@ -626,13 +626,19 @@ test('the controls take their rules from describe(): text limits, choices, numbe
   }
 });
 
-test('Hero style: background and spacing are not offered because the Hero renderer does not use them', () => {
+test('Hero style: background and spacing are not offered (the renderer ignores background and Roomy; Compact is set only by the T0 starter templates)', () => {
   const base = { schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_hero01', type: 'hero', data: { headline: 'H' } }] }] };
   const html = (style) => { const d = JSON.parse(JSON.stringify(base)); d.pages[0].sections[0].style = style; return V3.renderDesign(d, {}, { preview: true }).html; };
   const ref = html({});
   for (const background of ['alt', 'brand', 'dark']) assert.equal(html({ background }), ref, background);
-  for (const spacing of ['compact', 'roomy']) assert.equal(html({ spacing }), ref, spacing);
+  assert.equal(html({ spacing: 'roomy' }), ref, 'roomy');
+  // T0: Compact = the starter templates' tighter Hero top (class v3-hero-compact and its CSS, nothing else)
+  const compact = html({ spacing: 'compact' });
+  const CSS = '.v3-hero.v3-hero-compact{padding-top:16px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:36px}@media (min-width:768px){.v3-hero.v3-hero-compact{padding-top:24px}.v3-hero.v3-hero-compact .v3-hero-in{padding-top:64px}}';
+  assert.equal(compact.replace(' v3-hero-compact"', '"').replace(CSS, ''), ref, 'compact: only the class and its CSS');
   assert.notEqual(html({ align: 'center' }), ref, 'alignment does change the Hero');
+  // not offered in the Studio's Hero editor
+  assert.ok(!INSP.HERO_PLAN.some((r) => r.path && r.path[0] === 'style' && ['spacing', 'background'].includes(r.path[1])));
 });
 
 test('the character counter counts exactly what validateDesign counts', () => {

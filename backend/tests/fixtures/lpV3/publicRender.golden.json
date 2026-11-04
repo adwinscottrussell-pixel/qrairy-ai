@@ -39,8 +39,8 @@
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 0,
-      "bytes": 8792,
-      "sha256": "d63322231e8b32bb1e6a9c906b613e15de9d7a660bd6538f68f798bac306c15d",
+      "bytes": 9026,
+      "sha256": "25c398bd3556f8ce7ccf9c7b6cb0eb71013222ee14600806b2fb09ce0ad381ce",
       "skipped": []
     },
     {
@@ -60,8 +60,8 @@
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 1,
-      "bytes": 8817,
-      "sha256": "5e9e975659b1f67d2e80ce32dff4727c52545e02a33d82ce82b2698300d26de2",
+      "bytes": 9051,
+      "sha256": "456a4a7926d03d35940b99529ce520ffe253f7e94bedea0e2af0856a49680ff3",
       "skipped": []
     }
   ],
@@ -142,6 +142,13 @@
         "allRenderedVariantsHeroSimple"
       ],
       "reason": "Social Media icon size (owner-approved 24/48, CSS only): .v3-social-ic 20px -> 24px; .v3-social min-height/min-width 44px -> 48px (padding unchanged, 12+24+12 = 48px circle). Verified: output differs from 9316c65 only by these values."
+    },
+    {
+      "date": "2026-11-04",
+      "designs": [
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "T0 hero spacing (owner-approved): a Hero with style.spacing \"compact\" gets class v3-hero-compact and its CSS (phones 96 -> 52 px above the text, tablet+ 152 -> 88 px); added only to such pages. Verified: every other design byte-identical to 5efd4b9; the compact one differs only by the class and the CSS."
     }
   ]
 }

@@ -102,6 +102,13 @@ const LPV3_FILES = [
   'frontend/public/images/qraivy-onboarding-logo.jpg', // the approved onboarding logo
   'backend/tests/studioOnboarding.test.js',
   'backend/tests/studioOnboarding.browser.test.js',
+  // T0: the starter template catalog (not loaded by any page yet) and its tests
+  'frontend/public/js/studio/onboarding-templates.js',
+  'backend/tests/onboardingTemplates.test.js',
+  'backend/tests/onboardingTemplates.browser.test.js',
+  // T0: the two approved Studio starter heroes (the web copies; the PNG originals stay outside the repository)
+  'frontend/public/images/studio/starter/QRAIVY-Creator-Hero.jpg',
+  'frontend/public/images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',
   // Phase A / B (customer pages): the owner's own pages for the Studio
   // (GET /studio/pages, GET and PUT /studio/pages/:slug/design: read, and
   // save the Studio draft), the Studio's page selector, Save Draft and their tests
@@ -153,7 +160,9 @@ const LPV3_FILES = [
 // tests/studioShell.test.js and lpV3Scope.test.js.
 const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/js/lpV3/gallery-nav.js', 'frontend/public/studio.html', 'frontend/public/css/studio.css', 'frontend/public/js/studio',
   // Onboarding Phase O0
-  'frontend/public/studio-onboarding.html', 'frontend/public/css/studio-onboarding.css', 'frontend/public/images/qraivy-onboarding-logo.jpg'];
+  'frontend/public/studio-onboarding.html', 'frontend/public/css/studio-onboarding.css', 'frontend/public/images/qraivy-onboarding-logo.jpg',
+  // T0: the Studio starter photos (new folder)
+  'frontend/public/images/studio'];
 // Phase D1: its new files, and the five production files it changes. Older
 // guards skip them; lpV3Scope.test.js pins each changed file to exactly its
 // D1 edits on top of ae2861e (helpers/studioD1Files.js d1Only).
