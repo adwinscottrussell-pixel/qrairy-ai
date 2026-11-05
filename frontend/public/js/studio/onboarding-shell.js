@@ -46,6 +46,19 @@
  * later phases). Instagram and Website import
  * are shown as "Coming soon" and cannot be chosen.
  *
+ * T1b: five steps. Step 3 "Choose Your Design" is new: the six starter
+ * templates (onboarding-templates.js) as a radio group of cards, no template
+ * chosen at first (Next waits for one), the chosen template's palettes as a
+ * second radio group, and one live phone with the template as the customer's
+ * page: their Step 2 name, description and social links, example content
+ * everywhere else, each section with example content tagged "Example"
+ * (onboarding-previews.js markExamples). Only the chosen template's photos
+ * are loaded (studio-demo-images.js prepareImages), inline, in their own
+ * proportions, with the AI label. The former Steps 3 and 4 (sections,
+ * review) are now Steps 4 and 5, unchanged. The choice is kept with the
+ * answers (template, palette); progress kept by the four-step version is
+ * moved to the new step numbers (restore: no version = the old numbering).
+ *
  * In Node: module.exports (the pure parts, for the tests). In the browser:
  * window.QraivyOnboarding, and it starts itself.
  */
@@ -56,7 +69,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var STEPS = ['start', 'business', 'sections', 'review'];
+  var STEPS = ['start', 'business', 'design', 'sections', 'review'];
   // Step 1: only Start from Scratch is available in this version
   var OPTIONS = [
     { id: 'instagram', available: false },
@@ -67,7 +80,7 @@
   var TX = {
     en: {
       page_title: 'Get started — QRAIVY', lang_group: 'Language', progress_label: 'Progress', step_of: 'Step {n} of {total}',
-      step_start: 'Get started', step_business: 'Business information', step_sections: 'Choose sections', step_review: 'Review & save',
+      step_start: 'Get started', step_business: 'Business information', step_design: 'Choose your design', step_sections: 'Customize your page', step_review: 'Review & save draft',
       start_title: 'How would you like to start?', start_text: 'Choose how to create your landing page. You can change everything later in the Studio.',
       opt_instagram: 'Instagram', opt_instagram_text: 'Start with your Instagram profile.',
       opt_website: 'Existing Website', opt_website_text: 'Bring your existing website into QRAIVY.',
@@ -113,6 +126,13 @@
       chosen_title: 'On your page', more_title: 'Add more', more_none: 'All eight sections are on your page.',
       sections_info: 'Empty sections stay hidden on your public page until you add their content in the Studio.',
       live_note_sections: 'Scroll the phone to see every section. Nothing is saved yet.',
+      // Step 3 (T1b): choose your design
+      design_text: 'Pick a starting design and its colours. You can change everything later in the Studio.',
+      pal_title: 'Colour palette', design_hint: 'Choose a design to continue.', design_empty: 'Choose a design to see your page here.',
+      design_selected: '{name} selected.', pal_selected: 'Colour palette {name} selected.', selected: 'Selected', ai_label: 'AI · KI-generiert',
+      legend_yours: 'Your details from Step 2',
+      legend_example: '“Example”: demo, not your real details',
+      example_tag: 'Example', jump_preview: 'See live preview', live_note_design: 'Scroll the phone · Nothing is saved yet',
       add: 'Add', add_section_label: 'Add {name}', move_up_label: 'Move {name} up', move_down_label: 'Move {name} down', remove_section_label: 'Remove {name}',
       hero_locked: 'Always first · from Step 2', social_links: '{n} links from Step 2', social_links_one: '1 link from Step 2',
       social_none: 'No links yet · add them in Step 2', sec_empty: 'Add your content in the Studio',
@@ -133,7 +153,7 @@
     },
     de: {
       page_title: 'Loslegen — QRAIVY', lang_group: 'Sprache', progress_label: 'Fortschritt', step_of: 'Schritt {n} von {total}',
-      step_start: 'Loslegen', step_business: 'Unternehmensdaten', step_sections: 'Abschnitte wählen', step_review: 'Prüfen & speichern',
+      step_start: 'Loslegen', step_business: 'Unternehmensdaten', step_design: 'Design wählen', step_sections: 'Seite anpassen', step_review: 'Prüfen & Entwurf speichern',
       start_title: 'Wie möchten Sie starten?', start_text: 'Wählen Sie, wie Ihre Landingpage entstehen soll. Im Studio können Sie später alles ändern.',
       opt_instagram: 'Instagram', opt_instagram_text: 'Starten Sie mit Ihrem Instagram-Profil.',
       opt_website: 'Bestehende Website', opt_website_text: 'Bringen Sie Ihre bestehende Website zu QRAIVY.',
@@ -176,6 +196,13 @@
       chosen_title: 'Auf Ihrer Seite', more_title: 'Weitere hinzufügen', more_none: 'Alle acht Abschnitte sind auf Ihrer Seite.',
       sections_info: 'Leere Abschnitte bleiben auf Ihrer öffentlichen Seite verborgen, bis Sie im Studio Inhalte ergänzen.',
       live_note_sections: 'Scrollen Sie im Smartphone, um alle Abschnitte zu sehen. Noch wird nichts gespeichert.',
+      // Schritt 3 (T1b): Design wählen
+      design_text: 'Wählen Sie ein Start-Design und seine Farben. Im Studio können Sie später alles ändern.',
+      pal_title: 'Farbpalette', design_hint: 'Wählen Sie ein Design, um fortzufahren.', design_empty: 'Wählen Sie ein Design, um Ihre Seite hier zu sehen.',
+      design_selected: '{name} ausgewählt.', pal_selected: 'Farbpalette {name} ausgewählt.', selected: 'Ausgewählt', ai_label: 'AI · KI-generiert',
+      legend_yours: 'Ihre Angaben aus Schritt 2',
+      legend_example: '„Beispiel“: Demo, nicht Ihre Angaben',
+      example_tag: 'Beispiel', jump_preview: 'Live-Vorschau ansehen', live_note_design: 'Im Smartphone scrollen · Nichts gespeichert',
       add: 'Hinzufügen', add_section_label: '{name} hinzufügen', move_up_label: '{name} nach oben verschieben', move_down_label: '{name} nach unten verschieben', remove_section_label: '{name} entfernen',
       hero_locked: 'Immer zuerst · aus Schritt 2', social_links: '{n} Links aus Schritt 2', social_links_one: '1 Link aus Schritt 2',
       social_none: 'Noch keine Links · in Schritt 2 hinzufügen', sec_empty: 'Inhalte später im Studio hinzufügen',
@@ -215,15 +242,17 @@
   }
 
   // The wizard's navigation state: { step, choice }. Pure.
-  // Step 2 leads on only with valid answers (businessOk: onboarding-model.js check().ok), Step 3 only
-  // with a valid page (checkPage().pageOk); without it (undefined) Next may be tried and shows the errors.
+  // Step 2 leads on only with valid answers (ok: onboarding-model.js check().ok), Step 4 only with a
+  // valid page (checkPage().pageOk); without it (undefined) Next may be tried and shows the errors.
+  // Step 3 (T1b) only once a design is chosen (ok === true): no template is chosen at first.
   function choose(s, id) {
     var o = OPTIONS.filter(function (x) { return x.id === id; })[0];
     return o && o.available ? { step: s.step, choice: id } : s;
   }
-  function canNext(s, businessOk) {
+  function canNext(s, ok) {
     if (s.step === 0) return s.choice === 'scratch';
-    if (s.step === 1 || s.step === 2) return businessOk !== false;
+    if (s.step === 1 || s.step === 3) return ok !== false;
+    if (s.step === 2) return ok === true;
     return s.step > 0 && s.step < STEPS.length - 1;
   }
   function next(s, businessOk) { return canNext(s, businessOk) ? { step: s.step + 1, choice: s.choice } : s; }
@@ -239,15 +268,26 @@
     for (var i = 0; i < userId.length; i++) { h ^= userId.charCodeAt(i); h = Math.imul(h, 0x01000193); }
     return STORE_PREFIX + hex(h >>> 0);
   }
-  // The kept progress, checked: { step, choice, answers }. Steps past 2 only with valid answers, past 3 with a valid page.
-  function restore(saved, M, V3) {
+  // The kept progress' layout: v 2 = the five steps (T1b); none = the four-step version
+  // (Get started, Business information, Choose sections, Review), moved to the new numbers on restore.
+  var STORE_VERSION = 2;
+  // The kept progress, checked: { step, choice, answers }. Steps past 2 only with valid answers, past 3
+  // with a chosen design (T: onboarding-templates.js; an unknown template or palette is dropped), past 4
+  // with a valid page. Kept by the four-step version: its Steps 3 and 4 are now Steps 4 and 5.
+  function restore(saved, M, V3, T) {
     var s = saved && typeof saved === 'object' ? saved : {};
     var answers = M.sanitize(s.answers);
     var choice = s.choice === 'scratch' ? 'scratch' : null;
-    var step = typeof s.step === 'number' && s.step >= 0 && s.step < STEPS.length ? Math.floor(s.step) : 0;
+    var steps = s.v === STORE_VERSION ? STEPS.length : STEPS.length - 1;
+    var step = typeof s.step === 'number' && s.step >= 0 && s.step < steps ? Math.floor(s.step) : 0;
+    if (s.v !== STORE_VERSION && step >= 2) step += 1;
+    var tpl = T && answers.template ? T.get(answers.template) : null;
+    if (!tpl) { answers.template = null; answers.palette = null; }
+    else if (!tpl.palettes.some(function (p) { return p.id === answers.palette; })) answers.palette = tpl.palettes[0].id;
     if (!choice) step = 0;
     if (step > 1 && !M.check(V3, answers, 'en').ok) step = 1;
-    if (step > 2 && !M.checkPage(V3, answers, 'en').pageOk) step = 2;
+    if (step > 2 && !answers.template) step = 2;
+    if (step > 3 && !M.checkPage(V3, answers, 'en').pageOk) step = 3;
     return { step: step, choice: choice, answers: answers };
   }
 
@@ -264,7 +304,7 @@
     function t(k) { return tx(current, k); }
     // Step 1 previews: three DEMO pages (onboarding-previews.js, rendered by core.js) in the cards' phones, drawn once
     // per language and again when the demo photos are ready (inline, with the AI label)
-    var PV = win.QraivyOnboardingPreviews, V3 = win.QraivyV3, IMAGES = win.QraivyStudioDemoImages;
+    var PV = win.QraivyOnboardingPreviews, V3 = win.QraivyV3, IMAGES = win.QraivyStudioDemoImages, T = win.QraivyOnboardingTemplates;
     var drawn = null;
     function previews(force) {
       if (!PV || !V3 || !IMAGES || (!force && drawn === current)) return;
@@ -293,7 +333,7 @@
     function save() {
       var st = store();
       if (!owner || !st) return;
-      try { st.setItem(owner, JSON.stringify({ step: nav.step, choice: nav.choice, answers: answers })); } catch (e) {}
+      try { st.setItem(owner, JSON.stringify({ v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers })); } catch (e) {}
     }
     function clearStore() {
       var st = store();
@@ -307,15 +347,15 @@
       adopted = true; owner = key;
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
-      if (M && V3) { var r = restore(saved, M, V3); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
-      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0;
+      if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
     function forget() {
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
-      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0;
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
     function check() { return M && V3 ? M.check(V3, answers, current) : null; }
@@ -458,7 +498,155 @@
       live(true);
     }
 
-    // ── Step 3: the sections (answers.sections and answers.social, kept with the other answers) and the
+    // ── Step 3 (T1b): choose your design. The six templates and the chosen one's palettes, each a radio
+    // group (arrow keys move and choose, one tab stop); answers.template / answers.palette, kept with the
+    // other answers. The phone: the template with the customer's Step 2 answers, example content tagged ──
+    var designY = 0, designShown = null;          // the frame's scroll position; the template it shows (a new one starts at the top)
+    function designOk() { return !!(T && answers.template && T.get(answers.template)); }
+    function sayIn(id, msg) {
+      var s = $(id);
+      if (!s) return;
+      s.textContent = '';
+      win.setTimeout(function () { s.textContent = msg; }, 40);   // cleared first, so a repeat is spoken again
+    }
+    // a radio group's keys: arrows move to the previous / next option and choose it (wrapping), Home / End
+    function radioKeys(group, pick) {
+      group.addEventListener('keydown', function (e) {
+        var items = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+        var i = items.indexOf(doc.activeElement);
+        if (i < 0) return;
+        var k = e.key, j = -1;
+        if (k === 'ArrowRight' || k === 'ArrowDown') j = (i + 1) % items.length;
+        else if (k === 'ArrowLeft' || k === 'ArrowUp') j = (i - 1 + items.length) % items.length;
+        else if (k === 'Home') j = 0;
+        else if (k === 'End') j = items.length - 1;
+        if (j < 0) return;
+        e.preventDefault();
+        pick(items[j]);
+        items[j].focus();
+      });
+    }
+    // one tab stop: the checked option, or the first while none is checked
+    function roving(group) {
+      var items = group.querySelectorAll('[role="radio"]'), any = false;
+      for (var i = 0; i < items.length; i++) if (items[i].getAttribute('aria-checked') === 'true') any = true;
+      for (var j = 0; j < items.length; j++) items[j].tabIndex = (items[j].getAttribute('aria-checked') === 'true' || (!any && j === 0)) ? 0 : -1;
+    }
+    var cardsLang = null;
+    function templateCards() {
+      var box = $('ob-tpls');
+      if (!box || !T || !IMAGES) return;
+      if (cardsLang !== current) {
+        cardsLang = current;
+        while (box.firstChild) box.removeChild(box.firstChild);
+        T.list(current).forEach(function (tp) {
+          var b = el('button', 'ob-tpl', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-template': tp.id });
+          var media = el('span', 'ob-tpl__media', { 'aria-hidden': 'true' });
+          var img = el('img', '', { alt: '', loading: 'lazy', decoding: 'async', src: IMAGES.localSrc(T.imageUrl(tp.images[0])) || '' });
+          var ai = el('span', 'ob-tpl__ai'); ai.textContent = t('ai_label');
+          media.appendChild(img); media.appendChild(ai);
+          var bodyEl = el('span', 'ob-tpl__body'), title = el('span', 'ob-tpl__title'), text = el('span', 'ob-tpl__text');
+          title.textContent = tp.label; text.textContent = tp.blurb;
+          var dots = el('span', 'ob-tpl__dots', { 'aria-hidden': 'true' });
+          tp.palettes.forEach(function (p) { var d = el('span', 'ob-tpl__dot'); d.style.background = p.colors.brand; dots.appendChild(d); });
+          bodyEl.appendChild(title); bodyEl.appendChild(text); bodyEl.appendChild(dots);
+          var check = el('span', 'ob-option__check ob-tpl__check', { 'aria-hidden': 'true' });
+          check.appendChild(icon('check'));
+          var state = el('span', 'ob-sr ob-tpl__state');
+          b.appendChild(media); b.appendChild(bodyEl); b.appendChild(check); b.appendChild(state);
+          b.addEventListener('click', function () { pickTemplate(tp.id); });
+          box.appendChild(b);
+        });
+      }
+      var cards = box.querySelectorAll('.ob-tpl');
+      for (var i = 0; i < cards.length; i++) {
+        var on = cards[i].getAttribute('data-template') === answers.template;
+        cards[i].setAttribute('aria-checked', String(on));
+        cards[i].querySelector('.ob-tpl__state').textContent = on ? ', ' + t('selected') : '';
+      }
+      roving(box);
+    }
+    function paletteChoices() {
+      var wrap = $('ob-pals-wrap'), box = $('ob-pals');
+      if (!wrap || !T) return;
+      var tpl = designOk() ? T.list(current).filter(function (x) { return x.id === answers.template; })[0] : null;
+      wrap.hidden = !tpl;
+      if (!tpl) return;
+      if (box.getAttribute('data-for') !== tpl.id + ':' + current) {
+        box.setAttribute('data-for', tpl.id + ':' + current);
+        while (box.firstChild) box.removeChild(box.firstChild);
+        tpl.palettes.forEach(function (p) {
+          var b = el('button', 'ob-pal', { type: 'button', role: 'radio', 'aria-checked': 'false', 'data-palette': p.id });
+          var sw = el('span', 'ob-pal__swatch', { 'aria-hidden': 'true' });
+          [p.colors.brand, p.colors.surface, p.colors.dark].forEach(function (c) { var d = el('span', 'ob-pal__color'); d.style.background = c; sw.appendChild(d); });
+          var name = el('span', 'ob-pal__name'); name.textContent = p.label;
+          b.appendChild(sw); b.appendChild(name);
+          b.addEventListener('click', function () { pickPalette(p.id); });
+          box.appendChild(b);
+        });
+      }
+      var items = box.querySelectorAll('.ob-pal');
+      for (var i = 0; i < items.length; i++) items[i].setAttribute('aria-checked', String(items[i].getAttribute('data-palette') === answers.palette));
+      roving(box);
+    }
+    function pickTemplate(id) {
+      var tp = T && T.get(id);
+      if (!tp) return;
+      var changed = answers.template !== id;
+      answers.template = id;
+      if (changed || !tp.palettes.some(function (p) { return p.id === answers.palette; })) answers.palette = tp.palettes[0].id;
+      save();
+      design();
+      $('ob-next').disabled = !canNext(nav, designOk());
+      if (changed) sayIn('ob-design-status', t('design_selected').replace('{name}', T.list(current).filter(function (x) { return x.id === id; })[0].label));
+    }
+    function pickPalette(id) {
+      var tp = designOk() ? T.get(answers.template) : null;
+      if (!tp || !tp.palettes.some(function (p) { return p.id === id; }) || answers.palette === id) return;
+      answers.palette = id;
+      save();
+      design();
+      var p = T.list(current).filter(function (x) { return x.id === tp.id; })[0].palettes.filter(function (x) { return x.id === id; })[0];
+      sayIn('ob-design-status', t('pal_selected').replace('{name}', p.label));
+    }
+    // The page in the phone: the chosen template and palette with the customer's own name, description and
+    // links (Step 2; the last valid ones), example content everywhere else, its sections tagged "Example"
+    function drawDesign() {
+      var frame = $('ob-design-frame');
+      if (!frame || !PV || !T || !IMAGES) return;
+      var ok = designOk();
+      $('ob-design-empty').hidden = ok;
+      $('ob-design-stage').hidden = !ok;
+      if (!ok) { designShown = null; return; }
+      var r = check();
+      var name = r.values.name || M.cleanName(answers.name) || M.PLACEHOLDER_NAME[current];
+      var opts = { lang: current, palette: answers.palette, name: name, description: r.values.description, links: r.values.links };
+      var s = T.sample(V3, answers.template, opts);
+      if (!s.ok) { opts.links = []; s = T.sample(V3, answers.template, opts); }
+      if (!s.ok) return;
+      // only this template's photos, each once; the frame is drawn again when they are ready
+      IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), function () { drawDesign(); });
+      var out = V3.renderDesign(s.design, { businessName: name }, { preview: true });
+      if (!out || !out.ok) return;
+      var sections = s.design.pages[0].sections, examples = [];
+      s.demoOnly.forEach(function (p) {
+        var m = /^pages\[0\]\.sections\[(\d+)\]\./.exec(p), sec = m && sections[Number(m[1])];
+        if (sec && sec.type !== 'hero' && examples.indexOf(sec.id) === -1) examples.push(sec.id);
+      });
+      var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), examples, t('example_tag')));
+      if (!html) return;
+      if (designShown !== answers.template) { designY = 0; designShown = answers.template; }
+      if (frame.srcdoc !== html) frame.srcdoc = html;
+    }
+    function design() {
+      templateCards();
+      paletteChoices();
+      $('ob-design-hint').hidden = designOk();
+      $('ob-design-jump').disabled = !designOk();   // phones: nothing to jump to before a design is chosen
+      drawDesign();
+    }
+
+    // ── Step 4: the sections (answers.sections and answers.social, kept with the other answers) and the
     // live phone (the whole page; its scroll position kept; a section just added or moved shown) ──
     var frameY = 0, reveal = null, reviewY = 0;
     function page() { return M && V3 ? M.checkPage(V3, answers, current) : null; }
@@ -592,7 +780,7 @@
       else if (reveal && frame.contentWindow) { frame.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*'); reveal = null; }
     }
 
-    // ── Step 4: the review. Read only: the values and the page come from checkPage(), exactly what a draft will
+    // ── Step 5 (Step 4 before T1b): the review. Read only: the values and the page come from checkPage(), exactly what a draft will
     // hold later; text only through textContent; the phone shows the same page in the same frame as Step 3 ──
     function setText(id, value, empty) {
       var n = $(id);
@@ -693,13 +881,14 @@
       $('ob-back').hidden = s === 0;
       var last = s === STEPS.length - 1;
       $('ob-next').hidden = last;
-      $('ob-next').disabled = !canNext(nav);
-      $('ob-finish').hidden = !last;          // O3A: shown on Step 4, always disabled (no draft is saved yet)
+      $('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);
+      $('ob-finish').hidden = !last;          // O3A: shown on the last step (T1b: Step 5), always disabled (no draft is saved yet)
       $('ob-save-note').hidden = !last;
       if (s === 0) previews(false);
       if (s === 1) business();
-      if (s === 2) sections();
-      if (s === 3) review();
+      if (s === 2) design();
+      if (s === 3) sections();
+      if (s === 4) review();
       if (focus) { var h = $('ob-step-' + s).querySelector('.ob-h1'); if (h) h.focus(); }
     }
     function render(focus) {
@@ -748,6 +937,10 @@
         if (!ok) { tried = true; errors(); focusInvalid(r); return; }
       }
       if (nav.step === 2) {
+        ok = designOk();
+        if (!ok) { design(); $('ob-design-title').focus(); return; }
+      }
+      if (nav.step === 3) {
         var p = page();
         ok = !!(p && p.pageOk);
         if (!ok) { sections(); $('ob-chosen-title').focus(); return; }
@@ -764,8 +957,8 @@
     }
     // Step 4: Edit back to Steps 2 and 3
     $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
-    $('ob-edit-sections').addEventListener('click', function () { editStep(2, 'ob-chosen-title'); });
-    // Step 4's frame: after each load its scroll position (no reveal); from it, only its scroll position
+    $('ob-edit-sections').addEventListener('click', function () { editStep(3, 'ob-chosen-title'); });
+    // Step 5's review frame: after each load its scroll position (no reveal); from it, only its scroll position
     if (PV && $('ob-review-frame')) {
       $('ob-review-frame').addEventListener('load', function () {
         var f = $('ob-review-frame');
@@ -778,7 +971,30 @@
         if (m) reviewY = m.y;
       });
     }
-    // Step 3's live frame: after each load, the scroll position and the section to reveal; from it, only its scroll position
+    // Step 3's (T1b) design frame: after each load, its scroll position (top for a newly chosen template); from it,
+    // only its scroll position. The two radio groups: arrow keys move and choose.
+    if (PV && $('ob-design-frame')) {
+      $('ob-design-frame').addEventListener('load', function () {
+        var f = $('ob-design-frame');
+        if (f.contentWindow) f.contentWindow.postMessage(PV.initMessage(designY, null), '*');
+      });
+      win.addEventListener('message', function (e) {
+        var f = $('ob-design-frame');
+        if (!f || e.source !== f.contentWindow) return;
+        var m = PV.acceptFrameMessage(e.data);
+        if (m) designY = m.y;
+      });
+    }
+    if ($('ob-tpls')) radioKeys($('ob-tpls'), function (b) { pickTemplate(b.getAttribute('data-template')); });
+    if ($('ob-pals')) radioKeys($('ob-pals'), function (b) { pickPalette(b.getAttribute('data-palette')); });
+    // phones only (CSS): a jump down to the same live phone, below the cards and palettes; focus moves with it
+    if ($('ob-design-jump')) $('ob-design-jump').addEventListener('click', function () {
+      var live = $('ob-design-live');
+      var still = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      live.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+      live.focus({ preventScroll: true });
+    });
+    // Step 4's live frame: after each load, the scroll position and the section to reveal; from it, only its scroll position
     if (PV && $('ob-sections-frame')) {
       $('ob-sections-frame').addEventListener('load', function () {
         var f = $('ob-sections-frame');
@@ -818,5 +1034,5 @@
   }
 
   return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, STORE_PREFIX: STORE_PREFIX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back,
-    storeKey: storeKey, restore: restore, start: start };
+    storeKey: storeKey, restore: restore, STORE_VERSION: STORE_VERSION, start: start };
 });

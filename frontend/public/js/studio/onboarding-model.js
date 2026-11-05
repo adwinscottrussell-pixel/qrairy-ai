@@ -175,11 +175,18 @@
     else errors.name = errors.name || (e.code === 'too_long' ? 'name_too_long' : 'name_invalid');
   }
 
+  // A starter template's or palette's id as kept (onboarding-templates.js checks that it exists), or null
+  var CHOICE_ID = /^[a-z][a-z0-9-]{0,31}$/;
+  function choiceId(v) { return typeof v === 'string' && CHOICE_ID.test(v) ? v : null; }
+
   // The answers as kept between steps and across a reload (no token, nothing else).
-  // sections: null until the customer changes Step 3 (then the ordered list); social: Social Media's mode.
+  // sections: null until the customer changes the sections step (then the ordered list); social: Social
+  // Media's mode; template / palette (T1b, "Choose Your Design"): the chosen starter template and palette, or null.
   function sanitize(a) {
     a = a && typeof a === 'object' ? a : {};
     return {
+      template: choiceId(a.template),
+      palette: choiceId(a.palette),
       name: str(a.name).slice(0, 400),
       description: str(a.description).slice(0, 1500),
       links: (Array.isArray(a.links) ? a.links : []).slice(0, LIMITS.links).map(function (r) {

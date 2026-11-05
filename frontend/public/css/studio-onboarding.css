@@ -154,6 +154,15 @@ body.ob-page {
   .ob-link--exit { padding: 6px; }
   .ob-link__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+/* T1b, the narrowest phones (320 px): the header fits (tighter spacing, a slightly smaller logo), no sideways scroll */
+@media (max-width: 359px) {
+  .ob-top { gap: 8px; padding: 10px 10px; }
+  .ob-top__actions { gap: 4px; }
+  .ob-brand__logo { height: 34px; }
+  .ob-lang__btn { min-width: 32px; padding: 0 7px; }
+  .ob-theme__btn { min-width: 30px; padding: 0 6px; }
+  .ob-link { padding: 6px 2px; }
+}
 
 /* ── page body ── */
 .ob-main { position: relative; z-index: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 20px 16px 40px; }
@@ -369,6 +378,70 @@ body.ob-page {
 .ob-more .ob-sec { border-style: dashed; background: var(--ob-surface-2); }
 .ob-more .ob-btn--add { align-self: center; min-height: 44px; }
 .ob-live__stage--scroll, .ob-live__stage--scroll .ob-phone__frame { pointer-events: auto; }
+/* ── Step 3 (T1b): choose your design. Six template cards (a radio group: photo, name, description,
+   palette dots; the chosen one with the orange border, ring and check), then the chosen template's palettes
+   (a second radio group, the chosen one with border, ring and ✓), the live phone and its legend. ── */
+.ob-tpls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.ob-tpl {
+  position: relative; display: flex; flex-direction: column; min-width: 0; padding: 0; text-align: left; overflow: hidden;
+  background: var(--ob-surface); border: 1.5px solid var(--ob-border); border-radius: 14px; color: var(--ob-text); font: inherit; cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.ob-tpl:hover { border-color: var(--ob-accent); }
+.ob-tpl[aria-checked="true"] { border-color: var(--ob-accent); background: var(--ob-accent-soft); box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.25); }
+.ob-tpl:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+.ob-tpl__media { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; background: var(--ob-surface-2); }
+/* a cropped thumbnail, always 4:3 (never stretched); the portraits keep the face in view */
+.ob-tpl__media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; }
+.ob-tpl__ai { position: absolute; left: 6px; bottom: 6px; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, 0.72); color: #fff; font: 600 10px/1.5 system-ui, sans-serif; pointer-events: none; }
+.ob-tpl__body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; min-width: 0; }
+.ob-tpl__title { font: 700 15px/1.25 'Space Grotesk', Inter, sans-serif; color: var(--ob-navy); overflow-wrap: anywhere; }
+.ob-tpl__text { font-size: 12.5px; line-height: 1.35; color: var(--ob-muted); }
+.ob-tpl__dots { display: flex; gap: 4px; margin-top: 4px; }
+.ob-tpl__dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.14); }
+.ob-tpl[aria-checked="true"] .ob-tpl__check { display: inline-grid; }
+.ob-design-hint { margin-top: 2px; }
+.ob-pals { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-pal {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px 6px 10px;
+  background: var(--ob-surface); border: 1.5px solid var(--ob-border); border-radius: 999px; color: var(--ob-text); font: 600 13px/1.2 Inter, sans-serif; cursor: pointer;
+}
+.ob-pal:hover { border-color: var(--ob-accent); }
+.ob-pal[aria-checked="true"] { border-color: var(--ob-accent); background: var(--ob-accent-soft); box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.25); }
+.ob-pal[aria-checked="true"]::after { content: '✓'; font-weight: 800; color: var(--ob-accent-text); }
+.ob-pal:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+.ob-pal__swatch { display: inline-flex; padding-left: 5px; }
+.ob-pal__color { width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; border: 2px solid var(--ob-surface); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.ob-design-empty {
+  display: flex; align-items: center; justify-content: center; width: 100%; max-width: 260px; min-height: 220px; margin: 0; padding: 20px;
+  border: 2px dashed var(--ob-border-strong); border-radius: 28px; text-align: center; font-size: 14px; color: var(--ob-muted);
+}
+.ob-legend { display: flex; flex-direction: column; gap: 6px; max-width: 280px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.4; color: var(--ob-text-2); }
+.ob-legend__item { display: flex; gap: 8px; align-items: flex-start; }
+.ob-legend__item::before { content: ''; flex-shrink: 0; width: 12px; height: 12px; margin-top: 2px; border-radius: 3px; }
+.ob-legend__item--yours::before { background: #16a34a; }
+.ob-legend__item--example::before { background: #fffbeb; border: 1px dashed #b45309; }
+@media (min-width: 340px) { .ob-tpls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 600px) { .ob-tpls { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* phones and tablets: a jump to the live phone below the cards (hidden from 960 px, where the phone sits beside them) */
+.ob-design-jump {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: -6px 0 16px; padding: 8px 16px;
+  background: var(--ob-accent-soft); border: 1.5px solid var(--ob-accent); border-radius: 999px; color: var(--ob-accent-text); font: 700 14px/1.2 Inter, sans-serif; cursor: pointer;
+}
+.ob-design-jump:hover:not(:disabled) { box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.25); }
+.ob-design-jump:disabled { background: var(--ob-surface); border-color: var(--ob-border-strong); color: var(--ob-muted); cursor: not-allowed; }
+.ob-design-jump:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+#ob-design-live { scroll-margin-top: 12px; }
+#ob-design-live:focus { outline: none; }
+#ob-design-live:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+@media (min-width: 960px) {
+  .ob-design-empty { min-height: 480px; }
+  .ob-design-jump { display: none; }
+  /* desktop: the column beside the cards kept short (less space under the palettes); the phone keeps its size */
+  #ob-design-live { gap: 8px; padding-bottom: 12px; }
+  #ob-design-live .ob-legend { max-width: none; align-self: stretch; padding: 0 4px; }
+}
+
 /* phones: the buttons below the text */
 @media (max-width: 599px) {
   .ob-sec { flex-wrap: wrap; }
@@ -476,7 +549,7 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 @media (min-width: 760px) {
   .ob-main { padding-top: 36px; }
   .ob-h1 { font-size: 26px; }
-  .ob-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .ob-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .ob-options { grid-template-columns: repeat(3, 1fr); }
   /* desktop: the phone on top, the option below */
   .ob-card { flex-direction: column; align-items: stretch; gap: 14px; padding: 12px 12px 18px; }
@@ -490,11 +563,11 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
   /* Step 2: link rows on one line (platform, address, Remove) */
   .ob-link-row { grid-template-columns: 170px minmax(0, 1fr) auto; grid-template-areas: 'platform url remove' 'error error error'; }
 }
-/* Steps 2, 3 and 4 from 960 px: two columns, the phone stays in view */
+/* Steps 2 to 5 from 960 px: two columns, the phone stays in view */
 @media (min-width: 960px) {
-  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3):not([hidden])) { max-width: 1080px; }
-  /* the progress and the four step labels keep the width and place of Step 1 (920 px less the 16 px gutters) */
-  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3):not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
+  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3, #ob-step-4):not([hidden])) { max-width: 1080px; }
+  /* the progress and the five step labels keep the width and place of Step 1 (920 px less the 16 px gutters) */
+  .ob-main:has(:is(#ob-step-1, #ob-step-2, #ob-step-3, #ob-step-4):not([hidden])) .ob-progress { max-width: 888px; margin-left: auto; margin-right: auto; }
   .ob-business { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
   .ob-live { position: sticky; top: 20px; padding: 18px 16px 16px; }
   .ob-live .ob-phone { --s: 0.62; border-radius: 40px; padding: 7px; }      /* 242 px wide */

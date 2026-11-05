@@ -64,8 +64,8 @@ test('the wizard opens only for a signed-in user with a verified primary email',
   assert.equal(OB.authState({ session: { id: 's' }, user: { primaryEmailAddress: { verification: null } } }), 'unverified');
 });
 
-test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads on; Step 2 only with valid answers; four steps, none can finish', () => {
-  assert.deepEqual(OB.STEPS, ['start', 'business', 'sections', 'review']);
+test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads on; Step 2 only with valid answers; T1b: five steps, Step 3 only with a chosen design; none can finish', () => {
+  assert.deepEqual(OB.STEPS, ['start', 'business', 'design', 'sections', 'review']);
   assert.deepEqual(OB.OPTIONS, [{ id: 'instagram', available: false }, { id: 'website', available: false }, { id: 'scratch', available: true }]);
   let s = { step: 0, choice: null };
   assert.equal(OB.canNext(s), false, 'nothing chosen: no Next');
@@ -77,10 +77,16 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
   assert.equal(OB.next(s, false), s, 'Step 2: invalid answers, no Next');
   assert.equal(OB.canNext(s), true, 'Step 2: Next can be tried (it shows the errors)');
   s = OB.next(s, true); assert.equal(s.step, 2);
-  s = OB.next(s); assert.equal(s.step, 3);
+  // T1b: Step 3, no design chosen at first: no Next (not even to try)
+  assert.equal(OB.canNext(s), false, 'Step 3: no design chosen, no Next');
+  assert.equal(OB.next(s), s); assert.equal(OB.next(s, false), s);
+  s = OB.next(s, true); assert.equal(s.step, 3, 'a design chosen: Step 4');
+  assert.equal(OB.canNext(s), true, 'Step 4: Next can be tried (it shows the errors)');
+  assert.equal(OB.next(s, false), s, 'Step 4: an invalid page, no Next');
+  s = OB.next(s); assert.equal(s.step, 4);
   assert.equal(OB.canNext(s), false, 'the last step has no Next');
   assert.equal(OB.next(s), s);
-  s = OB.back(OB.back(OB.back(s)));
+  s = OB.back(OB.back(OB.back(OB.back(s))));
   assert.deepEqual(s, { step: 0, choice: 'scratch' }, 'Back keeps the choice');
   assert.equal(OB.back(s), s, 'no Back before Step 1');
 });
@@ -88,8 +94,8 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/studio/onboarding-theme.js', 'js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
-    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 9, 'no inline script');
+    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-templates.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 10, 'no inline script');
   // O2.1: the theme script in <head>, after the stylesheet and before the body (no flash of the other appearance)
   const head = HTML.slice(0, HTML.indexOf('</head>'));
   assert.ok(head.indexOf('css/studio-onboarding.css') < head.indexOf('js/studio/onboarding-theme.js'), 'the theme script in the head, after the stylesheet');
@@ -103,12 +109,13 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   const frames = [...HTML.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(frames, ['instagram', 'website', 'scratch'].map((id) => '<iframe class="ob-phone__frame" data-preview="' + id + '" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">')
     .concat('<iframe class="ob-phone__frame" id="ob-live-frame" sandbox="" tabindex="-1" title="" referrerpolicy="no-referrer">',
+      '<iframe class="ob-phone__frame" id="ob-design-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">',
       '<iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">',
       '<iframe class="ob-phone__frame" id="ob-review-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer">'));
   assert.ok(!/allow-same-origin|allow-popups|allow-top-navigation|allow-forms|allow-modals/.test(HTML), 'no other sandbox permission anywhere');
-  for (const [from, to] of [['<aside class="ob-live" aria-labelledby="ob-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-sections-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-review-live-label"', '</aside>']]) {
+  for (const [from, to] of [['<aside class="ob-live" aria-labelledby="ob-live-label"', '</aside>'], ['<aside class="ob-live" id="ob-design-live" tabindex="-1" aria-labelledby="ob-design-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-sections-live-label"', '</aside>'], ['<aside class="ob-live" aria-labelledby="ob-review-live-label"', '</aside>']]) {
     const live = HTML.slice(HTML.indexOf(from), HTML.indexOf(to, HTML.indexOf(from)));
-    assert.ok(/<div class="ob-live__stage[^"]*" aria-hidden="true">/.test(live) && live.search(/aria-hidden="true">/) < live.indexOf('<iframe'), from + ': the frame in the hidden part');
+    assert.ok(/<div class="ob-live__stage[^"]*"[^>]* aria-hidden="true"[^>]*>/.test(live) && live.search(/aria-hidden="true"[^>]*>/) < live.indexOf('<iframe'), from + ': the frame in the hidden part');
   }
   for (const id of ['instagram', 'website', 'scratch']) {
     const card = HTML.slice(HTML.indexOf('<div class="ob-card" data-card="' + id + '">'), HTML.indexOf('</button>', HTML.indexOf('<div class="ob-card" data-card="' + id + '">')));
@@ -135,7 +142,7 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'unique ids');
 });
 
-test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fields with labels and error slots, the logo disabled; Step 3 lists; Step 4 review with a disabled Save Draft', () => {
+test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fields with labels and error slots, the logo disabled; Step 3 (T1b) the design groups; Step 4 lists; Step 5 review with a disabled Save Draft', () => {
   const cards = [...HTML.matchAll(/<button type="button" class="ob-option"[^>]*>/g)].map((m) => m[0]);
   assert.equal(cards.length, 3);
   assert.match(cards[0], /data-option="instagram" disabled aria-disabled="true"/);
@@ -155,16 +162,30 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.match(HTML, /<button type="button" class="ob-upload" id="ob-logo" disabled aria-disabled="true" aria-describedby="ob-logo-note">/, 'the logo: disabled');
   const step2 = HTML.slice(HTML.indexOf('id="ob-step-1"'), HTML.indexOf('id="ob-step-2"'));
   assert.equal((step2.match(/<input\b/g) || []).length, 1, 'Step 2 markup: one input (the name); link rows are added by the script');
-  // Step 3: the two lists (filled by the script), the status for screen readers, the info note; no field
-  const step3 = HTML.slice(HTML.indexOf('id="ob-step-2"'), HTML.indexOf('id="ob-step-3"'));
+  // Step 3 (T1b): the two radio groups (filled by the script), the hint, the status for screen readers, the empty phone
+  // and the legend; no field, no button in the markup
+  const design = HTML.slice(HTML.indexOf('id="ob-step-2"'), HTML.indexOf('id="ob-step-3"'));
+  assert.ok(design.includes('<div class="ob-tpls" id="ob-tpls" role="radiogroup" aria-labelledby="ob-design-title"></div>'));
+  assert.ok(design.includes('<div class="ob-pals" id="ob-pals" role="radiogroup" aria-labelledby="ob-pals-title"></div>'));
+  assert.ok(design.includes('<section class="ob-secgroup ob-pals-wrap" id="ob-pals-wrap" aria-labelledby="ob-pals-title" hidden>'), 'the palettes only once a design is chosen');
+  assert.ok(design.includes('<p class="ob-sr" id="ob-design-status" role="status" aria-live="polite"></p>'));
+  for (const k of ['design_hint', 'design_empty', 'legend_yours', 'legend_example', 'live_note_design', 'jump_preview']) assert.ok(design.includes('data-ob="' + k + '"'), k);
+  // the one button: the phones-only jump to the live phone (the same aside, no second preview)
+  assert.equal((design.match(/<button\b/g) || []).length, 1);
+  assert.ok(design.includes('<button type="button" class="ob-design-jump" id="ob-design-jump" aria-controls="ob-design-live" disabled>'), 'disabled until a design is chosen');
+  assert.ok(design.includes('<aside class="ob-live" id="ob-design-live" tabindex="-1" aria-labelledby="ob-design-live-label">'));
+  assert.equal((design.match(/<iframe\b/g) || []).length, 1, 'one live phone');
+  assert.ok(!/<input|<textarea|<select|<form/.test(design), 'Step 3 markup: no field (cards and palettes added by the script)');
+  // Step 4: the two lists (filled by the script), the status for screen readers, the info note; no field
+  const step3 = HTML.slice(HTML.indexOf('id="ob-step-3"'), HTML.indexOf('id="ob-step-4"'));
   assert.match(step3, /<ol class="ob-chosen" id="ob-chosen"><\/ol>/);
   assert.match(step3, /<ul class="ob-more" id="ob-more"><\/ul>/);
   assert.match(step3, /<p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"><\/p>/);
   assert.match(step3, /data-ob="sections_info"/);
-  assert.ok(!/<input|<textarea|<select|<button/.test(step3), 'Step 3 markup: no field, no button (added by the script)');
-  // Step 4 (O3A): the status, the free / trial note, the two summaries with named Edit buttons, the save note; no field
-  const step4 = HTML.slice(HTML.indexOf('id="ob-step-3"'), HTML.indexOf('<div class="ob-nav">'));
-  assert.ok(!/<input|<textarea|<select|<form/.test(step4), 'Step 4 collects nothing');
+  assert.ok(!/<input|<textarea|<select|<button/.test(step3), 'Step 4 markup: no field, no button (added by the script)');
+  // Step 5 (O3A): the status, the free / trial note, the two summaries with named Edit buttons, the save note; no field
+  const step4 = HTML.slice(HTML.indexOf('id="ob-step-4"'), HTML.indexOf('<div class="ob-nav">'));
+  assert.ok(!/<input|<textarea|<select|<form/.test(step4), 'Step 5 collects nothing');
   assert.deepEqual([...step4.matchAll(/<button\b[^>]*>/g)].map((m) => m[0]), [
     '<button type="button" class="ob-edit" id="ob-edit-business" aria-label="Edit business information" data-ob-aria="edit_business_label">',
     '<button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label">'], 'only the two Edit buttons');
@@ -194,7 +215,7 @@ test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial c
   // O1: sessionStorage read in one place; written only under the user's key, with the step and the answers
   assert.equal((c.match(/sessionStorage/g) || []).length, 1);
   assert.equal((c.match(/\.setItem\(/g) || []).length, 1);
-  assert.ok(c.includes('st.setItem(owner, JSON.stringify({ step: nav.step, choice: nav.choice, answers: answers }));'));
+  assert.ok(c.includes('st.setItem(owner, JSON.stringify({ v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers }));'), 'T1b: with the layout version');
   assert.ok(c.includes("var key = storeKey(c && c.user && c.user.id);"), 'the key: the signed-in Clerk user');
   // sign-out clears the kept progress before signing out
   const out = c.slice(c.indexOf("$('ob-signout').addEventListener"));
@@ -209,20 +230,39 @@ test('O1 progress: one key per user (a hash, not the id); a restore is checked (
   assert.ok(a !== b && a === OB.storeKey('user_2abcDEF123'), 'stable, per user');
   assert.ok(!a.includes('user_2abc'), 'the id itself is not in the key');
   for (const x of [undefined, null, '', 42, {}]) assert.equal(OB.storeKey(x), null, 'no user: memory only');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
   const good = { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] };
-  assert.deepEqual(OB.restore({ step: 2, choice: 'scratch', answers: good }, M, V3), { step: 2, choice: 'scratch', answers: Object.assign({ sections: null, social: 'auto' }, good) });
-  // O2: the section list and Social Media's mode come back cleaned; Step 4 only with a valid page
-  const withSections = OB.restore({ step: 3, choice: 'scratch', answers: Object.assign({ sections: ['gallery', 'hero', 'evil', 'gallery'], social: 'removed' }, good) }, M, V3);
-  assert.deepEqual([withSections.step, withSections.answers.sections, withSections.answers.social], [3, ['hero', 'gallery'], 'removed']);
-  assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: Object.assign({}, good, { social: 'everything' }) }, M, V3).answers.social, 'auto');
-  assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: { name: '' } }, M, V3).step, 1, 'invalid answers: back to Step 2');
-  assert.equal(OB.restore({ step: 2, choice: 'instagram', answers: good }, M, V3).step, 0, 'no valid choice: Step 1');
-  for (const bad of [null, 'x', 7, [], { step: 99, choice: 'scratch' }, { step: -1 }, { step: 1.5, choice: 'scratch' }]) {
-    const r = OB.restore(bad, M, V3);
+  const v2 = (o) => Object.assign({ v: OB.STORE_VERSION }, o);
+  assert.equal(OB.STORE_VERSION, 2);
+  // T1b: the five steps (v 2); Step 3 needs nothing more than valid answers, Step 4 a chosen design
+  assert.deepEqual(OB.restore(v2({ step: 2, choice: 'scratch', answers: good }), M, V3, T), { step: 2, choice: 'scratch', answers: Object.assign({ template: null, palette: null, sections: null, social: 'auto' }, good) });
+  const chosen = Object.assign({ template: 'bakery', palette: 'sage' }, good);
+  assert.deepEqual([OB.restore(v2({ step: 3, choice: 'scratch', answers: chosen }), M, V3, T).step, OB.restore(v2({ step: 3, choice: 'scratch', answers: chosen }), M, V3, T).answers.palette], [3, 'sage']);
+  assert.equal(OB.restore(v2({ step: 3, choice: 'scratch', answers: good }), M, V3, T).step, 2, 'no design chosen: back to Step 3');
+  // an unknown template is dropped (back to Step 3); an unknown palette becomes the template's first
+  const evil = OB.restore(v2({ step: 3, choice: 'scratch', answers: Object.assign({}, good, { template: 'evil', palette: 'sage' }) }), M, V3, T);
+  assert.deepEqual([evil.step, evil.answers.template, evil.answers.palette], [2, null, null]);
+  assert.equal(OB.restore(v2({ step: 3, choice: 'scratch', answers: Object.assign({}, good, { template: 'retail', palette: 'nope' }) }), M, V3, T).answers.palette, 'mono');
+  for (const x of ['<b>', 'BAKERY', 'a'.repeat(40), 7, {}]) assert.equal(M.sanitize({ template: x }).template, null, 'an id only: ' + JSON.stringify(x));
+  // T1b migration: progress kept by the four-step version (no v) moves to the new numbers: its Choose sections (2) and
+  // Review (3) become Steps 4 and 5; without a design yet, the customer lands on the new Step 3 with everything kept
+  const old2 = OB.restore({ step: 2, choice: 'scratch', answers: Object.assign({ sections: ['hero', 'gallery'], social: 'removed' }, good) }, M, V3, T);
+  assert.deepEqual([old2.step, old2.answers.sections, old2.answers.social, old2.answers.name], [2, ['hero', 'gallery'], 'removed', 'Café Sonne'], 'old Step 3 -> new Step 3 (choose a design first); sections and answers kept');
+  assert.equal(OB.restore({ step: 1, choice: 'scratch', answers: good }, M, V3, T).step, 1, 'old Step 2 stays Step 2');
+  assert.equal(OB.restore({ step: 3, choice: 'scratch', answers: chosen }, M, V3, T).step, 4, 'old Review (3) -> Step 5 when a design is kept');
+  assert.equal(OB.restore({ step: 4, choice: 'scratch', answers: chosen }, M, V3, T).step, 0, 'the old layout had no Step 5: not trusted');
+  // O2: the section list and Social Media's mode come back cleaned; Step 5 only with a valid page
+  const withSections = OB.restore(v2({ step: 4, choice: 'scratch', answers: Object.assign({ sections: ['gallery', 'hero', 'evil', 'gallery'], social: 'removed' }, chosen) }), M, V3, T);
+  assert.deepEqual([withSections.step, withSections.answers.sections, withSections.answers.social], [4, ['hero', 'gallery'], 'removed']);
+  assert.equal(OB.restore(v2({ step: 4, choice: 'scratch', answers: Object.assign({}, chosen, { social: 'everything' }) }), M, V3, T).answers.social, 'auto');
+  assert.equal(OB.restore(v2({ step: 4, choice: 'scratch', answers: { name: '' } }), M, V3, T).step, 1, 'invalid answers: back to Step 2');
+  assert.equal(OB.restore(v2({ step: 2, choice: 'instagram', answers: good }), M, V3, T).step, 0, 'no valid choice: Step 1');
+  for (const bad of [null, 'x', 7, [], { step: 99, choice: 'scratch' }, { step: -1 }, { step: 1.5, choice: 'scratch' }, v2({ step: 5, choice: 'scratch' })]) {
+    const r = OB.restore(bad, M, V3, T);
     assert.ok(r.step >= 0 && r.step <= 1, JSON.stringify(bad));
-    assert.deepEqual(Object.keys(r.answers).sort(), ['description', 'links', 'name', 'sections', 'social']);
+    assert.deepEqual(Object.keys(r.answers).sort(), ['description', 'links', 'name', 'palette', 'sections', 'social', 'template']);
   }
-  const r = OB.restore({ step: 1, choice: 'scratch', answers: { name: 5, links: [{ platform: 'myspace', url: 'x', token: 't' }, ...Array(12).fill({ platform: 'x', url: '' })], token: 'secret' } }, M, V3);
+  const r = OB.restore({ step: 1, choice: 'scratch', answers: { name: 5, links: [{ platform: 'myspace', url: 'x', token: 't' }, ...Array(12).fill({ platform: 'x', url: '' })], token: 'secret' } }, M, V3, T);
   assert.deepEqual(r.answers.links[0], { platform: 'instagram', url: 'x' }, 'unknown platform -> the first; unknown fields dropped');
   assert.equal(r.answers.links.length, 8, 'at most 8 rows');
   assert.equal(r.answers.name, '');
@@ -485,6 +525,49 @@ test('O2.1 colours: QDS tokens in Dark, dark text on orange, black header in bot
       assert.ok(r >= 4.5, name + ': ' + fg + ' on ' + bg + ' = ' + r.toFixed(2));
     }
   }
+});
+
+test('T1b Step 3: the "Example" tag on sections with example content only (fixed text, escaped, valid ids only, its style once); the hero and other sections untouched', () => {
+  const PV = require('../../frontend/public/js/studio/onboarding-previews.js');
+  const V3 = require('../src/lpV3/core.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const s = T.sample(V3, 'restaurant', { lang: 'en', name: 'Café Sonne' });
+  const html = V3.renderDesign(s.design, { businessName: 'Café Sonne' }, { preview: true }).html;
+  const ids = ['s_obbuttons1', 's_obproducts1', 'evil"><script>', 's_obhours01'];
+  const out = PV.markExamples(html, ids, 'Example <b>');
+  assert.equal((out.match(/<span class="ob-ex">Example &#60;b&#62;<\/span>/g) || []).length, 3, 'three tags, the label escaped');
+  assert.equal((out.match(/<style>\.ob-ex\{/g) || []).length, 1, 'the style once');
+  assert.ok(/data-v3-id="s_obbuttons1"[^>]*><div class="v3-wrap"><span class="ob-ex">/.test(out), 'at the top of the section');
+  assert.ok(!/data-v3-id="s_obhero01"[^>]*>[^]{0,200}ob-ex/.test(out.replace(/<style>[^]*?<\/style>/g, '')), 'the hero (the customer\'s name) is not tagged');
+  assert.ok(!out.includes('<script>'), 'nothing injected from an id');
+  assert.equal(PV.markExamples(html, [], 'Example'), html, 'no example section: unchanged');
+  assert.equal(PV.markExamples('<p>x</p>', ['s_obbuttons1'], 'Example'), '', 'not a page: nothing');
+});
+
+test('T1b Step 3: the shell draws the chosen template with the customer\'s answers, only its photos, example sections tagged; Next waits for a design; nothing else on the page changes', () => {
+  const c = code(SRC);
+  assert.ok(c.includes("var s = T.sample(V3, answers.template, opts);"), 'the catalog builds the page');
+  assert.ok(c.includes("var opts = { lang: current, palette: answers.palette, name: name, description: r.values.description, links: r.values.links };"), 'the customer\'s own name, description and links (Step 2)');
+  assert.ok(c.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), function () { drawDesign(); });"), 'only the chosen template\'s photos');
+  assert.ok(c.includes("var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), examples, t('example_tag')));"), 'inline photos, example tags, the fixed frame script');
+  assert.ok(c.includes("if (sec && sec.type !== 'hero' && examples.indexOf(sec.id) === -1) examples.push(sec.id);"));
+  assert.ok(c.includes("$('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);"), 'Next disabled until a design is chosen');
+  // choosing a template or palette changes only template / palette (Step 2 answers and the section list are kept)
+  const pick = c.slice(c.indexOf('function pickTemplate('), c.indexOf('function drawDesign('));
+  assert.ok(!/answers\.(name|description|links|sections|social)\s*=/.test(pick), 'never touches the customer\'s answers or sections');
+  assert.ok(/answers\.template = id;/.test(pick) && /answers\.palette = /.test(pick));
+  // texts of Step 3 in both languages
+  for (const k of ['step_design', 'design_text', 'pal_title', 'design_hint', 'design_empty', 'design_selected', 'pal_selected', 'selected', 'legend_yours', 'legend_example', 'example_tag', 'live_note_design', 'jump_preview']) {
+    assert.ok(OB.TX.en[k] && OB.TX.de[k] && (OB.TX.en[k] !== OB.TX.de[k] || k === 'selected'), k);
+  }
+  assert.deepEqual([OB.TX.en.step_sections, OB.TX.de.step_sections, OB.TX.en.step_review], ['Customize your page', 'Seite anpassen', 'Review & save draft']);
+  // the legend, short: the customer's details and the demo content (the 'Example' tags stay in the phone)
+  assert.deepEqual([OB.TX.en.legend_yours, OB.TX.en.legend_example], ['Your details from Step 2', '“Example”: demo, not your real details']);
+  assert.deepEqual([OB.TX.de.legend_yours, OB.TX.de.legend_example], ['Ihre Angaben aus Schritt 2', '„Beispiel“: Demo, nicht Ihre Angaben']);
+  for (const l of ['en', 'de']) assert.ok(OB.TX[l].legend_example.includes(OB.TX[l].example_tag), l + ': the legend names the tag');
+  assert.deepEqual([OB.TX.en.jump_preview, OB.TX.de.jump_preview], ['See live preview', 'Live-Vorschau ansehen']);
+  assert.ok(/getElementById\('ob-design-jump'\)|\$\('ob-design-jump'\)/.test(c) && /scrollIntoView/.test(c), 'the jump scrolls to the existing phone');
+  assert.ok(c.includes("$('ob-design-jump').disabled = !designOk();"), 'the jump enabled with a design');
 });
 
 test('English and German: the same texts, none empty', () => {

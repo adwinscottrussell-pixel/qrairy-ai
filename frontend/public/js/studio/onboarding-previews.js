@@ -30,6 +30,10 @@
  * and, on the wizard's message, restores it and scrolls to a section just
  * added or moved. acceptFrameMessage accepts exactly { type: 'scroll', y }.
  *
+ * T1b: markExamples adds a small "Example" tag (fixed wizard text) at the
+ * top of the sections showing example content in Step 3's phone, so example
+ * text, prices, hours and links are never taken for the customer's own.
+ *
  * In Node: module.exports (for the tests). In the browser:
  * window.QraivyOnboardingPreviews.
  */
@@ -142,6 +146,22 @@
     if (typeof html !== 'string' || !/<\/body><\/html>$/.test(html)) return '';
     return html.slice(0, html.length - '</body></html>'.length) + FRAME_SCRIPT + '</body></html>';
   }
+  // T1b: the sections showing example content get a small "Example" tag at their top, so example text,
+  // prices, hours and links are never mistaken for the customer's own. ids: section ids (s_ + 4-16 of
+  // a-z0-9, anything else ignored); label: a fixed text of the wizard (escaped). '' for anything but a page.
+  var EXAMPLE_CSS = '<style>.ob-ex{display:inline-block;margin:0 0 10px;padding:2px 9px;border:1px dashed #b45309;border-radius:999px;background:#fffbeb;' +
+    'color:#7c2d12;font:700 11px/1.5 system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase}</style>';
+  function markExamples(html, ids, label) {
+    if (typeof html !== 'string' || !/<\/head>/.test(html)) return '';
+    var text = String(label || '').replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; });
+    var marked = false;
+    (Array.isArray(ids) ? ids : []).forEach(function (id) {
+      if (typeof id !== 'string' || !SECTION_ID.test(id)) return;
+      html = html.replace(new RegExp('(<section [^>]*data-v3-id="' + id + '"[^>]*><div class="v3-wrap">)'), function (m) { marked = true; return m + '<span class="ob-ex">' + text + '</span>'; });
+    });
+    return marked ? html.replace('</head>', EXAMPLE_CSS + '</head>') : html;
+  }
+
   // a message from the live frame -> { type: 'scroll', y } or null (nothing else is accepted)
   function acceptFrameMessage(d) {
     if (!d || typeof d !== 'object' || Array.isArray(d) || Object.getPrototypeOf(d) !== Object.prototype) return null;
@@ -154,5 +174,5 @@
   }
 
   return { CARDS: CARDS, PHOTOS: PHOTOS, demos: demos, previews: previews,
-    FRAME_SCRIPT: FRAME_SCRIPT, liveHtml: liveHtml, acceptFrameMessage: acceptFrameMessage, initMessage: initMessage };
+    FRAME_SCRIPT: FRAME_SCRIPT, liveHtml: liveHtml, markExamples: markExamples, acceptFrameMessage: acceptFrameMessage, initMessage: initMessage };
 });

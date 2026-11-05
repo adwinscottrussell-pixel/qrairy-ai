@@ -318,11 +318,12 @@ test('Hero spacing: compact for Creator and Professional Services only (T0 refin
   assert.equal(T.get('services').content((en) => en, () => '', () => '').hero.variant, 'split');
 });
 
-test('pure: no request, no storage, no DOM; nothing loads the catalog yet (onboarding unchanged)', () => {
+test('pure: no request, no storage, no DOM; T1b: loaded by the onboarding only (Step 3), never by the Studio', () => {
   const src = read('js/studio/onboarding-templates.js');
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|localStorage|sessionStorage|document\.|window\.|new Image|import\(/.test(src.replace(/^\s*\*.*$/gm, '').replace(/\/\/.*$/gm, '')));
-  ['studio-onboarding.html', 'studio.html'].forEach((f) => assert.ok(!read(f).includes('onboarding-templates.js'), f));
-  ['js/studio/onboarding-shell.js', 'js/studio/studio-shell.js'].forEach((f) => assert.ok(!read(f).includes('QraivyOnboardingTemplates'), f));
+  assert.ok(read('studio-onboarding.html').includes('<script src="js/studio/onboarding-templates.js"></script>'), 'the onboarding loads it');
+  assert.ok(read('js/studio/onboarding-shell.js').includes('T = win.QraivyOnboardingTemplates'), 'Step 3 uses it');
+  assert.ok(!read('studio.html').includes('onboarding-templates.js') && !read('js/studio/studio-shell.js').includes('QraivyOnboardingTemplates'), 'the Studio does not');
 });
 
 (async () => {

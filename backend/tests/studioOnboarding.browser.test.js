@@ -20,6 +20,11 @@
 // - no API request at all, no draft, no billing;
 // - the Studio's "Create your first page" on the isolated address only.
 // Screenshots: set OB_SHOTS=<folder>.
+// T1b: five steps; Step 3 "Choose your design": six template cards (a radio
+// group, none chosen, Next waits), palettes, the live phone with the Step 2
+// answers and "Example" tags, only the chosen template's photos, keyboard,
+// kept across Back / Next / reload, four-step progress migrated, phones 390 /
+// 360 / 320 in EN / DE, Light / Dark.
 // Run: node tests/studioOnboarding.browser.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -136,7 +141,7 @@ test('email not verified (German): the notice, no wizard; "I have verified it" c
   await page.evaluate(() => { window.__verifyOnReload = true; });
   await page.click('#ob-recheck'); await sleep(100);
   assert.equal(await visible(page, '#ob-wizard'), true, 'verified now: the wizard');
-  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 1 von 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 1 von 5');
   assert.deepEqual((await calls(page)).filter((c) => c !== 'load'), ['openUserProfile', 'reload', 'reload']);
   assert.deepEqual(api, []);
   await page.close();
@@ -145,7 +150,7 @@ test('email not verified (German): the notice, no wizard; "I have verified it" c
 test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from Scratch -> Step 2; Next needs the name; placeholders; Back / Next', async () => {
   const { page, api, external, missing } = await onboarding();
   assert.equal(await visible(page, '#ob-wizard'), true);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 5');
   assert.equal(await page.$eval('.ob-steps__item[data-step="0"]', (n) => n.getAttribute('aria-current')), 'step');
   assert.equal(await visible(page, '.ob-steps'), true, 'the four step labels on desktop');
   const opts = await page.$$eval('.ob-option', (ns) => ns.map((n) => ({ id: n.dataset.option, disabled: n.disabled, badge: n.querySelector('.ob-badge').textContent, title: n.querySelector('.ob-option__title').textContent, text: n.querySelector('.ob-option__text').textContent })));
@@ -170,20 +175,23 @@ test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from 
   assert.equal(await page.$eval('#ob-next', (n) => n.disabled), false);
   await shot(page, 'onboarding-step1-selected-desktop-en.png');
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.equal(await visible(page, '#ob-step-1'), true);
   assert.equal(await visible(page, '#ob-step-0'), false);
   assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.textContent), 'Business information', 'focus on the step heading');
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4', 'no name: no Next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5', 'no name: no Next');
   await page.type('#ob-name', 'Café Sonne');
-  await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
-  await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
+  await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5');
+  assert.equal(await page.$eval('#ob-next', (n) => n.disabled), true, 'T1b Step 3: Next waits for a design');
+  await page.click('.ob-tpl[data-template="bakery"]');
+  await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
+  await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.equal(await visible(page, '#ob-next'), false);
   assert.equal(await page.$eval('#ob-finish', (n) => n.disabled), true, 'no draft is created');
   assert.match(await text(page, '#ob-save-note'), /Nothing has been saved yet/);
-  await page.click('#ob-back'); await page.click('#ob-back'); await page.click('#ob-back');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 4');
+  await page.click('#ob-back'); await page.click('#ob-back'); await page.click('#ob-back'); await page.click('#ob-back');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 5');
   assert.equal(await page.$eval('[data-option="scratch"]', (n) => n.getAttribute('aria-checked')), 'true', 'Back keeps the choice');
   assert.deepEqual(api, [], 'no API request (no draft, no save, no billing)');
   assert.deepEqual(external, []); assert.deepEqual(missing, []);
@@ -193,7 +201,7 @@ test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from 
 
 test('phone, German: one column, no sideways scroll, Back / Next reachable; language switch EN <-> DE', async () => {
   const { page, api } = await onboarding({ lang: 'de', viewport: PHONE });
-  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 1 von 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 1 von 5');
   assert.equal(await text(page, '#ob-start-title'), 'Wie möchten Sie starten?');
   assert.deepEqual(await page.$$eval('.ob-option .ob-badge', (ns) => ns.map((n) => n.textContent)), ['Demnächst', 'Demnächst', 'Verfügbar']);
   const layout = await page.evaluate(() => {
@@ -208,9 +216,9 @@ test('phone, German: one column, no sideways scroll, Back / Next reachable; lang
   await shot(page, 'onboarding-step1-phone-de.png');
   await page.click('[data-option="scratch"]');
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 2 von 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 2 von 5');
   await page.click('.ob-lang__btn[data-lang="en"]');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.equal(await page.evaluate(() => localStorage.getItem('qraivy_lang')), 'en', 'the shared language setting');
   assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
   await page.click('#ob-back');
@@ -261,7 +269,7 @@ test('Step 1 demo pages: three DEMO pages in sandboxed phone frames, DEMO on eac
   assert.deepEqual(await page.$$eval('.ob-option .ob-badge', (ns) => ns.map((n) => n.textContent)), ['Demnächst', 'Demnächst', 'Verfügbar']);
   // Next with Start from Scratch still leads to Step 2
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 2 von 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Schritt 2 von 5');
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, [], 'nothing from elsewhere (photos are local, inline)'); assert.deepEqual(missing, []);
   await page.close();
 });
@@ -310,7 +318,7 @@ test('Step 2, desktop, English: the form left, the live phone right; name requir
   await tallShot(page, 'onboarding-step2-desktop-en-empty.png', DESKTOP);
   // Next without a name: an error on the field, focus moves there, still Step 2
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.deepEqual(await field(page, 'ob-name'), { invalid: 'true', error: 'Please enter your business name.', focused: true });
   // typing fixes it; the preview follows (escaped by core.js; the frame stays sandboxed, no script)
   await page.type('#ob-name', 'Café <Sonne>');
@@ -329,13 +337,13 @@ test('Step 2, desktop, English: the form left, the live phone right; name requir
   await sleep(300);
   assert.ok((await live(page)).includes('Café &lt;Sonne&gt;'), 'the preview keeps the last valid name');
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4', 'too long: no Next');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5', 'too long: no Next');
   await page.$eval('#ob-name', (n) => { n.value = ''; n.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('#ob-name', 'Café Sonnenschein');
   assert.equal(await text(page, '#ob-name-count-sr'), '', 'quiet while far from the limit');
   await tallShot(page, 'onboarding-step2-desktop-en-filled.png', DESKTOP);
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5', 'valid: on to Step 3 (T1b: Choose your design)');
   await page.click('#ob-back');
   assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonnenschein', 'Back keeps the answers');
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
@@ -369,7 +377,7 @@ test('Step 2 links: the green "+ Add link"; all eight platforms; https:// added;
   assert.ok(!(await live(page)).includes('javascript'), 'never in the page');
   await tallShot(page, 'onboarding-step2-desktop-en-errors.png', DESKTOP);
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.equal((await field(page, 'ob-link-url-' + keys[1])).focused, true, 'focus on the bad link');
   // another platform's address is refused too; the right one is accepted
   await page.$eval('#ob-link-url-' + keys[1], (n) => { n.value = 'instagram.com/x'; n.dispatchEvent(new Event('input', { bubbles: true })); });
@@ -389,7 +397,7 @@ test('Step 2 links: the green "+ Add link"; all eight platforms; https:// added;
   assert.equal(await visible(page, '#ob-links-full'), true);
   assert.deepEqual(await page.$$eval('#ob-links select', (ns) => ns.map((n) => n.value)), ['tiktok', 'instagram', 'facebook', 'youtube', 'linkedin', 'x', 'pinterest', 'whatsapp'], 'each new row starts with an unused platform');
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4', 'empty rows ignored');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5', 'empty rows ignored');
   assert.deepEqual(api, []);
   await page.close();
 });
@@ -439,14 +447,15 @@ test('the progress and the four step labels keep one width and place on Steps 1-
   for (const viewport of [DESKTOP, { width: 1024, height: 800 }, PHONE]) {
     const { page } = await onboarding({ viewport });
     const seen = [];
-    for (let step = 0; step < 4; step++) {
+    for (let step = 0; step < 5; step++) {
       seen.push(await page.evaluate(() => {
         const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return [Math.round(b.left), Math.round(b.width)]; };
         return { progress: r('.ob-progress'), bar: r('.ob-progress__bar'), labels: r('.ob-steps'), card: r('#ob-wizard .ob-card-panel') };
       }));
       if (step === 0) await page.click('[data-option="scratch"]');
       if (step === 1) await page.type('#ob-name', 'Café Sonne');
-      if (step < 3) await page.click('#ob-next');
+      if (step === 2) await page.click('.ob-tpl[data-template="bakery"]');
+      if (step < 4) await page.click('#ob-next');
     }
     for (const s of seen) assert.deepEqual([s.progress, s.bar, s.labels], [seen[0].progress, seen[0].bar, seen[0].labels], viewport.width + ': ' + JSON.stringify(seen));
     if (viewport.width >= 960) assert.ok(seen[1].card[1] > seen[0].card[1], 'Step 2 keeps its wider two-column card');
@@ -488,11 +497,11 @@ test('Step 2 progress: kept across a reload for the same user; another user sees
   const stored = await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding')).map((k) => [k, JSON.parse(sessionStorage.getItem(k))]));
   assert.equal(stored.length, 1);
   assert.match(stored[0][0], /^qraivy\.onboarding\.v1:[0-9a-f]{8}$/, 'a per-user key, not the id');
-  assert.deepEqual(stored[0][1], { step: 1, choice: 'scratch', answers: { name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }], sections: null, social: 'auto' } });
+  assert.deepEqual(stored[0][1], { v: 2, step: 1, choice: 'scratch', answers: { template: null, palette: null, name: 'Café Sonne', description: 'Kaffee', links: [{ platform: 'instagram', url: 'instagram.com/sonne' }], sections: null, social: 'auto' } });
   assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).filter((k) => /onboarding/.test(k) || /Sonne/.test(localStorage.getItem(k)))), [], 'nothing in localStorage');
   // reload: the same user is back on Step 2 with the answers
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonne');
   assert.equal(await page.$eval('#ob-description', (n) => n.value), 'Kaffee');
   assert.equal(await page.$eval('#ob-links input', (n) => n.value), 'instagram.com/sonne');
@@ -500,7 +509,7 @@ test('Step 2 progress: kept across a reload for the same user; another user sees
   // another account in this tab: none of the first one's answers
   await page.evaluate(() => sessionStorage.setItem('__test_uid', 'user_test_B'));
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 4', 'another user starts at Step 1');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 5', 'another user starts at Step 1');
   await toStep2(page);
   assert.equal(await page.$eval('#ob-name', (n) => n.value), '', 'another user: empty');
   assert.equal((await rowKeys(page)).length, 0);
@@ -513,12 +522,223 @@ test('Step 2 progress: kept across a reload for the same user; another user sees
   await page.close();
 });
 
+// ── T1b Step 3: choose your design ──
+async function toDesign(page, { name = 'Café Sonne', link = '' } = {}) {
+  await toStep2(page);
+  await page.type('#ob-name', name);
+  if (link) { await page.click('#ob-add-link'); await page.type('#ob-link-url-' + (await rowKeys(page))[0], link); }
+  await page.click('#ob-next');
+  await sleep(150);
+}
+const designFrame = (page) => page.$eval('#ob-design-frame', (f) => f.srcdoc);
+const checkedIn = (page, sel) => page.$$eval(sel + ' [aria-checked="true"]', (ns) => ns.map((n) => n.dataset.template || n.dataset.palette));
+// the image files the page asked for (the card thumbnails and the template photos come from the upload)
+function imageLog(page) { const seen = []; page.on('request', (r) => { const u = new URL(r.url()); if (/^\/images\/(deals|studio)\/starter\//.test(u.pathname)) seen.push(u.pathname.slice(1)); }); return seen; }
+
+test('T1b Step 3, desktop, English: six template cards (a radio group), none chosen, Next disabled with a hint; a click chooses one: orange ring and check, its palettes, the live phone with the customer\'s name and links, example sections tagged; no request', async () => {
+  const { page, api, external, missing } = await onboarding();
+  const images = imageLog(page);
+  await toDesign(page, { link: 'instagram.com/cafesonne' });
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5');
+  assert.equal(await text(page, '#ob-design-title'), 'Choose your design');
+  assert.equal(await page.$eval('.ob-steps__item[data-step="2"]', (n) => n.getAttribute('aria-current')), 'step');
+  const cards = await page.$$eval('#ob-tpls[role="radiogroup"] > .ob-tpl[role="radio"]', (ns) => ns.map((n) => ({ id: n.dataset.template, checked: n.getAttribute('aria-checked'), title: n.querySelector('.ob-tpl__title').textContent, tab: n.tabIndex, img: n.querySelector('img').getAttribute('src'), ai: n.querySelector('.ob-tpl__ai').textContent })));
+  assert.deepEqual(cards.map((c) => c.id), ['restaurant', 'bakery', 'beauty', 'retail', 'creator', 'services']);
+  assert.deepEqual(cards.map((c) => c.title), ['Restaurant', 'Bakery & Café', 'Beauty & Salon', 'Retail & Boutique', 'Creator & Influencer', 'Professional Services']);
+  assert.ok(cards.every((c) => c.checked === 'false'), 'no template chosen at first (D1)');
+  assert.deepEqual(cards.map((c) => c.tab), [0, -1, -1, -1, -1, -1], 'one tab stop');
+  assert.ok(cards.every((c) => /^images\/(deals|studio)\/starter\/[A-Za-z0-9-]+\.jpg$/.test(c.img) && c.ai === 'AI · KI-generiert'), 'a local photo with the AI label on every card');
+  assert.equal(await page.$eval('#ob-next', (n) => n.disabled), true, 'Next disabled until a design is chosen');
+  assert.equal(await visible(page, '#ob-design-hint'), true);
+  assert.equal(await visible(page, '#ob-pals-wrap'), false, 'no palettes yet');
+  assert.equal(await visible(page, '#ob-design-empty'), true, 'the phone says what to do');
+  assert.equal(await visible(page, '#ob-design-stage'), false);
+  // the card photos are all 4:3 thumbnails (cropped, never stretched), including the two portraits
+  const media = await page.$$eval('.ob-tpl__media', (ns) => ns.map((n) => { const r = n.getBoundingClientRect(), i = n.querySelector('img'); return [Math.round(r.width / r.height * 100) / 100, getComputedStyle(i).objectFit]; }));
+  assert.ok(media.every(([ratio, fit]) => Math.abs(ratio - 4 / 3) < 0.02 && fit === 'cover'), JSON.stringify(media));
+  await shot(page, 't1b-step3-desktop-en-empty.png');
+  // choose Restaurant
+  await page.click('.ob-tpl[data-template="restaurant"]');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), ['restaurant']);
+  await sleep(250);   // after the 0.15 s border transition
+  assert.equal(await page.$eval('.ob-tpl[data-template="restaurant"]', (n) => getComputedStyle(n).borderColor), 'rgb(255, 90, 31)', 'the orange selection border');
+  assert.equal(await visible(page, '.ob-tpl[data-template="restaurant"] .ob-tpl__check'), true, 'and the check (not colour alone)');
+  assert.equal(await page.$eval('#ob-next', (n) => n.disabled), false);
+  assert.equal(await visible(page, '#ob-design-hint'), false);
+  assert.deepEqual(await page.$$eval('#ob-pals .ob-pal', (ns) => ns.map((n) => n.querySelector('.ob-pal__name').textContent)), ['Bordeaux', 'Olive grove', 'Terracotta', 'Midnight & gold']);
+  assert.deepEqual(await checkedIn(page, '#ob-pals'), ['bordeaux'], 'the first palette');
+  await page.waitForFunction(() => document.getElementById('ob-design-frame').srcdoc.includes('Café Sonne'), { timeout: 3000 });
+  await page.waitForFunction(() => /data:image\/jpeg;base64/.test(document.getElementById('ob-design-frame').srcdoc), { timeout: 5000 });
+  let html = await designFrame(page);
+  assert.ok(html.includes('https://instagram.com/cafesonne') && !html.includes('href="https://www.instagram.com/"'), 'the customer\'s link, not the example profile');
+  assert.ok(html.includes('--v3-brand:#8c1c2b'), 'the Bordeaux palette');
+  assert.equal((html.match(/<span class="ob-ex">Example<\/span>/g) || []).length, 4, 'buttons, menu, opening hours, contact tagged');
+  assert.ok(/data-v3-id="s_obbuttons1"[^>]*><div class="v3-wrap"><span class="ob-ex">/.test(html));
+  assert.ok(!/data-v3-id="s_obhero01"[^>]*><div class="v3-wrap"><span class="ob-ex">/.test(html) && !/data-v3-id="s_obsocial1"[^>]*><div class="v3-wrap"><span class="ob-ex">/.test(html), 'the hero (the customer\'s name) and the customer\'s own links are not tagged');
+  assert.ok(!/res\.cloudinary\.com|images\/(deals|studio)\/starter/.test(html), 'inline photos only, no address in the frame');
+  assert.equal((html.match(/class="st-ai"/g) || []).length, (html.match(/<img\b[^>]*src="data:image\/jpeg/g) || []).length, 'every photo with the AI label');
+  assert.match(await text(page, '#ob-design-status'), /Restaurant selected\./);
+  // the legend: what is the customer's, what is an example
+  assert.match(await text(page, '.ob-legend__item--yours'), /^Your details from Step 2$/);
+  assert.match(await text(page, '.ob-legend__item--example'), /^“Example”: demo, not your real details$/);
+  assert.equal(await visible(page, '#ob-design-jump'), false, 'no preview jump on desktop: the phone sits beside the cards');
+  // desktop: the phone keeps its size; the column beside the cards ends close under the palettes
+  const col = await page.evaluate(() => { const r = (q) => document.querySelector(q).getBoundingClientRect(); return { phone: Math.round(r('#ob-design-stage .ob-phone').width), gap: Math.round(r('#ob-design-live').bottom - r('#ob-pals-wrap').bottom), legend: [...document.querySelectorAll('#ob-step-2 .ob-legend__item')].map((n) => Math.round(n.getBoundingClientRect().height)) }; });
+  assert.ok(col.phone === 260 && col.gap <= 120 && col.legend.every((h) => h <= 20), 'phone 260 px, little space under the palettes, one-line legend: ' + JSON.stringify(col));
+  // a palette: only the colours change
+  await page.click('.ob-pal[data-palette="olive"]');
+  assert.deepEqual(await checkedIn(page, '#ob-pals'), ['olive']);
+  await page.waitForFunction(() => document.getElementById('ob-design-frame').srcdoc.includes('--v3-brand:#4b6a2e'), { timeout: 3000 });
+  assert.match(await text(page, '#ob-design-status'), /Colour palette Olive grove selected\./);
+  await shot(page, 't1b-step3-desktop-en-restaurant.png');
+  // another template: its first palette; the Step 2 answers and the (untouched) section list kept
+  await page.click('.ob-tpl[data-template="services"]');
+  assert.deepEqual([await checkedIn(page, '#ob-tpls'), await checkedIn(page, '#ob-pals')], [['services'], ['navy']]);
+  await page.waitForFunction(() => document.getElementById('ob-design-frame').srcdoc.includes('Steuern') || document.getElementById('ob-design-frame').srcdoc.includes('Tax · Accounting'), { timeout: 3000 });
+  const kept = await page.evaluate(() => JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding')))));
+  assert.deepEqual([kept.v, kept.step, kept.answers.template, kept.answers.palette, kept.answers.name, kept.answers.sections], [2, 2, 'services', 'navy', 'Café Sonne', null]);
+  // only the chosen templates' photos were loaded for the phone (plus one thumbnail per card)
+  const thumbs = cards.map((c) => c.img);
+  const extra = images.filter((p) => !thumbs.includes(p));
+  for (const p of ['images/deals/starter/restaurant-fresh-01.jpg', 'images/deals/starter/restaurant-meal-01.jpg']) assert.ok(extra.includes(p), 'the chosen Restaurant\'s photos: ' + p);
+  const allowed = ['restaurant-fresh-01', 'restaurant-meal-01', 'bakery-bread-01', 'bakery-coffee-01'].map((id) => 'images/deals/starter/' + id + '.jpg');   // (the bakery ones: Step 1's demo pages)
+  assert.deepEqual(extra.filter((p) => !allowed.includes(p)), [], 'nothing of Beauty, Retail or Creator beyond their thumbnails: ' + JSON.stringify(extra));
+  assert.equal(new Set(images).size, images.length, 'each photo loaded once');
+  assert.deepEqual(api, []); assert.deepEqual(external, []); assert.deepEqual(missing, []);
+  await page.close();
+});
+
+test('T1b Step 3 keyboard: Tab reaches the cards once, arrow keys / Home / End move and choose, the same for palettes; a visible focus ring; Next by keyboard', async () => {
+  const { page } = await onboarding();
+  await toDesign(page);
+  await page.focus('.ob-tpl[data-template="restaurant"]');
+  await page.keyboard.press('ArrowRight');
+  assert.deepEqual([await checkedIn(page, '#ob-tpls'), await page.evaluate(() => document.activeElement.dataset.template)], [['bakery'], 'bakery']);
+  await page.keyboard.press('End');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), ['services']);
+  await page.keyboard.press('ArrowRight');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), ['restaurant'], 'wraps around');
+  await page.keyboard.press('ArrowLeft');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), ['services']);
+  const ring = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth]; });
+  assert.deepEqual(ring, ['solid', '3px'], 'visible focus ring');
+  assert.deepEqual(await page.$$eval('.ob-tpl', (ns) => ns.map((n) => n.tabIndex)), [-1, -1, -1, -1, -1, 0], 'the chosen card is the one tab stop');
+  // Tab: into the palettes (one stop), arrows choose
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.dataset.palette), 'navy');
+  await page.keyboard.press('ArrowDown');
+  assert.deepEqual(await checkedIn(page, '#ob-pals'), ['forest']);
+  await page.keyboard.press('Home');
+  assert.deepEqual(await checkedIn(page, '#ob-pals'), ['navy']);
+  await page.focus('#ob-next'); await page.keyboard.press('Enter'); await sleep(150);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
+  await page.close();
+});
+
+test('T1b Step 3 progress: template and palette kept across Back / Next and a reload; a new template never touches the customer\'s sections; sign-out clears the choice', async () => {
+  const { page } = await onboarding();
+  await toDesign(page);
+  await page.click('.ob-tpl[data-template="beauty"]'); await page.click('.ob-pal[data-palette="plum"]');
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5');
+  assert.deepEqual([await checkedIn(page, '#ob-tpls'), await checkedIn(page, '#ob-pals')], [['beauty'], ['plum']]);
+  await page.waitForFunction(() => document.getElementById('ob-design-frame').srcdoc.includes('--v3-brand:#6b3a7a'), { timeout: 3000 });
+  // on to Step 4, change the sections; Back to Step 3, another template; Step 4 still has the customer's list
+  await page.click('#ob-next'); await sleep(150);
+  await page.click('#ob-more [data-act="add"][aria-label="Add Gallery"]');
+  await page.click('#ob-chosen [data-type="buttons"] [data-act="remove"]');
+  const mine = await chosen(page);
+  await page.click('#ob-back');
+  assert.deepEqual([await checkedIn(page, '#ob-tpls'), await checkedIn(page, '#ob-pals')], [['beauty'], ['plum']], 'kept on Back');
+  await page.click('.ob-tpl[data-template="retail"]');
+  await page.click('#ob-next'); await sleep(150);
+  assert.deepEqual(await chosen(page), mine, 'the customer\'s sections are never dropped by a template change');
+  // Back to Step 2 and forward again: everything kept
+  await page.click('#ob-back'); await page.click('#ob-back');
+  assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonne');
+  await page.click('#ob-next');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), ['retail']);
+  await page.click('#ob-signout'); await sleep(100);
+  assert.deepEqual(await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding'))), []);
+  await page.close();
+});
+
+test('T1b migration: progress kept by the four-step version (on "Choose sections", own section list) opens on the new Step 3 with every answer and section kept; after a design, Step 4 shows the same list', async () => {
+  const { page } = await onboarding();
+  await toStep2(page);
+  // the four-step version's progress for this user: step 2 = Choose sections, no version field
+  await page.evaluate(() => {
+    const key = Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding'));
+    sessionStorage.setItem(key, JSON.stringify({ step: 2, choice: 'scratch', answers: { name: 'Café Alt', description: 'Seit 1990', links: [], sections: ['hero', 'text', 'contact'], social: 'auto' } }));
+  });
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5', 'the new step first: choose a design');
+  assert.deepEqual(await checkedIn(page, '#ob-tpls'), []);
+  await page.click('.ob-tpl[data-template="creator"]');
+  await page.waitForFunction(() => document.getElementById('ob-design-frame').srcdoc.includes('Café Alt') && document.getElementById('ob-design-frame').srcdoc.includes('Seit 1990'), { timeout: 3000 });
+  await page.click('#ob-next'); await sleep(150);
+  assert.deepEqual(await chosen(page), ['hero', 'text', 'contact'], 'the kept section list');
+  await page.close();
+});
+
+test('T1b Step 3, phone 390 / 360 / 320, English and German, Light and Dark: cards in two columns (one at 320), palettes and phone below, no sideways scroll, touch targets 44 px, readable', async () => {
+  for (const [width, lang, theme] of [[390, 'en', 'light'], [360, 'de', 'dark'], [320, 'de', 'light'], [320, 'en', 'dark']]) {
+    const viewport = Object.assign({}, PHONE, { width });
+    const { page, api, external } = await onboarding({ viewport, lang, theme });
+    await toDesign(page, { name: lang === 'de' ? 'Bäckerei Sonne' : 'Café Sonne' });
+    // the preview jump: shown, but disabled until a design is chosen (nothing to see yet); a tap does nothing
+    assert.deepEqual(await page.$eval('#ob-design-jump', (n) => [getComputedStyle(n).display !== 'none', n.disabled]), [true, true], width + ' ' + lang + ': jump disabled first');
+    await page.evaluate(() => window.scrollTo(0, 0)); await page.click('#ob-design-jump', { force: true }).catch(() => {}); await sleep(300);
+    assert.equal(await page.evaluate(() => scrollY), 0, 'a disabled jump does not scroll');
+    await page.click('.ob-tpl[data-template="creator"]');
+    assert.equal(await page.$eval('#ob-design-jump', (n) => n.disabled), false, 'enabled right after the choice');
+    await page.waitForFunction(() => /data:image\/jpeg;base64/.test(document.getElementById('ob-design-frame').srcdoc), { timeout: 5000 });
+    const lay = await page.evaluate(() => {
+      const r = (q) => document.querySelector(q).getBoundingClientRect();
+      const cols = new Set([...document.querySelectorAll('.ob-tpl')].map((n) => Math.round(n.getBoundingClientRect().left))).size;
+      const small = [...document.querySelectorAll('#ob-step-2 .ob-tpl, #ob-step-2 .ob-pal, .ob-nav button:not([hidden])')].filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.className);
+      return { sw: document.documentElement.scrollWidth, iw: innerWidth, cols, small, order: r('#ob-tpls').bottom <= r('#ob-pals-wrap').top && r('#ob-pals-wrap').bottom <= r('#ob-step-2 .ob-live').top && r('#ob-step-2 .ob-live').bottom <= r('.ob-nav').top };
+    });
+    const tag = width + ' ' + lang + ' ' + theme;
+    assert.ok(lay.sw <= lay.iw, tag + ': no sideways scroll ' + JSON.stringify(lay));
+    assert.equal(lay.cols, width >= 340 ? 2 : 1, tag + ': columns');
+    assert.deepEqual(lay.small, [], tag + ': touch targets');
+    assert.ok(lay.order, tag + ': cards, palettes, phone, Back / Next');
+    if (lang === 'de') {
+      assert.equal(await text(page, '#ob-design-title'), 'Design wählen');
+      assert.equal(await text(page, '.ob-tpl[data-template="services"] .ob-tpl__title'), 'Dienstleistungen');
+      assert.ok((await designFrame(page)).includes('<span class="ob-ex">Beispiel</span>'));
+      assert.match(await text(page, '.ob-legend__item--example'), /^„Beispiel“: Demo, nicht Ihre Angaben$/);
+      assert.equal(await text(page, '.ob-legend__item--yours'), 'Ihre Angaben aus Schritt 2');
+    }
+    // the preview jump: near the top, above the cards; it scrolls to the one live phone and moves focus there
+    assert.equal(await text(page, '#ob-design-jump'), lang === 'de' ? 'Live-Vorschau ansehen' : 'See live preview');
+    const jump = await page.evaluate(() => { const b = document.getElementById('ob-design-jump').getBoundingClientRect(); return { above: b.bottom <= document.getElementById('ob-tpls').getBoundingClientRect().top, h: b.height, frames: document.querySelectorAll('#ob-step-2 iframe').length }; });
+    assert.ok(jump.above && jump.h >= 44 && jump.frames === 1, tag + ': jump ' + JSON.stringify(jump));
+    const jr = await contrast(page, '#ob-design-jump span');
+    assert.ok(jr !== null && jr >= 4.5, tag + ': jump contrast ' + jr);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.click('#ob-design-jump');
+    await page.waitForFunction(() => Math.abs(document.getElementById('ob-design-live').getBoundingClientRect().top - 12) < 4 || document.documentElement.scrollTop + innerHeight >= document.documentElement.scrollHeight - 2, { timeout: 3000 });
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-design-live', tag + ': focus on the preview');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    for (const sel of ['#ob-design-title','.ob-tpl[data-template="creator"] .ob-tpl__title', '.ob-tpl[data-template="bakery"] .ob-tpl__text', '#ob-pals-title', '.ob-pal__name', '.ob-legend__item--example', '.ob-live__note']) {
+      const r = await contrast(page, sel);
+      assert.ok(r !== null && r >= 4.5, tag + ': ' + sel + ' contrast ' + r);
+    }
+    await shot(page, 't1b-step3-phone-' + width + '-' + lang + '-' + theme + '.png');
+    assert.deepEqual(api, []); assert.deepEqual(external, []);
+    await page.close();
+  }
+});
+
 // ── Step 3 (O2): choose sections ──
 async function toStep3(page, { name = 'Café Sonne', link = '' } = {}) {
   await toStep2(page);
   await page.type('#ob-name', name);
   if (link) { await page.click('#ob-add-link'); await page.type('#ob-link-url-' + (await rowKeys(page))[0], link); }
   await page.click('#ob-next');
+  await page.click('.ob-tpl[data-template="bakery"]'); await page.click('#ob-next');   // T1b: Step 3, a design
   await sleep(150);
 }
 const chosen = (page) => page.$$eval('#ob-chosen > li', (ns) => ns.map((n) => n.dataset.type));
@@ -531,7 +751,7 @@ const frameIds = async (page) => [...(await secFrame(page)).matchAll(/data-v3-id
 test('Step 3, desktop, English: defaults Hero (locked), Buttons, Opening Hours, Contact; "Add more" the rest; live phone with the whole page; two columns; no request', async () => {
   const { page, api, external, missing } = await onboarding();
   await toStep3(page);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-sections-title', 'focus on the step heading');
   assert.deepEqual(await chosen(page), ['hero', 'buttons', 'openingHours', 'contact']);
   assert.deepEqual(await more(page), ['socialMedia', 'products', 'gallery', 'text']);
@@ -550,12 +770,12 @@ test('Step 3, desktop, English: defaults Hero (locked), Buttons, Opening Hours, 
   assert.deepEqual(await frameIds(page), ['s_obhero01', 's_obbuttons1', 's_obhours01', 's_obcontact1']);
   const fr = await page.$eval('#ob-sections-frame', (f) => ({ sandbox: f.getAttribute('sandbox'), tab: f.tabIndex, hidden: !!f.closest('[aria-hidden="true"]'), scripts: (f.srcdoc.match(/<script>/g) || []).length, name: f.srcdoc.includes('Café Sonne'), ph: (f.srcdoc.match(/Empty section – add content in the editor/g) || []).length }));
   assert.deepEqual(fr, { sandbox: 'allow-scripts', tab: -1, hidden: true, scripts: 1, name: true, ph: 3 });
-  const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-2 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-2 .ob-live').getBoundingClientRect();
-    return { side: l.left >= f.right, sticky: getComputedStyle(document.querySelector('#ob-step-2 .ob-live')).position, phone: Math.round(document.getElementById('ob-sections-frame').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth }; });
+  const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-3 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-3 .ob-live').getBoundingClientRect();
+    return { side: l.left >= f.right, sticky: getComputedStyle(document.querySelector('#ob-step-3 .ob-live')).position, phone: Math.round(document.getElementById('ob-sections-frame').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth }; });
   assert.ok(lay.side && lay.sticky === 'sticky' && Math.abs(lay.phone - 242) <= 1 && lay.sw <= lay.iw, JSON.stringify(lay));
   // Steps 1, 2 and 4 unchanged: Step 4 is still the placeholder, the Step 1 and 2 frames still without scripts
   await page.click('#ob-next');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.match(await text(page, '#ob-save-note'), /Nothing has been saved yet/);
   assert.deepEqual(await page.$$eval('[data-preview], #ob-live-frame', (ns) => ns.map((f) => f.getAttribute('sandbox'))), ['', '', '', '']);
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
@@ -618,7 +838,7 @@ test('Step 3: add, remove, Move up / Move down; the Hero stays first; each type 
   await page.keyboard.press('Enter');
   assert.equal((await chosen(page))[2], 'openingHours', 'Enter moves it');
   // touch targets: every section button at least 44 px
-  assert.ok((await page.$$eval('#ob-step-2 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && (r.height < 44 || r.width < 44)).length)) === 0, 'buttons at least 44 x 44');
+  assert.ok((await page.$$eval('#ob-step-3 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && (r.height < 44 || r.width < 44)).length)) === 0, 'buttons at least 44 x 44');
   assert.deepEqual(api, []);
   await page.close();
 });
@@ -647,26 +867,26 @@ test('Step 3 Social Media: included with Step 2 links ("1 link from Step 2"); fo
   const { page } = await onboarding();
   await toStep3(page);
   assert.ok(!(await chosen(page)).includes('socialMedia'), 'no links: not included');
-  // back to Step 2, add a link: Social Media joins at the end
-  await page.click('#ob-back');
+  // back to Step 2 (through Step 3), add a link: Social Media joins at the end
+  await page.click('#ob-back'); await page.click('#ob-back');
   await page.click('#ob-add-link');
   await page.type('#ob-link-url-' + (await rowKeys(page))[0], 'instagram.com/sonne');
-  await page.click('#ob-next');
+  await page.click('#ob-next'); await page.click('#ob-next');
   assert.deepEqual(await chosen(page), ['hero', 'buttons', 'openingHours', 'contact', 'socialMedia']);
   assert.equal(await text(page, '#ob-chosen [data-type="socialMedia"] .ob-sec__tag'), '1 link from Step 2');
   await waitSec(page, 's_obsocial1');
   assert.ok((await secFrame(page)).includes('https://instagram.com/sonne'));
   // removed deliberately: stays out after Step 2 gets another link
   await page.click('#ob-chosen [data-type="socialMedia"] [data-act="remove"]');
-  await page.click('#ob-back');
+  await page.click('#ob-back'); await page.click('#ob-back');
   await page.click('#ob-add-link');
   await page.type('#ob-link-url-' + (await rowKeys(page))[1], 'facebook.com/sonne');
-  await page.click('#ob-next');
+  await page.click('#ob-next'); await page.click('#ob-next');
   assert.ok(!(await chosen(page)).includes('socialMedia'), 'the customer\'s remove is kept');
   // added deliberately without links: stays, "No links yet"
-  await page.click('#ob-back');
+  await page.click('#ob-back'); await page.click('#ob-back');
   for (const b of await page.$$('#ob-links .ob-remove')) await page.click('#ob-links .ob-remove');
-  await page.click('#ob-next');
+  await page.click('#ob-next'); await page.click('#ob-next');
   await page.click('#ob-more [data-act="add"][aria-label="Add Social Media"]');
   assert.equal(await text(page, '#ob-chosen [data-type="socialMedia"] .ob-sec__tag'), 'No links yet · add them in Step 2');
   await page.click('#ob-back'); await page.click('#ob-next');
@@ -685,10 +905,14 @@ test('Step 3 progress: the sections come back after a reload (same user); Step 2
   const before = await chosen(page);
   assert.deepEqual(before, ['hero', 'openingHours', 'contact', 'text', 'socialMedia']);
   const stored = await page.evaluate(() => JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding')))));
-  assert.deepEqual([stored.step, stored.answers.sections, stored.answers.social], [2, ['hero', 'openingHours', 'contact', 'text', 'socialMedia'], 'auto']);
+  assert.deepEqual([stored.v, stored.step, stored.answers.template, stored.answers.palette, stored.answers.sections, stored.answers.social], [2, 3, 'bakery', 'honey', ['hero', 'openingHours', 'contact', 'text', 'socialMedia'], 'auto']);
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
   assert.deepEqual(await chosen(page), before);
+  // T1b: Back to Step 3: the chosen design and palette kept; Back again: Step 2 answers intact
+  await page.click('#ob-back');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 5');
+  assert.deepEqual(await page.$$eval('.ob-tpl[aria-checked="true"], .ob-pal[aria-checked="true"]', (ns) => ns.map((n) => n.dataset.template || n.dataset.palette)), ['bakery', 'honey']);
   await page.click('#ob-back');
   assert.equal(await page.$eval('#ob-name', (n) => n.value), 'Café Sonne', 'Step 2 answers intact');
   await page.click('#ob-signout'); await sleep(100);
@@ -704,13 +928,13 @@ test('Step 3, phone, English and German: one column (on your page, add more, pho
     await waitSec(page, 's_obsocial1');
     const lay = await page.evaluate(() => {
       const r = (s) => document.querySelector(s).getBoundingClientRect();
-      const a = r('#ob-chosen'), b = r('#ob-more'), c = r('#ob-step-2 .ob-live'), d = r('.ob-nav');
+      const a = r('#ob-chosen'), b = r('#ob-more'), c = r('#ob-step-3 .ob-live'), d = r('.ob-nav');
       return { order: a.bottom <= b.top && b.bottom <= c.top && c.bottom <= d.top, sw: document.documentElement.scrollWidth, iw: innerWidth, phone: Math.round(document.getElementById('ob-sections-frame').getBoundingClientRect().width) };
     });
     assert.ok(lay.order && lay.sw <= lay.iw && Math.abs(lay.phone - 195) <= 1, lang + ': ' + JSON.stringify(lay));
-    assert.ok((await page.$$eval('#ob-step-2 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length)) === 0, 'touch targets');
+    assert.ok((await page.$$eval('#ob-step-3 button', (ns) => ns.map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length)) === 0, 'touch targets');
     if (lang === 'de') {
-      assert.equal(await text(page, '#ob-sections-title'), 'Abschnitte wählen');
+      assert.equal(await text(page, '#ob-sections-title'), 'Seite anpassen');
       assert.equal(await text(page, '#ob-chosen-title'), 'Auf Ihrer Seite');
       assert.equal(await text(page, '#ob-more-title'), 'Weitere hinzufügen');
       assert.deepEqual(await page.$$eval('#ob-chosen .ob-sec__title', (ns) => ns.map((n) => n.textContent)), ['Hero', 'Buttons', 'Öffnungszeiten', 'Kontakt', 'Social Media']);
@@ -761,7 +985,7 @@ test('O2.1: Light by default; the sun / moon toggle beside EN / DE switches, is 
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
   t = await theme(page);
   assert.deepEqual([t.theme, t.atBody, t.pressed], ['dark', 'dark', ['dark']], 'applied before the body: no flash');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4', 'the answers and the step are not touched by the theme');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5', 'the answers and the step are not touched by the theme');
   // keyboard: the toggle is reachable and works with Enter; German labels
   await page.focus('.ob-theme__btn[data-ob-theme-choice="light"]');
   await page.keyboard.press('Enter');
@@ -814,12 +1038,15 @@ test('O2.1: readable contrast in Light and Dark on every step; dark text on oran
     frames.step2 = frames.step2 || [];
     frames.step2.push(await live(page));
     await page.click('#ob-next');
+    await page.click('.ob-tpl[data-template="bakery"]');
+    await at('Step 3 design', ['#ob-design-title', '[data-ob="design_text"]', '.ob-tpl[data-template="bakery"] .ob-tpl__title', '.ob-tpl[data-template="bakery"] .ob-tpl__text', '.ob-tpl[data-template="retail"] .ob-tpl__title', '#ob-pals-title', '.ob-pal[aria-checked="true"] .ob-pal__name', '.ob-pal[aria-checked="false"] .ob-pal__name', '.ob-legend__item--yours', '.ob-legend__item--example', '.ob-steps__item[data-step="2"] .ob-steps__label']);
+    await page.click('#ob-next');
     await waitSec(page, 's_obsocial1');
     await at('Step 3', ['#ob-chosen-title', '#ob-chosen [data-type="contact"] .ob-sec__title', '#ob-chosen [data-type="contact"] .ob-sec__text', '#ob-chosen [data-type="contact"] .ob-sec__tag', '#ob-chosen [data-type="socialMedia"] .ob-sec__tag', '#ob-chosen [data-type="contact"] .ob-sec__num', '#ob-more [data-act="add"]', '#ob-chosen .ob-remove', '[data-ob="sections_info"]']);
     frames.step3 = frames.step3 || [];
     frames.step3.push(await secFrame(page));
     await page.click('#ob-next');
-    await at('Step 4', ['#ob-step-3 .ob-h1', '#ob-step-3 .ob-lead', '#ob-step-3 .ob-info p', '#ob-back']);
+    await at('Step 4', ['#ob-step-4 .ob-h1', '#ob-step-4 .ob-lead', '#ob-step-4 .ob-info p', '#ob-back']);
     for (const [label, r] of checks) assert.ok(r !== null && r >= 4.5, th + ': ' + label + ' contrast ' + r);
     assert.deepEqual(await page.$$eval('.ob-phone__frame', (ns) => [...new Set(ns.map((f) => getComputedStyle(f).colorScheme))]), ['light'], 'the phone frames stay light');
     assert.deepEqual(api, []);
@@ -848,11 +1075,12 @@ test('O2.1: the gradient waves behind everything (never clickable), fuller on St
     for (const viewport of [DESKTOP, { width: 1024, height: 800 }, { width: 768, height: 1024 }, PHONE]) {
       const o = await onboarding({ theme: th, viewport });
       const seen = [];
-      for (let step = 0; step < 4; step++) {
+      for (let step = 0; step < 5; step++) {
         seen.push(await o.page.evaluate((st) => ({ step: st, sw: document.documentElement.scrollWidth, iw: innerWidth, benefits: getComputedStyle(document.querySelector('.ob-benefits')).display !== 'none' }), step));
         if (step === 0) await o.page.click('[data-option="scratch"]');
         if (step === 1) await o.page.type('#ob-name', 'Café Sonne');
-        if (step < 3) await o.page.click('#ob-next');
+        if (step === 2) await o.page.click('.ob-tpl[data-template="bakery"]');
+        if (step < 4) await o.page.click('#ob-next');
       }
       assert.ok(seen.every((x) => x.sw <= x.iw), th + ' ' + viewport.width + ': no sideways scroll ' + JSON.stringify(seen));
       assert.ok(seen.every((x) => x.benefits === (x.step === 0 && viewport.width >= 1400)), th + ' ' + viewport.width + ': the checklist on Step 1 at 1400 px and wider only ' + JSON.stringify(seen));
@@ -924,7 +1152,7 @@ const summary = (page) => page.evaluate(() => ({
   name: document.getElementById('ob-sum-name').textContent, description: document.getElementById('ob-sum-description').textContent,
   descEmpty: document.getElementById('ob-sum-description').getAttribute('data-empty'),
   links: [...document.querySelectorAll('#ob-sum-links li')].map((n) => n.textContent), linksText: document.getElementById('ob-sum-links').textContent,
-  anchors: document.querySelectorAll('#ob-step-3 .ob-fields a').length,
+  anchors: document.querySelectorAll('#ob-step-4 .ob-fields a').length,
   sectionsTitle: document.getElementById('ob-sum-sections-title').textContent,
   sections: [...document.querySelectorAll('#ob-sum-sections > li')].map((n) => n.dataset.type),
   tags: [...document.querySelectorAll('#ob-sum-sections .ob-sec__tag')].map((n) => n.textContent),
@@ -939,8 +1167,9 @@ async function toStep4(page, { name = 'Café Sonne', description = '', links = [
   if (description) await page.type('#ob-description', description);
   for (let i = 0; i < links.length; i++) { await page.click('#ob-add-link'); await page.type('#ob-link-url-' + (await rowKeys(page))[i], links[i]); }
   await page.click('#ob-next'); await sleep(150);
+  await page.click('.ob-tpl[data-template="bakery"]'); await page.click('#ob-next'); await sleep(150);   // T1b: Step 3, a design
   const stuck = await page.evaluate(() => [document.getElementById('ob-progress-count').textContent, [...document.querySelectorAll('.ob-error')].map((n) => n.textContent).filter(Boolean)]);
-  if (stuck[0] !== 'Step 3 of 4' && stuck[0] !== 'Schritt 3 von 4') throw new Error('not on Step 3: ' + JSON.stringify(stuck));
+  if (stuck[0] !== 'Step 4 of 5' && stuck[0] !== 'Schritt 4 von 5') throw new Error('not on the sections step: ' + JSON.stringify(stuck));
   for (const n of add) await page.click('#ob-more [data-act="add"][aria-label="Add ' + n + '"]');
   const step3 = await secFrame(page);
   await page.click('#ob-next'); await sleep(200);
@@ -950,7 +1179,7 @@ async function toStep4(page, { name = 'Café Sonne', description = '', links = [
 test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order), the draft status, free / no trial, Save Draft disabled with its note; the phone shows the Step 3 page; no request', async () => {
   const { page, api, external, missing } = await onboarding();
   const step3 = await toStep4(page, { name: 'Café <b>Sonne</b>', description: 'Fresh coffee\nand cake.', links: ['instagram.com/sonne', 'facebook.com/sonne'], add: ['Gallery', 'Text'] });
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-review-title', 'focus on the step heading');
   const s = await summary(page);
   assert.equal(s.name, 'Café <b>Sonne</b>', 'the name as text (never markup)');
@@ -972,7 +1201,7 @@ test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order)
   assert.ok((await reviewFrame(page)).includes('Café &lt;b&gt;Sonne&lt;/b&gt;'));
   assert.equal(await page.$eval('#ob-review-frame', (f) => f.getAttribute('sandbox')), 'allow-scripts');
   // layout: two columns, the phone beside, the progress indicator unchanged
-  const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-3 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-3 .ob-live').getBoundingClientRect();
+  const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-4 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-4 .ob-live').getBoundingClientRect();
     return { side: l.left >= f.right, progress: Math.round(document.querySelector('.ob-progress').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth }; });
   assert.ok(lay.side && lay.progress === 888 && lay.sw <= lay.iw, JSON.stringify(lay));
   // Save Draft: a click (even forced through the DOM) does nothing: no request, nothing stored, no success text
@@ -992,16 +1221,16 @@ test('Step 4 Edit: back to Step 2 or Step 3 with every answer kept; changes show
   await toStep4(page, { description: 'Kaffee', links: ['instagram.com/sonne'] });
   // Edit business information -> Step 2, the name focused, everything still there
   await page.click('#ob-edit-business');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 2 of 5');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-name');
   assert.deepEqual(await page.evaluate(() => [document.getElementById('ob-name').value, document.getElementById('ob-description').value, document.querySelector('#ob-links input').value]), ['Café Sonne', 'Kaffee', 'instagram.com/sonne']);
   await page.$eval('#ob-name', (n) => { n.value = 'Café Mond'; n.dispatchEvent(new Event('input', { bubbles: true })); });
-  await page.click('#ob-next'); await page.click('#ob-next'); await sleep(200);
+  await page.click('#ob-next'); await page.click('#ob-next'); await page.click('#ob-next'); await sleep(200);
   assert.equal((await summary(page)).name, 'Café Mond');
   await page.waitForFunction(() => document.getElementById('ob-review-frame').srcdoc.includes('Café Mond'), { timeout: 3000 });
   // Edit sections -> Step 3, the list heading focused; move Contact up; back on Step 4 in the new order
   await page.click('#ob-edit-sections');
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 3 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-chosen-title');
   await page.click('#ob-chosen [data-type="contact"] [data-act="up"]');
   await page.click('#ob-next'); await sleep(200);
@@ -1013,7 +1242,7 @@ test('Step 4 Edit: back to Step 2 or Step 3 with every answer kept; changes show
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-edit-sections');
   // reload: still Step 4 with the answers; sign-out: all gone
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
-  assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 4');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.equal((await summary(page)).name, 'Café Mond');
   await page.click('#ob-signout'); await sleep(100);
   assert.deepEqual(await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('qraivy.onboarding'))), []);
@@ -1039,7 +1268,7 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
     }
     // the disabled Save Draft: readable (full opacity, its own muted look), still disabled
     assert.deepEqual(await page.$eval('#ob-finish', (b) => [b.disabled, getComputedStyle(b).opacity, getComputedStyle(b).borderStyle]), [true, '1', 'dashed'], 'Save Draft: disabled, not faded');
-    for (const sel of ['#ob-finish', '.ob-draft-badge', '#ob-save-note', '#ob-sum-name', '#ob-sum-description', '.ob-summary__row dt', '.ob-edit', '#ob-step-3 .ob-info p', '#ob-sum-business-title']) {
+    for (const sel of ['#ob-finish', '.ob-draft-badge', '#ob-save-note', '#ob-sum-name', '#ob-sum-description', '.ob-summary__row dt', '.ob-edit', '#ob-step-4 .ob-info p', '#ob-sum-business-title']) {
       const r = await contrast(page, sel);
       assert.ok(r >= 4.5, lang + ' ' + th + ' ' + viewport.width + ': ' + sel + ' contrast ' + r);
     }
@@ -1047,10 +1276,10 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
     const badge = await page.$eval('.ob-draft-badge', (n) => ({ tag: n.tagName, role: n.getAttribute('role'), tab: n.tabIndex, color: getComputedStyle(n).color, border: getComputedStyle(n).borderTopColor, dot: getComputedStyle(n.querySelector('.ob-draft-badge__dot')).backgroundColor, text: n.textContent }));
     const green = th === 'light' ? 'rgb(21, 128, 61)' : 'rgb(74, 222, 128)';
     assert.deepEqual(badge, { tag: 'P', role: null, tab: -1, color: green, border: green, dot: green, text: de ? 'Bereit zum Speichern · Noch nicht gespeichert' : 'Ready to save · Not saved yet' }, lang + ' ' + th + ': green status badge');
-    const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, small: [...document.querySelectorAll('#ob-step-3 button')].map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length }));
+    const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, small: [...document.querySelectorAll('#ob-step-4 button')].map((b) => b.getBoundingClientRect()).filter((r) => r.width && r.height < 44).length }));
     assert.ok(lay.sw <= lay.iw && lay.small === 0, lang + ' ' + viewport.width + ': ' + JSON.stringify(lay));
     if (viewport === PHONE) {
-      const order = await page.evaluate(() => { const r = (q) => document.querySelector(q).getBoundingClientRect(); return r('#ob-sum-sections').bottom <= r('#ob-step-3 .ob-live').top && r('#ob-step-3 .ob-live').bottom <= r('.ob-nav').top && r('.ob-nav').bottom <= r('#ob-save-note').top; });
+      const order = await page.evaluate(() => { const r = (q) => document.querySelector(q).getBoundingClientRect(); return r('#ob-sum-sections').bottom <= r('#ob-step-4 .ob-live').top && r('#ob-step-4 .ob-live').bottom <= r('.ob-nav').top && r('.ob-nav').bottom <= r('#ob-save-note').top; });
       assert.ok(order, 'phone: summary, phone preview, Back / Save Draft, the note');
     }
     assert.deepEqual(api, []);
@@ -1079,7 +1308,7 @@ test('header: solid black, white links, EN/DE readable with the chosen language 
   for (const viewport of [DESKTOP, PHONE]) {
     const { page, api } = await onboarding({ viewport });
     const seen = [];
-    for (let step = 0; step < 4; step++) {
+    for (let step = 0; step < 5; step++) {
       const h = await header(page);
       assert.equal(h.top, 'rgb(0, 0, 0)', 'black header, step ' + (step + 1));
       assert.ok(h.exitColor === 'rgb(255, 255, 255)' && h.outColor === 'rgb(255, 255, 255)' && h.outShown, 'white Sign out and Back to Studio: ' + JSON.stringify(h));
@@ -1089,16 +1318,17 @@ test('header: solid black, white links, EN/DE readable with the chosen language 
       seen.push(h.h);
       if (step === 0) await page.click('[data-option="scratch"]');
       if (step === 1) await page.type('#ob-name', 'Café Sonne');
-      if (step < 3) await page.click('#ob-next');
+      if (step === 2) await page.click('.ob-tpl[data-template="bakery"]');
+      if (step < 4) await page.click('#ob-next');
     }
-    assert.ok(seen.every((x) => x === seen[0]), 'the same header height on all four steps: ' + seen);
+    assert.ok(seen.every((x) => x === seen[0]), 'the same header height on all five steps: ' + seen);
     // keyboard: the focus ring on the black header is white and visible
     await page.focus('.ob-lang__btn[data-lang="de"]');
     await page.keyboard.press('Tab'); await page.keyboard.down('Shift'); await page.keyboard.press('Tab'); await page.keyboard.up('Shift');
     const ring = await page.evaluate(() => { const a = document.activeElement, c = getComputedStyle(a); return { lang: a.dataset.lang, style: c.outlineStyle, color: c.outlineColor, width: c.outlineWidth }; });
     assert.ok(ring.lang === 'de' && ring.style === 'solid' && ring.color === 'rgb(255, 255, 255)' && ring.width === '3px', 'white focus ring: ' + JSON.stringify(ring));
     await page.keyboard.press('Enter');
-    assert.equal(await text(page, '#ob-progress-count'), 'Schritt 4 von 4', 'the language switch still works by keyboard');
+    assert.equal(await text(page, '#ob-progress-count'), 'Schritt 5 von 5', 'the language switch still works by keyboard');
     assert.deepEqual(api, []);
     await page.close();
   }
