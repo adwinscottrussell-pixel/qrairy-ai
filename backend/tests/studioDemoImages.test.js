@@ -12,7 +12,11 @@
 //   then or on failure; every other image is untouched;
 // - nothing leaks: the design, the store's draft and the public render keep
 //   the Cloudinary addresses; core.js knows nothing of the local copies;
-// - the local copies are the catalogue's starter images (same checksums).
+// - the local copies are the catalogue's starter images (same checksums);
+// - T1a: the starter templates' 14 photos (12 Deals starters, 2 Studio
+//   heroes): their local files and sizes, inline copies in the photo's own
+//   proportions (4:3 and 4:5), placeholders likewise, only the photos asked
+//   for are loaded, each once; the demo's prepare() unchanged.
 // Run: node tests/studioDemoImages.test.js
 // ============================================================
 const assert = require('assert/strict');
@@ -165,6 +169,84 @@ test('the Studio preview (shell): the page HTML it builds has no Cloudinary addr
   // the preview frames stay sandboxed with scripts only (never same origin)
   const prev = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-preview.js'), 'utf8');
   assert.ok(/var SANDBOX = 'allow-scripts';/.test(prev), 'sandbox unchanged');
+});
+
+// ── T1a: the onboarding starter templates' photos ──
+const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+function jpegSize(buf) {
+  let o = 2;
+  while (o < buf.length) { const m = buf[o + 1], len = buf.readUInt16BE(o + 2); if (m >= 0xc0 && m <= 0xc3) return [buf.readUInt16BE(o + 7), buf.readUInt16BE(o + 5)]; o += 2 + len; }
+  return null;
+}
+
+test('T1a: the 14 template photos are exactly the starter templates\' photos, at the address the catalog uses, each with its local file and its real size', () => {
+  const used = [...new Set(T.TEMPLATE_IDS.flatMap((id) => T.get(id).images))].sort();
+  assert.deepEqual(DEMO_IMAGES.TEMPLATE_IMAGES.map((i) => i.id).sort(), used);
+  assert.equal(used.length, 14);
+  for (const id of IDS) assert.ok(used.includes(id), 'the demo\'s three are among them');
+  for (const i of DEMO_IMAGES.TEMPLATE_IMAGES) {
+    const url = DEMO_IMAGES.templateUrls([i.id])[0];
+    assert.equal(url, T.imageUrl(i.id), i.id + ': the catalog\'s address');
+    assert.equal(url, i.studio ? DEMO_IMAGES.studioUrl(i.id) : DEMO_IMAGES.cloudinaryUrl(i.id));
+    const local = DEMO_IMAGES.localSrc(url);
+    assert.equal(local, (i.studio ? 'images/studio/starter/' : 'images/deals/starter/') + i.id + '.jpg');
+    assert.deepEqual(jpegSize(fs.readFileSync(path.join(PUB, local))), [i.width, i.height], i.id + ': the size the placeholder uses');
+  }
+  const portrait = DEMO_IMAGES.TEMPLATE_IMAGES.filter((i) => i.width / i.height < 1).map((i) => i.id);
+  assert.deepEqual(portrait, ['QRAIVY-Creator-Hero', 'QRAIVY-Professional-Services-Hero'], 'the two 4:5 heroes; the other twelve 4:3');
+  assert.deepEqual(DEMO_IMAGES.templateUrls(['nope', 'bakery-bread-01', 42]), [urlOf('bakery-bread-01')], 'unknown ids left out');
+  // the Studio heroes are not swapped under any other address
+  assert.equal(DEMO_IMAGES.localSrc(DEMO_IMAGES.cloudinaryUrl('QRAIVY-Creator-Hero')), null);
+});
+
+test('T1a: the inline copies keep the photo\'s proportions: at most 800 px wide (4:3 -> 800 x 600, 4:5 -> 800 x 1000), never enlarged; placeholders in the same proportions', () => {
+  assert.deepEqual(DEMO_IMAGES.fit(1200, 900), { width: 800, height: 600 });
+  assert.deepEqual(DEMO_IMAGES.fit(1122, 1402), { width: 800, height: 1000 });
+  assert.deepEqual(DEMO_IMAGES.fit(600, 400), { width: 600, height: 400 }, 'a smaller photo is not enlarged');
+  assert.equal(DEMO_IMAGES.placeholder(1200, 900), DEMO_IMAGES.PLACEHOLDER, 'the 4:3 placeholder is the existing one');
+  const p = decodeURIComponent(DEMO_IMAGES.placeholder(1122, 1402).replace('data:image/svg+xml,', ''));
+  assert.match(p, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="800" height="1000" viewBox="0 0 800 1000">/);
+  assert.ok(!DEMO_IMAGES.placeholder(1122, 1402).includes('"'), 'no quoting needed inside src=""');
+  // the browser loader sizes the canvas with fit(), never the fixed 800 x 600
+  const src = fs.readFileSync(path.join(PUB, 'js', 'studio', 'studio-demo-images.js'), 'utf8');
+  assert.ok(src.includes('var s = fit(img.naturalWidth, img.naturalHeight);') && src.includes('c.width = s.width; c.height = s.height;'));
+  assert.ok(!src.includes('c.width = SIZE.width; c.height = SIZE.height;'));
+});
+
+test('T1a: prepareImages() loads only the photos asked for (the selected template\'s), each once; the frame HTML gets them inline with the AI label, the others stay placeholders', () => {
+  const D = fresh();
+  const asked = [];
+  let ready = 0;
+  const creator = D.templateUrls(T.get('creator').images);
+  assert.equal(D.prepareImages(creator.concat(creator, ['https://res.cloudinary.com/x/image/upload/a.jpg']), () => { ready++; }, (src, done) => { asked.push(src); done(JPEG(asked.length)); }), 1);
+  assert.deepEqual(asked, ['images/studio/starter/QRAIVY-Creator-Hero.jpg'], 'only the Creator hero, once; unknown addresses ignored');
+  assert.equal(ready, 1);
+  assert.equal(D.prepareImages(creator, () => { ready++; }, () => { throw new Error('loaded twice'); }), 0, 'already loaded: nothing to do');
+  assert.equal(ready, 1);
+  // a Creator page and a Restaurant page in the frame
+  const html = (id) => V3.renderDesign(T.sample(V3, id, { lang: 'en' }).design, { businessName: 'x' }, { preview: true }).html;
+  const c = D.localizeHtml(html('creator'));
+  assert.ok(c.includes('<span class="st-ai">AI · KI-generiert</span><img class="v3-hero-img" src="' + JPEG(1) + '"'));
+  assert.ok(!/res\.cloudinary\.com|images\/(deals|studio)\/starter/.test(c), 'no address and no file path in the frame');
+  const r = D.localizeHtml(html('restaurant'));
+  assert.ok(!r.includes('class="st-ai"') && !/res\.cloudinary\.com/.test(r), 'Restaurant not prepared: placeholders only, no label');
+  assert.equal((r.match(/data-st-placeholder="1"/g) || []).length, 4, 'its hero and three gallery photos');
+  // the portrait's placeholder has the portrait's proportions
+  const D2 = fresh();
+  const s = D2.localizeHtml(html('services'));
+  assert.ok(s.includes('src="' + D2.placeholder(1122, 1402) + '" data-st-placeholder="1"'));
+  assert.deepEqual(D.status(), { started: false, ready: 1, failed: 0 }, 'prepare() (the demo\'s three) not started');
+});
+
+test('T1a: the demo\'s prepare() is unchanged (the same three files, once) and works next to prepareImages()', () => {
+  const D = fresh();
+  const asked = [];
+  D.prepareImages(D.templateUrls(['bakery-bread-01']), null, (src, done) => { asked.push(src); done(JPEG(9)); });
+  let ready = 0;
+  D.prepare(() => { ready++; }, (src, done) => { asked.push(src); done(JPEG(asked.length)); });
+  assert.deepEqual(asked, ['images/deals/starter/bakery-bread-01.jpg', 'images/deals/starter/bakery-croissants-01.jpg', 'images/deals/starter/bakery-coffee-01.jpg'], 'the bread is not loaded twice');
+  assert.equal(ready, 1);
+  assert.deepEqual(D.status(), { started: true, ready: 3, failed: 0 });
 });
 
 let failed = 0;

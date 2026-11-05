@@ -27,8 +27,9 @@
  *              descriptions) and the approved starter photos. starter()
  *              keeps them, as core.starter's texts are kept today; they
  *              are listed (samplePaths) so a later phase can mark them.
- * The customer's own name and description (Step 2) replace the example
- * headline and sub-headline.
+ * The customer's own name, description and social media links (Step 2)
+ * replace the example headline, sub-headline and example profiles; they
+ * are listed (customerPaths) and starter() always keeps them.
  *
  * Photos: only approved, AI-generated images, by id, never unrelated
  * pictures: the Deals starter catalog (js/deal-starter-images.js,
@@ -460,9 +461,17 @@
     return SECTION_TYPES.filter(function (type) { return type === 'buttons' || !!probe[type]; });
   }
 
+  // The customer's social media links (Step 2, onboarding-model.js check().values.links): platform and
+  // address only, at most 8 (the schema checks each address on the platform's own domains)
+  function customerLinks(links) {
+    return (Array.isArray(links) ? links : []).filter(function (x) { return x && typeof x.platform === 'string' && typeof x.url === 'string' && x.url; })
+      .slice(0, 8).map(function (x) { return { platform: x.platform, url: x.url }; });
+  }
+
   // compose(V3, id, opts) -> the design (not yet checked) and the paths of its example parts.
-  // opts: { lang, palette, imageUrl(starterId) -> address (default: imageUrl() here), name, description, sections: [types] }
-  // name / description: the customer's own (Step 2); they replace the example headline / sub-headline.
+  // opts: { lang, palette, imageUrl(starterId) -> address (default: imageUrl() here), name, description, links, sections: [types] }
+  // name / description / links: the customer's own (Step 2); they replace the example headline,
+  // sub-headline and the example profiles (the platforms' home pages), and are listed (customerPaths).
   function compose(V3, id, opts) {
     var o = opts || {};
     var t = get(id);
@@ -472,17 +481,21 @@
     var types = (Array.isArray(o.sections) ? o.sections : t.sections).filter(function (type, i, a) { return SECTION_TYPES.indexOf(type) !== -1 && a.indexOf(type) === i; });
     types = ['hero'].concat(types.filter(function (x) { return x !== 'hero'; }));
     var name = typeof o.name === 'string' && o.name.trim() ? o.name.trim() : t.demoName;
-    var demoOnly = [], sample = [];
+    var links = customerLinks(o.links);
+    var demoOnly = [], sample = [], customer = [];
     var sections = [];
     types.forEach(function (type) {
       var s = exampleSection(t, type, l, IMG);
       if (!s) return;
       var i = sections.length;
+      var at = function (k) { return 'pages[0].sections[' + i + '].data.' + k; };
       if (type === 'hero') {
         s.data.headline = name;
-        if (typeof o.description === 'string' && o.description.trim()) s.data.subheadline = o.description.trim();
+        if (name !== t.demoName) customer.push(at('headline'));
+        if (typeof o.description === 'string' && o.description.trim()) { s.data.subheadline = o.description.trim(); customer.push(at('subheadline')); }
       }
-      (DEMO_ONLY[type] || []).forEach(function (k) { if (s.data[k] !== undefined) demoOnly.push('pages[0].sections[' + i + '].data.' + k); });
+      if (type === 'socialMedia' && links.length) { s.data.links = links; customer.push(at('links')); }
+      (DEMO_ONLY[type] || []).forEach(function (k) { if (s.data[k] !== undefined && customer.indexOf(at(k)) === -1) demoOnly.push(at(k)); });
       (SAMPLE[type] || []).forEach(function (k) {
         if (s.data[k] === undefined || s.data[k] === '') return;
         if (type === 'hero' && ((k === 'headline' && name !== t.demoName) || (k === 'subheadline' && o.description && String(o.description).trim()))) return;   // the customer's own
@@ -500,25 +513,27 @@
     var palette = paletteOf(t, o.palette);
     var design = { schemaVersion: V3.SCHEMA_VERSION, theme: { palette: clone(palette.colors), fontPair: t.fontPair, radius: t.radius },
       settings: { language: l }, header: { showBusinessName: true }, pages: [{ id: 'start', title: l === 'de' ? 'Start' : 'Home', sections: sections }] };
-    return { design: design, demoOnly: demoOnly, samplePaths: sample, palette: palette.id };
+    return { design: design, demoOnly: demoOnly, samplePaths: sample, customerPaths: customer, palette: palette.id };
   }
 
-  // sample(V3, id, opts) -> { ok, design, errors, demoOnly, samplePaths, palette }: the full example page
-  // for the preview (core.validateDesign's normalized copy when valid)
+  // sample(V3, id, opts) -> { ok, design, errors, demoOnly, samplePaths, customerPaths, palette }: the full
+  // example page for the preview (core.validateDesign's normalized copy when valid)
   function sample(V3, id, opts) {
     var c = compose(V3, id, opts);
-    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], demoOnly: [], samplePaths: [], palette: null };
+    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], demoOnly: [], samplePaths: [], customerPaths: [], palette: null };
     var v = V3.validateDesign(c.design, opts && opts.cloudName ? { cloudName: opts.cloudName } : undefined);
-    return { ok: v.ok, design: v.design, errors: v.errors, demoOnly: c.demoOnly, samplePaths: c.samplePaths, palette: c.palette };
+    return { ok: v.ok, design: v.design, errors: v.errors, demoOnly: c.demoOnly, samplePaths: c.samplePaths, customerPaths: c.customerPaths, palette: c.palette };
   }
 
-  // stripDemo(design) -> a copy without the example-only parts (DEMO_ONLY): no example link,
+  // stripDemo(design, keep) -> a copy without the example-only parts (DEMO_ONLY): no example link,
   // price, product, opening hours, address, email or social profile. Contact keeps no map link.
-  function stripDemo(design) {
+  // keep: paths of the customer's own values (compose's customerPaths), never removed.
+  function stripDemo(design, keep) {
     var d = clone(design);
-    ((d.pages && d.pages[0] && d.pages[0].sections) || []).forEach(function (s) {
+    var own = Array.isArray(keep) ? keep : [];
+    ((d.pages && d.pages[0] && d.pages[0].sections) || []).forEach(function (s, i) {
       (DEMO_ONLY[s.type] || []).forEach(function (k) {
-        if (!s.data || s.data[k] === undefined) return;
+        if (!s.data || s.data[k] === undefined || own.indexOf('pages[0].sections[' + i + '].data.' + k) !== -1) return;
         if (Array.isArray(s.data[k])) s.data[k] = [];
         else delete s.data[k];
       });
@@ -527,14 +542,14 @@
     return d;
   }
 
-  // starter(V3, id, opts) -> { ok, design, errors, samplePaths }: the page a save may store: the
-  // template's layout, theme, neutral texts and photos, the customer's name and description, and no
-  // example-only part (sections left empty stay hidden on the public page until filled in)
+  // starter(V3, id, opts) -> { ok, design, errors, samplePaths, customerPaths }: the page a save may
+  // store: the template's layout, theme, neutral texts and photos, the customer's name, description and
+  // social links, and no example-only part (sections left empty stay hidden on the public page until filled in)
   function starter(V3, id, opts) {
     var c = compose(V3, id, opts);
-    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], samplePaths: [] };
-    var v = V3.validateDesign(stripDemo(c.design), opts && opts.cloudName ? { cloudName: opts.cloudName } : undefined);
-    return { ok: v.ok, design: v.design, errors: v.errors, samplePaths: c.samplePaths };
+    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], samplePaths: [], customerPaths: [] };
+    var v = V3.validateDesign(stripDemo(c.design, c.customerPaths), opts && opts.cloudName ? { cloudName: opts.cloudName } : undefined);
+    return { ok: v.ok, design: v.design, errors: v.errors, samplePaths: c.samplePaths, customerPaths: c.customerPaths };
   }
 
   return { SECTION_TYPES: SECTION_TYPES.slice(), SECTION_IDS: SECTION_IDS, BUTTON_PRESETS: BUTTON_PRESETS, DEMO_ONLY: DEMO_ONLY, SAMPLE: SAMPLE,

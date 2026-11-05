@@ -28,10 +28,13 @@ const fsSource = {
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
-test('the upload: the Studio files, two icons, the starter catalog, the three demo photos and the generated files, nothing else', () => {
+test('the upload: the Studio files, two icons, the starter catalog, the starter templates\' 14 photos and the generated files, nothing else', () => {
   const names = [...X.buildUpload(fsSource).keys()].sort();
   const studio = fs.readdirSync(path.join(PUB, 'js', 'studio')).map((f) => 'js/studio/' + f);
-  const photos = ['bakery-croissants-01', 'bakery-bread-01', 'bakery-coffee-01'].map((id) => 'images/deals/starter/' + id + '.jpg');
+  // the demo's three bakery photos and (T1a) the starter templates' other eleven: nine Deals starters, two Studio heroes
+  const photos = ['bakery-croissants-01', 'bakery-bread-01', 'bakery-coffee-01', 'restaurant-table-01', 'restaurant-fresh-01', 'restaurant-meal-01',
+    'beauty-salon-01', 'beauty-skincare-01', 'beauty-spa-01', 'fashion-boutique-01', 'fashion-rack-01', 'fashion-lifestyle-01'].map((id) => 'images/deals/starter/' + id + '.jpg')
+    .concat(['QRAIVY-Creator-Hero', 'QRAIVY-Professional-Services-Hero'].map((id) => 'images/studio/starter/' + id + '.jpg'));
   // (Phase O0: plus the onboarding page, its stylesheet and its approved logo)
   assert.deepEqual(names, ['apple-touch-icon.png', 'css/studio-onboarding.css', 'css/studio.css', 'dashboard-shell.css', 'favicon.ico', 'js/admin-shell.js', 'js/deal-starter-images.js', 'js/lpV3/core.js', 'js/lpV3/gallery-nav.js', 'js/qraivy-lang.js']
     .concat(studio, photos, ['images/qraivy-onboarding-logo.jpg', 'robots.txt', 'studio-onboarding.html', 'studio.html', 'vercel.json']).sort());
@@ -42,6 +45,11 @@ test('every local copy the Studio shows for the demo photos is in the upload (2A
   const DEMO = require('../../frontend/public/js/studio/studio-demo-images.js');
   assert.ok(DEMO.STARTERS.length >= 3);
   for (const id of DEMO.STARTERS) assert.ok(files.has(DEMO.localSrc(DEMO.cloudinaryUrl(id))), id);
+  // T1a: and every starter template photo (studio-demo-images.js TEMPLATE_IMAGES); no PNG photo
+  const urls = DEMO.templateUrls(DEMO.TEMPLATE_IMAGES.map((i) => i.id));
+  assert.equal(urls.length, 14);
+  for (const u of urls) assert.ok(files.has(DEMO.localSrc(u)), u);
+  assert.ok(![...files.keys()].some((n) => /^images\/.*\.png$/i.test(n)), 'no PNG photo in the upload');
 });
 
 test('every script, stylesheet and CSS image studio.html and studio-onboarding.html load is in the upload', () => {

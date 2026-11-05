@@ -64,6 +64,8 @@ const LPV3_FILES = [
   'frontend/public/js/studio/studio-demo-images.js',
   'backend/tests/studioGalleryEditor.browser.test.js',
   'backend/tests/studioDemoImages.test.js',
+  // T1a: the starter templates' photos in a real browser (inline, own proportions, only those asked for)
+  'backend/tests/studioDemoImages.browser.test.js',
   // the demo photos behind a sign-in (live preview fix, 2A-3H)
   'backend/tests/studioPreviewAuth.browser.test.js',
   // Gallery carousel navigation: buttons rendered by core.js (no script), the

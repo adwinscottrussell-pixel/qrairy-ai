@@ -15,7 +15,8 @@
 // - example-only parts (links, prices, products, hours, address, email,
 //   social profiles) are listed and never in starter(); example links lead
 //   only to the page itself, social examples to the platforms' home pages;
-// - the customer's name and description replace the example texts;
+// - the customer's name, description and (T1a) social links replace the
+//   example texts and profiles, are listed and kept by starter();
 // - no request, no storage, no DOM; the onboarding does not load it yet.
 // Rendering at phone widths: onboardingTemplates.browser.test.js.
 // Run: node tests/onboardingTemplates.test.js
@@ -269,6 +270,40 @@ test('a palette change touches only the theme; a template change keeps the custo
   });
   const answers = { name: 'Lindenhof', description: 'Our own words.' };
   T.TEMPLATE_IDS.forEach((id) => { const h = T.starter(V3, id, opts('en', null, answers)).design.pages[0].sections[0].data; assert.deepEqual([h.headline, h.subheadline], [answers.name, answers.description]); });
+});
+
+test('T1a: the customer\'s Step 2 links replace the example profiles in the preview and stay in the saveable page; listed as the customer\'s, never as examples', () => {
+  const links = [{ platform: 'instagram', url: 'https://www.instagram.com/lindenhof' }, { platform: 'whatsapp', url: 'https://wa.me/491701234567' }];
+  const social = (d) => d.pages[0].sections.find((s) => s.type === 'socialMedia');
+  T.TEMPLATE_IDS.forEach((id) => LANGS.forEach((l) => {
+    const s = T.sample(V3, id, opts(l, null, { name: 'Lindenhof', links })), st = T.starter(V3, id, opts(l, null, { name: 'Lindenhof', links }));
+    assert.ok(s.ok && st.ok, id + ' ' + l);
+    const i = s.design.pages[0].sections.indexOf(social(s.design));
+    assert.deepEqual(social(s.design).data.links, links, id + ': the customer\'s, in their order');
+    assert.deepEqual(social(st.design).data.links, links, id + ': kept by starter()');
+    assert.ok(s.customerPaths.includes('pages[0].sections[' + i + '].data.links') && !s.demoOnly.includes('pages[0].sections[' + i + '].data.links'), id + ': the customer\'s, not an example');
+    assert.ok(!social(s.design).data.links.some((x) => x.url === T.PLATFORM_HOME[x.platform]), id + ': no example profile left');
+    assert.deepEqual(st.customerPaths, s.customerPaths);
+    // the other example parts are still removed from the saveable page
+    assert.ok(!/example\.com|Musterstra|Sample Street|€/.test(JSON.stringify(st.design)), id);
+  }));
+  // without links: the example profiles (platform home pages), example-only, removed by starter()
+  const none = T.sample(V3, 'bakery', opts('en', null, { links: [] }));
+  const j = none.design.pages[0].sections.indexOf(social(none.design));
+  assert.ok(social(none.design).data.links.every((x) => x.url === T.PLATFORM_HOME[x.platform]));
+  assert.ok(none.demoOnly.includes('pages[0].sections[' + j + '].data.links') && !none.customerPaths.length);
+  assert.deepEqual(social(T.starter(V3, 'bakery', opts('en', null, { links: [] })).design).data.links, []);
+  // malformed entries are dropped, at most 8 are taken; the schema still checks each address
+  const many = Array.from({ length: 10 }, (x, n) => ({ platform: 'instagram', url: 'https://www.instagram.com/p' + n }));
+  assert.equal(social(T.sample(V3, 'bakery', opts('en', null, { links: [null, { platform: 'x' }, { url: 'https://x.com/a' }].concat(many) })).design).data.links.length, 8);
+  const bad = T.sample(V3, 'bakery', opts('en', null, { links: [{ platform: 'instagram', url: 'https://evil.example/x' }] }));
+  assert.equal(bad.ok, false, 'an address off the platform\'s domains is refused by core.js');
+  // the section left out (Step 2 "removed"): no links anywhere
+  const out = T.sample(V3, 'bakery', opts('en', null, { links, sections: ['hero', 'buttons'] }));
+  assert.ok(!JSON.stringify(out.design).includes('lindenhof') && !out.customerPaths.some((p) => /links$/.test(p)));
+  // the hero's name and description are the customer's too
+  const h = T.sample(V3, 'creator', opts('de', null, { name: 'Lindenhof', description: 'Unsere Worte.' }));
+  assert.deepEqual(h.customerPaths, ['pages[0].sections[0].data.headline', 'pages[0].sections[0].data.subheadline']);
 });
 
 test('Hero spacing: compact for Creator and Professional Services only (T0 refinement); the other four unchanged', () => {

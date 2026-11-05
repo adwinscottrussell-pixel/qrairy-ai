@@ -51,6 +51,19 @@ const FILES = [
   'images/deals/starter/bakery-croissants-01.jpg',
   'images/deals/starter/bakery-bread-01.jpg',
   'images/deals/starter/bakery-coffee-01.jpg',
+  // T1a: the onboarding starter templates' other photos, inlined into the
+  // preview frames from these local files (js/studio/studio-demo-images.js TEMPLATE_IMAGES)
+  'images/deals/starter/restaurant-table-01.jpg',
+  'images/deals/starter/restaurant-fresh-01.jpg',
+  'images/deals/starter/restaurant-meal-01.jpg',
+  'images/deals/starter/beauty-salon-01.jpg',
+  'images/deals/starter/beauty-skincare-01.jpg',
+  'images/deals/starter/beauty-spa-01.jpg',
+  'images/deals/starter/fashion-boutique-01.jpg',
+  'images/deals/starter/fashion-rack-01.jpg',
+  'images/deals/starter/fashion-lifestyle-01.jpg',
+  'images/studio/starter/QRAIVY-Creator-Hero.jpg',
+  'images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',
 ];
 const DIRS = ['js/studio/'];
 
