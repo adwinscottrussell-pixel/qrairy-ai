@@ -469,9 +469,14 @@
   }
 
   // compose(V3, id, opts) -> the design (not yet checked) and the paths of its example parts.
-  // opts: { lang, palette, imageUrl(starterId) -> address (default: imageUrl() here), name, description, links, sections: [types] }
+  // opts: { lang, palette, imageUrl(starterId) -> address (default: imageUrl() here), name, description, links, sections: [types],
+  //   emptyFallback, exampleProfiles }
   // name / description / links: the customer's own (Step 2); they replace the example headline,
   // sub-headline and the example profiles (the platforms' home pages), and are listed (customerPaths).
+  // emptyFallback (T1c): a chosen type without example content here (Creator: Opening Hours, Gallery;
+  // Services: Gallery) stays on the page as core.js's empty starter with its fixed id (listed in
+  // emptySections) instead of being left out. exampleProfiles false (T1c): Social Media without the
+  // customer's links stays empty, never the example profiles.
   function compose(V3, id, opts) {
     var o = opts || {};
     var t = get(id);
@@ -482,11 +487,18 @@
     types = ['hero'].concat(types.filter(function (x) { return x !== 'hero'; }));
     var name = typeof o.name === 'string' && o.name.trim() ? o.name.trim() : t.demoName;
     var links = customerLinks(o.links);
-    var demoOnly = [], sample = [], customer = [];
+    var demoOnly = [], sample = [], customer = [], empty = [];
     var sections = [];
     types.forEach(function (type) {
       var s = exampleSection(t, type, l, IMG);
+      if (!s && o.emptyFallback && V3.starter(type, l)) {
+        s = Object.assign({ id: SECTION_IDS[type] }, V3.starter(type, l));
+        empty.push(s.id);
+        sections.push(s);
+        return;
+      }
       if (!s) return;
+      if (type === 'socialMedia' && !links.length && o.exampleProfiles === false) { s.data.links = []; empty.push(s.id); sections.push(s); return; }
       var i = sections.length;
       var at = function (k) { return 'pages[0].sections[' + i + '].data.' + k; };
       if (type === 'hero') {
@@ -513,16 +525,16 @@
     var palette = paletteOf(t, o.palette);
     var design = { schemaVersion: V3.SCHEMA_VERSION, theme: { palette: clone(palette.colors), fontPair: t.fontPair, radius: t.radius },
       settings: { language: l }, header: { showBusinessName: true }, pages: [{ id: 'start', title: l === 'de' ? 'Start' : 'Home', sections: sections }] };
-    return { design: design, demoOnly: demoOnly, samplePaths: sample, customerPaths: customer, palette: palette.id };
+    return { design: design, demoOnly: demoOnly, samplePaths: sample, customerPaths: customer, emptySections: empty, palette: palette.id };
   }
 
-  // sample(V3, id, opts) -> { ok, design, errors, demoOnly, samplePaths, customerPaths, palette }: the full
+  // sample(V3, id, opts) -> { ok, design, errors, demoOnly, samplePaths, customerPaths, emptySections, palette }: the full
   // example page for the preview (core.validateDesign's normalized copy when valid)
   function sample(V3, id, opts) {
     var c = compose(V3, id, opts);
-    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], demoOnly: [], samplePaths: [], customerPaths: [], palette: null };
+    if (!c) return { ok: false, design: null, errors: [{ path: '$', code: 'unknown_template' }], demoOnly: [], samplePaths: [], customerPaths: [], emptySections: [], palette: null };
     var v = V3.validateDesign(c.design, opts && opts.cloudName ? { cloudName: opts.cloudName } : undefined);
-    return { ok: v.ok, design: v.design, errors: v.errors, demoOnly: c.demoOnly, samplePaths: c.samplePaths, customerPaths: c.customerPaths, palette: c.palette };
+    return { ok: v.ok, design: v.design, errors: v.errors, demoOnly: c.demoOnly, samplePaths: c.samplePaths, customerPaths: c.customerPaths, emptySections: c.emptySections, palette: c.palette };
   }
 
   // stripDemo(design, keep) -> a copy without the example-only parts (DEMO_ONLY): no example link,

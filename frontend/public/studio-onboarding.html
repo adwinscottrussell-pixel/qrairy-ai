@@ -311,6 +311,11 @@
             <div class="ob-live__stage ob-live__stage--scroll" aria-hidden="true">
               <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" id="ob-sections-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
             </div>
+            <!-- T1c.2: the chosen template's page: the customer's details and the example content, as on Step 3 -->
+            <ul class="ob-legend" id="ob-sections-legend">
+              <li class="ob-legend__item ob-legend__item--yours" data-ob="legend_yours">Your details from Step 2</li>
+              <li class="ob-legend__item ob-legend__item--example" data-ob="legend_example">“Example”: demo, not your real details</li>
+            </ul>
             <p class="ob-live__note" data-ob="live_note_sections">Scroll the phone to see every section. Nothing is saved yet.</p>
           </aside>
         </div>
@@ -322,7 +327,7 @@
         <p class="ob-lead" data-ob="review_text">Check your page before you save it as a draft.</p>
         <div class="ob-business ob-review">
           <div class="ob-fields">
-            <p class="ob-draft-badge"><span class="ob-draft-badge__dot" aria-hidden="true"></span><span data-ob="draft_status">Ready to save · Not saved yet</span></p>
+            <p class="ob-draft-badge"><span class="ob-draft-badge__dot" aria-hidden="true"></span><span data-ob="draft_status">Draft preview ready · Not saved</span></p>
             <div class="ob-info ob-info--compact">
               <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
               <p data-ob="draft_free">Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.</p>
@@ -338,12 +343,14 @@
                 <div class="ob-summary__row"><dt data-ob="links_label">Social media links</dt><dd id="ob-sum-links"></dd></div>
               </dl>
             </section>
-            <section class="ob-summary" aria-labelledby="ob-sum-sections-title">
+            <!-- T1c.3: on phones the first three sections of the list (the customer's order, Edit unchanged); "Show all sections (N)" shows the rest -->
+            <section class="ob-summary" id="ob-sum-sections-box" data-open="false" aria-labelledby="ob-sum-sections-title">
               <div class="ob-summary__head">
                 <h2 class="ob-h2" id="ob-sum-sections-title" tabindex="-1"></h2>
                 <button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label"><span data-ob="edit">Edit</span></button>
               </div>
               <ol class="ob-chosen ob-sum-sections" id="ob-sum-sections"></ol>
+              <button type="button" class="ob-sum-toggle" id="ob-sum-toggle" aria-expanded="false" aria-controls="ob-sum-sections"><span id="ob-sum-toggle-text">Show all sections</span><svg class="ob-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </section>
             <p class="ob-error" id="ob-review-error"></p>
           </div>
@@ -353,6 +360,12 @@
             <div class="ob-live__stage ob-live__stage--scroll" aria-hidden="true">
               <div class="ob-phone"><div class="ob-phone__screen"><span class="ob-phone__island"></span><iframe class="ob-phone__frame" id="ob-review-frame" sandbox="allow-scripts" tabindex="-1" title="" referrerpolicy="no-referrer"></iframe></div></div>
             </div>
+            <!-- T1c.3: what is the customer's, what is an example, and that examples are not saved as theirs -->
+            <ul class="ob-legend" id="ob-review-legend">
+              <li class="ob-legend__item ob-legend__item--yours" data-ob="legend_yours">Your details from Step 2</li>
+              <li class="ob-legend__item ob-legend__item--example" data-ob="legend_example">“Example”: demo, not your real details</li>
+            </ul>
+            <p class="ob-live__note ob-review-example-note" id="ob-review-example-note" data-ob="review_example_note">Example details are not saved as your information.</p>
             <p class="ob-live__note" data-ob="review_live_note">Scroll the phone to see the whole page.</p>
           </aside>
         </div>

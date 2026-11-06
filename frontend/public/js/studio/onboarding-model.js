@@ -103,12 +103,14 @@
     list.forEach(function (t) { if (SECTION_TYPES.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t); });
     return out;
   }
-  // The sections the page has now: the customer's list (or the defaults), with Social Media following
-  // Step 2's links while its mode is 'auto' (kept at its place when there are links, left out without);
-  // 'added' keeps it even without links, 'removed' leaves it out.
-  function sectionsFor(answers, hasLinks) {
+  // The sections the page has now: the customer's list (or the defaults: the chosen template's suggested
+  // sections when given (T1c), else DEFAULT_SECTIONS), with Social Media following Step 2's links while its
+  // mode is 'auto' (kept at its place when there are links, left out without, for every template);
+  // 'added' keeps it even without links, 'removed' leaves it out. A list the customer made is never
+  // replaced by a template's (only the Hero, always first, is added to it).
+  function sectionsFor(answers, hasLinks, defaults) {
     var a = answers || {};
-    var list = cleanSections(a.sections) || DEFAULT_SECTIONS.slice();
+    var list = cleanSections(a.sections) || cleanSections(defaults) || DEFAULT_SECTIONS.slice();
     var mode = SOCIAL_MODES.indexOf(a.social) !== -1 ? a.social : 'auto';
     var has = list.indexOf('socialMedia') !== -1;
     if (mode === 'removed' || (mode === 'auto' && !hasLinks)) return list.filter(function (t) { return t !== 'socialMedia'; });
@@ -116,9 +118,19 @@
     return list;
   }
 
-  // checkPage(V3, answers, language) -> Step 2's check plus { sections, page }: the full page with the sections,
-  // checked by core.validateDesign (page: its normalized copy when valid, else null)
-  function checkPage(V3, answers, language) {
+  // checkPage(V3, answers, language[, T]) -> Step 2's check plus { sections, page }: the full page with the sections,
+  // checked by core.validateDesign (page: its normalized copy when valid, else null). With the template catalog
+  // (T, onboarding-templates.js) and a chosen template (T1c): the template's page (pageFor), plus composed.
+  function checkPage(V3, answers, language, T) {
+    var p = T ? pageFor(V3, T, answers, language) : null;
+    if (p) {
+      var c = p.check;
+      c.sections = p.sections;
+      c.page = p.ok ? p.design : null;
+      c.pageOk = !!c.page;
+      c.composed = p;
+      return c;
+    }
     var r = check(V3, answers, language);
     var types = sectionsFor(answers, r.values.links.length > 0);
     var v = V3.validateDesign(buildDesign(V3, r.values, language, types));
@@ -126,6 +138,42 @@
     r.page = r.ok && v.ok ? v.design : null;
     r.pageOk = !!r.page;
     return r;
+  }
+
+  // pageFor(V3, T, answers, language[, opts]) -> the chosen template's page for Steps 3, 4 and 5 (T1c), or null
+  // without a known template: { ok, check, name, sections, design, draft, palette, exampleIds, emptyIds, demoOnly,
+  // customerPaths, samplePaths, errors }.
+  //   sections  sectionsFor() with the template's suggested list as the default (the customer's own list kept)
+  //   design    the preview page (T.sample: example content where the customer has none), checked by core.js
+  //   draft     the same page without the example-only parts (T.starter), what a draft may hold later; null when invalid
+  //   exampleIds the sections holding example-only content (the Hero excluded: it carries the customer's name)
+  //   emptyIds  sections without content yet (no example here, or Social Media without the customer's links)
+  // The customer's name, description and links (Step 2: the valid ones; the name as typed, else the placeholder,
+  // while it is still invalid) always replace the examples. opts.imageUrl: the photo addresses (default: the catalog's).
+  function pageFor(V3, T, answers, language, opts) {
+    var a = answers || {};
+    var tpl = T && a.template ? T.get(a.template) : null;
+    if (!tpl) return null;
+    var l = lang(language), r = check(V3, a, l);
+    var name = r.values.name || cleanName(a.name) || PLACEHOLDER_NAME[l];
+    var types = sectionsFor(a, r.values.links.length > 0, tpl.sections);
+    var o = { lang: l, palette: a.palette, name: name, description: r.values.description, links: r.values.links, sections: types,
+      emptyFallback: true, exampleProfiles: false };
+    if (opts && typeof opts.imageUrl === 'function') o.imageUrl = opts.imageUrl;
+    var s = T.sample(V3, tpl.id, o);
+    if (!s.ok) { o.links = []; s = T.sample(V3, tpl.id, o); }   // a name the schema refuses: the page without the links, Next blocked by check()
+    var d = s.ok ? T.starter(V3, tpl.id, o) : null;
+    var examples = [];
+    if (s.ok) {
+      var secs = s.design.pages[0].sections;
+      s.demoOnly.forEach(function (p) {
+        var m = /^pages\[0\]\.sections\[(\d+)\]\./.exec(p), sec = m && secs[Number(m[1])];
+        if (sec && sec.type !== 'hero' && examples.indexOf(sec.id) === -1) examples.push(sec.id);
+      });
+    }
+    return { ok: r.ok && s.ok, check: r, name: name, sections: types, design: s.ok ? s.design : null, draft: d && d.ok ? d.design : null,
+      palette: s.palette, exampleIds: examples, emptyIds: s.emptySections || [], demoOnly: s.demoOnly, customerPaths: s.customerPaths,
+      samplePaths: s.samplePaths, errors: s.errors };
   }
 
   // One link, by core.js's own rules: null when valid, else an error code
@@ -206,5 +254,5 @@
   return { LIMITS: LIMITS, PLATFORMS: PLATFORMS, LABELS: LABELS, EXAMPLES: EXAMPLES, PLACEHOLDER_NAME: PLACEHOLDER_NAME,
     chars: chars, cleanName: cleanName, cleanDescription: cleanDescription, normalizeUrl: normalizeUrl,
     buildDesign: buildDesign, linkError: linkError, check: check, sanitize: sanitize, nextPlatform: nextPlatform,
-    SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections, sectionsFor: sectionsFor, checkPage: checkPage };
+    SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections, sectionsFor: sectionsFor, checkPage: checkPage, pageFor: pageFor };
 });

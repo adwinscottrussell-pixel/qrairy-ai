@@ -92,11 +92,11 @@
       review_text: 'Check your page before you save it as a draft.',
       back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out',
       // Step 4 (O3A)
-      draft_status: 'Ready to save · Not saved yet',
+      draft_status: 'Draft preview ready · Not saved', sum_view_all: 'Show all sections ({n})', sum_view_less: 'Show fewer sections',
       draft_free: "Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.",
       sum_business: 'Business information', sum_sections: 'Sections ({n})', sum_no_description: 'No description', sum_no_links: 'No social media links',
       edit: 'Edit', edit_business_label: 'Edit business information', edit_sections_label: 'Edit sections',
-      review_live_label: 'Your page as a draft', review_live_note: 'Scroll the phone to see the whole page.',
+      review_live_label: 'Your page as a draft', review_example_note: 'Example details are not saved as your information.', review_live_note: 'Scroll the phone to see the whole page.',
       save_draft: 'Save Draft', save_note: 'Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.',
       review_invalid: "This page can't be built yet. Please check Step 2 or Step 3.",
       unavailable_title: "Onboarding isn't available here yet", unavailable_text: 'The new onboarding is still being built and tested. Your landing pages keep working as before.',
@@ -134,6 +134,7 @@
       legend_example: '“Example”: demo, not your real details',
       example_tag: 'Example', jump_preview: 'See live preview', live_note_design: 'Scroll the phone · Nothing is saved yet',
       add: 'Add', add_section_label: 'Add {name}', move_up_label: 'Move {name} up', move_down_label: 'Move {name} down', remove_section_label: 'Remove {name}',
+      sec_example: 'Example · Edit later in Studio', sec_starter: 'Starter content · edit it in the Studio',
       hero_locked: 'Always first · from Step 2', social_links: '{n} links from Step 2', social_links_one: '1 link from Step 2',
       social_none: 'No links yet · add them in Step 2', sec_empty: 'Add your content in the Studio',
       sec_added: '{name} added, position {n} of {total}.', sec_removed: '{name} removed.', sec_moved: '{name} moved to position {n} of {total}.',
@@ -164,11 +165,11 @@
       sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
       review_text: 'Prüfen Sie Ihre Seite, bevor Sie sie als Entwurf speichern.',
       back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
-      draft_status: 'Bereit zum Speichern · Noch nicht gespeichert',
+      draft_status: 'Entwurfsvorschau bereit · Nicht gespeichert', sum_view_all: 'Alle Abschnitte anzeigen ({n})', sum_view_less: 'Weniger Abschnitte anzeigen',
       draft_free: 'Das Erstellen eines Entwurfs ist kostenlos und startet nicht Ihre 14-tägige Testphase. Die Testphase beginnt erst, wenn Sie veröffentlichen.',
       sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
       edit: 'Bearbeiten', edit_business_label: 'Unternehmensdaten bearbeiten', edit_sections_label: 'Abschnitte bearbeiten',
-      review_live_label: 'Ihre Seite als Entwurf', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
+      review_live_label: 'Ihre Seite als Entwurf', review_example_note: 'Beispielangaben werden nicht als Ihre Angaben gespeichert.', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
       save_draft: 'Entwurf speichern', save_note: 'Das Speichern folgt im nächsten Update. Es wurde noch nichts gespeichert – Ihre Angaben bleiben in diesem Browser-Tab.',
       review_invalid: 'Diese Seite kann noch nicht erstellt werden. Bitte prüfen Sie Schritt 2 oder 3.',
       unavailable_title: 'Das Onboarding ist hier noch nicht verfügbar', unavailable_text: 'Das neue Onboarding wird noch gebaut und getestet. Ihre Landingpages funktionieren weiter wie bisher.',
@@ -204,6 +205,7 @@
       legend_example: '„Beispiel“: Demo, nicht Ihre Angaben',
       example_tag: 'Beispiel', jump_preview: 'Live-Vorschau ansehen', live_note_design: 'Im Smartphone scrollen · Nichts gespeichert',
       add: 'Hinzufügen', add_section_label: '{name} hinzufügen', move_up_label: '{name} nach oben verschieben', move_down_label: '{name} nach unten verschieben', remove_section_label: '{name} entfernen',
+      sec_example: 'Beispiel · Später im Studio bearbeiten', sec_starter: 'Startinhalt · im Studio bearbeiten',
       hero_locked: 'Immer zuerst · aus Schritt 2', social_links: '{n} Links aus Schritt 2', social_links_one: '1 Link aus Schritt 2',
       social_none: 'Noch keine Links · in Schritt 2 hinzufügen', sec_empty: 'Inhalte später im Studio hinzufügen',
       sec_added: '{name} hinzugefügt, Position {n} von {total}.', sec_removed: '{name} entfernt.', sec_moved: '{name} auf Position {n} von {total} verschoben.',
@@ -287,7 +289,7 @@
     if (!choice) step = 0;
     if (step > 1 && !M.check(V3, answers, 'en').ok) step = 1;
     if (step > 2 && !answers.template) step = 2;
-    if (step > 3 && !M.checkPage(V3, answers, 'en').pageOk) step = 3;
+    if (step > 3 && !M.checkPage(V3, answers, 'en', T).pageOk) step = 3;   // T1c: the chosen template's page
     return { step: step, choice: choice, answers: answers };
   }
 
@@ -610,7 +612,9 @@
       sayIn('ob-design-status', t('pal_selected').replace('{name}', p.label));
     }
     // The page in the phone: the chosen template and palette with the customer's own name, description and
-    // links (Step 2; the last valid ones), example content everywhere else, its sections tagged "Example"
+    // links (Step 2; the last valid ones), example content everywhere else, its sections tagged "Example".
+    // T1c.1: composed by the shared M.pageFor (for Steps 3, 4 and 5), here with the template's suggested
+    // sections (Social Media only with the customer's links); T1c.2 brings the customer's own list to all three.
     function drawDesign() {
       var frame = $('ob-design-frame');
       if (!frame || !PV || !T || !IMAGES) return;
@@ -618,26 +622,19 @@
       $('ob-design-empty').hidden = ok;
       $('ob-design-stage').hidden = !ok;
       if (!ok) { designShown = null; return; }
-      var r = check();
-      var name = r.values.name || M.cleanName(answers.name) || M.PLACEHOLDER_NAME[current];
-      var opts = { lang: current, palette: answers.palette, name: name, description: r.values.description, links: r.values.links };
-      var s = T.sample(V3, answers.template, opts);
-      if (!s.ok) { opts.links = []; s = T.sample(V3, answers.template, opts); }
-      if (!s.ok) return;
+      var p = M.pageFor(V3, T, Object.assign({}, answers, { sections: null, social: 'auto' }), current);
+      if (!p || !p.design) return;
       // only this template's photos, each once; the frame is drawn again when they are ready
-      IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), function () { drawDesign(); });
-      var out = V3.renderDesign(s.design, { businessName: name }, { preview: true });
+      IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);
+      var out = V3.renderDesign(p.design, { businessName: p.name }, { preview: true });
       if (!out || !out.ok) return;
-      var sections = s.design.pages[0].sections, examples = [];
-      s.demoOnly.forEach(function (p) {
-        var m = /^pages\[0\]\.sections\[(\d+)\]\./.exec(p), sec = m && sections[Number(m[1])];
-        if (sec && sec.type !== 'hero' && examples.indexOf(sec.id) === -1) examples.push(sec.id);
-      });
-      var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), examples, t('example_tag')));
+      var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), p.exampleIds, t('example_tag')));
       if (!html) return;
       if (designShown !== answers.template) { designY = 0; designShown = answers.template; }
       if (frame.srcdoc !== html) frame.srcdoc = html;
     }
+    // the template's photos are asked for once (Step 3 or 4); when ready, the step on screen is drawn again
+    function photosReady() { if (nav.step === 2) drawDesign(); if (nav.step === 3) drawSections(); if (nav.step === 4) review(); }
     function design() {
       templateCards();
       paletteChoices();
@@ -649,7 +646,9 @@
     // ── Step 4: the sections (answers.sections and answers.social, kept with the other answers) and the
     // live phone (the whole page; its scroll position kept; a section just added or moved shown) ──
     var frameY = 0, reveal = null, reviewY = 0;
-    function page() { return M && V3 ? M.checkPage(V3, answers, current) : null; }
+    // T1c.2 / T1c.3: the page of Steps 4 and 5: the chosen template's (M.pageFor through checkPage): its suggested sections
+    // while the list is untouched, else the customer's own list; the palette, the Step 2 details and links.
+    function sectionsPage() { return M && V3 ? M.checkPage(V3, answers, current, T) : null; }
     function secName(type) { return t('sec_' + type); }
     function icon(name) { return $('ob-tpl-icons').content.querySelector('[data-icon="' + name + '"]').cloneNode(true); }
     function say(msg) {
@@ -661,6 +660,8 @@
       var n = r.values.links.length, text, cls = 'ob-sec__tag';
       if (type === 'hero') text = t('hero_locked');
       else if (type === 'socialMedia') { text = n === 1 ? t('social_links_one') : n ? t('social_links').replace('{n}', String(n)) : t('social_none'); if (n) cls += ' ob-sec__tag--links'; }
+      else if (r.composed && r.composed.exampleIds.indexOf(M.SECTION_IDS[type]) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }
+      else if (r.composed && r.composed.emptyIds.indexOf(M.SECTION_IDS[type]) === -1) text = t('sec_starter');
       else text = t('sec_empty');
       var s = el('span', cls);
       if (type === 'hero') s.appendChild(icon('lock'));
@@ -716,7 +717,7 @@
     }
     function sections() {
       if (!M || !$('ob-chosen')) return;
-      var r = page(), list = r.sections, chosen = $('ob-chosen'), more = $('ob-more');
+      var r = sectionsPage(), list = r.sections, chosen = $('ob-chosen'), more = $('ob-more');
       while (chosen.firstChild) chosen.removeChild(chosen.firstChild);
       while (more.firstChild) more.removeChild(more.firstChild);
       list.forEach(function (type, i) { chosen.appendChild(chosenItem(type, i, list.length, r)); });
@@ -727,7 +728,7 @@
       drawSections();
     }
     function addSection(type) {
-      var list = page().sections;
+      var list = sectionsPage().sections;
       if (list.indexOf(type) !== -1 || M.SECTION_TYPES.indexOf(type) === -1) return;
       var restIndex = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; }).indexOf(type);
       list.push(type);
@@ -735,14 +736,14 @@
       if (type === 'socialMedia') answers.social = 'added';
       reveal = M.SECTION_IDS[type];
       save(); sections();
-      var now = page().sections;
+      var now = sectionsPage().sections;
       say(t('sec_added').replace('{name}', secName(type)).replace('{n}', String(now.indexOf(type) + 1)).replace('{total}', String(now.length)));
       // focus: the next "+ Add" (or the one before), else the list's heading
       var adds = $('ob-more').querySelectorAll('[data-act="add"]');
       (adds[restIndex] || adds[restIndex - 1] || $('ob-chosen-title')).focus();
     }
     function removeSection(type) {
-      var list = page().sections, i = list.indexOf(type);
+      var list = sectionsPage().sections, i = list.indexOf(type);
       if (i < 1) return;                                     // the Hero cannot be removed
       list.splice(i, 1);
       answers.sections = list;
@@ -756,7 +757,7 @@
       (b || $('ob-chosen-title')).focus();
     }
     function moveSection(type, dir) {
-      var list = page().sections, i = list.indexOf(type), j = i + (dir === 'up' ? -1 : 1);
+      var list = sectionsPage().sections, i = list.indexOf(type), j = i + (dir === 'up' ? -1 : 1);
       if (i < 1 || j < 1 || j >= list.length) return;        // the Hero stays first
       list[i] = list[j]; list[j] = type;
       answers.sections = list;
@@ -770,18 +771,27 @@
       b.focus();
     }
     // the page into the scriptable live frame (onboarding-previews.js liveHtml); unchanged HTML is not reloaded,
-    // a reveal then goes to the page as it is
+    // a reveal then goes to the page as it is. T1c.2: the template's page with its photos inline (only this
+    // template's, T1a helper), example sections tagged as on Step 3
     function drawSections() {
-      var r = page(), frame = $('ob-sections-frame');
+      var r = sectionsPage(), frame = $('ob-sections-frame');
       if (!r || !frame || !PV) return;
-      var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
-      var html = out && out.ok ? PV.liveHtml(out.html) : '';
+      var p = r.composed, html = '';
+      if (p && p.design && IMAGES) {
+        IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);
+        var tout = V3.renderDesign(p.design, { businessName: p.name }, { preview: true });
+        html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';
+      } else {
+        var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
+        html = out && out.ok ? PV.liveHtml(out.html) : '';
+      }
       if (html && frame.srcdoc !== html) frame.srcdoc = html;
       else if (reveal && frame.contentWindow) { frame.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*'); reveal = null; }
     }
 
-    // ── Step 5 (Step 4 before T1b): the review. Read only: the values and the page come from checkPage(), exactly what a draft will
-    // hold later; text only through textContent; the phone shows the same page in the same frame as Step 3 ──
+    // ── Step 5 (Step 4 before T1b): the review. Read only: the values and the page come from checkPage() with the template
+    // (T1c.3), the same page as Step 4, example sections tagged (a draft will hold it without them); text only through
+    // textContent; the phone shows the same page in the same kind of frame as Step 4 ──
     function setText(id, value, empty) {
       var n = $(id);
       n.textContent = value || t(empty);
@@ -789,7 +799,7 @@
     }
     function review() {
       if (!M || !$('ob-sum-name')) return;
-      var r = page();
+      var r = sectionsPage();   // T1c.3: the same template page as Step 4 (M.pageFor): its palette, the customer's sections and Step 2
       setText('ob-sum-name', r.values.name || M.cleanName(answers.name), 'name_required');
       setText('ob-sum-description', r.values.description, 'sum_no_description');
       var links = $('ob-sum-links');
@@ -816,15 +826,37 @@
         li.appendChild(body(type, r));
         list.appendChild(li);
       });
+      // phones (CSS): the first SUM_FIRST sections of this same list (same order, same Edit) until "Show all sections (N)"
+      sumOpen(null);
       $('ob-review-error').textContent = r.pageOk ? '' : t('review_invalid');
       drawReview(r);
     }
+    // T1c.3: the template's page as on Step 4 (photos inline, only this template's; example sections tagged)
     function drawReview(r) {
       var frame = $('ob-review-frame');
       if (!frame || !PV) return;
-      var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
-      var html = out && out.ok ? PV.liveHtml(out.html) : '';
+      var p = r.composed, html = '';
+      if (p && p.design && IMAGES) {
+        IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);
+        var tout = V3.renderDesign(p.design, { businessName: p.name }, { preview: true });
+        html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';
+      } else {
+        var out = V3.renderDesign(r.page || M.buildDesign(V3, r.values, current, r.sections), { businessName: r.values.name || M.PLACEHOLDER_NAME[current] }, { preview: true });
+        html = out && out.ok ? PV.liveHtml(out.html) : '';
+      }
       if (html && frame.srcdoc !== html) frame.srcdoc = html;
+    }
+    // the phone summary's state (open: true / false; null: as it is); its button says what it does and how many sections
+    // there are; with SUM_FIRST sections or fewer there is nothing to expand: no button, the whole list
+    var SUM_FIRST = 3;
+    function sumOpen(open) {
+      var box = $('ob-sum-sections-box'), b = $('ob-sum-toggle'), n = $('ob-sum-sections').children.length;
+      if (open !== null) box.setAttribute('data-open', String(open));
+      var now = box.getAttribute('data-open') === 'true';
+      box.setAttribute('data-more', String(n > SUM_FIRST));
+      b.hidden = n <= SUM_FIRST;
+      b.setAttribute('aria-expanded', String(now));
+      $('ob-sum-toggle-text').textContent = t(now ? 'sum_view_less' : 'sum_view_all').replace('{n}', String(n));
     }
     // Edit: back to the step, its answers as they are (saved first), focus where the change starts
     function editStep(step, focusId) {
@@ -941,7 +973,7 @@
         if (!ok) { design(); $('ob-design-title').focus(); return; }
       }
       if (nav.step === 3) {
-        var p = page();
+        var p = sectionsPage();
         ok = !!(p && p.pageOk);
         if (!ok) { sections(); $('ob-chosen-title').focus(); return; }
       }
@@ -958,6 +990,7 @@
     // Step 4: Edit back to Steps 2 and 3
     $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
     $('ob-edit-sections').addEventListener('click', function () { editStep(3, 'ob-chosen-title'); });
+    $('ob-sum-toggle').addEventListener('click', function () { sumOpen($('ob-sum-sections-box').getAttribute('data-open') !== 'true'); });
     // Step 5's review frame: after each load its scroll position (no reveal); from it, only its scroll position
     if (PV && $('ob-review-frame')) {
       $('ob-review-frame').addEventListener('load', function () {

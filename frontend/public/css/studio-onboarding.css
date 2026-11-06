@@ -153,6 +153,9 @@ body.ob-page {
   .ob-link { white-space: nowrap; }
   .ob-link--exit { padding: 6px; }
   .ob-link__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* T1c.2 polish: every header control answers a 44 px tall tap (an invisible area, the look unchanged; never wider, so no overlap) */
+  .ob-lang__btn, .ob-theme__btn, .ob-link { position: relative; }
+  .ob-lang__btn::after, .ob-theme__btn::after, .ob-link::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 }
 /* T1b, the narrowest phones (320 px): the header fits (tighter spacing, a slightly smaller logo), no sideways scroll */
 @media (max-width: 359px) {
@@ -162,6 +165,7 @@ body.ob-page {
   .ob-lang__btn { min-width: 32px; padding: 0 7px; }
   .ob-theme__btn { min-width: 30px; padding: 0 6px; }
   .ob-link { padding: 6px 2px; }
+  .ob-link--exit { padding: 6px 7px; }   /* T1c.2 polish: the Back to Studio arrow 32 px wide (was 22) */
 }
 
 /* ── page body ── */
@@ -367,6 +371,8 @@ body.ob-page {
 .ob-sec__tag { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; background: var(--ob-tag-bg); color: var(--ob-muted); font: 600 11.5px/1.5 Inter, sans-serif; }
 .ob-sec__tag .ob-ic { width: 13px; height: 13px; }
 .ob-sec__tag--links { background: var(--ob-info-bg); color: var(--ob-info-text); }
+/* T1c.2: a section with example content (the template's demo), marked like the "Example" tag in the phone */
+.ob-sec__tag--example { background: #fffbeb; color: #92400e; box-shadow: inset 0 0 0 1px #d97706; }
 .ob-sec__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .ob-iconbtn {
   display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ob-border-strong); border-radius: 12px;
@@ -508,14 +514,24 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
    yet": the page is ready, nothing is saved), a plain paragraph, not a control. ── */
 .ob-draft-badge {
   display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin: 0; padding: 6px 12px;
-  border: 1.5px solid var(--ob-add); border-radius: 999px; background: var(--ob-add-bg); color: var(--ob-add); font: 700 13px/1.3 Inter, sans-serif;
+  border: 1.5px solid var(--ob-border-strong); border-radius: 999px; background: var(--ob-tag-bg); color: var(--ob-text-2); font: 700 13px/1.3 Inter, sans-serif;
 }
-.ob-draft-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ob-add); flex-shrink: 0; }
+.ob-draft-badge__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ob-muted); flex-shrink: 0; }   /* T1c.3: neutral while saving is not available */
 .ob-summary { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ob-border); border-radius: 14px; background: var(--ob-surface); }
-.ob-summary__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* T1c.3: the phone section summary: the first three sections, the rest on request (desktop and tablet: always the full list) */
+.ob-sum-toggle { display: none; }
+@media (max-width: 599px) {
+  .ob-sum-toggle:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; align-self: flex-start; min-height: 44px; padding: 0 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px; background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1 Inter, sans-serif; cursor: pointer; }
+  .ob-sum-toggle .ob-ic { width: 16px; height: 16px; transition: transform 0.15s; }
+  .ob-sum-toggle[aria-expanded="true"] .ob-ic { transform: rotate(180deg); }
+  .ob-sum-toggle:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+  #ob-sum-sections-box[data-open="false"] .ob-sum-sections > li:nth-child(n+4) { display: none; }
+}
+.ob-summary__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }   /* T1c.3: on the narrowest phones the Edit button goes below a long heading */
 .ob-edit {
   min-height: 44px; min-width: 44px; padding: 0 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px;
   background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1 Inter, sans-serif; cursor: pointer;
+  flex-shrink: 0;   /* T1c.3: never squeezed by a long heading (German at 320 px); the heading wraps instead */
 }
 .ob-edit:hover { border-color: var(--ob-navy); color: var(--ob-navy); }
 .ob-summary__list { display: flex; flex-direction: column; gap: 10px; margin: 0; }

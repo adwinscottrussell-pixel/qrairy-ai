@@ -326,6 +326,46 @@ test('pure: no request, no storage, no DOM; T1b: loaded by the onboarding only (
   assert.ok(!read('studio.html').includes('onboarding-templates.js') && !read('js/studio/studio-shell.js').includes('QraivyOnboardingTemplates'), 'the Studio does not');
 });
 
+test('T1c emptyFallback: a chosen type without example content stays on the page as core.js\'s empty starter with its fixed id (listed), in every template and both languages; off by default (T0 unchanged)', () => {
+  const missing = { restaurant: [], bakery: [], beauty: [], retail: [], creator: ['openingHours', 'gallery'], services: ['gallery'] };
+  T.TEMPLATE_IDS.forEach((id) => {
+    assert.deepEqual(T.SECTION_TYPES.filter((x) => !T.available(id).includes(x)), missing[id], id + ': the types without an example');
+    ['en', 'de'].forEach((l) => {
+      const r = T.sample(V3, id, opts(l, null, { sections: T.SECTION_TYPES, emptyFallback: true }));
+      assert.ok(r.ok, id + ' ' + l + ' valid: ' + JSON.stringify(r.errors));
+      const secs = r.design.pages[0].sections;
+      assert.deepEqual(secs.map((s) => s.type), T.SECTION_TYPES, id + ': every chosen type kept, in order');
+      assert.deepEqual(secs.map((s) => s.id), T.SECTION_TYPES.map((x) => T.SECTION_IDS[x]), id + ': the fixed ids');
+      assert.deepEqual(r.emptySections, missing[id].map((x) => T.SECTION_IDS[x]), id + ': listed as empty');
+      missing[id].forEach((x) => {
+        const s = secs.find((y) => y.type === x), st = V3.starter(x, l);
+        assert.equal(s.variant, st.variant);
+        assert.deepEqual(s.data, V3.validateDesign({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_obhero01', type: 'hero', data: { headline: 'x' } }, Object.assign({ id: s.id }, st)] }] }).design.pages[0].sections[1].data, id + ' ' + x + ': core.js\'s starter, nothing invented');
+        assert.ok(!r.demoOnly.some((p) => p.startsWith('pages[0].sections[' + secs.indexOf(s) + ']')), id + ' ' + x + ': no example part');
+      });
+      // the saveable page keeps them too (empty: hidden on the public page until filled in)
+      assert.deepEqual(T.starter(V3, id, opts(l, null, { sections: T.SECTION_TYPES, emptyFallback: true })).design.pages[0].sections.map((s) => s.type), T.SECTION_TYPES);
+    });
+  });
+  // without the option: left out, as in T0
+  assert.deepEqual(T.sample(V3, 'creator', opts('en', null, { sections: ['hero', 'gallery', 'openingHours'] })).design.pages[0].sections.map((s) => s.type), ['hero']);
+});
+
+test('T1c exampleProfiles false: Social Media without the customer\'s links is empty (never the example profiles) and not an example; with links: the customer\'s', () => {
+  T.TEMPLATE_IDS.forEach((id) => {
+    const none = T.sample(V3, id, opts('en', null, { sections: ['hero', 'socialMedia'], exampleProfiles: false }));
+    const s = none.design.pages[0].sections[1];
+    assert.deepEqual([s.type, s.id, s.data.links], ['socialMedia', 's_obsocial1', []], id);
+    assert.deepEqual([none.demoOnly.filter((p) => p.startsWith('pages[0].sections[1]')), none.emptySections], [[], ['s_obsocial1']], id + ': not an example, empty');
+    assert.ok(!JSON.stringify(none.design).includes(T.PLATFORM_HOME.instagram), id + ': no example profile anywhere');
+    const own = T.sample(V3, id, opts('en', null, { sections: ['hero', 'socialMedia'], exampleProfiles: false, links: [{ platform: 'tiktok', url: 'https://www.tiktok.com/@sonne' }] }));
+    assert.deepEqual(own.design.pages[0].sections[1].data.links, [{ platform: 'tiktok', url: 'https://www.tiktok.com/@sonne' }]);
+    assert.ok(own.customerPaths.includes('pages[0].sections[1].data.links') && !own.emptySections.length);
+  });
+  // default (T0 / Step 1 behaviour): the example profiles
+  assert.ok(T.sample(V3, 'bakery', opts('en', null, { sections: ['hero', 'socialMedia'] })).design.pages[0].sections[1].data.links.length > 0);
+});
+
 (async () => {
   let passed = 0, failed = 0;
   console.log('onboardingTemplates');

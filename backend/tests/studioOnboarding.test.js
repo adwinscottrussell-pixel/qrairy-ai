@@ -188,7 +188,11 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.ok(!/<input|<textarea|<select|<form/.test(step4), 'Step 5 collects nothing');
   assert.deepEqual([...step4.matchAll(/<button\b[^>]*>/g)].map((m) => m[0]), [
     '<button type="button" class="ob-edit" id="ob-edit-business" aria-label="Edit business information" data-ob-aria="edit_business_label">',
-    '<button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label">'], 'only the two Edit buttons');
+    '<button type="button" class="ob-edit" id="ob-edit-sections" aria-label="Edit sections" data-ob-aria="edit_sections_label">',
+    '<button type="button" class="ob-sum-toggle" id="ob-sum-toggle" aria-expanded="false" aria-controls="ob-sum-sections">'], 'the two Edit buttons and (T1c.3, phones) the section summary toggle');
+  assert.ok(step4.includes('<section class="ob-summary" id="ob-sum-sections-box" data-open="false" aria-labelledby="ob-sum-sections-title">') && !step4.includes('ob-sum-compact'));
+  assert.deepEqual([OB.TX.en.draft_status, OB.TX.de.draft_status], ['Draft preview ready · Not saved', 'Entwurfsvorschau bereit · Nicht gespeichert']);
+  assert.deepEqual([OB.TX.en.sum_view_all, OB.TX.de.sum_view_all, OB.TX.en.sum_view_less, OB.TX.de.sum_view_less], ['Show all sections ({n})', 'Alle Abschnitte anzeigen ({n})', 'Show fewer sections', 'Weniger Abschnitte anzeigen']);
   for (const k of ['draft_status', 'draft_free', 'sum_business', 'review_live_label']) assert.ok(step4.includes('data-ob="' + k + '"'), k);
   assert.match(HTML, /<p class="ob-save-note" id="ob-save-note" hidden data-ob="save_note">/);
   assert.ok(!/review_placeholder|finish_soon/.test(HTML + SRC), 'the placeholder texts are gone');
@@ -395,6 +399,189 @@ test('O2 Social Media: follows Step 2 links while untouched; a deliberate add or
   assert.deepEqual(M.sectionsFor({ social: 'removed' }, true), ['hero', 'buttons', 'openingHours', 'contact']);
 });
 
+test('T1c.1 sectionsFor: the chosen template\'s suggested sections while the list is untouched; Social Media only with links (every template); the customer\'s own list (also just the Hero) never replaced', () => {
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  T.TEMPLATE_IDS.forEach((id) => {
+    const s = T.get(id).sections;
+    assert.deepEqual(M.sectionsFor({}, true, s), s, id + ' with links: the suggested list, Social Media at its place');
+    assert.deepEqual(M.sectionsFor({}, false, s), s.filter((x) => x !== 'socialMedia'), id + ' without links: no Social Media');
+    assert.deepEqual(M.sectionsFor({ social: 'removed' }, true, s), s.filter((x) => x !== 'socialMedia'), id + ': removed stays out');
+    assert.deepEqual(M.sectionsFor({ social: 'added' }, false, s), s, id + ': added stays in');
+    // the customer's lists win over every template
+    assert.deepEqual(M.sectionsFor({ sections: ['hero', 'text', 'gallery'] }, false, s), ['hero', 'text', 'gallery'], id);
+    assert.deepEqual(M.sectionsFor({ sections: [] }, false, s), ['hero'], id + ': an emptied list stays empty (the Hero only)');
+    assert.deepEqual(M.sectionsFor({ sections: ['hero'] }, true, s), ['hero', 'socialMedia'], id + ': links while auto: Social Media added at the end');
+  });
+  // no template: the O2 defaults, unchanged
+  assert.deepEqual(M.sectionsFor({}, false), ['hero', 'buttons', 'openingHours', 'contact']);
+  assert.deepEqual(M.sectionsFor({}, false, null), ['hero', 'buttons', 'openingHours', 'contact']);
+  assert.deepEqual(M.sanitize({ sections: [] }).sections, ['hero'], 'kept as the customer\'s list');
+});
+
+test('T1c.1 pageFor: all six templates, EN / DE, every palette: the template\'s page with the Step 2 details and links (the customer\'s, never examples), example sections listed, the draft without example-only parts; nothing in the answers changed', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const links = [{ platform: 'instagram', url: 'instagram.com/cafesonne' }, { platform: 'tiktok', url: 'https://www.tiktok.com/@cafesonne' }];
+  const own = [{ platform: 'instagram', url: 'https://instagram.com/cafesonne' }, { platform: 'tiktok', url: 'https://www.tiktok.com/@cafesonne' }];
+  const at = (d, type) => d.pages[0].sections.find((s) => s.type === type);
+  T.TEMPLATE_IDS.forEach((id) => ['en', 'de'].forEach((l) => T.get(id).palettes.forEach((p) => {
+    const tag = id + ' ' + l + ' ' + p.id;
+    const answers = { template: id, palette: p.id, name: 'Café Sonne', description: 'Kaffee & Kuchen', links: links.slice(), sections: null, social: 'auto' };
+    const before = JSON.stringify(answers);
+    const r = M.pageFor(V3, T, answers, l);
+    assert.equal(JSON.stringify(answers), before, tag + ': the answers untouched');
+    assert.ok(r.ok && r.design && r.draft, tag + ' valid: ' + JSON.stringify(r.errors));
+    assert.deepEqual(r.sections, T.get(id).sections, tag + ': the suggested list');
+    assert.deepEqual(r.design.pages[0].sections.map((s) => s.type), r.sections);
+    assert.deepEqual(r.design.pages[0].sections.map((s) => s.id), r.sections.map((x) => M.SECTION_IDS[x]), tag + ': the fixed ids');
+    assert.deepEqual(r.design.theme.palette, p.colors, tag + ': the palette');
+    // Step 2 stays the customer's: in the preview and in the draft, listed as the customer's
+    [r.design, r.draft].forEach((d) => {
+      assert.deepEqual([at(d, 'hero').data.headline, at(d, 'hero').data.subheadline], ['Café Sonne', 'Kaffee & Kuchen'], tag);
+      assert.deepEqual(at(d, 'socialMedia').data.links, own, tag + ': the customer\'s links');
+    });
+    assert.ok(r.customerPaths.some((x) => x.endsWith('.data.headline')) && r.customerPaths.some((x) => x.endsWith('.data.links')), tag);
+    assert.ok(!r.exampleIds.includes('s_obhero01') && !r.exampleIds.includes('s_obsocial1'), tag + ': the Hero and the customer\'s links are not examples');
+    assert.ok(r.exampleIds.includes('s_obbuttons1') && r.exampleIds.length >= 2, tag + ': example sections listed');
+    // the draft: no example-only part (buttons, prices, hours, address, example profiles)
+    assert.deepEqual(at(r.draft, 'buttons').data.items, [], tag);
+    assert.ok(!/example\.com|Musterstra|Sample Street|€/.test(JSON.stringify(r.draft)), tag + ': no example facts in the draft');
+    assert.equal(r.name, 'Café Sonne');
+  })));
+  // no links: no Social Media on any template; no example profile anywhere
+  T.TEMPLATE_IDS.forEach((id) => {
+    const r = M.pageFor(V3, T, { template: id, palette: null, name: 'Café Sonne', links: [] }, 'en');
+    assert.ok(r.ok && !r.sections.includes('socialMedia') && !at(r.design, 'socialMedia'), id + ': no Social Media without links');
+    assert.ok(!Object.values(T.PLATFORM_HOME).some((u) => JSON.stringify(r.design).includes(u)), id + ': no example profile');
+    assert.equal(r.palette, T.get(id).palettes[0].id, id + ': the first palette by default');
+    // added without links: kept, empty, not an example
+    const added = M.pageFor(V3, T, { template: id, name: 'Café Sonne', links: [], social: 'added' }, 'en');
+    assert.deepEqual([at(added.design, 'socialMedia').data.links, added.emptyIds.includes('s_obsocial1'), added.exampleIds.includes('s_obsocial1')], [[], true, false], id);
+  });
+});
+
+test('T1c.1 pageFor: the customer\'s own section lists in every template (every type, alone and all together, any order, just the Hero), empty starters where a template has no example, stable ids; unknown template: null', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const links = [{ platform: 'facebook', url: 'facebook.com/sonne' }];
+  const lists = [['hero'], [], M.SECTION_TYPES.slice(), M.SECTION_TYPES.slice().reverse()].concat(M.SECTION_TYPES.filter((x) => x !== 'hero').map((x) => ['hero', x]));
+  T.TEMPLATE_IDS.forEach((id) => lists.forEach((list) => ['added', 'auto', 'removed'].forEach((social) => {
+    const answers = { template: id, name: 'Sonne', links, sections: list, social };
+    const r = M.pageFor(V3, T, answers, 'de');
+    const want = M.sectionsFor(answers, true, T.get(id).sections);
+    const tag = id + ' ' + JSON.stringify(list) + ' ' + social;
+    assert.ok(r.ok && r.draft, tag + ': ' + JSON.stringify(r.errors));
+    assert.deepEqual(r.sections, want, tag + ': the customer\'s list');
+    assert.deepEqual(r.design.pages[0].sections.map((s) => s.type), want, tag + ': nothing left out');
+    assert.deepEqual(r.design.pages[0].sections.map((s) => s.id), want.map((x) => M.SECTION_IDS[x]), tag + ': stable ids');
+    assert.deepEqual(r.draft.pages[0].sections.map((s) => s.type), want, tag + ': the draft too');
+    const noExample = T.SECTION_TYPES.filter((x) => !T.available(id).includes(x));
+    assert.deepEqual(r.emptyIds, want.filter((x) => noExample.includes(x)).map((x) => M.SECTION_IDS[x]), tag + ': empty starters listed');
+  })));
+  // the same list in two templates: the same sections and ids, only the look changes
+  const a = M.pageFor(V3, T, { template: 'restaurant', name: 'Sonne', sections: ['hero', 'gallery', 'contact'] }, 'en');
+  const b = M.pageFor(V3, T, { template: 'creator', name: 'Sonne', sections: ['hero', 'gallery', 'contact'] }, 'en');
+  assert.deepEqual(a.design.pages[0].sections.map((s) => s.id), b.design.pages[0].sections.map((s) => s.id));
+  assert.notDeepEqual(a.design.theme, b.design.theme);
+  assert.deepEqual(b.emptyIds, ['s_obgallery1'], 'Creator has no gallery example: empty, not dropped');
+  // no or an unknown template: null; checkPage then builds the O2 page as before
+  assert.equal(M.pageFor(V3, T, { name: 'Sonne' }, 'en'), null);
+  assert.equal(M.pageFor(V3, T, { template: 'evil', name: 'Sonne' }, 'en'), null);
+  assert.equal(M.pageFor(V3, null, { template: 'bakery', name: 'Sonne' }, 'en'), null);
+  // an invalid name: the page still draws (the typed name or the placeholder), not ok, no draft relied on
+  const bad = M.pageFor(V3, T, { template: 'bakery', name: '' }, 'en');
+  assert.equal(bad.ok, false); assert.ok(bad.design); assert.equal(bad.name, M.PLACEHOLDER_NAME.en);
+});
+
+test('T1c.1 checkPage with the catalog: the template\'s page and sections (composed); without a template or the catalog: the O2 page, unchanged; restore keeps the customer\'s list and checks the template\'s page', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const links = [{ platform: 'instagram', url: 'instagram.com/sonne' }];
+  const answers = { template: 'beauty', palette: 'plum', name: 'Salon Sonne', description: '', links, sections: null, social: 'auto' };
+  const r = M.checkPage(V3, answers, 'en', T);
+  assert.ok(r.ok && r.pageOk);
+  assert.deepEqual(r.sections, T.get('beauty').sections);
+  assert.equal(r.page, r.composed.design);
+  assert.deepEqual(r.values.links, [{ platform: 'instagram', url: 'https://instagram.com/sonne', row: 0 }], 'Step 2\'s check kept');
+  // without the catalog (Steps 4 and 5 until T1c.2) or a template: exactly the O2 page
+  assert.deepEqual(M.checkPage(V3, answers, 'en'), M.checkPage(V3, Object.assign({}, answers, { template: null }), 'en', T));
+  assert.deepEqual(M.checkPage(V3, answers, 'en').sections, ['hero', 'buttons', 'openingHours', 'contact', 'socialMedia']);
+  assert.equal(M.checkPage(V3, answers, 'en').composed, undefined);
+  // restore: Step 5 kept with the template's page; the customer's lists (also just the Hero) kept exactly
+  const v2 = (o) => Object.assign({ v: OB.STORE_VERSION }, o);
+  const kept = OB.restore(v2({ step: 4, choice: 'scratch', answers: Object.assign({}, answers, { sections: ['hero', 'gallery', 'text'], social: 'removed' }) }), M, V3, T);
+  assert.deepEqual([kept.step, kept.answers.sections, kept.answers.social, kept.answers.template, kept.answers.palette], [4, ['hero', 'gallery', 'text'], 'removed', 'beauty', 'plum']);
+  const bare = OB.restore(v2({ step: 4, choice: 'scratch', answers: Object.assign({}, answers, { template: 'creator', palette: 'coral', sections: [] }) }), M, V3, T);
+  assert.deepEqual([bare.step, bare.answers.sections], [4, ['hero']], 'an emptied list: kept (the Hero only)');
+  const untouched = OB.restore(v2({ step: 3, choice: 'scratch', answers }), M, V3, T);
+  assert.deepEqual([untouched.step, untouched.answers.sections], [3, null], 'untouched stays untouched: follows the template');
+});
+
+test('T1c.2 Step 4: the list, add / remove / move, Next and the phone use the template\'s page (M.pageFor through checkPage with the catalog); only its photos; example sections tagged', () => {
+  const c = code(SRC);
+  assert.ok(c.includes("function sectionsPage() { return M && V3 ? M.checkPage(V3, answers, current, T) : null; }"));
+  const step4 = c.slice(c.indexOf('function sections() {'), c.indexOf('function setText('));
+  assert.equal((step4.match(/\bpage\(\)/g) || []).length, 0, 'Step 4 never uses the O2 page');
+  assert.equal((step4.match(/sectionsPage\(\)/g) || []).length, 6, 'list, add (2), remove, move, the phone');
+  assert.ok(c.slice(c.indexOf("if (nav.step === 3) {"), c.indexOf("var n = next(nav, ok);")).includes('var p = sectionsPage();'), 'Next checks the same page');
+  assert.ok(step4.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);"), 'only the template\'s photos (T1a helper)');
+  assert.ok(step4.includes("html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';"), 'inline photos, Example tags, the fixed frame script');
+  // the reveal and scroll handling unchanged
+  assert.ok(step4.includes("if (html && frame.srcdoc !== html) frame.srcdoc = html;") && step4.includes("frame.contentWindow.postMessage(PV.initMessage(frameY, reveal), '*'); reveal = null;"));
+  // T1c.3: the O2-only page() is gone; Steps 4 and 5 share sectionsPage()
+  assert.ok(!c.includes('function page()') && !/\bpage\(\)/.test(c));
+  // the tags: the template's example sections, starter content, empty ones
+  assert.ok(c.includes("r.composed.exampleIds.indexOf(M.SECTION_IDS[type]) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }"));
+  for (const k of ['sec_example', 'sec_starter']) assert.ok(OB.TX.en[k] && OB.TX.de[k] && OB.TX.en[k] !== OB.TX.de[k], k);
+  assert.deepEqual([OB.TX.en.sec_example, OB.TX.de.sec_example], ['Example · Edit later in Studio', 'Beispiel · Später im Studio bearbeiten'], 'the short example label (T1c.2 polish)');
+  assert.ok(!/^Example|^Beispiel/.test(OB.TX.en.sec_starter + OB.TX.de.sec_starter), 'starter content is not called an example');
+  // the Step 4 legend: the same short texts as Step 3
+  const s4 = HTML.slice(HTML.indexOf('id="ob-step-3"'), HTML.indexOf('id="ob-step-4"'));
+  assert.ok(s4.includes('<ul class="ob-legend" id="ob-sections-legend">') && s4.includes('data-ob="legend_yours"') && s4.includes('data-ob="legend_example"'));
+});
+
+test('T1c.3 Step 5: the review uses the same template page as Step 4 (sectionsPage: palette, the customer\'s order, Step 2); the phone the template\'s page with inline photos and Example tags; the legend and the "not saved" note in EN / DE; Save Draft untouched', () => {
+  const c = code(SRC);
+  const rev = c.slice(c.indexOf('function review() {'), c.indexOf('function editStep('));
+  assert.ok(rev.includes('var r = sectionsPage();'), 'the Step 4 page');
+  assert.ok(rev.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);"), 'only the template\'s photos');
+  assert.ok(rev.includes("html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';"), 'inline photos, Example tags');
+  assert.ok(rev.includes('li.appendChild(body(type, r));'), 'the section summary with the Step 4 tags (example / starter / the customer\'s)');
+  assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|ob-finish/.test(rev), 'no request, Save Draft not touched');
+  assert.deepEqual([OB.TX.en.review_example_note, OB.TX.de.review_example_note], ['Example details are not saved as your information.', 'Beispielangaben werden nicht als Ihre Angaben gespeichert.']);
+  const s5 = HTML.slice(HTML.indexOf('id="ob-step-4"'));
+  assert.ok(s5.includes('<ul class="ob-legend" id="ob-review-legend">') && s5.includes('data-ob="review_example_note"'));
+  assert.ok(s5.includes('id="ob-finish" hidden disabled aria-disabled="true"'), 'Save Draft disabled in the markup');
+});
+
+test('T1c.2 Step 4 model: Restaurant and Creator: untouched -> the suggested list; add / remove / move from it make the customer\'s list (kept, also Hero-only); the tags\' data (example / starter / empty)', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const links = [{ platform: 'instagram', url: 'instagram.com/sonne' }];
+  const r = M.checkPage(V3, { template: 'restaurant', palette: 'olive', name: 'Sonne', links, sections: null }, 'en', T);
+  assert.deepEqual(r.sections, ['hero', 'buttons', 'products', 'gallery', 'text', 'openingHours', 'contact', 'socialMedia']);
+  assert.deepEqual(r.composed.exampleIds, ['s_obbuttons1', 's_obproducts1', 's_obhours01', 's_obcontact1'], 'Restaurant: examples');
+  assert.deepEqual(r.composed.emptyIds, []);
+  const cr = M.checkPage(V3, { template: 'creator', name: 'Sonne', links: [], sections: null }, 'de', T);
+  assert.deepEqual(cr.sections, ['hero', 'buttons', 'products', 'text', 'contact'], 'Creator without links: no Social Media');
+  // the shell's edits, as the shell makes them: from the page's list
+  const answers = { template: 'creator', name: 'Sonne', links: [], sections: null, social: 'auto' };
+  let list = M.checkPage(V3, answers, 'en', T).sections; list.push('gallery'); answers.sections = list;   // add
+  assert.deepEqual(M.checkPage(V3, answers, 'en', T).sections, ['hero', 'buttons', 'products', 'text', 'contact', 'gallery']);
+  assert.deepEqual(M.checkPage(V3, answers, 'en', T).composed.emptyIds, ['s_obgallery1'], 'Creator\'s Gallery: empty, kept');
+  list = M.checkPage(V3, answers, 'en', T).sections; list.splice(list.indexOf('buttons'), 1); answers.sections = list;   // remove
+  list = M.checkPage(V3, answers, 'en', T).sections; const i = list.indexOf('contact'); list[i] = list[i - 1]; list[i - 1] = 'contact'; answers.sections = list;   // move up
+  assert.deepEqual(M.checkPage(V3, answers, 'en', T).sections, ['hero', 'products', 'contact', 'text', 'gallery']);
+  assert.deepEqual(M.checkPage(V3, Object.assign({}, answers, { template: 'restaurant' }), 'en', T).sections, ['hero', 'products', 'contact', 'text', 'gallery'], 'the customer\'s list in another template too');
+  assert.deepEqual(M.checkPage(V3, Object.assign({}, answers, { sections: ['hero'] }), 'en', T).sections, ['hero'], 'Hero-only kept');
+  assert.ok(M.checkPage(V3, Object.assign({}, answers, { sections: ['hero'] }), 'en', T).pageOk, 'a Hero-only page is valid');
+});
+
 test('O2 live frame: the fixed script (no customer data) blocks clicks and links, restores the scroll, reveals a section; only exact scroll messages accepted', () => {
   const V3 = require('../src/lpV3/core.js');
   const M = require('../../frontend/public/js/studio/onboarding-model.js');
@@ -546,11 +733,14 @@ test('T1b Step 3: the "Example" tag on sections with example content only (fixed
 
 test('T1b Step 3: the shell draws the chosen template with the customer\'s answers, only its photos, example sections tagged; Next waits for a design; nothing else on the page changes', () => {
   const c = code(SRC);
-  assert.ok(c.includes("var s = T.sample(V3, answers.template, opts);"), 'the catalog builds the page');
-  assert.ok(c.includes("var opts = { lang: current, palette: answers.palette, name: name, description: r.values.description, links: r.values.links };"), 'the customer\'s own name, description and links (Step 2)');
-  assert.ok(c.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), function () { drawDesign(); });"), 'only the chosen template\'s photos');
-  assert.ok(c.includes("var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), examples, t('example_tag')));"), 'inline photos, example tags, the fixed frame script');
-  assert.ok(c.includes("if (sec && sec.type !== 'hero' && examples.indexOf(sec.id) === -1) examples.push(sec.id);"));
+  // T1c.1: the shared M.pageFor builds the page (the customer's own name, description and links: tested on the model),
+  // Step 3 with the template's suggested sections until T1c.2
+  assert.ok(c.includes("var p = M.pageFor(V3, T, Object.assign({}, answers, { sections: null, social: 'auto' }), current);"), 'the shared composition');
+  assert.equal((c.match(/T\.sample\(|T\.starter\(|T\.compose\(/g) || []).length, 0, 'no page built by the shell itself');
+  assert.ok(c.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);"), 'only the chosen template\'s photos');
+  assert.ok(c.includes("function photosReady() { if (nav.step === 2) drawDesign(); if (nav.step === 3) drawSections(); if (nav.step === 4) review(); }"), 'redrawn on the step on screen');
+  assert.ok(c.includes("var html = PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(out.html), p.exampleIds, t('example_tag')));"), 'inline photos, example tags, the fixed frame script');
+  assert.ok(c.includes("if (step > 3 && !M.checkPage(V3, answers, 'en', T).pageOk) step = 3;"), 'restore checks the template\'s page');
   assert.ok(c.includes("$('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);"), 'Next disabled until a design is chosen');
   // choosing a template or palette changes only template / palette (Step 2 answers and the section list are kept)
   const pick = c.slice(c.indexOf('function pickTemplate('), c.indexOf('function drawDesign('));
