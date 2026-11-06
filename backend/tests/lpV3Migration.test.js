@@ -52,11 +52,13 @@ test('schema.prisma matches the migration', () => {
 test('it is the newest migration and no earlier migration changed', () => {
   const dirs = fs.readdirSync(MIGRATIONS).filter((d) => /^\d{14}_/.test(d)).sort();
   // ...followed only by Phase D1's additive creation log (studioDraftMigration.test.js)
+  // and D2.1's additive PageDesign.origin column (studioDraftsOnboarding.test.js)
   const D1 = '20261031090000_add_studio_draft_creation';
-  assert.deepEqual(dirs.slice(-2), [NAME, D1]);
+  const D21 = '20261107090000_add_page_design_origin';
+  assert.deepEqual(dirs.slice(-3), [NAME, D1, D21]);
   // Committed or not: the only difference from main is these migrations, added.
   const changed = execFileSync('git', ['diff', 'ae2861e', '--name-status', '--', 'backend/prisma/migrations'], { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
-  const allowed = [NAME, D1].map((n) => 'A\tbackend/prisma/migrations/' + n + '/migration.sql');
+  const allowed = [NAME, D1, D21].map((n) => 'A\tbackend/prisma/migrations/' + n + '/migration.sql');
   assert.deepEqual(changed.filter((l) => !allowed.includes(l)), [], 'earlier migrations unchanged');
 });
 

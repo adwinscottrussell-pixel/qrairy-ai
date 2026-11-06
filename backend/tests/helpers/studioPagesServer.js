@@ -110,7 +110,7 @@ const designWrites = [];
 const pause = (ms) => (ms ? new Promise((r) => setTimeout(r, ms)) : null);
 // Save Draft's writes. Each one checks and changes the rows in one step
 // (no await in between), as the database does in one statement.
-const ALLOWED_DESIGN_FIELDS = ['landingPageId', 'draftRevision', 'draft', 'schemaVersion', 'updatedByUserId', 'updatedAt'];
+const ALLOWED_DESIGN_FIELDS = ['landingPageId', 'draftRevision', 'draft', 'schemaVersion', 'updatedByUserId', 'updatedAt', 'origin'];   // origin: D2.1, POST /studio/drafts only
 function checkDesignData(data) {
   for (const k of Object.keys(data)) if (!ALLOWED_DESIGN_FIELDS.includes(k)) throw new Error('unexpected PageDesign field: ' + k);
 }

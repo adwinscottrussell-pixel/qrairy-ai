@@ -124,6 +124,12 @@ model PageDesign {
   draftRevision      Int                 @default(0)
   publishedVersionId String?
   updatedByUserId    String?
+  // D2.1 (additive, nullable): where the draft came from, e.g. the onboarding:
+  // { source: 'onboarding', template, palette, language, exampleSectionIds }.
+  // Metadata only: never rendered, never part of the design, never used for
+  // access or billing. Written once by POST /studio/drafts; a draft save
+  // (PUT /studio/pages/:slug/design) leaves it unchanged.
+  origin             Json?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   versions           PageDesignVersion[]

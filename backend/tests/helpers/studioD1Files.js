@@ -18,6 +18,9 @@ const D1_NEW_FILES = [
   'backend/tests/publicDraftGuard.test.js',
   'backend/tests/lpPublishDraftGuard.test.js',
   'backend/tests/studioDraftMigration.test.js',
+  // D2.1 (onboarding Save Draft, backend): PageDesign.origin and its tests
+  'backend/prisma/migrations/20261107090000_add_page_design_origin/migration.sql',
+  'backend/tests/studioDraftsOnboarding.test.js',
 ];
 
 // removes `text` exactly `times` times (else null)
