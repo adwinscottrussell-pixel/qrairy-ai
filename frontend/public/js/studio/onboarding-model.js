@@ -62,6 +62,22 @@
   var SECTION_IDS = { hero: 's_obhero01', buttons: 's_obbuttons1', socialMedia: 's_obsocial1', contact: 's_obcontact1',
     openingHours: 's_obhours01', products: 's_obproducts1', gallery: 's_obgallery1', text: 's_obtext01' };
   var DEFAULT_SECTIONS = ['hero', 'buttons', 'openingHours', 'contact'];   // plus Social Media when Step 2 has links
+  // Custom Sections (repeatable): each one an entry "custom:" + 8 of a-z0-9 in the section list, kept as made (its stable
+  // instance id); on the page an empty core.js Text section with the id "s_c" + those 8 characters. Empty, so nothing is
+  // invented and nothing shows on a public page until filled in the Studio. At most MAX_CUSTOM.
+  var CUSTOM_RE = /^custom:([a-z0-9]{8})$/, MAX_CUSTOM = 10;
+  function isCustom(entry) { return typeof entry === 'string' && CUSTOM_RE.test(entry); }
+  function sectionId(entry) { var m = typeof entry === 'string' && CUSTOM_RE.exec(entry); return m ? 's_c' + m[1] : SECTION_IDS[entry]; }
+  // a new entry not in the list yet (rand: () -> [0, 1), default Math.random; the browser passes crypto-based)
+  function newCustom(list, rand) {
+    var r = typeof rand === 'function' ? rand : Math.random, have = Array.isArray(list) ? list : [];
+    for (var tries = 0; tries < 50; tries++) {
+      var s = '';
+      for (var i = 0; i < 8; i++) s += 'abcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(r() * 36) % 36);
+      if (have.indexOf('custom:' + s) === -1) return 'custom:' + s;
+    }
+    return null;
+  }
   var SOCIAL_MODES = ['auto', 'added', 'removed'];
 
   function hero(V3, l, name, description) {
@@ -79,9 +95,16 @@
   function section(V3, l, type, values) {
     if (type === 'hero') return hero(V3, l, values.name || PLACEHOLDER_NAME[l], values.description || '');
     if (type === 'socialMedia') return social(V3, l, values.links || []);
+    if (isCustom(type)) return customSection(V3, l, type);
     var s = V3.starter(type, l);
     if (type === 'text') s.data = { heading: '', body: '' };
     return Object.assign({ id: SECTION_IDS[type] }, s);
+  }
+  // a Custom Section: core.js's Text starter, emptied (no heading, no text), with its instance id
+  function customSection(V3, l, entry) {
+    var s = V3.starter('text', l);
+    s.data = { heading: '', body: '' };
+    return Object.assign({ id: sectionId(entry) }, s);
   }
   // The page the answers make (not yet checked). Without a section list (Step 2): the Hero, then Social
   // Media when there are links. With one (Step 3): those sections, in that order.
@@ -96,11 +119,16 @@
     return { schemaVersion: V3.SCHEMA_VERSION, settings: { language: l }, pages: [{ id: 'start', title: l === 'en' ? 'Home' : 'Start', sections: sections }] };
   }
 
-  // A kept section list, cleaned: known types only, each once, the Hero first (null: not chosen yet, the defaults apply)
+  // A kept section list, cleaned: known types each once, Custom Sections (each instance once, at most MAX_CUSTOM),
+  // the Hero first (null: not chosen yet, the defaults apply)
   function cleanSections(list) {
     if (!Array.isArray(list)) return null;
-    var out = ['hero'];
-    list.forEach(function (t) { if (SECTION_TYPES.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t); });
+    var out = ['hero'], customs = 0;
+    list.forEach(function (t) {
+      if (out.indexOf(t) !== -1) return;
+      if (SECTION_TYPES.indexOf(t) !== -1) out.push(t);
+      else if (isCustom(t) && customs < MAX_CUSTOM) { out.push(t); customs++; }
+    });
     return out;
   }
   // The sections the page has now: the customer's list (or the defaults: the chosen template's suggested
@@ -254,5 +282,6 @@
   return { LIMITS: LIMITS, PLATFORMS: PLATFORMS, LABELS: LABELS, EXAMPLES: EXAMPLES, PLACEHOLDER_NAME: PLACEHOLDER_NAME,
     chars: chars, cleanName: cleanName, cleanDescription: cleanDescription, normalizeUrl: normalizeUrl,
     buildDesign: buildDesign, linkError: linkError, check: check, sanitize: sanitize, nextPlatform: nextPlatform,
-    SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections, sectionsFor: sectionsFor, checkPage: checkPage, pageFor: pageFor };
+    SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections,
+    MAX_CUSTOM: MAX_CUSTOM, isCustom: isCustom, sectionId: sectionId, newCustom: newCustom, sectionsFor: sectionsFor, checkPage: checkPage, pageFor: pageFor };
 });

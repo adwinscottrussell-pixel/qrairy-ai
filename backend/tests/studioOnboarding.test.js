@@ -526,7 +526,7 @@ test('T1c.2 Step 4: the list, add / remove / move, Next and the phone use the te
   assert.ok(c.includes("function sectionsPage() { return M && V3 ? M.checkPage(V3, answers, current, T) : null; }"));
   const step4 = c.slice(c.indexOf('function sections() {'), c.indexOf('function setText('));
   assert.equal((step4.match(/\bpage\(\)/g) || []).length, 0, 'Step 4 never uses the O2 page');
-  assert.equal((step4.match(/sectionsPage\(\)/g) || []).length, 6, 'list, add (2), remove, move, the phone');
+  assert.equal((step4.match(/sectionsPage\(\)/g) || []).length, 8, 'list, add (2), add a Custom Section (2), remove, move, the phone');
   assert.ok(c.slice(c.indexOf("if (nav.step === 3) {"), c.indexOf("var n = next(nav, ok);")).includes('var p = sectionsPage();'), 'Next checks the same page');
   assert.ok(step4.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);"), 'only the template\'s photos (T1a helper)');
   assert.ok(step4.includes("html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';"), 'inline photos, Example tags, the fixed frame script');
@@ -535,7 +535,7 @@ test('T1c.2 Step 4: the list, add / remove / move, Next and the phone use the te
   // T1c.3: the O2-only page() is gone; Steps 4 and 5 share sectionsPage()
   assert.ok(!c.includes('function page()') && !/\bpage\(\)/.test(c));
   // the tags: the template's example sections, starter content, empty ones
-  assert.ok(c.includes("r.composed.exampleIds.indexOf(M.SECTION_IDS[type]) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }"));
+  assert.ok(c.includes("r.composed.exampleIds.indexOf(M.sectionId(type)) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }"));
   for (const k of ['sec_example', 'sec_starter']) assert.ok(OB.TX.en[k] && OB.TX.de[k] && OB.TX.en[k] !== OB.TX.de[k], k);
   assert.deepEqual([OB.TX.en.sec_example, OB.TX.de.sec_example], ['Example · Edit later in Studio', 'Beispiel · Später im Studio bearbeiten'], 'the short example label (T1c.2 polish)');
   assert.ok(!/^Example|^Beispiel/.test(OB.TX.en.sec_starter + OB.TX.de.sec_starter), 'starter content is not called an example');
@@ -795,6 +795,69 @@ test('the Studio\'s entry point: in the empty state, on the isolated staging add
   assert.ok(start.indexOf('removeChild(onboard)') < start.indexOf('if (ROUTING.blocked'), 'removed before anything else, also where the Studio does not start');
   assert.ok(shell.includes("if ($('st-page-onboard')) $('st-page-onboard').hidden = st !== 'empty';"));
   assert.ok(shell.includes("page_onboard: 'Create your first page'") && shell.includes("page_onboard: 'Erste Seite erstellen'"));
+});
+
+test('Custom Sections (model): repeatable "custom:" entries with stable instance ids; cleaned and capped; an empty core.js Text section each; kept by sanitize; a template switch keeps them; nothing invented', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  // ids
+  assert.equal(M.isCustom('custom:ab12cd34'), true);
+  for (const bad of ['custom:AB12CD34', 'custom:ab12', 'custom:ab12cd345', 'text', 'custom', null, 3]) assert.equal(M.isCustom(bad), false, String(bad));
+  assert.equal(M.sectionId('custom:ab12cd34'), 's_cab12cd34');
+  assert.equal(M.sectionId('text'), M.SECTION_IDS.text);
+  assert.match(M.sectionId('custom:ab12cd34'), /^s_[a-z0-9]{4,16}$/, 'a valid core.js section id');
+  assert.ok(Object.values(M.SECTION_IDS).every((id) => !/^s_c[a-z0-9]{8}$/.test(id)), 'no clash with the fixed ids');
+  // new entries: unique, never one already in the list
+  const seq = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]; let k = 0;
+  const first = M.newCustom([], () => seq[k++ % seq.length]);
+  k = 0;
+  const second = M.newCustom([first], () => seq[k++ % seq.length]);
+  assert.ok(M.isCustom(first) && M.isCustom(second) && first !== second, first + ' ' + second);
+  // cleaned: each instance once, at most MAX_CUSTOM, the Hero first, unknown dropped, order kept
+  const many = Array.from({ length: 14 }, (_, i) => 'custom:' + String(i).padStart(8, '0'));
+  const c = M.cleanSections(['buttons', 'custom:aaaa1111', 'custom:aaaa1111', 'custom:BAD', 'text', 'nope', ...many]);
+  assert.deepEqual(c.slice(0, 4), ['hero', 'buttons', 'custom:aaaa1111', 'text']);
+  assert.equal(c.filter(M.isCustom).length, M.MAX_CUSTOM);
+  assert.equal(M.MAX_CUSTOM, 10);
+  // kept across a reload (sanitize)
+  assert.deepEqual(M.sanitize({ sections: ['hero', 'custom:aaaa1111', 'text', 'custom:bbbb2222'] }).sections, ['hero', 'custom:aaaa1111', 'text', 'custom:bbbb2222']);
+  // the template page: an empty Text section per instance, in place, listed as empty, never an example
+  const list = ['hero', 'custom:aaaa1111', 'buttons', 'custom:bbbb2222', 'text'];
+  for (const tpl of ['restaurant', 'creator', 'services']) {
+    const p = M.pageFor(V3, T, { template: tpl, name: 'Café Sonne', description: '', links: [], sections: list, social: 'auto' }, 'en');
+    assert.ok(p.ok, tpl);
+    const secs = p.design.pages[0].sections;
+    assert.deepEqual(secs.map((s) => s.id).slice(0, 4), ['s_obhero01', 's_caaaa1111', 's_obbuttons1', 's_cbbbb2222'], tpl + ': order');
+    for (const id of ['s_caaaa1111', 's_cbbbb2222']) {
+      const s = secs.find((x) => x.id === id);
+      assert.equal(s.type, 'text', tpl + ': a core.js Text section');
+      assert.ok(!s.data.heading && !s.data.body && !s.data.image, tpl + ': empty, nothing invented');
+      assert.ok(p.emptyIds.includes(id) && !p.exampleIds.includes(id), tpl + ': listed as empty');
+    }
+    // preview: core.js's own "empty section" note on each; the draft (public rendering): nothing shown for them
+    const prev = V3.renderDesign(p.design, { businessName: 'Café Sonne' }, { preview: true }).html;
+    assert.equal((prev.match(/Empty section – add content in the editor/g) || []).length >= 2, true, tpl + ': preview notes');
+    const pub = V3.renderDesign(p.draft, { businessName: 'Café Sonne' }, {}).html;
+    assert.ok(!/Empty section/.test(pub), tpl + ': nothing on the public page');
+  }
+  // German preview note
+  const de = M.pageFor(V3, T, { template: 'bakery', name: 'Bäckerei', links: [], sections: ['hero', 'custom:aaaa1111'], social: 'auto' }, 'de');
+  assert.match(V3.renderDesign(de.design, { businessName: 'x' }, { preview: true }).html, /Leerer Abschnitt – Inhalte im Editor ergänzen/);
+  // a template switch keeps the customer's list, Custom Sections included
+  const a = { template: 'restaurant', name: 'Café Sonne', links: [], sections: list, social: 'auto' };
+  const before = M.pageFor(V3, T, a, 'en').sections;
+  const after = M.pageFor(V3, T, Object.assign({}, a, { template: 'beauty' }), 'en').sections;
+  assert.deepEqual(after, before);
+  // without a template (checkPage without the catalog) the same empty Text sections
+  const plain = M.checkPage(V3, { name: 'Café Sonne', links: [], sections: ['hero', 'custom:aaaa1111'], social: 'auto' }, 'en');
+  assert.ok(plain.pageOk && plain.page.pages[0].sections[1].id === 's_caaaa1111' && plain.page.pages[0].sections[1].type === 'text');
+  // EN / DE names
+  assert.deepEqual([OB.TX.en.sec_custom, OB.TX.de.sec_custom], ['Custom Section', 'Eigener Abschnitt']);
+  for (const key of ['sec_custom_text', 'sec_custom_more']) assert.ok(OB.TX.en[key] && OB.TX.de[key], key);
+  // the shared renderer is not touched for this
+  const crypto = require('crypto'), h = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+  assert.equal(h(path.join(PUB, 'js/lpV3/core.js')), h(path.join(__dirname, '../src/lpV3/core.js')), 'both core.js copies identical');
 });
 
 (async () => {

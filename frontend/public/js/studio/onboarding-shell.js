@@ -147,6 +147,7 @@
       sec_products: 'Products', sec_products_text: 'Products with links to your shop',
       sec_gallery: 'Gallery', sec_gallery_text: 'Photos of your business, products or menu',
       sec_text: 'Text', sec_text_text: 'A heading and your own text',
+      sec_custom: 'Custom Section', sec_custom_text: 'Your own heading and text', sec_custom_more: 'Your own heading and text · add as many as you need',
       // O2.1: appearance and the Step 1 benefits
       theme_group: 'Appearance', theme_light: 'Light mode', theme_dark: 'Dark mode',
       benefit_code: 'No coding required', benefit_mobile: 'Mobile optimized', benefit_update: 'Easy to update', benefit_free: 'Start for free',
@@ -218,6 +219,7 @@
       sec_products: 'Produkte', sec_products_text: 'Produkte mit Links zu Ihrem Shop',
       sec_gallery: 'Galerie', sec_gallery_text: 'Fotos von Ihrem Geschäft, Ihren Produkten oder Ihrer Speisekarte',
       sec_text: 'Text', sec_text_text: 'Eine Überschrift und Ihr eigener Text',
+      sec_custom: 'Eigener Abschnitt', sec_custom_text: 'Ihre eigene Überschrift und Ihr eigener Text', sec_custom_more: 'Ihre eigene Überschrift und Ihr eigener Text · beliebig oft',
       theme_group: 'Darstellung', theme_light: 'Heller Modus', theme_dark: 'Dunkler Modus',
       benefit_code: 'Ganz ohne Programmieren', benefit_mobile: 'Für Smartphones optimiert', benefit_update: 'Einfach zu aktualisieren', benefit_free: 'Kostenlos starten',
       note_text: 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!',
@@ -649,7 +651,17 @@
     // T1c.2 / T1c.3: the page of Steps 4 and 5: the chosen template's (M.pageFor through checkPage): its suggested sections
     // while the list is untouched, else the customer's own list; the palette, the Step 2 details and links.
     function sectionsPage() { return M && V3 ? M.checkPage(V3, answers, current, T) : null; }
-    function secName(type) { return t('sec_' + type); }
+    // Custom Sections (repeatable, M.isCustom): named "Custom Section 1, 2, ..." by their place among the Custom Sections in
+    // the list shown (lastList); "custom" alone is the "Add more" row that makes a new one
+    var lastList = [];
+    function secName(type, list) {
+      if (!M.isCustom(type)) return t('sec_' + type);
+      var c = (list || lastList).filter(M.isCustom), n = c.indexOf(type);
+      return t('sec_custom') + ' ' + String(n === -1 ? c.length + 1 : n + 1);
+    }
+    function rand() {
+      try { var a = new Uint32Array(1); win.crypto.getRandomValues(a); return a[0] / 4294967296; } catch (e) { return Math.random(); }
+    }
     function icon(name) { return $('ob-tpl-icons').content.querySelector('[data-icon="' + name + '"]').cloneNode(true); }
     function say(msg) {
       var s = $('ob-sections-status');
@@ -660,8 +672,8 @@
       var n = r.values.links.length, text, cls = 'ob-sec__tag';
       if (type === 'hero') text = t('hero_locked');
       else if (type === 'socialMedia') { text = n === 1 ? t('social_links_one') : n ? t('social_links').replace('{n}', String(n)) : t('social_none'); if (n) cls += ' ob-sec__tag--links'; }
-      else if (r.composed && r.composed.exampleIds.indexOf(M.SECTION_IDS[type]) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }
-      else if (r.composed && r.composed.emptyIds.indexOf(M.SECTION_IDS[type]) === -1) text = t('sec_starter');
+      else if (r.composed && r.composed.exampleIds.indexOf(M.sectionId(type)) !== -1) { text = t('sec_example'); cls += ' ob-sec__tag--example'; }
+      else if (r.composed && r.composed.emptyIds.indexOf(M.sectionId(type)) === -1) text = t('sec_starter');
       else text = t('sec_empty');
       var s = el('span', cls);
       if (type === 'hero') s.appendChild(icon('lock'));
@@ -671,7 +683,7 @@
     function body(type, r) {
       var b = el('span', 'ob-sec__body'), title = el('span', 'ob-sec__title'), text = el('span', 'ob-sec__text');
       title.textContent = secName(type);
-      text.textContent = t('sec_' + type + '_text');
+      text.textContent = type === 'custom' ? t('sec_custom_more') : M.isCustom(type) ? t('sec_custom_text') : t('sec_' + type + '_text');
       b.appendChild(title); b.appendChild(text);
       if (r) b.appendChild(tag(type, r));
       return b;
@@ -704,7 +716,7 @@
       var li = el('li', 'ob-sec', { 'data-type': type });
       li.appendChild(body(type, null));
       var acts = el('span', 'ob-sec__actions');
-      var add = el('button', 'ob-btn ob-btn--add', { type: 'button', 'data-act': 'add', 'aria-label': t('add_section_label').replace('{name}', secName(type)) });
+      var add = el('button', 'ob-btn ob-btn--add', { type: 'button', 'data-act': 'add', 'aria-label': t('add_section_label').replace('{name}', type === 'custom' ? t('sec_custom') : secName(type)) });
       var plus = el('span', '', { 'aria-hidden': 'true' });
       plus.textContent = '+';
       var label = el('span', '');
@@ -718,23 +730,39 @@
     function sections() {
       if (!M || !$('ob-chosen')) return;
       var r = sectionsPage(), list = r.sections, chosen = $('ob-chosen'), more = $('ob-more');
+      lastList = list;
       while (chosen.firstChild) chosen.removeChild(chosen.firstChild);
       while (more.firstChild) more.removeChild(more.firstChild);
       list.forEach(function (type, i) { chosen.appendChild(chosenItem(type, i, list.length, r)); });
       var rest = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; });
       rest.forEach(function (type) { more.appendChild(moreItem(type)); });
+      if (list.filter(M.isCustom).length < M.MAX_CUSTOM) more.appendChild(moreItem('custom'));   // always offered (repeatable) up to the limit
       $('ob-more-none').hidden = rest.length > 0;
       $('ob-sections-error').textContent = r.pageOk ? '' : t('sections_invalid');
       drawSections();
     }
+    function addCustom() {
+      var list = sectionsPage().sections, entry = list.filter(M.isCustom).length < M.MAX_CUSTOM ? M.newCustom(list, rand) : null;
+      if (!entry) return;
+      list.push(entry);
+      answers.sections = list;
+      reveal = M.sectionId(entry);
+      save(); sections();
+      var now = sectionsPage().sections;
+      say(t('sec_added').replace('{name}', secName(entry, now)).replace('{n}', String(now.indexOf(entry) + 1)).replace('{total}', String(now.length)));
+      // focus: the Custom Section "+ Add" again (more can be added), else the last "+ Add", else the list's heading
+      var again = $('ob-more').querySelector('[data-type="custom"] [data-act="add"]'), adds = $('ob-more').querySelectorAll('[data-act="add"]');
+      (again || adds[adds.length - 1] || $('ob-chosen-title')).focus();
+    }
     function addSection(type) {
+      if (type === 'custom') return addCustom();
       var list = sectionsPage().sections;
       if (list.indexOf(type) !== -1 || M.SECTION_TYPES.indexOf(type) === -1) return;
       var restIndex = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; }).indexOf(type);
       list.push(type);
       answers.sections = list;
       if (type === 'socialMedia') answers.social = 'added';
-      reveal = M.SECTION_IDS[type];
+      reveal = M.sectionId(type);
       save(); sections();
       var now = sectionsPage().sections;
       say(t('sec_added').replace('{name}', secName(type)).replace('{n}', String(now.indexOf(type) + 1)).replace('{total}', String(now.length)));
@@ -743,14 +771,14 @@
       (adds[restIndex] || adds[restIndex - 1] || $('ob-chosen-title')).focus();
     }
     function removeSection(type) {
-      var list = sectionsPage().sections, i = list.indexOf(type);
+      var list = sectionsPage().sections, i = list.indexOf(type), name = secName(type, list);
       if (i < 1) return;                                     // the Hero cannot be removed
       list.splice(i, 1);
       answers.sections = list;
       if (type === 'socialMedia') answers.social = 'removed';
       reveal = null;
       save(); sections();
-      say(t('sec_removed').replace('{name}', secName(type)));
+      say(t('sec_removed').replace('{name}', name));
       // focus: the section that took its place (or the one before), else the list's heading
       var items = $('ob-chosen').children, to = items[i] || items[i - 1];
       var b = to && to.querySelector('[data-act="remove"]');
@@ -761,7 +789,7 @@
       if (i < 1 || j < 1 || j >= list.length) return;        // the Hero stays first
       list[i] = list[j]; list[j] = type;
       answers.sections = list;
-      reveal = M.SECTION_IDS[type];
+      reveal = M.sectionId(type);
       save(); sections();
       say(t('sec_moved').replace('{name}', secName(type)).replace('{n}', String(j + 1)).replace('{total}', String(list.length)));
       // focus: the same button on the moved section (the other one when it reached the end)
@@ -816,6 +844,7 @@
         links.appendChild(ul);
       } else setText('ob-sum-links', '', 'sum_no_links');
       $('ob-sum-sections-title').textContent = t('sum_sections').replace('{n}', String(r.sections.length));
+      lastList = r.sections;
       var list = $('ob-sum-sections');
       while (list.firstChild) list.removeChild(list.firstChild);
       r.sections.forEach(function (type, i) {

@@ -754,7 +754,7 @@ test('Step 3, desktop, English (T1c.2: the chosen template\'s suggested sections
   assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-sections-title', 'focus on the step heading');
   assert.deepEqual(await chosen(page), ['hero', 'buttons', 'products', 'text', 'openingHours', 'contact'], 'Bakery\'s suggested sections (no links: no Social Media)');
-  assert.deepEqual(await more(page), ['socialMedia', 'gallery']);
+  assert.deepEqual(await more(page), ['socialMedia', 'gallery', 'custom'], 'the rest, then the repeatable Custom Section');
   // the Hero: locked (no button), "Always first"; the others: Move up / Move down / Remove with their names
   const items = await page.$$eval('#ob-chosen > li', (ns) => ns.map((n) => ({ type: n.dataset.type, num: n.querySelector('.ob-sec__num').textContent, title: n.querySelector('.ob-sec__title').textContent, tag: n.querySelector('.ob-sec__tag').textContent,
     buttons: [...n.querySelectorAll('button')].map((b) => (b.disabled ? '-' : '') + b.getAttribute('aria-label')) })));
@@ -764,7 +764,7 @@ test('Step 3, desktop, English (T1c.2: the chosen template\'s suggested sections
   assert.deepEqual(items.map((x) => x.tag), ['Always first · from Step 2', 'Example · Edit later in Studio', 'Example · Edit later in Studio', 'Starter content · edit it in the Studio',
     'Example · Edit later in Studio', 'Example · Edit later in Studio'], 'T1c.2: example and starter content marked');
   assert.deepEqual(await page.$$eval('#ob-more [data-act="add"]', (ns) => ns.map((b) => b.getAttribute('aria-label') + '|' + b.textContent + '|' + getComputedStyle(b).color)),
-    ['Add Social Media|+Add|rgb(21, 128, 61)', 'Add Gallery|+Add|rgb(21, 128, 61)'], 'green Add buttons');
+    ['Add Social Media|+Add|rgb(21, 128, 61)', 'Add Gallery|+Add|rgb(21, 128, 61)', 'Add Custom Section|+Add|rgb(21, 128, 61)'], 'green Add buttons');
   assert.equal(await text(page, '[data-ob="sections_info"]'), 'Empty sections stay hidden on your public page until you add their content in the Studio.');
   // the live phone: the page with exactly these sections, in order; scripts only, never same-origin; the fixed script once
   await waitSec(page, 's_obcontact1');
@@ -794,9 +794,9 @@ test('Step 3: add, remove, Move up / Move down; the Hero stays first; each type 
   // add Gallery: at the end, announced, focus on the next "+ Add"; the phone scrolls to it
   await page.click('#ob-more [data-act="add"][aria-label="Add Gallery"]');
   assert.deepEqual(await chosen(page), ['hero', 'buttons', 'products', 'text', 'openingHours', 'contact', 'gallery']);
-  assert.deepEqual(await more(page), ['socialMedia'], 'Gallery only once');
+  assert.deepEqual(await more(page), ['socialMedia', 'custom'], 'Gallery only once (Custom Section stays offered)');
   assert.equal(await status(page), 'Gallery added, position 7 of 7.');
-  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Add Social Media', 'focus: the Add before (none after)');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Add Custom Section', 'focus: the next Add (the repeatable Custom Section)');
   await waitSec(page, 's_obgallery1');
   await page.waitForFunction(() => window.__frameY.length && window.__frameY[window.__frameY.length - 1] > 200, { timeout: 4000 });
   const revealedAt = await page.evaluate(() => window.__frameY[window.__frameY.length - 1]);
@@ -829,7 +829,7 @@ test('Step 3: add, remove, Move up / Move down; the Hero stays first; each type 
   assert.equal((await chosen(page)).length, 8);
   assert.equal(new Set(await chosen(page)).size, 8);
   assert.equal(await visible(page, '#ob-more-none'), true);
-  assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-chosen-title', 'nothing left to add: focus on the list heading');
+  assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Add Custom Section', 'all eight on the page: focus on the repeatable Custom Section "+ Add"');
   await waitSec(page, 's_obtext01');
   assert.equal((await frameIds(page)).length, 8, 'the phone shows all eight');
   assert.ok(!(await secFrame(page)).includes('Your text'), 'the Text section has no placeholder text');
@@ -1646,6 +1646,86 @@ test('the Studio: "Create your first page" in the empty state on the isolated ad
     assert.equal(await o.page.$('#st-page-onboard'), null, host + ': no entry point');
     await o.page.close();
   }
+});
+
+test('Custom Sections (Step 4 / Step 5): "+ Add" Custom Section repeatedly (unique ids), reorder and remove one instance, the phone shows an empty-section note per instance and no invented text, Step 5 lists every one in order; Back / Next, reload and a template switch keep them; keyboard; EN / DE, Light / Dark, desktop / 390 / 320', async () => {
+  for (const [viewport, lang, theme, id, other] of [[DESKTOP, 'en', 'light', 'restaurant', 'creator'], [Object.assign({}, PHONE, { width: 390 }), 'de', 'dark', 'bakery', 'beauty'],
+    [Object.assign({}, PHONE, { width: 320 }), 'en', 'dark', 'creator', 'services'], [DESKTOP, 'de', 'dark', 'services', 'restaurant']]) {
+    const { page, api, external } = await onboarding({ viewport, lang, theme });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    const de = lang === 'de', tag = viewport.width + ' ' + lang + ' ' + theme + ' ' + id, NAME = de ? 'Eigener Abschnitt' : 'Custom Section';
+    await toTemplateStep4(page, { id, name: de ? 'Bäckerei Sonne' : 'Café Sonne' });
+    await waitPhotos(page).catch(() => {});
+    const start = await chosen(page);
+    const row = () => page.$eval('#ob-more [data-type="custom"]', (li) => ({ title: li.querySelector('.ob-sec__title').textContent, label: li.querySelector('[data-act="add"]').getAttribute('aria-label') }));
+    assert.deepEqual(await row(), { title: NAME, label: de ? 'Eigener Abschnitt hinzufügen' : 'Add Custom Section' }, tag + ': offered in "Add more"');
+    // three instances; the second by keyboard (Enter on the focused button: focus stays on it)
+    await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(150);
+    assert.equal(await page.evaluate(() => document.activeElement.closest('[data-type]').dataset.type + '|' + document.activeElement.dataset.act), 'custom|add', tag + ': focus stays on "+ Add" for another');
+    await page.keyboard.press('Enter'); await sleep(150);
+    await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(150);
+    let list = await chosen(page);
+    const cs = list.filter((x) => /^custom:[a-z0-9]{8}$/.test(x));
+    assert.equal(cs.length, 3, tag + ': three instances');
+    assert.equal(new Set(cs).size, 3, tag + ': unique ids');
+    assert.deepEqual(list.slice(0, start.length), start, tag + ': added at the end, the rest unchanged');
+    assert.deepEqual(await page.$$eval('#ob-chosen > li', (ns) => ns.filter((n) => n.dataset.type.startsWith('custom:')).map((n) => n.querySelector('.ob-sec__title').textContent + '|' + n.querySelector('.ob-sec__tag').textContent)),
+      [1, 2, 3].map((n) => NAME + ' ' + n + '|' + (de ? 'Inhalte später im Studio hinzufügen' : 'Add your content in the Studio')), tag + ': named 1-3, labelled as needing content in the Studio');
+    assert.match(await text(page, '#ob-sections-status'), de ? /Eigener Abschnitt 3 hinzugefügt/ : /Custom Section 3 added/, tag + ': announced');
+    // the phone: one Text section per instance (its id), core.js's empty note, no invented heading or text
+    await page.waitForFunction((ids) => ids.every((i) => document.getElementById('ob-sections-frame').srcdoc.includes('s_c' + i.slice(7))), { timeout: 4000 }, cs);
+    const html = await page.$eval('#ob-sections-frame', (f) => f.srcdoc);
+    const notes = (html.match(de ? /Leerer Abschnitt – Inhalte im Editor ergänzen/g : /Empty section – add content in the editor/g) || []).length;
+    assert.ok(notes >= 3, tag + ': an empty note per Custom Section (' + notes + ')');
+    const order = (h) => cs.map((c) => h.indexOf('s_c' + c.slice(7)));
+    assert.ok(order(html).every((x, i, a) => x > 0 && (i === 0 || x > a[i - 1])), tag + ': in the list order on the phone');
+    // move the third up (before the second), remove the first
+    await page.click('#ob-chosen [data-type="' + cs[2] + '"] [data-act="up"]'); await sleep(150);
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.act), 'up', tag + ': focus on the moved instance');
+    await page.click('#ob-chosen [data-type="' + cs[0] + '"] [data-act="remove"]'); await sleep(150);
+    list = await chosen(page);
+    const want = start.concat([cs[2], cs[1]]);
+    assert.deepEqual(list, want, tag + ': reordered and one removed, the others kept');
+    // Step 5: every Custom Section, in order, labelled; Save Draft disabled
+    await page.click('#ob-next'); await sleep(250);
+    if (viewport !== DESKTOP) await page.click('#ob-sum-toggle');
+    assert.deepEqual(await sumSections(page), want, tag + ': Step 5 order');
+    assert.deepEqual(await page.$$eval('#ob-sum-sections > li', (ns) => ns.filter((n) => n.dataset.type.startsWith('custom:')).map((n) => n.querySelector('.ob-sec__title').textContent)), [NAME + ' 1', NAME + ' 2'], tag + ': Step 5 names');
+    assert.equal(await page.$eval('#ob-finish', (b) => b.disabled), true);
+    const rhtml = await reviewFrame(page);
+    assert.ok([cs[2], cs[1]].map((c) => rhtml.indexOf('s_c' + c.slice(7))).every((x, i, a) => x > 0 && (i === 0 || x > a[i - 1])), tag + ': Step 5 phone order');
+    // Back / Next, reload, template switch
+    await page.click('#ob-back'); await sleep(200);
+    assert.deepEqual(await chosen(page), want, tag + ': Back keeps them');
+    await page.reload({ waitUntil: 'networkidle0' }); await sleep(250);
+    assert.deepEqual(await chosen(page), want, tag + ': reload keeps them');
+    await page.click('#ob-back'); await sleep(200);
+    await page.click('.ob-tpl[data-template="' + other + '"]'); await sleep(200);
+    await page.click('#ob-next'); await sleep(250);
+    assert.deepEqual(await chosen(page), want, tag + ': ' + id + ' -> ' + other + ' keeps them');
+    // layout and contrast
+    const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
+    assert.ok(lay.sw <= lay.iw, tag + ': no sideways scroll ' + JSON.stringify(lay));
+    for (const sel of ['#ob-chosen [data-type^="custom:"] .ob-sec__title', '#ob-chosen [data-type^="custom:"] .ob-sec__tag', '#ob-more [data-type="custom"] .ob-sec__text']) {
+      const r = await contrast(page, sel);
+      assert.ok(r !== null && r >= 4.5, tag + ': ' + sel + ' contrast ' + r);
+    }
+    await shot(page, 'custom-sections-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    assert.deepEqual(errors, [], tag + ': no script error');
+    assert.deepEqual(api, []); assert.deepEqual(external, []);
+    await page.close();
+  }
+});
+
+test('Custom Sections: at most ten; then "Custom Section" leaves "Add more"', async () => {
+  const { page } = await onboarding();
+  await toTemplateStep4(page, { id: 'restaurant' });
+  for (let i = 0; i < 10; i++) { await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(60); }
+  assert.equal((await chosen(page)).filter((x) => x.startsWith('custom:')).length, 10);
+  assert.equal(await page.$('#ob-more [data-type="custom"]'), null, 'no more offered');
+  await page.click('#ob-chosen [data-type^="custom:"] [data-act="remove"]'); await sleep(100);
+  assert.ok(await page.$('#ob-more [data-type="custom"]'), 'offered again after a removal');
+  await page.close();
 });
 
 (async () => {

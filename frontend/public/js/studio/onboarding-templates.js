@@ -52,6 +52,7 @@
   'use strict';
 
   var SECTION_TYPES = ['hero', 'buttons', 'socialMedia', 'contact', 'openingHours', 'products', 'gallery', 'text'];
+  var CUSTOM_RE = /^custom:([a-z0-9]{8})$/;   // a Custom Section's entry (onboarding-model.js isCustom / sectionId)
   // the same ids as onboarding-model.js SECTION_IDS (checked by the tests)
   var SECTION_IDS = { hero: 's_obhero01', buttons: 's_obbuttons1', socialMedia: 's_obsocial1', contact: 's_obcontact1',
     openingHours: 's_obhours01', products: 's_obproducts1', gallery: 's_obgallery1', text: 's_obtext01' };
@@ -483,13 +484,21 @@
     if (!t) return null;
     var l = lang(o.lang);
     var IMG = function (sid) { return typeof o.imageUrl === 'function' ? o.imageUrl(sid) : imageUrl(sid); };
-    var types = (Array.isArray(o.sections) ? o.sections : t.sections).filter(function (type, i, a) { return SECTION_TYPES.indexOf(type) !== -1 && a.indexOf(type) === i; });
+    var types = (Array.isArray(o.sections) ? o.sections : t.sections).filter(function (type, i, a) { return (SECTION_TYPES.indexOf(type) !== -1 || CUSTOM_RE.test(type)) && a.indexOf(type) === i; });
     types = ['hero'].concat(types.filter(function (x) { return x !== 'hero'; }));
     var name = typeof o.name === 'string' && o.name.trim() ? o.name.trim() : t.demoName;
     var links = customerLinks(o.links);
     var demoOnly = [], sample = [], customer = [], empty = [];
     var sections = [];
     types.forEach(function (type) {
+      var cm = CUSTOM_RE.exec(type);
+      if (cm) {   // a Custom Section (onboarding-model.js): core.js's Text starter, empty, with its instance id; never example content
+        var cs = Object.assign({ id: 's_c' + cm[1] }, V3.starter('text', l));
+        cs.data = { heading: '', body: '' };
+        empty.push(cs.id);
+        sections.push(cs);
+        return;
+      }
       var s = exampleSection(t, type, l, IMG);
       if (!s && o.emptyFallback && V3.starter(type, l)) {
         s = Object.assign({ id: SECTION_IDS[type] }, V3.starter(type, l));
