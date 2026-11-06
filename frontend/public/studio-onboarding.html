@@ -331,7 +331,7 @@
         </div>
       </div>
       <!-- Step 5 (Step 4 before T1b): Review & save draft (Phase O3A). A read-only summary of Steps 2 and 3 with Edit buttons and the page
-           in the phone. Nothing is saved yet: Save Draft stays disabled until draft saving is built and approved. -->
+           in the phone. D2.2: Save Draft creates a private, unpublished draft (onboarding-drafts.js); shown as saved only once the server confirmed it. -->
       <div class="ob-step" id="ob-step-4" data-step="4" hidden>
         <h1 class="ob-h1" id="ob-review-title" tabindex="-1" data-ob="step_review">Review &amp; save</h1>
         <p class="ob-lead" data-ob="review_text">Check your page before you save it as a draft.</p>
@@ -384,10 +384,11 @@
       <div class="ob-nav">
         <button type="button" class="ob-btn ob-btn--ghost" id="ob-back"><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span data-ob="back">Back</span></button>
         <button type="button" class="ob-btn ob-btn--primary" id="ob-next"><span data-ob="next">Next</span><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-right"/></svg></button>
-        <!-- O3A: disabled on purpose; nothing is saved until authenticated draft saving is built and approved -->
+        <!-- D2.2: enabled once the page is complete (renderSave); one request at a time; disabled once the server confirmed the draft -->
         <button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled aria-disabled="true" aria-describedby="ob-save-note" data-ob="save_draft">Save Draft</button>
       </div>
-      <p class="ob-save-note" id="ob-save-note" hidden data-ob="save_note">Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.</p>
+      <p class="ob-save-note" id="ob-save-note" hidden tabindex="-1" data-tone="info" data-ob="save_note">Saves your page privately in your QRAIVY account. Nothing is published.</p>
+      <p class="ob-sr" id="ob-save-status" role="status" aria-live="polite"></p>
     </div>
   </section>
 </main>
@@ -401,6 +402,8 @@
 <script src="js/studio/onboarding-model.js"></script>
 <!-- Step 3 (T1b): the six starter templates (plain data, built with core.js) -->
 <script src="js/studio/onboarding-templates.js"></script>
+<!-- D2.2: Save Draft, the onboarding's only request -->
+<script src="js/studio/onboarding-drafts.js"></script>
 <script src="js/studio/onboarding-shell.js"></script>
 </body>
 </html>

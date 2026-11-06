@@ -56,7 +56,8 @@ const pageErrors = [];   // any script error on any page fails the run
 
 // The page on `host`. clerk: 'none' | 'signedout' | 'unverified' | 'verified'
 // theme: the Studio appearance preference set before each load ('light' by default; null: leave it as it is)
-async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}', theme = 'light' } = {}) {
+// drafts (D2.2): (body, n) -> { status, body, delay } | 'hang' (never answered) | 'abort' (no answer): the POST /studio/drafts responder; posts: the bodies sent
+async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}', theme = 'light', drafts = null } = {}) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
   await page.evaluateOnNewDocument((l, mode, th) => {
@@ -81,8 +82,8 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
   }, lang, clerk, theme);
   page.on('pageerror', (e) => pageErrors.push(String(e.message)));
   await page.setRequestInterception(true);
-  const api = [], external = [], missing = [];
-  page.on('request', (r) => {
+  const api = [], external = [], missing = [], posts = [];
+  page.on('request', async (r) => {
     const u = new URL(r.url());
     if (u.protocol === 'data:') return r.continue();
     if (u.host === host) {
@@ -95,6 +96,16 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
       const cors = { 'access-control-allow-origin': 'https://' + host, 'access-control-allow-headers': 'authorization,accept,content-type', 'access-control-allow-methods': 'GET,POST,PUT' };
       if (r.method() === 'OPTIONS') return r.respond({ status: 204, headers: cors, body: '' });
       if (u.pathname === '/studio/pages') return r.respond({ status: 200, contentType: 'application/json', headers: cors, body: pages });
+      if (drafts && u.pathname === '/studio/drafts' && r.method() === 'POST') {
+        let body = null;
+        try { body = JSON.parse(r.postData() || 'null'); } catch (e) { body = null; }
+        posts.push({ body, auth: r.headers().authorization || '', type: r.headers()['content-type'] || '' });
+        const a = await drafts(body, posts.length);
+        if (a === 'hang') return undefined;
+        if (a === 'abort') return r.abort('failed').catch(() => {});
+        if (a.delay) await sleep(a.delay);
+        return r.respond({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body || {}) }).catch(() => {});
+      }
       return r.respond({ status: 401, contentType: 'application/json', headers: cors, body: '{"error":"Unauthorized."}' });
     }
     if (FONT_HOSTS.includes(u.host)) return r.respond({ status: 200, contentType: 'text/css', body: '' });
@@ -103,7 +114,7 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
   });
   await page.goto('https://' + host + '/' + file, { waitUntil: 'networkidle0' });
   await sleep(300);
-  return { page, api, external, missing };
+  return { page, api, external, missing, posts };
 }
 const visible = (page, sel) => page.evaluate((s) => { const n = document.querySelector(s); if (!n) return false; const r = n.getBoundingClientRect(); return !n.closest('[hidden]') && r.width > 0 && r.height > 0; }, sel);
 const text = (page, sel) => page.evaluate((s) => { const n = document.querySelector(s); return n ? n.textContent.trim() : null; }, sel);
@@ -188,8 +199,8 @@ test('desktop, English: Step 1 of 4; Instagram and Website disabled; Start from 
   await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 4 of 5');
   await page.click('#ob-next'); assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.equal(await visible(page, '#ob-next'), false);
-  assert.equal(await page.$eval('#ob-finish', (n) => n.disabled), true, 'no draft is created');
-  assert.match(await text(page, '#ob-save-note'), /Nothing has been saved yet/);
+  assert.equal(await page.$eval('#ob-finish', (n) => n.disabled), false, 'D2.2: Save Draft ready (nothing is sent until it is clicked)');
+  assert.equal(await text(page, '#ob-save-note'), 'Saves your page privately in your QRAIVY account. Nothing is published.');
   await page.click('#ob-back'); await page.click('#ob-back'); await page.click('#ob-back'); await page.click('#ob-back');
   assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 5');
   assert.equal(await page.$eval('[data-option="scratch"]', (n) => n.getAttribute('aria-checked')), 'true', 'Back keeps the choice');
@@ -780,7 +791,7 @@ test('Step 3, desktop, English (T1c.2: the chosen template\'s suggested sections
   // Steps 1, 2 and 4 unchanged: Step 4 is still the placeholder, the Step 1 and 2 frames still without scripts
   await page.click('#ob-next');
   assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
-  assert.match(await text(page, '#ob-save-note'), /Nothing has been saved yet/);
+  assert.equal(await text(page, '#ob-save-note'), 'Saves your page privately in your QRAIVY account. Nothing is published.');
   assert.deepEqual(await page.$$eval('[data-preview], #ob-live-frame', (ns) => ns.map((f) => f.getAttribute('sandbox'))), ['', '', '', '']);
   assert.deepEqual(api, [], 'no API request'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
   assert.ok(!(await calls(page)).includes('getToken'));
@@ -1307,8 +1318,8 @@ test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order)
   assert.ok(s.tags[0] === 'Always first · from Step 2' && s.tags[6] === '2 links from Step 2' && s.tags[7] === 'Starter content · edit it in the Studio' && s.tags[1] === 'Example · Edit later in Studio', JSON.stringify(s.tags));
   assert.equal(s.status, 'Draft preview ready · Not saved');
   assert.match(s.free, /free and doesn't start your 14-day trial/);
-  assert.deepEqual(s.save, { text: 'Save Draft', disabled: true, aria: 'true', note: 'ob-save-note', shown: true });
-  assert.equal(s.note, 'Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.');
+  assert.deepEqual(s.save, { text: 'Save Draft', disabled: false, aria: 'false', note: 'ob-save-note', shown: true }, 'D2.2: ready, nothing sent until clicked');
+  assert.equal(s.note, 'Saves your page privately in your QRAIVY account. Nothing is published.');
   assert.equal(s.next, false, 'no Next on the last step');
   assert.equal(s.error, '');
   // the phone (T1c.3): the Step 4 page: the same template, palette, sections and order, photos inline, examples tagged; escaped, scripts only
@@ -1325,15 +1336,18 @@ test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order)
   const lay = await page.evaluate(() => { const f = document.querySelector('#ob-step-4 .ob-fields').getBoundingClientRect(), l = document.querySelector('#ob-step-4 .ob-live').getBoundingClientRect();
     return { side: l.left >= f.right, progress: Math.round(document.querySelector('.ob-progress').getBoundingClientRect().width), sw: document.documentElement.scrollWidth, iw: innerWidth }; });
   assert.ok(lay.side && lay.progress === 888 && lay.sw <= lay.iw, JSON.stringify(lay));
-  // Save Draft: a click (even forced through the DOM) does nothing: no request, nothing stored, no success text
-  const before = await page.evaluate(() => JSON.stringify(sessionStorage));
+  // D2.2: nothing is sent before the click; a click sends exactly the one drafts request. This server refuses it (401):
+  // the sign-in message, nothing marked saved, no success text, no billing request
+  assert.deepEqual(api, [], 'nothing sent before the click');
   await page.evaluate(() => document.getElementById('ob-finish').click());
-  await page.click('#ob-finish').catch(() => {});
-  await sleep(300);
-  assert.equal(await page.evaluate(() => JSON.stringify(sessionStorage)), before, 'nothing changed');
+  await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'error', { timeout: 4000 });
+  assert.equal(await text(page, '#ob-save-note'), 'Your sign-in has expired. Please sign in again – your answers are kept.');
+  const kept = await page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).draft; } return null; });
+  assert.equal(kept.status, 'pending', 'only the requestId is kept, never "saved"');
   assert.ok(!/saved successfully|draft (was|has been) (created|saved)|Draft saved/i.test(await page.evaluate(() => document.body.innerText)), 'no success message');
-  assert.deepEqual(api, [], 'no API request: no draft, no billing'); assert.deepEqual(external, []); assert.deepEqual(missing, []);
-  assert.ok(!(await calls(page)).includes('getToken'), 'no session token');
+  assert.deepEqual(api.filter((x) => !x.startsWith('OPTIONS ')), ['POST studio-v3-api-production.up.railway.app/studio/drafts'], 'only the drafts request: no billing, no trial');
+  assert.deepEqual(external, []); assert.deepEqual(missing, []);
+  assert.equal((await calls(page)).filter((c) => c === 'getToken').length, 1, 'D2.2: the session token asked for once, for the one click');
   await page.close();
 });
 
@@ -1382,14 +1396,14 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
     assert.equal(s.sectionsTitle, de ? 'Abschnitte (6)' : 'Sections (6)');
     if (de) assert.equal(await text(page, '#ob-review-example-note'), 'Beispielangaben werden nicht als Ihre Angaben gespeichert.');
     assert.equal(s.save.text, de ? 'Entwurf speichern' : 'Save Draft');
-    assert.ok(s.save.disabled);
+    assert.ok(!s.save.disabled, 'D2.2: Save Draft ready');
     if (de) {
       assert.equal(s.status, 'Entwurfsvorschau bereit · Nicht gespeichert');
-      assert.match(s.note, /Es wurde noch nichts gespeichert/);
+      assert.equal(s.note, 'Speichert Ihre Seite privat in Ihrem QRAIVY-Konto. Es wird nichts veröffentlicht.');
       assert.deepEqual(await page.$$eval('.ob-edit', (ns) => ns.map((b) => b.getAttribute('aria-label') + '|' + b.textContent)), ['Unternehmensdaten bearbeiten|Bearbeiten', 'Abschnitte bearbeiten|Bearbeiten']);
     }
     // the disabled Save Draft: readable (full opacity, its own muted look), still disabled
-    assert.deepEqual(await page.$eval('#ob-finish', (b) => [b.disabled, getComputedStyle(b).opacity, getComputedStyle(b).borderStyle]), [true, '1', 'dashed'], 'Save Draft: disabled, not faded');
+    assert.deepEqual(await page.$eval('#ob-finish', (b) => [b.disabled, getComputedStyle(b).opacity]), [false, '1'], 'D2.2: Save Draft enabled, full opacity');
     if (viewport.width < 600) await page.click('#ob-sum-toggle');   // phones: the full section list for the contrast checks
     for (const sel of ['#ob-finish', '.ob-draft-badge', '#ob-save-note', '#ob-sum-name', '#ob-sum-description', '.ob-summary__row dt', '.ob-edit', '#ob-step-4 .ob-info p', '#ob-sum-business-title', '#ob-review-example-note', '#ob-review-legend .ob-legend__item--example', '#ob-sum-sections .ob-sec__tag--example']) {
       const r = await contrast(page, sel);
@@ -1448,7 +1462,7 @@ test('T1c.3 Step 5, Restaurant (desktop, English): a customized order and the St
   assert.equal(await text(page, '#ob-progress-count'), 'Step 5 of 5');
   assert.deepEqual(await sumSections(page), mine.concat('gallery'), 'reload: Step 5 with the customer\'s order');
   await page.waitForFunction(() => document.getElementById('ob-review-frame').srcdoc.includes('--v3-brand:#4b6a2e'), { timeout: 3000 });
-  assert.deepEqual(await page.$eval('#ob-finish', (b) => [b.disabled, b.getAttribute('aria-disabled')]), [true, 'true'], 'Save Draft disabled');
+  assert.deepEqual(await page.$eval('#ob-finish', (b) => [b.disabled, b.getAttribute('aria-disabled')]), [false, 'false'], 'D2.2: Save Draft ready (not clicked: nothing sent)');
   assert.deepEqual(api, []); assert.deepEqual(external, []); assert.deepEqual(missing, []);
   await page.close();
 });
@@ -1691,7 +1705,7 @@ test('Custom Sections (Step 4 / Step 5): "+ Add" Custom Section repeatedly (uniq
     if (viewport !== DESKTOP) await page.click('#ob-sum-toggle');
     assert.deepEqual(await sumSections(page), want, tag + ': Step 5 order');
     assert.deepEqual(await page.$$eval('#ob-sum-sections > li', (ns) => ns.filter((n) => n.dataset.type.startsWith('custom:')).map((n) => n.querySelector('.ob-sec__title').textContent)), [NAME + ' 1', NAME + ' 2'], tag + ': Step 5 names');
-    assert.equal(await page.$eval('#ob-finish', (b) => b.disabled), true);
+    assert.equal(await page.$eval('#ob-finish', (b) => b.disabled), false, tag + ': D2.2 Save Draft ready (not clicked here)');
     const rhtml = await reviewFrame(page);
     assert.ok([cs[2], cs[1]].map((c) => rhtml.indexOf('s_c' + c.slice(7))).every((x, i, a) => x > 0 && (i === 0 || x > a[i - 1])), tag + ': Step 5 phone order');
     // Back / Next, reload, template switch
@@ -1816,6 +1830,199 @@ test('T1c.4 template switch: untouched list follows the new template (no notice)
     }
     assert.deepEqual(errors, [], tag + ': no script error');
     assert.deepEqual(api, []); assert.deepEqual(external, []);
+    await page.close();
+  }
+});
+
+// ── D2.2: Save Draft ──
+const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const saved201 = (slug = 'cafe-sonne-abc123', name = 'Café Sonne') => ({ status: 201, body: { created: true, page: { slug, name, status: 'draft', live: false, kind: 'business', renderer: 'legacy' }, revision: 1, design: {} } });
+const saveUi = (page) => page.evaluate(() => {
+  const b = document.getElementById('ob-finish'), n = document.getElementById('ob-save-note'), badge = document.querySelector('#ob-step-4 .ob-draft-badge');
+  return { text: b.textContent, disabled: b.disabled, aria: b.getAttribute('aria-disabled'), busy: b.getAttribute('aria-busy'), note: n.textContent, tone: n.getAttribute('data-tone'),
+    badge: badge.textContent, state: badge.getAttribute('data-state'), live: document.getElementById('ob-save-status').textContent, focus: document.activeElement && document.activeElement.id };
+});
+// a design as the server accepts it, without any example-only data (DEMO_ONLY in onboarding-templates.js)
+function checkSentDesign(body, tag) {
+  const { readBody } = require('../src/lpV3/studioDraftsController');
+  const r = readBody(body);
+  assert.ok(!r.error, tag + ': the server accepts the body ' + JSON.stringify(r));
+  const v = V3core.validateDesign(body.design, { cloudName: 'dwqc6n7rn' });
+  assert.ok(v.ok, tag + ': a valid design ' + JSON.stringify(v.errors && v.errors.slice(0, 3)));
+  assert.equal(body.design.settings.language, body.language);
+  for (const s of body.design.pages[0].sections) {
+    const d = s.data || {};
+    // core.js keeps an emptied button as { text: '', target: '' }: no example label or link
+    if (s.type === 'hero') assert.ok([d.primary, d.secondary].every((x) => !x || (!x.text && !x.target)), tag + ': no example Hero buttons ' + JSON.stringify([d.primary, d.secondary]));
+    if (s.type === 'buttons' || s.type === 'products') assert.ok(!d.items || d.items.length === 0, tag + ': no example ' + s.type);
+    if (s.type === 'contact') assert.ok((!d.address || Object.values(d.address).every((v) => !v)) && !d.phone && !d.email && !d.mapsUrl, tag + ': no example contact data ' + JSON.stringify(d));
+    if (s.type === 'openingHours') assert.ok(!d.days || d.days.length === 0, tag + ': no example hours');
+  }
+  assert.ok(!/Musterstra|Sample Street|Sample Town|Beispielstra|example\.com|hallo@|hello@|\+49|€|\$\d/.test(JSON.stringify(body.design)), tag + ': no example address, email, phone or price');
+  const ids = new Set(body.design.pages[0].sections.map((s) => s.id));
+  assert.ok(body.origin.exampleSectionIds.every((id) => ids.has(id)), tag + ': example ids are sections of the design');
+}
+const V3core = require('../src/lpV3/core.js');
+
+test('D2.2 Save Draft (desktop, English): one request (double click and Enter ignored while saving) with a stable requestId, the template page and origin, Custom Sections in order, no example data; saved only after the server confirmed; kept across a reload; a later change is shown as not saved, never sent', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const { page, api, external, posts } = await onboarding({ drafts: async () => { await gate; return saved201(); } });
+  await toTemplateStep4(page, { id: 'restaurant', name: 'Café Sonne', link: 'instagram.com/cafesonne' });
+  for (let i = 0; i < 2; i++) { await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(120); }
+  const cs = (await chosen(page)).filter((x) => x.startsWith('custom:'));
+  await page.click('#ob-chosen [data-type="' + cs[1] + '"] [data-act="up"]'); await sleep(120);
+  const order = await chosen(page);
+  await page.click('#ob-next'); await sleep(300);
+  let s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.badge, s.state, s.tone], ['Save Draft', false, 'Draft preview ready · Not saved', 'draft', 'info']);
+  assert.deepEqual(api, [], 'nothing sent before the click');
+  await page.click('#ob-finish');
+  await page.click('#ob-finish').catch(() => {});
+  await page.focus('#ob-finish').catch(() => {}); await page.keyboard.press('Enter');
+  await sleep(150);
+  s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.aria, s.busy, s.note, s.badge], ['Saving…', true, 'true', 'true', 'Saving your draft…', 'Draft preview ready · Not saved'], 'saving: not shown as saved yet');
+  assert.equal(posts.length, 1, 'one request');
+  const b = posts[0].body;
+  assert.match(b.requestId, UUID4);
+  assert.deepEqual([b.name, b.language, b.kind, posts[0].auth, posts[0].type.split(';')[0]], ['Café Sonne', 'en', 'business', 'Bearer tok', 'application/json']);
+  assert.deepEqual(Object.keys(b).sort(), ['design', 'kind', 'language', 'name', 'origin', 'requestId']);
+  assert.deepEqual(Object.keys(b.origin).sort(), ['exampleSectionIds', 'language', 'palette', 'source', 'template']);
+  assert.deepEqual([b.origin.source, b.origin.template, b.origin.language], ['onboarding', 'restaurant', 'en']);
+  const sentIds = b.design.pages[0].sections.map((x) => x.id);
+  assert.deepEqual(sentIds.filter((id) => id.startsWith('s_c')), [cs[1], cs[0]].map((c) => 's_c' + c.slice(7)), 'Custom Sections with their ids, in the chosen order');
+  assert.equal(sentIds.length, order.length);
+  assert.deepEqual(b.design.pages[0].sections.find((x) => x.type === 'socialMedia').data.links, [{ platform: 'instagram', url: 'https://instagram.com/cafesonne' }], 'the customer\'s own link');
+  assert.equal(b.design.pages[0].sections[0].data.headline, 'Café Sonne', 'the customer\'s name');
+  checkSentDesign(b, 'en');
+  release();
+  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Draft saved', { timeout: 4000 });
+  s = await saveUi(page);
+  assert.deepEqual([s.disabled, s.badge, s.state, s.tone, s.focus], [true, 'Draft saved · Not published', 'saved', 'success', 'ob-save-note']);
+  assert.equal(s.note, 'Your draft is saved privately in your QRAIVY account. It is not published. Opening it in the Studio follows in the next update.');
+  await page.waitForFunction(() => /Draft saved\. It is private/.test(document.getElementById('ob-save-status').textContent), { timeout: 2000 });
+  // reload: still saved (the address and revision kept), nothing sent again
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.badge], ['Draft saved', true, 'Draft saved · Not published'], 'kept across a reload');
+  const kept = await page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).draft; } return null; });
+  assert.deepEqual([kept.status, kept.slug, kept.revision, kept.requestId], ['saved', 'cafe-sonne-abc123', 1, b.requestId]);
+  assert.ok(!JSON.stringify(kept).includes('tok'), 'no token kept');
+  // a later change: shown, never sent
+  await page.click('#ob-back'); await sleep(200);
+  await page.click('#ob-chosen [data-type="contact"] [data-act="up"]'); await sleep(150);
+  await page.click('#ob-next'); await sleep(300);
+  s = await saveUi(page);
+  assert.deepEqual([s.disabled, s.badge, s.state, s.tone], [true, 'Draft saved · Later changes not saved', 'changed', 'warn']);
+  assert.match(s.note, /^You changed your page after saving\. These changes are not in your saved draft\./);
+  assert.equal(posts.length, 1, 'no second draft');
+  assert.ok(api.every((x) => / \S+\/studio\/drafts$/.test(x)), 'only the drafts endpoint: ' + api.join(', '));
+  assert.ok(!api.some((x) => /trial|tier|stripe|publish|\/lp/.test(x)), 'no trial, plan, billing or publish request');
+  assert.deepEqual(external, []);
+  await page.close();
+});
+
+test('D2.2 failure and retry (phone 390, German, Dark): 503 -> error, nothing marked saved, the button again; the retry sends the SAME requestId; a reload while the request was open, then a retry: still the same requestId; no answer -> the network message', async () => {
+  const replies = [{ status: 503, body: { error: 'Temporarily unavailable.' } }, 'hang', saved201('studio-sonne-x1y2z3', 'Studio Sonne')];
+  const { page, posts } = await onboarding({ viewport: Object.assign({}, PHONE, { width: 390 }), lang: 'de', theme: 'dark', drafts: async (body, n) => replies[n - 1] || saved201() });
+  await toTemplateStep4(page, { id: 'creator', name: 'Studio Sonne' });
+  await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(120);
+  await page.click('#ob-next'); await sleep(300);
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'error', { timeout: 4000 });
+  let s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.badge, s.state, s.focus], ['Entwurf speichern', false, 'Entwurfsvorschau bereit · Nicht gespeichert', 'draft', 'ob-finish']);
+  assert.equal(s.note, 'Das Speichern ist vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich noch einmal – es ging nichts verloren.');
+  assert.equal(posts[0].body.kind, 'creator');
+  checkSentDesign(posts[0].body, 'de creator');
+  // retry: the request stays open; reload meanwhile
+  await page.click('#ob-finish'); await sleep(200);
+  assert.equal((await saveUi(page)).text, 'Wird gespeichert …');
+  assert.equal(posts[1].body.requestId, posts[0].body.requestId, 'retry: the same requestId');
+  await page.reload({ waitUntil: 'domcontentloaded' }); await sleep(600);
+  s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.state], ['Entwurf speichern', false, 'draft'], 'after a reload: not saved, ready again');
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Entwurf gespeichert', { timeout: 4000 });
+  assert.equal(posts[2].body.requestId, posts[0].body.requestId, 'after the reload: still the same requestId');
+  assert.deepEqual(posts[2].body, posts[0].body, 'the same request');
+  s = await saveUi(page);
+  assert.deepEqual([s.badge, s.state], ['Entwurf gespeichert · Nicht veröffentlicht', 'saved']);
+  assert.match(s.note, /^Ihr Entwurf ist privat in Ihrem QRAIVY-Konto gespeichert\./);
+  await page.close();
+  // no answer at all
+  const n = await onboarding({ drafts: async () => 'abort' });
+  await toTemplateStep4(n.page, { id: 'bakery', name: 'Café Sonne' });
+  await n.page.click('#ob-next'); await sleep(300);
+  await n.page.click('#ob-finish');
+  await n.page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'error', { timeout: 4000 });
+  assert.equal((await saveUi(n.page)).note, 'Saving failed. Please check your connection and try again – nothing was lost.');
+  await n.page.close();
+});
+
+test('D2.2 server answers, English and German: unverified, other 403, signed out, draft limit (3), rate limit (minutes / hours), invalid page, requestId conflict (a NEW requestId next time); each keeps the answers and is never shown as saved', async () => {
+  const cases = [
+    [{ status: 403, body: { error: 'email_unverified' } }, 'Please verify your email address before saving. Your answers are kept.', 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Ihre Angaben bleiben erhalten.'],
+    [{ status: 403, body: { error: 'Not allowed.' } }, 'This account cannot save drafts here. Your answers are kept in this browser tab.', 'Mit diesem Konto können hier keine Entwürfe gespeichert werden. Ihre Angaben bleiben in diesem Browser-Tab erhalten.'],
+    [{ status: 401, body: { error: 'Unauthorized.' } }, 'Your sign-in has expired. Please sign in again – your answers are kept.', 'Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Angaben bleiben erhalten.'],
+    [{ status: 409, body: { error: 'draft_limit', limit: 3, active: 3 } }, 'You already have 3 unpublished drafts, the current maximum. Your answers are kept in this browser tab.', 'Sie haben bereits 3 unveröffentlichte Entwürfe – das ist derzeit das Maximum. Ihre Angaben bleiben in diesem Browser-Tab erhalten.'],
+    [{ status: 429, body: { error: 'draft_rate_limit', limit: 5, retryAfterSeconds: 90 } }, 'You have created several drafts recently. Please try again in about 2 minutes.', 'Sie haben in letzter Zeit mehrere Entwürfe erstellt. Bitte versuchen Sie es in etwa 2 Minuten erneut.'],
+    [{ status: 429, body: { error: 'draft_rate_limit', limit: 5, retryAfterSeconds: 5400 } }, 'You have created several drafts recently. Please try again in about 2 hours.', 'Sie haben in letzter Zeit mehrere Entwürfe erstellt. Bitte versuchen Sie es in etwa 2 Stunden erneut.'],
+    [{ status: 422, body: { error: 'design_invalid', errors: [] } }, 'Your page could not be saved because some content is not valid. Please check Steps 2 to 4 and try again.', 'Ihre Seite konnte nicht gespeichert werden, weil einige Inhalte ungültig sind. Bitte prüfen Sie die Schritte 2 bis 4 und versuchen Sie es erneut.'],
+    [{ status: 409, body: { error: 'request_id_conflict' } }, 'Please try saving again.', 'Bitte versuchen Sie es erneut.'],
+  ];
+  for (const lang of ['en', 'de']) {
+    let i = -1;
+    const { page, posts } = await onboarding({ lang, drafts: async () => (cases[i] ? cases[i][0] : saved201()) });
+    await toTemplateStep4(page, { id: 'beauty', name: 'Salon Sonne' });
+    await page.click('#ob-next'); await sleep(300);
+    for (i = 0; i < cases.length; i++) {
+      const before = posts.length;
+      const want = lang === 'de' ? cases[i][2] : cases[i][1];
+      await page.click('#ob-finish');
+      for (let k = 0; k < 80 && posts.length === before; k++) await sleep(50);
+      assert.equal(posts.length, before + 1, lang + ' ' + i + ': one request per click');
+      await page.waitForFunction((w) => document.getElementById('ob-save-note').textContent === w, { timeout: 4000 }, want).catch(() => {});
+      const s = await saveUi(page);
+      assert.equal(s.note, want, lang + ' ' + JSON.stringify(cases[i][0].body));
+      assert.deepEqual([s.disabled, s.state, s.tone], [false, 'draft', 'error'], lang + ' ' + i + ': not saved, can try again');
+      await page.waitForFunction((w) => document.getElementById('ob-save-status').textContent === w, { timeout: 2000 }, want);
+    }
+    // the same requestId for every attempt until the conflict; after it a new one
+    const ids = posts.map((p) => p.body.requestId);
+    assert.equal(new Set(ids).size, 1, lang + ': one requestId for the same content');
+    await page.click('#ob-finish'); await sleep(300);
+    assert.notEqual(posts[posts.length - 1].body.requestId, ids[0], lang + ': after request_id_conflict a new requestId');
+    assert.equal(await text(page, '#ob-progress-count'), lang === 'de' ? 'Schritt 5 von 5' : 'Step 5 of 5', 'still on Step 5');
+    await page.close();
+  }
+});
+
+test('D2.2 Save Draft states readable everywhere: ready, saving, error and saved at 390 / 320 and desktop, English and German, Light and Dark; no sideways scroll; 44 px target; contrast', async () => {
+  for (const [viewport, lang, theme] of [[Object.assign({}, PHONE, { width: 390 }), 'en', 'light'], [Object.assign({}, PHONE, { width: 320 }), 'de', 'dark'], [Object.assign({}, PHONE, { width: 320 }), 'en', 'light'], [DESKTOP, 'de', 'dark']]) {
+    const tag = viewport.width + ' ' + lang + ' ' + theme;
+    let n = 0;
+    const { page } = await onboarding({ viewport, lang, theme, drafts: async () => (++n === 1 ? { status: 409, body: { error: 'draft_limit', limit: 3, active: 3 } } : saved201()) });
+    await toTemplateStep4(page, { id: 'retail', name: lang === 'de' ? 'Boutique Sonne' : 'Boutique Sun' });
+    await page.click('#ob-next'); await sleep(300);
+    const check = async (what) => {
+      const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, h: document.getElementById('ob-finish').getBoundingClientRect().height }));
+      assert.ok(lay.sw <= lay.iw && lay.h >= 44, tag + ' ' + what + ': ' + JSON.stringify(lay));
+      for (const sel of ['#ob-save-note', '#ob-step-4 .ob-draft-badge']) {
+        const r = await contrast(page, sel);
+        assert.ok(r !== null && r >= 4.5, tag + ' ' + what + ': ' + sel + ' contrast ' + r);
+      }
+    };
+    await check('ready');
+    await page.click('#ob-finish');
+    await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'error', { timeout: 4000 });
+    await check('error');
+    await shot(page, 'd22-error-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    await page.click('#ob-finish');
+    await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'success', { timeout: 4000 });
+    await check('saved');
+    await shot(page, 'd22-saved-' + viewport.width + '-' + lang + '-' + theme + '.png');
     await page.close();
   }
 });

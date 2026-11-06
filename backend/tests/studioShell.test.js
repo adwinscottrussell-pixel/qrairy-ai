@@ -105,6 +105,8 @@ test('no network in the Studio files (no fetch, XHR, sockets, beacons, imports o
     // the request itself is made only in the Deals data file (it calls the browser's fetch through doFetch)
     // ... and, since Phase A, in the pages data file: only the two Studio page GET requests (studioPagesData.test.js), never a Deals endpoint
     if (f === 'js/studio/studio-pages-data.js') assert.ok(!/'\/deals/.test(src), f + ': no Deals endpoint');
+    // ... and, since D2.2, the onboarding's Save Draft file: only POST /studio/drafts (onboardingSaveDraft.test.js)
+    else if (f === 'js/studio/onboarding-drafts.js') assert.ok(!/'\/deals/.test(src) && src.includes("var PATH = '/studio/drafts';") && (src.match(/\bdoFetch\(/g) || []).length === 1, f + ': only the drafts endpoint, one request');
     else if (f !== 'js/studio/studio-deals-data.js') assert.ok(!/\bdoFetch\b|\.fetch\b|'\/deals/.test(src), f + ': no request, no Deals endpoint');
   }
   // the starter catalog the Studio now loads is plain data

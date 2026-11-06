@@ -40,10 +40,17 @@
  * tells the page which screen is shown (body data-ob-step: the background is
  * fuller on Step 1, calmer elsewhere) and gives the toggle its EN/DE labels.
  *
- * Nothing is sent: no fetch, no draft, no save. The sign-in (studio-auth.js)
- * only tells it who is signed in and whether the email is verified; the
- * server checks that again before any draft is created (lpV3/draftPolicy.js,
- * later phases). Instagram and Website import
+ * D2.2: Save Draft (Step 5) is the onboarding's only request, sent by
+ * onboarding-drafts.js (this file sends nothing itself): the chosen
+ * template's page as a draft may hold it (onboarding-model.js pageFor().draft:
+ * the customer's answers, starter texts and photos, empty Custom Sections with
+ * their ids; never the example-only data) and its origin, with a requestId
+ * kept before the request (a reload, a retry or a double click sends the same
+ * one; the server answers with the same draft). Shown as saved only after the
+ * server confirmed it; the draft's address and revision are kept with the
+ * answers. The sign-in (studio-auth.js) only tells it who is signed in and
+ * whether the email is verified; the server checks both again
+ * (lpV3/draftPolicy.js). A draft is private: no public page, no trial. Instagram and Website import
  * are shown as "Coming soon" and cannot be chosen.
  *
  * T1b: five steps. Step 3 "Choose Your Design" is new: the six starter
@@ -97,7 +104,22 @@
       sum_business: 'Business information', sum_sections: 'Sections ({n})', sum_no_description: 'No description', sum_no_links: 'No social media links',
       edit: 'Edit', edit_business_label: 'Edit business information', edit_sections_label: 'Edit sections',
       review_live_label: 'Your page as a draft', review_example_note: 'Example details are not saved as your information.', review_live_note: 'Scroll the phone to see the whole page.',
-      save_draft: 'Save Draft', save_note: 'Saving is coming in the next update. Nothing has been saved yet — your answers stay in this browser tab.',
+      save_draft: 'Save Draft', save_note: 'Saves your page privately in your QRAIVY account. Nothing is published.',
+      save_saving_btn: 'Saving…', save_saved_btn: 'Draft saved', save_saving: 'Saving your draft…',
+      draft_saved: 'Draft saved · Not published', draft_saved_changed: 'Draft saved · Later changes not saved',
+      save_saved: 'Your draft is saved privately in your QRAIVY account. It is not published. Opening it in the Studio follows in the next update.',
+      save_saved_say: 'Draft saved. It is private and not published.',
+      save_changed: 'You changed your page after saving. These changes are not in your saved draft. Editing your saved draft in the Studio follows in the next update.',
+      err_signin: 'Your sign-in has expired. Please sign in again – your answers are kept.',
+      err_unverified: 'Please verify your email address before saving. Your answers are kept.',
+      err_forbidden: 'This account cannot save drafts here. Your answers are kept in this browser tab.',
+      err_limit: 'You already have {n} unpublished drafts, the current maximum. Your answers are kept in this browser tab.',
+      err_rate: 'You have created several drafts recently. Please try again in {time}.',
+      err_invalid: 'Your page could not be saved because some content is not valid. Please check Steps 2 to 4 and try again.',
+      err_conflict: 'Please try saving again.',
+      err_unavailable: 'Saving is temporarily unavailable. Please try again in a moment – nothing was lost.',
+      err_network: 'Saving failed. Please check your connection and try again – nothing was lost.',
+      wait_minute: 'about a minute', wait_minutes: 'about {n} minutes', wait_hour: 'about an hour', wait_hours: 'about {n} hours', wait_later: 'a little while',
       review_invalid: "This page can't be built yet. Please check Step 2 or Step 3.",
       unavailable_title: "Onboarding isn't available here yet", unavailable_text: 'The new onboarding is still being built and tested. Your landing pages keep working as before.',
       loading_title: 'Checking your sign-in …', loading_text: 'One moment.',
@@ -177,7 +199,22 @@
       sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
       edit: 'Bearbeiten', edit_business_label: 'Unternehmensdaten bearbeiten', edit_sections_label: 'Abschnitte bearbeiten',
       review_live_label: 'Ihre Seite als Entwurf', review_example_note: 'Beispielangaben werden nicht als Ihre Angaben gespeichert.', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
-      save_draft: 'Entwurf speichern', save_note: 'Das Speichern folgt im nächsten Update. Es wurde noch nichts gespeichert – Ihre Angaben bleiben in diesem Browser-Tab.',
+      save_draft: 'Entwurf speichern', save_note: 'Speichert Ihre Seite privat in Ihrem QRAIVY-Konto. Es wird nichts veröffentlicht.',
+      save_saving_btn: 'Wird gespeichert …', save_saved_btn: 'Entwurf gespeichert', save_saving: 'Ihr Entwurf wird gespeichert …',
+      draft_saved: 'Entwurf gespeichert · Nicht veröffentlicht', draft_saved_changed: 'Entwurf gespeichert · Spätere Änderungen nicht gespeichert',
+      save_saved: 'Ihr Entwurf ist privat in Ihrem QRAIVY-Konto gespeichert. Er ist nicht veröffentlicht. Das Öffnen im Studio folgt im nächsten Update.',
+      save_saved_say: 'Entwurf gespeichert. Er ist privat und nicht veröffentlicht.',
+      save_changed: 'Sie haben Ihre Seite nach dem Speichern geändert. Diese Änderungen sind nicht in Ihrem gespeicherten Entwurf. Das Bearbeiten im Studio folgt im nächsten Update.',
+      err_signin: 'Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Angaben bleiben erhalten.',
+      err_unverified: 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Ihre Angaben bleiben erhalten.',
+      err_forbidden: 'Mit diesem Konto können hier keine Entwürfe gespeichert werden. Ihre Angaben bleiben in diesem Browser-Tab erhalten.',
+      err_limit: 'Sie haben bereits {n} unveröffentlichte Entwürfe – das ist derzeit das Maximum. Ihre Angaben bleiben in diesem Browser-Tab erhalten.',
+      err_rate: 'Sie haben in letzter Zeit mehrere Entwürfe erstellt. Bitte versuchen Sie es in {time} erneut.',
+      err_invalid: 'Ihre Seite konnte nicht gespeichert werden, weil einige Inhalte ungültig sind. Bitte prüfen Sie die Schritte 2 bis 4 und versuchen Sie es erneut.',
+      err_conflict: 'Bitte versuchen Sie es erneut.',
+      err_unavailable: 'Das Speichern ist vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich noch einmal – es ging nichts verloren.',
+      err_network: 'Speichern fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut – es ging nichts verloren.',
+      wait_minute: 'etwa einer Minute', wait_minutes: 'etwa {n} Minuten', wait_hour: 'etwa einer Stunde', wait_hours: 'etwa {n} Stunden', wait_later: 'einer Weile',
       review_invalid: 'Diese Seite kann noch nicht erstellt werden. Bitte prüfen Sie Schritt 2 oder 3.',
       unavailable_title: 'Das Onboarding ist hier noch nicht verfügbar', unavailable_text: 'Das neue Onboarding wird noch gebaut und getestet. Ihre Landingpages funktionieren weiter wie bisher.',
       loading_title: 'Anmeldung wird geprüft …', loading_text: 'Einen Moment bitte.',
@@ -321,6 +358,39 @@
     return { kind: 'applied', tpl: s.tpl, prev: prev, prevSocial: M.sanitize({ social: s.prevSocial }).social };
   }
 
+  // ── D2.2: Save Draft, the pure parts ──
+  // a short fingerprint of a request's content (FNV-1a, 32 bit, and the length): the same content keeps its requestId
+  function fingerprint(s) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return hex(h >>> 0) + '-' + s.length;
+  }
+  // draftRequest(M, V3, T, answers, language) -> the draft request without its requestId, or null while the page is not
+  // complete: { name, language, kind, design, origin }. design: the template's page as a draft may hold it (pageFor().draft:
+  // the customer's Step 2 answers, starter texts and photos, empty Custom Sections with their ids; no example-only data);
+  // origin: where it came from (template, palette, language, the sections with example content on Step 3-5).
+  function draftRequest(M, V3, T, answers, language) {
+    var r = M && V3 && T ? M.checkPage(V3, answers, language, T) : null;
+    var p = r && r.composed;
+    if (!r || !r.ok || !r.pageOk || !p || !p.draft || !r.values.name) return null;
+    var l = lang(language), ids = {};
+    p.draft.pages[0].sections.forEach(function (s) { ids[s.id] = true; });
+    return { name: r.values.name, language: l, kind: answers.template === 'creator' ? 'creator' : 'business', design: p.draft,
+      origin: { source: 'onboarding', template: answers.template, palette: p.palette || answers.palette, language: l,
+        exampleSectionIds: p.exampleIds.filter(function (id) { return ids[id]; }) } };
+  }
+  // the kept Save Draft state, checked: { status: 'pending', requestId, fp } (sent, not confirmed) or
+  // { status: 'saved', requestId, fp, slug, revision, savedAt } (confirmed by the server); anything else: null
+  var UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  function restoreDraft(d) {
+    if (!d || typeof d !== 'object' || typeof d.requestId !== 'string' || !UUID4.test(d.requestId) || typeof d.fp !== 'string' || !/^[0-9a-f]{8}-[0-9]{1,9}$/.test(d.fp)) return null;
+    if (d.status === 'pending') return { status: 'pending', requestId: d.requestId, fp: d.fp };
+    if (d.status !== 'saved' || typeof d.slug !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/.test(d.slug)) return null;
+    if (typeof d.revision !== 'number' || d.revision !== Math.floor(d.revision) || d.revision < 1) return null;
+    if (typeof d.savedAt !== 'string' || d.savedAt.length > 40 || isNaN(Date.parse(d.savedAt))) return null;
+    return { status: 'saved', requestId: d.requestId, fp: d.fp, slug: d.slug, revision: d.revision, savedAt: d.savedAt };
+  }
+
   // ── the page ──
   function start(win) {
     var doc = win.document;
@@ -358,6 +428,7 @@
     var last = { name: '', description: '' };    // the last valid name and description: the preview keeps them while a field is too long
     var adopted = false, owner = null;           // whose progress this is (owner: the store key; null: memory only)
     var sw = null;                               // T1c.4: the template-switch notice (restoreSwitch)
+    var draft = null, saving = false, saveError = null;   // D2.2: Save Draft (restoreDraft), the request in flight, the last failure
     var liveTimer = null, spoken = {};
 
     function store() { try { return win.sessionStorage || null; } catch (e) { return null; } }
@@ -366,6 +437,7 @@
       if (!owner || !st) return;
       var data = { v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers };
       if (sw) data.sw = sw;                      // T1c.4: only while the switch notice is active
+      if (draft) data.draft = draft;             // D2.2: the requestId (kept before the request) and, once confirmed, the draft's address
       try { st.setItem(owner, JSON.stringify(data)); } catch (e) {}
     }
     function clearStore() {
@@ -380,7 +452,8 @@
       adopted = true; owner = key;
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
-      if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; sw = restoreSwitch(saved && saved.sw, answers, M); }
+      if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; sw = restoreSwitch(saved && saved.sw, answers, M); draft = restoreDraft(saved && saved.draft); }
+      saveError = null;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -388,7 +461,7 @@
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
-      sw = null;
+      sw = null; draft = null; saveError = null;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -946,6 +1019,7 @@
       sumOpen(null);
       $('ob-review-error').textContent = r.pageOk ? '' : t('review_invalid');
       drawReview(r);
+      renderSave();
     }
     // T1c.3: the template's page as on Step 4 (photos inline, only this template's; example sections tagged)
     function drawReview(r) {
@@ -973,6 +1047,69 @@
       b.hidden = n <= SUM_FIRST;
       b.setAttribute('aria-expanded', String(now));
       $('ob-sum-toggle-text').textContent = t(now ? 'sum_view_less' : 'sum_view_all').replace('{n}', String(n));
+    }
+    // ── D2.2: Save Draft (Step 5). The request goes through onboarding-drafts.js only. ──
+    var DR = win.QraivyOnboardingDrafts ? win.QraivyOnboardingDrafts.createDraftClient({ api: ROUTING.api, session: function () { return clerk && clerk.session ? clerk.session : null; } }) : null;
+    function currentRequest() { return draftRequest(M, V3, T, answers, current); }
+    function waitText(sec) {
+      if (!sec) return t('wait_later');
+      var m = Math.max(1, Math.ceil(sec / 60));
+      if (m < 60) return m === 1 ? t('wait_minute') : t('wait_minutes').replace('{n}', String(m));
+      var h = Math.ceil(m / 60);
+      return h === 1 ? t('wait_hour') : t('wait_hours').replace('{n}', String(h));
+    }
+    function errText(f) {
+      var s = f && f.state, info = (f && f.info) || {};
+      if (s === 'limit') return t('err_limit').replace('{n}', String(info.limit || 3));
+      if (s === 'rate') return t('err_rate').replace('{time}', waitText(info.retryAfterSeconds));
+      return t(['signin', 'unverified', 'forbidden', 'invalid', 'conflict', 'unavailable', 'network'].indexOf(s) !== -1 ? 'err_' + s : 'err_network');
+    }
+    // the button, the status badge and the note, from the state (never "saved" before the server confirmed it)
+    function renderSave() {
+      var btn = $('ob-finish'), note = $('ob-save-note'), badge = doc.querySelector('#ob-step-4 [data-ob="draft_status"]');
+      if (!btn || !note) return;
+      var r = currentRequest(), fp = r ? fingerprint(JSON.stringify(r)) : null;
+      var saved = !!(draft && draft.status === 'saved'), changed = saved && fp !== draft.fp;
+      var can = !!(DR && DR.available() && r && !saving && !saved && auth === 'ready');
+      btn.disabled = !can;
+      btn.setAttribute('aria-disabled', String(!can));
+      btn.setAttribute('aria-busy', String(saving));
+      btn.textContent = t(saving ? 'save_saving_btn' : saved ? 'save_saved_btn' : 'save_draft');
+      if (badge) {
+        badge.textContent = t(saved ? (changed ? 'draft_saved_changed' : 'draft_saved') : 'draft_status');
+        badge.parentNode.setAttribute('data-state', saved ? (changed ? 'changed' : 'saved') : 'draft');
+      }
+      note.textContent = saving ? t('save_saving') : saved ? t(changed ? 'save_changed' : 'save_saved') : saveError ? errText(saveError) : t('save_note');
+      note.setAttribute('data-tone', saving ? 'info' : saved ? (changed ? 'warn' : 'success') : saveError ? 'error' : 'info');
+    }
+    function saveDraft() {
+      if (saving || !DR || auth !== 'ready' || (draft && draft.status === 'saved')) return;
+      var r = currentRequest();
+      if (!r) { saveError = { state: 'invalid' }; renderSave(); return; }
+      var fp = fingerprint(JSON.stringify(r));
+      // the same content keeps its requestId (a retry, a reload, a second click: the server answers with the same draft)
+      if (!draft || draft.fp !== fp) draft = { status: 'pending', requestId: win.QraivyOnboardingDrafts.requestId(win.crypto), fp: fp };
+      var mine = owner, body = { name: r.name, language: r.language, kind: r.kind, requestId: draft.requestId, design: r.design, origin: r.origin };
+      saving = true; saveError = null;
+      save();                                    // the requestId is kept before anything is sent
+      renderSave();
+      sayIn('ob-save-status', t('save_saving'));
+      DR.create(body).then(function (ok) {
+        if (owner !== mine) return;              // signed out meanwhile: not this account's progress
+        draft = { status: 'saved', requestId: body.requestId, fp: fp, slug: ok.slug, revision: ok.revision, savedAt: new Date().toISOString() };
+        saving = false;
+        save(); renderSave();
+        sayIn('ob-save-status', t('save_saved_say'));
+        $('ob-save-note').focus();               // the button is disabled now: focus on what happened
+      }, function (f) {
+        if (owner !== mine) return;
+        saving = false;
+        saveError = f && f.state ? f : { state: 'network' };
+        if (saveError.state === 'conflict') draft = null;   // that requestId cannot be used again: a new one next time
+        save(); renderSave();
+        sayIn('ob-save-status', errText(saveError));
+        if (!$('ob-finish').disabled) $('ob-finish').focus();
+      });
     }
     // Edit: back to the step, its answers as they are (saved first), focus where the change starts
     function editStep(step, focusId) {
@@ -1030,7 +1167,8 @@
       var last = s === STEPS.length - 1;
       $('ob-next').hidden = last;
       $('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);
-      $('ob-finish').hidden = !last;          // O3A: shown on the last step (T1b: Step 5), always disabled (no draft is saved yet)
+      $('ob-finish').hidden = !last;          // O3A: shown on the last step (T1b: Step 5); D2.2: enabled by renderSave()
+      if (!last) saveError = null;
       $('ob-save-note').hidden = !last;
       if (s === 0) previews(false);
       if (s === 1) business();
@@ -1106,6 +1244,7 @@
     // Step 4: Edit back to Steps 2 and 3
     $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
     $('ob-edit-sections').addEventListener('click', function () { editStep(3, 'ob-chosen-title'); });
+    $('ob-finish').addEventListener('click', saveDraft);
     $('ob-switch-use').addEventListener('click', useSuggested);
     $('ob-switch-undo').addEventListener('click', undoSwitch);
     $('ob-sum-toggle').addEventListener('click', function () { sumOpen($('ob-sum-sections-box').getAttribute('data-open') !== 'true'); });
@@ -1185,5 +1324,6 @@
   }
 
   return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, STORE_PREFIX: STORE_PREFIX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back,
-    storeKey: storeKey, restore: restore, restoreSwitch: restoreSwitch, STORE_VERSION: STORE_VERSION, start: start };
+    storeKey: storeKey, restore: restore, restoreSwitch: restoreSwitch, restoreDraft: restoreDraft, draftRequest: draftRequest, fingerprint: fingerprint,
+    STORE_VERSION: STORE_VERSION, start: start };
 });

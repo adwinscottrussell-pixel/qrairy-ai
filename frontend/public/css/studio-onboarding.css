@@ -383,6 +383,8 @@ body.ob-page {
 .ob-sec__tag--links { background: var(--ob-info-bg); color: var(--ob-info-text); }
 /* T1c.2: a section with example content (the template's demo), marked like the "Example" tag in the phone */
 .ob-sec__tag--example { background: #fffbeb; color: #92400e; box-shadow: inset 0 0 0 1px #d97706; }
+/* D2.2: on phones a long Example label (German, 320 px) wraps to two even lines in a softly rounded box, not a stretched pill */
+@media (max-width: 599px) { .ob-sec__tag--example { max-width: 100%; padding: 3px 8px; border-radius: 8px; line-height: 1.35; text-wrap: balance; } }
 .ob-sec__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .ob-iconbtn {
   display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ob-border-strong); border-radius: 12px;
@@ -555,6 +557,16 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 .ob-sum-links__url { color: var(--ob-text-2); }
 .ob-sum-sections .ob-sec { padding: 8px 10px 8px 12px; }
 .ob-save-note { margin: 10px 0 0; font-size: 13px; color: var(--ob-muted); text-align: right; }
+/* D2.2: Save Draft states */
+.ob-save-note:focus { outline: none; }
+.ob-save-note:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; border-radius: 4px; }
+.ob-save-note[data-tone="error"] { color: var(--ob-danger); font-weight: 600; }
+.ob-save-note[data-tone="success"] { color: var(--ob-text-2); }
+.ob-save-note[data-tone="warn"] { color: var(--ob-text-2); font-weight: 600; }
+.ob-draft-badge[data-state="saved"] { border-color: var(--ob-add-border); background: var(--ob-add-bg); color: var(--ob-text); }
+.ob-draft-badge[data-state="saved"] .ob-draft-badge__dot { background: var(--ob-add); }
+.ob-draft-badge[data-state="changed"] .ob-draft-badge__dot { background: var(--ob-add); }
+#ob-finish[aria-busy="true"] { cursor: progress; }
 /* Save Draft while saving is not built: clearly disabled and still readable (not faded to 45 %): a muted
    surface, a dashed border, muted text at 4.5:1 or more in Light and Dark; no hover */
 #ob-finish:disabled { opacity: 1; background: var(--ob-surface-2); border: 1.5px dashed var(--ob-border-strong); color: var(--ob-muted); box-shadow: none; }

@@ -94,8 +94,8 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/studio/onboarding-theme.js', 'js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
-    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-templates.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 10, 'no inline script');
+    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-templates.js', 'js/studio/onboarding-drafts.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 11, 'no inline script');
   // O2.1: the theme script in <head>, after the stylesheet and before the body (no flash of the other appearance)
   const head = HTML.slice(0, HTML.indexOf('</head>'));
   assert.ok(head.indexOf('css/studio-onboarding.css') < head.indexOf('js/studio/onboarding-theme.js'), 'the theme script in the head, after the stylesheet');
@@ -195,14 +195,16 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.deepEqual([OB.TX.en.draft_status, OB.TX.de.draft_status], ['Draft preview ready · Not saved', 'Entwurfsvorschau bereit · Nicht gespeichert']);
   assert.deepEqual([OB.TX.en.sum_view_all, OB.TX.de.sum_view_all, OB.TX.en.sum_view_less, OB.TX.de.sum_view_less], ['Show all sections ({n})', 'Alle Abschnitte anzeigen ({n})', 'Show fewer sections', 'Weniger Abschnitte anzeigen']);
   for (const k of ['draft_status', 'draft_free', 'sum_business', 'review_live_label']) assert.ok(step4.includes('data-ob="' + k + '"'), k);
-  assert.match(HTML, /<p class="ob-save-note" id="ob-save-note" hidden data-ob="save_note">/);
+  assert.match(HTML, /<p class="ob-save-note" id="ob-save-note" hidden tabindex="-1" data-tone="info" data-ob="save_note">/);
+  assert.ok(HTML.includes('<p class="ob-sr" id="ob-save-status" role="status" aria-live="polite"></p>'), 'D2.2: the Save Draft announcements');
   assert.ok(!/review_placeholder|finish_soon/.test(HTML + SRC), 'the placeholder texts are gone');
   // honest copy: never claims a saved draft
   for (const l of ['en', 'de']) assert.ok(!/\b(saved successfully|draft (was|has been) (created|saved)|erfolgreich gespeichert|wurde (erstellt|gespeichert))\b/i.test(Object.values(OB.TX[l]).join(' ')), l + ': no success wording');
   assert.equal(OB.TX.en.save_draft, 'Save Draft'); assert.equal(OB.TX.de.save_draft, 'Entwurf speichern');
   assert.ok(/free/.test(OB.TX.en.draft_free) && /14-day trial/.test(OB.TX.en.draft_free) && /kostenlos/.test(OB.TX.de.draft_free) && /14-tägige Testphase/.test(OB.TX.de.draft_free));
-  // the save button has no handler: nothing in the shell listens to it
-  assert.ok(!code(SRC).includes("$('ob-finish').addEventListener") && !/ob-finish'\)\.disabled\s*=/.test(code(SRC)), 'Save Draft never enabled, never handled');
+  // D2.2: one handler (saveDraft); the button is enabled / disabled in renderSave only
+  assert.equal((code(SRC).match(/\$\('ob-finish'\)\.addEventListener/g) || []).length, 1);
+  assert.ok(code(SRC).includes("$('ob-finish').addEventListener('click', saveDraft);") && !/ob-finish'\)\.disabled\s*=/.test(code(SRC)) && (code(SRC).match(/btn\.disabled\s*=/g) || []).length === 1, 'Save Draft: saveDraft handles it, renderSave sets disabled');
 });
 
 test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial calls; storage only this tab\'s sessionStorage under the per-user key', () => {
@@ -220,6 +222,7 @@ test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial c
   // O1: sessionStorage read in one place; written only under the user's key, with the step and the answers
   assert.equal((c.match(/sessionStorage/g) || []).length, 1);
   assert.equal((c.match(/\.setItem\(/g) || []).length, 1);
+  assert.ok(c.includes('if (draft) data.draft = draft;'), 'D2.2: the Save Draft state (requestId, then the confirmed address) is kept with the answers');
   assert.ok(c.includes('var data = { v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers };') && c.includes('if (sw) data.sw = sw;') && c.includes('st.setItem(owner, JSON.stringify(data));'), 'T1b: with the layout version (T1c.4: the switch notice state only while active)');
   assert.ok(c.includes("var key = storeKey(c && c.user && c.user.id);"), 'the key: the signed-in Clerk user');
   // sign-out clears the kept progress before signing out
@@ -547,12 +550,13 @@ test('T1c.2 Step 4: the list, add / remove / move, Next and the phone use the te
 
 test('T1c.3 Step 5: the review uses the same template page as Step 4 (sectionsPage: palette, the customer\'s order, Step 2); the phone the template\'s page with inline photos and Example tags; the legend and the "not saved" note in EN / DE; Save Draft untouched', () => {
   const c = code(SRC);
-  const rev = c.slice(c.indexOf('function review() {'), c.indexOf('function editStep('));
+  const rev = c.slice(c.indexOf('function review() {'), c.indexOf('var DR = win.QraivyOnboardingDrafts'));
+  assert.ok(c.indexOf('var DR = win.QraivyOnboardingDrafts') > c.indexOf('function review() {'));
   assert.ok(rev.includes('var r = sectionsPage();'), 'the Step 4 page');
   assert.ok(rev.includes("IMAGES.prepareImages(IMAGES.templateUrls(T.get(answers.template).images), photosReady);"), 'only the template\'s photos');
   assert.ok(rev.includes("html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';"), 'inline photos, Example tags');
   assert.ok(rev.includes('li.appendChild(body(type, r));'), 'the section summary with the Step 4 tags (example / starter / the customer\'s)');
-  assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|ob-finish/.test(rev), 'no request, Save Draft not touched');
+  assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|ob-finish/.test(rev), 'no request, Save Draft not touched (D2.2: renderSave / saveDraft only)');
   assert.deepEqual([OB.TX.en.review_example_note, OB.TX.de.review_example_note], ['Example details are not saved as your information.', 'Beispielangaben werden nicht als Ihre Angaben gespeichert.']);
   const s5 = HTML.slice(HTML.indexOf('id="ob-step-4"'));
   assert.ok(s5.includes('<ul class="ob-legend" id="ob-review-legend">') && s5.includes('data-ob="review_example_note"'));

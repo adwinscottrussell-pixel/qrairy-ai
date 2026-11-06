@@ -108,6 +108,9 @@ const LPV3_FILES = [
   'frontend/public/js/studio/onboarding-templates.js',
   'backend/tests/onboardingTemplates.test.js',
   'backend/tests/onboardingTemplates.browser.test.js',
+  // D2.2: Save Draft, the onboarding's only request (POST /studio/drafts), and its tests
+  'frontend/public/js/studio/onboarding-drafts.js',
+  'backend/tests/onboardingSaveDraft.test.js',
   // T0: the two approved Studio starter heroes (the web copies; the PNG originals stay outside the repository)
   'frontend/public/images/studio/starter/QRAIVY-Creator-Hero.jpg',
   'frontend/public/images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',
