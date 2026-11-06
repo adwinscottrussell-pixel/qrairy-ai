@@ -170,8 +170,9 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.ok(design.includes('<section class="ob-secgroup ob-pals-wrap" id="ob-pals-wrap" aria-labelledby="ob-pals-title" hidden>'), 'the palettes only once a design is chosen');
   assert.ok(design.includes('<p class="ob-sr" id="ob-design-status" role="status" aria-live="polite"></p>'));
   for (const k of ['design_hint', 'design_empty', 'legend_yours', 'legend_example', 'live_note_design', 'jump_preview']) assert.ok(design.includes('data-ob="' + k + '"'), k);
-  // the one button: the phones-only jump to the live phone (the same aside, no second preview)
-  assert.equal((design.match(/<button\b/g) || []).length, 1);
+  // the buttons: the phones-only jump to the live phone (the same aside, no second preview) and (T1c.4) the switch notice's two actions
+  assert.deepEqual((design.match(/<button\b[^>]*>/g) || []).map((b) => (b.match(/id="([^"]+)"/) || [])[1]), ['ob-design-jump', 'ob-switch-use', 'ob-switch-undo']);
+  assert.ok(design.includes('<div class="ob-info ob-switch" id="ob-switch" hidden>') && design.includes('<button type="button" class="ob-switch__btn" id="ob-switch-undo" hidden></button>'), 'T1c.4: the notice hidden until a switch needs it');
   assert.ok(design.includes('<button type="button" class="ob-design-jump" id="ob-design-jump" aria-controls="ob-design-live" disabled>'), 'disabled until a design is chosen');
   assert.ok(design.includes('<aside class="ob-live" id="ob-design-live" tabindex="-1" aria-labelledby="ob-design-live-label">'));
   assert.equal((design.match(/<iframe\b/g) || []).length, 1, 'one live phone');
@@ -219,7 +220,7 @@ test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial c
   // O1: sessionStorage read in one place; written only under the user's key, with the step and the answers
   assert.equal((c.match(/sessionStorage/g) || []).length, 1);
   assert.equal((c.match(/\.setItem\(/g) || []).length, 1);
-  assert.ok(c.includes('st.setItem(owner, JSON.stringify({ v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers }));'), 'T1b: with the layout version');
+  assert.ok(c.includes('var data = { v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers };') && c.includes('if (sw) data.sw = sw;') && c.includes('st.setItem(owner, JSON.stringify(data));'), 'T1b: with the layout version (T1c.4: the switch notice state only while active)');
   assert.ok(c.includes("var key = storeKey(c && c.user && c.user.id);"), 'the key: the signed-in Clerk user');
   // sign-out clears the kept progress before signing out
   const out = c.slice(c.indexOf("$('ob-signout').addEventListener"));
@@ -744,7 +745,10 @@ test('T1b Step 3: the shell draws the chosen template with the customer\'s answe
   assert.ok(c.includes("$('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);"), 'Next disabled until a design is chosen');
   // choosing a template or palette changes only template / palette (Step 2 answers and the section list are kept)
   const pick = c.slice(c.indexOf('function pickTemplate('), c.indexOf('function drawDesign('));
-  assert.ok(!/answers\.(name|description|links|sections|social)\s*=/.test(pick), 'never touches the customer\'s answers or sections');
+  // T1c.4: only the notice's two explicit actions change the section list; picking a template or palette never does
+  const actions = pick.slice(pick.indexOf('function useSuggested('), pick.indexOf('function pickPalette('));
+  assert.ok(actions.length > 0 && !/answers\.(name|description|links|sections|social)\s*=/.test(pick.replace(actions, '')), 'never touches the customer\'s answers or sections');
+  assert.deepEqual((actions.match(/answers\.(\w+)\s*=/g) || []).map((x) => x.replace(/\s*=$/, '')), ['answers.sections', 'answers.social', 'answers.sections', 'answers.social'], 'useSuggested and undoSwitch: the section list and Social Media mode only');
   assert.ok(/answers\.template = id;/.test(pick) && /answers\.palette = /.test(pick));
   // texts of Step 3 in both languages
   for (const k of ['step_design', 'design_text', 'pal_title', 'design_hint', 'design_empty', 'design_selected', 'pal_selected', 'selected', 'legend_yours', 'legend_example', 'example_tag', 'live_note_design', 'jump_preview']) {
@@ -858,6 +862,40 @@ test('Custom Sections (model): repeatable "custom:" entries with stable instance
   // the shared renderer is not touched for this
   const crypto = require('crypto'), h = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
   assert.equal(h(path.join(PUB, 'js/lpV3/core.js')), h(path.join(__dirname, '../src/lpV3/core.js')), 'both core.js copies identical');
+});
+
+test('T1c.4 switch protection (pure): suggestedSections is the template\'s own list; restoreSwitch keeps the notice state only while it still fits (same template, list unchanged since), with the exact previous list for Undo', () => {
+  const V3 = require('../src/lpV3/core.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const base = { name: 'Café Sonne', description: '', links: [], social: 'auto' };
+  // suggested: the template's list as an untouched list would have it (Social Media only with Step 2 links)
+  for (const tpl of ['restaurant', 'bakery', 'beauty', 'retail', 'creator', 'services']) {
+    const a = Object.assign({}, base, { template: tpl, sections: ['hero', 'custom:aaaa1111'] });
+    assert.deepEqual(M.suggestedSections(V3, T, a, 'en'), M.pageFor(V3, T, Object.assign({}, a, { sections: null }), 'en').sections, tpl);
+    const withLink = Object.assign({}, a, { links: [{ platform: 'instagram', url: 'instagram.com/sonne' }] });
+    assert.deepEqual(M.suggestedSections(V3, T, withLink, 'en'), M.pageFor(V3, T, Object.assign({}, withLink, { sections: null }), 'en').sections, tpl + ' with a link');
+  }
+  assert.equal(M.suggestedSections(V3, T, Object.assign({}, base, { template: null }), 'en'), null);
+  // restoreSwitch
+  const prev = ['hero', 'custom:bbbb2222', 'buttons', 'custom:aaaa1111', 'contact'];
+  const kept = Object.assign({}, base, { template: 'creator', sections: prev.slice() });
+  const applied = Object.assign({}, base, { template: 'creator', sections: null });
+  assert.deepEqual(OB.restoreSwitch({ kind: 'kept', tpl: 'creator' }, kept, M), { kind: 'kept', tpl: 'creator' });
+  assert.deepEqual(OB.restoreSwitch({ kind: 'applied', tpl: 'creator', prev, prevSocial: 'removed' }, applied, M), { kind: 'applied', tpl: 'creator', prev, prevSocial: 'removed' }, 'the exact list, Custom Section ids and order kept');
+  assert.equal(OB.restoreSwitch({ kind: 'kept', tpl: 'restaurant' }, kept, M), null, 'another template');
+  assert.equal(OB.restoreSwitch({ kind: 'kept', tpl: 'creator' }, applied, M), null, 'kept needs a customised list');
+  assert.equal(OB.restoreSwitch({ kind: 'applied', tpl: 'creator', prev }, kept, M), null, 'applied needs the untouched list (changed since: no Undo over newer edits)');
+  assert.equal(OB.restoreSwitch({ kind: 'applied', tpl: 'creator', prev: 'x' }, applied, M), null, 'bad prev');
+  assert.equal(OB.restoreSwitch({ kind: 'weird', tpl: 'creator' }, kept, M), null);
+  assert.equal(OB.restoreSwitch(null, kept, M), null);
+  assert.equal(OB.restoreSwitch({ kind: 'applied', tpl: 'creator', prev, prevSocial: 'evil' }, applied, M).prevSocial, 'auto', 'unknown Social Media mode -> auto');
+  const dirty = OB.restoreSwitch({ kind: 'applied', tpl: 'creator', prev: ['custom:aaaa1111', 'custom:aaaa1111', 'nope', 'text'] }, applied, M);
+  assert.deepEqual(dirty.prev, ['hero', 'custom:aaaa1111', 'text'], 'prev cleaned like any list');
+  // texts
+  for (const k of ['switch_kept_title', 'switch_kept_text', 'switch_custom_one', 'switch_custom_many', 'switch_use', 'switch_applied_title', 'switch_applied_text', 'switch_undo', 'switch_undo_label', 'switch_kept_say', 'switch_applied_say', 'switch_undone_say']) assert.ok(OB.TX.en[k] && OB.TX.de[k], k);
+  assert.equal(OB.TX.en.switch_use, 'Use {name}\'s suggested sections');
+  assert.equal(OB.TX.de.switch_use, 'Vorgeschlagene Abschnitte von {name} verwenden');
 });
 
 (async () => {

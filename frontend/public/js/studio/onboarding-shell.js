@@ -148,6 +148,12 @@
       sec_gallery: 'Gallery', sec_gallery_text: 'Photos of your business, products or menu',
       sec_text: 'Text', sec_text_text: 'A heading and your own text',
       sec_custom: 'Custom Section', sec_custom_text: 'Your own heading and text', sec_custom_more: 'Your own heading and text · add as many as you need',
+      switch_kept_title: 'Your sections were kept', switch_kept_text: 'Your page keeps the {n} sections you chose in Step 4. The new design changes only the look and colours.',
+      switch_custom_one: 'Using the suggestions also removes your Custom Section. Undo brings it back.',
+      switch_custom_many: 'Using the suggestions also removes your {k} Custom Sections. Undo brings them back.',
+      switch_use: 'Use {name}\'s suggested sections', switch_applied_title: '{name}\'s suggested sections are on your page',
+      switch_applied_text: 'Your previous list of {n} sections can be restored.', switch_undo: 'Undo', switch_undo_label: 'Undo: restore your previous {n} sections',
+      switch_kept_say: 'Your sections were kept.', switch_applied_say: '{name}\'s suggested sections are now on your page. Undo is available.', switch_undone_say: 'Your previous sections are back.',
       // O2.1: appearance and the Step 1 benefits
       theme_group: 'Appearance', theme_light: 'Light mode', theme_dark: 'Dark mode',
       benefit_code: 'No coding required', benefit_mobile: 'Mobile optimized', benefit_update: 'Easy to update', benefit_free: 'Start for free',
@@ -220,6 +226,12 @@
       sec_gallery: 'Galerie', sec_gallery_text: 'Fotos von Ihrem Geschäft, Ihren Produkten oder Ihrer Speisekarte',
       sec_text: 'Text', sec_text_text: 'Eine Überschrift und Ihr eigener Text',
       sec_custom: 'Eigener Abschnitt', sec_custom_text: 'Ihre eigene Überschrift und Ihr eigener Text', sec_custom_more: 'Ihre eigene Überschrift und Ihr eigener Text · beliebig oft',
+      switch_kept_title: 'Ihre Abschnitte wurden beibehalten', switch_kept_text: 'Ihre Seite behält die {n} Abschnitte aus Schritt 4. Das neue Design ändert nur Aussehen und Farben.',
+      switch_custom_one: 'Wenn Sie die Vorschläge verwenden, wird auch Ihr eigener Abschnitt entfernt. „Rückgängig“ holt ihn zurück.',
+      switch_custom_many: 'Wenn Sie die Vorschläge verwenden, werden auch Ihre {k} eigenen Abschnitte entfernt. „Rückgängig“ holt sie zurück.',
+      switch_use: 'Vorgeschlagene Abschnitte von {name} verwenden', switch_applied_title: 'Die vorgeschlagenen Abschnitte von {name} sind auf Ihrer Seite',
+      switch_applied_text: 'Ihre vorherige Liste mit {n} Abschnitten lässt sich wiederherstellen.', switch_undo: 'Rückgängig', switch_undo_label: 'Rückgängig: Ihre vorherigen {n} Abschnitte wiederherstellen',
+      switch_kept_say: 'Ihre Abschnitte wurden beibehalten.', switch_applied_say: 'Die vorgeschlagenen Abschnitte von {name} sind jetzt auf Ihrer Seite. Rückgängig ist möglich.', switch_undone_say: 'Ihre vorherigen Abschnitte sind zurück.',
       theme_group: 'Darstellung', theme_light: 'Heller Modus', theme_dark: 'Dunkler Modus',
       benefit_code: 'Ganz ohne Programmieren', benefit_mobile: 'Für Smartphones optimiert', benefit_update: 'Einfach zu aktualisieren', benefit_free: 'Kostenlos starten',
       note_text: 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!',
@@ -295,6 +307,20 @@
     return { step: step, choice: choice, answers: answers };
   }
 
+  // T1c.4: the template-switch notice's state, as kept for a reload, checked against the restored answers:
+  //   { kind: 'kept', tpl }                       a customised list kept through a switch to tpl ("Use suggested" offered)
+  //   { kind: 'applied', tpl, prev, prevSocial }  tpl's suggested list applied; prev / prevSocial: the exact list before
+  //                                              (Custom Section instances with their ids) for the one-step Undo
+  // null when it no longer fits (another template, the list changed since, unknown values).
+  function restoreSwitch(s, answers, M) {
+    if (!s || typeof s !== 'object' || !answers || !answers.template || s.tpl !== answers.template) return null;
+    if (s.kind === 'kept') return Array.isArray(answers.sections) ? { kind: 'kept', tpl: s.tpl } : null;
+    if (s.kind !== 'applied' || answers.sections !== null) return null;
+    var prev = M.cleanSections(s.prev);
+    if (!prev) return null;
+    return { kind: 'applied', tpl: s.tpl, prev: prev, prevSocial: M.sanitize({ social: s.prevSocial }).social };
+  }
+
   // ── the page ──
   function start(win) {
     var doc = win.document;
@@ -331,13 +357,16 @@
     var tried = false, touched = {};             // after a Next attempt every error shows; a link's after leaving it filled in
     var last = { name: '', description: '' };    // the last valid name and description: the preview keeps them while a field is too long
     var adopted = false, owner = null;           // whose progress this is (owner: the store key; null: memory only)
+    var sw = null;                               // T1c.4: the template-switch notice (restoreSwitch)
     var liveTimer = null, spoken = {};
 
     function store() { try { return win.sessionStorage || null; } catch (e) { return null; } }
     function save() {
       var st = store();
       if (!owner || !st) return;
-      try { st.setItem(owner, JSON.stringify({ v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers })); } catch (e) {}
+      var data = { v: STORE_VERSION, step: nav.step, choice: nav.choice, answers: answers };
+      if (sw) data.sw = sw;                      // T1c.4: only while the switch notice is active
+      try { st.setItem(owner, JSON.stringify(data)); } catch (e) {}
     }
     function clearStore() {
       var st = store();
@@ -351,7 +380,7 @@
       adopted = true; owner = key;
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
-      if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; }
+      if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; sw = restoreSwitch(saved && saved.sw, answers, M); }
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -359,6 +388,7 @@
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
+      sw = null;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -599,10 +629,66 @@
       var changed = answers.template !== id;
       answers.template = id;
       if (changed || !tp.palettes.some(function (p) { return p.id === answers.palette; })) answers.palette = tp.palettes[0].id;
+      // T1c.4: a customised list is kept as it is (Custom Section ids included); the notice offers this template's suggestions.
+      // After "Use suggested" the Undo stays available while the list is untouched, also through further switches.
+      if (changed) {
+        if (sw && sw.kind === 'applied' && !Array.isArray(answers.sections)) sw.tpl = id;
+        else sw = Array.isArray(answers.sections) && !sameList(sectionsPage().sections, M.suggestedSections(V3, T, answers, current) || []) ? { kind: 'kept', tpl: id } : null;
+      }
       save();
       design();
       $('ob-next').disabled = !canNext(nav, designOk());
-      if (changed) sayIn('ob-design-status', t('design_selected').replace('{name}', T.list(current).filter(function (x) { return x.id === id; })[0].label));
+      if (changed) sayIn('ob-design-status', t('design_selected').replace('{name}', tplName(id)) + (switchShown() === 'kept' ? ' ' + t('switch_kept_say') : ''));
+    }
+    // ── T1c.4: the template-switch notice (Step 3): a kept customised list -> "Use {name}'s suggested sections";
+    // applied -> a one-step Undo restoring the exact previous list and order (Custom Section ids included) ──
+    function sameList(a, b) { return a.length === b.length && a.every(function (x, i) { return x === b[i]; }); }
+    function tplName(id) { var x = T.list(current).filter(function (y) { return y.id === id; })[0]; return x ? x.label : ''; }
+    // a text with the template's name; English "{name}'s" becomes "Services'" for a name ending in s
+    function withName(key, name) { return t(key).replace("{name}'s", /s$/i.test(name) ? name + "'" : name + "'s").replace('{name}', name); }
+    function switchShown() {
+      if (!sw || !M || !designOk() || sw.tpl !== answers.template) return null;
+      if (sw.kind === 'applied') return Array.isArray(answers.sections) ? null : 'applied';
+      return Array.isArray(answers.sections) && !sameList(sectionsPage().sections, M.suggestedSections(V3, T, answers, current) || []) ? 'kept' : null;
+    }
+    function switchNotice() {
+      var box = $('ob-switch');
+      if (!box) return;
+      var kind = switchShown(), name = kind ? tplName(answers.template) : '';
+      box.hidden = !kind;
+      if (!kind) return;
+      box.setAttribute('data-kind', kind);
+      var use = $('ob-switch-use'), undo = $('ob-switch-undo');
+      use.hidden = kind !== 'kept'; undo.hidden = kind !== 'applied';
+      if (kind === 'kept') {
+        var now = sectionsPage().sections, k = now.filter(M.isCustom).length;
+        $('ob-switch-title').textContent = t('switch_kept_title');
+        $('ob-switch-text').textContent = t('switch_kept_text').replace('{n}', String(now.length)) + (k ? ' ' + (k === 1 ? t('switch_custom_one') : t('switch_custom_many').replace('{k}', String(k))) : '');
+        use.textContent = withName('switch_use', name);
+      } else {
+        $('ob-switch-title').textContent = withName('switch_applied_title', name);
+        $('ob-switch-text').textContent = t('switch_applied_text').replace('{n}', String(sw.prev.length));
+        undo.textContent = t('switch_undo');
+        undo.setAttribute('aria-label', t('switch_undo_label').replace('{n}', String(sw.prev.length)));
+      }
+    }
+    function useSuggested() {
+      if (switchShown() !== 'kept') return;
+      sw = { kind: 'applied', tpl: answers.template, prev: answers.sections.slice(), prevSocial: answers.social };
+      answers.sections = null;          // untouched again: the template's suggested list
+      answers.social = 'auto';
+      save(); design();
+      sayIn('ob-design-status', withName('switch_applied_say', tplName(answers.template)));
+      $('ob-switch-undo').focus();
+    }
+    function undoSwitch() {
+      if (switchShown() !== 'applied') return;
+      answers.sections = M.cleanSections(sw.prev);   // the exact list and order (Custom Section ids kept)
+      answers.social = sw.prevSocial;
+      sw = { kind: 'kept', tpl: answers.template };
+      save(); design();
+      sayIn('ob-design-status', t('switch_undone_say'));
+      ($('ob-switch-use').hidden ? $('ob-design-title') : $('ob-switch-use')).focus();
     }
     function pickPalette(id) {
       var tp = designOk() ? T.get(answers.template) : null;
@@ -640,6 +726,7 @@
     function design() {
       templateCards();
       paletteChoices();
+      switchNotice();
       $('ob-design-hint').hidden = designOk();
       $('ob-design-jump').disabled = !designOk();   // phones: nothing to jump to before a design is chosen
       drawDesign();
@@ -745,7 +832,7 @@
       var list = sectionsPage().sections, entry = list.filter(M.isCustom).length < M.MAX_CUSTOM ? M.newCustom(list, rand) : null;
       if (!entry) return;
       list.push(entry);
-      answers.sections = list;
+      answers.sections = list; sw = null;
       reveal = M.sectionId(entry);
       save(); sections();
       var now = sectionsPage().sections;
@@ -760,7 +847,7 @@
       if (list.indexOf(type) !== -1 || M.SECTION_TYPES.indexOf(type) === -1) return;
       var restIndex = M.SECTION_TYPES.filter(function (x) { return list.indexOf(x) === -1; }).indexOf(type);
       list.push(type);
-      answers.sections = list;
+      answers.sections = list; sw = null;
       if (type === 'socialMedia') answers.social = 'added';
       reveal = M.sectionId(type);
       save(); sections();
@@ -774,7 +861,7 @@
       var list = sectionsPage().sections, i = list.indexOf(type), name = secName(type, list);
       if (i < 1) return;                                     // the Hero cannot be removed
       list.splice(i, 1);
-      answers.sections = list;
+      answers.sections = list; sw = null;
       if (type === 'socialMedia') answers.social = 'removed';
       reveal = null;
       save(); sections();
@@ -788,7 +875,7 @@
       var list = sectionsPage().sections, i = list.indexOf(type), j = i + (dir === 'up' ? -1 : 1);
       if (i < 1 || j < 1 || j >= list.length) return;        // the Hero stays first
       list[i] = list[j]; list[j] = type;
-      answers.sections = list;
+      answers.sections = list; sw = null;
       reveal = M.sectionId(type);
       save(); sections();
       say(t('sec_moved').replace('{name}', secName(type)).replace('{n}', String(j + 1)).replace('{total}', String(list.length)));
@@ -1019,6 +1106,8 @@
     // Step 4: Edit back to Steps 2 and 3
     $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
     $('ob-edit-sections').addEventListener('click', function () { editStep(3, 'ob-chosen-title'); });
+    $('ob-switch-use').addEventListener('click', useSuggested);
+    $('ob-switch-undo').addEventListener('click', undoSwitch);
     $('ob-sum-toggle').addEventListener('click', function () { sumOpen($('ob-sum-sections-box').getAttribute('data-open') !== 'true'); });
     // Step 5's review frame: after each load its scroll position (no reveal); from it, only its scroll position
     if (PV && $('ob-review-frame')) {
@@ -1096,5 +1185,5 @@
   }
 
   return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, STORE_PREFIX: STORE_PREFIX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back,
-    storeKey: storeKey, restore: restore, STORE_VERSION: STORE_VERSION, start: start };
+    storeKey: storeKey, restore: restore, restoreSwitch: restoreSwitch, STORE_VERSION: STORE_VERSION, start: start };
 });

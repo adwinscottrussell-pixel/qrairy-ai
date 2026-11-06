@@ -188,6 +188,16 @@ body.ob-page {
 }
 .ob-info .ob-ic { color: var(--ob-info); margin-top: 1px; }
 .ob-info p { margin: 0; font-size: 14px; }
+/* T1c.4: the template-switch notice (Step 3) */
+.ob-switch { margin-top: 0; }
+.ob-switch__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ob-switch .ob-switch__title { font-weight: 700; }
+.ob-switch .ob-switch__text { line-height: 1.45; }
+.ob-switch__btn { align-self: flex-start; margin-top: 6px; min-height: 44px; max-width: 100%; padding: 10px 14px; border: 1px solid var(--ob-border-strong); border-radius: 12px;
+  background: var(--ob-surface); color: var(--ob-text-2); font: 600 14px/1.3 Inter, sans-serif; text-align: left; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.ob-switch__btn:hover { border-color: var(--ob-navy); color: var(--ob-navy); }
+.ob-switch__btn[hidden] { display: none; }
+.ob-switch__btn:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
 
 /* ── buttons ── */
 .ob-btn {

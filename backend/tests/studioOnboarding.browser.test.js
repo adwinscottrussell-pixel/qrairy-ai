@@ -1728,6 +1728,98 @@ test('Custom Sections: at most ten; then "Custom Section" leaves "Add more"', as
   await page.close();
 });
 
+test('T1c.4 template switch: untouched list follows the new template (no notice); a customised list (Custom Sections included) is kept with a notice; "Use suggested" only on request; one-step Undo restores the exact list; Back / Next and reload; Step 2 kept; keyboard and announcements; EN / DE, Light / Dark, desktop / 390 / 320', async () => {
+  for (const [viewport, lang, theme, a, b] of [[DESKTOP, 'en', 'light', 'restaurant', 'creator'], [Object.assign({}, PHONE, { width: 390 }), 'de', 'dark', 'bakery', 'creator'],
+    [Object.assign({}, PHONE, { width: 320 }), 'en', 'dark', 'creator', 'services'], [DESKTOP, 'de', 'dark', 'services', 'restaurant']]) {
+    const { page, api, external } = await onboarding({ viewport, lang, theme });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    const de = lang === 'de', tag = viewport.width + ' ' + lang + ' ' + theme + ' ' + a + '->' + b;
+    const NAME = de ? 'Bäckerei Sonne' : 'Café Sonne', DESC = de ? 'Frisches Brot.' : 'Fresh bread.';
+    const notice = () => page.evaluate(() => { const n = document.getElementById('ob-switch'); const v = (x) => !!x && !x.hidden && getComputedStyle(x).display !== 'none';
+      return { shown: v(n), kind: n.getAttribute('data-kind'), title: document.getElementById('ob-switch-title').textContent, text: document.getElementById('ob-switch-text').textContent,
+        use: v(document.getElementById('ob-switch-use')) ? document.getElementById('ob-switch-use').textContent : null, undo: v(document.getElementById('ob-switch-undo')) ? document.getElementById('ob-switch-undo').textContent : null }; });
+    const status = () => page.waitForFunction(() => document.getElementById('ob-design-status').textContent.length > 0, { timeout: 2000 }).then(() => text(page, '#ob-design-status'));
+    await toTemplateStep4(page, { id: a, name: NAME, description: DESC });
+    const sugA = await chosen(page);
+    // A. untouched: switching follows the new template, no notice
+    await page.click('#ob-back'); await sleep(200);
+    await page.click('.ob-tpl[data-template="' + b + '"]'); await sleep(250);
+    assert.equal((await notice()).shown, false, tag + ': untouched list: no notice');
+    await page.click('#ob-next'); await sleep(250);
+    const sugB = await chosen(page);
+    assert.deepEqual(sugB, await page.evaluate((id) => window.QraivyOnboardingTemplates.get(id).sections.filter((x) => x !== 'socialMedia'), b), tag + ': follows ' + b + '\'s suggestions (no Step 2 links: no Social Media)');
+    assert.notDeepEqual(sugB, sugA, tag + ': a pair with different suggestions');
+    // B. customise on Step 4: two Custom Sections, a move, a removal
+    await page.click('#ob-back'); await sleep(200);
+    await page.click('.ob-tpl[data-template="' + a + '"]'); await sleep(250);
+    assert.equal((await notice()).shown, false, tag + ': still untouched: no notice');
+    await page.click('#ob-next'); await sleep(250);
+    assert.deepEqual(await chosen(page), sugA);
+    for (let i = 0; i < 2; i++) { await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(120); }
+    let cs = (await chosen(page)).filter((x) => x.startsWith('custom:'));
+    await page.click('#ob-chosen [data-type="' + cs[1] + '"] [data-act="up"]'); await sleep(120);
+    const dels = await page.$$('#ob-chosen [data-act="remove"]'); await dels[0].click(); await sleep(120);
+    const mine = await chosen(page);
+    // switch: kept, notice with the action; nothing replaced
+    await page.click('#ob-back'); await sleep(200);
+    await page.click('.ob-tpl[data-template="' + b + '"]'); await sleep(250);
+    const nameB = await page.evaluate((id) => window.QraivyOnboardingTemplates.list(document.documentElement.lang === 'de' ? 'de' : 'en').filter((x) => x.id === id)[0].label, b);
+    let n = await notice();
+    assert.deepEqual([n.shown, n.kind, n.title, n.use, n.undo], [true, 'kept', de ? 'Ihre Abschnitte wurden beibehalten' : 'Your sections were kept',
+      de ? 'Vorgeschlagene Abschnitte von ' + nameB + ' verwenden' : 'Use ' + nameB + (/s$/.test(nameB) ? '\'' : '\'s') + ' suggested sections', null], tag + ': kept notice (English possessive: Services\')');
+    assert.ok(n.text.includes(String(mine.length)) && n.text.includes(de ? 'Ihre 2 eigenen Abschnitte' : 'your 2 Custom Sections'), tag + ': count and the Custom Section note: ' + n.text);
+    assert.match(await status(), de ? /Ihre Abschnitte wurden beibehalten/ : /Your sections were kept/, tag + ': announced');
+    await page.click('#ob-next'); await sleep(250);
+    assert.deepEqual(await chosen(page), mine, tag + ': the customised list kept exactly (Custom Section ids too)');
+    await page.click('#ob-back'); await sleep(200);
+    assert.equal((await notice()).kind, 'kept', tag + ': Back / Next keep the notice');
+    // C. Use suggested by keyboard
+    await page.focus('#ob-switch-use'); await page.keyboard.press('Enter'); await sleep(250);
+    n = await notice();
+    assert.deepEqual([n.kind, n.use, n.undo], ['applied', null, de ? 'Rückgängig' : 'Undo'], tag + ': applied, Undo offered');
+    assert.equal(n.title, de ? 'Die vorgeschlagenen Abschnitte von ' + nameB + ' sind auf Ihrer Seite' : nameB + (/s$/.test(nameB) ? '\'' : '\'s') + ' suggested sections are on your page');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-switch-undo', tag + ': focus on Undo');
+    assert.equal(await page.$eval('#ob-switch-undo', (x) => x.getAttribute('aria-label')), (de ? 'Rückgängig: Ihre vorherigen ' : 'Undo: restore your previous ') + mine.length + (de ? ' Abschnitte wiederherstellen' : ' sections'));
+    assert.match(await status(), de ? /sind jetzt auf Ihrer Seite/ : /are now on your page/, tag + ': announced');
+    await page.click('#ob-next'); await sleep(250);
+    assert.deepEqual(await chosen(page), sugB, tag + ': ' + b + '\'s suggested list');
+    // D. reload keeps the applied state and its Undo
+    await page.click('#ob-back'); await sleep(200);
+    await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+    n = await notice();
+    assert.deepEqual([n.shown, n.kind], [true, 'applied'], tag + ': reload keeps Undo');
+    // E. Undo: the exact previous list and order, the same Custom Section ids
+    await page.click('#ob-switch-undo'); await sleep(250);
+    n = await notice();
+    assert.equal(n.kind, 'kept', tag + ': back to the kept notice');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'ob-switch-use', tag + ': focus on Use suggested');
+    assert.match(await status(), de ? /Ihre vorherigen Abschnitte sind zurück/ : /Your previous sections are back/);
+    await page.click('#ob-next'); await sleep(250);
+    assert.deepEqual(await chosen(page), mine, tag + ': Undo restored the exact list (ids and order)');
+    // F. a Step 4 edit ends the notice (no Undo over newer edits)
+    await page.click('#ob-chosen [data-type="' + mine[mine.length - 1] + '"] [data-act="up"]'); await sleep(150);
+    await page.click('#ob-back'); await sleep(200);
+    assert.equal((await notice()).shown, false, tag + ': after a Step 4 edit: no notice');
+    // Step 2 kept throughout
+    await page.click('#ob-back'); await sleep(200);
+    assert.deepEqual(await page.evaluate(() => [document.getElementById('ob-name').value, document.getElementById('ob-description').value]), [NAME, DESC], tag + ': Step 2 kept');
+    // layout, contrast, targets (on the kept notice)
+    await page.click('#ob-next'); await sleep(200);
+    await page.click('.ob-tpl[data-template="' + a + '"]'); await sleep(250);
+    if ((await notice()).shown) {
+      const lay = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, h: document.getElementById('ob-switch-use').getBoundingClientRect().height }));
+      assert.ok(lay.sw <= lay.iw && lay.h >= 44, tag + ': ' + JSON.stringify(lay));
+      for (const sel of ['#ob-switch-title', '#ob-switch-text', '#ob-switch-use']) {
+        const r = await contrast(page, sel);
+        assert.ok(r !== null && r >= 4.5, tag + ': ' + sel + ' contrast ' + r);
+      }
+    }
+    assert.deepEqual(errors, [], tag + ': no script error');
+    assert.deepEqual(api, []); assert.deepEqual(external, []);
+    await page.close();
+  }
+});
+
 (async () => {
   browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
   let passed = 0, failed = 0;

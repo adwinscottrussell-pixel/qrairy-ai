@@ -204,6 +204,14 @@
       samplePaths: s.samplePaths, errors: s.errors };
   }
 
+  // suggestedSections(V3, T, answers, language) -> the chosen template's suggested list as the page would have it
+  // with an untouched list (Social Media following Step 2's links), or null without a known template (T1c.4)
+  function suggestedSections(V3, T, answers, language) {
+    var a = answers || {}, tpl = T && a.template ? T.get(a.template) : null;
+    if (!tpl) return null;
+    return sectionsFor({ social: 'auto' }, check(V3, a, lang(language)).values.links.length > 0, tpl.sections);
+  }
+
   // One link, by core.js's own rules: null when valid, else an error code
   function linkError(V3, platform, url) {
     if (PLATFORMS.indexOf(platform) === -1) return 'link_platform';
@@ -283,5 +291,5 @@
     chars: chars, cleanName: cleanName, cleanDescription: cleanDescription, normalizeUrl: normalizeUrl,
     buildDesign: buildDesign, linkError: linkError, check: check, sanitize: sanitize, nextPlatform: nextPlatform,
     SECTION_TYPES: SECTION_TYPES, SECTION_IDS: SECTION_IDS, DEFAULT_SECTIONS: DEFAULT_SECTIONS, cleanSections: cleanSections,
-    MAX_CUSTOM: MAX_CUSTOM, isCustom: isCustom, sectionId: sectionId, newCustom: newCustom, sectionsFor: sectionsFor, checkPage: checkPage, pageFor: pageFor };
+    MAX_CUSTOM: MAX_CUSTOM, isCustom: isCustom, sectionId: sectionId, newCustom: newCustom, suggestedSections: suggestedSections, sectionsFor: sectionsFor, checkPage: checkPage, pageFor: pageFor };
 });

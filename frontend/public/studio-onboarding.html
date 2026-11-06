@@ -263,6 +263,16 @@
               <h2 class="ob-h2" id="ob-pals-title" data-ob="pal_title">Colour palette</h2>
               <div class="ob-pals" id="ob-pals" role="radiogroup" aria-labelledby="ob-pals-title"></div>
             </section>
+            <!-- T1c.4: after a design switch with a customised section list: kept, "Use suggested" on request, then a one-step Undo -->
+            <div class="ob-info ob-switch" id="ob-switch" hidden>
+              <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+              <div class="ob-switch__body">
+                <p class="ob-switch__title" id="ob-switch-title"></p>
+                <p class="ob-switch__text" id="ob-switch-text"></p>
+                <button type="button" class="ob-switch__btn" id="ob-switch-use"></button>
+                <button type="button" class="ob-switch__btn" id="ob-switch-undo" hidden></button>
+              </div>
+            </div>
             <p class="ob-sr" id="ob-design-status" role="status" aria-live="polite"></p>
           </div>
           <!-- the live preview: the chosen template rendered by core.js; the frame may run only the fixed
