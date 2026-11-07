@@ -202,6 +202,13 @@
     var de = SECTION_TEXT[state.lang] && SECTION_TEXT[state.lang][type];
     return de ? { label: de[0], description: de[1] } : { label: lib.label, description: lib.description };
   }
+  // D2.3b-2: the brand colour of the page now in the editor (the demo, a template draft, a customer page; its
+  // current theme, Undo / Redo included), V3's default when it has none or not a valid one
+  function pageBrand() {
+    var th = editor && editor.theme ? editor.theme() : null;
+    var b = th && th.palette ? th.palette.brand : null;
+    return (typeof b === 'string' && /^#[0-9a-fA-F]{6}$/.test(b) ? b : V3.DEFAULT_PALETTE.brand).toLowerCase();
+  }
   function fieldLabel(k) { var d = FIELD[state.lang] || FIELD.en; return d[k] || FIELD.en[k] || k; }
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
@@ -935,7 +942,7 @@
       onLayout: function () { if (preview) deviceButtons(); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: (demo.design.theme.palette.brand || V3.DEFAULT_PALETTE.brand).toLowerCase(),
+      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: pageBrand,
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
       signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });

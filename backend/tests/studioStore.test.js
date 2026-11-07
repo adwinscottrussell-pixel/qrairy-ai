@@ -535,6 +535,19 @@ test('Gallery: the demo starts with three described starter images; descriptions
   assert.ok(!V3.renderDesign(store.lastValid(), { businessName: 'X' }).html.includes('id="galerie"'), 'public: left out');
 });
 
+test('D2.3b-2 theme(): the current page\'s theme as a copy (follows load, never changes the draft when modified)', () => {
+  const { store } = make();
+  const d0 = store.draft();
+  assert.deepEqual(store.theme(), d0.theme);
+  const th = store.theme();
+  th.palette.brand = '#000000';
+  assert.deepEqual(store.theme(), d0.theme, 'a copy: the draft is not changed through it');
+  const other = demo().design;
+  other.theme.palette.brand = '#94500f';
+  assert.ok(store.load(other));
+  assert.equal(store.theme().palette.brand, '#94500f', 'the loaded page\'s theme');
+});
+
 (async () => {
   let passed = 0, failed = 0;
   for (const { name, fn } of tests) {

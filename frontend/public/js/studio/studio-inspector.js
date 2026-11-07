@@ -501,6 +501,9 @@
   function createInspector(o) {
     var store = o.store, el = o.el;
     var refreshers = [];
+    // D2.3b-2: the colour a field without its own colour shows: the open page's brand (o.brand(): read at every
+    // refresh, so a page switch, a theme change and Undo / Redo follow), or a fixed colour (older callers)
+    function brandColor() { return typeof o.brand === 'function' ? o.brand() : o.brand; }
     var uid = 0;
     function tx(k) { var d = TX[o.lang()] || TX.en; return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : TX.en[k]; }
     function nextId(p) { uid += 1; return 'st-f-' + p + '-' + uid; }
@@ -608,7 +611,7 @@
       wrap.appendChild(inp); wrap.appendChild(reset);
       refreshers.push(function (cur) {
         var v = getPath(cur, path);
-        var shown = v || o.brand;
+        var shown = v || brandColor();
         if (!focused(inp) && inp.value.toLowerCase() !== shown) inp.value = shown;
         reset.hidden = !v;
       });

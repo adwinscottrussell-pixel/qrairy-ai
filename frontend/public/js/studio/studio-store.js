@@ -142,6 +142,8 @@
     var api = {
       // ── reading ──
       draft: function () { return clone(draft); },
+      // D2.3b-2: the page's theme alone (the colour fields compare with its brand; cheaper than a whole draft)
+      theme: function () { return draft && draft.theme ? clone(draft.theme) : null; },
       lastValid: function () { return lastValid ? clone(lastValid) : null; },
       isValid: function () { return errors.length === 0; },
       errors: function () { return errors.slice(); },

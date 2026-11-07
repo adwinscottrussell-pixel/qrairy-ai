@@ -270,6 +270,67 @@ test('D2.3b-1 origin in the Studio: kept for the opened onboarding draft (as sto
   await page.close();
 });
 
+test('D2.3b-2 colour field: a button without its own colour shows the OPEN page\'s brand (Bakery, Creator; page switch; design reload); an explicit colour stays; Default clears it; Undo / Redo follow', async () => {
+  S.resetDrafts();
+  const OB = require('../../frontend/public/js/studio/onboarding-shell.js');
+  const M = require('../../frontend/public/js/studio/onboarding-model.js');
+  const T = require('../../frontend/public/js/studio/onboarding-templates.js');
+  const make = async (template, name) => {
+    const r = OB.draftRequest(M, V3, T, { template, palette: T.get(template).palettes[0].id, name, description: '', links: [], social: 'auto', sections: null }, 'en');
+    const res = await fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ requestId: require('crypto').randomUUID() }, r)) }).then((x) => x.json());
+    return { slug: res.page.slug, brand: r.design.theme.palette.brand.toLowerCase() };
+  };
+  const bakery = await make('bakery', 'Bakery Sun');
+  const creator = await make('creator', 'Creator Sun');
+  assert.notEqual(bakery.brand, creator.brand, 'two different template brands');
+  const demoBrand = V3.DEFAULT_PALETTE.brand.toLowerCase();
+  assert.ok(bakery.brand !== demoBrand && creator.brand !== demoBrand);
+  const { page, log } = await open('studio.html?slug=' + bakery.slug);
+  await until(async () => (await studioState(page)).status === 'loaded', 'bakery loaded');
+  const SEL = '#st-fields .st-color[data-path="data.primary.color"]';
+  // the Hero's primary button colour (the first section, Content)
+  const heroColour = async () => {
+    if (!(await page.$(SEL))) {
+      await page.click('#st-tab-sections');
+      const first = await page.$eval('#st-outline [data-id]', (n) => n.getAttribute('data-id'));
+      await page.click('#st-outline [data-id="' + first + '"]');
+      await page.click('[data-insp="content"]');
+      await page.waitForSelector(SEL, { timeout: 4000 });
+    }
+    return page.$eval(SEL, (w) => ({ shown: w.querySelector('input[type="color"]').value.toLowerCase(), defaultShown: !w.querySelector('button').hidden,
+      stored: ((window.QraivyStudio.editor.draft().pages[0].sections[0].data || {}).primary || {}).color || null }));
+  };
+  assert.deepEqual(await heroColour(), { shown: bakery.brand, defaultShown: false, stored: null }, 'Bakery: its own brand, not the demo\'s');
+  // an explicit colour
+  await page.$eval(SEL + ' input[type="color"]', (i) => { i.value = '#123456'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  await sleep(150);
+  assert.deepEqual(await heroColour(), { shown: '#123456', defaultShown: true, stored: '#123456' }, 'the override shown and stored');
+  // Undo: back to no colour (the brand); Redo: the override again
+  await page.click('#st-undo-btn'); await sleep(200);
+  assert.deepEqual(await heroColour(), { shown: bakery.brand, defaultShown: false, stored: null }, 'Undo');
+  await page.click('#st-redo-btn'); await sleep(200);
+  assert.deepEqual(await heroColour(), { shown: '#123456', defaultShown: true, stored: '#123456' }, 'Redo');
+  // Default clears the override
+  await page.click(SEL + ' button'); await sleep(200);
+  assert.deepEqual(await heroColour(), { shown: bakery.brand, defaultShown: false, stored: null }, 'Default');
+  // switch pages (nothing unsaved: Default restored the loaded page; save if the editor still counts it changed)
+  if (await page.$eval('#st-save-btn', (b) => !b.disabled)) { await page.click('#st-save-btn'); await until(async () => (await studioState(page)).saveState === 'saved', 'saved'); }
+  await page.select('#st-page-select', creator.slug);
+  await until(async () => { const s = await studioState(page); return s.status === 'loaded' && s.selected === creator.slug; }, 'creator open');
+  assert.deepEqual(await heroColour(), { shown: creator.brand, defaultShown: false, stored: null }, 'Creator: its own brand');
+  await page.select('#st-page-select', bakery.slug);
+  await until(async () => { const s = await studioState(page); return s.status === 'loaded' && s.selected === bakery.slug; }, 'bakery again');
+  assert.equal((await heroColour()).shown, bakery.brand, 'back to Bakery');
+  // a design reload with another brand (as a theme change would): followed at once
+  await page.evaluate(() => { const d = window.QraivyStudio.editor.draft(); d.theme.palette.brand = '#0a7f3f'; window.QraivyStudio.editor.load(d); });
+  await sleep(200);
+  assert.equal((await heroColour()).shown, '#0a7f3f', 'the current theme, not a remembered one');
+  // nothing about origins or the stored drafts changed by looking at colours
+  assert.equal(designOf(creator.slug).draftRevision, 1);
+  assert.deepEqual(log.errors, []);
+  await page.close();
+});
+
 test('two tabs: the Studio saves a newer version; the onboarding\'s Save changes gets 409 and overwrites nothing; an expired session (401) changes nothing either', async () => {
   S.resetDrafts();
   const a = await open('studio-onboarding.html');
