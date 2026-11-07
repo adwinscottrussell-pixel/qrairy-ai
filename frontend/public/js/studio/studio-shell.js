@@ -477,7 +477,18 @@
     var valid = editor.lastValid();
     var name = pageView.current ? pageView.current.name : window.QRAIVY_STUDIO_DEMO.businessName;
     var r = valid ? V3.renderDesign(valid, { businessName: name }, { preview: true, deals: dealsView }) : null;
+    if (r && r.ok) prepareShown(r.html);
     return r && r.ok ? DEMO_IMAGES.localizeHtml(r.html) : preview.html();
+  }
+  // The page's own starter photos (a template draft's Hero, Gallery, ...): the sandboxed frames cannot load them
+  // (studio-demo-images.js), so the Studio page prepares their inline copies, like the demo's, and redraws the
+  // preview once they are ready. Each photo is loaded once per visit (prepareImages skips the ones already asked
+  // for), so the redraw asks for nothing new and ends there; the redraw always shows the page open at that moment
+  // (an answer for a page left meanwhile only refreshes the current one). The design is never changed.
+  function prepareShown(html) {
+    if (!DEMO_IMAGES.knownUrlsIn || !DEMO_IMAGES.prepareImages) return;
+    var urls = DEMO_IMAGES.knownUrlsIn(html);
+    if (urls.length) DEMO_IMAGES.prepareImages(urls, function () { if (preview) preview.setHtml(pageHtml(), 0); });
   }
   // The signed-in Clerk session's token (the Deal Builder's mechanism); none without a session.
   function clerkToken() {

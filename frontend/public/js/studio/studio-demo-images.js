@@ -93,6 +93,11 @@
   function localSrc(url) { return known(url) ? KNOWN[url].local : null; }
   // what the Studio page shows for an image address: the local copy, or the address itself
   function displaySrc(url) { return localSrc(url) || url; }
+  // the known starter addresses that occur in a text (a page's HTML or design), each once; any other image is left out
+  function knownUrlsIn(text) {
+    if (typeof text !== 'string' || !text) return [];
+    return Object.keys(KNOWN).filter(function (url) { return text.indexOf(url) !== -1; });
+  }
   // the template photos' addresses, for a list of ids (unknown ids left out)
   function templateUrls(ids) {
     return (Array.isArray(ids) ? ids : []).map(function (id) {
@@ -170,5 +175,5 @@
   return { STARTERS: STARTERS.slice(), LOCAL_DIR: LOCAL_DIR, STUDIO_LOCAL_DIR: STUDIO_LOCAL_DIR, AI_LABEL: AI_LABEL, SIZE: SIZE, PLACEHOLDER: PLACEHOLDER,
     TEMPLATE_IMAGES: TEMPLATE_IMAGES.map(function (i) { return Object.assign({}, i); }),
     cloudinaryUrl: cloudinaryUrl, studioUrl: studioUrl, fit: fit, placeholder: placeholder, templateUrls: templateUrls,
-    localSrc: localSrc, displaySrc: displaySrc, prepare: prepare, prepareImages: prepareImages, status: status, localizeHtml: localizeHtml };
+    localSrc: localSrc, displaySrc: displaySrc, knownUrlsIn: knownUrlsIn, prepare: prepare, prepareImages: prepareImages, status: status, localizeHtml: localizeHtml };
 });

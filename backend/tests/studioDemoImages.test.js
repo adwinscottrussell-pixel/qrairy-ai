@@ -249,6 +249,16 @@ test('T1a: the demo\'s prepare() is unchanged (the same three files, once) and w
   assert.deepEqual(D.status(), { started: true, ready: 3, failed: 0 });
 });
 
+test('knownUrlsIn: the known starter addresses in a text, each once; unknown images, near-misses and non-text ignored', () => {
+  const beauty = DEMO_IMAGES.cloudinaryUrl('beauty-salon-01'), creator = DEMO_IMAGES.studioUrl('QRAIVY-Creator-Hero'), bread = DEMO_IMAGES.cloudinaryUrl('bakery-bread-01');
+  const html = '<img src="' + beauty + '"><img src="' + beauty + '"><div style="background:url(' + creator + ')"></div>' +
+    '<img src="https://res.cloudinary.com/dwqc6n7rn/image/upload/v1/customer/own-photo.jpg"><img src="' + beauty.replace('w_1200', 'w_600') + '"><img src="https://example.com/' + 'beauty-salon-01.jpg">';
+  assert.deepEqual(DEMO_IMAGES.knownUrlsIn(html).sort(), [beauty, creator].sort(), 'only the exact known addresses, once');
+  assert.deepEqual(DEMO_IMAGES.knownUrlsIn(JSON.stringify({ data: { image: bread } })), [bread], 'works on a design too');
+  for (const x of [undefined, null, '', 42, {}, ['x']]) assert.deepEqual(DEMO_IMAGES.knownUrlsIn(x), [], String(x));
+  assert.ok(DEMO_IMAGES.knownUrlsIn(html).every((u) => DEMO_IMAGES.localSrc(u)), 'each has a local copy');
+});
+
 let failed = 0;
 for (const { name, fn } of tests) {
   try { fn(); console.log('ok  ' + name); }
