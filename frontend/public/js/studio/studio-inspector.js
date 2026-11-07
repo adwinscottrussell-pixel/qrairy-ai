@@ -1187,6 +1187,18 @@
       // D2.3b-3: the section's name as the outline shows it (numbered when repeated)
       o.kind.textContent = sec ? (typeof o.sectionName === 'function' ? o.sectionName(sec) : o.sectionLabel(sec.type)) : '';
       if (!sec) { box.appendChild(el('p', { class: 'st-empty', text: o.t('select_section') })); o.note.textContent = ''; return; }
+      // D2.3b-4: the Studio-only guidance for an empty section (o.guidance: the shell decides; plain text), kept up to
+      // date while typing: it goes as soon as the section has content and comes back when it is emptied (Undo too)
+      if (typeof o.guidance === 'function') {
+        var guide = el('p', { class: 'st-guide', role: 'note', 'data-guide': '', hidden: true });
+        box.appendChild(guide);
+        refreshers.push(function (cur) {
+          var g = o.guidance(cur);
+          guide.hidden = !g;
+          guide.textContent = g ? g.text : '';
+          if (g) guide.setAttribute('data-kind', g.kind); else guide.removeAttribute('data-kind');
+        });
+      }
       var D = o.V3.describe();
       var editable = EDITABLE.indexOf(sec.type) !== -1;
       box.setAttribute('data-editable', String(editable));

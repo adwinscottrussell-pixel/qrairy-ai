@@ -117,6 +117,8 @@ const LPV3_FILES = [
   'backend/tests/studioOriginRead.test.js',
   // D2.3b-3: Custom Sections in the full Studio (labels, numbering, the shortcut, the 40-section limit)
   'backend/tests/studioCustomSections.browser.test.js',
+  // D2.3b-4: the Studio-only guidance for empty sections
+  'backend/tests/studioGuidance.browser.test.js',
   // T0: the two approved Studio starter heroes (the web copies; the PNG originals stay outside the repository)
   'frontend/public/images/studio/starter/QRAIVY-Creator-Hero.jpg',
   'frontend/public/images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',

@@ -462,6 +462,9 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-addbtn[aria-disabled="true"] .st-ic { color: var(--st-muted); }
 .st-addbtn__why { margin: 6px 0 0; font: 500 12.5px/1.4 'Inter', sans-serif; color: var(--st-muted); }
 .st-outline small.is-empty { font-style: italic; }
+/* D2.3b-4: the guidance note at the top of an empty section's editor (Studio only) */
+.st-guide { display: flex; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--st-border-strong); border-left: 3px solid var(--st-accent); border-radius: 10px; background: var(--st-surface-2, var(--st-surface)); color: var(--st-text); font: 500 13px/1.45 'Inter', sans-serif; }
+.st-guide[hidden] { display: none; }
 
 /* Add library: title, a readable description, a visible availability label */
 .st-lib__item { align-items: flex-start; padding: 12px 10px 12px 12px; }

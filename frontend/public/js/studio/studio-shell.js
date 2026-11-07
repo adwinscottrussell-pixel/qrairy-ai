@@ -82,7 +82,9 @@
       conflict_text: 'This page was saved in another tab or on another device. Nothing was overwritten.', conflict_load: 'Load saved version', conflict_keep: 'Keep editing',
       conflict_load_confirm: 'Load the saved version? Your unsaved changes here will be lost.', signout_confirm: 'Sign out? Your unsaved changes on this page will be lost.',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
-      tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', add_custom: 'Add Custom Section', sec_empty: 'Empty – add content', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
+      tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', add_custom: 'Add Custom Section', sec_empty: 'Empty – add content',
+      guide_empty: 'Add your content – this section isn’t shown on your public page until it has content.',
+      guide_example: 'The example details from the template were not saved as your information. Add your own.', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
       phone_note: 'Full editing works on a tablet or computer. On a phone you can preview and publish.',
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
@@ -123,7 +125,9 @@
       conflict_text: 'Diese Seite wurde in einem anderen Tab oder auf einem anderen Gerät gespeichert. Es wurde nichts überschrieben.', conflict_load: 'Gespeicherte Fassung laden', conflict_keep: 'Weiter bearbeiten',
       conflict_load_confirm: 'Gespeicherte Fassung laden? Ihre nicht gespeicherten Änderungen hier gehen verloren.', signout_confirm: 'Abmelden? Ihre nicht gespeicherten Änderungen an dieser Seite gehen verloren.',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
-      tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', add_custom: 'Eigenen Abschnitt hinzufügen', sec_empty: 'Leer – Inhalt hinzufügen', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
+      tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', add_custom: 'Eigenen Abschnitt hinzufügen', sec_empty: 'Leer – Inhalt hinzufügen',
+      guide_empty: 'Inhalt hinzufügen – dieser Abschnitt erscheint erst auf Ihrer öffentlichen Seite, wenn er Inhalte hat.',
+      guide_example: 'Die Beispielangaben der Vorlage wurden nicht als Ihre Angaben gespeichert. Ergänzen Sie Ihre eigenen.', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
       phone_note: 'Vollständig bearbeiten kannst du auf Tablet oder Computer. Auf dem Smartphone: Vorschau und Veröffentlichen.',
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
@@ -318,6 +322,19 @@
     while ((m = EMPTY_MARK.exec(r.html))) out[m[1]] = true;
     return out;
   }
+  // D2.3b-4: the empty ids of the current page, worked out once per change (onStoreChange, showDeals clear it) and
+  // shared by the Sections list and the editor's guidance: one core render per change, not one per use
+  var emptyCache = null;
+  function emptyNow() { if (!emptyCache) emptyCache = emptyIds(); return emptyCache; }
+  // D2.3b-4: the Studio-only guidance for a section (never saved, never sent, never on the public page): only on the
+  // owner's open page, only for a section core.js itself shows as empty. Example wording only when the page's checked
+  // origin (D2.3b-1) lists the section among those whose example details were left out; nothing is ever guessed
+  // from the wording of a text. null: no guidance.
+  function guidanceFor(sec) {
+    if (!sec || !pageView.current || pageView.state !== 'loaded' || !emptyNow()[sec.id]) return null;
+    var ex = pageView.origin && Array.isArray(pageView.origin.exampleSectionIds) && pageView.origin.exampleSectionIds.indexOf(sec.id) !== -1;
+    return { kind: ex ? 'example' : 'empty', text: t(ex ? 'guide_example' : 'guide_empty') };
+  }
   // D2.3b-3: the Add Custom Section shortcut: available while the page has room (40 sections), else its reason
   function renderCustomButton() {
     var b = $('st-add-custom');
@@ -333,7 +350,7 @@
     var list = $('st-outline'), a = document.activeElement;
     var had = list.contains(a) ? { id: a.getAttribute('data-id') || a.getAttribute('data-sec'), act: a.getAttribute('data-act') } : null;
     list.textContent = '';
-    var all = editor.draft().pages[0].sections, empty = emptyIds();
+    var all = editor.draft().pages[0].sections, empty = emptyNow();
     all.forEach(function (s, i) {
       var tx = { label: sectionName(s, all) };     // D2.3b-3: numbered when repeated
       var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
@@ -469,6 +486,7 @@
   }
   function showDeals(view) {
     dealsView = view;
+    emptyCache = null;                       // D2.3b-4: an Offers section's emptiness follows the deals
     preview.setHtml(pageHtml(), 0);
     inspector.refresh();
   }
@@ -554,6 +572,7 @@
     if (!pageView.current) return;
     pageView.current = null;
     pageView.revision = null; pageView.owner = null; pageView.origin = null;
+    emptyCache = null;
     resetSave();
     // the address no longer names that page (a next account starts from its own pages)
     try { var u = new URL(window.location.href); u.searchParams.delete('slug'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
@@ -588,6 +607,7 @@
       pageView.revision = r.source === 'draft' ? r.revision : null;
       pageView.owner = sessionUser();
       pageView.origin = r.origin || null;
+      emptyCache = null;
       saveView.savedAt = r.savedAt;
       showPages({ state: 'loaded', source: r.source });
       setLeftTab('sections');
@@ -771,6 +791,7 @@
   function announce(msg) { var n = $('st-live'); n.textContent = ''; setTimeout(function () { n.textContent = msg; }, 30); }
   function onStoreChange(kind, info) {
     if (kind === 'select') return;
+    emptyCache = null;                       // D2.3b-4: the page changed: its empty sections are worked out again
     // Undo / Redo and list changes (add, move, remove) rebuild the inspector
     if (kind === 'history' || info.structure) inspector.render(); else inspector.refresh();
     staleNote();
@@ -983,7 +1004,7 @@
       onLayout: function () { if (preview) deviceButtons(); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, sectionName: function (sec) { return sectionName(sec); }, announce: announce, brand: pageBrand,
+      sectionLabel: function (type) { return sectionText(type).label; }, sectionName: function (sec) { return sectionName(sec); }, guidance: guidanceFor, announce: announce, brand: pageBrand,
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
       signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });
