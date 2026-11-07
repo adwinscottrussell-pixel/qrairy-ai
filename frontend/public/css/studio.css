@@ -456,6 +456,12 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-addbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 12px; padding: 0 12px; border: 1.5px dashed var(--st-accent); border-radius: 10px; background: var(--st-surface); color: var(--st-text); font: 600 14px 'Inter', sans-serif; cursor: pointer; }
 .st-addbtn .st-ic { color: var(--st-accent); }
 .st-addbtn:hover { background: var(--st-accent-soft); }
+/* D2.3b-3: Add Custom Section under Add Section: a solid outline (secondary to the dashed Add Section), the same 44 px */
+.st-addbtn--custom { margin-top: 8px; border-style: solid; border-color: var(--st-border-strong); }
+.st-addbtn[aria-disabled="true"] { cursor: not-allowed; opacity: 1; color: var(--st-muted); border-color: var(--st-border); background: var(--st-surface); }
+.st-addbtn[aria-disabled="true"] .st-ic { color: var(--st-muted); }
+.st-addbtn__why { margin: 6px 0 0; font: 500 12.5px/1.4 'Inter', sans-serif; color: var(--st-muted); }
+.st-outline small.is-empty { font-style: italic; }
 
 /* Add library: title, a readable description, a visible availability label */
 .st-lib__item { align-items: flex-start; padding: 12px 10px 12px 12px; }

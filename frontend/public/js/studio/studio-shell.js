@@ -82,7 +82,7 @@
       conflict_text: 'This page was saved in another tab or on another device. Nothing was overwritten.', conflict_load: 'Load saved version', conflict_keep: 'Keep editing',
       conflict_load_confirm: 'Load the saved version? Your unsaved changes here will be lost.', signout_confirm: 'Sign out? Your unsaved changes on this page will be lost.',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
-      tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
+      tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', add_custom: 'Add Custom Section', sec_empty: 'Empty – add content', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
       phone_note: 'Full editing works on a tablet or computer. On a phone you can preview and publish.',
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
@@ -123,7 +123,7 @@
       conflict_text: 'Diese Seite wurde in einem anderen Tab oder auf einem anderen Gerät gespeichert. Es wurde nichts überschrieben.', conflict_load: 'Gespeicherte Fassung laden', conflict_keep: 'Weiter bearbeiten',
       conflict_load_confirm: 'Gespeicherte Fassung laden? Ihre nicht gespeicherten Änderungen hier gehen verloren.', signout_confirm: 'Abmelden? Ihre nicht gespeicherten Änderungen an dieser Seite gehen verloren.',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
-      tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
+      tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', add_custom: 'Eigenen Abschnitt hinzufügen', sec_empty: 'Leer – Inhalt hinzufügen', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
       phone_note: 'Vollständig bearbeiten kannst du auf Tablet oder Computer. Auf dem Smartphone: Vorschau und Veröffentlichen.',
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
@@ -154,13 +154,17 @@
       act_up: 'Nach oben', act_down: 'Nach unten', act_duplicate: 'Duplizieren', act_remove: 'Entfernen',
     },
   };
+  // D2.3b-3: the Text type is called "Custom Section" in the Studio, as in the onboarding (the type itself stays "text")
   var SECTION_TEXT = {
+    en: {
+      text: ['Custom Section', 'Your own heading and text · add as many as you need'],
+    },
     de: {
       hero: ['Hero', 'Auffälliger Kopfbereich mit Bild, Text und Buttons'], gallery: ['Galerie', 'Bilder, Produkte oder Speisekarte'],
       dealsOffers: ['Angebote', 'Aktuelle Angebote und Aktionen zeigen'], loyalty: ['Treueprogramm', 'Digitale Stempelkarte und Prämien'],
       products: ['Produkte', 'Produkte mit Links zum Shop'], openingHours: ['Öffnungszeiten', 'Deine Geschäftszeiten zeigen'],
       contact: ['Kontakt', 'Karte, Adresse, Telefon, E-Mail'], buttons: ['Buttons', 'WhatsApp, Anruf, Route, Website'],
-      socialMedia: ['Social Media', 'Instagram, Facebook, TikTok usw.'], text: ['Textabschnitt', 'Text, Überschriften und Bilder'],
+      socialMedia: ['Social Media', 'Instagram, Facebook, TikTok usw.'], text: ['Eigener Abschnitt', 'Ihre eigene Überschrift und Ihr eigener Text · beliebig oft'],
     },
   };
   var FIELD = {
@@ -287,20 +291,54 @@
     });
     if (had) { var back = list.querySelector('[data-type="' + had + '"]'); if (back) back.focus(); }
   }
-  function sectionSummary(s) {
+  function sectionSummary(s, empty) {
     var d = s.data || {};
-    return d.headline || d.title || d.heading || (d.items && d.items[0] && (d.items[0].label || d.items[0].name)) || '';
+    var v = d.headline || d.title || d.heading || (d.items && d.items[0] && (d.items[0].label || d.items[0].name)) || '';
+    // D2.3b-3: "Empty – add content" for a section the preview itself shows as empty (core.js's rule; also when it
+    // has a title, e.g. Buttons without buttons: nothing of it is on the public page yet), and only for those
+    return empty ? t('sec_empty') : v;
+  }
+  // D2.3b-3: a section's name as the owner sees it: its type's label, numbered by the current page order when the
+  // page holds more than one of that type ("Custom Section 2"). Display only: never stored, the ids stay as they are.
+  function sectionName(s, all) {
+    var list = all || editor.draft().pages[0].sections, n = 0, at = 0;
+    for (var i = 0; i < list.length; i++) if (list[i].type === s.type) { n++; if (list[i].id === s.id) at = n; }
+    var base = sectionText(s.type).label;
+    return n > 1 && at ? base + ' ' + at : base;
+  }
+  // D2.3b-3: which sections are empty, by core.js's own rule: the ones its preview draws as the empty-section note
+  // (v3-ph-section), so the outline and the preview always agree. Read from the last valid page.
+  var EMPTY_MARK = /<section [^>]*data-v3-id="([^"]+)"[^>]*class="[^"]*\bv3-ph-section\b/g;
+  function emptyIds() {
+    var valid = editor.lastValid(), out = {};
+    var r = valid ? V3.renderDesign(valid, { businessName: 'x' }, { preview: true, deals: dealsView }) : null;
+    if (!r || !r.ok) return out;
+    var m;
+    EMPTY_MARK.lastIndex = 0;
+    while ((m = EMPTY_MARK.exec(r.html))) out[m[1]] = true;
+    return out;
+  }
+  // D2.3b-3: the Add Custom Section shortcut: available while the page has room (40 sections), else its reason
+  function renderCustomButton() {
+    var b = $('st-add-custom');
+    if (!b) return;
+    var why = addReason('text');
+    b.setAttribute('aria-disabled', why ? 'true' : 'false');
+    b.title = why === 'max_sections' ? t('lib_max') : '';
+    var note = $('st-add-custom-why');
+    note.textContent = why === 'max_sections' ? t('lib_max') : '';
+    note.hidden = !note.textContent;
   }
   function renderOutline() {
     var list = $('st-outline'), a = document.activeElement;
     var had = list.contains(a) ? { id: a.getAttribute('data-id') || a.getAttribute('data-sec'), act: a.getAttribute('data-act') } : null;
     list.textContent = '';
-    var all = editor.draft().pages[0].sections;
+    var all = editor.draft().pages[0].sections, empty = emptyIds();
     all.forEach(function (s, i) {
-      var tx = sectionText(s.type);
+      var tx = { label: sectionName(s, all) };     // D2.3b-3: numbered when repeated
       var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
-        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { text: sectionSummary(s) })]),
+        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { class: empty[s.id] ? 'is-empty' : null, text: sectionSummary(s, !!empty[s.id]) })]),
         s.hidden ? el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-eye-off')]) : null,
       ]);
       item.addEventListener('click', function () { select(s.id, 'outline'); });
@@ -324,13 +362,14 @@
       var back = (had.act && list.querySelector('[data-sec="' + had.id + '"][data-act="' + had.act + '"]:not([aria-disabled="true"])')) || list.querySelector('.st-outline__item[data-id="' + had.id + '"]');
       if (back) back.focus();
     }
+    renderCustomButton();
   }
 
   // ── adding, moving, duplicating, removing sections (Phase C) ──
   // the edit panel shows the selected section: on a desktop bring it back if hidden, below 1200 px its drawer
   function openEditor() { if (desktop()) { if (!panels().right) setPanel('right', true); } else openDrawer('st-right'); }
   function pageLanguage() { var s = editor.draft().settings; return (s && (s.language === 'de' || s.language === 'en')) ? s.language : state.lang; }
-  function label(id) { var s = editor.section(id); return s ? sectionText(s.type).label : ''; }
+  function label(id) { var s = editor.section(id); return s ? sectionName(s) : ''; }
   function addSection(type) {
     if (addReason(type)) return;
     var id = editor.addSection(type, editor.selected(), pageLanguage());
@@ -812,6 +851,8 @@
   function bindUi() {
     $('st-tab-sections').addEventListener('click', function () { setLeftTab('sections'); });
     $('st-tab-add').addEventListener('click', function () { setLeftTab('add'); });
+    // D2.3b-3: Add Custom Section: the same add as the library's Custom Section (below the selected section, selected, its editor opened)
+    $('st-add-custom').addEventListener('click', function () { if (addReason('text')) { announce(t('lib_max')); return; } addSection('text'); });
     $('st-add-section').addEventListener('click', function () {
       setLeftTab('add');
       var first = $('st-lib').querySelector('.st-lib__item:not([aria-disabled="true"])') || $('st-lib').querySelector('.st-lib__item');
@@ -942,7 +983,7 @@
       onLayout: function () { if (preview) deviceButtons(); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, announce: announce, brand: pageBrand,
+      sectionLabel: function (type) { return sectionText(type).label; }, sectionName: function (sec) { return sectionName(sec); }, announce: announce, brand: pageBrand,
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
       signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });

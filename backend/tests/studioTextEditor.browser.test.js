@@ -112,7 +112,7 @@ test('the demo has a Plain "Über uns" Text section; selected from the Sections 
   const { page, errors } = await open(1440, 900);
   assert.ok((await page.$$eval('#st-outline [data-id]', (n) => n.map((x) => x.getAttribute('data-id')))).includes(T), 'listed in Sections');
   await clickInPreview(page, '[data-v3-id="' + T + '"] .v3-h2');
-  await until(async () => (await page.$eval('#st-kind', (n) => n.textContent)) === 'Text Section', 'selected from the preview');
+  await until(async () => (await page.$eval('#st-kind', (n) => n.textContent)) === 'Custom Section', 'selected from the preview');
   assert.equal(await page.$eval('#st-fields', (n) => n.getAttribute('data-editable')), 'true');
   const paths = () => page.$$eval('#st-fields > [data-path]', (n) => n.map((x) => x.getAttribute('data-path')));
   assert.deepEqual(await paths(), ['data.heading', 'data.body', 'data.image', 'data.imageAlt']);
@@ -295,7 +295,7 @@ test('Undo / Redo across Text edits, buttons and keyboard; typing is one step', 
 
 test('German: labels, layout names, hints', async () => {
   const { page, errors } = await openText(1440, 900, { lang: 'de', images: true });
-  assert.equal(await page.$eval('#st-kind', (n) => n.textContent), 'Textabschnitt');
+  assert.equal(await page.$eval('#st-kind', (n) => n.textContent), 'Eigener Abschnitt');
   assert.deepEqual(await page.$$eval('#st-fields > [data-path] > span:first-child', (n) => n.map((x) => x.textContent.replace(/\d+ \/ \d+$/, '').trim())), ['Überschrift', 'Text', 'Bild', 'Bildbeschreibung']);
   await setImage(page, IMG);
   await until(async () => (await shownHints(page)).join() === 'plain_image', 'hint');
@@ -356,7 +356,7 @@ test('devices: Tablet and Mobile show the edit; both frames update side by side 
 test('tablet width (1024): the edit drawer edits the Text section; no overflow', async () => {
   const { page, errors } = await open(1024, 768);
   await clickInPreview(page, '[data-v3-id="' + T + '"] .v3-h2');
-  await until(async () => (await page.$eval('#st-kind', (n) => n.textContent)) === 'Text Section', 'selected');
+  await until(async () => (await page.$eval('#st-kind', (n) => n.textContent)) === 'Custom Section', 'selected');
   // the edit panel is a drawer below 1200 px: open it when it is not on screen
   const onScreen = () => page.$eval('#st-right', (n) => { const r = n.getBoundingClientRect(), cs = getComputedStyle(n); return cs.visibility !== 'hidden' && cs.display !== 'none' && r.width > 0 && r.left < innerWidth - 10 && r.right > 10; });
   if (!(await onScreen())) await page.click('#st-open-right');

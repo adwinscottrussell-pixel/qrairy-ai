@@ -166,7 +166,8 @@ test('move: Move up / down buttons and Alt + ↑ / ↓; order changes, content k
   assert.equal(await page.$eval('#st-outline [data-sec="s_website"][data-act="down"]', (n) => n.getAttribute('aria-disabled')), 'true', 'last: no Move down');
   await act(page, 's_website', 'up');
   assert.deepEqual(await ids(page), ['s_hero', 's_website', 's_buttons']);
-  assert.equal(await live(page), '„Buttons“ an Position 2 von 3 verschoben.');
+  // D2.3b-3: two Buttons sections on this page: named by their current position
+  assert.equal(await live(page), '„Buttons 1“ an Position 2 von 3 verschoben.');
   assert.equal((await state(page)).focus, 's_website:up', 'focus stays on the moved section’s button');
   await page.keyboard.down('Alt'); await page.keyboard.press('ArrowUp'); await page.keyboard.up('Alt');
   assert.deepEqual(await ids(page), ['s_website', 's_hero', 's_buttons']);
@@ -208,7 +209,7 @@ test('duplicate: a copy right below with a new id; Hero, Deals / Offers, Loyalty
   const d = await page.evaluate(() => window.QraivyStudio.editor.draft().pages[0].sections);
   assert.deepEqual(d[2].data, d[1].data);
   assert.equal((await state(page)).selected, copy);
-  assert.equal(await live(page), '„Buttons“ dupliziert.');
+  assert.equal(await live(page), '„Buttons 2“ dupliziert.', 'D2.3b-3: the copy, numbered by its position');
   await page.click('#st-outline .st-outline__item[data-id="s_hero"]');
   const dup = await page.$eval('#st-outline [data-sec="s_hero"][data-act="duplicate"]', (n) => ({ off: n.getAttribute('aria-disabled'), title: n.getAttribute('data-tip'), desc: n.getAttribute('aria-description') }));
   assert.deepEqual(dup, { off: 'true', title: 'Nur ein Abschnitt „Hero“ pro Seite', desc: 'Nur ein Abschnitt „Hero“ pro Seite' });
@@ -225,7 +226,7 @@ test('remove: Cancel keeps everything; untouched starter content goes without a 
   const before = await ids(o.page);
   await act(o.page, 's_buttons', 'remove');
   assert.equal(o.log.dialogs.length, 1);
-  assert.match(o.log.dialogs[0], /^„Buttons“ entfernen\?\n\nDieser Abschnitt enthält Ihre Inhalte\./);
+  assert.match(o.log.dialogs[0], /^„Buttons 1“ entfernen\?\n\nDieser Abschnitt enthält Ihre Inhalte\./, 'D2.3b-3: numbered (two Buttons sections)');
   assert.deepEqual(await ids(o.page), before, 'Cancel: nothing removed');
   assert.equal((await state(o.page)).dirty, false);
   await o.page.close();
@@ -240,13 +241,13 @@ test('remove: Cancel keeps everything; untouched starter content goes without a 
   assert.ok(!(await ids(o.page)).includes(fresh));
   // wait for the removal's own announcement (the previous one, "hinzugefügt", may still be showing for a moment)
   await until(async () => /entfernt/.test(await o.page.$eval('#st-live', (n) => n.textContent)), 'the removal announcement');
-  assert.match(await live(o.page), /^„Textabschnitt“ entfernt\. Mit „Rückgängig“ holen Sie ihn zurück\.$/);
+  assert.match(await live(o.page), /^„Eigener Abschnitt“ entfernt\. Mit „Rückgängig“ holen Sie ihn zurück\.$/);
   assert.equal((await state(o.page)).selected, 's_website', 'the neighbour is selected');
   // Delete key in the Sections list
   await o.page.focus('#st-outline .st-outline__item[data-id="s_website"]');
   await o.page.keyboard.press('Delete');
   assert.ok(!(await ids(o.page)).includes('s_website'));
-  assert.match(o.log.dialogs[o.log.dialogs.length - 1], /„Buttons“ entfernen\?|„Buttons“/, 'asked (the website row holds content)');
+  assert.match(o.log.dialogs[o.log.dialogs.length - 1], /„Buttons( \d)?“ entfernen\?|„Buttons( \d)?“/, 'asked (the website row holds content)');
   await o.page.click('#st-undo-btn');
   assert.ok((await ids(o.page)).includes('s_website'));
   // Delete in a text field deletes text, not the section
@@ -375,7 +376,7 @@ test('desktop and tablet: the selected row’s labelled actions sit below it (ne
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'phaseC-sections-' + width + '.png') });
     await addFromLibrary(page, 'text');
     if (width < 1200) assert.equal(await page.$eval('#st-right', (n) => n.classList.contains('is-open')), true, 'the edit drawer opens on the new section');
-    assert.equal(await page.$eval('#st-kind', (n) => n.textContent), 'Textabschnitt');
+    assert.equal(await page.$eval('#st-kind', (n) => n.textContent), 'Eigener Abschnitt');
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'phaseC-added-' + width + '.png') });
     assert.deepEqual(log.errors, []);
     await page.close();

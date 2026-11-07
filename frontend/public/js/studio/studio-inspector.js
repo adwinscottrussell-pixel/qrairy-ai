@@ -1184,7 +1184,8 @@
       refreshers = [];
       var id = store.selected();
       var sec = id ? store.section(id) : null;
-      o.kind.textContent = sec ? o.sectionLabel(sec.type) : '';
+      // D2.3b-3: the section's name as the outline shows it (numbered when repeated)
+      o.kind.textContent = sec ? (typeof o.sectionName === 'function' ? o.sectionName(sec) : o.sectionLabel(sec.type)) : '';
       if (!sec) { box.appendChild(el('p', { class: 'st-empty', text: o.t('select_section') })); o.note.textContent = ''; return; }
       var D = o.V3.describe();
       var editable = EDITABLE.indexOf(sec.type) !== -1;
