@@ -57,7 +57,8 @@ const pageErrors = [];   // any script error on any page fails the run
 // The page on `host`. clerk: 'none' | 'signedout' | 'unverified' | 'verified'
 // theme: the Studio appearance preference set before each load ('light' by default; null: leave it as it is)
 // drafts (D2.2): (body, n) -> { status, body, delay } | 'hang' (never answered) | 'abort' (no answer): the POST /studio/drafts responder; posts: the bodies sent
-async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}', theme = 'light', drafts = null } = {}) {
+// puts (D2.3a): (body, n, slug) -> the same, for PUT /studio/pages/<slug>/design; putsSent: { slug, body, auth }
+async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DESKTOP, pages = '{"pages":[]}', theme = 'light', drafts = null, puts = null } = {}) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
   await page.evaluateOnNewDocument((l, mode, th) => {
@@ -82,7 +83,7 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
   }, lang, clerk, theme);
   page.on('pageerror', (e) => pageErrors.push(String(e.message)));
   await page.setRequestInterception(true);
-  const api = [], external = [], missing = [], posts = [];
+  const api = [], external = [], missing = [], posts = [], putsSent = [];
   page.on('request', async (r) => {
     const u = new URL(r.url());
     if (u.protocol === 'data:') return r.continue();
@@ -106,6 +107,17 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
         if (a.delay) await sleep(a.delay);
         return r.respond({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body || {}) }).catch(() => {});
       }
+      const pm = /^\/studio\/pages\/([^/]+)\/design$/.exec(u.pathname);
+      if (puts && pm && r.method() === 'PUT') {
+        let body = null;
+        try { body = JSON.parse(r.postData() || 'null'); } catch (e) { body = null; }
+        putsSent.push({ slug: decodeURIComponent(pm[1]), body, auth: r.headers().authorization || '' });
+        const a = await puts(body, putsSent.length, decodeURIComponent(pm[1]));
+        if (a === 'hang') return undefined;
+        if (a === 'abort') return r.abort('failed').catch(() => {});
+        if (a.delay) await sleep(a.delay);
+        return r.respond({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body || {}) }).catch(() => {});
+      }
       return r.respond({ status: 401, contentType: 'application/json', headers: cors, body: '{"error":"Unauthorized."}' });
     }
     if (FONT_HOSTS.includes(u.host)) return r.respond({ status: 200, contentType: 'text/css', body: '' });
@@ -114,7 +126,7 @@ async function open(host, file, { clerk = 'verified', lang = 'en', viewport = DE
   });
   await page.goto('https://' + host + '/' + file, { waitUntil: 'networkidle0' });
   await sleep(300);
-  return { page, api, external, missing, posts };
+  return { page, api, external, missing, posts, putsSent };
 }
 const visible = (page, sel) => page.evaluate((s) => { const n = document.querySelector(s); if (!n) return false; const r = n.getBoundingClientRect(); return !n.closest('[hidden]') && r.width > 0 && r.height > 0; }, sel);
 const text = (page, sel) => page.evaluate((s) => { const n = document.querySelector(s); return n ? n.textContent.trim() : null; }, sel);
@@ -1897,15 +1909,15 @@ test('D2.2 Save Draft (desktop, English): one request (double click and Enter ig
   assert.equal(b.design.pages[0].sections[0].data.headline, 'Café Sonne', 'the customer\'s name');
   checkSentDesign(b, 'en');
   release();
-  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Draft saved', { timeout: 4000 });
+  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Open in Studio', { timeout: 4000 });
   s = await saveUi(page);
-  assert.deepEqual([s.disabled, s.badge, s.state, s.tone, s.focus], [true, 'Draft saved · Not published', 'saved', 'success', 'ob-save-note']);
-  assert.equal(s.note, 'Your draft is saved privately in your QRAIVY account. It is not published. Opening it in the Studio follows in the next update.');
+  assert.deepEqual([s.disabled, s.badge, s.state, s.tone, s.focus], [false, 'Draft saved · Not published', 'saved', 'success', 'ob-finish'], 'D2.3a: saved; the main button now opens the Studio (focused)');
+  assert.equal(s.note, 'Your draft is saved privately in your QRAIVY account. It is not published. Open it in the Studio to keep editing.');
   await page.waitForFunction(() => /Draft saved\. It is private/.test(document.getElementById('ob-save-status').textContent), { timeout: 2000 });
   // reload: still saved (the address and revision kept), nothing sent again
   await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
   s = await saveUi(page);
-  assert.deepEqual([s.text, s.disabled, s.badge], ['Draft saved', true, 'Draft saved · Not published'], 'kept across a reload');
+  assert.deepEqual([s.text, s.disabled, s.badge], ['Open in Studio', false, 'Draft saved · Not published'], 'kept across a reload');
   const kept = await page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).draft; } return null; });
   assert.deepEqual([kept.status, kept.slug, kept.revision, kept.requestId], ['saved', 'cafe-sonne-abc123', 1, b.requestId]);
   assert.ok(!JSON.stringify(kept).includes('tok'), 'no token kept');
@@ -1914,8 +1926,8 @@ test('D2.2 Save Draft (desktop, English): one request (double click and Enter ig
   await page.click('#ob-chosen [data-type="contact"] [data-act="up"]'); await sleep(150);
   await page.click('#ob-next'); await sleep(300);
   s = await saveUi(page);
-  assert.deepEqual([s.disabled, s.badge, s.state, s.tone], [true, 'Draft saved · Later changes not saved', 'changed', 'warn']);
-  assert.match(s.note, /^You changed your page after saving\. These changes are not in your saved draft\./);
+  assert.deepEqual([s.text, s.disabled, s.badge, s.state, s.tone], ['Save changes', false, 'Draft saved · Later changes not saved', 'changed', 'warn'], 'D2.3a: offered, not sent');
+  assert.match(s.note, /^You changed your page after saving\. These changes are not in your saved draft yet\./);
   assert.equal(posts.length, 1, 'no second draft');
   assert.ok(api.every((x) => / \S+\/studio\/drafts$/.test(x)), 'only the drafts endpoint: ' + api.join(', '));
   assert.ok(!api.some((x) => /trial|tier|stripe|publish|\/lp/.test(x)), 'no trial, plan, billing or publish request');
@@ -1944,7 +1956,7 @@ test('D2.2 failure and retry (phone 390, German, Dark): 503 -> error, nothing ma
   s = await saveUi(page);
   assert.deepEqual([s.text, s.disabled, s.state], ['Entwurf speichern', false, 'draft'], 'after a reload: not saved, ready again');
   await page.click('#ob-finish');
-  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Entwurf gespeichert', { timeout: 4000 });
+  await page.waitForFunction(() => document.getElementById('ob-finish').textContent === 'Im Studio öffnen', { timeout: 4000 });
   assert.equal(posts[2].body.requestId, posts[0].body.requestId, 'after the reload: still the same requestId');
   assert.deepEqual(posts[2].body, posts[0].body, 'the same request');
   s = await saveUi(page);
@@ -2023,6 +2035,226 @@ test('D2.2 Save Draft states readable everywhere: ready, saving, error and saved
     await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'success', { timeout: 4000 });
     await check('saved');
     await shot(page, 'd22-saved-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    await page.close();
+  }
+});
+
+// ── D2.3a: the handoff to the Studio ──
+const keptDraft = (page) => page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).draft || null; } return null; });
+const leaveUi = (page) => page.evaluate(() => { const d = document.getElementById('ob-leave'); return { open: d.open, text: document.getElementById('ob-leave-text').textContent, focus: document.activeElement && document.activeElement.id }; });
+const updated200 = (revision) => ({ status: 200, body: { revision, savedAt: '2026-11-07T10:0' + revision + ':00.000Z', design: {} } });
+async function toSaved(page, { id = 'restaurant', name = 'Café Sonne', customs = 0 } = {}) {
+  await toTemplateStep4(page, { id, name, link: 'instagram.com/cafesonne' });
+  for (let i = 0; i < customs; i++) { await page.click('#ob-more [data-type="custom"] [data-act="add"]'); await sleep(120); }
+  await page.click('#ob-next'); await sleep(300);
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 4000 });
+}
+// a change after saving: Contact one place up (Step 4), back to Step 5
+async function changeAfterSave(page) {
+  await page.click('#ob-back'); await sleep(200);
+  await page.click('#ob-chosen [data-type="contact"] [data-act="up"]'); await sleep(150);
+  await page.click('#ob-next'); await sleep(300);
+}
+// the browser's Back from the Studio (may be served from the page cache: no load event to wait for)
+// ONE Back is enough: the Studio's preview updates add no history entries (studio-preview.js reload())
+async function goBack(page) {
+  await page.goBack({ waitUntil: 'domcontentloaded', timeout: 4000 }).catch(() => {});
+  for (let i = 0; i < 40 && !page.url().endsWith('/studio-onboarding.html'); i++) await sleep(50);
+  assert.ok(page.url().endsWith('/studio-onboarding.html'), 'one Back: on the onboarding again (' + page.url() + ')');
+  await page.waitForFunction(() => !document.getElementById('ob-done').hidden || !document.getElementById('ob-wizard').hidden, { timeout: 4000 });
+  await sleep(200);
+}
+const STUDIO_URL = (slug) => 'https://' + V3 + '/studio.html?slug=' + slug;
+
+test('D2.3a handoff (desktop, English): saved -> "Open in Studio" opens studio.html?slug=<the saved slug> (nothing created); back: the return screen, also after a reload; its Open in Studio again; Start a new page: Step 1, no kept draft, nothing sent, the next save a NEW requestId', async () => {
+  let n = 0;
+  const { page, posts, api } = await onboarding({ drafts: async () => (++n === 1 ? saved201('cafe-sonne-abc123') : saved201('salon-neu-def456', 'Salon Neu')) });
+  await toSaved(page, { customs: 1 });
+  let s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.focus, await visible(page, '#ob-open')], ['Open in Studio', false, 'ob-finish', false]);
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-finish')]);
+  assert.equal(page.url(), STUDIO_URL('cafe-sonne-abc123'), 'the Studio, at the saved draft');
+  assert.equal(posts.length, 1, 'no second draft');
+  assert.ok(!api.some((x) => /^POST /.test(x) && !/\/studio\/drafts$/.test(x)) && !api.some((x) => /^(PUT|DELETE) /.test(x)), 'nothing created or changed by the handoff: ' + api.join(', '));
+  // back to the onboarding: the return screen, not the steps
+  await goBack(page);
+  assert.equal(await visible(page, '#ob-done'), true, 'return screen');
+  assert.equal(await visible(page, '#ob-wizard'), false);
+  assert.equal(await text(page, '#ob-done-text'), '“Café Sonne” is saved privately in your QRAIVY account and is not published. Continue editing it in the Studio, or start a new page.');
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await visible(page, '#ob-done'), true, 'return screen after a reload');
+  assert.deepEqual([await text(page, '#ob-done-open'), await text(page, '#ob-done-new')], ['Open in Studio', 'Start a new page']);
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-done-open')]);
+  assert.equal(page.url(), STUDIO_URL('cafe-sonne-abc123'));
+  await goBack(page);
+  const before = api.length;
+  await page.click('#ob-done-new'); await sleep(300);
+  assert.equal(api.length, before, 'Start a new page sends nothing (the saved draft stays on the server)');
+  assert.deepEqual([await visible(page, '#ob-step-0'), await visible(page, '#ob-done'), await keptDraft(page)], [true, false, null], 'Step 1, no kept draft state');
+  assert.equal(await text(page, '#ob-progress-count'), 'Step 1 of 5');
+  // a new page: saved as a new draft with a new requestId
+  await toSaved(page, { id: 'beauty', name: 'Salon Neu' });
+  assert.equal(posts.length, 2);
+  assert.notEqual(posts[1].body.requestId, posts[0].body.requestId, 'a new requestId');
+  assert.equal((await keptDraft(page)).slug, 'salon-neu-def456');
+  await page.close();
+});
+
+test('D2.3a Save changes (phone 390, German, Dark): a change after saving -> one PUT to the saved slug with { design, baseRevision: 1 } only (no origin); saved -> revision 2 kept; the next change -> baseRevision 2; never a second draft', async () => {
+  const { page, posts, putsSent } = await onboarding({ viewport: Object.assign({}, PHONE, { width: 390 }), lang: 'de', theme: 'dark', drafts: async () => saved201('studio-sonne-x1y2z3', 'Studio Sonne'), puts: async (b, n) => updated200(n + 1) });
+  await toSaved(page, { id: 'creator', name: 'Studio Sonne', customs: 2 });
+  const sentIds = posts[0].body.design.pages[0].sections.map((x) => x.id);
+  await changeAfterSave(page);
+  let s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.badge, s.tone], ['Änderungen speichern', false, 'Entwurf gespeichert · Spätere Änderungen nicht gespeichert', 'warn']);
+  assert.equal(s.note, 'Sie haben Ihre Seite nach dem Speichern geändert. Diese Änderungen sind noch nicht in Ihrem gespeicherten Entwurf. Speichern Sie Ihre Änderungen oder öffnen Sie das Studio ohne sie.');
+  assert.equal(await visible(page, '#ob-open'), true, 'the second way into the Studio');
+  assert.equal(await text(page, '#ob-open'), 'Im Studio öffnen');
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 4000 });
+  assert.equal(putsSent.length, 1);
+  const p = putsSent[0];
+  assert.deepEqual([p.slug, p.auth, Object.keys(p.body).sort(), p.body.baseRevision], ['studio-sonne-x1y2z3', 'Bearer tok', ['baseRevision', 'design'], 1], 'the design and the kept revision only');
+  const ids = p.body.design.pages[0].sections.map((x) => x.id);
+  assert.deepEqual([...ids].sort(), [...sentIds].sort(), 'the same sections, the same ids (Custom Sections included)');
+  assert.ok(ids.indexOf('s_obcontact1') < sentIds.indexOf('s_obcontact1') || ids.join() !== sentIds.join(), 'the new order');
+  assert.equal(ids.filter((x) => x.startsWith('s_c')).length, 2);
+  checkSentDesign(Object.assign({}, posts[0].body, { design: p.body.design }), 'de update');
+  s = await saveUi(page);
+  assert.deepEqual([s.text, s.badge, s.state, s.tone, s.focus], ['Im Studio öffnen', 'Entwurf gespeichert · Nicht veröffentlicht', 'saved', 'success', 'ob-finish']);
+  assert.equal(s.note, 'Ihre Änderungen sind in Ihrem Entwurf gespeichert. Er ist weiterhin privat und nicht veröffentlicht.');
+  assert.equal(await visible(page, '#ob-open'), false);
+  assert.deepEqual([(await keptDraft(page)).revision, (await keptDraft(page)).slug], [2, 'studio-sonne-x1y2z3']);
+  // another change: built on revision 2
+  await page.click('#ob-back'); await sleep(200);
+  await page.click('#ob-chosen [data-type="contact"] [data-act="down"]'); await sleep(150);
+  await page.click('#ob-next'); await sleep(300);
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 4000 });
+  assert.deepEqual([putsSent.length, putsSent[1].body.baseRevision, (await keptDraft(page)).revision], [2, 2, 3]);
+  // kept across a reload
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal((await saveUi(page)).text, 'Im Studio öffnen');
+  assert.equal(posts.length, 1, 'never a second draft');
+  await page.close();
+});
+
+test('D2.3a unsaved changes and conflicts (desktop, English): Open in Studio with a change asks first (modal, focus on Stay here; Escape and Stay here keep everything); 409 -> nothing overwritten, never sent again, only Open in Studio (asks with the conflict text); "Open Studio without these changes" goes', async () => {
+  const { page, putsSent } = await onboarding({ drafts: async () => saved201(), puts: async () => ({ status: 409, body: { error: 'revision_conflict', currentRevision: 3, savedAt: '2026-11-07T10:00:00.000Z' } }) });
+  await toSaved(page);
+  await changeAfterSave(page);
+  // the secondary button with unsaved changes: the question
+  await page.click('#ob-open'); await sleep(150);
+  let l = await leaveUi(page);
+  assert.deepEqual([l.open, l.focus], [true, 'ob-leave-stay']);
+  assert.equal(l.text, 'You changed your page after saving. These changes are not in your saved draft and will not appear in the Studio. To keep them, choose “Stay here” and then “Save changes”.');
+  assert.equal(await text(page, '#ob-leave-title'), 'Leave your changes behind?');
+  // keyboard: Tab to the second choice, Shift+Tab back; Escape closes, focus back on the button
+  await page.keyboard.press('Tab'); assert.equal((await leaveUi(page)).focus, 'ob-leave-go');
+  await page.keyboard.down('Shift'); await page.keyboard.press('Tab'); await page.keyboard.up('Shift'); assert.equal((await leaveUi(page)).focus, 'ob-leave-stay');
+  await page.keyboard.press('Escape'); await sleep(150);
+  l = await leaveUi(page);
+  assert.deepEqual([l.open, l.focus, page.url().endsWith('/studio-onboarding.html')], [false, 'ob-open', true], 'Escape: stays, focus back');
+  await page.click('#ob-open'); await sleep(100);
+  await page.click('#ob-leave-stay'); await sleep(100);
+  assert.deepEqual([(await leaveUi(page)).open, (await saveUi(page)).text], [false, 'Save changes'], 'Stay here: the changes and Save changes stay');
+  // Save changes -> 409: nothing overwritten
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 4000 });
+  let s = await saveUi(page);
+  assert.deepEqual([s.text, s.disabled, s.badge, s.tone], ['Open in Studio', false, 'Draft saved · Newer version in the Studio', 'warn']);
+  assert.equal(s.note, 'Your draft was changed in the Studio after you saved it here, so nothing was overwritten. Open the Studio to continue with your latest saved draft.');
+  assert.equal(await visible(page, '#ob-open'), false);
+  assert.deepEqual([(await keptDraft(page)).conflict, (await keptDraft(page)).revision], [true, 1], 'the conflict kept; the revision not moved on');
+  // kept across a reload; never sent again
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal((await saveUi(page)).badge, 'Draft saved · Newer version in the Studio');
+  await page.click('#ob-finish'); await sleep(150);
+  l = await leaveUi(page);
+  assert.deepEqual([l.open, l.text], [true, 'The changes you made here cannot be saved because your draft was changed in the Studio. They will be left behind. The Studio shows your latest saved draft.']);
+  assert.equal(putsSent.length, 1, 'no second update after the conflict');
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-leave-go')]);
+  assert.equal(page.url(), STUDIO_URL('cafe-sonne-abc123'));
+  assert.equal(putsSent.length, 1);
+  await page.close();
+});
+
+test('D2.3a Save changes refused, English and German: expired session (401), another account / unverified (403), deleted draft (404), invalid (422), unavailable (503), no answer; the changes kept, the revision unchanged, Save changes again', async () => {
+  const cases = [
+    [{ status: 401, body: { error: 'Unauthorized.' } }, 'Your sign-in has expired. Please sign in again – your answers are kept.', 'Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Angaben bleiben erhalten.'],
+    [{ status: 403, body: { error: 'forbidden' } }, 'This draft cannot be changed with this account. Please check that you are signed in with the account that saved it and that your email address is verified. Your changes are kept in this browser tab.', 'Dieser Entwurf kann mit diesem Konto nicht geändert werden. Bitte prüfen Sie, ob Sie mit dem Konto angemeldet sind, mit dem Sie ihn gespeichert haben, und ob Ihre E-Mail-Adresse bestätigt ist. Ihre Änderungen bleiben in diesem Browser-Tab erhalten.'],
+    [{ status: 404, body: { error: 'not_found' } }, 'This draft can no longer be found. Nothing was created or changed. Your changes are kept in this browser tab.', 'Dieser Entwurf ist nicht mehr auffindbar. Es wurde nichts erstellt oder geändert. Ihre Änderungen bleiben in diesem Browser-Tab erhalten.'],
+    [{ status: 422, body: { error: 'design_invalid', errors: [] } }, 'Your page could not be saved because some content is not valid. Please check Steps 2 to 4 and try again.', 'Ihre Seite konnte nicht gespeichert werden, weil einige Inhalte ungültig sind. Bitte prüfen Sie die Schritte 2 bis 4 und versuchen Sie es erneut.'],
+    [{ status: 503, body: {} }, 'Saving is temporarily unavailable. Please try again in a moment – nothing was lost.', 'Das Speichern ist vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich noch einmal – es ging nichts verloren.'],
+    ['abort', 'Saving is temporarily unavailable. Please try again in a moment – nothing was lost.', 'Das Speichern ist vorübergehend nicht verfügbar. Bitte versuchen Sie es gleich noch einmal – es ging nichts verloren.'],
+  ];
+  for (const lang of ['en', 'de']) {
+    let i = 0;
+    const { page, posts, putsSent } = await onboarding({ lang, drafts: async () => saved201(), puts: async () => cases[i][0] });
+    await toSaved(page, { id: 'bakery', name: 'Bäckerei Sonne' });
+    await changeAfterSave(page);
+    for (i = 0; i < cases.length; i++) {
+      const want = lang === 'de' ? cases[i][2] : cases[i][1];
+      await page.click('#ob-finish');
+      await page.waitForFunction((w) => document.getElementById('ob-save-note').textContent === w, { timeout: 4000 }, want).catch(() => {});
+      const s = await saveUi(page);
+      assert.equal(s.note, want, lang + ' ' + JSON.stringify(cases[i][0]));
+      assert.deepEqual([s.text, s.disabled, s.tone, s.state], [lang === 'de' ? 'Änderungen speichern' : 'Save changes', false, 'error', 'changed'], lang + ' ' + i);
+      assert.equal((await keptDraft(page)).revision, 1, 'the revision unchanged');
+      await page.waitForFunction((w) => document.getElementById('ob-save-status').textContent === w, { timeout: 2000 }, want);
+    }
+    assert.deepEqual([putsSent.length, posts.length], [cases.length, 1], lang + ': one PUT per click, never a new draft');
+    assert.ok(putsSent.every((p) => p.body.baseRevision === 1 && !('origin' in p.body)));
+    await page.close();
+  }
+});
+
+test('D2.3a another account in the same tab: its own (empty) progress, never the other account\'s return screen; back to the first account: its return screen', async () => {
+  const { page } = await onboarding({ drafts: async () => saved201() });
+  await toSaved(page);
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-finish')]);
+  await goBack(page);
+  assert.equal(await visible(page, '#ob-done'), true);
+  await page.evaluate(() => sessionStorage.setItem('__test_uid', 'user_test_B'));
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.deepEqual([await visible(page, '#ob-done'), await visible(page, '#ob-step-0')], [false, true], 'B: Step 1, not A\'s draft');
+  assert.ok(!(await page.evaluate(() => document.body.innerText)).includes('Café Sonne'));
+  await page.evaluate(() => sessionStorage.setItem('__test_uid', 'user_test_A'));
+  await page.reload({ waitUntil: 'networkidle0' }); await sleep(300);
+  assert.equal(await visible(page, '#ob-done'), true, 'A: the return screen again');
+  await page.close();
+});
+
+test('D2.3a readable everywhere: Save changes + Open in Studio, the leave question and the return screen at 390 / 320 and desktop, English and German, Light and Dark; no sideways scroll; 44 px targets; contrast', async () => {
+  for (const [viewport, lang, theme] of [[Object.assign({}, PHONE, { width: 390 }), 'en', 'light'], [Object.assign({}, PHONE, { width: 320 }), 'de', 'dark'], [Object.assign({}, PHONE, { width: 320 }), 'en', 'light'], [Object.assign({}, PHONE, { width: 390 }), 'de', 'light'], [DESKTOP, 'de', 'dark'], [DESKTOP, 'en', 'light']]) {
+    const tag = viewport.width + ' ' + lang + ' ' + theme;
+    const { page } = await onboarding({ viewport, lang, theme, drafts: async () => saved201(), puts: async () => updated200(2) });
+    await toSaved(page, { id: 'services', name: lang === 'de' ? 'Kanzlei Sonne' : 'Sun Law Office' });
+    await changeAfterSave(page);
+    const lay = (sels) => page.evaluate((ss) => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, boxes: ss.map((x) => { const r = document.querySelector(x).getBoundingClientRect(); return { x, h: r.height, l: r.left, r: r.right }; }) }), sels);
+    const ok = async (what, sels, texts) => {
+      const m = await lay(sels);
+      assert.ok(m.sw <= m.iw, tag + ' ' + what + ': sideways scroll ' + m.sw + '/' + m.iw);
+      for (const b of m.boxes) assert.ok(b.h >= 44 && b.l >= 0 && b.r <= m.iw + 0.5, tag + ' ' + what + ': ' + JSON.stringify(b));
+      for (const sel of texts) { const r = await contrast(page, sel); assert.ok(r !== null && r >= 4.5, tag + ' ' + what + ': ' + sel + ' contrast ' + r); }
+    };
+    await ok('changed', ['#ob-finish', '#ob-open', '#ob-back'], ['#ob-save-note', '#ob-step-4 .ob-draft-badge', '#ob-open']);
+    await shot(page, 'd23a-changed-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    await page.click('#ob-open'); await sleep(200);
+    await ok('leave question', ['#ob-leave-stay', '#ob-leave-go'], ['#ob-leave-text', '#ob-leave-title', '#ob-leave-go']);
+    const dlg = await page.$eval('#ob-leave', (d) => { const r = d.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, iw: innerWidth, ih: innerHeight }; });
+    assert.ok(dlg.l >= 15 && dlg.r <= dlg.iw - 15 && dlg.t >= 0 && dlg.b <= dlg.ih, tag + ': the dialog inside the screen ' + JSON.stringify(dlg));
+    await shot(page, 'd23a-leave-' + viewport.width + '-' + lang + '-' + theme + '.png', false);
+    await page.click('#ob-leave-stay'); await sleep(100);
+    await page.click('#ob-finish');
+    await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 4000 });
+    await ok('updated', ['#ob-finish'], ['#ob-save-note', '#ob-step-4 .ob-draft-badge']);
+    await shot(page, 'd23a-updated-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-finish')]);
+    await goBack(page);
+    await ok('return screen', ['#ob-done-open', '#ob-done-new'], ['#ob-done-text', '#ob-done-title', '#ob-done-new']);
+    await shot(page, 'd23a-return-' + viewport.width + '-' + lang + '-' + theme + '.png');
     await page.close();
   }
 });

@@ -53,6 +53,18 @@
  * (lpV3/draftPolicy.js). A draft is private: no public page, no trial. Instagram and Website import
  * are shown as "Coming soon" and cannot be chosen.
  *
+ * D2.3a: the handoff to the Studio. Once saved, Step 5's main button opens
+ * that draft in the Studio (studio.html?slug=<the saved address, checked and
+ * encoded>; the Studio loads it through its own owner-checked GET and creates
+ * nothing). Changes after saving: "Save changes" updates the same draft
+ * (onboarding-drafts.js update(): the design only, with the kept revision;
+ * 409 when the draft changed since: nothing is overwritten and the onboarding
+ * stops updating it). Opening the Studio with changes that are not saved asks
+ * first (a modal dialog). After the handoff this tab shows a return screen
+ * (Open in Studio / Start a new page) instead of the steps: the draft is never
+ * created again; Start a new page forgets this tab's answers and the kept
+ * draft state (a new requestId next time) and deletes nothing on the server.
+ *
  * T1b: five steps. Step 3 "Choose Your Design" is new: the six starter
  * templates (onboarding-templates.js) as a radio group of cards, no template
  * chosen at first (Next waits for one), the chosen template's palettes as a
@@ -107,9 +119,21 @@
       save_draft: 'Save Draft', save_note: 'Saves your page privately in your QRAIVY account. Nothing is published.',
       save_saving_btn: 'Saving…', save_saved_btn: 'Draft saved', save_saving: 'Saving your draft…',
       draft_saved: 'Draft saved · Not published', draft_saved_changed: 'Draft saved · Later changes not saved',
-      save_saved: 'Your draft is saved privately in your QRAIVY account. It is not published. Opening it in the Studio follows in the next update.',
+      save_saved: 'Your draft is saved privately in your QRAIVY account. It is not published. Open it in the Studio to keep editing.',
       save_saved_say: 'Draft saved. It is private and not published.',
-      save_changed: 'You changed your page after saving. These changes are not in your saved draft. Editing your saved draft in the Studio follows in the next update.',
+      save_changed: 'You changed your page after saving. These changes are not in your saved draft yet. Save your changes, or open the Studio without them.',
+      open_studio: 'Open in Studio', save_changes: 'Save changes', save_updated: 'Your changes are saved in your draft. It is still private and not published.',
+      draft_conflict: 'Draft saved · Newer version in the Studio',
+      upd_conflict: 'Your draft was changed in the Studio after you saved it here, so nothing was overwritten. Open the Studio to continue with your latest saved draft.',
+      upd_forbidden: 'This draft cannot be changed with this account. Please check that you are signed in with the account that saved it and that your email address is verified. Your changes are kept in this browser tab.',
+      upd_notfound: 'This draft can no longer be found. Nothing was created or changed. Your changes are kept in this browser tab.',
+      leave_title: 'Leave your changes behind?',
+      leave_text: 'You changed your page after saving. These changes are not in your saved draft and will not appear in the Studio. To keep them, choose “Stay here” and then “Save changes”.',
+      leave_text_conflict: 'The changes you made here cannot be saved because your draft was changed in the Studio. They will be left behind. The Studio shows your latest saved draft.',
+      leave_stay: 'Stay here', leave_go: 'Open Studio without these changes',
+      done_title: 'Your draft is in the Studio', done_text: '“{name}” is saved privately in your QRAIVY account and is not published. Continue editing it in the Studio, or start a new page.',
+      done_text_noname: 'Your page is saved privately in your QRAIVY account and is not published. Continue editing it in the Studio, or start a new page.',
+      done_info: 'Starting a new page keeps this draft in your account. Creating drafts is free.', done_new: 'Start a new page',
       err_signin: 'Your sign-in has expired. Please sign in again – your answers are kept.',
       err_unverified: 'Please verify your email address before saving. Your answers are kept.',
       err_forbidden: 'This account cannot save drafts here. Your answers are kept in this browser tab.',
@@ -202,9 +226,21 @@
       save_draft: 'Entwurf speichern', save_note: 'Speichert Ihre Seite privat in Ihrem QRAIVY-Konto. Es wird nichts veröffentlicht.',
       save_saving_btn: 'Wird gespeichert …', save_saved_btn: 'Entwurf gespeichert', save_saving: 'Ihr Entwurf wird gespeichert …',
       draft_saved: 'Entwurf gespeichert · Nicht veröffentlicht', draft_saved_changed: 'Entwurf gespeichert · Spätere Änderungen nicht gespeichert',
-      save_saved: 'Ihr Entwurf ist privat in Ihrem QRAIVY-Konto gespeichert. Er ist nicht veröffentlicht. Das Öffnen im Studio folgt im nächsten Update.',
+      save_saved: 'Ihr Entwurf ist privat in Ihrem QRAIVY-Konto gespeichert. Er ist nicht veröffentlicht. Öffnen Sie ihn im Studio, um weiterzuarbeiten.',
       save_saved_say: 'Entwurf gespeichert. Er ist privat und nicht veröffentlicht.',
-      save_changed: 'Sie haben Ihre Seite nach dem Speichern geändert. Diese Änderungen sind nicht in Ihrem gespeicherten Entwurf. Das Bearbeiten im Studio folgt im nächsten Update.',
+      save_changed: 'Sie haben Ihre Seite nach dem Speichern geändert. Diese Änderungen sind noch nicht in Ihrem gespeicherten Entwurf. Speichern Sie Ihre Änderungen oder öffnen Sie das Studio ohne sie.',
+      open_studio: 'Im Studio öffnen', save_changes: 'Änderungen speichern', save_updated: 'Ihre Änderungen sind in Ihrem Entwurf gespeichert. Er ist weiterhin privat und nicht veröffentlicht.',
+      draft_conflict: 'Entwurf gespeichert · Neuere Fassung im Studio',
+      upd_conflict: 'Ihr Entwurf wurde im Studio geändert, nachdem Sie ihn hier gespeichert haben – es wurde nichts überschrieben. Öffnen Sie das Studio, um mit Ihrem zuletzt gespeicherten Entwurf weiterzuarbeiten.',
+      upd_forbidden: 'Dieser Entwurf kann mit diesem Konto nicht geändert werden. Bitte prüfen Sie, ob Sie mit dem Konto angemeldet sind, mit dem Sie ihn gespeichert haben, und ob Ihre E-Mail-Adresse bestätigt ist. Ihre Änderungen bleiben in diesem Browser-Tab erhalten.',
+      upd_notfound: 'Dieser Entwurf ist nicht mehr auffindbar. Es wurde nichts erstellt oder geändert. Ihre Änderungen bleiben in diesem Browser-Tab erhalten.',
+      leave_title: 'Änderungen zurücklassen?',
+      leave_text: 'Sie haben Ihre Seite nach dem Speichern geändert. Diese Änderungen sind nicht in Ihrem gespeicherten Entwurf und erscheinen nicht im Studio. Um sie zu behalten, wählen Sie „Hier bleiben“ und dann „Änderungen speichern“.',
+      leave_text_conflict: 'Ihre Änderungen hier können nicht gespeichert werden, weil Ihr Entwurf im Studio geändert wurde. Sie werden zurückgelassen. Das Studio zeigt Ihren zuletzt gespeicherten Entwurf.',
+      leave_stay: 'Hier bleiben', leave_go: 'Studio ohne diese Änderungen öffnen',
+      done_title: 'Ihr Entwurf ist im Studio', done_text: '„{name}“ ist privat in Ihrem QRAIVY-Konto gespeichert und nicht veröffentlicht. Bearbeiten Sie ihn im Studio weiter oder beginnen Sie eine neue Seite.',
+      done_text_noname: 'Ihre Seite ist privat in Ihrem QRAIVY-Konto gespeichert und nicht veröffentlicht. Bearbeiten Sie sie im Studio weiter oder beginnen Sie eine neue Seite.',
+      done_info: 'Eine neue Seite zu beginnen behält diesen Entwurf in Ihrem Konto. Entwürfe zu erstellen ist kostenlos.', done_new: 'Neue Seite beginnen',
       err_signin: 'Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Angaben bleiben erhalten.',
       err_unverified: 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse. Ihre Angaben bleiben erhalten.',
       err_forbidden: 'Mit diesem Konto können hier keine Entwürfe gespeichert werden. Ihre Angaben bleiben in diesem Browser-Tab erhalten.',
@@ -380,7 +416,8 @@
         exampleSectionIds: p.exampleIds.filter(function (id) { return ids[id]; }) } };
   }
   // the kept Save Draft state, checked: { status: 'pending', requestId, fp } (sent, not confirmed) or
-  // { status: 'saved', requestId, fp, slug, revision, savedAt } (confirmed by the server); anything else: null
+  // { status: 'saved', requestId, fp, slug, revision, savedAt } (confirmed by the server; D2.3a: + name, and
+  // handedOff / conflict when true: opened in the Studio / the draft changed there since); anything else: null
   var UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
   function restoreDraft(d) {
     if (!d || typeof d !== 'object' || typeof d.requestId !== 'string' || !UUID4.test(d.requestId) || typeof d.fp !== 'string' || !/^[0-9a-f]{8}-[0-9]{1,9}$/.test(d.fp)) return null;
@@ -388,7 +425,15 @@
     if (d.status !== 'saved' || typeof d.slug !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/.test(d.slug)) return null;
     if (typeof d.revision !== 'number' || d.revision !== Math.floor(d.revision) || d.revision < 1) return null;
     if (typeof d.savedAt !== 'string' || d.savedAt.length > 40 || isNaN(Date.parse(d.savedAt))) return null;
-    return { status: 'saved', requestId: d.requestId, fp: d.fp, slug: d.slug, revision: d.revision, savedAt: d.savedAt };
+    var out = { status: 'saved', requestId: d.requestId, fp: d.fp, slug: d.slug, revision: d.revision, savedAt: d.savedAt };
+    if (typeof d.name === 'string' && d.name.length <= 120) out.name = d.name;
+    if (d.handedOff === true) out.handedOff = true;
+    if (d.conflict === true) out.conflict = true;
+    return out;
+  }
+  // D2.3a: the Studio address for a saved draft: studio.html?slug=<encoded>, only for a well-formed slug (else null)
+  function studioUrl(slug) {
+    return typeof slug === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/.test(slug) ? 'studio.html?slug=' + encodeURIComponent(slug) : null;
   }
 
   // ── the page ──
@@ -1064,23 +1109,51 @@
       if (s === 'rate') return t('err_rate').replace('{time}', waitText(info.retryAfterSeconds));
       return t(['signin', 'unverified', 'forbidden', 'invalid', 'conflict', 'unavailable', 'network'].indexOf(s) !== -1 ? 'err_' + s : 'err_network');
     }
-    // the button, the status badge and the note, from the state (never "saved" before the server confirmed it)
-    function renderSave() {
-      var btn = $('ob-finish'), note = $('ob-save-note'), badge = doc.querySelector('#ob-step-4 [data-ob="draft_status"]');
-      if (!btn || !note) return;
+    // D2.3a: what Step 5's main button does now: 'save' (no draft yet), 'update' (saved, changed since, may still be
+    // updated), 'open' (saved: unchanged, or the draft changed in the Studio since: only opening is left)
+    function saveMode() {
       var r = currentRequest(), fp = r ? fingerprint(JSON.stringify(r)) : null;
       var saved = !!(draft && draft.status === 'saved'), changed = saved && fp !== draft.fp;
-      var can = !!(DR && DR.available() && r && !saving && !saved && auth === 'ready');
+      return { r: r, fp: fp, saved: saved, changed: changed, mode: !saved ? 'save' : changed && !draft.conflict ? 'update' : 'open' };
+    }
+    function updErrText(f) {
+      var s = f && f.state;
+      if (s === 'conflict') return t('upd_conflict');
+      if (s === 'forbidden' || s === 'notfound') return t('upd_' + s);
+      return errText(f);
+    }
+    // the buttons, the status badge and the note, from the state (never "saved" before the server confirmed it)
+    function renderSave() {
+      var btn = $('ob-finish'), open = $('ob-open'), note = $('ob-save-note'), badge = doc.querySelector('#ob-step-4 [data-ob="draft_status"]');
+      if (!btn || !note) return;
+      var m = saveMode(), saved = m.saved, changed = m.changed, conflict = saved && !!draft.conflict;
+      var can = !saving && auth === 'ready' && (m.mode === 'save' ? !!(DR && DR.available() && m.r) : m.mode === 'update' ? !!(DR && DR.canUpdate() && m.r) : !!studioUrl(draft.slug));
       btn.disabled = !can;
       btn.setAttribute('aria-disabled', String(!can));
       btn.setAttribute('aria-busy', String(saving));
-      btn.textContent = t(saving ? 'save_saving_btn' : saved ? 'save_saved_btn' : 'save_draft');
+      btn.setAttribute('data-mode', m.mode);
+      btn.textContent = t(saving ? 'save_saving_btn' : m.mode === 'save' ? 'save_draft' : m.mode === 'update' ? 'save_changes' : 'open_studio');
+      // the second way into the Studio while changes could still be saved
+      if (open) { open.hidden = !(m.mode === 'update' && studioUrl(draft.slug) && $('ob-finish').hidden === false); open.disabled = saving; }
       if (badge) {
-        badge.textContent = t(saved ? (changed ? 'draft_saved_changed' : 'draft_saved') : 'draft_status');
+        badge.textContent = t(saved ? (conflict && changed ? 'draft_conflict' : changed ? 'draft_saved_changed' : 'draft_saved') : 'draft_status');
         badge.parentNode.setAttribute('data-state', saved ? (changed ? 'changed' : 'saved') : 'draft');
       }
-      note.textContent = saving ? t('save_saving') : saved ? t(changed ? 'save_changed' : 'save_saved') : saveError ? errText(saveError) : t('save_note');
-      note.setAttribute('data-tone', saving ? 'info' : saved ? (changed ? 'warn' : 'success') : saveError ? 'error' : 'info');
+      var msg, tone;
+      if (saving) { msg = t('save_saving'); tone = 'info'; }
+      else if (saveError) { msg = saved ? updErrText(saveError) : errText(saveError); tone = 'error'; }
+      else if (conflict && changed) { msg = t('upd_conflict'); tone = 'warn'; }
+      else if (saved) { msg = t(changed ? 'save_changed' : draft.updated ? 'save_updated' : 'save_saved'); tone = changed ? 'warn' : 'success'; }
+      else { msg = t('save_note'); tone = 'info'; }
+      note.textContent = msg;
+      note.setAttribute('data-tone', tone);
+    }
+    // Step 5's main button
+    function primaryAction() {
+      var m = saveMode().mode;
+      if (m === 'save') saveDraft();
+      else if (m === 'update') updateDraft();
+      else openStudio($('ob-finish'));
     }
     function saveDraft() {
       if (saving || !DR || auth !== 'ready' || (draft && draft.status === 'saved')) return;
@@ -1096,11 +1169,11 @@
       sayIn('ob-save-status', t('save_saving'));
       DR.create(body).then(function (ok) {
         if (owner !== mine) return;              // signed out meanwhile: not this account's progress
-        draft = { status: 'saved', requestId: body.requestId, fp: fp, slug: ok.slug, revision: ok.revision, savedAt: new Date().toISOString() };
+        draft = { status: 'saved', requestId: body.requestId, fp: fp, slug: ok.slug, revision: ok.revision, savedAt: new Date().toISOString(), name: ok.name || r.name };
         saving = false;
         save(); renderSave();
         sayIn('ob-save-status', t('save_saved_say'));
-        $('ob-save-note').focus();               // the button is disabled now: focus on what happened
+        $('ob-finish').focus();                  // D2.3a: the button now opens the Studio
       }, function (f) {
         if (owner !== mine) return;
         saving = false;
@@ -1111,6 +1184,79 @@
         if (!$('ob-finish').disabled) $('ob-finish').focus();
       });
     }
+    // ── D2.3a: Save changes (the same draft, the kept revision; the design only) ──
+    function updateDraft() {
+      if (saving || !DR || auth !== 'ready' || !draft || draft.status !== 'saved' || draft.conflict) return;
+      var m = saveMode();
+      if (m.mode !== 'update') return;
+      var mine = owner, slug = draft.slug, base = draft.revision, fp = m.fp;
+      saving = true; saveError = null;
+      renderSave();
+      sayIn('ob-save-status', t('save_saving'));
+      DR.update(slug, m.r.design, base).then(function (ok) {
+        if (owner !== mine || !draft || draft.slug !== slug) return;
+        saving = false;
+        draft.revision = ok.revision; draft.fp = fp; draft.savedAt = ok.savedAt || new Date().toISOString(); draft.updated = true;
+        save(); renderSave();
+        sayIn('ob-save-status', t('save_updated'));
+        $('ob-finish').focus();
+      }, function (f) {
+        if (owner !== mine || !draft || draft.slug !== slug) return;
+        saving = false;
+        saveError = f && f.state ? f : { state: 'unavailable' };
+        // the draft changed in the Studio: never overwritten; from now on only opening the Studio is offered
+        if (saveError.state === 'conflict') { draft.conflict = true; saveError = null; }
+        save(); renderSave();
+        sayIn('ob-save-status', draft.conflict ? t('upd_conflict') : updErrText(saveError));
+        $('ob-finish').focus();
+      });
+    }
+    // ── D2.3a: into the Studio (the saved draft by its address); changes that are not saved: ask first ──
+    var leaveFrom = null;
+    function openStudio(from) {
+      if (saving || !draft || draft.status !== 'saved' || !studioUrl(draft.slug)) return;
+      if (saveMode().changed) { askLeave(from); return; }
+      goStudio();
+    }
+    function goStudio() {
+      var url = draft && draft.status === 'saved' ? studioUrl(draft.slug) : null;
+      if (!url) return;
+      draft.handedOff = true;                    // this tab shows the return screen from now on
+      save();
+      win.location.assign(url);
+    }
+    function askLeave(from) {
+      var dlg = $('ob-leave');
+      leaveFrom = from || null;
+      $('ob-leave-text').textContent = t(draft.conflict ? 'leave_text_conflict' : 'leave_text');
+      if (dlg && typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); $('ob-leave-stay').focus(); return; }
+      // no dialog element: the browser's own question, with the same text
+      if (win.confirm(t('leave_title') + '\n\n' + $('ob-leave-text').textContent)) goStudio();
+    }
+    function closeLeave() {
+      var dlg = $('ob-leave');
+      if (dlg && dlg.open) dlg.close();
+      if (leaveFrom && !leaveFrom.hidden) leaveFrom.focus();
+      leaveFrom = null;
+    }
+    // ── D2.3a: the return screen (after the handoff) ──
+    function handedOff() { return !!(draft && draft.status === 'saved' && draft.handedOff); }
+    function done() {
+      var name = draft && draft.name ? draft.name : '';
+      $('ob-done-text').textContent = name ? t('done_text').replace('{name}', name) : t('done_text_noname');
+      $('ob-done-open').disabled = !studioUrl(draft && draft.slug);
+    }
+    // a new page: this tab's answers and the kept draft state go (a new requestId next time); the saved draft stays on the server
+    function startNew() {
+      draft = null; saving = false; saveError = null; sw = null;
+      nav = { step: 0, choice: null };
+      answers = M ? M.sanitize({}) : answers;
+      tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
+      save();
+      fields();
+      render(true);
+    }
+
     // Edit: back to the step, its answers as they are (saved first), focus where the change starts
     function editStep(step, focusId) {
       nav = { step: step, choice: nav.choice };
@@ -1131,7 +1277,7 @@
     }
 
     function show(id) {
-      ['ob-unavailable', 'ob-gate', 'ob-wizard'].forEach(function (x) { $(x).hidden = x !== id; });
+      ['ob-unavailable', 'ob-gate', 'ob-wizard', 'ob-done'].forEach(function (x) { $(x).hidden = x !== id; });
       // O2.1: which screen is shown, for the background (Step 1 full, everything else calmer)
       doc.body.setAttribute('data-ob-step', id === 'ob-wizard' ? String(nav.step) : 'notice');
     }
@@ -1169,6 +1315,7 @@
       $('ob-next').disabled = !canNext(nav, s === 2 ? designOk() : undefined);
       $('ob-finish').hidden = !last;          // O3A: shown on the last step (T1b: Step 5); D2.2: enabled by renderSave()
       if (!last) saveError = null;
+      if (!last) $('ob-open').hidden = true;      // D2.3a: the second Studio button belongs to Step 5 only
       $('ob-save-note').hidden = !last;
       if (s === 0) previews(false);
       if (s === 1) business();
@@ -1182,8 +1329,9 @@
       if (!canStart(ROUTING)) { show('ob-unavailable'); return; }
       $('ob-exit').hidden = false;
       $('ob-signout').hidden = auth !== 'ready' && auth !== 'unverified';
-      if (auth === 'ready') { show('ob-wizard'); wizard(focus); }
-      else { show('ob-gate'); gate(auth); }
+      if (auth === 'ready' && handedOff()) { closeLeave(); show('ob-done'); done(); if (focus) $('ob-done-title').focus(); }
+      else if (auth === 'ready') { show('ob-wizard'); wizard(focus); }
+      else { closeLeave(); show('ob-gate'); gate(auth); }
     }
     function refresh() {
       auth = authState(clerk);
@@ -1244,7 +1392,16 @@
     // Step 4: Edit back to Steps 2 and 3
     $('ob-edit-business').addEventListener('click', function () { editStep(1, 'ob-name'); });
     $('ob-edit-sections').addEventListener('click', function () { editStep(3, 'ob-chosen-title'); });
-    $('ob-finish').addEventListener('click', saveDraft);
+    $('ob-finish').addEventListener('click', primaryAction);
+    // D2.3a: the second way into the Studio, the leave question, the return screen
+    $('ob-open').addEventListener('click', function () { openStudio($('ob-open')); });
+    $('ob-leave-stay').addEventListener('click', closeLeave);
+    $('ob-leave-go').addEventListener('click', function () { var dlg = $('ob-leave'); if (dlg && dlg.open) dlg.close(); leaveFrom = null; goStudio(); });
+    $('ob-leave').addEventListener('cancel', function (e) { e.preventDefault(); closeLeave(); });
+    $('ob-done-open').addEventListener('click', goStudio);
+    $('ob-done-new').addEventListener('click', startNew);
+    // back from the Studio (the browser's page cache): the return screen, not the steps as they were
+    win.addEventListener('pageshow', function (e) { if (e && e.persisted) render(false); });
     $('ob-switch-use').addEventListener('click', useSuggested);
     $('ob-switch-undo').addEventListener('click', undoSwitch);
     $('ob-sum-toggle').addEventListener('click', function () { sumOpen($('ob-sum-sections-box').getAttribute('data-open') !== 'true'); });
@@ -1324,6 +1481,6 @@
   }
 
   return { STEPS: STEPS, OPTIONS: OPTIONS, TX: TX, STORE_PREFIX: STORE_PREFIX, canStart: canStart, authState: authState, choose: choose, canNext: canNext, next: next, back: back,
-    storeKey: storeKey, restore: restore, restoreSwitch: restoreSwitch, restoreDraft: restoreDraft, draftRequest: draftRequest, fingerprint: fingerprint,
+    storeKey: storeKey, restore: restore, restoreSwitch: restoreSwitch, restoreDraft: restoreDraft, draftRequest: draftRequest, fingerprint: fingerprint, studioUrl: studioUrl,
     STORE_VERSION: STORE_VERSION, start: start };
 });

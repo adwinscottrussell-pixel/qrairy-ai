@@ -94,8 +94,10 @@ test('Step 1: Instagram and Website cannot be chosen; Start from Scratch leads o
 test('page: no Admin sidebar, no Studio controls; the language file, the routing, the sign-in loader, the shared renderer with the demo (O0.1) and its own scripts', () => {
   const scripts = [...HTML.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/studio/onboarding-theme.js', 'js/qraivy-lang.js', 'js/studio/studio-routing.js', 'js/studio/studio-auth.js',
-    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-templates.js', 'js/studio/onboarding-drafts.js', 'js/studio/onboarding-shell.js']);
-  assert.equal((HTML.match(/<script\b/g) || []).length, 11, 'no inline script');
+    'js/lpV3/core.js', 'js/studio/studio-demo-images.js', 'js/studio/onboarding-previews.js', 'js/studio/onboarding-model.js', 'js/studio/onboarding-templates.js',
+    // D2.3a: the Studio's own Save Draft (studio-pages-data.js), used only through onboarding-drafts.js update()
+    'js/studio/studio-pages-data.js', 'js/studio/onboarding-drafts.js', 'js/studio/onboarding-shell.js']);
+  assert.equal((HTML.match(/<script\b/g) || []).length, 12, 'no inline script');
   // O2.1: the theme script in <head>, after the stylesheet and before the body (no flash of the other appearance)
   const head = HTML.slice(0, HTML.indexOf('</head>'));
   assert.ok(head.indexOf('css/studio-onboarding.css') < head.indexOf('js/studio/onboarding-theme.js'), 'the theme script in the head, after the stylesheet');
@@ -202,9 +204,21 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   for (const l of ['en', 'de']) assert.ok(!/\b(saved successfully|draft (was|has been) (created|saved)|erfolgreich gespeichert|wurde (erstellt|gespeichert))\b/i.test(Object.values(OB.TX[l]).join(' ')), l + ': no success wording');
   assert.equal(OB.TX.en.save_draft, 'Save Draft'); assert.equal(OB.TX.de.save_draft, 'Entwurf speichern');
   assert.ok(/free/.test(OB.TX.en.draft_free) && /14-day trial/.test(OB.TX.en.draft_free) && /kostenlos/.test(OB.TX.de.draft_free) && /14-tägige Testphase/.test(OB.TX.de.draft_free));
-  // D2.2: one handler (saveDraft); the button is enabled / disabled in renderSave only
+  // D2.2: one handler; D2.3a: primaryAction (Save Draft, Save changes or Open in Studio); the button is enabled / disabled in renderSave only
   assert.equal((code(SRC).match(/\$\('ob-finish'\)\.addEventListener/g) || []).length, 1);
-  assert.ok(code(SRC).includes("$('ob-finish').addEventListener('click', saveDraft);") && !/ob-finish'\)\.disabled\s*=/.test(code(SRC)) && (code(SRC).match(/btn\.disabled\s*=/g) || []).length === 1, 'Save Draft: saveDraft handles it, renderSave sets disabled');
+  assert.ok(code(SRC).includes("$('ob-finish').addEventListener('click', primaryAction);") && !/ob-finish'\)\.disabled\s*=/.test(code(SRC)) && (code(SRC).match(/btn\.disabled\s*=/g) || []).length === 1, 'Save Draft: primaryAction handles it, renderSave sets disabled');
+  // D2.3a: the Studio is opened only at the checked, encoded address of the saved draft; one navigation, after marking the handoff
+  assert.equal((code(SRC).match(/location\.assign\(/g) || []).length, 1);
+  assert.ok(code(SRC).includes("'studio.html?slug=' + encodeURIComponent(slug)") && /draft\.handedOff = true;[\s\S]{0,40}save\(\);[\s\S]{0,20}win\.location\.assign\(url\);/.test(code(SRC)), 'handoff: marked and kept, then the one navigation');
+  assert.equal(OB.studioUrl('cafe-sonne-abc123'), 'studio.html?slug=cafe-sonne-abc123');
+  for (const bad of ['', null, 42, '../x', 'a/b', 'a b', '-x', 'https://evil.example', 'x?y=1', 'x#y', 'a'.repeat(121), 'é']) assert.equal(OB.studioUrl(bad), null, 'refused: ' + bad);
+  for (const k of ['open_studio', 'save_changes', 'save_updated', 'draft_conflict', 'upd_conflict', 'upd_forbidden', 'upd_notfound', 'leave_title', 'leave_text', 'leave_text_conflict', 'leave_stay', 'leave_go', 'done_title', 'done_text', 'done_text_noname', 'done_info', 'done_new']) {
+    assert.ok(OB.TX.en[k] && OB.TX.de[k] && OB.TX.en[k] !== OB.TX.de[k], 'D2.3a EN/DE text: ' + k);
+  }
+  assert.ok(!/next update|nächsten Update/.test(OB.TX.en.save_saved + OB.TX.en.save_changed + OB.TX.de.save_saved + OB.TX.de.save_changed), 'D2.3a: no "follows in the next update" any more');
+  // the leave question: a modal dialog, labelled and described; the return screen with its two choices
+  assert.ok(HTML.includes('<dialog class="ob-dialog" id="ob-leave" aria-labelledby="ob-leave-title" aria-describedby="ob-leave-text">'));
+  for (const id of ['ob-done', 'ob-done-title', 'ob-done-text', 'ob-done-open', 'ob-done-new', 'ob-open', 'ob-leave-stay', 'ob-leave-go']) assert.ok(HTML.includes('id="' + id + '"'), id);
 });
 
 test('no request: no fetch, XHR, sockets, beacons, API paths, payment or trial calls; storage only this tab\'s sessionStorage under the per-user key', () => {

@@ -107,6 +107,22 @@
     }
     function frames() { return Array.prototype.slice.call(o.canvas.querySelectorAll('iframe')); }
     function post(ifr, msg) { if (ifr.contentWindow) ifr.contentWindow.postMessage(msg, '*'); }
+    // after every (re)load: back to the same scroll position, selection marked
+    // (a section just asked to be shown, e.g. one just added, is scrolled into view in the reloaded page)
+    function watch(ifr) {
+      ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[ifr.getAttribute('data-device')] || 0, reveal: revealPending() }); });
+    }
+    // New page HTML for a frame. Assigning srcdoc to a frame that has already loaded is a navigation the
+    // browser records in the tab's history: every preview update would add an entry, and Back would step
+    // the frame through older previews instead of leaving the Studio. A NEW frame element's first page is
+    // not recorded, so the frame is replaced by a copy (same attributes and sandbox) holding the new page.
+    function reload(ifr, html) {
+      if (!ifr.parentNode) return;
+      var n = ifr.cloneNode(false);
+      n.srcdoc = html;
+      watch(n);
+      ifr.parentNode.replaceChild(n, ifr);
+    }
 
     function makeFrame(device) {
       var f = FRAMES[device];
@@ -130,9 +146,7 @@
       ifr.setAttribute('height', String(f.h));
       ifr.setAttribute('loading', 'eager');
       ifr.setAttribute('data-device', device);
-      // after every (re)load: back to the same scroll position, selection marked
-      // (a section just asked to be shown, e.g. one just added, is scrolled into view in the reloaded page)
-      ifr.addEventListener('load', function () { post(ifr, { type: 'init', id: state.selected, y: state.scroll[device] || 0, reveal: revealPending() }); });
+      watch(ifr);
       ifr.srcdoc = previewHtml(state.html, state.nav);
       if (device === 'mobile') scale.appendChild(phoneScreen(ifr));
       else scale.appendChild(ifr);
@@ -224,7 +238,7 @@
         if (html === state.html) return;
         state.html = html;
         var doc2 = previewHtml(html, state.nav);
-        frames().forEach(function (ifr) { ifr.srcdoc = doc2; });
+        frames().forEach(function (ifr) { reload(ifr, doc2); });
       };
       if (delay) state.timer = setTimeout(apply, delay); else apply();
     }
@@ -235,7 +249,7 @@
       if (!navTag(text) || text === state.nav) return;
       state.nav = text;
       var doc2 = previewHtml(state.html, state.nav);
-      frames().forEach(function (ifr) { ifr.srcdoc = doc2; });
+      frames().forEach(function (ifr) { reload(ifr, doc2); });
     }
 
     function revealPending() { return !!state.revealAt && Date.now() - state.revealAt < REVEAL_MS; }

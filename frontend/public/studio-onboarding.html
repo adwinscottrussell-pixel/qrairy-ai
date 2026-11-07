@@ -105,6 +105,21 @@
     </div>
   </section>
 
+  <!-- D2.3a: after the handoff to the Studio: the saved draft is never created again from here -->
+  <section class="ob-card-panel ob-notice-panel" id="ob-done" hidden>
+    <svg class="ob-ic ob-ic--lg" aria-hidden="true"><use href="#ob-check"/></svg>
+    <h1 class="ob-h1" id="ob-done-title" tabindex="-1" data-ob="done_title">Your draft is in the Studio</h1>
+    <p class="ob-lead" id="ob-done-text"></p>
+    <div class="ob-info">
+      <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+      <p data-ob="done_info">Starting a new page keeps this draft in your account. Creating drafts is free.</p>
+    </div>
+    <div class="ob-gate__actions">
+      <button type="button" class="ob-btn ob-btn--primary" id="ob-done-open" data-ob="open_studio">Open in Studio</button>
+      <button type="button" class="ob-btn ob-btn--secondary" id="ob-done-new" data-ob="done_new">Start a new page</button>
+    </div>
+  </section>
+
   <!-- The wizard: four steps (O0-O3A); Step 4 reviews the page, saving a draft is not built yet -->
   <section class="ob-wizard" id="ob-wizard" hidden>
     <!-- O2.1: Step 1, large desktops only: the benefits checklist (decoration; the same facts are in the texts) -->
@@ -384,13 +399,25 @@
       <div class="ob-nav">
         <button type="button" class="ob-btn ob-btn--ghost" id="ob-back"><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-left"/></svg><span data-ob="back">Back</span></button>
         <button type="button" class="ob-btn ob-btn--primary" id="ob-next"><span data-ob="next">Next</span><svg class="ob-ic" aria-hidden="true"><use href="#ob-arrow-right"/></svg></button>
-        <!-- D2.2: enabled once the page is complete (renderSave); one request at a time; disabled once the server confirmed the draft -->
+        <!-- D2.3a: while changes after saving can still be saved: the second way into the Studio (asks first) -->
+        <button type="button" class="ob-btn ob-btn--secondary" id="ob-open" hidden aria-describedby="ob-save-note" data-ob="open_studio">Open in Studio</button>
+        <!-- D2.2: enabled once the page is complete (renderSave); one request at a time. D2.3a: then Open in Studio, or Save changes -->
         <button type="button" class="ob-btn ob-btn--primary" id="ob-finish" hidden disabled aria-disabled="true" aria-describedby="ob-save-note" data-ob="save_draft">Save Draft</button>
       </div>
       <p class="ob-save-note" id="ob-save-note" hidden tabindex="-1" data-tone="info" data-ob="save_note">Saves your page privately in your QRAIVY account. Nothing is published.</p>
       <p class="ob-sr" id="ob-save-status" role="status" aria-live="polite"></p>
     </div>
   </section>
+
+  <!-- D2.3a: opening the Studio with changes that are not saved: asked first (modal; Escape or "Stay here" keeps everything) -->
+  <dialog class="ob-dialog" id="ob-leave" aria-labelledby="ob-leave-title" aria-describedby="ob-leave-text">
+    <h2 class="ob-h2" id="ob-leave-title" data-ob="leave_title">Leave your changes behind?</h2>
+    <p class="ob-dialog__text" id="ob-leave-text"></p>
+    <div class="ob-dialog__actions">
+      <button type="button" class="ob-btn ob-btn--primary" id="ob-leave-stay" data-ob="leave_stay">Stay here</button>
+      <button type="button" class="ob-btn ob-btn--secondary" id="ob-leave-go" data-ob="leave_go">Open Studio without these changes</button>
+    </div>
+  </dialog>
 </main>
 
 <script src="js/studio/studio-auth.js"></script>
@@ -402,7 +429,9 @@
 <script src="js/studio/onboarding-model.js"></script>
 <!-- Step 3 (T1b): the six starter templates (plain data, built with core.js) -->
 <script src="js/studio/onboarding-templates.js"></script>
-<!-- D2.2: Save Draft, the onboarding's only request -->
+<!-- D2.3a: the Studio's own Save Draft (PUT of a saved draft's design), used by onboarding-drafts.js update() -->
+<script src="js/studio/studio-pages-data.js"></script>
+<!-- D2.2: Save Draft, the onboarding's only request file -->
 <script src="js/studio/onboarding-drafts.js"></script>
 <script src="js/studio/onboarding-shell.js"></script>
 </body>

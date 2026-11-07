@@ -24,6 +24,16 @@
  *   unavailable  5xx, another status, or an answer that is not the expected one
  *   network      no answer (offline, blocked, timed out)
  *
+ * D2.3a: update(slug, design, baseRevision) saves later changes to that saved
+ * draft. It sends no request of its own: it is the Studio's own Save Draft
+ * (studio-pages-data.js save(): PUT <api>/studio/pages/<slug>/design
+ * { design, baseRevision }; requireAuth, requireVerifiedEmail, the server
+ * checks the owner and the revision, 409 when the draft changed since). Only
+ * the design is sent: never the origin, never a name, never a new draft.
+ * Resolves { slug, revision, savedAt } or rejects with a Failure:
+ *   conflict  409 revision_conflict (the draft changed since; nothing was overwritten)
+ *   signin / forbidden / notfound / invalid / unavailable (also no answer)
+ *
  * In Node: module.exports (for the tests). In the browser:
  * window.QraivyOnboardingDrafts.
  */
@@ -74,7 +84,7 @@
     return new Failure('unavailable');
   }
 
-  // createDraftClient({ api, session: () => Clerk session or null, fetch })
+  // createDraftClient({ api, session: () => Clerk session or null, fetch, pages: QraivyStudioPages })
   function createDraftClient(o) {
     var api = typeof o.api === 'string' && API.test(o.api) ? o.api : '';
     var doFetch = typeof o.fetch === 'function' ? o.fetch : typeof root.fetch === 'function' ? root.fetch.bind(root) : null;
@@ -102,7 +112,25 @@
       }).then(function (r) { if (r instanceof Failure) throw r; return r; }, function (e) { throw e instanceof Failure ? e : new Failure('network'); });
     }
 
-    return { available: available, create: create };
+    // D2.3a: the later changes, through the Studio's own save (studio-pages-data.js)
+    var PAGES = o.pages || root.QraivyStudioPages;
+    var pagesData = PAGES && typeof PAGES.createPagesData === 'function' && available() ? PAGES.createPagesData({ api: api, fetch: doFetch, getToken: function () {
+      var s = sessionOf();
+      return s && typeof s.getToken === 'function' ? s.getToken() : null;
+    } }) : null;
+    function canUpdate() { return !!(pagesData && pagesData.connected()); }
+    var UPDATE_STATES = ['conflict', 'signin', 'forbidden', 'notfound', 'invalid'];
+    function update(slug, design, baseRevision) {
+      if (!canUpdate()) return Promise.reject(new Failure('unavailable'));
+      if (typeof slug !== 'string' || !SLUG.test(slug) || !isObj(design) || count(baseRevision) === null || baseRevision < 1) return Promise.reject(new Failure('invalid'));
+      return Promise.resolve(pagesData.save(slug, design, baseRevision)).then(function (r) {
+        if (isObj(r) && r.state === 'saved' && count(r.revision) && r.revision > baseRevision) return { slug: slug, revision: r.revision, savedAt: typeof r.savedAt === 'string' ? r.savedAt : null };
+        var st = isObj(r) && UPDATE_STATES.indexOf(r.state) !== -1 ? r.state : 'unavailable';
+        throw new Failure(st, st === 'conflict' ? { currentRevision: count(r.currentRevision) } : null);
+      }, function () { throw new Failure('unavailable'); });
+    }
+
+    return { available: available, create: create, canUpdate: canUpdate, update: update };
   }
 
   return { PATH: PATH, TIMEOUT_MS: TIMEOUT_MS, Failure: Failure, requestId: requestId, outcome: outcome, createDraftClient: createDraftClient };

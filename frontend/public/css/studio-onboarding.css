@@ -577,6 +577,25 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 .ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-border); }
 .ob-nav .ob-btn { flex: 1; }
 .ob-nav #ob-back[hidden] + .ob-btn { margin-left: auto; }
+/* D2.3a: Save changes + Open in Studio: on phones Open in Studio takes its own full-width row under Back / Save changes */
+.ob-nav { flex-wrap: wrap; }
+#ob-open { order: 3; flex: 1 0 100%; }
+/* a label that wraps on narrow phones ("Save changes", "Änderungen speichern"): two readable lines, centred */
+@media (max-width: 599px) { .ob-nav .ob-btn { padding: 8px 14px; line-height: 1.25; text-align: center; } }
+@media (min-width: 600px) { #ob-open { order: 0; flex: 0 0 auto; margin-left: auto; } }
+
+/* D2.3a: the leave question (a modal dialog) */
+.ob-dialog {
+  width: min(480px, calc(100vw - 32px)); max-width: none; box-sizing: border-box; margin: auto; padding: 22px 20px 20px;
+  border: 1px solid var(--ob-border); border-radius: 16px; background: var(--ob-surface); color: var(--ob-text); box-shadow: var(--ob-shadow);
+}
+.ob-dialog::backdrop { background: rgba(10, 10, 10, 0.55); }
+.ob-dialog__text { margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: var(--ob-text-2); }
+.ob-dialog__actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.ob-dialog .ob-btn { width: 100%; padding: 10px 16px; line-height: 1.25; text-align: center; }
+.ob-btn:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; }
+#ob-done-title:focus { outline: none; }
+#ob-done-title:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; border-radius: 4px; }
 
 /* ── wider screens ── */
 @media (min-width: 600px) {

@@ -221,9 +221,9 @@ test('Style: background, alignment and spacing reach the preview', async () => {
     await page.select(fp('style.spacing', 'select'), sp);
     await sectionHas(page, 'class="v3-s v3-text v3-v-plain v3-bg-' + bg + ' v3-al-' + al + ' v3-sp-' + sp + '"');
   }
-  const fr = await frame(page);
   await page.select(fp('style.align', 'select'), 'center');
-  await until(async () => (await fr.$eval('[data-v3-id="' + T + '"] .v3-h2', (n) => getComputedStyle(n).textAlign).catch(() => '')) === 'center', 'centred heading');
+  // the preview frame is replaced on every update (studio-preview.js reload(): no history entries): looked up each time
+  await until(async () => (await frame(page).then((fr) => fr.$eval('[data-v3-id="' + T + '"] .v3-h2', (n) => getComputedStyle(n).textAlign)).catch(() => '')) === 'center', 'centred heading');
   await page.close();
 });
 
