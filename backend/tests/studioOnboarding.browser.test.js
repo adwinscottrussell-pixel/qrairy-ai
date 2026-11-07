@@ -788,7 +788,7 @@ test('Step 3, desktop, English (T1c.2: the chosen template\'s suggested sections
     'Example · Edit later in Studio', 'Example · Edit later in Studio'], 'T1c.2: example and starter content marked');
   assert.deepEqual(await page.$$eval('#ob-more [data-act="add"]', (ns) => ns.map((b) => b.getAttribute('aria-label') + '|' + b.textContent + '|' + getComputedStyle(b).color)),
     ['Add Social Media|+Add|rgb(21, 128, 61)', 'Add Gallery|+Add|rgb(21, 128, 61)', 'Add Custom Section|+Add|rgb(21, 128, 61)'], 'green Add buttons');
-  assert.equal(await text(page, '[data-ob="sections_info"]'), 'Empty sections stay hidden on your public page until you add their content in the Studio.');
+  assert.equal(await text(page, '#ob-sections-intro-title'), 'Choose what goes on your page', 'E1: the information panel');
   // the live phone: the page with exactly these sections, in order; scripts only, never same-origin; the fixed script once
   await waitSec(page, 's_obcontact1');
   assert.deepEqual(await frameIds(page), ['s_obhero01', 's_obbuttons1', 's_obproducts1', 's_obtext01', 's_obhours01', 's_obcontact1']);
@@ -941,6 +941,50 @@ test('T1c.2 Step 4, Creator: six suggested (no links: five, no Social Media); a 
   const pal = await page.evaluate(() => JSON.parse(sessionStorage.getItem(Object.keys(sessionStorage).find((k) => k.startsWith('qraivy.onboarding')))).answers);
   assert.deepEqual([pal.template, pal.palette, pal.sections], ['creator', 'violet', ['hero']]);
   assert.equal(await page.$eval('#ob-next', (b) => b.disabled), false, 'a Hero-only page can go on');
+  await page.close();
+});
+
+const INTRO = {
+  en: ['Choose what goes on your page', "Select the sections you'd like on your landing page. We'll add example content to help you get started.",
+    "Don't worry about the details yet! You'll be able to edit all text, images, products and opening hours in the Studio Builder.", 'You can add or remove sections later.'],
+  de: ['Wählen Sie die Bereiche für Ihre Seite', 'Wählen Sie aus, welche Bereiche Ihre Landingpage enthalten soll. Wir fügen Beispielinhalte hinzu, damit Sie direkt starten können.',
+    'Um die Details müssen Sie sich jetzt noch nicht kümmern! Texte, Bilder, Produkte und Öffnungszeiten können Sie anschließend im Studio bearbeiten.', 'Sie können später jederzeit Bereiche hinzufügen oder entfernen.'],
+};
+test('E1: Step 4 information panel: the approved English and German text, blue, directly above the section cards, under the unchanged heading; readable in Light and Dark; desktop 1440 / 1024 and phones 390 / 320 without sideways scroll; the language switch updates it', async () => {
+  for (const [viewport, lang, theme] of [[DESKTOP, 'en', 'light'], [DESKTOP, 'de', 'dark'], [{ width: 1024, height: 768 }, 'en', 'dark'], [PHONE, 'de', 'light'], [Object.assign({}, PHONE, { width: 320 }), 'en', 'dark'], [Object.assign({}, PHONE, { width: 320 }), 'de', 'dark']]) {
+    const { page, api, external } = await onboarding({ viewport, lang, theme });
+    await toTemplateStep4(page, { id: 'bakery', name: lang === 'de' ? 'Bäckerei Sonne' : 'Café Sonne' });
+    const tag = viewport.width + ' ' + lang + ' ' + theme;
+    const r = await page.evaluate(() => {
+      const box = document.getElementById('ob-sections-intro'), q = (s) => document.querySelector(s).getBoundingClientRect(), b = box.getBoundingClientRect(), cs = getComputedStyle(box);
+      return { texts: [...box.querySelectorAll('.ob-info__title, p')].map((n) => n.textContent), h1: document.querySelector('#ob-step-3 .ob-h1').textContent,
+        first: box.parentElement.firstElementChild === box && box.nextElementSibling.querySelector('#ob-chosen') !== null,
+        above: b.top >= q('#ob-step-3 .ob-h1').bottom && b.bottom <= q('#ob-chosen-title').top && b.bottom <= q('#ob-chosen').top,
+        bg: cs.backgroundColor, border: cs.borderTopColor, icon: getComputedStyle(box.querySelector('.ob-ic')).color, heading: box.querySelector('h2').id,
+        old: !!document.querySelector('[data-ob="sections_info"], [data-ob="sections_text"]'), sw: document.documentElement.scrollWidth, iw: innerWidth, w: Math.round(b.width) };
+    });
+    assert.deepEqual(r.texts, INTRO[lang], tag + ': the approved text');
+    assert.equal(r.h1, lang === 'de' ? 'Seite anpassen' : 'Customize your page', tag + ': the Step 4 heading unchanged');
+    assert.ok(r.first && r.above, tag + ': directly above the section cards ' + JSON.stringify(r));
+    assert.equal(r.old, false, tag + ': the former lead line and note are gone');
+    assert.equal(r.heading, 'ob-sections-intro-title');
+    assert.deepEqual([r.bg, r.border, r.icon], theme === 'light' ? ['rgb(239, 246, 255)', 'rgb(191, 219, 254)', 'rgb(29, 78, 216)'] : ['rgba(59, 130, 246, 0.12)', 'rgba(59, 130, 246, 0.38)', 'rgb(96, 165, 250)'], tag + ': the blue information tokens');
+    assert.ok(r.sw <= r.iw, tag + ': no sideways scroll ' + r.sw + ' > ' + r.iw);
+    for (const sel of ['#ob-sections-intro-title', '[data-ob="sections_intro_text"]', '[data-ob="sections_intro_detail"]', '[data-ob="sections_intro_later"]']) {
+      const c = await contrast(page, sel);
+      assert.ok(c !== null && c >= 4.5, tag + ': ' + sel + ' contrast ' + c);
+    }
+    await shot(page, 'e1-step4-intro-' + viewport.width + '-' + lang + '-' + theme + '.png', false);
+    assert.deepEqual(api, []); assert.deepEqual(external, []);
+    await page.close();
+  }
+  // switching the language on Step 4 swaps the panel's text at once
+  const { page } = await onboarding({ viewport: DESKTOP });
+  await toTemplateStep4(page, { id: 'bakery', name: 'Café Sonne' });
+  await page.click('.ob-lang__btn[data-lang="de"]');
+  assert.deepEqual(await page.$$eval('#ob-sections-intro .ob-info__title, #ob-sections-intro p', (ns) => ns.map((n) => n.textContent)), INTRO.de);
+  await page.click('.ob-lang__btn[data-lang="en"]');
+  assert.deepEqual(await page.$$eval('#ob-sections-intro .ob-info__title, #ob-sections-intro p', (ns) => ns.map((n) => n.textContent)), INTRO.en);
   await page.close();
 });
 
@@ -1181,7 +1225,7 @@ test('O2.1: readable contrast in Light and Dark on every step; dark text on oran
     await at('Step 3 design', ['#ob-design-title', '[data-ob="design_text"]', '.ob-tpl[data-template="bakery"] .ob-tpl__title', '.ob-tpl[data-template="bakery"] .ob-tpl__text', '.ob-tpl[data-template="retail"] .ob-tpl__title', '#ob-pals-title', '.ob-pal[aria-checked="true"] .ob-pal__name', '.ob-pal[aria-checked="false"] .ob-pal__name', '.ob-legend__item--yours', '.ob-legend__item--example', '.ob-steps__item[data-step="2"] .ob-steps__label']);
     await page.click('#ob-next');
     await waitSec(page, 's_obsocial1');
-    await at('Step 3', ['#ob-chosen-title', '#ob-chosen [data-type="contact"] .ob-sec__title', '#ob-chosen [data-type="contact"] .ob-sec__text', '#ob-chosen [data-type="contact"] .ob-sec__tag', '#ob-chosen [data-type="socialMedia"] .ob-sec__tag', '#ob-chosen [data-type="contact"] .ob-sec__num', '#ob-more [data-act="add"]', '#ob-chosen .ob-remove', '[data-ob="sections_info"]']);
+    await at('Step 3', ['#ob-chosen-title', '#ob-chosen [data-type="contact"] .ob-sec__title', '#ob-chosen [data-type="contact"] .ob-sec__text', '#ob-chosen [data-type="contact"] .ob-sec__tag', '#ob-chosen [data-type="socialMedia"] .ob-sec__tag', '#ob-chosen [data-type="contact"] .ob-sec__num', '#ob-more [data-act="add"]', '#ob-chosen .ob-remove', '#ob-sections-intro-title', '[data-ob="sections_intro_text"]', '[data-ob="sections_intro_detail"]', '[data-ob="sections_intro_later"]']);
     frames.step3 = frames.step3 || [];
     frames.step3.push(await secFrame(page));
     await page.click('#ob-next');
@@ -1341,7 +1385,7 @@ test('Step 4, desktop, English: the summary of Steps 2 and 3 (as text, in order)
   assert.equal(await reviewFrame(page), await secFrame(page), 'exactly the Step 4 page');
   assert.ok((await reviewFrame(page)).includes('--v3-brand:#94500f') && ((await reviewFrame(page)).match(/<span class="ob-ex">Example<\/span>/g) || []).length === 4, 'the Bakery palette, buttons / products / hours / contact tagged');
   assert.deepEqual(await page.$$eval('#ob-review-legend .ob-legend__item', (ns) => ns.map((n) => n.textContent)), ['Your details from Step 2', '“Example”: demo, not your real details']);
-  assert.equal(await text(page, '#ob-review-example-note'), 'Example details are not saved as your information.');
+  assert.equal(await text(page, '#ob-review-example-note'), 'Sections marked “Example” come into your draft with example content, so you can edit them in the Studio. The examples are not your business details: replace them with your own.');
   assert.ok((await reviewFrame(page)).includes('Café &lt;b&gt;Sonne&lt;/b&gt;'));
   assert.equal(await page.$eval('#ob-review-frame', (f) => f.getAttribute('sandbox')), 'allow-scripts');
   // layout: two columns, the phone beside, the progress indicator unchanged
@@ -1406,7 +1450,7 @@ test('Step 4 minimal: only a name -> "No description", "No social media links", 
     assert.deepEqual([s.description, s.descEmpty, s.linksText], de ? ['Keine Beschreibung', 'true', 'Keine Social-Media-Links'] : ['No description', 'true', 'No social media links']);
     assert.deepEqual(s.sections, ['hero', 'buttons', 'products', 'text', 'openingHours', 'contact'], 'T1c.3: the template\'s suggested sections, as on Step 4');
     assert.equal(s.sectionsTitle, de ? 'Abschnitte (6)' : 'Sections (6)');
-    if (de) assert.equal(await text(page, '#ob-review-example-note'), 'Beispielangaben werden nicht als Ihre Angaben gespeichert.');
+    if (de) assert.equal(await text(page, '#ob-review-example-note'), 'Mit „Beispiel“ markierte Abschnitte kommen mit Beispielinhalten in Ihren Entwurf, damit Sie sie im Studio bearbeiten können. Die Beispiele sind nicht Ihre Unternehmensangaben: Ersetzen Sie sie durch Ihre eigenen.');
     assert.equal(s.save.text, de ? 'Entwurf speichern' : 'Save Draft');
     assert.ok(!s.save.disabled, 'D2.2: Save Draft ready');
     if (de) {
@@ -1458,7 +1502,7 @@ test('T1c.3 Step 5, Restaurant (desktop, English): a customized order and the St
   assert.ok(html.includes('--v3-brand:#4b6a2e') && html.includes('Pasta &amp; Wein') && html.includes('https://instagram.com/cafesonne'), 'the Olive palette and the Step 2 details');
   assert.deepEqual(await page.$$eval('#ob-sum-sections .ob-sec__tag', (ns) => ns.map((n) => n.textContent)),
     ['Always first · from Step 2', 'Example · Edit later in Studio', 'Example · Edit later in Studio', 'Example · Edit later in Studio', 'Starter content · edit it in the Studio', 'Example · Edit later in Studio', '1 link from Step 2'], 'example, starter and the customer\'s own told apart');
-  assert.equal(await text(page, '#ob-review-example-note'), 'Example details are not saved as your information.');
+  assert.equal(await text(page, '#ob-review-example-note'), 'Sections marked “Example” come into your draft with example content, so you can edit them in the Studio. The examples are not your business details: replace them with your own.');
   // Back to Step 4: the same list; add Gallery back; forward: Step 5 follows
   await page.click('#ob-back'); await sleep(150);
   assert.deepEqual(await chosen(page), mine, 'Back: every edit kept');
@@ -1854,7 +1898,8 @@ const saveUi = (page) => page.evaluate(() => {
   return { text: b.textContent, disabled: b.disabled, aria: b.getAttribute('aria-disabled'), busy: b.getAttribute('aria-busy'), note: n.textContent, tone: n.getAttribute('data-tone'),
     badge: badge.textContent, state: badge.getAttribute('data-state'), live: document.getElementById('ob-save-status').textContent, focus: document.activeElement && document.activeElement.id };
 });
-// a design as the server accepts it, without any example-only data (DEMO_ONLY in onboarding-templates.js)
+// a design as the server accepts it (E2: with the template's example content in the chosen sections): no phone number, no
+// contact or map link, every link on the page itself or the customer's own social link, no example profile, Custom Sections empty
 function checkSentDesign(body, tag) {
   const { readBody } = require('../src/lpV3/studioDraftsController');
   const r = readBody(body);
@@ -1862,21 +1907,24 @@ function checkSentDesign(body, tag) {
   const v = V3core.validateDesign(body.design, { cloudName: 'dwqc6n7rn' });
   assert.ok(v.ok, tag + ': a valid design ' + JSON.stringify(v.errors && v.errors.slice(0, 3)));
   assert.equal(body.design.settings.language, body.language);
-  for (const s of body.design.pages[0].sections) {
+  const secs = body.design.pages[0].sections, anchors = secs.map((s) => s.anchor).filter(Boolean);
+  const onPage = (u) => !u || u === '/' || anchors.includes(String(u).slice(1));
+  for (const s of secs) {
     const d = s.data || {};
-    // core.js keeps an emptied button as { text: '', target: '' }: no example label or link
-    if (s.type === 'hero') assert.ok([d.primary, d.secondary].every((x) => !x || (!x.text && !x.target)), tag + ': no example Hero buttons ' + JSON.stringify([d.primary, d.secondary]));
-    if (s.type === 'buttons' || s.type === 'products') assert.ok(!d.items || d.items.length === 0, tag + ': no example ' + s.type);
-    if (s.type === 'contact') assert.ok((!d.address || Object.values(d.address).every((v) => !v)) && !d.phone && !d.email && !d.mapsUrl, tag + ': no example contact data ' + JSON.stringify(d));
-    if (s.type === 'openingHours') assert.ok(!d.days || d.days.length === 0, tag + ': no example hours');
+    if (s.type === 'hero') assert.ok([d.primary, d.secondary].every((x) => !x || onPage(x.target)), tag + ': Hero buttons only to the page itself ' + JSON.stringify([d.primary, d.secondary]));
+    if (s.type === 'buttons') assert.ok((d.items || []).every((x) => onPage(x.target)), tag + ': example buttons only to the page itself');
+    if (s.type === 'products') assert.ok((d.items || []).every((x) => !x.target), tag + ': example products without a link');
+    if (s.type === 'contact') assert.ok(!d.phone && !d.mapsUrl && !d.showMapLink && (!d.email || /@example\.com$/.test(d.email)), tag + ': no phone, no map link, only an example.com email ' + JSON.stringify(d));
+    if (s.type === 'socialMedia') assert.ok((d.links || []).every((x) => !/^https:\/\/(www\.)?[a-z]+\.com\/$|^https:\/\/x\.com\/$/.test(x.url)), tag + ': no example profile (platform home page)');
+    if (/^s_c/.test(s.id)) assert.ok(!d.heading && !d.body, tag + ': Custom Section empty');
   }
-  assert.ok(!/Musterstra|Sample Street|Sample Town|Beispielstra|example\.com|hallo@|hello@|\+49|€|\$\d/.test(JSON.stringify(body.design)), tag + ': no example address, email, phone or price');
-  const ids = new Set(body.design.pages[0].sections.map((s) => s.id));
+  assert.ok(!/tel:|wa\.me|mailto:/.test(JSON.stringify(body.design)), tag + ': no phone, WhatsApp or email link');
+  const ids = new Set(secs.map((s) => s.id));
   assert.ok(body.origin.exampleSectionIds.every((id) => ids.has(id)), tag + ': example ids are sections of the design');
 }
 const V3core = require('../src/lpV3/core.js');
 
-test('D2.2 Save Draft (desktop, English): one request (double click and Enter ignored while saving) with a stable requestId, the template page and origin, Custom Sections in order, no example data; saved only after the server confirmed; kept across a reload; a later change is shown as not saved, never sent', async () => {
+test('D2.2 Save Draft (desktop, English): one request (double click and Enter ignored while saving) with a stable requestId, the template page and origin, Custom Sections in order, E2: the preview\'s example content (no phone, no contact link); saved only after the server confirmed; kept across a reload; a later change is shown as not saved, never sent', async () => {
   let release;
   const gate = new Promise((r) => { release = r; });
   const { page, api, external, posts } = await onboarding({ drafts: async () => { await gate; return saved201(); } });

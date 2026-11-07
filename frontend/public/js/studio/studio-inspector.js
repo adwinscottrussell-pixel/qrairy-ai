@@ -1177,6 +1177,30 @@
       });
     }
 
+    // E3: the chips. paths: as the fields name themselves (data-path). A link field gets none (its button's text carries
+    // it), a list row one on its toggle (part of the row's name), a field inside an open row its own; Opening Hours one
+    // on the days heading. Every earlier chip goes first, so a replaced value loses its chip at once.
+    function markExampleFields(box, paths) {
+      var old = box.querySelectorAll('.st-ex-chip');
+      for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
+      var chip = function () { return el('span', { class: 'st-ex-chip', 'data-example': '', text: o.t('ex_badge') }); };
+      var rows = {};
+      (paths || []).forEach(function (p) {
+        if (typeof p !== 'string' || /\.target$/.test(p)) return;
+        var m = /^(data\.[a-zA-Z]+)\[(\d+)\]\./.exec(p);
+        if (m && !rows[m[1] + m[2]]) {
+          rows[m[1] + m[2]] = true;
+          var t = box.querySelector('[data-path="' + m[1] + '"] .st-item[data-index="' + m[2] + '"] .st-item__toggle');
+          if (t) t.appendChild(chip());
+        }
+        var f = box.querySelector('[data-path="' + p + '"]');
+        if (!f) return;
+        var at = f.querySelector('.st-field__label') || f.querySelector('.st-group') || f.firstElementChild;
+        if (!at || at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.tagName === 'SELECT') return;
+        var lab = at.querySelector('label');
+        if (lab && lab.parentNode === at) at.insertBefore(chip(), lab.nextSibling); else at.appendChild(chip());   // beside the label, before a counter
+      });
+    }
     // Full build: on selection, tab, language or Undo / Redo.
     function render() {
       var box = o.box;
@@ -1204,6 +1228,9 @@
       box.setAttribute('data-editable', String(editable));
       if (editable) {
         renderPlan(box, sec, D, PLANS[sec.type]);
+        // E3: a small "Example" chip beside each field that still holds the template's example value (o.exampleFields:
+        // the shell decides), on a list row when any of its fields does; kept up to date while typing
+        if (typeof o.exampleFields === 'function') refreshers.push(function (cur) { markExampleFields(box, o.exampleFields(cur)); });
         o.note.textContent = tx('note_edit');
       } else {
         var valid = store.lastValid();

@@ -310,9 +310,19 @@
            with the other answers; nothing is sent or saved. -->
       <div class="ob-step" id="ob-step-3" data-step="3" hidden>
         <h1 class="ob-h1" id="ob-sections-title" tabindex="-1" data-ob="step_sections">Customize your page</h1>
-        <p class="ob-lead" data-ob="sections_text">Pick the sections for your page, put them in order and see a live phone preview.</p>
         <div class="ob-business ob-sections">
           <div class="ob-fields">
+            <!-- E1: the approved blue information panel, directly above the section cards (replaces the former lead line and
+                 the note on empty sections) -->
+            <section class="ob-info ob-info--intro" id="ob-sections-intro" aria-labelledby="ob-sections-intro-title">
+              <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
+              <div class="ob-info__body">
+                <h2 class="ob-info__title" id="ob-sections-intro-title" data-ob="sections_intro_title">Choose what goes on your page</h2>
+                <p data-ob="sections_intro_text">Select the sections you'd like on your landing page. We'll add example content to help you get started.</p>
+                <p data-ob="sections_intro_detail">Don't worry about the details yet! You'll be able to edit all text, images, products and opening hours in the Studio Builder.</p>
+                <p class="ob-info__later" data-ob="sections_intro_later">You can add or remove sections later.</p>
+              </div>
+            </section>
             <section class="ob-secgroup" aria-labelledby="ob-chosen-title">
               <h2 class="ob-h2" id="ob-chosen-title" tabindex="-1" data-ob="chosen_title">On your page</h2>
               <ol class="ob-chosen" id="ob-chosen"></ol>
@@ -322,10 +332,6 @@
               <ul class="ob-more" id="ob-more"></ul>
               <p class="ob-hint" id="ob-more-none" data-ob="more_none" hidden>All eight sections are on your page.</p>
             </section>
-            <div class="ob-info ob-info--compact">
-              <svg class="ob-ic" aria-hidden="true"><use href="#ob-info"/></svg>
-              <p data-ob="sections_info">Empty sections stay hidden on your public page until you add their content in the Studio.</p>
-            </div>
             <p class="ob-error" id="ob-sections-error"></p>
             <p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"></p>
           </div>
@@ -390,7 +396,7 @@
               <li class="ob-legend__item ob-legend__item--yours" data-ob="legend_yours">Your details from Step 2</li>
               <li class="ob-legend__item ob-legend__item--example" data-ob="legend_example">“Example”: demo, not your real details</li>
             </ul>
-            <p class="ob-live__note ob-review-example-note" id="ob-review-example-note" data-ob="review_example_note">Example details are not saved as your information.</p>
+            <p class="ob-live__note ob-review-example-note" id="ob-review-example-note" data-ob="review_example_note">Sections marked “Example” come into your draft with example content, so you can edit them in the Studio. The examples are not your business details: replace them with your own.</p>
             <p class="ob-live__note" data-ob="review_live_note">Scroll the phone to see the whole page.</p>
           </aside>
         </div>

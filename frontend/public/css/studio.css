@@ -465,6 +465,14 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 /* D2.3b-4: the guidance note at the top of an empty section's editor (Studio only) */
 .st-guide { display: flex; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--st-border-strong); border-left: 3px solid var(--st-accent); border-radius: 10px; background: var(--st-surface-2, var(--st-surface)); color: var(--st-text); font: 500 13px/1.45 'Inter', sans-serif; }
 .st-guide[hidden] { display: none; }
+/* E3: example content. The note in the blue information style; small neutral "Example" badges (section list) and chips (fields) */
+.st-guide[data-kind="demo"] { border-color: var(--st-info-border); border-left: 3px solid var(--st-info); background: var(--st-info-soft); color: var(--st-info); }
+.st-ex-badge, .st-ex-chip { display: inline-flex; align-items: center; flex: none; padding: 1px 7px; border: 1px solid var(--st-border-strong); border-radius: 999px; background: var(--st-surface-3); color: var(--st-text-2);
+  font: 700 10.5px/1.5 'Inter', sans-serif; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.st-ex-badge { align-self: flex-start; margin-top: 4px; }
+.st-ex-chip { margin-left: 6px; }
+.st-field__label .st-ex-chip { margin-left: 0; margin-right: auto; }
+.st-group .st-ex-chip { margin-left: 8px; letter-spacing: .04em; }
 
 /* Add library: title, a readable description, a visible availability label */
 .st-lib__item { align-items: flex-start; padding: 12px 10px 12px 12px; }

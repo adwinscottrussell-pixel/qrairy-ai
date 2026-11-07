@@ -349,6 +349,14 @@ body.ob-page {
   border: 1.5px dashed var(--ob-border-strong); border-radius: 12px; background: var(--ob-surface-2); color: var(--ob-muted);
   font: 600 14px/1 Inter, sans-serif; cursor: not-allowed;
 }
+/* E1: Step 4's information panel above the section cards */
+.ob-info--intro { margin-top: 0; padding: 16px 18px; gap: 12px; }
+.ob-info--intro .ob-ic { width: 22px; height: 22px; margin-top: 2px; }
+.ob-info__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ob-info__title { margin: 0; font: 700 16px/1.35 Inter, sans-serif; color: var(--ob-info-text); }
+.ob-info--intro p { font-size: 14px; line-height: 1.5; }
+.ob-info--intro .ob-info__later { font-weight: 600; }
+@media (max-width: 599px) { .ob-info--intro { padding: 14px; gap: 10px; } .ob-info__title { font-size: 15px; } }
 .ob-info--compact { margin-top: 2px; padding: 10px 12px; }
 .ob-info--compact p { font-size: 13px; }
 

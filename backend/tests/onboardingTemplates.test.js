@@ -318,12 +318,27 @@ test('Hero spacing: compact for Creator and Professional Services only (T0 refin
   assert.equal(T.get('services').content((en) => en, () => '', () => '').hero.variant, 'split');
 });
 
-test('pure: no request, no storage, no DOM; T1b: loaded by the onboarding only (Step 3), never by the Studio', () => {
+test('pure: no request, no storage, no DOM; T1b: loaded by the onboarding (Step 3); E3: in the Studio only as the example-value detection\'s catalog', () => {
   const src = read('js/studio/onboarding-templates.js');
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|localStorage|sessionStorage|document\.|window\.|new Image|import\(/.test(src.replace(/^\s*\*.*$/gm, '').replace(/\/\/.*$/gm, '')));
   assert.ok(read('studio-onboarding.html').includes('<script src="js/studio/onboarding-templates.js"></script>'), 'the onboarding loads it');
   assert.ok(read('js/studio/onboarding-shell.js').includes('T = win.QraivyOnboardingTemplates'), 'Step 3 uses it');
-  assert.ok(!read('studio.html').includes('onboarding-templates.js') && !read('js/studio/studio-shell.js').includes('QraivyOnboardingTemplates'), 'the Studio does not');
+  // E3: the Studio loads it once, as a local file, after core.js and before the detection and the shell
+  const studio = read('studio.html'), at = (f) => studio.indexOf('<script src="' + f + '"></script>');
+  assert.equal(studio.split('onboarding-templates.js').length - 1, 1, 'the Studio loads it once');
+  assert.ok(at('js/lpV3/core.js') !== -1 && at('js/lpV3/core.js') < at('js/studio/onboarding-templates.js') && at('js/studio/onboarding-templates.js') < at('js/studio/studio-demo-fields.js')
+    && at('js/studio/studio-demo-fields.js') < at('js/studio/studio-shell.js'), 'core.js, the catalog, the detection, then the shell');
+  // the shell takes it in one place and hands it only to the detection (studio-demo-fields.js exampleMap); nothing else of the Studio uses it
+  const shell = read('js/studio/studio-shell.js');
+  assert.equal(shell.split('QraivyOnboardingTemplates').length - 1, 1, 'one reference in the shell');
+  assert.ok(shell.includes('TPL_CATALOG = window.QraivyOnboardingTemplates || null;'));
+  // exactly three uses: taken, checked present, passed to the detection
+  const uses = shell.split('TPL_CATALOG').length - 1;
+  assert.equal(uses, 3, 'TPL_CATALOG used three times');
+  assert.ok(shell.includes('DEMO_FIELDS && TPL_CATALOG && pageView.current') && shell.includes('DEMO_FIELDS.exampleMap(editor.draft(), pageView.origin, TPL_CATALOG, V3)'), 'used only as the detection\'s input');
+  for (const f of ['js/studio/studio-inspector.js', 'js/studio/studio-store.js', 'js/studio/studio-preview.js', 'js/studio/studio-pages-data.js', 'js/studio/studio-demo-fields.js']) {
+    assert.ok(!read(f).includes('QraivyOnboardingTemplates'), f + ': takes no catalog from the page');
+  }
 });
 
 test('T1c emptyFallback: a chosen type without example content stays on the page as core.js\'s empty starter with its fixed id (listed), in every template and both languages; off by default (T0 unchanged)', () => {

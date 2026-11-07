@@ -198,6 +198,55 @@ test('Save Draft -> Open in Studio: the Studio opens THAT draft at revision 1 (C
   await page.close();
 });
 
+test('E2: the saved draft holds the preview\'s example content (Bakery: buttons, products, hours, contact; no phone, no example profile; Custom Section empty); the Studio opens it as saved, shows it and edits it: a product renamed and saved is revision 2, every other example kept', async () => {
+  S.resetDrafts();
+  const { page, api, log } = await open('studio-onboarding.html');
+  const order = await onboardToSaved(page, { template: 'bakery', customs: 1 });
+  const slug = (await page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).draft.slug; } return null; }));
+  const saved = S.copy(designOf(slug).draft);
+  const secs = saved.pages[0].sections, by = (t) => secs.find((s) => s.type === t);
+  assert.deepEqual(secs.map((s) => s.type), order.map((t) => (t.startsWith('custom:') ? 'text' : t)), 'exactly the chosen sections, in order');
+  assert.equal(by('hero').data.headline, 'Café Sonne', 'the customer\'s name');
+  assert.ok(by('buttons').data.items.length >= 3 && by('products').data.items.length >= 3 && by('openingHours').data.days.length === 7, 'example buttons, products, hours');
+  assert.ok(/^(hello|hallo)@example\.com$/.test(by('contact').data.email) && by('contact').data.address.city, 'the example contact');
+  assert.ok(!by('contact').data.phone && !/tel:|wa\.me|mailto:/.test(JSON.stringify(saved)), 'no phone number, no contact link');
+  assert.deepEqual(by('socialMedia').data.links, [{ platform: 'instagram', url: 'https://instagram.com/cafesonne' }], 'only the customer\'s link');
+  const custom = secs.find((s) => s.id.startsWith('s_c'));
+  assert.deepEqual([custom.data.heading, custom.data.body], ['', ''], 'the Custom Section empty');
+  assert.equal(designOf(slug).draftRevision, 1);
+  // into the Studio: the same content, shown in the preview, editable
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-finish')]);
+  await until(async () => (await studioState(page)).status === 'loaded', 'the Studio loaded the draft');
+  assert.deepEqual(await page.evaluate(() => window.QraivyStudio.editor.draft()), saved, 'the Studio holds the draft exactly as saved');
+  const first = by('products').data.items[0].name, second = by('products').data.items[1].name;
+  const frame = await until(() => page.$eval('#st-canvas iframe', (f) => (f.srcdoc.includes('data-v3-id="s_obproducts1"') ? f.srcdoc : null)), 'the preview');
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  assert.ok(frame.includes(esc(first)) && frame.includes(esc(by('contact').data.address.line1)), 'the example product and address in the Studio preview');
+  await page.click('#st-tab-sections');
+  await page.click('#st-outline [data-id="s_obproducts1"]');
+  await page.click('[data-insp="content"]');
+  const sel = '#st-fields [data-path="data.items[0].name"] input';
+  await until(() => page.$('#st-fields .st-item[data-index="0"] .st-item__toggle'), 'the product rows');
+  assert.equal(await page.$eval('#st-fields .st-item[data-index="0"] .st-item__name', (n) => n.textContent), first, 'the example product listed');
+  if (!(await page.$('#st-fields .st-item[data-index="0"].is-open'))) await page.click('#st-fields .st-item[data-index="0"] .st-item__toggle');
+  await until(() => page.$(sel), 'the first product\'s name field');
+  assert.equal(await page.$eval(sel, (n) => n.value), first, 'the example product, editable');
+  await shot(page, 'e2-studio-example-products.png');
+  await page.click(sel, { clickCount: 3 });
+  await page.keyboard.type('Sourdough loaf');
+  await until(() => page.$eval('#st-save-btn', (b) => !b.disabled), 'Save Draft enabled');
+  await page.click('#st-save-btn');
+  await until(async () => (await studioState(page)).saveState === 'saved', 'Studio saved');
+  const now = designOf(slug).draft, items = now.pages[0].sections.find((s) => s.type === 'products').data.items;
+  assert.equal(designOf(slug).draftRevision, 2, 'revision 2');
+  assert.deepEqual([items[0].name, items[1].name], ['Sourdough loaf', second], 'the customer\'s edit wins; the other examples kept');
+  const rest = S.copy(now); rest.pages[0].sections.find((s) => s.type === 'products').data.items[0].name = first;
+  assert.deepEqual(rest, saved, 'nothing else changed');
+  assert.deepEqual(api().filter((x) => !/^GET /.test(x)), ['POST /studio/drafts', 'PUT /studio/pages/' + slug + '/design']);
+  assert.deepEqual([log.errors, log.blocked], [[], []]);
+  await page.close();
+});
+
 test('history: the Studio\'s preview updates (typing, a section selected, the device switched, a save) add no browser-history entry; the preview still shows the latest edit; ONE browser Back returns to the onboarding', async () => {
   S.resetDrafts();
   const { page, log } = await open('studio-onboarding.html');

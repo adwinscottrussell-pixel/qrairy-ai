@@ -58,6 +58,8 @@
   var STORE = window.QraivyStudioStore, PREVIEW = window.QraivyStudioPreview, INSPECTOR = window.QraivyStudioInspector;
   // the demo's starter photos: shown from the Studio's own files, with the AI label (2A-3H);
   // the preview frames get them inline (studio-demo-images.js prepare())
+  // E3: the template example values of an onboarding draft (studio-demo-fields.js with the template catalog); none without them
+  var DEMO_FIELDS = window.QraivyStudioDemoFields || null, TPL_CATALOG = window.QraivyOnboardingTemplates || null;
   var DEMO_IMAGES = window.QraivyStudioDemoImages || { localizeHtml: function (h) { return h; }, localSrc: function () { return null; }, displaySrc: function (u) { return u; } };
   var ROUTING = window.QRAIVY_STUDIO_ROUTING || { blocked: true };
   var DEALS = window.QraivyStudioDeals;
@@ -84,7 +86,8 @@
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
       tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', add_custom: 'Add Custom Section', sec_empty: 'Empty – add content',
       guide_empty: 'Add your content – this section isn’t shown on your public page until it has content.',
-      guide_example: 'The example details from the template were not saved as your information. Add your own.', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
+      guide_example: 'Your template showed example content here. Add your own information.',
+      guide_demo: 'This section contains example content. Replace it with your own information.', ex_badge: 'Example', page_sections: 'Page sections', open_sections: 'Sections', open_edit: 'Edit section',
       page: 'Page', device: 'Device', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile', undo: 'Undo', redo: 'Redo',
       phone_note: 'Full editing works on a tablet or computer. On a phone you can preview and publish.',
       edit_section: 'Edit Section', insp_content: 'Content', insp_style: 'Style', insp_settings: 'Settings',
@@ -127,7 +130,8 @@
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
       tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', add_custom: 'Eigenen Abschnitt hinzufügen', sec_empty: 'Leer – Inhalt hinzufügen',
       guide_empty: 'Inhalt hinzufügen – dieser Abschnitt erscheint erst auf Ihrer öffentlichen Seite, wenn er Inhalte hat.',
-      guide_example: 'Die Beispielangaben der Vorlage wurden nicht als Ihre Angaben gespeichert. Ergänzen Sie Ihre eigenen.', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
+      guide_example: 'Ihre Vorlage hat hier Beispielinhalte gezeigt. Ergänzen Sie Ihre eigenen Angaben.',
+      guide_demo: 'Dieser Bereich enthält Beispielinhalte. Ersetzen Sie diese durch Ihre eigenen Angaben.', ex_badge: 'Beispiel', page_sections: 'Abschnitte der Seite', open_sections: 'Abschnitte', open_edit: 'Abschnitt bearbeiten',
       page: 'Seite', device: 'Gerät', desktop: 'Desktop', tablet: 'Tablet', mobile: 'Smartphone', undo: 'Rückgängig', redo: 'Wiederholen',
       phone_note: 'Vollständig bearbeiten kannst du auf Tablet oder Computer. Auf dem Smartphone: Vorschau und Veröffentlichen.',
       edit_section: 'Abschnitt bearbeiten', insp_content: 'Inhalt', insp_style: 'Stil', insp_settings: 'Einstellungen',
@@ -326,12 +330,24 @@
   // shared by the Sections list and the editor's guidance: one core render per change, not one per use
   var emptyCache = null;
   function emptyNow() { if (!emptyCache) emptyCache = emptyIds(); return emptyCache; }
+  // E3: the sections and fields of the OPEN customer page that still hold its template's example values ({ sectionId: [paths] }),
+  // from the page's checked origin (template, language) and the current draft; worked out once per change. Nothing for the
+  // sample page, a page without an onboarding origin or an unknown template. Studio-only: never saved, sent or published.
+  var exampleCache = null;
+  function examplesNow() {
+    if (exampleCache) return exampleCache;
+    if (!(DEMO_FIELDS && TPL_CATALOG && pageView.current && pageView.state === 'loaded' && pageView.origin)) return {};   // not kept: worked out once the page is open
+    try { exampleCache = DEMO_FIELDS.exampleMap(editor.draft(), pageView.origin, TPL_CATALOG, V3); } catch (e) { exampleCache = {}; }
+    return exampleCache;
+  }
+  function exampleFieldsOf(sec) { var m = sec ? examplesNow()[sec.id] : null; return m ? m.slice() : []; }
   // D2.3b-4: the Studio-only guidance for a section (never saved, never sent, never on the public page): only on the
   // owner's open page, only for a section core.js itself shows as empty. Example wording only when the page's checked
   // origin (D2.3b-1) lists the section among those whose example details were left out; nothing is ever guessed
   // from the wording of a text. null: no guidance.
   function guidanceFor(sec) {
-    if (!sec || !pageView.current || pageView.state !== 'loaded' || !emptyNow()[sec.id]) return null;
+    if (!sec || !pageView.current || pageView.state !== 'loaded') return null;
+    if (!emptyNow()[sec.id]) return examplesNow()[sec.id] ? { kind: 'demo', text: t('guide_demo') } : null;   // E3
     var ex = pageView.origin && Array.isArray(pageView.origin.exampleSectionIds) && pageView.origin.exampleSectionIds.indexOf(sec.id) !== -1;
     return { kind: ex ? 'example' : 'empty', text: t(ex ? 'guide_example' : 'guide_empty') };
   }
@@ -350,12 +366,13 @@
     var list = $('st-outline'), a = document.activeElement;
     var had = list.contains(a) ? { id: a.getAttribute('data-id') || a.getAttribute('data-sec'), act: a.getAttribute('data-act') } : null;
     list.textContent = '';
-    var all = editor.draft().pages[0].sections, empty = emptyNow();
+    var all = editor.draft().pages[0].sections, empty = emptyNow(), examples = examplesNow();
     all.forEach(function (s, i) {
       var tx = { label: sectionName(s, all) };     // D2.3b-3: numbered when repeated
       var item = el('button', { type: 'button', class: 'st-outline__item' + (s.hidden ? ' is-hidden' : ''), 'aria-current': String(editor.selected() === s.id), 'data-id': s.id }, [
         el('span', { class: 'st-lib__icon' }, [icon('st-t-' + s.type)]),
-        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { class: empty[s.id] ? 'is-empty' : null, text: sectionSummary(s, !!empty[s.id]) })]),
+        el('span', { class: 'st-lib__text' }, [el('strong', { text: tx.label }), el('small', { class: empty[s.id] ? 'is-empty' : null, text: sectionSummary(s, !!empty[s.id]) }),
+          examples[s.id] ? el('span', { class: 'st-ex-badge', 'data-example': '', text: t('ex_badge') }) : null]),   // E3
         s.hidden ? el('span', { class: 'st-lib__more', 'aria-hidden': 'true' }, [icon('st-eye-off')]) : null,
       ]);
       item.addEventListener('click', function () { select(s.id, 'outline'); });
@@ -478,7 +495,22 @@
     var name = pageView.current ? pageView.current.name : window.QRAIVY_STUDIO_DEMO.businessName;
     var r = valid ? V3.renderDesign(valid, { businessName: name }, { preview: true, deals: dealsView }) : null;
     if (r && r.ok) prepareShown(r.html);
-    return r && r.ok ? DEMO_IMAGES.localizeHtml(r.html) : preview.html();
+    return r && r.ok ? markExamples(DEMO_IMAGES.localizeHtml(r.html)) : preview.html();
+  }
+  // E3: in the preview (and the full preview), a section that still holds example content gets a small neutral "Example"
+  // tag in its top right corner (the AI label stays top left) and its links do nothing. Preview only: the public renderer
+  // (core.js) is unchanged. ids: section ids as core.js checks them; the tag text is the Studio's own (escaped).
+  var EX_CSS = '<style>[data-st-ex]{position:relative}[data-st-ex] a{pointer-events:none;cursor:default}' +
+    '.st-ex-tag{position:absolute;top:10px;right:10px;z-index:4;padding:2px 9px;border:1px solid rgba(15,23,42,.22);border-radius:999px;background:#fff;color:#334155;' +
+    'font:700 11px/1.5 system-ui,-apple-system,sans-serif;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 1px 3px rgba(0,0,0,.18);pointer-events:none}</style>';
+  function markExamples(html) {
+    var ids = Object.keys(examplesNow()).filter(function (id) { return /^s_[a-z0-9]{4,16}$/.test(id); });
+    if (!ids.length || typeof html !== 'string' || html.indexOf('</head>') === -1) return html;
+    var label = String(t('ex_badge')).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }), marked = false;
+    ids.forEach(function (id) {
+      html = html.replace(new RegExp('<section ([^>]*data-v3-id="' + id + '"[^>]*)>'), function (m, attrs) { marked = true; return '<section data-st-ex="1" ' + attrs + '><span class="st-ex-tag">' + label + '</span>'; });
+    });
+    return marked ? html.replace('</head>', EX_CSS + '</head>') : html;
   }
   // The page's own starter photos (a template draft's Hero, Gallery, ...): the sandboxed frames cannot load them
   // (studio-demo-images.js), so the Studio page prepares their inline copies, like the demo's, and redraws the
@@ -583,7 +615,7 @@
     if (!pageView.current) return;
     pageView.current = null;
     pageView.revision = null; pageView.owner = null; pageView.origin = null;
-    emptyCache = null;
+    emptyCache = null; exampleCache = null;
     resetSave();
     // the address no longer names that page (a next account starts from its own pages)
     try { var u = new URL(window.location.href); u.searchParams.delete('slug'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
@@ -603,7 +635,7 @@
     if (!force && pageView.current && pageView.current.slug !== slug && unsaved() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
     var n = ++pageLoad;
     resetSave();
-    pageView.origin = null;                  // D2.3b-1: the previous page's origin never carries over
+    pageView.origin = null; exampleCache = null;                  // D2.3b-1: the previous page's origin never carries over
     showPages({ state: 'loading' });
     pagesData.load(slug).then(function (r) {
       if (n !== pageLoad) return;
@@ -618,7 +650,7 @@
       pageView.revision = r.source === 'draft' ? r.revision : null;
       pageView.owner = sessionUser();
       pageView.origin = r.origin || null;
-      emptyCache = null;
+      emptyCache = null; exampleCache = null;
       saveView.savedAt = r.savedAt;
       showPages({ state: 'loaded', source: r.source });
       setLeftTab('sections');
@@ -676,7 +708,7 @@
     saveGen++;
     dealsLoad++;
     pageView.pages = [];
-    pageView.origin = null;                  // D2.3b-1: signed out / another account: the page's origin goes with it
+    pageView.origin = null; exampleCache = null;                  // D2.3b-1: signed out / another account: the page's origin goes with it
     // nothing of this account is open any more; the next account's pages follow (listPages)
     if (pageView.state === 'loaded') pageView.state = 'loading';
     dealsView = { state: dealsData && dealsData.connected() ? 'loading' : 'sample', pages: [], page: '', items: [], withheld: 0 };
@@ -802,7 +834,7 @@
   function announce(msg) { var n = $('st-live'); n.textContent = ''; setTimeout(function () { n.textContent = msg; }, 30); }
   function onStoreChange(kind, info) {
     if (kind === 'select') return;
-    emptyCache = null;                       // D2.3b-4: the page changed: its empty sections are worked out again
+    emptyCache = null; exampleCache = null;  // D2.3b-4 / E3: the page changed: its empty sections and example values are worked out again
     // Undo / Redo and list changes (add, move, remove) rebuild the inspector
     if (kind === 'history' || info.structure) inspector.render(); else inspector.refresh();
     staleNote();
@@ -1015,7 +1047,7 @@
       onLayout: function () { if (preview) deviceButtons(); } });
     inspector = INSPECTOR.createInspector({ box: $('st-fields'), note: $('st-note'), kind: $('st-kind'), store: editor, V3: V3, el: el, icon: icon,
       lang: function () { return state.lang; }, tab: function () { return state.insp; }, t: t, fieldLabel: fieldLabel,
-      sectionLabel: function (type) { return sectionText(type).label; }, sectionName: function (sec) { return sectionName(sec); }, guidance: guidanceFor, announce: announce, brand: pageBrand,
+      sectionLabel: function (type) { return sectionText(type).label; }, sectionName: function (sec) { return sectionName(sec); }, guidance: guidanceFor, announce: announce, brand: pageBrand, exampleFields: exampleFieldsOf,
       displaySrc: DEMO_IMAGES.displaySrc, aiLabel: function (u) { return DEMO_IMAGES.localSrc(u) ? DEMO_IMAGES.AI_LABEL : ''; },
       deals: function () { return dealsView; }, selectDealsPage: selectDealsPage, retryDeals: loadDeals,
       signIn: function () { return !!(AUTH && AUTH.signIn()); }, dealBuilder: ROUTING.isolated ? null : ROUTING.builder || 'deals.html' });

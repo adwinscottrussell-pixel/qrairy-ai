@@ -80,7 +80,11 @@ test('scripts: only the shell, the shared V3 code and the Studio files; no Clerk
     // Deals connection: the sign-in loader (loads Clerk on the connected preview only)
     'js/studio/studio-auth.js',
     // Phase A: the owner's own pages, read only (studioPagesData.test.js)
-    'js/studio/studio-pages-data.js', 'js/studio/studio-shell.js']);
+    'js/studio/studio-pages-data.js',
+    // E3: the starter template catalog (plain data, pure: onboardingTemplates.test.js) and the example-value detection
+    // (pure: studioDemoFields.test.js), both before the shell, which reads them once at start
+    'js/studio/onboarding-templates.js', 'js/studio/studio-demo-fields.js',
+    'js/studio/studio-shell.js']);
   assert.ok(!/clerk|api-base\.js|lp-routing\.js|deals-routing\.js|staging-config\.js/i.test(HTML));
   const styles = (HTML.match(/<link\b[^>]*>/g) || []).filter((l) => /rel="stylesheet"/.test(l)).map((l) => l.match(/href="([^"]+)"/)[1]);
   assert.deepEqual(styles, ['https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap', 'dashboard-shell.css', 'css/studio.css']);

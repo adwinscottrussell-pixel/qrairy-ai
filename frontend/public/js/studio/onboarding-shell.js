@@ -42,9 +42,9 @@
  *
  * D2.2: Save Draft (Step 5) is the onboarding's only request, sent by
  * onboarding-drafts.js (this file sends nothing itself): the chosen
- * template's page as a draft may hold it (onboarding-model.js pageFor().draft:
- * the customer's answers, starter texts and photos, empty Custom Sections with
- * their ids; never the example-only data) and its origin, with a requestId
+ * template's page as Steps 4 and 5 show it (E2: onboarding-model.js
+ * pageFor().design: the customer's answers, the template's example content in
+ * the chosen sections, empty Custom Sections with their ids) and its origin, with a requestId
  * kept before the request (a reload, a retry or a double click sends the same
  * one; the server answers with the same draft). Shown as saved only after the
  * server confirmed it; the draft's address and revision are kept with the
@@ -107,7 +107,6 @@
       soon: 'Coming soon', available: 'Available', demo: 'DEMO',
       start_help: 'Instagram and website import are coming soon. Nothing is imported in this version.',
       business_text: 'Your business name, a short description and your social media links.',
-      sections_text: 'Pick the sections for your page, put them in order and see a live phone preview.',
       review_text: 'Check your page before you save it as a draft.',
       back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out',
       // Step 4 (O3A)
@@ -115,7 +114,7 @@
       draft_free: "Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.",
       sum_business: 'Business information', sum_sections: 'Sections ({n})', sum_no_description: 'No description', sum_no_links: 'No social media links',
       edit: 'Edit', edit_business_label: 'Edit business information', edit_sections_label: 'Edit sections',
-      review_live_label: 'Your page as a draft', review_example_note: 'Example details are not saved as your information.', review_live_note: 'Scroll the phone to see the whole page.',
+      review_live_label: 'Your page as a draft', review_example_note: 'Sections marked “Example” come into your draft with example content, so you can edit them in the Studio. The examples are not your business details: replace them with your own.', review_live_note: 'Scroll the phone to see the whole page.',
       save_draft: 'Save Draft', save_note: 'Saves your page privately in your QRAIVY account. Nothing is published.',
       save_saving_btn: 'Saving…', save_saved_btn: 'Draft saved', save_saving: 'Saving your draft…',
       draft_saved: 'Draft saved · Not published', draft_saved_changed: 'Draft saved · Later changes not saved',
@@ -170,7 +169,10 @@
       links_too_many: 'You can add at most 8 links.',
       // Step 3 (O2)
       chosen_title: 'On your page', more_title: 'Add more', more_none: 'All eight sections are on your page.',
-      sections_info: 'Empty sections stay hidden on your public page until you add their content in the Studio.',
+      sections_intro_title: 'Choose what goes on your page',
+      sections_intro_text: "Select the sections you'd like on your landing page. We'll add example content to help you get started.",
+      sections_intro_detail: "Don't worry about the details yet! You'll be able to edit all text, images, products and opening hours in the Studio Builder.",
+      sections_intro_later: 'You can add or remove sections later.',
       live_note_sections: 'Scroll the phone to see every section. Nothing is saved yet.',
       // Step 3 (T1b): choose your design
       design_text: 'Pick a starting design and its colours. You can change everything later in the Studio.',
@@ -215,14 +217,13 @@
       soon: 'Demnächst', available: 'Verfügbar', demo: 'DEMO',
       start_help: 'Der Import von Instagram und Websites folgt bald. In dieser Version wird nichts importiert.',
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
-      sections_text: 'Wählen Sie die Abschnitte Ihrer Seite, legen Sie die Reihenfolge fest und sehen Sie eine Live-Vorschau auf dem Smartphone.',
       review_text: 'Prüfen Sie Ihre Seite, bevor Sie sie als Entwurf speichern.',
       back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
       draft_status: 'Entwurfsvorschau bereit · Nicht gespeichert', sum_view_all: 'Alle Abschnitte anzeigen ({n})', sum_view_less: 'Weniger Abschnitte anzeigen',
       draft_free: 'Das Erstellen eines Entwurfs ist kostenlos und startet nicht Ihre 14-tägige Testphase. Die Testphase beginnt erst, wenn Sie veröffentlichen.',
       sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
       edit: 'Bearbeiten', edit_business_label: 'Unternehmensdaten bearbeiten', edit_sections_label: 'Abschnitte bearbeiten',
-      review_live_label: 'Ihre Seite als Entwurf', review_example_note: 'Beispielangaben werden nicht als Ihre Angaben gespeichert.', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
+      review_live_label: 'Ihre Seite als Entwurf', review_example_note: 'Mit „Beispiel“ markierte Abschnitte kommen mit Beispielinhalten in Ihren Entwurf, damit Sie sie im Studio bearbeiten können. Die Beispiele sind nicht Ihre Unternehmensangaben: Ersetzen Sie sie durch Ihre eigenen.', review_live_note: 'Scrollen Sie im Smartphone, um die ganze Seite zu sehen.',
       save_draft: 'Entwurf speichern', save_note: 'Speichert Ihre Seite privat in Ihrem QRAIVY-Konto. Es wird nichts veröffentlicht.',
       save_saving_btn: 'Wird gespeichert …', save_saved_btn: 'Entwurf gespeichert', save_saving: 'Ihr Entwurf wird gespeichert …',
       draft_saved: 'Entwurf gespeichert · Nicht veröffentlicht', draft_saved_changed: 'Entwurf gespeichert · Spätere Änderungen nicht gespeichert',
@@ -275,7 +276,10 @@
       link_invalid: 'Geben Sie eine {platform}-Adresse ein, zum Beispiel {example}', link_platform: 'Bitte wählen Sie eine Plattform.',
       links_too_many: 'Sie können höchstens 8 Links hinzufügen.',
       chosen_title: 'Auf Ihrer Seite', more_title: 'Weitere hinzufügen', more_none: 'Alle acht Abschnitte sind auf Ihrer Seite.',
-      sections_info: 'Leere Abschnitte bleiben auf Ihrer öffentlichen Seite verborgen, bis Sie im Studio Inhalte ergänzen.',
+      sections_intro_title: 'Wählen Sie die Bereiche für Ihre Seite',
+      sections_intro_text: 'Wählen Sie aus, welche Bereiche Ihre Landingpage enthalten soll. Wir fügen Beispielinhalte hinzu, damit Sie direkt starten können.',
+      sections_intro_detail: 'Um die Details müssen Sie sich jetzt noch nicht kümmern! Texte, Bilder, Produkte und Öffnungszeiten können Sie anschließend im Studio bearbeiten.',
+      sections_intro_later: 'Sie können später jederzeit Bereiche hinzufügen oder entfernen.',
       live_note_sections: 'Scrollen Sie im Smartphone, um alle Abschnitte zu sehen. Noch wird nichts gespeichert.',
       // Schritt 3 (T1b): Design wählen
       design_text: 'Wählen Sie ein Start-Design und seine Farben. Im Studio können Sie später alles ändern.',
@@ -402,16 +406,19 @@
     return hex(h >>> 0) + '-' + s.length;
   }
   // draftRequest(M, V3, T, answers, language) -> the draft request without its requestId, or null while the page is not
-  // complete: { name, language, kind, design, origin }. design: the template's page as a draft may hold it (pageFor().draft:
-  // the customer's Step 2 answers, starter texts and photos, empty Custom Sections with their ids; no example-only data);
-  // origin: where it came from (template, palette, language, the sections with example content on Step 3-5).
+  // complete: { name, language, kind, design, origin }. design (E2): the page exactly as Steps 4 and 5 show it (pageFor().design,
+  // the template's sample() checked by core.js): only the chosen sections, the Hero first, their fixed ids; the customer's
+  // Step 2 name, description and links always in place of the examples; the template's approved example content in the
+  // other chosen sections (example address and example.com email, no phone number, links only to the page itself, never
+  // an example social profile); Custom Sections empty. A draft is private (never rendered publicly, no publish exists);
+  // origin: where it came from (template, palette, language, the sections with example content on Step 3-5), unchanged.
   function draftRequest(M, V3, T, answers, language) {
     var r = M && V3 && T ? M.checkPage(V3, answers, language, T) : null;
     var p = r && r.composed;
-    if (!r || !r.ok || !r.pageOk || !p || !p.draft || !r.values.name) return null;
+    if (!r || !r.ok || !r.pageOk || !p || !p.design || !r.values.name) return null;
     var l = lang(language), ids = {};
-    p.draft.pages[0].sections.forEach(function (s) { ids[s.id] = true; });
-    return { name: r.values.name, language: l, kind: answers.template === 'creator' ? 'creator' : 'business', design: p.draft,
+    p.design.pages[0].sections.forEach(function (s) { ids[s.id] = true; });
+    return { name: r.values.name, language: l, kind: answers.template === 'creator' ? 'creator' : 'business', design: p.design,
       origin: { source: 'onboarding', template: answers.template, palette: p.palette || answers.palette, language: l,
         exampleSectionIds: p.exampleIds.filter(function (id) { return ids[id]; }) } };
   }
@@ -1023,7 +1030,7 @@
     }
 
     // ── Step 5 (Step 4 before T1b): the review. Read only: the values and the page come from checkPage() with the template
-    // (T1c.3), the same page as Step 4, example sections tagged (a draft will hold it without them); text only through
+    // (T1c.3), the same page as Step 4, example sections tagged (E2: a draft holds them, editable in the Studio); text only through
     // textContent; the phone shows the same page in the same kind of frame as Step 4 ──
     function setText(id, value, empty) {
       var n = $(id);

@@ -173,7 +173,7 @@
   // customerPaths, samplePaths, errors }.
   //   sections  sectionsFor() with the template's suggested list as the default (the customer's own list kept)
   //   design    the preview page (T.sample: example content where the customer has none), checked by core.js
-  //   draft     the same page without the example-only parts (T.starter), what a draft may hold later; null when invalid
+  //   draft     the same page without the example-only parts (T.starter); null when invalid (E2: Save Draft sends design)
   //   exampleIds the sections holding example-only content (the Hero excluded: it carries the customer's name)
   //   emptyIds  sections without content yet (no example here, or Social Media without the customer's links)
   // The customer's name, description and links (Step 2: the valid ones; the name as typed, else the placeholder,

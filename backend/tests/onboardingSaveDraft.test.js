@@ -129,7 +129,7 @@ test('onboarding-drafts.js is the only file that sends: one fetch, the one path,
   assert.ok(!/\bfetch\b|getToken|XMLHttpRequest/.test(shell.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')), 'the shell sends nothing itself');
 });
 
-test('draftRequest: the template page as a draft may hold it (no example-only data), Custom Sections with their ids in order, the customer\'s name and link, the origin; null while the page is not complete', () => {
+test('E2 draftRequest: the page exactly as Steps 4 and 5 show it (pageFor().design): the template\'s example content in the chosen sections, Custom Sections empty with their ids in order, the customer\'s name, description and link; the origin unchanged; null while the page is not complete', () => {
   for (const tpl of ['restaurant', 'bakery', 'beauty', 'retail', 'creator', 'services']) {
     for (const lang of ['en', 'de']) {
       const a = answers(tpl, lang);
@@ -138,24 +138,81 @@ test('draftRequest: the template page as a draft may hold it (no example-only da
       assert.ok(r, tag);
       assert.deepEqual(Object.keys(r).sort(), ['design', 'kind', 'language', 'name', 'origin']);
       assert.deepEqual([r.name, r.language, r.kind], [a.name, lang, tpl === 'creator' ? 'creator' : 'business'], tag);
-      assert.deepEqual(r.design, M.pageFor(V3, T, a, lang).draft, tag + ': exactly pageFor().draft');
-      assert.ok(V3.validateDesign(r.design, { cloudName: 'dwqc6n7rn' }).ok, tag);
-      const ids = r.design.pages[0].sections.map((s) => s.id);
+      const p = M.pageFor(V3, T, a, lang);
+      assert.deepEqual(r.design, p.design, tag + ': exactly pageFor().design (the preview page)');
+      assert.ok(V3.validateDesign(r.design, { cloudName: 'dwqc6n7rn' }).ok, tag + ': valid by core.js with the server\'s Cloudinary rule');
+      const secs = r.design.pages[0].sections, ids = secs.map((x) => x.id);
+      assert.deepEqual(ids, M.sectionsFor(a, true, T.get(tpl).sections).map(M.sectionId), tag + ': exactly the chosen sections, in order, the Hero first, their fixed ids');
       assert.deepEqual(ids.filter((id) => id.startsWith('s_c')), ['s_caaaa1111', 's_cbbbb2222'], tag + ': Custom Sections in order');
-      assert.ok(ids.indexOf('s_caaaa1111') < ids.indexOf('s_cbbbb2222'));
-      const json = JSON.stringify(r.design);
-      assert.ok(!/Sample Street|Musterstra|Beispielstra|example\.com|hello@|hallo@|\+49|€/.test(json), tag + ': no example data');
-      for (const s of r.design.pages[0].sections) {
-        if (s.type === 'products' || s.type === 'buttons') assert.equal((s.data.items || []).length, 0, tag + ' ' + s.type);
-        if (s.type === 'socialMedia') assert.deepEqual(s.data.links, [{ platform: 'instagram', url: 'https://instagram.com/cafesonne' }], tag + ': only the customer\'s link');
-      }
+      for (const x of secs.filter((y) => y.id.startsWith('s_c'))) assert.deepEqual([x.type, x.data.heading, x.data.body, x.data.image], ['text', '', '', ''], tag + ': Custom Section empty');
+      const hero = secs[0];
+      assert.deepEqual([hero.type, hero.data.headline, hero.data.subheadline], ['hero', a.name, 'Fresh.'], tag + ': the customer\'s name and description');
+      const social = secs.find((x) => x.type === 'socialMedia');
+      assert.deepEqual(social.data.links, [{ platform: 'instagram', url: 'https://instagram.com/cafesonne' }], tag + ': only the customer\'s link, never an example profile');
+      const products = secs.find((x) => x.type === 'products'), buttons = secs.find((x) => x.type === 'buttons'), contact = secs.find((x) => x.type === 'contact');
+      assert.ok(products.data.items.length >= 3 && products.data.items.every((it) => it.name), tag + ': example products (with the template\'s example prices where it has any)');
+      assert.ok(buttons.data.items.length >= 3, tag + ': example buttons');
+      assert.ok(/@example\.com$/.test(contact.data.email) && (tpl === 'creator' || contact.data.address.postalCode === '12345'), tag + ': the example.com email and (not Creator) the example address');
+      assert.ok(!contact.data.phone && !contact.data.mapsUrl, tag + ': no phone number, no map address');
+      assert.equal(contact.data.showMapLink, false, tag + ': no map link');
       assert.deepEqual([r.origin.source, r.origin.template, r.origin.palette, r.origin.language], ['onboarding', tpl, a.palette, lang]);
+      assert.deepEqual(r.origin.exampleSectionIds, p.exampleIds, tag + ': origin unchanged (the sections with example content)');
       assert.ok(r.origin.exampleSectionIds.every((id) => ids.includes(id)), tag);
     }
   }
   assert.equal(OB.draftRequest(M, V3, T, answers('bakery', 'en', { name: '' }), 'en'), null, 'no name');
   assert.equal(OB.draftRequest(M, V3, T, answers('bakery', 'en', { template: null }), 'en'), null, 'no template');
   assert.equal(OB.draftRequest(M, V3, T, answers('bakery', 'en', { name: 'x'.repeat(81) }), 'en'), null, 'invalid name');
+});
+
+test('E2 draftRequest, every template x language x palette, the suggested list, every type alone and all eight, with and without a link: only the chosen sections, valid, no phone or contact / map link, no link off the page but the customer\'s, no example profile; the template\'s own sample page', () => {
+  const lists = [null, ['hero'], ...M.SECTION_TYPES.filter((x) => x !== 'hero').map((x) => ['hero', x]), M.SECTION_TYPES.slice(), ['hero', 'contact', 'custom:zzzz9999', 'openingHours', 'buttons']];
+  let n = 0;
+  for (const tpl of T.TEMPLATE_IDS) {
+    for (const lang of ['en', 'de']) {
+      for (const pal of T.get(tpl).palettes) {
+        for (const list of lists) {
+          for (const links of [[], [{ platform: 'facebook', url: 'facebook.com/sonne' }]]) {
+            const a = { template: tpl, palette: pal.id, name: 'Sonne & Co', description: '', links, social: list && list.includes('socialMedia') ? 'added' : 'auto', sections: list };
+            const tag = [tpl, lang, pal.id, JSON.stringify(list), links.length].join(' ');
+            const r = OB.draftRequest(M, V3, T, a, lang);
+            assert.ok(r, tag);
+            n++;
+            assert.ok(V3.validateDesign(r.design, { cloudName: 'dwqc6n7rn' }).ok, tag + ': valid');
+            const chosen = M.sectionsFor(a, links.length > 0, T.get(tpl).sections);
+            assert.deepEqual(r.design.pages[0].sections.map((x) => x.id), chosen.map(M.sectionId), tag + ': only the chosen sections');
+            const json = JSON.stringify(r.design);
+            assert.ok(!/tel:|wa\.me|mailto:|"phone":"[^"]|"mapsUrl":"[^"]|google\.|maps\./.test(json), tag + ': no phone number, no contact or map link');
+            const anchors = r.design.pages[0].sections.map((x) => x.anchor).filter(Boolean);
+            for (const m of json.matchAll(/"(?:target|url)":"([^"]*)"/g)) {
+              const u = m[1];
+              assert.ok(u === '' || u === '/' || anchors.includes(u.slice(1)) || u === 'https://facebook.com/sonne', tag + ': link ' + u);
+            }
+            assert.ok(!/(instagram|facebook|tiktok|pinterest|linkedin|youtube)\.com\/"|x\.com\/"/.test(json), tag + ': no example profile (platform home page)');
+            const sample = T.sample(V3, tpl, { lang, palette: pal.id, name: 'Sonne & Co', description: '', links: links.map((l) => ({ platform: l.platform, url: 'https://' + l.url })), sections: chosen, emptyFallback: true, exampleProfiles: false });
+            assert.deepEqual(r.design, sample.design, tag + ': the template\'s sample page');
+          }
+        }
+      }
+    }
+  }
+  assert.ok(n > 1000, 'cases: ' + n);
+});
+
+test('E2 real data wins: the customer\'s name, description and links replace the examples in the saved draft; without a description the template\'s neutral sub-headline; without links no Social Media', () => {
+  for (const tpl of T.TEMPLATE_IDS) {
+    for (const lang of ['en', 'de']) {
+      const ex = T.sample(V3, tpl, { lang }).design.pages[0].sections[0].data;
+      const own = OB.draftRequest(M, V3, T, { template: tpl, palette: null, name: 'Werkstatt Lindenhof', description: 'Our own words.', links: [{ platform: 'tiktok', url: 'tiktok.com/@nord' }, { platform: 'youtube', url: 'youtube.com/@nord' }], social: 'auto', sections: null }, lang);
+      const hero = own.design.pages[0].sections[0];
+      assert.deepEqual([hero.data.headline, hero.data.subheadline], ['Werkstatt Lindenhof', 'Our own words.'], tpl + ' ' + lang);
+      assert.notEqual(hero.data.headline, T.get(tpl).demoName);
+      assert.deepEqual(own.design.pages[0].sections.find((x) => x.type === 'socialMedia').data.links, [{ platform: 'tiktok', url: 'https://tiktok.com/@nord' }, { platform: 'youtube', url: 'https://youtube.com/@nord' }]);
+      const none = OB.draftRequest(M, V3, T, { template: tpl, palette: null, name: 'Werkstatt Lindenhof', description: '', links: [], social: 'auto', sections: null }, lang);
+      assert.equal(none.design.pages[0].sections[0].data.subheadline, ex.subheadline, tpl + ' ' + lang + ': the neutral example sub-headline when the customer wrote none');
+      assert.ok(!none.design.pages[0].sections.some((x) => x.type === 'socialMedia'), tpl + ' ' + lang + ': no links, no Social Media (auto)');
+    }
+  }
 });
 
 test('fingerprint: same content same value, any change another; restoreDraft accepts only the two well-formed states', () => {

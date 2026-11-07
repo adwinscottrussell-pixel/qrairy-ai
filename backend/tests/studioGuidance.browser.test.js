@@ -48,8 +48,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let browser, srv;
 const pageErrors = [];
 const TEXT = {
-  en: { empty: 'Add your content – this section isn’t shown on your public page until it has content.', example: 'The example details from the template were not saved as your information. Add your own.' },
-  de: { empty: 'Inhalt hinzufügen – dieser Abschnitt erscheint erst auf Ihrer öffentlichen Seite, wenn er Inhalte hat.', example: 'Die Beispielangaben der Vorlage wurden nicht als Ihre Angaben gespeichert. Ergänzen Sie Ihre eigenen.' },
+  en: { empty: 'Add your content – this section isn’t shown on your public page until it has content.', example: 'Your template showed example content here. Add your own information.', demo: 'This section contains example content. Replace it with your own information.' },
+  de: { empty: 'Inhalt hinzufügen – dieser Abschnitt erscheint erst auf Ihrer öffentlichen Seite, wenn er Inhalte hat.', example: 'Ihre Vorlage hat hier Beispielinhalte gezeigt. Ergänzen Sie Ihre eigenen Angaben.', demo: 'Dieser Bereich enthält Beispielinhalte. Ersetzen Sie diese durch Ihre eigenen Angaben.' },
 };
 const ALL_GUIDE = Object.values(TEXT).flatMap((x) => Object.values(x));
 
@@ -101,10 +101,14 @@ async function until(fn, what, ms = 8000) {
   for (;;) { const v = await fn().catch(() => null); if (v) return v; if (Date.now() > end) throw new Error('timed out: ' + what); await sleep(50); }
 }
 async function shot(page, name) { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, name), fullPage: false }); } }
-// Carl's onboarding draft: Buttons, Products, Opening Hours, Contact (examples left out), one empty Custom Section, the Hero
-async function onboardingDraft(lang = 'en') {
-  const r = OB.draftRequest(M, V3, T, { template: 'bakery', palette: T.get('bakery').palettes[0].id, name: lang === 'de' ? 'Bäckerei Sonne' : 'Bakery Sun', description: '', links: [], social: 'auto',
-    sections: ['hero', 'buttons', 'products', 'openingHours', 'contact', 'custom:aaaa1111', 'socialMedia'] }, lang);
+// Carl's onboarding draft: Buttons, Products, Opening Hours, Contact, one empty Custom Section, the Hero.
+// Default: as drafts saved BEFORE E2 hold it (examples left out: the design is pageFor().draft, T.starter), the
+// compatibility case for every existing draft. e2: true: as Save Draft sends it now (the preview's example content).
+async function onboardingDraft(lang = 'en', { e2 = false } = {}) {
+  const a = { template: 'bakery', palette: T.get('bakery').palettes[0].id, name: lang === 'de' ? 'Bäckerei Sonne' : 'Bakery Sun', description: '', links: [], social: 'auto',
+    sections: ['hero', 'buttons', 'products', 'openingHours', 'contact', 'custom:aaaa1111', 'socialMedia'] };
+  const r = OB.draftRequest(M, V3, T, a, lang);
+  if (!e2) r.design = M.pageFor(V3, T, a, lang).draft;
   const res = await fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ requestId: require('crypto').randomUUID() }, r)) }).then((x) => x.json());
   return { slug: res.page.slug, origin: r.origin };
 }
@@ -123,16 +127,33 @@ const guide = (page) => page.evaluate(() => { const g = document.querySelector('
 const guideFor = async (page, id) => { await selectSection(page, id); return guide(page); };
 const EXAMPLES = ['s_obbuttons1', 's_obproducts1', 's_obhours01', 's_obcontact1'];
 
-test('an onboarding draft: the example note on its four left-out example sections, the generic note on the empty Custom Section, none on the Hero; English', async () => {
+test('an onboarding draft saved before E2: the left-out note on its four empty example sections, the generic note on the empty Custom Section, the E3 example note on the Hero (starter text and photo); English', async () => {
   S.resetDrafts();
   const d = await onboardingDraft('en');
   assert.deepEqual(d.origin.exampleSectionIds, EXAMPLES, 'the fixture');
   const { page, log } = await open('studio.html?slug=' + d.slug);
   for (const id of EXAMPLES) assert.deepEqual(await guideFor(page, id), { kind: 'example', text: TEXT.en.example }, id);
   assert.deepEqual(await guideFor(page, 's_caaaa1111'), { kind: 'empty', text: TEXT.en.empty });
-  assert.equal(await guideFor(page, 's_obhero01'), null, 'the Hero has content');
+  // E3: the Hero has content, part of it the template's starter text and photo: the example-content note
+  assert.deepEqual(await guideFor(page, 's_obhero01'), { kind: 'demo', text: TEXT.en.demo }, 'the Hero holds template example content');
   // a plain-text note (role note), above the fields
   assert.deepEqual(await page.evaluate(() => { const g = document.querySelector('#st-fields .st-guide'); return [g.getAttribute('role'), g.children.length, g === document.querySelector('#st-fields').firstElementChild]; }), ['note', 0, true]);
+  assert.deepEqual([log.errors, log.blocked], [[], []]);
+  await page.close();
+});
+
+test('E2 / E3: a draft saved now holds the example content: the example-content note on the four example sections and the Hero, the generic note on the empty Custom Section; the saved draft unchanged by opening it', async () => {
+  S.resetDrafts();
+  const d = await onboardingDraft('en', { e2: true });
+  assert.deepEqual(d.origin.exampleSectionIds, EXAMPLES, 'the same origin as before E2');
+  const before = S.copy(designOf(d.slug));
+  const items = before.draft.pages[0].sections.find((s) => s.id === 's_obproducts1').data.items;
+  assert.ok(items.length >= 3, 'example products saved');
+  const { page, log } = await open('studio.html?slug=' + d.slug);
+  for (const id of EXAMPLES) assert.deepEqual(await guideFor(page, id), { kind: 'demo', text: TEXT.en.demo }, id + ': example content (E3), not the empty-section note');
+  assert.deepEqual(await guideFor(page, 's_caaaa1111'), { kind: 'empty', text: TEXT.en.empty });
+  assert.deepEqual(await guideFor(page, 's_obhero01'), { kind: 'demo', text: TEXT.en.demo });
+  assert.deepEqual([S.copy(designOf(d.slug).draft), designOf(d.slug).draftRevision, S.copy(designOf(d.slug).origin)], [before.draft, before.draftRevision, before.origin], 'opening and selecting change nothing');
   assert.deepEqual([log.errors, log.blocked], [[], []]);
   await page.close();
 });

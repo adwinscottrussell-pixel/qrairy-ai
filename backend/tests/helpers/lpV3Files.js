@@ -121,6 +121,10 @@ const LPV3_FILES = [
   'backend/tests/studioGuidance.browser.test.js',
   // a template draft's starter photos in the Studio preview (the hosted walkthrough's Hero placeholder bug)
   'backend/tests/studioTemplateImages.browser.test.js',
+  // E3: the template example values of an onboarding draft, marked in the Studio (section list, editor, preview)
+  'frontend/public/js/studio/studio-demo-fields.js',
+  'backend/tests/studioDemoFields.test.js',
+  'backend/tests/studioDemoFields.browser.test.js',
   // T0: the two approved Studio starter heroes (the web copies; the PNG originals stay outside the repository)
   'frontend/public/images/studio/starter/QRAIVY-Creator-Hero.jpg',
   'frontend/public/images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',

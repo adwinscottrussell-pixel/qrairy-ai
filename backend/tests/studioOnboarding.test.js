@@ -184,7 +184,11 @@ test('markup: Step 1 three cards, Instagram and Website "Coming soon"; Step 2 fi
   assert.match(step3, /<ol class="ob-chosen" id="ob-chosen"><\/ol>/);
   assert.match(step3, /<ul class="ob-more" id="ob-more"><\/ul>/);
   assert.match(step3, /<p class="ob-sr" id="ob-sections-status" role="status" aria-live="polite"><\/p>/);
-  assert.match(step3, /data-ob="sections_info"/);
+  // E1: the blue information panel first in the fields column, before the section lists; the old lead and note gone
+  assert.ok(step3.indexOf('id="ob-sections-intro"') !== -1 && step3.indexOf('id="ob-sections-intro"') < step3.indexOf('id="ob-chosen"'), 'E1: the panel before the cards');
+  assert.match(step3, /<section class="ob-info ob-info--intro" id="ob-sections-intro" aria-labelledby="ob-sections-intro-title">/);
+  ['sections_intro_title', 'sections_intro_text', 'sections_intro_detail', 'sections_intro_later'].forEach((k) => assert.match(step3, new RegExp('data-ob="' + k + '"')));
+  assert.ok(!/sections_info|sections_text|Empty sections stay hidden/.test(step3), 'E1: the former lead line and note removed');
   assert.ok(!/<input|<textarea|<select|<button/.test(step3), 'Step 4 markup: no field, no button (added by the script)');
   // Step 5 (O3A): the status, the free / trial note, the two summaries with named Edit buttons, the save note; no field
   const step4 = HTML.slice(HTML.indexOf('id="ob-step-4"'), HTML.indexOf('<div class="ob-nav">'));
@@ -571,7 +575,7 @@ test('T1c.3 Step 5: the review uses the same template page as Step 4 (sectionsPa
   assert.ok(rev.includes("html = tout && tout.ok ? PV.liveHtml(PV.markExamples(IMAGES.localizeHtml(tout.html), p.exampleIds, t('example_tag'))) : '';"), 'inline photos, Example tags');
   assert.ok(rev.includes('li.appendChild(body(type, r));'), 'the section summary with the Step 4 tags (example / starter / the customer\'s)');
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|ob-finish/.test(rev), 'no request, Save Draft not touched (D2.2: renderSave / saveDraft only)');
-  assert.deepEqual([OB.TX.en.review_example_note, OB.TX.de.review_example_note], ['Example details are not saved as your information.', 'Beispielangaben werden nicht als Ihre Angaben gespeichert.']);
+  assert.deepEqual([OB.TX.en.review_example_note, OB.TX.de.review_example_note], ['Sections marked “Example” come into your draft with example content, so you can edit them in the Studio. The examples are not your business details: replace them with your own.', 'Mit „Beispiel“ markierte Abschnitte kommen mit Beispielinhalten in Ihren Entwurf, damit Sie sie im Studio bearbeiten können. Die Beispiele sind nicht Ihre Unternehmensangaben: Ersetzen Sie sie durch Ihre eigenen.']);
   const s5 = HTML.slice(HTML.indexOf('id="ob-step-4"'));
   assert.ok(s5.includes('<ul class="ob-legend" id="ob-review-legend">') && s5.includes('data-ob="review_example_note"'));
   assert.ok(s5.includes('id="ob-finish" hidden disabled aria-disabled="true"'), 'Save Draft disabled in the markup');
