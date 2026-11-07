@@ -2046,8 +2046,30 @@ test('D2.2 server answers, English and German: unverified, other 403, signed out
       await page.waitForFunction((w) => document.getElementById('ob-save-note').textContent === w, { timeout: 4000 }, want).catch(() => {});
       const s = await saveUi(page);
       assert.equal(s.note, want, lang + ' ' + JSON.stringify(cases[i][0].body));
-      assert.deepEqual([s.disabled, s.state, s.tone], [false, 'draft', 'error'], lang + ' ' + i + ': not saved, can try again');
       await page.waitForFunction((w) => document.getElementById('ob-save-status').textContent === w, { timeout: 2000 }, want);
+      if (cases[i][0].body.error === 'draft_limit') {
+        // the draft limit: Save Draft disabled (grey), nothing sent on a click, Manage drafts to the Studio's page list; kept on Back / Next
+        const lim = await page.evaluate(() => { const b = document.getElementById('ob-finish'), r = document.getElementById('ob-manage-row'), a = document.getElementById('ob-manage');
+          return { limit: b.getAttribute('data-limit'), bg: getComputedStyle(b).backgroundColor, shown: !r.hidden && !!a.offsetParent, href: a.getAttribute('href'), text: a.textContent, focus: document.activeElement && document.activeElement.id }; });
+        assert.deepEqual([s.disabled, s.aria, s.state, s.tone], [true, 'true', 'draft', 'error'], lang + ': limit: Save Draft disabled, not saved');
+        assert.deepEqual([lim.limit, lim.shown, lim.href, lim.text, lim.focus], ['true', true, 'studio.html', lang === 'de' ? 'Entwürfe verwalten' : 'Manage drafts', 'ob-manage'], lang + ': limit ' + JSON.stringify(lim));
+        assert.notEqual(lim.bg, 'rgb(255, 90, 31)', lang + ': not the orange of an available button');
+        await page.$eval('#ob-finish', (b) => b.click()); await sleep(300);
+        assert.equal(posts.length, before + 1, lang + ': at the limit nothing is sent');
+        await page.click('#ob-back'); await sleep(200); await page.click('#ob-next'); await sleep(300);
+        const back = await saveUi(page);
+        assert.deepEqual([back.disabled, back.note], [true, want], lang + ': Back / Next keep the limit state and the message');
+        assert.equal(await page.$eval('#ob-manage-row', (n) => n.hidden), false);
+        await page.click('#ob-back'); await sleep(200);
+        assert.equal(await page.$eval('#ob-manage-row', (n) => n.hidden), true, lang + ': Manage drafts only on Step 5');
+        await page.click('#ob-next'); await sleep(300);
+        // back in this tab (e.g. after managing drafts): Save Draft offered again, the server decides on the next click
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await sleep(100);
+        assert.deepEqual([(await saveUi(page)).disabled, await page.$eval('#ob-manage-row', (n) => n.hidden)], [false, true], lang + ': available again on return');
+        continue;
+      }
+      assert.deepEqual([s.disabled, s.state, s.tone], [false, 'draft', 'error'], lang + ' ' + i + ': not saved, can try again');
     }
     // the same requestId for every attempt until the conflict; after it a new one
     const ids = posts.map((p) => p.body.requestId);
@@ -2078,7 +2100,14 @@ test('D2.2 Save Draft states readable everywhere: ready, saving, error and saved
     await page.click('#ob-finish');
     await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'error', { timeout: 4000 });
     await check('error');
+    // the draft limit: Manage drafts in reach (44 px), inside the screen, its text readable; Save Draft disabled
+    const man = await page.evaluate(() => { const a = document.getElementById('ob-manage'), r = a.getBoundingClientRect(); return { h: r.height, l: r.left, r: r.right, iw: innerWidth, sw: document.documentElement.scrollWidth, dis: document.getElementById('ob-finish').disabled }; });
+    assert.ok(man.dis && man.h >= 44 && man.l >= 0 && man.r <= man.iw + 0.5 && man.sw <= man.iw, tag + ' limit: ' + JSON.stringify(man));
+    const mc = await contrast(page, '#ob-manage');
+    assert.ok(mc !== null && mc >= 4.5, tag + ' limit: Manage drafts contrast ' + mc);
     await shot(page, 'd22-error-' + viewport.width + '-' + lang + '-' + theme + '.png');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));   // back in the tab: Save Draft offered again
+    await sleep(100);
     await page.click('#ob-finish');
     await page.waitForFunction(() => document.getElementById('ob-save-note').getAttribute('data-tone') === 'success', { timeout: 4000 });
     await check('saved');

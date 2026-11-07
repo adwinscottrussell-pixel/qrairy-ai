@@ -567,6 +567,12 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 .ob-save-note { margin: 10px 0 0; font-size: 13px; color: var(--ob-muted); text-align: right; }
 /* D2.2: Save Draft states */
 .ob-save-note:focus { outline: none; }
+/* the draft limit: Save Draft clearly disabled (grey, not a faded orange); Manage drafts beside the message */
+.ob-btn--primary[data-limit="true"]:disabled { background: var(--ob-surface-2); color: var(--ob-muted); border-color: var(--ob-border-strong); opacity: 1; box-shadow: none; }
+.ob-manage-row { display: flex; justify-content: flex-end; margin: 10px 0 0; }
+.ob-manage-row[hidden] { display: none; }
+.ob-manage-row .ob-btn { text-decoration: none; }
+@media (max-width: 599px) { .ob-manage-row { justify-content: stretch; } .ob-manage-row .ob-btn { flex: 1; } }
 .ob-save-note:focus-visible { outline: 3px solid var(--ob-focus); outline-offset: 2px; border-radius: 4px; }
 .ob-save-note[data-tone="error"] { color: var(--ob-danger); font-weight: 600; }
 .ob-save-note[data-tone="success"] { color: var(--ob-text-2); }

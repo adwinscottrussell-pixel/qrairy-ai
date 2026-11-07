@@ -108,7 +108,7 @@
       start_help: 'Instagram and website import are coming soon. Nothing is imported in this version.',
       business_text: 'Your business name, a short description and your social media links.',
       review_text: 'Check your page before you save it as a draft.',
-      back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out',
+      back: 'Back', next: 'Next', exit: 'Back to Studio', sign_out: 'Sign out', manage_drafts: 'Manage drafts',
       // Step 4 (O3A)
       draft_status: 'Draft preview ready · Not saved', sum_view_all: 'Show all sections ({n})', sum_view_less: 'Show fewer sections',
       draft_free: "Creating a draft is free and doesn't start your 14-day trial. The trial only starts when you choose to publish.",
@@ -218,7 +218,7 @@
       start_help: 'Der Import von Instagram und Websites folgt bald. In dieser Version wird nichts importiert.',
       business_text: 'Ihr Unternehmensname, eine kurze Beschreibung und Ihre Social-Media-Links.',
       review_text: 'Prüfen Sie Ihre Seite, bevor Sie sie als Entwurf speichern.',
-      back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden',
+      back: 'Zurück', next: 'Weiter', exit: 'Zurück zum Studio', sign_out: 'Abmelden', manage_drafts: 'Entwürfe verwalten',
       draft_status: 'Entwurfsvorschau bereit · Nicht gespeichert', sum_view_all: 'Alle Abschnitte anzeigen ({n})', sum_view_less: 'Weniger Abschnitte anzeigen',
       draft_free: 'Das Erstellen eines Entwurfs ist kostenlos und startet nicht Ihre 14-tägige Testphase. Die Testphase beginnt erst, wenn Sie veröffentlichen.',
       sum_business: 'Unternehmensdaten', sum_sections: 'Abschnitte ({n})', sum_no_description: 'Keine Beschreibung', sum_no_links: 'Keine Social-Media-Links',
@@ -480,6 +480,9 @@
     var last = { name: '', description: '' };    // the last valid name and description: the preview keeps them while a field is too long
     var adopted = false, owner = null;           // whose progress this is (owner: the store key; null: memory only)
     var sw = null;                               // T1c.4: the template-switch notice (restoreSwitch)
+    // draft limit: the server's 409 draft_limit answer ({ limit, active }), kept while this tab stays on the onboarding (Save Draft
+    // disabled, Manage drafts shown); cleared when the owner comes back to the tab, so the server can be asked again
+    var limitHit = null;
     var draft = null, saving = false, saveError = null;   // D2.2: Save Draft (restoreDraft), the request in flight, the last failure
     var liveTimer = null, spoken = {};
 
@@ -505,7 +508,7 @@
       var st = store(), saved = null;
       if (key && st) { try { saved = JSON.parse(st.getItem(key) || 'null'); } catch (e) { saved = null; } }
       if (M && V3) { var r = restore(saved, M, V3, T); nav = { step: r.step, choice: r.choice }; answers = r.answers; sw = restoreSwitch(saved && saved.sw, answers, M); draft = restoreDraft(saved && saved.draft); }
-      saveError = null;
+      saveError = null; limitHit = null;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -513,7 +516,7 @@
       adopted = false; owner = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
-      sw = null; draft = null; saveError = null;
+      sw = null; draft = null; saveError = null; limitHit = null;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
       fields();
     }
@@ -1134,11 +1137,15 @@
       var btn = $('ob-finish'), open = $('ob-open'), note = $('ob-save-note'), badge = doc.querySelector('#ob-step-4 [data-ob="draft_status"]');
       if (!btn || !note) return;
       var m = saveMode(), saved = m.saved, changed = m.changed, conflict = saved && !!draft.conflict;
-      var can = !saving && auth === 'ready' && (m.mode === 'save' ? !!(DR && DR.available() && m.r) : m.mode === 'update' ? !!(DR && DR.canUpdate() && m.r) : !!studioUrl(draft.slug));
+      var atLimit = !!limitHit && m.mode === 'save';
+      var can = !saving && auth === 'ready' && !atLimit && (m.mode === 'save' ? !!(DR && DR.available() && m.r) : m.mode === 'update' ? !!(DR && DR.canUpdate() && m.r) : !!studioUrl(draft.slug));
       btn.disabled = !can;
       btn.setAttribute('aria-disabled', String(!can));
       btn.setAttribute('aria-busy', String(saving));
       btn.setAttribute('data-mode', m.mode);
+      btn.setAttribute('data-limit', String(atLimit));
+      var manage = $('ob-manage-row');
+      if (manage) manage.hidden = !(atLimit && !btn.hidden);
       btn.textContent = t(saving ? 'save_saving_btn' : m.mode === 'save' ? 'save_draft' : m.mode === 'update' ? 'save_changes' : 'open_studio');
       // the second way into the Studio while changes could still be saved
       if (open) { open.hidden = !(m.mode === 'update' && studioUrl(draft.slug) && $('ob-finish').hidden === false); open.disabled = saving; }
@@ -1148,6 +1155,7 @@
       }
       var msg, tone;
       if (saving) { msg = t('save_saving'); tone = 'info'; }
+      else if (atLimit) { msg = errText(limitHit); tone = 'error'; }
       else if (saveError) { msg = saved ? updErrText(saveError) : errText(saveError); tone = 'error'; }
       else if (conflict && changed) { msg = t('upd_conflict'); tone = 'warn'; }
       else if (saved) { msg = t(changed ? 'save_changed' : draft.updated ? 'save_updated' : 'save_saved'); tone = changed ? 'warn' : 'success'; }
@@ -1163,7 +1171,7 @@
       else openStudio($('ob-finish'));
     }
     function saveDraft() {
-      if (saving || !DR || auth !== 'ready' || (draft && draft.status === 'saved')) return;
+      if (saving || !DR || auth !== 'ready' || limitHit || (draft && draft.status === 'saved')) return;
       var r = currentRequest();
       if (!r) { saveError = { state: 'invalid' }; renderSave(); return; }
       var fp = fingerprint(JSON.stringify(r));
@@ -1186,9 +1194,11 @@
         saving = false;
         saveError = f && f.state ? f : { state: 'network' };
         if (saveError.state === 'conflict') draft = null;   // that requestId cannot be used again: a new one next time
+        if (saveError.state === 'limit') limitHit = saveError;
         save(); renderSave();
         sayIn('ob-save-status', errText(saveError));
-        if (!$('ob-finish').disabled) $('ob-finish').focus();
+        if (limitHit && $('ob-manage')) $('ob-manage').focus();   // the way on: Manage drafts
+        else if (!$('ob-finish').disabled) $('ob-finish').focus();
       });
     }
     // ── D2.3a: Save changes (the same draft, the kept revision; the design only) ──
@@ -1255,7 +1265,7 @@
     }
     // a new page: this tab's answers and the kept draft state go (a new requestId next time); the saved draft stays on the server
     function startNew() {
-      draft = null; saving = false; saveError = null; sw = null;
+      draft = null; saving = false; saveError = null; limitHit = null; sw = null;
       nav = { step: 0, choice: null };
       answers = M ? M.sanitize({}) : answers;
       tried = false; touched = {}; last = { name: '', description: '' }; frameY = 0; reveal = null; reviewY = 0; designY = 0; designShown = null;
@@ -1324,6 +1334,7 @@
       if (!last) saveError = null;
       if (!last) $('ob-open').hidden = true;      // D2.3a: the second Studio button belongs to Step 5 only
       $('ob-save-note').hidden = !last;
+      if (!last && $('ob-manage-row')) $('ob-manage-row').hidden = true;   // the draft limit's Manage drafts belongs to Step 5 only
       if (s === 0) previews(false);
       if (s === 1) business();
       if (s === 2) design();
@@ -1408,7 +1419,9 @@
     $('ob-done-open').addEventListener('click', goStudio);
     $('ob-done-new').addEventListener('click', startNew);
     // back from the Studio (the browser's page cache): the return screen, not the steps as they were
-    win.addEventListener('pageshow', function (e) { if (e && e.persisted) render(false); });
+    win.addEventListener('pageshow', function (e) { if (e && e.persisted) { limitHit = null; render(false); } });
+    // the draft limit: back in this tab (e.g. after managing drafts elsewhere), Save Draft is offered again; the server decides
+    doc.addEventListener('visibilitychange', function () { if (doc.visibilityState === 'visible' && limitHit) { limitHit = null; saveError = null; renderSave(); } });
     $('ob-switch-use').addEventListener('click', useSuggested);
     $('ob-switch-undo').addEventListener('click', undoSwitch);
     $('ob-sum-toggle').addEventListener('click', function () { sumOpen($('ob-sum-sections-box').getAttribute('data-open') !== 'true'); });

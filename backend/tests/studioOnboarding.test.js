@@ -138,8 +138,9 @@ test('page: no Admin sidebar, no Studio controls; the language file, the routing
   assert.ok(logo[0] === 0xff && logo[1] === 0xd8, 'a JPEG');
   const css = read('css/studio-onboarding.css');
   assert.ok(css.includes('.ob-brand__logo { display: block; height: 40px; width: auto; aspect-ratio: 1 / 1; object-fit: contain; }'), 'height only: never stretched');
-  // the only link: back to the Studio (in the same upload)
-  assert.deepEqual([...HTML.matchAll(/\shref="([^"#][^"]*)"/g)].map((m) => m[1]).filter((h) => !/^https:\/\/fonts\.googleapis\.com/.test(h) && !h.endsWith('.css')), ['studio.html']);
+  // the only links: back to the Studio and (the draft limit) Manage drafts, both to the Studio in the same upload
+  assert.deepEqual([...HTML.matchAll(/\shref="([^"#][^"]*)"/g)].map((m) => m[1]).filter((h) => !/^https:\/\/fonts\.googleapis\.com/.test(h) && !h.endsWith('.css')), ['studio.html', 'studio.html']);
+  assert.ok(HTML.includes('<a class="ob-btn ob-btn--secondary" id="ob-manage" href="studio.html" data-ob="manage_drafts">Manage drafts</a>'), 'Manage drafts: the Studio\'s page list');
   const ids = [...HTML.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'unique ids');
 });

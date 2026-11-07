@@ -247,6 +247,73 @@ test('E2: the saved draft holds the preview\'s example content (Bakery: buttons,
   await page.close();
 });
 
+// the onboarding up to Step 5, nothing saved
+async function onboardToStep5(page, { name = 'Café Limit', template = 'bakery' } = {}) {
+  await page.click('[data-option="scratch"]'); await page.click('#ob-next'); await sleep(150);
+  await page.type('#ob-name', name);
+  await page.click('#ob-next'); await sleep(300);
+  await page.click('.ob-tpl[data-template="' + template + '"]'); await page.click('#ob-next'); await sleep(300);
+  await page.click('#ob-more [data-type="gallery"] [data-act="add"]').catch(() => {}); await sleep(150);
+  await page.click('#ob-next'); await sleep(400);
+}
+const keptAnswers = (page) => page.evaluate(() => { for (let i = 0; i < sessionStorage.length; i++) { const k = sessionStorage.key(i); if (k.startsWith('qraivy.onboarding.v1:')) return JSON.parse(sessionStorage.getItem(k)).answers; } return null; });
+const finishUi = (page) => page.evaluate(() => { const b = document.getElementById('ob-finish'), r = document.getElementById('ob-manage-row');
+  return { mode: b.getAttribute('data-mode'), disabled: b.disabled, limit: b.getAttribute('data-limit'), manage: !r.hidden, note: document.getElementById('ob-save-note').textContent }; });
+
+test('draft limit with the real route: 0, 1 and 2 unpublished drafts -> Save Draft saves; 3 -> Save Draft disabled after the server\'s answer, nothing more sent, Manage drafts opens the Studio\'s page list; the answers kept; back with a free slot: Save Draft saves', async () => {
+  const LIMIT_EN = 'You already have 3 unpublished drafts, the current maximum. Your answers are kept in this browser tab.';
+  const plain = (n) => fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Old draft ' + n, language: 'en' }) }).then((x) => x.json());
+  const carlDrafts = () => S.db.pages.filter((p) => p.userId === S.CARL && p.status === 'draft');
+  for (const n of [0, 1, 2]) {
+    S.resetDrafts();
+    for (let i = 0; i < n; i++) await plain(i);
+    assert.equal(carlDrafts().length, n, 'fixture ' + n);
+    const { page, api } = await open('studio-onboarding.html');
+    await onboardToStep5(page);
+    const s = await finishUi(page);
+    assert.deepEqual([s.mode, s.disabled, s.manage], ['save', false, false], n + ' drafts: Save Draft available');
+    await page.click('#ob-finish');
+    await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 8000 });
+    assert.equal(carlDrafts().length, n + 1, n + ' drafts: saved');
+    assert.deepEqual([(await finishUi(page)).manage, api().filter((x) => x === 'POST /studio/drafts').length], [false, 1]);
+    await page.close();
+  }
+  // 3: the server answers draft_limit
+  S.resetDrafts();
+  for (let i = 0; i < 3; i++) await plain(i);
+  const { page, api, log } = await open('studio-onboarding.html');
+  await onboardToStep5(page);
+  const answers = await keptAnswers(page);
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-limit') === 'true', { timeout: 8000 });
+  let s = await finishUi(page);
+  assert.deepEqual([s.mode, s.disabled, s.manage, s.note], ['save', true, true, LIMIT_EN], '3 drafts: disabled, Manage drafts');
+  assert.equal(carlDrafts().length, 3, 'nothing created');
+  await page.$eval('#ob-finish', (b) => b.click()); await sleep(300);
+  assert.equal(api().filter((x) => x === 'POST /studio/drafts').length, 1, 'at the limit nothing more is sent');
+  assert.deepEqual(await keptAnswers(page), answers, 'the answers kept exactly');
+  await shot(page, 'limit-01-onboarding-limit.png');
+  // Manage drafts: the Studio, its page list with the three drafts (nothing created or changed)
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-manage')]);
+  assert.equal(new URL(page.url()).pathname, '/studio.html');
+  await until(async () => (await page.$$eval('#st-page-select option', (o) => o.length)) >= 3 || null, 'the page list');
+  const listed = await page.$$eval('#st-page-select option', (o) => o.map((x) => x.value));
+  for (const p of carlDrafts()) assert.ok(listed.includes(p.slug), 'listed: ' + p.slug);
+  await shot(page, 'limit-02-studio-page-list.png');
+  // a draft removed elsewhere (no delete in the Studio yet), then back: the answers and Step 5, Save Draft offered again
+  S.db.pages.splice(S.db.pages.indexOf(carlDrafts()[0]), 1);
+  await goBackToOnboarding(page);
+  await until(async () => (await page.$eval('#ob-progress-count', (n) => n.textContent)) === 'Step 5 of 5' || null, 'back on Step 5');
+  assert.deepEqual(await keptAnswers(page), answers, 'the answers kept after Manage drafts and Back');
+  s = await finishUi(page);
+  assert.deepEqual([s.mode, s.disabled, s.manage], ['save', false, false], 'back in the tab: Save Draft available again');
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 8000 });
+  assert.equal(carlDrafts().length, 3, 'saved into the free slot');
+  assert.deepEqual(log.errors, []);
+  await page.close();
+});
+
 test('history: the Studio\'s preview updates (typing, a section selected, the device switched, a save) add no browser-history entry; the preview still shows the latest edit; ONE browser Back returns to the onboarding', async () => {
   S.resetDrafts();
   const { page, log } = await open('studio-onboarding.html');
