@@ -113,6 +113,8 @@ const LPV3_FILES = [
   'backend/tests/onboardingSaveDraft.test.js',
   // D2.3a: the onboarding -> Studio handoff, end to end with the real routes
   'backend/tests/onboardingStudioHandoff.browser.test.js',
+  // D2.3b-1: the saved onboarding origin, returned read only to the owner's Studio
+  'backend/tests/studioOriginRead.test.js',
   // T0: the two approved Studio starter heroes (the web copies; the PNG originals stay outside the repository)
   'frontend/public/images/studio/starter/QRAIVY-Creator-Hero.jpg',
   'frontend/public/images/studio/starter/QRAIVY-Professional-Services-Hero.jpg',

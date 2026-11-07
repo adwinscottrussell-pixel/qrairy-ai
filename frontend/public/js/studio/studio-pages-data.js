@@ -41,6 +41,21 @@
   function Failure(state, info) { this.state = state; this.info = info || null; }
   function revisionOf(v) { return typeof v === 'number' && v === Math.floor(v) && v >= 1 ? v : null; }
   function dateOf(v) { return typeof v === 'string' && v.length <= 40 && !isNaN(Date.parse(v)) ? v : null; }
+  // D2.3b-1: where an onboarding draft came from (the server's checked PageDesign.origin), checked again here: only
+  // the known fields, each in its known form; anything else is null. Plain data for the Studio: never shown as HTML.
+  var CHOICE_ID = /^[a-z][a-z0-9-]{0,31}$/, SECTION_ID = /^s_[a-z0-9]{4,16}$/, MAX_EXAMPLE_IDS = 40;
+  function origin(v) {
+    if (!isObj(v) || v.source !== 'onboarding') return null;
+    var o = { source: 'onboarding' };
+    if (typeof v.template === 'string' && CHOICE_ID.test(v.template)) o.template = v.template;
+    if (typeof v.palette === 'string' && CHOICE_ID.test(v.palette)) o.palette = v.palette;
+    if (v.language === 'en' || v.language === 'de') o.language = v.language;
+    if (Array.isArray(v.exampleSectionIds) && v.exampleSectionIds.length <= MAX_EXAMPLE_IDS) {
+      var ids = v.exampleSectionIds.filter(function (x, i, a) { return typeof x === 'string' && SECTION_ID.test(x) && a.indexOf(x) === i; });
+      o.exampleSectionIds = ids;
+    }
+    return o;
+  }
   function page(p) {
     if (!isObj(p) || typeof p.slug !== 'string' || !SLUG.test(p.slug)) return null;
     return { slug: p.slug, name: text(p.name, 120) || p.slug, live: p.live === true, kind: p.kind === 'creator' ? 'creator' : 'business', hasDraft: p.hasDraft === true };
@@ -90,7 +105,7 @@
         return { state: pages.length ? 'ready' : 'empty', pages: pages };
       }).catch(function (e) { var f = fail(e); f.pages = []; return f; });
     }
-    // load(slug) -> { state: 'loaded', page, design, source, revision, savedAt, warnings } or
+    // load(slug) -> { state: 'loaded', page, design, source, revision, savedAt, warnings, origin (D2.3b-1: object or null) } or
     // { state: 'signin' | 'forbidden' | 'notfound' | 'error' }. Never rejects.
     function load(slug) {
       if (!connected() || typeof slug !== 'string' || !SLUG.test(slug)) return Promise.resolve({ state: 'error' });
@@ -100,7 +115,8 @@
         var warnings = Array.isArray(r.warnings) ? r.warnings.filter(isObj).map(function (w) { return text(w.code, 60); }).filter(Boolean) : [];
         var revision = r.source === 'draft' ? revisionOf(r.revision) : null;
         if (r.source === 'draft' && !revision) throw new Failure('error');
-        return { state: 'loaded', page: p, design: r.design, source: r.source, revision: revision, savedAt: dateOf(r.savedAt), warnings: warnings };
+        return { state: 'loaded', page: p, design: r.design, source: r.source, revision: revision, savedAt: dateOf(r.savedAt), warnings: warnings,
+          origin: r.source === 'draft' ? origin(r.origin) : null };
       }).catch(fail);
     }
     // save(slug, design, baseRevision) -> { state: 'saved', revision, savedAt } or
@@ -128,5 +144,5 @@
     return { connected: connected, list: list, load: load, save: save };
   }
 
-  return { LIST: LIST, SLUG: SLUG, designPath: designPath, allowed: allowed, createPagesData: createPagesData };
+  return { LIST: LIST, SLUG: SLUG, designPath: designPath, allowed: allowed, origin: origin, createPagesData: createPagesData };
 });

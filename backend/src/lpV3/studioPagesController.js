@@ -5,7 +5,9 @@
  *   GET /studio/pages               the owner's pages (LandingPage.userId)
  *   GET /studio/pages/:slug/design  one page as a V3 design: its saved
  *                                   PageDesign draft, or else the legacy page
- *                                   converted in memory (importLegacy.js)
+ *                                   converted in memory (importLegacy.js);
+ *                                   D2.3b-1: + origin, where an onboarding
+ *                                   draft came from (read only, see storedOrigin)
  *   PUT /studio/pages/:slug/design  Phase B: save the Studio draft
  *                                   { design, baseRevision }
  *
@@ -48,6 +50,19 @@ function summary(p) {
 // The V3 tables come with the Studio migration; where it is not applied yet
 // (any database before Phase B) a page simply has no saved draft.
 function tableMissing(e) { return !!e && (e.code === 'P2021' || /does not exist/i.test(String(e.message || ''))); }
+// D2.3b-1: a draft's stored origin (PageDesign.origin, written once by POST /studio/drafts) as the Studio may see it:
+// checked again with the same rules as on creation (studioDraftsController.js readOrigin; loaded here when used: that
+// file requires this one), the language one of the two the Studio knows. Anything else (none, an older draft, a value
+// that no longer passes) is null: never an error, the page still loads. Read only: PUT never writes the origin.
+function storedOrigin(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  if (v.language !== undefined && v.language !== null && v.language !== 'en' && v.language !== 'de') return null;
+  try {
+    const r = require('./studioDraftsController').readOrigin(v, v.language);
+    return r && r.origin ? r.origin : null;
+  } catch (e) { return null; }
+}
+
 // The page, when it is the signed-in owner's; otherwise the answer is sent (null).
 async function ownPage(req, res, select) {
   const { slug } = req.params;
@@ -98,18 +113,18 @@ async function getStudioPageDesign(req, res) {
 
     let stored = null;
     try {
-      stored = await prisma.pageDesign.findUnique({ where: { landingPageId: page.id }, select: { draft: true, draftRevision: true, updatedAt: true } });
+      stored = await prisma.pageDesign.findUnique({ where: { landingPageId: page.id }, select: { draft: true, draftRevision: true, updatedAt: true, origin: true } });
     } catch (e) { if (!tableMissing(e)) throw e; }
 
     if (stored) {
       const checked = V3.validateDesign(stored.draft, { cloudName: cloudName() });
       if (!checked.ok) return res.status(422).json({ error: 'stored_draft_invalid', page: summary(page) });
-      return res.json({ page: summary(page), source: 'draft', revision: stored.draftRevision, savedAt: stored.updatedAt, design: checked.design, warnings: [] });
+      return res.json({ page: summary(page), source: 'draft', revision: stored.draftRevision, savedAt: stored.updatedAt, design: checked.design, warnings: [], origin: storedOrigin(stored.origin) });
     }
     // the legacy page, converted in memory only (the row is not changed)
     const imported = importLegacyPage(page, { cloudName: cloudName() });
     if (!imported.ok) return res.status(422).json({ error: 'import_failed', reason: imported.reason, page: summary(page) });
-    return res.json({ page: summary(page), source: 'legacy_import', revision: null, savedAt: null, design: imported.draft, warnings: imported.warnings });
+    return res.json({ page: summary(page), source: 'legacy_import', revision: null, savedAt: null, design: imported.draft, warnings: imported.warnings, origin: null });
   } catch (e) {
     console.error('[StudioPages] design error:', e && e.message);
     return res.status(500).json({ error: 'Failed to load the page.' });
@@ -163,4 +178,4 @@ async function saveStudioPageDesign(req, res) {
   }
 }
 
-module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, kindOf, summary, SLUG, MAX_PAGES };
+module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, storedOrigin, kindOf, summary, SLUG, MAX_PAGES };

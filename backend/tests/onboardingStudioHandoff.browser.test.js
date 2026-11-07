@@ -62,6 +62,13 @@ async function open(file, { token = 'tok_carl', lang = 'en', viewport = DESKTOP 
     if (tok === null) { window.Clerk = { loaded: true, load: async () => {}, user: null, session: null, addListener: (fn) => listeners.push(fn), openSignIn: () => {}, signOut: async () => {} }; return; }
     const user = { id: 'user_' + tok.slice(4), primaryEmailAddress: { verification: { status: 'verified' } }, reload: async () => {} };
     window.Clerk = { loaded: true, load: async () => {}, user, session: { id: 'sess_' + tok, getToken: async () => current }, addListener: (fn) => listeners.push(fn), openSignIn: () => {}, openSignUp: () => {}, signOut: async () => {} };
+    // D2.3b-1: another account (a token) or signed out (null) in this tab, announced as Clerk does
+    window.__setSession = (t) => {
+      current = t;
+      window.Clerk.user = t ? { id: 'user_' + t.slice(4), primaryEmailAddress: { verification: { status: 'verified' } }, reload: async () => {} } : null;
+      window.Clerk.session = t ? { id: 'sess_' + t, getToken: async () => current } : null;
+      listeners.forEach((fn) => fn({ session: window.Clerk.session, user: window.Clerk.user }));
+    };
   }, token, lang);
   const log = { errors: [], blocked: [], dialogs: [] };
   page.on('pageerror', (e) => { log.errors.push(e.message); pageErrors.push(e.message); });
@@ -220,6 +227,46 @@ test('history: the Studio\'s preview updates (typing, a section selected, the de
   await goBackToOnboarding(page);
   assert.equal(await page.$eval('#ob-done', (n) => !n.hidden), true);
   assert.deepEqual([log.errors, log.blocked], [[], []]);
+  await page.close();
+});
+
+test('D2.3b-1 origin in the Studio: kept for the opened onboarding draft (as stored, read only); null for another page; cleared on page switch, account change and sign-out; never shown as HTML', async () => {
+  S.resetDrafts();
+  const { page, log } = await open('studio-onboarding.html');
+  await onboardToSaved(page, { name: 'Café Herkunft', template: 'creator', customs: 2 });
+  const slug = S.db.pages.find((p) => p.userId === S.CARL && p.status === 'draft').slug;
+  const stored = S.copy(designOf(slug).origin);
+  // a second draft of Carl's without an origin (created directly, no onboarding)
+  const plain = await fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Ohne Herkunft' }) }).then((r) => r.json());
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-finish')]);
+  await until(async () => (await studioState(page)).status === 'loaded', 'Studio loaded');
+  const originNow = () => page.evaluate(() => window.QraivyStudio.origin());
+  assert.deepEqual(await originNow(), stored, 'the stored origin, kept for the open page');
+  assert.equal(stored.source, 'onboarding');
+  // never rendered: no origin value appears in the Studio's text or HTML
+  const html = await page.evaluate(() => document.body.innerHTML);
+  assert.ok(!html.includes('exampleSectionIds') && !html.includes('"source"'), 'not rendered');
+  // the page selector: the plain draft -> null; back -> the origin again
+  await page.select('#st-page-select', plain.page.slug);
+  await until(async () => { const s = await studioState(page); return s.status === 'loaded' && s.selected === plain.page.slug; }, 'plain draft open');
+  assert.equal(await originNow(), null, 'another page: no origin');
+  await page.select('#st-page-select', slug);
+  await until(async () => { const s = await studioState(page); return s.status === 'loaded' && s.selected === slug; }, 'back');
+  assert.deepEqual(await originNow(), stored);
+  // a save keeps it, and keeps it stored
+  await studioEditAndSave(page, ' X');
+  assert.deepEqual([await originNow(), designOf(slug).origin], [stored, stored], 'unchanged by the Studio save');
+  // another account in this tab: cleared at once
+  await page.evaluate(() => window.__setSession('tok_ben'));
+  await until(async () => (await page.evaluate(() => window.QraivyStudio.origin())) === null, 'cleared on account change');
+  await until(async () => { const s = await studioState(page); return s.status === 'loaded' || s.status === 'empty'; }, 'Ben settled');
+  assert.ok(!(await page.evaluate(() => document.body.innerText)).includes('Café Herkunft'), 'none of Carl\'s page for Ben');
+  assert.equal(await originNow(), null, 'Ben\'s own page has no origin');
+  // signed out
+  await page.evaluate(() => window.__setSession(null));
+  await sleep(500);
+  assert.equal(await originNow(), null, 'signed out: none');
+  assert.deepEqual(log.errors, []);
   await page.close();
 });
 

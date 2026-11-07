@@ -191,7 +191,8 @@
   // the owner's own pages (studio-pages-data.js): state off | loading | ready | empty | signin | error |
   // forbidden | notfound | invalid; current = the page open in the editor (null: the demo)
   // revision: the saved draft's (null: no draft yet); owner: who opened it (the sign-in)
-  var pagesData = null, pageView = { state: 'off', pages: [], current: null, source: '', revision: null, owner: null }, pageLoad = 0;
+  // origin (D2.3b-1): where the open page came from (studio-pages-data.js load(): checked; null for any other page), kept only while that page is open
+  var pagesData = null, pageView = { state: 'off', pages: [], current: null, source: '', revision: null, owner: null, origin: null }, pageLoad = 0;
   // Save Draft: state idle | saved | error | conflict; busy while a save runs; gen: answers of an older page / account are ignored
   var saveView = { state: 'idle', busy: false, savedAt: null, invalid: false }, saveGen = 0, leaving = false;
   function lang() { return window.QraivyShell ? window.QraivyShell.lang() : 'en'; }
@@ -506,7 +507,7 @@
   function showSample() {
     if (!pageView.current) return;
     pageView.current = null;
-    pageView.revision = null; pageView.owner = null;
+    pageView.revision = null; pageView.owner = null; pageView.origin = null;
     resetSave();
     // the address no longer names that page (a next account starts from its own pages)
     try { var u = new URL(window.location.href); u.searchParams.delete('slug'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
@@ -526,6 +527,7 @@
     if (!force && pageView.current && pageView.current.slug !== slug && unsaved() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
     var n = ++pageLoad;
     resetSave();
+    pageView.origin = null;                  // D2.3b-1: the previous page's origin never carries over
     showPages({ state: 'loading' });
     pagesData.load(slug).then(function (r) {
       if (n !== pageLoad) return;
@@ -539,6 +541,7 @@
       pageView.current = r.page;
       pageView.revision = r.source === 'draft' ? r.revision : null;
       pageView.owner = sessionUser();
+      pageView.origin = r.origin || null;
       saveView.savedAt = r.savedAt;
       showPages({ state: 'loaded', source: r.source });
       setLeftTab('sections');
@@ -596,6 +599,7 @@
     saveGen++;
     dealsLoad++;
     pageView.pages = [];
+    pageView.origin = null;                  // D2.3b-1: signed out / another account: the page's origin goes with it
     // nothing of this account is open any more; the next account's pages follow (listPages)
     if (pageView.state === 'loaded') pageView.state = 'loading';
     dealsView = { state: dealsData && dealsData.connected() ? 'loading' : 'sample', pages: [], page: '', items: [], withheld: 0 };
@@ -962,7 +966,8 @@
     deviceButtons();
     startPages();
     startDeals();
-    window.QraivyStudio = { state: state, editor: editor, preview: preview }; // for local inspection only
+    window.QraivyStudio = { state: state, editor: editor, preview: preview, // for local inspection only
+      origin: function () { return pageView.origin ? JSON.parse(JSON.stringify(pageView.origin)) : null; } };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

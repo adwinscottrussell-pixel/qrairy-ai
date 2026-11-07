@@ -249,4 +249,4 @@ async function createStudioDraft(req, res) {
   }
 }
 
-module.exports = { createStudioDraft, readBody, starterDesign, requestHash, FIELDS, ORIGIN_FIELDS, NAME_MAX, MAX_EXAMPLE_IDS };
+module.exports = { createStudioDraft, readBody, readOrigin, starterDesign, requestHash, FIELDS, ORIGIN_FIELDS, NAME_MAX, MAX_EXAMPLE_IDS };
