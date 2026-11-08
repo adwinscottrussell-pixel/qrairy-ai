@@ -16,8 +16,9 @@
   --ob-bg: #0a0a0a;               /* the page around the white workspace: QDS near-black (qds-color-background) */
   --ob-surface: #ffffff;
   --ob-surface-2: #f7f8fa;
-  --ob-border: #e3e6ec;
-  --ob-border-strong: #cfd4dd;
+  --ob-border: #c3c9d2;          /* card / container edges: clearly visible on the white workspace, still neutral */
+  --ob-border-strong: #b5bcc7;   /* inputs and outlined controls: one step stronger than the cards */
+  --ob-divider: #e3e6ec;         /* the workspace outline and the Back / Next separator stay quiet */
   --ob-text: #0f172a;
   --ob-text-2: #334155;
   --ob-muted: #475569;           /* secondary / helper text: still secondary, 7:1 on white and the grey surfaces */
@@ -41,7 +42,7 @@
   --ob-danger-border: #dc2626;
   --ob-danger-ring: rgba(220, 38, 38, 0.18);
   --ob-placeholder: #64748b;     /* placeholders: readable (4.7:1), lighter than typed text */
-  --ob-border-hover: #b4bbc8;
+  --ob-border-hover: #949dab;   /* input hover: still a step darker than --ob-border-strong */
   --ob-tag-bg: #eef0f4;
   --ob-stage: linear-gradient(180deg, #eef1f6, #e4e8ef);
   /* Step 1 demo stages: each card its own soft tint */
@@ -72,6 +73,7 @@
   --ob-surface-2: #1a1a1a;
   --ob-border: rgba(255, 255, 255, 0.12);
   --ob-border-strong: rgba(255, 255, 255, 0.2);
+  --ob-divider: rgba(255, 255, 255, 0.12);
   --ob-border-hover: rgba(255, 255, 255, 0.34);
   --ob-text: #f0ece0;
   --ob-text-2: #c8c8c0;
@@ -172,7 +174,7 @@ body.ob-page {
 /* ── page body ── */
 .ob-main { position: relative; z-index: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 20px 16px 40px; }
 .ob-card-panel {
-  background: var(--ob-surface); border: 1px solid var(--ob-border); border-radius: var(--ob-radius);
+  background: var(--ob-surface); border: 1px solid var(--ob-divider); border-radius: var(--ob-radius);
   box-shadow: var(--ob-shadow); padding: 22px 18px;
 }
 .ob-notice-panel { max-width: 560px; margin: 24px auto 0; text-align: center; }
@@ -596,7 +598,7 @@ body[data-ob-step="0"] .ob-bg__ribbon { display: inline; }
 @media (max-width: 599px) { .ob-save-note { text-align: left; } }
 
 /* ── Back / Next ── */
-.ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-border); }
+.ob-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--ob-divider); }
 .ob-nav .ob-btn { flex: 1; }
 .ob-nav #ob-back[hidden] + .ob-btn { margin-left: auto; }
 /* D2.3a: Save changes + Open in Studio: on phones Open in Studio takes its own full-width row under Back / Save changes */
