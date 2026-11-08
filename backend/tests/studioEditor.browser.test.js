@@ -257,9 +257,13 @@ test('buttons follow the renderer: shown only with text and link; link choices; 
   await page.select(field('data.primary.icon', 'select'), 'star');
   await until(async () => /v3-btn-primary[^>]*>[^]*?<svg/.test(await srcdoc(page)), 'icon');
   await page.$eval('#st-fields [data-path="data.primary.color"] input', (n) => { n.value = '#123456'; n.dispatchEvent(new Event('input', { bubbles: true })); n.dispatchEvent(new Event('change', { bubbles: true })); });
-  await previewHas(page, 'style="background:#123456"');
+  // a dark colour keeps the light label; a light one gets a dark label (light-theme audit, Problem 6)
+  await previewHas(page, 'style="background:#123456;color:#ffffff"');
+  await page.$eval('#st-fields [data-path="data.primary.color"] input', (n) => { n.value = '#ffd400'; n.dispatchEvent(new Event('input', { bubbles: true })); n.dispatchEvent(new Event('change', { bubbles: true })); });
+  await previewHas(page, 'style="background:#ffd400;color:#');
+  assert.ok(!(await srcdoc(page)).includes('style="background:#ffd400;color:#ffffff"'), 'a light colour: no white label');
   await page.click('#st-fields [data-path="data.primary.color"] .st-linkbtn');
-  await until(async () => !(await srcdoc(page)).includes('background:#123456'), 'colour back to the default');
+  await until(async () => !/background:#(123456|ffd400)/.test(await srcdoc(page)), 'colour back to the default');
   // secondary: no text -> not shown
   await typeInto(page, field('data.secondary.text'), '');
   await until(async () => !(await srcdoc(page)).includes('<a class="v3-btn v3-btn-outline"'), 'secondary hidden without text');

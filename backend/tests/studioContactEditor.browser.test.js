@@ -258,12 +258,12 @@ test('Style: background and spacing', async () => {
 // Brand-background fix after the 2A-3D visual review: the icons were orange
 // on orange. Computed colours on all four backgrounds, in the Studio preview
 // (desktop and mobile).
-test('Contact icons on Default, Alternate, Dark (brand orange) and Brand (white), desktop and mobile; text and Directions unchanged', async () => {
+test('Contact icons on Default, Alternate (brand orange), Dark and Brand (white, the section text colour), desktop and mobile; text and Directions unchanged', async () => {
   const { page } = await openContact();
   await typeInto(page, fp('data.mapsUrl'), 'https://maps.app.goo.gl/abc');
   await page.evaluate(() => document.activeElement.blur());
   await tab(page, 'style');
-  const want = { default: 'rgb(255, 90, 31)', alt: 'rgb(255, 90, 31)', dark: 'rgb(255, 90, 31)', brand: 'rgb(255, 255, 255)' };
+  const want = { default: 'rgb(255, 90, 31)', alt: 'rgb(255, 90, 31)', dark: 'rgb(255, 255, 255)', brand: 'rgb(255, 255, 255)' };
   const text = { default: 'rgb(10, 10, 10)', alt: 'rgb(10, 10, 10)', dark: 'rgb(255, 255, 255)', brand: 'rgb(255, 255, 255)' };
   for (const dev of ['desktop', 'mobile']) {
     if (dev === 'mobile') await page.click('button[data-device="mobile"]');

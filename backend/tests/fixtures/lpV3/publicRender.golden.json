@@ -1,12 +1,12 @@
 {
-  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified). Re-generated on 2026-10-24 for the owner-decided Text Plain layout (text only): allRenderedVariants changes only by the removed image of its Plain Text section (verified). Restructured on 2026-10-29 for the owner-approved Phase C one-Hero-per-page rule: allRenderedVariants (three Heroes) split into allRenderedVariants (overlay Hero), allRenderedVariantsHeroSplit and allRenderedVariantsHeroSimple (one Hero each, plus the menu target s_hours1); renderer unchanged, every section byte-identical to the previous page (verified).",
+  "about": "SHA-256 of the PUBLIC V3 render (no preview option) of the reference designs. Generated from b04f15e core.js; allRenderedVariants (which uses the default palette) re-generated on 2026-10-21 for the owner-approved QRAIVY neutral black / gray default palette (only the :root colour tokens changed, verified). Must not change otherwise. localBusiness and allRenderedVariants re-generated on 2026-10-23 for the owner-authorised Social Media contrast fix (only the .v3-social rule gained color:var(--v3-text), verified). Re-generated again on 2026-10-23 for the owner-requested Contact Brand-background icon fix (one added rule, .v3-bg-brand .v3-ct-row .v3-ic, verified). Re-generated on 2026-10-23 for the owner-approved Opening Hours Dark/Brand contrast rules (three added rules, verified). Re-generated on 2026-10-24 for the owner-decided Text Plain layout (text only): allRenderedVariants changes only by the removed image of its Plain Text section (verified). Restructured on 2026-10-29 for the owner-approved Phase C one-Hero-per-page rule: allRenderedVariants (three Heroes) split into allRenderedVariants (overlay Hero), allRenderedVariantsHeroSplit and allRenderedVariantsHeroSimple (one Hero each, plus the menu target s_hours1); renderer unchanged, every section byte-identical to the previous page (verified). Re-generated on 2026-11-08 for the owner-approved light-theme readability fixes (audit Problems 4-6): one added Contact rule on Dark, the Hero guard CSS, the guard element on overlay Heroes below 50 % darkening and the readable label colour on a custom Hero button colour (verified).",
   "generatedFrom": "b04f15e90c2ebeae1d2079991ccfa3c10821505a",
   "results": [
     {
       "design": "localBusiness",
       "ctx": 0,
-      "bytes": 16086,
-      "sha256": "188384caa5b2b5b4ac9a7e97ffab47debe8d85f512af508d5edb476832fc416f",
+      "bytes": 16511,
+      "sha256": "af7d3749a46bf1bbe8d08850240bb24e32423afe19dfcda65983bff8b4048ea5",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -15,8 +15,8 @@
     {
       "design": "localBusiness",
       "ctx": 1,
-      "bytes": 16086,
-      "sha256": "188384caa5b2b5b4ac9a7e97ffab47debe8d85f512af508d5edb476832fc416f",
+      "bytes": 16511,
+      "sha256": "af7d3749a46bf1bbe8d08850240bb24e32423afe19dfcda65983bff8b4048ea5",
       "skipped": [
         "dealsOffers",
         "loyalty"
@@ -25,43 +25,43 @@
     {
       "design": "allRenderedVariants",
       "ctx": 0,
-      "bytes": 18567,
-      "sha256": "b980791fa17487a9124e550775707f401ea4bfab101268e15313806d2be29325",
+      "bytes": 19060,
+      "sha256": "e320dd56662eef3153a94cf63d41f6e67255729796bcf06a8e1225f35c888bc8",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 0,
-      "bytes": 9091,
-      "sha256": "7c3737ce1bae883c9eacb886891ed24448304b97fce5aa38f27d4ede3a2640b9",
+      "bytes": 9516,
+      "sha256": "9d299fb18b088cc11bb9f0538e32ef30513abc052745788dce3c4ff31a08349d",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 0,
-      "bytes": 9026,
-      "sha256": "25c398bd3556f8ce7ccf9c7b6cb0eb71013222ee14600806b2fb09ce0ad381ce",
+      "bytes": 9451,
+      "sha256": "01268459d18e4a9ede10e7b5f9857162ab070db8dfcebad319996ef20e42bfda",
       "skipped": []
     },
     {
       "design": "allRenderedVariants",
       "ctx": 1,
-      "bytes": 18592,
-      "sha256": "891bdb028d3ff45409b7f797f8dd5fde507350409b13f1a53f2e576fb7dd025e",
+      "bytes": 19085,
+      "sha256": "1b09ff9e5d3aec0aa893ec3380aa46d34d44c269341ccdc30d13d36405de891f",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSplit",
       "ctx": 1,
-      "bytes": 9116,
-      "sha256": "699d865b8fc2a055960f3919c83f68fe8f4b5861eadbd0f7ba3290f2ffe9dc80",
+      "bytes": 9541,
+      "sha256": "20bae733d5fcd613302ff23feac69021b3810f245386abbfeb3fde630a285359",
       "skipped": []
     },
     {
       "design": "allRenderedVariantsHeroSimple",
       "ctx": 1,
-      "bytes": 9051,
-      "sha256": "456a4a7926d03d35940b99529ce520ffe253f7e94bedea0e2af0856a49680ff3",
+      "bytes": 9476,
+      "sha256": "d6cd23fc58d761f2f96121ce190f807261034a931e7aa1279c6a42cdde86ec03",
       "skipped": []
     }
   ],
@@ -149,6 +149,16 @@
         "allRenderedVariantsHeroSimple"
       ],
       "reason": "T0 hero spacing (owner-approved): a Hero with style.spacing \"compact\" gets class v3-hero-compact and its CSS (phones 96 -> 52 px above the text, tablet+ 152 -> 88 px); added only to such pages. Verified: every other design byte-identical to 5efd4b9; the compact one differs only by the class and the CSS."
+    },
+    {
+      "date": "2026-11-08",
+      "designs": [
+        "localBusiness",
+        "allRenderedVariants",
+        "allRenderedVariantsHeroSplit",
+        "allRenderedVariantsHeroSimple"
+      ],
+      "reason": "Light-theme readability (owner-approved audit, Problems 4-6): added .v3-bg-dark .v3-ct-row .v3-ic{color:inherit} (Contact icons on Dark take the section text colour; Brand unchanged); added the .v3-hero-guard CSS (a soft local shade behind Hero text over a photo); an overlay Hero with a photo and darkening below 50 % gets <div class=\"v3-hero-guard\" style=\"opacity:g\"> with 1-(1-o)(1-g)=0.5 (allRenderedVariants: 30 % -> 0.29); a custom Hero button colour also sets a readable label colour (core.js hintOnBrand with the chosen colour; allRenderedVariants: #ffffff). Before the change the committed core.js (2320b35) reproduced every previous entry exactly; each new render equals that render with exactly these additions and nothing else (verified)"
     }
   ]
 }

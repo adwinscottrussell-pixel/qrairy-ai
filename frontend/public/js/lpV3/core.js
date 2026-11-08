@@ -486,16 +486,28 @@
     return '<div class="v3-img-ph' + (cls ? ' ' + cls : '') + '" role="img" aria-label="' + esc(t.image) + '">' + icon('image') + '</div>';
   }
 
+  // Hero text over a photo (light-theme audit, Problems 5 and 7): the owner's darkening stays as set; when it is
+  // below HERO_GUARD_TARGET, a soft local shade behind the text (.v3-hero-guard, fading out away from it) adds
+  // just enough that the darkening behind the text reaches the target: 1 - (1 - o)(1 - g) = target. 50 % and
+  // more: no guard (the page is unchanged); 45 %: a light .09; 0 %: .5 behind the text only.
+  var HERO_GUARD_TARGET = 0.5;
+  function heroGuard(overlay) {
+    var o = overlay / 100;
+    if (o >= HERO_GUARD_TARGET) return '';
+    var g = Math.round((1 - (1 - HERO_GUARD_TARGET) / (1 - o)) * 100) / 100;
+    return g > 0 ? '<div class="v3-hero-guard" style="opacity:' + g + '"></div>' : '';
+  }
+
   var RENDER = {
-    hero: function (s, t, pv) {
+    hero: function (s, t, pv, pal) {
       var d = s.data, out = '';
       var img = s.variant !== 'simple' && d.backgroundImage
         ? '<img class="v3-hero-img" src="' + esc(d.backgroundImage) + '" alt="' + esc(d.imageAlt) + '" width="1600" height="900" fetchpriority="high">' : '';
       var media = s.variant === 'split' ? (img || (pv ? imagePlaceholder(t) : '')) : '';
-      var overlay = s.variant === 'overlay' && img ? '<div class="v3-hero-shade" style="opacity:' + (d.overlay / 100) + '"></div>' : '';
+      var overlay = s.variant === 'overlay' && img ? '<div class="v3-hero-shade" style="opacity:' + (d.overlay / 100) + '"></div>' + heroGuard(d.overlay) : '';
       var btns = '';
       if (d.primary.text && d.primary.target) {
-        btns += '<a class="v3-btn v3-btn-primary"' + linkAttrs(d.primary.target) + (d.primary.color ? ' style="background:' + d.primary.color + '"' : '') + '>' + icon(d.primary.icon) + '<span>' + esc(d.primary.text) + '</span></a>';
+        btns += '<a class="v3-btn v3-btn-primary"' + linkAttrs(d.primary.target) + (d.primary.color ? ' style="background:' + d.primary.color + ';color:' + hintOnBrand(Object.assign({}, pal, { brand: d.primary.color })) + '"' : '') + '>' + icon(d.primary.icon) + '<span>' + esc(d.primary.text) + '</span></a>';
       }
       if (d.secondary.text && d.secondary.target) btns += '<a class="v3-btn v3-btn-outline"' + linkAttrs(d.secondary.target) + '>' + icon(d.secondary.icon) + '<span>' + esc(d.secondary.text) + '</span></a>';
       out += '<section id="' + esc(s.anchor || s.id) + '"' + selectId(s, pv) + ' class="v3-s v3-hero v3-v-' + esc(s.variant) + ' v3-al-' + esc(s.style.align) + (img ? ' v3-has-img' : '') + (s.style.spacing === 'compact' ? ' v3-hero-compact' : '') + '">';
@@ -780,10 +792,15 @@
   ].join('');
   var PREVIEW_CSS = [
     '.v3-ph-note{display:flex;align-items:center;gap:10px;padding:18px;border:2px dashed rgba(0,0,0,.2);border-radius:var(--v3-radius);color:var(--v3-muted)}',
+    // on Dark / Brand: the section colour (text, icon) and a dashed line in it (light-theme audit, Problem 3)
+    '.v3-bg-dark .v3-ph-note,.v3-bg-brand .v3-ph-note{color:inherit;border-color:currentColor;border-color:color-mix(in srgb,currentColor 70%,transparent)}',
     '.v3-img-ph{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/3;border:2px dashed rgba(127,127,127,.45);border-radius:var(--v3-radius);background:rgba(127,127,127,.08);color:var(--v3-muted)}',
     '.v3-img-ph .v3-ic{width:32px;height:32px}.v3-prod .v3-img-ph{border-radius:0;border-width:0 0 2px}',
     '.v3-sample{position:relative}.v3-sample-badge{display:inline-block;margin-bottom:10px;padding:2px 10px;border-radius:999px;background:var(--v3-muted);color:var(--v3-bg);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}',
-    '.v3-more{font-weight:700;color:var(--v3-brand)}.v3-loyalty-card{max-width:420px;margin-top:16px;padding:18px;border-radius:var(--v3-radius);background:var(--v3-surface)}',
+    '.v3-more{font-weight:700;color:var(--v3-brand)}.v3-loyalty-card{max-width:420px;margin-top:16px;padding:18px;border-radius:var(--v3-radius);background:var(--v3-surface);color:var(--v3-text)}',
+    // on Dark / Brand (light-theme audit, Problems 2 and 3): the Deals link and the Deals / Loyalty notes take the section colour
+    '.v3-bg-dark .v3-more,.v3-bg-brand .v3-more{color:inherit;text-decoration:underline}',
+    '.v3-dealsOffers.v3-bg-dark .v3-note,.v3-loyalty.v3-bg-dark .v3-note{color:inherit;opacity:.85}.v3-dealsOffers.v3-bg-brand .v3-note,.v3-loyalty.v3-bg-brand .v3-note{color:inherit}',
     '.v3-stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.v3-stamp{aspect-ratio:1/1;border-radius:50%;border:2px solid var(--v3-brand)}.v3-stamp-on{background:var(--v3-brand)}.v3-stamps-tx{margin:12px 0;font-weight:600}',
     // Deals / Offers: the owner's real deals (D2)
     '.v3-live-badge{background:var(--v3-text)}.v3-deal-media{position:relative}.v3-deal-noimg{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;background:var(--v3-surface);color:var(--v3-brand)}',
@@ -810,6 +827,8 @@
     // hero
     '.v3-hero{position:relative;overflow:hidden;background:var(--v3-dark);color:var(--v3-hero-text)}.v3-hero-in{position:relative;z-index:1;padding-top:56px;padding-bottom:56px}',
     '.v3-hero.v3-v-overlay .v3-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.v3-hero-shade{position:absolute;inset:0;background:#000}',
+    '.v3-hero-guard{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,#000 0,#000 45%,transparent 95%)}.v3-al-center .v3-hero-guard{background:radial-gradient(ellipse 75% 85% at 50% 50%,#000 35%,transparent 100%)}',
+    '@media (max-width:767px){.v3-hero-guard,.v3-al-center .v3-hero-guard{background:linear-gradient(to bottom,#000 0,#000 80%,transparent 100%)}}',
     '.v3-hero.v3-v-simple{background:var(--v3-surface);color:var(--v3-text)}.v3-hero-media img{border-radius:var(--v3-radius);width:100%;object-fit:cover}',
     // split Hero on phones: the image stacks under the text; 20px between the buttons and the image
     '.v3-hero.v3-v-split .v3-hero-media{margin-top:20px}',
@@ -828,7 +847,7 @@
     '.v3-card-ic{display:flex;color:var(--v3-brand)}.v3-card-tx{display:flex;flex-direction:column;min-width:0;flex:1}.v3-card-tx small{color:var(--v3-muted);font-size:12px}.v3-chev{color:var(--v3-muted)}',
     '.v3-text-grid{display:grid;gap:24px;align-items:center}.v3-text-fig{margin:0}.v3-text-fig img{border-radius:var(--v3-radius);width:100%}.v3-body{margin:0;white-space:normal}',
     '.v3-hours{border-collapse:collapse;width:100%;max-width:520px;margin-top:12px}.v3-hours th,.v3-hours td{padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08);text-align:left;font-weight:500}.v3-hours td{text-align:right}.v3-closed td{color:var(--v3-muted)}.v3-note{color:var(--v3-muted);margin-top:12px}.v3-bg-dark .v3-closed td,.v3-openingHours.v3-bg-dark .v3-note{color:inherit;opacity:.85}.v3-bg-brand .v3-closed td,.v3-openingHours.v3-bg-brand .v3-note{color:inherit}.v3-bg-dark .v3-hours th,.v3-bg-dark .v3-hours td{border-bottom-color:rgba(255,255,255,.14)}',
-    '.v3-contact{display:flex;flex-direction:column;gap:14px;margin-top:12px}.v3-ct-row{display:flex;gap:12px;align-items:flex-start}.v3-ct-row .v3-ic{color:var(--v3-brand);margin-top:2px}.v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)}.v3-contact address{font-style:normal}.v3-contact .v3-btn{align-self:flex-start}',
+    '.v3-contact{display:flex;flex-direction:column;gap:14px;margin-top:12px}.v3-ct-row{display:flex;gap:12px;align-items:flex-start}.v3-ct-row .v3-ic{color:var(--v3-brand);margin-top:2px}.v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)}.v3-bg-dark .v3-ct-row .v3-ic{color:inherit}.v3-contact address{font-style:normal}.v3-contact .v3-btn{align-self:flex-start}',
     '.v3-socials{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.v3-social{display:inline-flex;align-items:center;gap:8px;min-height:48px;min-width:48px;justify-content:center;padding:0 12px;border-radius:999px;background:var(--v3-surface);color:var(--v3-text);text-decoration:none;font-weight:600}',
     '.v3-social-mark{font-weight:800;display:inline-flex}.v3-social-ic{display:block;width:24px;height:24px;fill:currentColor;stroke:none}',
     '.v3-footer{padding:28px 0;background:var(--v3-dark);color:var(--v3-hero-text);font-size:14px}.v3-footer .v3-wrap{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}.v3-footer a{opacity:.85}',
@@ -854,12 +873,12 @@
     var pv = !!(opts && opts.preview === true);
     var design = v.design, lang = design.settings.language, t = TEXT[lang];
     var businessName = ctx && typeof ctx.businessName === 'string' ? cleanStr(ctx.businessName, false).slice(0, 120) : '';
-    var skipped = [], samples = [], used = {};
+    var skipped = [], samples = [], used = {}, pal = palette(design);
     var page = design.pages[0];
     var body = page.sections.map(function (s) {
       if (s.hidden) return '';
       var out;
-      if (SECTIONS[s.type].rendered) out = RENDER[s.type](s, t, pv);
+      if (SECTIONS[s.type].rendered) out = RENDER[s.type](s, t, pv, pal);
       else if (pv) { if (s.type !== 'dealsOffers' || dealsState(opts) === 'sample') samples.push(s.type); out = SAMPLE[s.type](s, t, opts); }
       else { skipped.push(s.type); return ''; }
       if (out) used[s.type] = true;

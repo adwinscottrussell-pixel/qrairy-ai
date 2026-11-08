@@ -104,13 +104,16 @@ test('Social Media links: the pill pairs its text colour with its background (re
 
 // Contact icons on Brand sections (2A-3D visual review): the icons are the
 // brand colour, so on a Brand section they take the on-brand colour instead.
+// On Dark (light-theme audit 2026-11-08, Problem 4: the template palettes' brand
+// colours were 1.0–3.3:1 on their dark colour) they take the section text colour.
 // Computed colours for all four backgrounds: studioContactEditor.browser.test.js.
-test('Contact icons: brand-coloured, except on Brand sections where they use the on-brand colour', () => {
+test('Contact icons: brand-coloured, except on Brand sections (on-brand colour) and Dark sections (the section text colour)', () => {
   const d = withSections({ id: 's_con77', type: 'contact', style: { background: 'brand' }, data: { phone: '+49 731 1' } });
   const html = V3.renderDesign(d, CTX).html;
   assert.ok(html.includes('.v3-ct-row .v3-ic{color:var(--v3-brand);margin-top:2px}'), 'the usual icon colour is unchanged');
   assert.ok(html.includes('.v3-bg-brand .v3-ct-row .v3-ic{color:var(--v3-on-brand)}'), 'on Brand: the on-brand colour');
-  assert.equal((html.match(/\.v3-ct-row \.v3-ic\{/g) || []).length, 2, 'the usual rule and the Brand rule, no other override');
+  assert.ok(html.includes('.v3-bg-dark .v3-ct-row .v3-ic{color:inherit}'), 'on Dark: the section text colour');
+  assert.equal((html.match(/\.v3-ct-row \.v3-ic\{/g) || []).length, 3, 'the usual rule, the Brand rule and the Dark rule, no other override');
   assert.ok(contrast(V3.DEFAULT_PALETTE.onBrand, V3.DEFAULT_PALETTE.brand) >= 3, 'on-brand icons are visible on the brand colour');
 });
 
@@ -119,6 +122,39 @@ test('Contact icons: brand-coloured, except on Brand sections where they use the
 // divider lines are light on Dark. Default / Alternate keep the grey; the
 // Deals / Loyalty sample notes are not affected. Computed colours:
 // studioHoursEditor.browser.test.js.
+// Hero over a photo (light-theme audit 2026-11-08, Problems 5-7): the owner's darkening is kept as set; below 50 %
+// a soft local guard behind the text tops the darkening there up to 50 % (1 - (1 - o)(1 - g) = .5); none from 50 %,
+// none without a photo or outside the Overlay layout. A custom Hero button colour gets a readable label colour.
+test('Hero over a photo: the owner\'s darkening stays; a local guard behind the text below 50 %; readable custom button labels', () => {
+  const hero = (data, variant = 'overlay') => withSections({ id: 's_hero9', type: 'hero', variant, data: Object.assign({ headline: 'H', backgroundImage: IMG('h'), primary: { text: 'Go', target: 'https://example.com' } }, data) });
+  const guardOf = (html) => { const m = /<div class="v3-hero-shade" style="opacity:([0-9.]+)"><\/div>(<div class="v3-hero-guard" style="opacity:([0-9.]+)"><\/div>)?/.exec(html); return m ? [m[1], m[3] || null] : null; };
+  const want = { 0: '0.5', 10: '0.44', 30: '0.29', 45: '0.09', 49: '0.02', 50: null, 80: null };
+  for (const o of Object.keys(want)) {
+    const r = V3.renderDesign(hero({ overlay: Number(o) }), CTX);
+    assert.ok(r.ok, JSON.stringify(r.errors));
+    assert.deepEqual(guardOf(r.html), [String(Number(o) / 100), want[o]], o + ' %: the darkening as set, guard ' + want[o]);
+    if (want[o]) assert.ok(Math.abs(1 - (1 - o / 100) * (1 - Number(want[o])) - 0.5) < 0.006, o + ' %: 50 % behind the text');
+  }
+  // no guard without a photo, nor in the Split / Simple layouts
+  for (const [data, variant] of [[{ backgroundImage: '', overlay: 0 }, 'overlay'], [{ overlay: 0 }, 'split'], [{ overlay: 0 }, 'simple']]) {
+    assert.ok(!V3.renderDesign(hero(data, variant), CTX).html.includes('<div class="v3-hero-guard"'), variant + ': no guard');
+  }
+  const css = V3.renderDesign(hero({ overlay: 0 }), CTX).html;
+  assert.ok(css.includes('.v3-hero-guard{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,#000 0,#000 45%,transparent 95%)}'), 'left text: from the left');
+  assert.ok(css.includes('.v3-al-center .v3-hero-guard{background:radial-gradient('), 'centred text: around the middle');
+  assert.ok(css.includes('@media (max-width:767px){.v3-hero-guard,.v3-al-center .v3-hero-guard{background:linear-gradient(to bottom,'), 'phones: over the text block');
+  // the custom button colour: a readable label (the palette colour that reads at 4.5:1, else black or white)
+  const label = (color) => (/class="v3-btn v3-btn-primary"[^>]* style="background:(#[0-9a-f]+);color:(#[0-9a-f]+)"/.exec(V3.renderDesign(hero({ primary: { text: 'Go', target: 'https://example.com', color } }), CTX).html) || []).slice(1);
+  const pal = Object.assign({}, V3.DEFAULT_PALETTE, BASE.theme && BASE.theme.palette);
+  for (const c of ['#ffd400', '#f5f5f5', '#ffffff', '#7dd3fc']) {
+    const [bg, fg] = label(c);
+    assert.equal(bg, c);
+    assert.ok(contrast(fg, c) >= 4.5 && lum(fg) < 0.2, c + ': a dark label ' + fg + ' ' + contrast(fg, c).toFixed(2));
+  }
+  for (const c of ['#1e3a8a', '#000000', '#8c1c2b', '#166534']) { const [bg, fg] = label(c); assert.equal(bg, c); assert.equal(fg, pal.onBrand, c + ': the light on-brand label'); }
+  assert.ok(!/v3-btn-primary"[^>]*style=/.test(V3.renderDesign(hero({}), CTX).html), 'no custom colour: no inline style, as before');
+});
+
 test('Opening Hours on Dark / Brand: Closed rows and the note follow the section colour; nothing else changes', () => {
   const html = V3.renderDesign(withSections({ id: 's_hrs77', type: 'openingHours', style: { background: 'dark' }, data: { days: [{ day: 'sun', closed: true }], note: 'N' } }), CTX).html;
   assert.ok(html.includes('.v3-closed td{color:var(--v3-muted)}') && html.includes('.v3-note{color:var(--v3-muted);margin-top:12px}'), 'the usual muted grey stays for Default / Alternate');
