@@ -62,6 +62,9 @@ const ALLOWED_ROUTES = [
   { method: 'GET',    path: new RegExp('^/studio/pages/' + SLUG + '/design$'),  access: 'user', what: 'Studio: load a page\'s draft (own pages only)' },
   { method: 'PUT',    path: new RegExp('^/studio/pages/' + SLUG + '/design$'),  access: 'user', what: 'Studio: save a draft (own pages, verified email)' },
   { method: 'POST',   path: /^\/studio\/drafts$/,                               access: 'user', what: 'Studio: create a draft (verified email, limits)' },
+  // Delete draft: the owner's own UNPUBLISHED Studio draft only (owner, draft status and revision checked by the handler,
+  // lpV3/studioDraftDeleteController.js); the legacy DELETE /lp/:slug stays closed here
+  { method: 'DELETE', path: new RegExp('^/studio/pages/' + SLUG + '$'),         access: 'user', what: 'Studio: delete an unpublished draft (own drafts only, verified email)' },
 ];
 
 function matchRoute(method, path) {

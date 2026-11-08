@@ -139,7 +139,11 @@ test('B. exactly seven kinds of request are allowed, and only two of them withou
   // and the four Studio V3 routes (Phase D1), all "user"
   assert.deepEqual(ALLOWED_ROUTES.slice(0, 7).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
   const studio = ALLOWED_ROUTES.filter((r) => r.path.source.startsWith('^\\/studio'));
-  assert.deepEqual(studio.map((r) => r.method + ' ' + r.access), ['GET user', 'GET user', 'PUT user', 'POST user']);
+  assert.deepEqual(studio.map((r) => r.method + ' ' + r.access), ['GET user', 'GET user', 'PUT user', 'POST user', 'DELETE user']);
+  // Delete draft: exactly /studio/pages/<slug>; nothing else of the Studio can be deleted, and the legacy page delete stays closed
+  assert.ok(matchRoute('DELETE', '/studio/pages/casa-lumi-ab1'));
+  for (const [m, p] of [['DELETE', '/studio/pages'], ['DELETE', '/studio/pages/a/b'], ['DELETE', '/studio/pages/a/design'], ['DELETE', '/studio/pages/..'], ['DELETE', '/studio/pages/-a'],
+    ['DELETE', '/STUDIO/pages/a'], ['DELETE', '/studio/drafts'], ['DELETE', '/lp/casa-lumi-ab1'], ['DELETE', '/api/lp/casa-lumi-ab1'], ['POST', '/studio/pages/casa-lumi-ab1']]) assert.equal(matchRoute(m, p), null, m + ' ' + p);
   assert.ok(ALLOWED_ROUTES.slice(7).every((r) => r.access === 'user' && (r.path.source.startsWith('^\\/deals') || studio.includes(r))), 'everything after the seven is a signed-in Deals or Studio route');
   for (const [m, p] of [['GET', '/studio/pages'], ['GET', '/studio/pages/casa-lumi-ab1/design'], ['PUT', '/studio/pages/casa-lumi-ab1/design'], ['POST', '/studio/drafts']]) assert.ok(matchRoute(m, p), m + ' ' + p);
   for (const [m, p] of [['GET', '/studio/drafts'], ['DELETE', '/studio/drafts'], ['POST', '/studio/pages'], ['PUT', '/studio/pages/a'], ['DELETE', '/studio/pages/a/design'], ['GET', '/studio/pages/a/b/design'], ['POST', '/studio/drafts/x'], ['GET', '/STUDIO/pages']]) assert.equal(matchRoute(m, p), null, m + ' ' + p);

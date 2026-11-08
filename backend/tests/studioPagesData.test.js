@@ -29,7 +29,7 @@ function fakeFetch(answers) {
 const page = (slug, extra) => Object.assign({ slug, name: 'N ' + slug, live: true, kind: 'business', hasDraft: false, userId: 'user_x', sections: '{"secret":1}' }, extra);
 const design = (headline) => ({ schemaVersion: 1, pages: [{ id: 'start', sections: [{ id: 's_hero01', type: 'hero', variant: 'simple', data: { headline } }] }] });
 
-test('only three requests are possible: GET the list, GET one page’s design, PUT one page’s design (any other path refused before a request)', async () => {
+test('only four requests are possible: GET the list, GET one page’s design, PUT one page’s design, DELETE one page (Delete draft); any other path refused before a request', async () => {
   assert.equal(PD.LIST, '/studio/pages');
   assert.equal(PD.designPath('anna-cafe'), '/studio/pages/anna-cafe/design');
   assert.ok(PD.allowed('/studio/pages') && PD.allowed('/studio/pages/anna-cafe/design'));
@@ -37,9 +37,11 @@ test('only three requests are possible: GET the list, GET one page’s design, P
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'frontend', 'public', 'js', 'studio', 'studio-pages-data.js'), 'utf8');
   assert.equal((src.match(/doFetch\(/g) || []).length, 1, 'one request site');
   assert.ok(src.includes("var init = { method: 'GET', headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer' };"));
-  // the one PUT (Save Draft), never to the list; nothing else
-  assert.deepEqual(src.match(/'(GET|POST|PUT|PATCH|DELETE)'/g), ["'GET'", "'PUT'"]);
-  assert.ok(src.includes("if (!allowed(path) || (body !== undefined && path === LIST)) return Promise.reject(new Failure('error'));"));
+  // the one PUT (Save Draft), never to the list; the one DELETE (Delete draft), only to one page's own address; nothing else
+  assert.deepEqual(src.match(/'(GET|POST|PUT|PATCH|DELETE)'/g), ["'GET'", "'PUT'", "'DELETE'"]);
+  assert.ok(src.includes("if (del ? (body !== undefined || !deletable(path)) : (!allowed(path) || (body !== undefined && path === LIST))) return Promise.reject(new Failure('error'));"));
+  assert.ok(PD.deletable('/studio/pages/anna-cafe') && PD.pagePath('anna-cafe') === '/studio/pages/anna-cafe');
+  for (const p of ['/studio/pages', '/studio/pages/anna-cafe/design', '/studio/pages/-x', '/studio/pages/a%2Fb', '/studio/pages/../x', '/lp/anna-cafe', '/deals/x']) assert.equal(PD.deletable(p), false, 'DELETE ' + p);
   assert.ok(src.includes("return request(designPath(slug), { design: design, baseRevision: base })"));
   assert.ok(!/localStorage|sessionStorage|document\.cookie|indexedDB|XMLHttpRequest|WebSocket|sendBeacon|publish/i.test(src.replace(/\/\*[\s\S]*?\*\//, '')));
 });
@@ -115,6 +117,34 @@ test('save: one PUT to the design path with { design, baseRevision } and the ses
   const dn = PD.createPagesData({ api: API, getToken: () => 'tok', fetch: none });
   for (const args of [['../x', design('x'), 4], ['anna-shop', design('x'), 0], ['anna-shop', design('x'), '4'], ['anna-shop', design('x'), undefined], ['anna-shop', null, 4], ['anna-shop', [], 4]]) assert.equal((await dn.save(...args)).state, 'error', JSON.stringify(args));
   assert.equal((await PD.createPagesData({ api: '', getToken: () => 'tok', fetch: none }).save('anna-shop', design('x'), 4)).state, 'error');
+  assert.equal(none.calls.length, 0);
+});
+
+test('remove (Delete draft): one DELETE to the page\'s own address with ?revision and the session token, no body; answers mapped (deleted, conflict, not a draft, refusals); nothing sent for a bad slug or revision; never rejects', async () => {
+  const f = fakeFetch(() => ({ status: 200, body: { ok: true, deleted: 'anna-draft' } }));
+  const d = PD.createPagesData({ api: API, getToken: () => 'tok', fetch: f });
+  assert.deepEqual(await d.remove('anna-draft', 3), { state: 'deleted' });
+  const c = f.calls[0];
+  assert.equal(c.url, API + '/studio/pages/anna-draft?revision=3');
+  assert.equal(c.init.method, 'DELETE');
+  assert.equal(c.init.headers.Authorization, 'Bearer tok');
+  assert.equal(c.init.body, undefined, 'no body');
+  assert.deepEqual([c.init.credentials, c.init.cache, c.init.redirect], ['omit', 'no-store', 'error']);
+  await d.remove('anna-draft', null);
+  assert.equal(f.calls[1].url, API + '/studio/pages/anna-draft', 'no revision: no query');
+  const cases = [
+    [{ status: 409, body: { error: 'revision_conflict', currentRevision: 4 } }, { state: 'conflict', currentRevision: 4 }],
+    [{ status: 409, body: { error: 'not_a_draft' } }, { state: 'not_draft' }],
+    [{ status: 409, body: null }, { state: 'error' }],
+    [{ status: 401 }, { state: 'signin' }], [{ status: 403 }, { state: 'forbidden' }], [{ status: 404 }, { state: 'notfound' }], [{ status: 400 }, { state: 'error' }],
+    [{ status: 500 }, { state: 'error' }], ['throw', { state: 'error' }], [{ status: 200, body: { ok: true, deleted: 'other' } }, { state: 'error' }], [{ status: 200, body: {} }, { state: 'error' }],
+  ];
+  for (const [ans, want] of cases) assert.deepEqual(await PD.createPagesData({ api: API, getToken: () => 'tok', fetch: fakeFetch(() => ans) }).remove('anna-draft', 3), want, JSON.stringify(ans));
+  const none = fakeFetch(() => ({ status: 200, body: { ok: true, deleted: 'x' } }));
+  const dn = PD.createPagesData({ api: API, getToken: () => 'tok', fetch: none });
+  for (const args of [['../x', 1], ['-x', 1], ['a/b', 1], ['anna-draft', 0], ['anna-draft', '3'], ['anna-draft', 1.5]]) assert.equal((await dn.remove(...args)).state, 'error', JSON.stringify(args));
+  assert.deepEqual(await PD.createPagesData({ api: API, getToken: () => null, fetch: none }).remove('anna-draft', 1), { state: 'signin' });
+  assert.equal((await PD.createPagesData({ api: '', getToken: () => 'tok', fetch: none }).remove('anna-draft', 1)).state, 'error');
   assert.equal(none.calls.length, 0);
 });
 

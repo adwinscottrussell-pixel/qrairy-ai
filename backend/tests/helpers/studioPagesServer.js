@@ -177,6 +177,38 @@ function txModels(undo) {
         if (opts.failDraftAfterPage) throw new Error('database unavailable');
         return copy(row);
       },
+      // Delete draft (studioPagesController.js deleteStudioDraft, services/landingPageDeletion.js): the page, its PageDesign
+      // with it (onDelete Cascade); undone when the transaction throws
+      delete: async ({ where }) => {
+        const row = db.pages.find((p) => matches(p, where));
+        if (!row) { const e = new Error('Record to delete does not exist.'); e.code = 'P2025'; throw e; }
+        draftWrites.push({ op: 'landingPage.delete', slug: row.slug, userId: row.userId, status: row.status });
+        if (opts.failDeleteAfterPage) throw new Error('database unavailable');
+        const designs = db.pageDesigns.filter((d) => d.landingPageId === row.id);
+        db.pages.splice(db.pages.indexOf(row), 1);
+        for (const d of designs) db.pageDesigns.splice(db.pageDesigns.indexOf(d), 1);
+        undo.push(() => { db.pages.push(row); db.pageDesigns.push(...designs); });
+        return copy(row);
+      },
+    }),
+    stampToken: Object.assign(Object.create(mockPrisma.stampToken), {
+      deleteMany: async ({ where }) => {
+        const rows = db.reserved.stampToken || [], gone = rows.filter((r) => matches(r, where));
+        draftWrites.push({ op: 'stampToken.deleteMany', slug: where.slug, count: gone.length });
+        for (const r of gone) rows.splice(rows.indexOf(r), 1);
+        undo.push(() => rows.push(...gone));
+        return { count: gone.length };
+      },
+    }),
+    supportAction: Object.assign(Object.create(mockPrisma.supportAction), {
+      create: async ({ data }) => {
+        draftWrites.push({ op: 'supportAction.create', actionType: data.actionType, targetId: data.targetId, actorId: data.actorId });
+        const rows = db.reserved.supportAction = db.reserved.supportAction || [];
+        const row = Object.assign({ id: 'sa_' + nextId++, createdAt: new Date() }, copy(data));
+        rows.push(row);
+        undo.push(() => rows.splice(rows.indexOf(row), 1));
+        return copy(row);
+      },
     }),
     pageDesign: Object.assign(Object.create(mockPrisma.pageDesign), {
       create: async (args) => {
@@ -238,7 +270,7 @@ function resetDrafts() {
   db.pageDesigns.splice(0, db.pageDesigns.length, ...db.pageDesigns.filter((d) => !String(d.landingPageId).startsWith('lp_new_')));
   for (const k of Object.keys(db.reserved)) delete db.reserved[k];
   db.draftLog.length = 0; draftWrites.length = 0; emailChecks.length = 0; lockEvents.length = 0;
-  Object.assign(opts, { draftTableMissing: false, clerkDown: false, draftDelayMs: 0, failDraftAfterPage: false, beforePageCreate: null });
+  Object.assign(opts, { draftTableMissing: false, clerkDown: false, draftDelayMs: 0, failDraftAfterPage: false, failDeleteAfterPage: false, beforePageCreate: null });
 }
 
 const tableMissing = () => { const e = new Error('The table `public.PageDesign` does not exist in the current database.'); e.code = 'P2021'; throw e; };

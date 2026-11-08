@@ -442,6 +442,33 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-menu__info { display: flex; gap: 8px; align-items: flex-start; margin: 2px 0 6px; padding: 8px 10px; border: 1px solid var(--st-info-border); border-radius: 8px; background: var(--st-info-soft); color: var(--st-info); font-size: 12.5px; line-height: 1.4; }
 .st-menu__info .st-ic { flex-shrink: 0; margin-top: 1px; }
 .st-menu__sep { height: 1px; margin: 4px 2px; background: var(--st-border); }
+.st-menu__sep[hidden] { display: none; }
+
+/* Delete draft: a destructive action, red and apart from the normal actions; asked first in a modal dialog */
+:root { --st-danger: #b91c1c; --st-danger-hover: #991b1b; --st-danger-text: #ffffff; --st-danger-soft: #fef2f2; }
+:root[data-studio-theme="dark"] { --st-danger: #dc2626; --st-danger-hover: #b91c1c; --st-danger-text: #ffffff; --st-danger-soft: rgba(239, 68, 68, 0.14); }
+.st-menu__list .st-menu__danger { display: flex; align-items: center; gap: 8px; color: var(--st-danger); font-weight: 600; cursor: pointer; }
+:root[data-studio-theme="dark"] .st-menu__list .st-menu__danger { color: #fca5a5; }
+.st-menu__list .st-menu__danger:hover:not(:disabled), .st-menu__list .st-menu__danger:focus-visible { background: var(--st-danger-soft); }
+.st-menu__list .st-menu__danger:disabled { color: var(--st-muted); cursor: not-allowed; }
+.st-menu__list .st-menu__danger[hidden] { display: none; }
+.st-btn--danger { background: var(--st-danger); color: var(--st-danger-text); border-color: var(--st-danger); min-width: 120px; justify-content: center; }
+.st-btn--danger:hover:not(:disabled) { background: var(--st-danger-hover); border-color: var(--st-danger-hover); }
+.st-btn--danger:disabled, .st-dialog .st-btn--outline:disabled { opacity: 0.55; cursor: not-allowed; }
+.st-dialog { position: fixed; inset: 0; margin: auto; height: fit-content; max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; width: min(440px, calc(100vw - 32px)); padding: 22px 22px 18px; border: 1px solid var(--st-border-strong); border-radius: 14px; background: var(--st-surface); color: var(--st-text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+.st-dialog::backdrop { background: rgba(15, 23, 42, 0.55); }
+.st-dialog__title { margin: 0 0 6px; font: 700 18px/1.3 'Inter', sans-serif; }
+.st-dialog__name { margin: 0 0 10px; font: 600 14px/1.4 'Inter', sans-serif; color: var(--st-text-2); overflow-wrap: anywhere; }
+.st-dialog__name:empty { display: none; }
+.st-dialog__text { margin: 0; font: 400 14px/1.5 'Inter', sans-serif; color: var(--st-text-2); }
+.st-dialog__err { margin: 12px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--st-danger-soft); color: var(--st-danger); font: 600 13px/1.4 'Inter', sans-serif; }
+:root[data-studio-theme="dark"] .st-dialog__err { color: #fca5a5; }
+.st-dialog__err[hidden] { display: none; }
+.st-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+/* phones: one per row, Cancel first (the safe choice on top), the destructive button below it */
+@media (max-width: 480px) { .st-dialog__actions { flex-direction: column; } .st-dialog__actions .st-btn { width: 100%; height: 44px; } }
+/* the phone header hides outline buttons (Save Draft: phones are preview-only); the dialog's Cancel always stays */
+.st-dialog .st-dialog__actions .st-btn--outline { display: inline-flex; }
 .st-templates[hidden] { display: none; }
 
 /* Sections panel: the selected section, its labelled actions, "+ Add Section" */

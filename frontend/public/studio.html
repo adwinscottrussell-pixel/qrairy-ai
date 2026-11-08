@@ -207,6 +207,9 @@
             <button type="button" disabled data-st="menu_settings">Page settings</button>
             <button type="button" disabled data-st="menu_classic">Switch back to the classic page</button>
             <p class="st-menu__note" data-st="menu_note">Available once the Studio is connected.</p>
+            <!-- Delete draft: shown only while one of the owner's UNPUBLISHED drafts is open (studio-shell.js); asks first (#st-delete) -->
+            <div class="st-menu__sep" id="st-delete-sep" aria-hidden="true" hidden></div>
+            <button type="button" class="st-menu__danger" id="st-delete-draft" hidden><svg class="st-ic" aria-hidden="true"><use href="#st-trash"/></svg><span data-st="delete_draft">Delete draft</span></button>
           </div>
         </div>
       </div>
@@ -299,6 +302,18 @@
     </div>
   </div>
 </div>
+
+<!-- Delete draft: asked first (modal; Cancel has the focus; Escape or Cancel deletes nothing). Texts set by studio-shell.js -->
+<dialog class="st-dialog" id="st-delete" aria-labelledby="st-delete-title" aria-describedby="st-delete-text">
+  <h2 class="st-dialog__title" id="st-delete-title" data-st="delete_title">Delete this draft?</h2>
+  <p class="st-dialog__name" id="st-delete-name"></p>
+  <p class="st-dialog__text" id="st-delete-text" data-st="delete_text">This draft will be permanently deleted. This action cannot be undone.</p>
+  <p class="st-dialog__err" id="st-delete-err" role="alert" hidden></p>
+  <div class="st-dialog__actions">
+    <button type="button" class="st-btn st-btn--outline" id="st-delete-cancel" data-st="delete_cancel">Cancel</button>
+    <button type="button" class="st-btn st-btn--danger" id="st-delete-confirm" data-st="delete_confirm">Delete draft</button>
+  </div>
+</dialog>
 
 <script src="js/lpV3/core.js"></script>
 <script src="js/lpV3/gallery-nav.js"></script>

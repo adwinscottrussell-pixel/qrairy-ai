@@ -84,6 +84,11 @@
       conflict_text: 'This page was saved in another tab or on another device. Nothing was overwritten.', conflict_load: 'Load saved version', conflict_keep: 'Keep editing',
       conflict_load_confirm: 'Load the saved version? Your unsaved changes here will be lost.', signout_confirm: 'Sign out? Your unsaved changes on this page will be lost.',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
+      delete_draft: 'Delete draft', delete_name: '“{name}”', delete_title: 'Delete this draft?', delete_text: 'This draft will be permanently deleted. This action cannot be undone.',
+      delete_cancel: 'Cancel', delete_confirm: 'Delete draft', delete_busy: 'Deleting…', delete_done: '“{name}” was deleted.',
+      delete_conflict: 'This draft was changed in another tab or window. Nothing was deleted. Reload it and try again.',
+      delete_not_draft: 'This page is published, so it cannot be deleted here. Nothing was deleted.',
+      delete_failed: 'The draft could not be deleted. Nothing was changed. Please try again.', delete_signin: 'Please sign in again to delete this draft. Nothing was deleted.',
       tab_sections: 'Sections', tab_add: 'Add', close: 'Close', add_section: 'Add Section', add_custom: 'Add Custom Section', sec_empty: 'Empty – add content',
       guide_empty: 'Add your content – this section isn’t shown on your public page until it has content.',
       guide_example: 'Your template showed example content here. Add your own information.',
@@ -128,6 +133,11 @@
       conflict_text: 'Diese Seite wurde in einem anderen Tab oder auf einem anderen Gerät gespeichert. Es wurde nichts überschrieben.', conflict_load: 'Gespeicherte Fassung laden', conflict_keep: 'Weiter bearbeiten',
       conflict_load_confirm: 'Gespeicherte Fassung laden? Ihre nicht gespeicherten Änderungen hier gehen verloren.', signout_confirm: 'Abmelden? Ihre nicht gespeicherten Änderungen an dieser Seite gehen verloren.',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
+      delete_draft: 'Entwurf löschen', delete_name: '„{name}“', delete_title: 'Diesen Entwurf löschen?', delete_text: 'Dieser Entwurf wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+      delete_cancel: 'Abbrechen', delete_confirm: 'Entwurf löschen', delete_busy: 'Wird gelöscht …', delete_done: '„{name}“ wurde gelöscht.',
+      delete_conflict: 'Dieser Entwurf wurde in einem anderen Tab oder Fenster geändert. Es wurde nichts gelöscht. Laden Sie ihn neu und versuchen Sie es erneut.',
+      delete_not_draft: 'Diese Seite ist veröffentlicht und kann hier nicht gelöscht werden. Es wurde nichts gelöscht.',
+      delete_failed: 'Der Entwurf konnte nicht gelöscht werden. Es wurde nichts geändert. Bitte versuchen Sie es erneut.', delete_signin: 'Bitte melden Sie sich erneut an, um diesen Entwurf zu löschen. Es wurde nichts gelöscht.',
       tab_sections: 'Abschnitte', tab_add: 'Hinzufügen', close: 'Schließen', add_section: 'Abschnitt hinzufügen', add_custom: 'Eigenen Abschnitt hinzufügen', sec_empty: 'Leer – Inhalt hinzufügen',
       guide_empty: 'Inhalt hinzufügen – dieser Abschnitt erscheint erst auf Ihrer öffentlichen Seite, wenn er Inhalte hat.',
       guide_example: 'Ihre Vorlage hat hier Beispielinhalte gezeigt. Ergänzen Sie Ihre eigenen Angaben.',
@@ -747,6 +757,68 @@
     $('st-conflict').hidden = st !== 'conflict';
     // the demo design is labelled as such while none of the owner's pages is open
     $('st-sample').hidden = !!pageView.current;
+    renderDeleteItem();
+  }
+  // ── Delete draft: the open page when it is one of the owner's UNPUBLISHED drafts (the server checks owner, draft status,
+  // published version and revision again); asked first in a modal dialog, Cancel focused; never a live page ──
+  var deleting = false;
+  function canDelete() { return !!(ownerPageOpen() && pageView.current && pageView.current.live === false && pagesData && pagesData.remove && !saveView.busy && !deleting); }
+  function renderDeleteItem() {
+    var b = $('st-delete-draft'), sep = $('st-delete-sep');
+    if (!b) return;
+    var shown = !!(ownerPageOpen() && pageView.current && pageView.current.live === false && pagesData && pagesData.remove);
+    b.hidden = !shown; if (sep) sep.hidden = !shown;
+    b.disabled = !canDelete();
+  }
+  var deleteFrom = null;
+  function askDelete() {
+    var dlg = $('st-delete');
+    if (!canDelete() || !dlg || dlg.open) return;
+    var menu = $('st-more-menu'); menu.hidden = true; $('st-more-btn').setAttribute('aria-expanded', 'false');
+    deleteFrom = { slug: pageView.current.slug, name: pageView.current.name, revision: pageView.revision, owner: pageView.owner, gen: saveGen };
+    $('st-delete-name').textContent = t('delete_name').replace('{name}', deleteFrom.name);
+    $('st-delete-err').hidden = true; $('st-delete-err').textContent = '';
+    $('st-delete-confirm').disabled = false; $('st-delete-cancel').disabled = false; $('st-delete-confirm').textContent = t('delete_confirm');
+    if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+    $('st-delete-cancel').focus();
+  }
+  function closeDelete() {
+    var dlg = $('st-delete');
+    if (deleting) return;
+    if (dlg && dlg.open) { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); }
+    deleteFrom = null;
+    $('st-more-btn').focus();
+  }
+  function confirmDelete() {
+    var from = deleteFrom;
+    if (!from || deleting || !pageView.current || pageView.current.slug !== from.slug || pageView.owner !== from.owner) { closeDelete(); return; }
+    deleting = true;
+    $('st-delete-confirm').disabled = true; $('st-delete-cancel').disabled = true; $('st-delete-confirm').textContent = t('delete_busy');
+    $('st-delete-err').hidden = true;
+    renderDeleteItem();
+    pagesData.remove(from.slug, from.revision).then(function (r) {
+      deleting = false;
+      // another account meanwhile: this answer no longer applies here
+      if (pageView.owner !== from.owner) { closeDelete(); return; }
+      if (r.state !== 'deleted') {
+        var key = r.state === 'conflict' ? 'delete_conflict' : r.state === 'not_draft' ? 'delete_not_draft' : r.state === 'signin' ? 'delete_signin' : 'delete_failed';
+        $('st-delete-err').textContent = t(key); $('st-delete-err').hidden = false;
+        $('st-delete-cancel').disabled = false; $('st-delete-confirm').textContent = t('delete_confirm');
+        $('st-delete-confirm').disabled = r.state === 'conflict' || r.state === 'not_draft';   // only an error may be retried
+        $('st-delete-cancel').focus();
+        renderDeleteItem();
+        return;
+      }
+      // gone: out of the list at once, the next page opened (its unsaved state is this draft's, gone with it), or the sample page
+      var dlg = $('st-delete');
+      if (dlg && dlg.open) { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); }
+      deleteFrom = null;
+      pageView.pages = pageView.pages.filter(function (p) { return p.slug !== from.slug; });
+      announce(t('delete_done').replace('{name}', from.name));
+      if (pageView.pages.length) openPage(pageView.pages[0].slug, true);
+      else { showSample(); showPages({ state: 'empty', pages: [] }); }
+      $('st-more-btn').focus();
+    });
   }
   function saveDraft() {
     if (!canSave()) return;
@@ -967,6 +1039,14 @@
       if (!menu.hidden) { var cur = menu.querySelector('[data-theme-pref][aria-checked="true"]') || menu.querySelector('button:not(:disabled)'); if (cur) cur.focus(); }
     });
     document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; more.setAttribute('aria-expanded', 'false'); } });
+    // Delete draft: the menu item asks first; Cancel, Escape or a click outside the box delete nothing
+    if ($('st-delete-draft')) {
+      $('st-delete-draft').addEventListener('click', function (e) { e.stopPropagation(); askDelete(); });
+      $('st-delete-cancel').addEventListener('click', closeDelete);
+      $('st-delete-confirm').addEventListener('click', confirmDelete);
+      $('st-delete').addEventListener('cancel', function (e) { e.preventDefault(); closeDelete(); });
+      $('st-delete').addEventListener('click', function (e) { if (e.target === $('st-delete')) closeDelete(); });
+    }
     // full size: the plain page (sandboxed with no permissions, no Studio script)
     $('st-preview-btn').addEventListener('click', function () { $('st-full-frame').srcdoc = pageHtml(); $('st-full').hidden = false; $('st-full-close').focus(); });
     $('st-full-close').addEventListener('click', function () { $('st-full').hidden = true; $('st-preview-btn').focus(); });

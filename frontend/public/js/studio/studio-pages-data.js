@@ -11,6 +11,9 @@
  *   PUT /studio/pages/<slug>/design save the Studio draft { design,
  *                                   baseRevision }; never publishes, never
  *                                   changes the live page
+ *   DELETE /studio/pages/<slug>     Delete draft: the owner's own UNPUBLISHED
+ *     [?revision=N]                 draft (the server refuses anything live or
+ *                                   published, and a draft saved since N)
  * Nothing else is ever created or changed. Only the Studio shell calls this
  * file, never the sandboxed preview frames. The token is the signed-in Clerk
  * session's, handed in by the shell. Without an API address nothing is sent.
@@ -33,6 +36,9 @@
   function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
   function text(v, max) { return typeof v === 'string' && v.length <= max ? v : ''; }
   function designPath(slug) { return LIST + '/' + encodeURIComponent(slug) + '/design'; }
+  function pagePath(slug) { return LIST + '/' + encodeURIComponent(slug); }
+  // Delete draft: only one page's own address, never the list or a design path
+  function deletable(path) { var m = /^\/studio\/pages\/([^/]+)$/.exec(path); return !!m && SLUG.test(decodeURIComponent(m[1])); }
   function allowed(path) {
     if (path === LIST) return true;
     var m = /^\/studio\/pages\/([^/]+)\/design$/.exec(path);
@@ -69,16 +75,18 @@
     function connected() { return !!(api && doFetch && typeof o.getToken === 'function'); }
 
     // GET to either path; PUT (with a JSON body) only to a design path
-    function request(path, body) {
-      if (!allowed(path) || (body !== undefined && path === LIST)) return Promise.reject(new Failure('error'));
+    // request(path[, body][, del]): GET; PUT with a body; DELETE (del: { query }) only to one page's own address
+    function request(path, body, del) {
+      if (del ? (body !== undefined || !deletable(path)) : (!allowed(path) || (body !== undefined && path === LIST))) return Promise.reject(new Failure('error'));
       return Promise.resolve().then(function () { return o.getToken(); }).then(function (token) {
         if (typeof token !== 'string' || !token) throw new Failure('signin');
         var ctl = typeof AbortController === 'function' ? new AbortController() : null;
         var timer = ctl ? setTimeout(function () { ctl.abort(); }, TIMEOUT_MS) : null;
         var init = { method: 'GET', headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer' };
         if (body !== undefined) { init.method = 'PUT'; init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(body); }
+        if (del) init.method = 'DELETE';
         if (ctl) init.signal = ctl.signal;
-        return doFetch(api + path, init).then(function (res) {
+        return doFetch(api + path + (del && del.query ? del.query : ''), init).then(function (res) {
           clearTimeout(timer);
           if (res.status === 401) throw new Failure('signin');
           if (res.status === 403) throw new Failure('forbidden');
@@ -141,8 +149,27 @@
       });
     }
 
-    return { connected: connected, list: list, load: load, save: save };
+    // remove(slug, revision) -> { state: 'deleted' } or { state: 'conflict', currentRevision } (saved since: nothing deleted) |
+    // 'not_draft' (a live page: never deleted here) | 'signin' | 'forbidden' | 'notfound' | 'error'. revision: the
+    // revision the Studio shows (null: none). Never rejects.
+    function remove(slug, revision) {
+      if (!connected() || typeof slug !== 'string' || !SLUG.test(slug)) return Promise.resolve({ state: 'error' });
+      var rev = revision === null || revision === undefined ? null : revisionOf(revision);
+      if (revision !== null && revision !== undefined && !rev) return Promise.resolve({ state: 'error' });
+      return request(pagePath(slug), undefined, { query: rev ? '?revision=' + rev : '' }).then(function (r) {
+        if (!isObj(r) || r.ok !== true || r.deleted !== slug) throw new Failure('error');
+        return { state: 'deleted' };
+      }).catch(function (e) {
+        if (!(e instanceof Failure)) return { state: 'error' };
+        var info = isObj(e.info) ? e.info : {};
+        if (e.state === 'conflict' && info.error === 'revision_conflict') return { state: 'conflict', currentRevision: revisionOf(info.currentRevision) };
+        if (e.state === 'conflict' && info.error === 'not_a_draft') return { state: 'not_draft' };
+        return { state: e.state === 'conflict' || e.state === 'invalid' ? 'error' : e.state };
+      });
+    }
+
+    return { connected: connected, list: list, load: load, save: save, remove: remove };
   }
 
-  return { LIST: LIST, SLUG: SLUG, designPath: designPath, allowed: allowed, origin: origin, createPagesData: createPagesData };
+  return { LIST: LIST, SLUG: SLUG, designPath: designPath, pagePath: pagePath, allowed: allowed, deletable: deletable, origin: origin, createPagesData: createPagesData };
 });

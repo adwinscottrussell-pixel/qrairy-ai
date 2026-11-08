@@ -49,12 +49,12 @@ const pageErrors = [];
 
 // a tab signed in with `token` (the stand-in Clerk; the helper server maps tokens to accounts: tok_carl, tok_ben, ...);
 // window.__setToken(t) changes what the session hands out (an expired session: a token the server refuses)
-async function open(file, { token = 'tok_carl', lang = 'en', viewport = DESKTOP } = {}) {
+async function open(file, { token = 'tok_carl', lang = 'en', viewport = DESKTOP, theme = 'light' } = {}) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
-  await page.evaluateOnNewDocument((tok, l) => {
+  await page.evaluateOnNewDocument((tok, l, th) => {
     if (window.top !== window) return;
-    try { localStorage.setItem('qraivy_lang', l); localStorage.setItem('qraivy.studio.theme', 'light'); localStorage.setItem('qraivy.studio.templates', 'collapsed'); } catch (e) {}
+    try { localStorage.setItem('qraivy_lang', l); localStorage.setItem('qraivy.studio.theme', th); localStorage.setItem('qraivy.studio.templates', 'collapsed'); } catch (e) {}
     let current = tok;
     try { current = sessionStorage.getItem('__tok') || tok; } catch (e) {}
     window.__setToken = (t) => { current = t; try { sessionStorage.setItem('__tok', t); } catch (e) {} };
@@ -69,7 +69,7 @@ async function open(file, { token = 'tok_carl', lang = 'en', viewport = DESKTOP 
       window.Clerk.session = t ? { id: 'sess_' + t, getToken: async () => current } : null;
       listeners.forEach((fn) => fn({ session: window.Clerk.session, user: window.Clerk.user }));
     };
-  }, token, lang);
+  }, token, lang, theme);
   const log = { errors: [], blocked: [], dialogs: [] };
   page.on('pageerror', (e) => { log.errors.push(e.message); pageErrors.push(e.message); });
   page.on('dialog', (d) => { log.dialogs.push(d.message()); d.dismiss(); });
@@ -83,11 +83,11 @@ async function open(file, { token = 'tok_carl', lang = 'en', viewport = DESKTOP 
       return UPLOAD.has(n) ? r.respond({ status: 200, contentType: TYPES[path.extname(n)] || 'application/octet-stream', body: UPLOAD.get(n) }) : r.respond({ status: 404, body: '' });
     }
     if (u.host === APIHOST) {
-      const cors = { 'access-control-allow-origin': 'https://' + HOST, 'access-control-allow-headers': 'authorization,accept,content-type', 'access-control-allow-methods': 'GET,POST,PUT' };
+      const cors = { 'access-control-allow-origin': 'https://' + HOST, 'access-control-allow-headers': 'authorization,accept,content-type', 'access-control-allow-methods': 'GET,HEAD,PUT,PATCH,POST,DELETE' };   // the cors package's defaults, as the real server (src/index.js)
       if (r.method() === 'OPTIONS') return r.respond({ status: 204, headers: cors, body: '' });
       const h = { Authorization: r.headers().authorization || '' };
       if (r.postData()) h['Content-Type'] = 'application/json';
-      const res = await fetch(srv.origin + u.pathname, { method: r.method(), headers: h, body: r.postData() || undefined });
+      const res = await fetch(srv.origin + u.pathname + u.search, { method: r.method(), headers: h, body: r.postData() || undefined });
       return r.respond({ status: res.status, contentType: 'application/json', headers: cors, body: await res.text() }).catch(() => {});
     }
     log.blocked.push(r.method() + ' ' + u.host + u.pathname);
@@ -311,6 +311,157 @@ test('draft limit with the real route: 0, 1 and 2 unpublished drafts -> Save Dra
   await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 8000 });
   assert.equal(carlDrafts().length, 3, 'saved into the free slot');
   assert.deepEqual(log.errors, []);
+  await page.close();
+});
+
+// ── Delete draft (Studio): the owner's own unpublished draft, asked first ──
+const plainDraft = (n, token = 'tok_carl') => fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Old draft ' + n, language: 'en' }) }).then((x) => x.json());
+const draftsOf = (who) => S.db.pages.filter((p) => p.userId === who && p.status === 'draft');
+const deleteUi = (page) => page.evaluate(() => {
+  const b = document.getElementById('st-delete-draft'), d = document.getElementById('st-delete');
+  return { item: !b.hidden, enabled: !b.disabled, open: d.open, title: document.getElementById('st-delete-title').textContent, text: document.getElementById('st-delete-text').textContent,
+    name: document.getElementById('st-delete-name').textContent, cancel: document.getElementById('st-delete-cancel').textContent, confirm: document.getElementById('st-delete-confirm').textContent,
+    err: document.getElementById('st-delete-err').hidden ? '' : document.getElementById('st-delete-err').textContent, focus: document.activeElement && document.activeElement.id };
+});
+async function openDeleteDialog(page) {
+  await page.click('#st-more-btn');
+  await until(() => page.$eval('#st-more-menu', (m) => !m.hidden), 'menu open');
+  await page.click('#st-delete-draft');
+  await until(async () => (await deleteUi(page)).open || null, 'the dialog');
+}
+const listed = (page) => page.$$eval('#st-page-select option', (o) => o.map((x) => x.value));
+
+test('Delete draft: shown for the owner\'s open unpublished draft only; asks first (title, text, Cancel focused); Cancel, Escape and a click beside the box delete nothing; Delete draft removes exactly that draft (3 -> 2), the list updates at once, the other drafts and other accounts untouched', async () => {
+  S.resetDrafts();
+  const made = [];
+  for (let i = 0; i < 3; i++) made.push((await plainDraft(i)).page.slug);
+  const bens = (await plainDraft('ben', 'tok_ben')).page.slug;
+  const keep = JSON.stringify([...draftsOf(S.CARL).filter((p) => p.slug !== made[0]), ...draftsOf(S.BEN)]);
+  const { page, api, log } = await open('studio.html?slug=' + made[0]);
+  await until(async () => (await studioState(page)).status === 'loaded' || null, 'the draft open');
+  let ui = await deleteUi(page);
+  assert.deepEqual([ui.item, ui.enabled, ui.open], [true, true, false], 'the menu item, nothing asked yet');
+  // Cancel
+  await openDeleteDialog(page);
+  ui = await deleteUi(page);
+  assert.deepEqual([ui.title, ui.text, ui.name, ui.cancel, ui.confirm, ui.focus], ['Delete this draft?', 'This draft will be permanently deleted. This action cannot be undone.', '“Old draft 0”', 'Cancel', 'Delete draft', 'st-delete-cancel']);
+  const look = await page.evaluate(() => { const c = getComputedStyle(document.getElementById('st-delete-confirm')), p = getComputedStyle(document.getElementById('st-save-btn')); return { bg: c.backgroundColor, color: c.color, saveBg: p.backgroundColor }; });
+  assert.notEqual(look.bg, look.saveBg, 'the destructive button looks unlike the normal actions');
+  assert.equal(look.bg, 'rgb(185, 28, 28)', 'red');
+  await shot(page, 'delete-01-dialog-en.png');
+  await page.click('#st-delete-cancel');
+  ui = await deleteUi(page);
+  assert.deepEqual([ui.open, ui.focus], [false, 'st-more-btn'], 'Cancel: closed, focus back on the menu button');
+  // Escape
+  await openDeleteDialog(page);
+  await page.keyboard.press('Escape');
+  await until(async () => !(await deleteUi(page)).open || null, 'Escape closes');
+  // a click beside the box (the backdrop)
+  await openDeleteDialog(page);
+  await page.mouse.click(5, 5);
+  await until(async () => !(await deleteUi(page)).open || null, 'a click beside the box closes');
+  assert.equal(api().filter((x) => x.startsWith('DELETE')).length, 0, 'nothing sent while cancelling');
+  assert.equal(draftsOf(S.CARL).length, 3, 'nothing deleted');
+  // Delete draft
+  await openDeleteDialog(page);
+  await page.click('#st-delete-confirm');
+  await until(async () => !(await deleteUi(page)).open || null, 'closed after deleting');
+  assert.deepEqual(api().filter((x) => x.startsWith('DELETE')), ['DELETE /studio/pages/' + made[0]], 'one DELETE, that draft');
+  assert.equal(draftsOf(S.CARL).length, 2, '3 -> 2');
+  assert.equal(S.db.pages.find((p) => p.slug === made[0]), undefined, 'gone');
+  assert.equal(JSON.stringify([...draftsOf(S.CARL), ...draftsOf(S.BEN)]), keep, 'the other drafts and Ben\'s untouched');
+  await until(async () => (await studioState(page)).status === 'loaded' || null, 'the next draft opened');
+  const now = await listed(page);
+  assert.ok(!now.includes(made[0]) && now.includes(made[1]) && now.includes(made[2]) && !now.includes(bens), 'the list without it: ' + JSON.stringify(now));
+  assert.notEqual((await studioState(page)).selected, made[0], 'another draft is open');
+  await shot(page, 'delete-02-after-en.png');
+  assert.deepEqual(log.errors, []);
+  await page.close();
+});
+
+test('Delete draft never for a live page; a draft saved since in another tab is not deleted (the server says so, nothing changed); the last draft leads to the empty state', async () => {
+  S.resetDrafts();
+  // Anna's live page: no Delete draft; her unpublished draft: offered
+  let p = await open('studio.html?slug=anna-cafe', { token: 'tok_anna' });
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'live page open');
+  assert.deepEqual([(await deleteUi(p.page)).item], [false], 'a live page: never offered');
+  await p.page.close();
+  // a stale revision: another tab saved meanwhile
+  const slug = (await plainDraft('only')).page.slug;
+  p = await open('studio.html?slug=' + slug);
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'draft open');
+  const d = S.db.pageDesigns.find((x) => x.landingPageId === S.db.pages.find((y) => y.slug === slug).id);
+  d.draftRevision = 2;
+  await openDeleteDialog(p.page);
+  await p.page.click('#st-delete-confirm');
+  await until(async () => (await deleteUi(p.page)).err || null, 'the refusal shown');
+  let ui = await deleteUi(p.page);
+  assert.deepEqual([ui.open, ui.err, ui.focus], [true, 'This draft was changed in another tab or window. Nothing was deleted. Reload it and try again.', 'st-delete-cancel']);
+  assert.equal(await p.page.$eval('#st-delete-confirm', (b) => b.disabled), true, 'not offered again for that version');
+  assert.ok(S.db.pages.find((y) => y.slug === slug), 'nothing deleted');
+  await p.page.click('#st-delete-cancel');
+  await p.page.close();
+  // reopened (revision 2): deletes; the last draft -> the empty state, no customer page in the editor
+  d.draftRevision = 2;
+  p = await open('studio.html?slug=' + slug);
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'reopened');
+  await openDeleteDialog(p.page);
+  await p.page.click('#st-delete-confirm');
+  await until(async () => (await studioState(p.page)).status === 'empty' || null, 'the empty state');
+  assert.deepEqual([(await studioState(p.page)).sample, (await deleteUi(p.page)).item, draftsOf(S.CARL).length], [true, false, 0]);
+  assert.deepEqual(p.log.errors, []);
+  await p.page.close();
+});
+
+test('Delete draft, German and Dark: the texts in formal German, readable, the destructive button red; at 390 px the dialog fits', async () => {
+  S.resetDrafts();
+  const slug = (await plainDraft('de')).page.slug;
+  for (const [viewport, theme] of [[DESKTOP, 'dark'], [{ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, 'light']]) {
+    const { page } = await open('studio.html?slug=' + slug, { lang: 'de', theme, viewport });
+    await until(async () => (await studioState(page)).status === 'loaded' || null, 'loaded');
+    await openDeleteDialog(page);
+    const ui = await deleteUi(page);
+    assert.equal(ui.name, '„Old draft de“', 'German quotation marks');
+    assert.deepEqual([ui.title, ui.text, ui.cancel, ui.confirm], ['Diesen Entwurf löschen?', 'Dieser Entwurf wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.', 'Abbrechen', 'Entwurf löschen']);
+    const m = await page.evaluate(() => {
+      const box = (id) => document.getElementById(id).getBoundingClientRect(), r = box('st-delete'), ca = box('st-delete-cancel'), co = box('st-delete-confirm'), c = getComputedStyle(document.getElementById('st-delete-confirm'));
+      return { l: r.left, r: r.right, t: r.top, b: r.bottom, iw: innerWidth, ih: innerHeight, sw: document.documentElement.scrollWidth, bg: c.backgroundColor, color: c.color,
+        cancel: [Math.round(ca.top), Math.round(ca.bottom), Math.round(ca.height)], confirm: [Math.round(co.top), Math.round(co.bottom), Math.round(co.height)] };
+    });
+    assert.ok(m.l >= 0 && m.r <= m.iw && m.t >= 0 && m.b <= m.ih && m.sw <= m.iw, viewport.width + ' fits ' + JSON.stringify(m));
+    assert.ok(Math.abs((m.l + m.r) / 2 - m.iw / 2) < 2, viewport.width + ' centred ' + JSON.stringify(m));
+    assert.ok(m.cancel[0] >= 0 && m.cancel[1] <= m.ih && m.confirm[1] <= m.ih, viewport.width + ' both buttons on screen ' + JSON.stringify(m));
+    if (viewport.width <= 480) assert.ok(m.cancel[1] <= m.confirm[0] && m.cancel[2] >= 44 && m.confirm[2] >= 44, 'phones: Cancel above, 44 px tall ' + JSON.stringify(m));
+    assert.equal(m.color, 'rgb(255, 255, 255)');
+    assert.ok(['rgb(185, 28, 28)', 'rgb(220, 38, 38)'].includes(m.bg), 'red ' + m.bg);
+    await shot(page, 'delete-03-dialog-de-' + viewport.width + '-' + theme + '.png');
+    await page.click('#st-delete-cancel');
+    await page.close();
+  }
+  assert.equal(draftsOf(S.CARL).length, 1, 'only cancelled: nothing deleted');
+});
+
+test('the whole way: onboarding at the 3-draft limit -> Manage drafts -> the Studio -> Delete draft -> back: the answers kept, Save Draft saves into the freed slot', async () => {
+  S.resetDrafts();
+  for (let i = 0; i < 3; i++) await plainDraft(i);
+  const { page, api } = await open('studio-onboarding.html');
+  await onboardToStep5(page);
+  const answers = await keptAnswers(page);
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-limit') === 'true', { timeout: 8000 });
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click('#ob-manage')]);
+  await until(async () => (await studioState(page)).status === 'loaded' || null, 'the Studio with a draft open');
+  await openDeleteDialog(page);
+  await page.click('#st-delete-confirm');
+  await until(async () => draftsOf(S.CARL).length === 2 || null, 'deleted');
+  await goBackToOnboarding(page);
+  await until(async () => (await page.$eval('#ob-progress-count', (n) => n.textContent)) === 'Step 5 of 5' || null, 'Step 5');
+  assert.deepEqual(await keptAnswers(page), answers, 'the answers kept');
+  assert.deepEqual([(await finishUi(page)).disabled, (await finishUi(page)).manage], [false, false], 'Save Draft offered again');
+  await page.click('#ob-finish');
+  await page.waitForFunction(() => document.getElementById('ob-finish').getAttribute('data-mode') === 'open', { timeout: 8000 });
+  assert.equal(draftsOf(S.CARL).length, 3, 'saved into the freed slot');
+  assert.equal(api().filter((x) => x.startsWith('DELETE')).length, 1);
   await page.close();
 });
 

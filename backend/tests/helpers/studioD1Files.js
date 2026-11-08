@@ -21,6 +21,10 @@ const D1_NEW_FILES = [
   // D2.1 (onboarding Save Draft, backend): PageDesign.origin and its tests
   'backend/prisma/migrations/20261107090000_add_page_design_origin/migration.sql',
   'backend/tests/studioDraftsOnboarding.test.js',
+  // Delete draft: the shared page deletion's operations (mirrors the legacy DELETE /lp/:slug, which stays unchanged) and the tests
+  'backend/src/services/landingPageDeletion.js',
+  'backend/src/lpV3/studioDraftDeleteController.js',
+  'backend/tests/studioDraftDelete.test.js',
 ];
 
 // removes `text` exactly `times` times (else null)
@@ -42,9 +46,14 @@ const D1_REVERT = {
   'backend/src/middleware/stagingGate.js': (s) => {
     s = cut(s, ' *\n * Landing Page Studio V3 (Phase D1): the Studio API (lpV3/studioPagesRoutes.js)\n * is allowed as "user": list own pages, load and save a page\'s draft, create\n * a draft. Its own checks still apply (ownership, verified email, limits).\n');
     if (s === null) return null;
+    // Delete draft (after D2): one more Studio route, DELETE /studio/pages/<slug>, with its two comment lines
+    s = cut(s, "  // Delete draft: the owner's own UNPUBLISHED Studio draft only (owner, draft status and revision checked by the handler,\n" +
+      "  // lpV3/studioDraftDeleteController.js); the legacy DELETE /lp/:slug stays closed here\n");
+    if (s === null) return null;
     const lines = s.split('\n');
-    const studio = lines.filter((l) => /^  \{ method: '(GET|PUT|POST)', +path: .*studio.*access: 'user', what: 'Studio: /.test(l));
-    return studio.length === 4 ? lines.filter((l) => !studio.includes(l)).join('\n') : null;
+    const studio = lines.filter((l) => /^  \{ method: '(GET|PUT|POST|DELETE)', +path: .*studio.*access: 'user', what: 'Studio: /.test(l));
+    const del = studio.filter((l) => l === "  { method: 'DELETE', path: new RegExp('^/studio/pages/' + SLUG + '$'),         access: 'user', what: 'Studio: delete an unpublished draft (own drafts only, verified email)' },");
+    return studio.length === 5 && del.length === 1 ? lines.filter((l) => !studio.includes(l)).join('\n') : null;
   },
   'backend/src/routes/lpRoutes.js': (s) => {
     s = cut(s, LP_ROUTES_HEADER, 1, 'const router  = express.Router();\n');

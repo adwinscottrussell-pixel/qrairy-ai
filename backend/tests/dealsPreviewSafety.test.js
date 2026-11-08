@@ -42,7 +42,7 @@ const WELCOME_ROUTE = 'GET public ^\\/lp\\/welcome\\/[A-Za-z0-9][A-Za-z0-9_-]{0,
 const BASE_ROUTES = ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` !== WELCOME_ROUTE && !/^\^\\\/studio/.test(r.path.source));
 
 test('A. the original six staging routes are exactly as before', () => {
-  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1 + 4, 'exactly one welcome-screen route (and the four Studio routes) on top');
+  assert.equal(ALLOWED_ROUTES.length - BASE_ROUTES.length, 1 + 5, 'exactly one welcome-screen route (and the five Studio routes, Delete draft included) on top');
   assert.equal(ALLOWED_ROUTES.filter((r) => `${r.method} ${r.access} ${r.path.source}` === WELCOME_ROUTE).length, 1);
   assert.deepEqual(BASE_ROUTES.slice(0, 6).map((r) => `${r.method} ${r.access} ${r.path.source}`), [
     'GET public ^\\/health$',
