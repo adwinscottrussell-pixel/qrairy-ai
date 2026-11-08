@@ -13,14 +13,14 @@
    ============================================================ */
 
 :root {
-  --ob-bg: #f3f4f7;
+  --ob-bg: #0a0a0a;               /* the page around the white workspace: QDS near-black (qds-color-background) */
   --ob-surface: #ffffff;
   --ob-surface-2: #f7f8fa;
   --ob-border: #e3e6ec;
   --ob-border-strong: #cfd4dd;
   --ob-text: #0f172a;
   --ob-text-2: #334155;
-  --ob-muted: #5b6a7f;           /* O2.1: a touch darker, 4.5:1 also on --ob-surface-2 */
+  --ob-muted: #475569;           /* secondary / helper text: still secondary, 7:1 on white and the grey surfaces */
   --ob-navy: #0b1633;             /* headings */
   --ob-accent: #ff5a1f;          /* QRAIVY orange (QDS brand-primary): primary actions */
   --ob-accent-hover: #ff7a45;    /* QDS brand-hover */
@@ -40,7 +40,7 @@
   --ob-danger: #b91c1c;
   --ob-danger-border: #dc2626;
   --ob-danger-ring: rgba(220, 38, 38, 0.18);
-  --ob-placeholder: #94a3b8;
+  --ob-placeholder: #64748b;     /* placeholders: readable (4.7:1), lighter than typed text */
   --ob-border-hover: #b4bbc8;
   --ob-tag-bg: #eef0f4;
   --ob-stage: linear-gradient(180deg, #eef1f6, #e4e8ef);
@@ -52,16 +52,17 @@
   --ob-focus: rgba(255, 90, 31, 0.55);
   --ob-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.07);
   --ob-radius: 16px;
-  /* the background: a soft warm wash, orange / pink waves left, pink / purple waves right */
-  --ob-page: linear-gradient(160deg, #fff6f1 0%, #fdf5fa 48%, #f6f2ff 100%);
+  /* the background: plain QDS near-black (--ob-bg), no wash and no waves in Light
+     (the wave colours below stay for Dark, which keeps its subtle waves) */
+  --ob-page: none;
   --ob-w1a: #ffe0cf; --ob-w1b: #ffb48c;
   --ob-w2a: #ff7a45; --ob-w2b: #f472b6;
   --ob-w3a: #ffc7a8; --ob-w3b: #f9a8d4;
   --ob-w4a: #fce7f3; --ob-w4b: #f5c2e7;
   --ob-w5a: #c4b5fd; --ob-w5b: #8b5cf6;
   --ob-w6a: #ede9fe; --ob-w6b: #c4b5fd;
-  --ob-waves: 1;                 /* Step 1; Steps 2-4 are calmer */
-  --ob-waves-calm: 0.5;
+  --ob-waves: 0;                 /* Light: no waves on any step (Dark sets its own) */
+  --ob-waves-calm: 0;
   color-scheme: light;
 }
 /* Dark: the QDS near-black foundation, the same accents, subtler waves */
@@ -215,6 +216,12 @@ body.ob-page {
 
 /* ── progress: Step x of 4 ── */
 .ob-progress { margin-bottom: 16px; }
+/* the parts drawn straight on the near-black page (the progress and the Step 1 note): QDS light text on
+   #0a0a0a in both themes (the same values Dark already uses); everything inside the white workspace keeps Light */
+.ob-progress, .ob-note {
+  --ob-navy: #f0ece0; --ob-text-2: #c8c8c0; --ob-muted: #a0a09a; --ob-accent-text: #ff7a45;
+  --ob-surface: #111111; --ob-border: rgba(255, 255, 255, 0.12); --ob-border-strong: rgba(255, 255, 255, 0.2);
+}
 .ob-progress__count { margin: 0 0 8px; font: 600 13px/1.2 Inter, sans-serif; color: var(--ob-muted); letter-spacing: 0.02em; }
 .ob-progress__bar { height: 6px; border-radius: 999px; background: var(--ob-border); overflow: hidden; }
 .ob-progress__fill { display: block; height: 100%; width: 25%; border-radius: 999px; background: var(--ob-accent); transition: width 0.25s ease; }

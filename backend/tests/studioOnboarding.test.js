@@ -728,13 +728,21 @@ test('O2.1 colours: QDS tokens in Dark, dark text on orange, black header in bot
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
   const pairs = [['--ob-text', '--ob-surface'], ['--ob-text-2', '--ob-surface'], ['--ob-muted', '--ob-surface'], ['--ob-muted', '--ob-surface-2'], ['--ob-navy', '--ob-surface'],
     ['--ob-accent-text', '--ob-surface'], ['--ob-accent-text', '--ob-accent-soft'], ['--ob-on-accent', '--ob-accent'], ['--ob-on-accent', '--ob-accent-hover'], ['--ob-on-accent', '--ob-accent-active'],
-    ['--ob-info-text', '--ob-info-bg'], ['--ob-add', '--ob-add-bg'], ['--ob-danger', '--ob-surface'], ['--ob-muted', '--ob-tag-bg'], ['--ob-text', '--ob-bg']];
+    ['--ob-info-text', '--ob-info-bg'], ['--ob-add', '--ob-add-bg'], ['--ob-danger', '--ob-surface'], ['--ob-muted', '--ob-tag-bg']];
   for (const [name, t] of [['Light', light], ['Dark', dark]]) {
     const card = rgb(t['--ob-surface'], [255, 255, 255]);
     for (const [fg, bg] of pairs) {
       const r = ratio(rgb(t[fg], card), rgb(t[bg], card));
       assert.ok(r >= 4.5, name + ': ' + fg + ' on ' + bg + ' = ' + r.toFixed(2));
     }
+  }
+  // the page around the white workspace: QDS near-black in both themes; the parts drawn on it (progress, Step 1 note) use QDS light text
+  assert.equal(light['--ob-bg'], '#0a0a0a', 'Light: QDS near-black page'); assert.equal(light['--ob-page'], 'none', 'Light: no wash');
+  assert.ok(qds.includes('--qds-color-background: #0a0a0a;'));
+  const shell = block('.ob-progress, .ob-note');
+  for (const k of ['--ob-navy', '--ob-text-2', '--ob-muted', '--ob-accent-text']) {
+    const r = ratio(rgb(shell[k], [10, 10, 10]), [10, 10, 10]);
+    assert.ok(r >= 4.5, 'on the page: ' + k + ' = ' + r.toFixed(2));
   }
 });
 

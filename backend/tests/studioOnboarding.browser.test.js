@@ -1251,9 +1251,18 @@ test('O2.1: the gradient waves behind everything (never clickable), fuller on St
   assert.deepEqual(bx.items, ['No coding required', 'Mobile optimized', 'Easy to update', 'Start for free']);
   await page.click('[data-option="scratch"]'); await page.click('#ob-next');
   const two = await bg();
-  assert.ok(two.opacity < one.opacity, 'calmer on Step 2: ' + two.opacity + ' < ' + one.opacity);
+  assert.deepEqual([one.opacity, two.opacity], [0, 0], 'Light: no waves (plain QDS near-black page)');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(10, 10, 10)', 'Light: the page is QDS near-black');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#ob-wizard .ob-card-panel')).backgroundColor), 'rgb(255, 255, 255)', 'the workspace stays white');
   assert.equal(await page.$eval('.ob-benefits', (b) => getComputedStyle(b).display), 'none', 'no checklist on Step 2');
   await page.close();
+  {
+    const d = await onboarding({ theme: 'dark' });
+    const op = () => d.page.evaluate(() => +getComputedStyle(document.querySelector('.ob-bg')).opacity);
+    const d1 = await op(); await d.page.click('[data-option="scratch"]'); await d.page.click('#ob-next'); const d2 = await op();
+    assert.ok(d2 < d1 && d2 > 0, 'Dark: calmer on Step 2: ' + d2 + ' < ' + d1);
+    await d.page.close();
+  }
   for (const th of ['light', 'dark']) {
     for (const viewport of [DESKTOP, { width: 1024, height: 800 }, { width: 768, height: 1024 }, PHONE]) {
       const o = await onboarding({ theme: th, viewport });
@@ -1289,7 +1298,7 @@ test('O2.1 handwritten note: Step 1 right side at 1400 px and wider, EN / DE, Li
         const label = th + ' ' + lang + ' ' + width + ': ';
         assert.ok(m.shown && m.hidden === 'true', label + 'shown, decoration');
         assert.equal(m.text, lang === 'de' ? 'Erstellen Sie Ihre digitale Geschäftsseite in wenigen Minuten!' : 'Create your digital business page in minutes!');
-        assert.equal(m.color, th === 'light' ? 'rgb(11, 22, 51)' : 'rgb(240, 236, 224)', label + 'dark text in Light, light text in Dark');
+        assert.equal(m.color, 'rgb(240, 236, 224)', label + 'QDS light text on the near-black page in both themes');
         assert.equal(m.stroke, 'rgb(255, 90, 31)', label + 'orange underline and arrow');
         const note = rect(m.note);
         for (const k of ['wizard', 'progress', 'benefits', 'top']) assert.ok(apart(note, rect(m[k])), label + 'not over the ' + k + ': ' + JSON.stringify([note, rect(m[k])]));
