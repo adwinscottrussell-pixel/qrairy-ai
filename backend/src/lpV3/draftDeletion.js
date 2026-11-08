@@ -1,7 +1,8 @@
-// services/landingPageDeletion.js — the records one landing page deletion
-// writes, shared by the legacy DELETE /lp/:slug (controllers/lpController.js)
-// and the Studio V3 "Delete draft" (DELETE /studio/pages/:slug,
-// lpV3/studioPagesController.js), so there is one deletion procedure.
+// lpV3/draftDeletion.js — the records one landing page deletion writes, for
+// the Studio V3 "Delete draft" (DELETE /studio/pages/:slug,
+// studioDraftDeleteController.js): exactly the three operations of the legacy
+// DELETE /lp/:slug (controllers/lpController.js, unchanged; a test keeps the
+// two the same), so there is one deletion procedure.
 //
 // deletionOps(db, { slug, actorId, metadata }) -> the three operations, to run
 // in ONE transaction (a batch array, or awaited in order inside an interactive
@@ -19,7 +20,7 @@
 //      nobody can take over a deleted page's printed QR codes, NFC tags or
 //      Wallet links by creating a new page on its slug
 // Who may delete what is decided by each caller, never here.
-const { DELETED_PAGE_MARKER } = require('./slugReservation');
+const { DELETED_PAGE_MARKER } = require('../services/slugReservation');
 
 // deletionSteps: the same three, each as a function, for an interactive transaction that runs them strictly one after
 // another (nothing starts before the previous one has finished, whatever the client's promise semantics)

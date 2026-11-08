@@ -84,6 +84,7 @@
       conflict_text: 'This page was saved in another tab or on another device. Nothing was overwritten.', conflict_load: 'Load saved version', conflict_keep: 'Keep editing',
       conflict_load_confirm: 'Load the saved version? Your unsaved changes here will be lost.', signout_confirm: 'Sign out? Your unsaved changes on this page will be lost.',
       menu_history: 'Version history', menu_settings: 'Page settings', menu_classic: 'Switch back to the classic page', menu_note: 'Available once the Studio is connected.',
+      saved_tip_title: '✓ Draft saved', saved_tip_text: 'You can delete drafts from the ⋮ menu in the top-right corner.',
       delete_draft: 'Delete draft', delete_name: '“{name}”', delete_title: 'Delete this draft?', delete_text: 'This draft will be permanently deleted. This action cannot be undone.',
       delete_cancel: 'Cancel', delete_confirm: 'Delete draft', delete_busy: 'Deleting…', delete_done: '“{name}” was deleted.',
       delete_conflict: 'This draft was changed in another tab or window. Nothing was deleted. Reload it and try again.',
@@ -133,6 +134,7 @@
       conflict_text: 'Diese Seite wurde in einem anderen Tab oder auf einem anderen Gerät gespeichert. Es wurde nichts überschrieben.', conflict_load: 'Gespeicherte Fassung laden', conflict_keep: 'Weiter bearbeiten',
       conflict_load_confirm: 'Gespeicherte Fassung laden? Ihre nicht gespeicherten Änderungen hier gehen verloren.', signout_confirm: 'Abmelden? Ihre nicht gespeicherten Änderungen an dieser Seite gehen verloren.',
       menu_history: 'Versionsverlauf', menu_settings: 'Seiteneinstellungen', menu_classic: 'Zur klassischen Seite zurück', menu_note: 'Verfügbar, sobald das Studio verbunden ist.',
+      saved_tip_title: '✓ Entwurf gespeichert', saved_tip_text: 'Sie können Ihre Entwürfe über das ⋮ Menü oben rechts löschen.',
       delete_draft: 'Entwurf löschen', delete_name: '„{name}“', delete_title: 'Diesen Entwurf löschen?', delete_text: 'Dieser Entwurf wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
       delete_cancel: 'Abbrechen', delete_confirm: 'Entwurf löschen', delete_busy: 'Wird gelöscht …', delete_done: '„{name}“ wurde gelöscht.',
       delete_conflict: 'Dieser Entwurf wurde in einem anderen Tab oder Fenster geändert. Es wurde nichts gelöscht. Laden Sie ihn neu und versuchen Sie es erneut.',
@@ -622,6 +624,7 @@
   }
   // Back to the sample page: the open customer page (if any) leaves the editor.
   function showSample() {
+    hideSavedTip();
     if (!pageView.current) return;
     pageView.current = null;
     pageView.revision = null; pageView.owner = null; pageView.origin = null;
@@ -645,6 +648,7 @@
     if (!force && pageView.current && pageView.current.slug !== slug && unsaved() && !window.confirm(t('page_switch_confirm'))) { renderPageBar(); return; }
     var n = ++pageLoad;
     resetSave();
+    hideSavedTip();
     pageView.origin = null; exampleCache = null;                  // D2.3b-1: the previous page's origin never carries over
     showPages({ state: 'loading' });
     pagesData.load(slug).then(function (r) {
@@ -715,6 +719,7 @@
     discardCustomer();
   }
   function discardCustomer() {
+    hideSavedTip();
     saveGen++;
     dealsLoad++;
     pageView.pages = [];
@@ -820,8 +825,21 @@
       $('st-more-btn').focus();
     });
   }
+  // the saved tip: shown after a successful Save Draft of one of the owner's unpublished drafts (where Delete draft is: the ⋮
+  // menu), for SAVED_TIP_MS; gone at once on the next save, a page switch, the sample page or an account change
+  var SAVED_TIP_MS = 6000, savedTipTimer = null;
+  function hideSavedTip() { clearTimeout(savedTipTimer); savedTipTimer = null; var n = $('st-saved-tip'); if (n) n.hidden = true; }
+  function showSavedTip() {
+    var n = $('st-saved-tip');
+    if (!n || !pageView.current || pageView.current.live !== false) return false;
+    hideSavedTip();
+    n.hidden = false;
+    savedTipTimer = setTimeout(hideSavedTip, SAVED_TIP_MS);
+    return true;
+  }
   function saveDraft() {
     if (!canSave()) return;
+    hideSavedTip();
     editor.endMerge();
     var snap = editor.snapshot(), slug = pageView.current.slug, gen = saveGen;
     saveView.busy = true;
@@ -836,7 +854,7 @@
         editor.markSaved(snap);
         saveView.state = 'saved'; saveView.savedAt = r.savedAt; saveView.invalid = false;
         renderPageBar();
-        announce(t('save_saved'));
+        if (!showSavedTip()) announce(t('save_saved'));   // the tip (role=status) is announced itself
         return;
       }
       if (r.state === 'signin' || r.state === 'forbidden' || r.state === 'notfound') {

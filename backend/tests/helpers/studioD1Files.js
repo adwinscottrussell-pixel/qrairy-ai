@@ -22,7 +22,7 @@ const D1_NEW_FILES = [
   'backend/prisma/migrations/20261107090000_add_page_design_origin/migration.sql',
   'backend/tests/studioDraftsOnboarding.test.js',
   // Delete draft: the shared page deletion's operations (mirrors the legacy DELETE /lp/:slug, which stays unchanged) and the tests
-  'backend/src/services/landingPageDeletion.js',
+  'backend/src/lpV3/draftDeletion.js',
   'backend/src/lpV3/studioDraftDeleteController.js',
   'backend/tests/studioDraftDelete.test.js',
 ];

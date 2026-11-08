@@ -177,7 +177,7 @@ function txModels(undo) {
         if (opts.failDraftAfterPage) throw new Error('database unavailable');
         return copy(row);
       },
-      // Delete draft (studioPagesController.js deleteStudioDraft, services/landingPageDeletion.js): the page, its PageDesign
+      // Delete draft (studioPagesController.js deleteStudioDraft, lpV3/draftDeletion.js): the page, its PageDesign
       // with it (onDelete Cascade); undone when the transaction throws
       delete: async ({ where }) => {
         const row = db.pages.find((p) => matches(p, where));

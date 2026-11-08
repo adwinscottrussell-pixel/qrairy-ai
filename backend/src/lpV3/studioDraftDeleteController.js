@@ -8,12 +8,12 @@
  * creating and saving a draft. Kept apart from studioPagesController.js (read
  * and save only, which never deletes or names publishing) like the draft
  * creation (studioDraftsController.js). The deletion itself is the shared
- * page deletion (services/landingPageDeletion.js: the same three operations as
+ * page deletion (lpV3/draftDeletion.js: the same three operations as
  * the legacy DELETE /lp/:slug, which stays as it is and closed on staging).
  */
 'use strict';
 const prisma = require('../utils/prismaClient');
-const { deletionSteps } = require('../services/landingPageDeletion');
+const { deletionSteps } = require('./draftDeletion');
 const { pageCache } = require('../utils/pageCache');
 
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/;
@@ -30,7 +30,7 @@ function validBase(v) { return Number.isInteger(v) && v >= 1 && v < 2147483647; 
 //     does, and refuses to change such a page) and no published V3 version; anything live or published: 409 not_a_draft
 //   - ?revision=N (optional, the revision the Studio shows): when the draft has been saved since (another tab), 409
 //     revision_conflict and nothing is deleted
-// The deletion itself is the shared one (services/landingPageDeletion.js, the same as the legacy DELETE /lp/:slug): stamp
+// The deletion itself is the shared one (lpV3/draftDeletion.js, the same as the legacy DELETE /lp/:slug): stamp
 // tokens, the page (its PageDesign goes with it), and the record that keeps the address reserved. No plan, trial or billing
 // code; the draft limit and the 24-hour creation limit are unchanged (StudioDraftCreation rows stay).
 class Refusal { constructor(status, body) { this.status = status; this.body = body; } }

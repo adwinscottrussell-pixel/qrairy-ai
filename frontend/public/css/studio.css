@@ -301,6 +301,9 @@ body.studio-page #main-content { min-height: 0; height: 100vh; height: 100dvh; }
 .st-stale { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--st-accent); background: var(--st-accent-soft); color: var(--st-text); font-size: 13px; font-weight: 500; }
 .st-stale[hidden] { display: none; }
 .st-stale .st-ic { color: var(--st-accent); flex-shrink: 0; }
+/* the saved tip: the same notice, in the Studio's green (--st-link: adding links), compact; its text may wrap */
+.st-savedtip { flex-wrap: wrap; gap: 2px 8px; border-color: var(--st-link-border); background: var(--st-link-soft); }
+.st-savedtip strong { color: var(--st-link); font-weight: 700; }
 .st-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .st-switch::before { transition: none; } }
 

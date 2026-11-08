@@ -261,7 +261,7 @@ const finishUi = (page) => page.evaluate(() => { const b = document.getElementBy
   return { mode: b.getAttribute('data-mode'), disabled: b.disabled, limit: b.getAttribute('data-limit'), manage: !r.hidden, note: document.getElementById('ob-save-note').textContent }; });
 
 test('draft limit with the real route: 0, 1 and 2 unpublished drafts -> Save Draft saves; 3 -> Save Draft disabled after the server\'s answer, nothing more sent, Manage drafts opens the Studio\'s page list; the answers kept; back with a free slot: Save Draft saves', async () => {
-  const LIMIT_EN = 'You already have 3 unpublished drafts, the current maximum. Your answers are kept in this browser tab.';
+  const LIMIT_EN = '3 drafts reached.\nOpen a draft and choose ⋮ → Delete draft to make room for a new draft.';
   const plain = (n) => fetch(srv.origin + '/studio/drafts', { method: 'POST', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Old draft ' + n, language: 'en' }) }).then((x) => x.json());
   const carlDrafts = () => S.db.pages.filter((p) => p.userId === S.CARL && p.status === 'draft');
   for (const n of [0, 1, 2]) {
@@ -463,6 +463,63 @@ test('the whole way: onboarding at the 3-draft limit -> Manage drafts -> the Stu
   assert.equal(draftsOf(S.CARL).length, 3, 'saved into the freed slot');
   assert.equal(api().filter((x) => x.startsWith('DELETE')).length, 1);
   await page.close();
+});
+
+const savedTip = (page) => page.evaluate(() => {
+  const n = document.getElementById('st-saved-tip'), s = getComputedStyle(n);
+  return { shown: !n.hidden && !!n.offsetParent, role: n.getAttribute('role'), title: n.querySelector('strong').textContent, text: n.querySelector('span').textContent, bg: s.backgroundColor, border: s.borderTopColor,
+    titleColor: getComputedStyle(n.querySelector('strong')).color, sw: document.documentElement.scrollWidth, iw: innerWidth };
+});
+
+test('the saved tip: after a successful Save Draft of an unpublished draft, a compact green note says where Delete draft is (EN / DE, Light / Dark, desktop / tablet); it goes by itself after about six seconds; never for a live page; gone on a page switch; Delete draft unchanged', async () => {
+  S.resetDrafts();
+  const a = (await plainDraft('tip-a')).page.slug, b = (await plainDraft('tip-b')).page.slug;
+  // English, Light, desktop
+  let p = await open('studio.html?slug=' + a);
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'draft open');
+  assert.equal((await savedTip(p.page)).shown, false, 'nothing before a save');
+  await studioEditAndSave(p.page, ' x');
+  let tip = await until(async () => { const x = await savedTip(p.page); return x.shown ? x : null; }, 'the tip after saving');
+  assert.deepEqual([tip.role, tip.title, tip.text], ['status', '✓ Draft saved', 'You can delete drafts from the ⋮ menu in the top-right corner.']);
+  assert.deepEqual([tip.bg, tip.border, tip.titleColor], ['rgb(240, 253, 244)', 'rgb(187, 247, 208)', 'rgb(21, 128, 61)'], 'the Studio\'s green (light)');
+  await shot(p.page, 'tip-01-saved-en-light.png');
+  // editing goes on undisturbed while it shows; it goes after ~6 s
+  await p.page.click('#st-fields [data-path="data.headline"] input'); await p.page.keyboard.type('y');
+  assert.equal(await p.page.$eval('#st-fields [data-path="data.headline"] input', (n) => n.value.endsWith('xy')), true, 'typing still works');
+  await sleep(4500);
+  assert.equal((await savedTip(p.page)).shown, true, 'still there after 4.5 s');
+  await until(async () => !(await savedTip(p.page)).shown || null, 'gone by itself', 3500);
+  // Delete draft is still where it was, unchanged
+  assert.deepEqual([(await deleteUi(p.page)).item, (await deleteUi(p.page)).enabled], [true, true]);
+  // a page switch hides it at once
+  await until(() => p.page.$eval('#st-save-btn', (x) => !x.disabled), 'Save enabled');
+  await p.page.click('#st-save-btn');
+  await until(async () => (await savedTip(p.page)).shown || null, 'shown again');
+  p.page.on('dialog', (d) => d.accept());
+  await p.page.select('#st-page-select', b);
+  await until(async () => (await studioState(p.page)).selected === b || null, 'switched');
+  assert.equal((await savedTip(p.page)).shown, false, 'gone on a page switch');
+  await p.page.close();
+  // German, Dark, tablet 1024
+  p = await open('studio.html?slug=' + b, { lang: 'de', theme: 'dark', viewport: { width: 1024, height: 768, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } });
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'draft open (de)');
+  if (await p.page.$eval('#st-open-right', (x) => !!x.offsetParent).catch(() => false)) await p.page.$eval('#st-open-right', (x) => x.click());
+  await sleep(300);
+  await studioEditAndSave(p.page, ' z');
+  tip = await until(async () => { const x = await savedTip(p.page); return x.shown ? x : null; }, 'the tip (de)');
+  assert.deepEqual([tip.title, tip.text], ['✓ Entwurf gespeichert', 'Sie können Ihre Entwürfe über das ⋮ Menü oben rechts löschen.']);
+  assert.equal(tip.titleColor, 'rgb(134, 239, 172)', 'the Studio\'s green (dark)');
+  assert.ok(tip.sw <= tip.iw, 'no sideways scroll');
+  await shot(p.page, 'tip-02-saved-de-dark-1024.png');
+  await p.page.close();
+  // a live page: its Studio draft is saved, but it cannot be deleted here, so no tip (the header says Saved)
+  p = await open('studio.html?slug=anna-shop', { token: 'tok_anna' });
+  await until(async () => (await studioState(p.page)).status === 'loaded' || null, 'live page open');
+  await studioEditAndSave(p.page, ' live');
+  await sleep(300);
+  assert.equal((await savedTip(p.page)).shown, false, 'never for a live page');
+  await p.page.close();
+  S.resetDesigns();
 });
 
 test('history: the Studio\'s preview updates (typing, a section selected, the device switched, a save) add no browser-history entry; the preview still shows the latest edit; ONE browser Back returns to the onboarding', async () => {

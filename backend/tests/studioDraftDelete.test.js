@@ -11,7 +11,7 @@
 // - never a live or published page: 409 not_a_draft, nothing changed
 // - ?revision=N: a draft saved since (another tab) is not deleted (409)
 // - one transaction under the account's draft lock; a failure changes nothing
-// - the deletion is the shared one (services/landingPageDeletion.js), the
+// - the deletion is the shared one (lpV3/draftDeletion.js), the
 //   same three operations as the legacy DELETE /lp/:slug
 // Run: node tests/studioDraftDelete.test.js
 // ============================================================
@@ -147,7 +147,7 @@ test('the code: the shared deletion is exactly the legacy DELETE /lp/:slug\'s th
   const legacy = read('controllers', 'lpController.js');
   const start = legacy.indexOf('async function handleDeleteLP(');
   const lfn = legacy.slice(start, legacy.indexOf('\n}\n', start));
-  const shared = read('services', 'landingPageDeletion.js');
+  const shared = read('lpV3', 'draftDeletion.js');
   const OPS = ['.stampToken.deleteMany({ where: { slug } })', '.landingPage.delete({ where: { slug } })', '.supportAction.create({ data: Object.assign({}, DELETED_PAGE_MARKER, { targetId: slug, actorId'];
   const order = (txt, who) => OPS.map((op) => txt.indexOf(who + op));
   const inLegacy = order(lfn, 'prisma'), inShared = order(shared, 'db');
