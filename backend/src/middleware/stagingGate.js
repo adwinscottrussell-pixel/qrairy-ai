@@ -65,6 +65,8 @@ const ALLOWED_ROUTES = [
   // Delete draft: the owner's own UNPUBLISHED Studio draft only (owner, draft status and revision checked by the handler,
   // lpV3/studioDraftDeleteController.js); the legacy DELETE /lp/:slug stays closed here
   { method: 'DELETE', path: new RegExp('^/studio/pages/' + SLUG + '$'),         access: 'user', what: 'Studio: delete an unpublished draft (own drafts only, verified email)' },
+  // Image Phase 1 (lpV3/studioImagesController.js): stored only in the staging STUDIO_IMAGE_FOLDER; without it 503
+  { method: 'POST',   path: new RegExp('^/studio/pages/' + SLUG + '/images$'),  access: 'user', what: 'Studio: upload an image (own pages, verified email, staging folder only)' },
 ];
 
 function matchRoute(method, path) {

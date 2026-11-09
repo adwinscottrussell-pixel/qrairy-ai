@@ -68,7 +68,7 @@ test('A. production: no policy, nothing validated, whatever else is set', () => 
 
 test('A. staging with every setting right is accepted', () => {
   const p = loadStagingPolicy(STAGING_ENV);
-  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging', dealImageFolder: null,
+  assert.deepEqual(JSON.parse(JSON.stringify(p)), { allowedUserIds: [ALICE, BOB], recordingCeiling: 25, voiceAudioFolder: 'qraivy-voices-staging', dealImageFolder: null, studioImageFolder: null,
     clerk: { jwtKey: STAGING_ENV.CLERK_JWT_KEY.trim(), issuer: 'https://clerk.voice-staging.example', authorizedParties: ['https://voice-preview.voice-staging.example'] } });
   assert.ok(Object.isFrozen(p) && Object.isFrozen(p.allowedUserIds));
 });
@@ -88,7 +88,7 @@ test('A. staging refuses to start without a sane recording ceiling', () => {
 });
 
 test('A. staging audio can never be configured into a production storage folder', () => {
-  assert.deepEqual(PRODUCTION_STORAGE_FOLDERS.slice().sort(), ['qraivy-deals', 'qraivy-logos', 'qraivy-voices', 'qraivy-wallet-strips']);
+  assert.deepEqual(PRODUCTION_STORAGE_FOLDERS.slice().sort(), ['qraivy-deals', 'qraivy-logos', 'qraivy-studio', 'qraivy-studio-starters', 'qraivy-voices', 'qraivy-wallet-strips']);
   for (const value of [undefined, '', ...PRODUCTION_STORAGE_FOLDERS, 'voices', 'qraivy-voices-test', 'qraivy-voices/staging', '../qraivy-voices', 'Staging', 'qraivy voices staging', 'notstaging', 'stagingish']) {
     assert.throws(() => loadStagingPolicy(Object.assign({}, STAGING_ENV, { VOICE_AUDIO_FOLDER: value })), /VOICE_AUDIO_FOLDER/, String(value));
   }
@@ -139,7 +139,10 @@ test('B. exactly seven kinds of request are allowed, and only two of them withou
   // and the four Studio V3 routes (Phase D1), all "user"
   assert.deepEqual(ALLOWED_ROUTES.slice(0, 7).map((r) => `${r.method} ${r.access}`), ['GET public', 'GET public', 'GET public', 'GET public', 'GET owner', 'POST user', 'POST user']);
   const studio = ALLOWED_ROUTES.filter((r) => r.path.source.startsWith('^\\/studio'));
-  assert.deepEqual(studio.map((r) => r.method + ' ' + r.access), ['GET user', 'GET user', 'PUT user', 'POST user', 'DELETE user']);
+  assert.deepEqual(studio.map((r) => r.method + ' ' + r.access), ['GET user', 'GET user', 'PUT user', 'POST user', 'DELETE user', 'POST user']);
+  // Image Phase 1: the upload is exactly POST /studio/pages/<slug>/images
+  assert.ok(matchRoute('POST', '/studio/pages/casa-lumi-ab1/images'));
+  for (const [m, p] of [['PUT', '/studio/pages/a/images'], ['DELETE', '/studio/pages/a/images'], ['GET', '/studio/pages/a/images'], ['POST', '/studio/pages/a/images/x'], ['POST', '/studio/pages/../images'], ['POST', '/studio/images']]) assert.equal(matchRoute(m, p), null, m + ' ' + p);
   // Delete draft: exactly /studio/pages/<slug>; nothing else of the Studio can be deleted, and the legacy page delete stays closed
   assert.ok(matchRoute('DELETE', '/studio/pages/casa-lumi-ab1'));
   for (const [m, p] of [['DELETE', '/studio/pages'], ['DELETE', '/studio/pages/a/b'], ['DELETE', '/studio/pages/a/design'], ['DELETE', '/studio/pages/..'], ['DELETE', '/studio/pages/-a'],

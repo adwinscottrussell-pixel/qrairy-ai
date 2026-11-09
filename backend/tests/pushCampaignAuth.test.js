@@ -140,7 +140,9 @@ test('managers: no other account (StadtPocket business members, city managers) g
   const lf = (s) => s.replace(/\r\n/g, '\n');
   const d1New = (f) => f === 'backend/src/middleware/publicDraftGuard.js' && D1_NEW_FILES.includes(f)
     && lf(fs.readFileSync(path.join(root, f), 'utf8')) === lf(execFileSync('git', ['show', '9323b29:' + f], { cwd: root, encoding: 'utf8' }));
-  const d1 = (f) => f !== 'backend/src/controllers/lpController.js' && (isD1Change(root, f) || d1New(f));
+  // ...and Studio V3 Image Phase 1's new files (helpers/studioImageFiles.js; no push code)
+  const imgNew = (f) => require('./helpers/studioImageFiles').IMG_NEW_FILES.includes(f);
+  const d1 = (f) => f !== 'backend/src/controllers/lpController.js' && (isD1Change(root, f) || d1New(f) || imgNew(f));
   assert.deepEqual(changed.filter((f) => !later.includes(f) && !d1(f)), ['backend/src/controllers/lpController.js'], 'only the push handlers changed');
 });
 

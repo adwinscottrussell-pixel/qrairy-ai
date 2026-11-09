@@ -162,7 +162,8 @@ test('switching between drafts of different templates: each shows its own photo;
 test('an image address the Studio does not know (a customer\'s own Cloudinary photo) stays exactly as it is: no placeholder, no inline copy, not loaded by the Studio page', async () => {
   S.resetDrafts();
   const d = await draftOf('beauty');
-  const own = 'https://res.cloudinary.com/dwqc6n7rn/image/upload/v1700000000/customer/own-photo.jpg';
+  // Image Phase 1: a customer's own photo lives in their Studio folder (qraivy-studio/<userId>/<pageId>/…); any other address is refused on save
+  const own = 'https://res.cloudinary.com/dwqc6n7rn/image/upload/c_limit,h_1600,w_1600/v1700000000/qraivy-studio/user_carl/lp_carl/own-photo.jpg';
   const design = S.copy(designOf(d.slug).draft);
   design.pages[0].sections[0].data.backgroundImage = own;
   const put = await fetch(srv.origin + '/studio/pages/' + d.slug + '/design', { method: 'PUT', headers: { Authorization: 'Bearer tok_carl', 'Content-Type': 'application/json' }, body: JSON.stringify({ design, baseRevision: 1 }) });

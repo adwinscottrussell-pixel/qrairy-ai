@@ -22,7 +22,10 @@ const mountOnly = (f) => f === 'backend/src/index.js' && INDEX_OK;
 // Phase D1: the existing production files it changes, each by exactly its own edits (helpers/studioD1Files.js)
 const { D1_CHANGED_FILES, d1Only, withoutD1 } = require('./helpers/studioD1Files');
 const D1_OK = new Set(D1_CHANGED_FILES.filter((f) => d1Only(ROOT, 'ae2861e', f)));
-const allowedChange = (f) => mountOnly(f) || D1_OK.has(f);
+// Image Phase 1: stagingPolicy.js by exactly its edits (helpers/studioImageFiles.js); its new files are listed in PHASE1_FILES
+const IMG = require('./helpers/studioImageFiles');
+const IMG_OK = new Set(IMG.IMG_CHANGED_FILES.filter((f) => IMG.imageOnly(ROOT, 'ae2861e', f)));
+const allowedChange = (f) => mountOnly(f) || D1_OK.has(f) || IMG_OK.has(f);
 
 test('Phase 1 changes only its own files', () => {
   const changed = git('diff', 'ae2861e', '--name-only').concat(git('ls-files', '--others', '--exclude-standard'));
@@ -41,10 +44,11 @@ test('customer-facing code is untouched (public pages, routes, server, staging, 
   const changed = git('diff', 'ae2861e', '--name-status', '--', ...protectedPaths).concat(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths).map((f) => '?\t' + f));
   // Phase D1 also adds its own new backend files (draft policy and controller, the public draft guard)
   const { D1_NEW_FILES } = require('./helpers/studioD1Files');
-  const isNewFile = (f) => isNew(f) || D1_NEW_FILES.includes(f);
+  const isNewFile = (f) => isNew(f) || D1_NEW_FILES.includes(f) || IMG.IMG_NEW_FILES.includes(f);
   assert.deepEqual(changed.filter((l) => !isNewFile(l.split('\t')[1]) && !allowedChange(l.split('\t')[1])), []);
   for (const l of changed) assert.ok(/^[A?]\t/.test(l) || allowedChange(l.split('\t')[1]), 'only new files, nothing existing replaced: ' + l);
   assert.deepEqual([...D1_OK].sort(), D1_CHANGED_FILES.slice().sort(), 'each D1 production file differs by exactly the D1 edits');
+  assert.deepEqual([...IMG_OK].sort(), IMG.IMG_CHANGED_FILES.slice().sort(), 'each Image Phase 1 production file differs by exactly its edits');
 });
 
 test('older scope guards: exactly these now allow the V3 files, and only the V3 lines', () => {

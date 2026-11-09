@@ -33,6 +33,7 @@
 const prisma = require('../utils/prismaClient');
 const V3 = require('./core');
 const { importLegacyPage } = require('./importLegacy');
+const { imageScope, imagesIn } = require('../data/studioImages');
 
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$/;
 const MAX_PAGES = 200;
@@ -104,6 +105,25 @@ async function listStudioPages(req, res) {
   }
 }
 
+// Image Phase 1: the images a save of this page may hold (data/studioImages.js imageScope):
+// the owner's folder and the starter folders, plus what the page already holds -- its
+// stored draft and its legacy logo (a page opened from the legacy editor keeps its logo).
+// Only the owner's own page reaches this, so `known` never lends another account's images.
+async function pageImageScope(userId, page) {
+  const known = imagesIn([page.logoUrl, parseLegacyLogo(page.sections)]);
+  try {
+    const stored = await prisma.pageDesign.findUnique({ where: { landingPageId: page.id }, select: { draft: true } });
+    if (stored) imagesIn(stored.draft, known);
+  } catch (e) { if (!tableMissing(e)) throw e; }
+  return imageScope(userId, Array.from(known));
+}
+function parseLegacyLogo(sections) {
+  try {
+    const s = typeof sections === 'string' ? JSON.parse(sections) : sections;
+    return s && s.logo && typeof s.logo.url === 'string' ? s.logo.url : null;
+  } catch (_) { return null; }
+}
+
 // GET /studio/pages/:slug/design
 async function getStudioPageDesign(req, res) {
   noStore(res);
@@ -147,10 +167,12 @@ async function saveStudioPageDesign(req, res) {
   if (!body || typeof body !== 'object' || Array.isArray(body) || !('design' in body) || !validBase(body.baseRevision)) return res.status(400).json({ error: 'invalid_body' });
   const base = body.baseRevision;
   try {
-    const page = await ownPage(req, res, { id: true, userId: true });
+    const page = await ownPage(req, res, { id: true, userId: true, logoUrl: true, sections: true });
     if (!page) return undefined;
-    // the whole design, on the server, with the shared rules and size limit
-    const checked = V3.validateDesign(body.design, { cloudName: cloudName() });
+    // the whole design, on the server, with the shared rules and size limit, and
+    // (Image Phase 1) the image ownership rule: only the owner's own uploads, the
+    // approved starter images, or an image this page already holds
+    const checked = V3.validateDesign(body.design, { cloudName: cloudName(), images: await pageImageScope(req.userId, page) });
     if (!checked.ok) return res.status(422).json({ error: 'design_invalid', errors: checked.errors.slice(0, V3.LIMITS.errors) });
 
     const savedAt = new Date();
@@ -178,4 +200,4 @@ async function saveStudioPageDesign(req, res) {
   }
 }
 
-module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, storedOrigin, kindOf, summary, SLUG, MAX_PAGES };
+module.exports = { listStudioPages, getStudioPageDesign, saveStudioPageDesign, storedOrigin, kindOf, summary, ownPage, SLUG, MAX_PAGES };

@@ -65,6 +65,7 @@ const TX_TRIES = 3;
 class Answer extends Error { constructor(status, body, headers) { super(body.error); this.status = status; this.body = body; this.headers = headers; } }
 
 function noStore(res) { if (typeof res.set === 'function') res.set('Cache-Control', 'private, no-store'); }
+const { imageScope } = require('../data/studioImages');
 function cloudName() { return process.env.CLOUDINARY_CLOUD_NAME || undefined; }
 function tableMissing(e) { return !!e && (e.code === 'P2021' || /does not exist/i.test(String(e.message || ''))); }
 function uniqueOn(e, field) { return !!e && e.code === 'P2002' && JSON.stringify((e.meta && e.meta.target) || e.message || '').includes(field); }
@@ -129,9 +130,11 @@ function readOrigin(v, language) {
   }
   return { origin: o };
 }
-// the checked design: { design } or { error, errors } (validateDesign, the language, origin's section ids in the design)
-function checkDesign(r) {
-  const checked = V3.validateDesign(r.design, { cloudName: cloudName() });
+// the checked design: { design } or { error, errors } (validateDesign, the language, origin's section ids in the design).
+// Image Phase 1: a new draft holds no images yet, so only the owner's own uploads and the approved
+// starter images may be in it (data/studioImages.js imageScope; nothing is "known" for a new page).
+function checkDesign(r, userId) {
+  const checked = V3.validateDesign(r.design, { cloudName: cloudName(), images: imageScope(userId) });
   if (!checked.ok) return { error: 'design_invalid', errors: checked.errors.slice(0, V3.LIMITS.errors) };
   const lang = checked.design.settings && checked.design.settings.language;
   if (lang !== r.language) return { error: 'design_invalid', errors: [{ path: 'settings.language', code: 'language_mismatch' }] };
@@ -216,7 +219,7 @@ async function createStudioDraft(req, res) {
   let design;
   if (r.design) {
     // D2.1: the onboarding's page, checked before anything is read or written
-    const c = checkDesign(r);
+    const c = checkDesign(r, req.userId);
     if (c.error === 'invalid_body') return res.status(400).json({ error: c.error, field: c.field });
     if (c.error) return res.status(422).json({ error: c.error, errors: c.errors });
     design = c.design;

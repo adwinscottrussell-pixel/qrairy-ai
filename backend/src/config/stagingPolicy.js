@@ -28,6 +28,12 @@
  *                                    refuses Deals uploads (it never falls
  *                                    back to the production folder); set
  *                                    but unsafe, the server does not start.
+ *   STUDIO_IMAGE_FOLDER              optional. Storage folder for Landing
+ *                                    Page Studio V3 image uploads (Image
+ *                                    Phase 1); same rules as
+ *                                    DEAL_IMAGE_FOLDER, and different from
+ *                                    both other folders. Without it a
+ *                                    staging server refuses Studio uploads.
  *
  *
  * Sign-in is verified with Clerk's PUBLIC key only, so staging holds no
@@ -87,7 +93,7 @@ function readClerkVerification(env, problems) {
 }
 
 // Storage folders production writes to. Staging may never use them.
-const PRODUCTION_STORAGE_FOLDERS = ['qraivy-voices', 'qraivy-logos', 'qraivy-wallet-strips', 'qraivy-deals'];
+const PRODUCTION_STORAGE_FOLDERS = ['qraivy-voices', 'qraivy-logos', 'qraivy-wallet-strips', 'qraivy-deals', 'qraivy-studio', 'qraivy-studio-starters'];
 const PRODUCTION_VOICE_FOLDER = 'qraivy-voices';
 
 // Settings that enable customer communication or payments. Their mere
@@ -139,6 +145,15 @@ function loadStagingPolicy(env = process.env) {
     else if (dealFolder === folder) problems.push('DEAL_IMAGE_FOLDER must differ from VOICE_AUDIO_FOLDER.');
   }
 
+  // Landing Page Studio V3 uploads (Image Phase 1): an explicit staging folder, or none at all.
+  const studioFolder = String(env.STUDIO_IMAGE_FOLDER || '').trim();
+  if (studioFolder) {
+    if (!/^[a-z0-9][a-z0-9-]{2,60}$/.test(studioFolder)) problems.push('STUDIO_IMAGE_FOLDER may only contain lowercase letters, digits and hyphens.');
+    else if (PRODUCTION_STORAGE_FOLDERS.includes(studioFolder)) problems.push('STUDIO_IMAGE_FOLDER is a production folder. Staging Studio images must go somewhere else.');
+    else if (!/(^|-)staging(-|$)/.test(studioFolder)) problems.push('STUDIO_IMAGE_FOLDER must contain the word "staging" (for example qraivy-studio-staging).');
+    else if (studioFolder === folder || studioFolder === dealFolder) problems.push('STUDIO_IMAGE_FOLDER must differ from VOICE_AUDIO_FOLDER and DEAL_IMAGE_FOLDER.');
+  }
+
   const clerk = readClerkVerification(env, problems);
 
   const present = FORBIDDEN_SETTINGS.filter((name) => String(env[name] || '').trim());
@@ -151,6 +166,7 @@ function loadStagingPolicy(env = process.env) {
     recordingCeiling: ceiling,
     voiceAudioFolder: folder,
     dealImageFolder: dealFolder || null,
+    studioImageFolder: studioFolder || null,
     clerk,
   });
 }

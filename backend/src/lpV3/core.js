@@ -11,6 +11,9 @@
  *      length-limited; links are https / mailto / tel or an internal
  *      "/<page-or-anchor>" that must exist; images are https Cloudinary
  *      uploads only (no data:); colours are hex; everything else is an enum.
+ *      On writes the server also passes opts.images (Image Phase 1): an image
+ *      must then lie in one of the allowed folders (the owner's own Studio
+ *      uploads, the approved starter images) or already be on the page.
  *   2. renderDesign(): validates again, then escapes every value for its
  *      context. Owner text is plain text only (no HTML), there are no inline
  *      event handlers, and the output contains no <script> at all.
@@ -185,11 +188,51 @@
     pages: { t: 'pages', required: true },
   });
 
+  // ── image ownership (Image Phase 1) ──
+  // imagePublicId(url) -> the Cloudinary public id an image address delivers
+  // (no extension), or null. Leading transformation segments ("c_fill,w_800")
+  // and the version ("v123") are skipped, exactly as Cloudinary reads the
+  // address: the public id starts at the first segment that is neither. Any
+  // address with an empty, "." or ".." segment, or a version segment inside
+  // the public id, is null (never guessed).
+  var TRANSFORM_SEG = /^[a-z]{1,3}_[A-Za-z0-9_.:-]+(?:,[a-z]{1,3}_[A-Za-z0-9_.:-]+)*$/;
+  var VERSION_SEG = /^v[0-9]+$/;
+  function imagePublicId(url) {
+    if (typeof url !== 'string' || !CLOUDINARY.exec(url)) return null;
+    var segs = url.slice(url.indexOf('/image/upload/') + 14).split('/');
+    var i = 0;
+    while (i < segs.length - 1 && TRANSFORM_SEG.test(segs[i])) i++;
+    if (i < segs.length - 1 && VERSION_SEG.test(segs[i])) i++;
+    var id = segs.slice(i);
+    for (var k = 0; k < id.length; k++) {
+      if (!id[k] || id[k] === '.' || id[k] === '..' || VERSION_SEG.test(id[k])) return null;
+    }
+    var joined = id.join('/');
+    var dot = joined.lastIndexOf('.');
+    return dot > 0 ? joined.slice(0, dot) : null;
+  }
+  // opts.images = { folders: ['qraivy-studio/user_x', ...], known: [url, ...] }:
+  // an image passes when its public id lies inside one of the folders, or it is
+  // exactly one of the known addresses (what the page held already). The server
+  // passes it on every write; without it only the address rule applies.
+  function imageAllowed(url, scope) {
+    if (scope.known && scope.known.indexOf(url) !== -1) return true;
+    var id = imagePublicId(url);
+    if (!id) return false;
+    return (scope.folders || []).some(function (f) { return typeof f === 'string' && f && id.indexOf(f + '/') === 0 && id.length > f.length + 1; });
+  }
+  function readImageScope(opts) {
+    var s = opts && opts.images;
+    if (!isObj(s)) return null;
+    return { folders: Array.isArray(s.folders) ? s.folders.slice() : [], known: Array.isArray(s.known) ? s.known.slice() : [] };
+  }
+
   // ── validation ──
   function Ctx(opts) {
     this.errors = [];
     this.internal = []; // { path, id } -- checked once all anchors are known
     this.cloudName = opts && typeof opts.cloudName === 'string' && opts.cloudName ? opts.cloudName : null;
+    this.images = readImageScope(opts);
   }
   Ctx.prototype.err = function (path, code, extra) {
     if (this.errors.length < LIMITS.errors) this.errors.push(Object.assign({ path: path, code: code }, extra || {}));
@@ -277,6 +320,7 @@
         var im = CLOUDINARY.exec(v.trim());
         if (!im || v.length > 500) return ctx.err(path, 'invalid_image'), '';
         if (ctx.cloudName && im[1] !== ctx.cloudName) return ctx.err(path, 'invalid_image'), '';
+        if (ctx.images && !imageAllowed(v.trim(), ctx.images)) return ctx.err(path, 'image_not_allowed'), '';
         return v.trim();
       }
       case 'link': {
@@ -956,6 +1000,7 @@
     SCHEMA_VERSION: SCHEMA_VERSION, LIMITS: LIMITS, SECTION_TYPES: SECTION_TYPES, ICONS: ICONS, LINK_KINDS: LINK_KINDS, FONT_PAIRS: Object.keys(FONT_PAIRS),
     SOCIAL_PLATFORMS: Object.keys(SOCIAL_HOSTS), DEFAULT_PALETTE: DEFAULT_PALETTE, MAX_PER_PAGE: MAX_PER_PAGE,
     validateDesign: validateDesign, renderDesign: renderDesign, library: library, describe: describe, starter: starter,
+    imagePublicId: imagePublicId, imageAllowed: imageAllowed,
     _esc: esc,
   };
 });

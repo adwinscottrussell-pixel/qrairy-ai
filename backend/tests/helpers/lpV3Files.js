@@ -171,6 +171,8 @@ const LPV3_FILES = [
   'backend/tests/lpStagingGate.test.js',
   'backend/tests/dealsPreviewSafety.test.js',
   'backend/tests/pushCampaignAuth.test.js',
+  // Image Phase 1 (secure shared upload foundation): its new files (helpers/studioImageFiles.js)
+  ...require('./studioImageFiles').IMG_NEW_FILES,
 ];
 
 // The browser copy of core.js is pinned by tests/lpV3CoreCopy.test.js (byte for byte
@@ -188,7 +190,9 @@ const LPV3_NEW_FRONTEND = ['frontend/public/js/lpV3/core.js', 'frontend/public/j
 const D1 = require('./studioD1Files');
 const LPV3_EXCLUDES = [':(exclude)backend/prisma/schema.prisma', ':(exclude)backend/prisma/migrations/20261021090000_add_page_design_v3']
   .concat(LPV3_NEW_FRONTEND.map((f) => ':(exclude)' + f))
-  .concat(D1.D1_NEW_FILES.concat(D1.D1_CHANGED_FILES).map((f) => ':(exclude)' + f));
+  .concat(D1.D1_NEW_FILES.concat(D1.D1_CHANGED_FILES).map((f) => ':(exclude)' + f))
+  // Image Phase 1: its new files and the production file it changes (stagingPolicy.js, pinned by lpV3Scope.test.js)
+  .concat(require('./studioImageFiles').IMG_EXCLUDES);
 
 // schema.prisma (LF line endings) without the V3 column block and models.
 // Phase D1: also without its StudioDraftCreation model (studioD1Files.js).

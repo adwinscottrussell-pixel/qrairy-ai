@@ -44,6 +44,9 @@ const D1_REVERT = {
     ' * Attaches req.userId on success, and the verified token payload as\n * req.authClaims (read-only use: lpV3/draftPolicy.js on staging).\n', 1, ' * Attaches req.userId on success.\n'),
     '    req.authClaims = payload;\n'),
   'backend/src/middleware/stagingGate.js': (s) => {
+    // Image Phase 1 (helpers/studioImageFiles.js): its upload route and comment line come out first
+    const img = require('./studioImageFiles').withoutImageGate(s);
+    if (img !== null) s = img;
     s = cut(s, ' *\n * Landing Page Studio V3 (Phase D1): the Studio API (lpV3/studioPagesRoutes.js)\n * is allowed as "user": list own pages, load and save a page\'s draft, create\n * a draft. Its own checks still apply (ownership, verified email, limits).\n');
     if (s === null) return null;
     // Delete draft (after D2): one more Studio route, DELETE /studio/pages/<slug>, with its two comment lines

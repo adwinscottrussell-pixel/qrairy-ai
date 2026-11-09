@@ -42,7 +42,7 @@ const designsBefore = S.copy(S.db.pageDesigns);
 
 test('every route runs requireAuth first, then the controller (writes: the verified-email check in between); mounted at /studio in the server entry point', () => {
   const routes = studioRoutes.stack.filter((l) => l.route).map((l) => ({ path: l.route.path, methods: Object.keys(l.route.methods), handlers: l.route.stack.map((s) => s.handle) }));
-  assert.deepEqual(routes.map((r) => r.path + ' ' + r.methods.join(',')), ['/pages get', '/pages/:slug/design get', '/pages/:slug/design put', '/drafts post', '/pages/:slug delete'], 'two GETs, the PUT (Save Draft), the POST (create a draft, Phase D1) and the DELETE (Delete draft; own controller), not Phase D1)');
+  assert.deepEqual(routes.map((r) => r.path + ' ' + r.methods.join(',')), ['/pages get', '/pages/:slug/design get', '/pages/:slug/design put', '/drafts post', '/pages/:slug delete', '/pages/:slug/images post'], 'two GETs, the PUT (Save Draft), the POST (create a draft, Phase D1), the DELETE (Delete draft; own controller, not Phase D1) and the image upload (Image Phase 1; tests/studioImageUpload.test.js)');
   assert.deepEqual(routes[0].handlers, [requireAuth, C.listStudioPages]);
   assert.deepEqual(routes[1].handlers, [requireAuth, C.getStudioPageDesign]);
   // Phase D1: creating and changing a draft need a verified email address

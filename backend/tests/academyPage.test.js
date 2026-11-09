@@ -180,7 +180,9 @@ test('scope: only the Academy files, the shared sidebar entry and its label chan
   const indexOk = indexOnlyStudioMount(ROOT, '12df76d');
   // and Studio V3 Phase D1: its production edits, exactly (tests/helpers/studioD1Files.js)
   const { isD1Change } = require('./helpers/studioD1Files');
-  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f) || LPV3_FILES.includes(f) || (f === 'backend/src/index.js' && indexOk) || isD1Change(ROOT, f), 'unexpected change: ' + f);
+  // and Studio V3 Image Phase 1: stagingPolicy.js by exactly its edits (tests/helpers/studioImageFiles.js)
+  const { isImageChange } = require('./helpers/studioImageFiles');
+  for (const f of changed) assert.ok(allowed.includes(f) || PHASE0_FILES.includes(f) || LPV3_FILES.includes(f) || (f === 'backend/src/index.js' && indexOk) || isD1Change(ROOT, f) || isImageChange(ROOT, f), 'unexpected change: ' + f);
   // each Admin page gained exactly the one sidebar line (smart-qr-detail.html: after undoing
   // exactly the Phase 0 edit, tests/helpers/phase0Revert.js)
   const { revertSqd0 } = require('./helpers/phase0Revert');
