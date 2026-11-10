@@ -99,8 +99,10 @@ async function uploadStudioImage(buffer, { userId, pageId }) {
         transformation: [{ width: STUDIO_MASTER_MAX_EDGE, height: STUDIO_MASTER_MAX_EDGE, crop: 'limit', quality: 'auto:best' }],
         eager: [{ ...STUDIO_DISPLAY_EAGER }],
         eager_async: false,
+        // Tags only: Cloudinary's folder Contributor role allows tags during upload, but contextual
+        // metadata needs the broader Editor role (Image Phase 1.1). Owner and page are already the
+        // public id's path (<folder>/<userId>/<pageId>/…), so no context is sent.
         tags: ['qraivy_studio_upload'],
-        context: { qraivy_owner: userId, qraivy_page: pageId },
       },
       (error, r) => { if (error) reject(error); else resolve(r); }
     );

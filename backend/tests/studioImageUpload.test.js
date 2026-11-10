@@ -194,6 +194,10 @@ test('success: 201 with the display address in the owner\'s tenant folder; the d
   assert.equal(cloud.calls.length, 1);
   assert.equal(cloud.calls[0].bytes, JPEG.length);
   assert.equal(cloud.calls[0].opts.overwrite, false);
+  // Image Phase 1.1: through the real endpoint, tags only and no Cloudinary context
+  assert.deepEqual(cloud.calls[0].opts.tags, ['qraivy_studio_upload']);
+  assert.ok(!('context' in cloud.calls[0].opts), 'no Cloudinary context');
+  assert.equal(cloud.calls[0].opts.folder, 'qraivy-studio/user_anna/lp_anna_shop');
   assert.equal(S.writes.length, writes, 'no database write');
   assert.deepEqual(S.copy(S.db.pageDesigns), designs, 'the draft is unchanged (the next save carries the image)');
   assert.deepEqual(S.copy(S.db.pages), pages);

@@ -250,6 +250,10 @@ test('D. upload: own tenant folder, a new unique id each time, never overwrite, 
     assert.deepEqual(o.eager, [{ width: 1600, height: 1600, crop: 'limit' }]);
     assert.equal(o.eager_async, false);
     assert.ok(!JSON.stringify(o).includes('@'), 'no email anywhere in the stored asset');
+    // Image Phase 1.1: tags only (allowed to the Contributor folder role); no contextual metadata (Editor)
+    assert.deepEqual(o.tags, ['qraivy_studio_upload']);
+    assert.ok(!('context' in o), 'no Cloudinary context is sent');
+    assert.deepEqual(Object.keys(o).sort(), ['allowed_formats', 'eager', 'eager_async', 'folder', 'overwrite', 'public_id', 'resource_type', 'tags', 'transformation', 'unique_filename']);
     assert.equal(a.url, U('c_limit,h_1600,w_1600/v123/' + a.publicId + '.jpg'));
     assert.deepEqual([a.width, a.height], [1600, 1067]);
     assert.deepEqual(a.master, { url: U('v123/' + a.publicId + '.jpg'), width: 3000, height: 2000 });
